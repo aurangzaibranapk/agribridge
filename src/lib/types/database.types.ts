@@ -1553,48 +1553,63 @@ export type Database = {
           attendance_date: string
           check_in: string | null
           check_in_at: string | null
+          check_in_distance_meters: number | null
           check_in_lat: number | null
           check_in_lng: number | null
+          check_in_location_ok: boolean | null
           check_out: string | null
           check_out_at: string | null
+          check_out_distance_meters: number | null
           check_out_lat: number | null
           check_out_lng: number | null
+          check_out_location_ok: boolean | null
           created_at: string
           id: string
           notes: string | null
           profile_id: string
+          source: string
           status: Database["public"]["Enums"]["attendance_status"]
         }
         Insert: {
           attendance_date: string
           check_in?: string | null
           check_in_at?: string | null
+          check_in_distance_meters?: number | null
           check_in_lat?: number | null
           check_in_lng?: number | null
+          check_in_location_ok?: boolean | null
           check_out?: string | null
           check_out_at?: string | null
+          check_out_distance_meters?: number | null
           check_out_lat?: number | null
           check_out_lng?: number | null
+          check_out_location_ok?: boolean | null
           created_at?: string
           id?: string
           notes?: string | null
           profile_id: string
+          source?: string
           status?: Database["public"]["Enums"]["attendance_status"]
         }
         Update: {
           attendance_date?: string
           check_in?: string | null
           check_in_at?: string | null
+          check_in_distance_meters?: number | null
           check_in_lat?: number | null
           check_in_lng?: number | null
+          check_in_location_ok?: boolean | null
           check_out?: string | null
           check_out_at?: string | null
+          check_out_distance_meters?: number | null
           check_out_lat?: number | null
           check_out_lng?: number | null
+          check_out_location_ok?: boolean | null
           created_at?: string
           id?: string
           notes?: string | null
           profile_id?: string
+          source?: string
           status?: Database["public"]["Enums"]["attendance_status"]
         }
         Relationships: [
@@ -1795,12 +1810,15 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          attendance_radius_meters: number
           created_at: string
           district: string | null
           id: string
           is_active: boolean
           is_distribution_center: boolean
           is_main_branch: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           organization_id: string
           status: string
@@ -1810,12 +1828,15 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          attendance_radius_meters?: number
           created_at?: string
           district?: string | null
           id?: string
           is_active?: boolean
           is_distribution_center?: boolean
           is_main_branch?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           organization_id: string
           status?: string
@@ -1825,12 +1846,15 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          attendance_radius_meters?: number
           created_at?: string
           district?: string | null
           id?: string
           is_active?: boolean
           is_distribution_center?: boolean
           is_main_branch?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           organization_id?: string
           status?: string
@@ -4026,9 +4050,11 @@ export type Database = {
           id: string
           interested_in_fertilizer: boolean
           interested_in_grain: boolean
+          interested_in_karyana: boolean
           interested_in_machinery: boolean
           interested_in_marketplace: boolean
           interested_in_milk: boolean
+          interested_in_vet_service: boolean
           is_active: boolean
           is_deleted: boolean
           is_profile_complete: boolean
@@ -4053,6 +4079,7 @@ export type Database = {
           profile_photo_url: string | null
           province: string | null
           registration_source: string | null
+          registration_stage: string
           tehsil: string | null
           total_farms_count: number | null
           updated_at: string
@@ -4088,9 +4115,11 @@ export type Database = {
           id?: string
           interested_in_fertilizer?: boolean
           interested_in_grain?: boolean
+          interested_in_karyana?: boolean
           interested_in_machinery?: boolean
           interested_in_marketplace?: boolean
           interested_in_milk?: boolean
+          interested_in_vet_service?: boolean
           is_active?: boolean
           is_deleted?: boolean
           is_profile_complete?: boolean
@@ -4115,6 +4144,7 @@ export type Database = {
           profile_photo_url?: string | null
           province?: string | null
           registration_source?: string | null
+          registration_stage?: string
           tehsil?: string | null
           total_farms_count?: number | null
           updated_at?: string
@@ -4150,9 +4180,11 @@ export type Database = {
           id?: string
           interested_in_fertilizer?: boolean
           interested_in_grain?: boolean
+          interested_in_karyana?: boolean
           interested_in_machinery?: boolean
           interested_in_marketplace?: boolean
           interested_in_milk?: boolean
+          interested_in_vet_service?: boolean
           is_active?: boolean
           is_deleted?: boolean
           is_profile_complete?: boolean
@@ -4177,6 +4209,7 @@ export type Database = {
           profile_photo_url?: string | null
           province?: string | null
           registration_source?: string | null
+          registration_stage?: string
           tehsil?: string | null
           total_farms_count?: number | null
           updated_at?: string
@@ -8815,6 +8848,8 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           profile_id: string
+          whatsapp_number: string | null
+          whatsapp_verified_at: string | null
         }
         Insert: {
           address?: string | null
@@ -8833,6 +8868,8 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           profile_id: string
+          whatsapp_number?: string | null
+          whatsapp_verified_at?: string | null
         }
         Update: {
           address?: string | null
@@ -8851,6 +8888,8 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           profile_id?: string
+          whatsapp_number?: string | null
+          whatsapp_verified_at?: string | null
         }
         Relationships: [
           {
@@ -8962,6 +9001,38 @@ export type Database = {
             foreignKeyName: "staff_product_permissions_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_whatsapp_pending: {
+        Row: {
+          attempts: number
+          created_at: string
+          expires_at: string
+          profile_id: string
+          whatsapp_number: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          profile_id: string
+          whatsapp_number: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          profile_id?: string
+          whatsapp_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_whatsapp_pending_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { nextFarmerCode } from "@/actions/registration";
+import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -63,6 +64,21 @@ export async function POST(request: NextRequest) {
     }
 
     const fromPhone = normalizeWhatsAppPhone(message.from);
+
+    // Pehle dekho ke ye staff to nahi. Staff ka raasta AI se nahi guzarta:
+    // un ke kaam (hazri waghera) gine chune hain aur unhein bilkul waisa
+    // hi chalna chahiye jaisa likha gaya. null aaye to ye staff nahi —
+    // neeche farmer wala purana raasta chalega.
+    const staffReply = await handleStaffMessage({
+      fromPhone,
+      text: message.type === "text" ? message.text.body : null,
+      latitude: message.location?.latitude ?? null,
+      longitude: message.location?.longitude ?? null,
+    });
+    if (staffReply) {
+      await sendWhatsAppMessage(fromPhone, staffReply);
+      return NextResponse.json({ ok: true });
+    }
 
     let { data: farmer } = await serviceClient.from("farmers").select("id, is_profile_complete").eq("whatsapp_number", fromPhone).maybeSingle();
 
