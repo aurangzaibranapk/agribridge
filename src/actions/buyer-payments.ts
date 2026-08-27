@@ -1,0 +1,51 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+
+export interface ActionState {
+  error?: string;
+  success?: boolean;
+}
+
+export async function recordBuyerPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const serviceClient = createServiceClient();
+  const buyerId = String(formData.get("buyer_id") ?? "");
+  const amount = Number(formData.get("amount") ?? 0);
+  const paymentDate = String(formData.get("payment_date") ?? new Date().toISOString().slice(0, 10));
+  const direction = String(formData.get("direction") ?? "we_paid"); // "we_paid" ya "they_paid"
+  const notes = (formData.get("notes") as string) || null;
+  if (!buyerId) return { error: "Missing buyer id." };
+  if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
+
+  let slipUrl: string | null = null;
+  const slip = formData.get("slip");
+  if (slip instanceof File && slip.size > 0) {
+    const path = `${Date.now()}-slip-${slip.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const { error: uploadError } = await serviceClient.storage.from("payment-slips").upload(path, slip);
+    if (!uploadError) {
+      const { data } = serviceClient.storage.from("payment-slips").getPublicUrl(path);
+      slipUrl = data.publicUrl;
+    }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase.from("buyer_payments").insert({
+    buyer_id: buyerId,
+    amount,
+    payment_date: paymentDate,
+    direction,
+    notes,
+    slip_url: slipUrl,
+    created_by: user?.id ?? null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/buyers/${buyerId}/statement`);
+  revalidatePath("/admin/buyers");
+  return { success: true };
+}

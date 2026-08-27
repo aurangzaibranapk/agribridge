@@ -1,0 +1,217 @@
+﻿"use client";
+
+import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import { ChevronDown, CheckCircle2 } from "lucide-react";
+import { updateFarmerProfile, type FarmerProfileState } from "@/actions/farmer-profile";
+import { Button, Input, Label } from "@/components/ui/form";
+import type { Database } from "@/lib/types/database.types";
+import type { ProfileCompletion } from "@/lib/utils/farmer-profile";
+
+type Farmer = Database["public"]["Tables"]["farmers"]["Row"];
+
+const initialState: FarmerProfileState = {};
+
+const fileInputClass =
+  "block w-full text-sm text-surface-500 file:mr-3 file:rounded-lg file:border-0 file:bg-surface-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-surface-900 hover:file:bg-surface-200 dark:file:bg-surface-800 dark:file:text-surface-100";
+const textareaClass =
+  "w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:border-surface-700 dark:bg-surface-800 dark:text-surface-100";
+
+export function FarmerProfileForm({ farmer, completion }: { farmer: Farmer; completion: ProfileCompletion }) {
+  const [state, formAction] = useFormState(updateFarmerProfile, initialState);
+  const [hasLivestock, setHasLivestock] = useState(farmer.has_livestock);
+  const [openSection, setOpenSection] = useState<"basic" | "farming" | "documents" | null>(
+    !completion.basicComplete ? "basic" : !completion.farmingComplete ? "farming" : "documents"
+  );
+
+  return (
+    <form action={formAction} encType="multipart/form-data" className="space-y-3">
+      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
+      {state.success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Profile saved.</p>}
+
+      <AccordionSection
+        title="Basic Information"
+        complete={completion.basicComplete}
+        open={openSection === "basic"}
+        onToggle={() => setOpenSection(openSection === "basic" ? null : "basic")}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input id="full_name" name="full_name" defaultValue={farmer.full_name ?? ""} />
+          </div>
+          <div>
+            <Label htmlFor="cnic">CNIC / ID Card</Label>
+            <Input id="cnic" name="cnic" defaultValue={farmer.cnic ?? ""} placeholder="XXXXX-XXXXXXX-X" />
+          </div>
+          <div>
+            <Label htmlFor="village">Village</Label>
+            <Input id="village" name="village" defaultValue={farmer.village ?? ""} />
+          </div>
+          <div className="col-span-2">
+            <Label htmlFor="city">City</Label>
+            <Input id="city" name="city" defaultValue={farmer.district ?? ""} />
+          </div>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-surface-600">
+          <input
+            type="checkbox"
+            name="whatsapp_notifications_enabled"
+            defaultChecked={farmer.whatsapp_notifications_enabled}
+            className="h-4 w-4 rounded border-surface-300"
+          />
+          Send me updates on WhatsApp
+        </label>
+      </AccordionSection>
+
+      <AccordionSection
+        title="Farming Details"
+        complete={completion.farmingComplete}
+        open={openSection === "farming"}
+        onToggle={() => setOpenSection(openSection === "farming" ? null : "farming")}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="land_size_acres">Land Size (acres)</Label>
+            <Input id="land_size_acres" name="land_size_acres" type="number" step="0.1" min="0" defaultValue={farmer.land_size_acres ?? ""} />
+          </div>
+          <div>
+            <Label htmlFor="crop_types">Type of Crops</Label>
+            <Input id="crop_types" name="crop_types" defaultValue={farmer.crop_types.join(", ")} placeholder="Wheat, Rice" />
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Label>Livestock</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-1.5 text-sm text-surface-600">
+              <input
+                type="radio"
+                name="has_livestock"
+                value="yes"
+                defaultChecked={farmer.has_livestock}
+                onChange={() => setHasLivestock(true)}
+                className="h-4 w-4"
+              />
+              Yes
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-surface-600">
+              <input
+                type="radio"
+                name="has_livestock"
+                value="no"
+                defaultChecked={!farmer.has_livestock}
+                onChange={() => setHasLivestock(false)}
+                className="h-4 w-4"
+              />
+              No
+            </label>
+          </div>
+        </div>
+
+        {hasLivestock && (
+          <div className="mt-3">
+            <Label htmlFor="livestock_details">Livestock Details</Label>
+            <textarea
+              id="livestock_details"
+              name="livestock_details"
+              rows={2}
+              defaultValue={farmer.livestock_details ?? ""}
+              placeholder="e.g. 3 buffaloes, 2 goats"
+              className={textareaClass}
+            />
+          </div>
+        )}
+      </AccordionSection>
+
+      <AccordionSection
+        title="Documents Upload"
+        complete={completion.documentsComplete}
+        open={openSection === "documents"}
+        onToggle={() => setOpenSection(openSection === "documents" ? null : "documents")}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <DocumentField label="CNIC Image" name="cnic_image" existingUrl={farmer.cnic_image_url} />
+          <DocumentField label="Land Ownership Proof" name="land_ownership_proof" existingUrl={farmer.land_ownership_proof_url} />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="crop_images">Crop Images</Label>
+            <input id="crop_images" name="crop_images" type="file" accept="image/*" multiple className={fileInputClass} />
+            {farmer.crop_image_urls.length > 0 && <ExistingThumbs urls={farmer.crop_image_urls} />}
+          </div>
+          <div>
+            <Label htmlFor="animal_images">Animal Images (if applicable)</Label>
+            <input id="animal_images" name="animal_images" type="file" accept="image/*" multiple className={fileInputClass} />
+            {farmer.animal_image_urls.length > 0 && <ExistingThumbs urls={farmer.animal_image_urls} />}
+          </div>
+        </div>
+      </AccordionSection>
+
+      <SubmitButton />
+    </form>
+  );
+}
+
+function AccordionSection({
+  title,
+  complete,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  complete: boolean;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-700 dark:bg-surface-900">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 font-medium text-surface-900 dark:text-surface-100">
+          {complete && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+          {title}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-surface-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="border-t border-surface-100 px-4 py-4 dark:border-surface-800">{children}</div>}
+    </div>
+  );
+}
+
+function DocumentField({ label, name, existingUrl }: { label: string; name: string; existingUrl: string | null }) {
+  return (
+    <div>
+      <Label htmlFor={name}>{label}</Label>
+      {existingUrl && (
+        <img src={existingUrl} alt={label} className="mb-2 h-16 w-16 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
+      )}
+      <input id={name} name={name} type="file" accept="image/*" className={fileInputClass} />
+    </div>
+  );
+}
+
+function ExistingThumbs({ urls }: { urls: string[] }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {urls.map((url) => (
+        <img key={url} src={url} alt="" className="h-12 w-12 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
+      ))}
+    </div>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="w-full">
+      {pending ? "Saving..." : "Save Profile"}
+    </Button>
+  );
+}
+

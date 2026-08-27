@@ -1,0 +1,66 @@
+import nodemailer from "nodemailer";
+
+const SITE_URL = "https://alranatraders.pk";
+
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+// Shared branded wrapper - logo, brand colors, and footer with contact/
+// social links, so every outgoing email looks consistent and professional.
+function emailWrapper(bodyHtml: string): string {
+  return `
+  <div style="font-family: Arial, Helvetica, sans-serif; background:#f4f6f4; padding:32px 16px;">
+    <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="background:#1a1f36; padding:24px; text-align:center;">
+        <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700;">Al Rana Traders</p>
+        <p style="margin:4px 0 0; color:#94a3b8; font-size:12px;">AgriBridge - Pakistan's Trusted Agriculture Bridge</p>
+      </div>
+      <div style="padding:28px 24px; color:#1f2937; font-size:14px; line-height:1.6;">
+        ${bodyHtml}
+      </div>
+      <div style="background:#f9fafb; padding:18px 24px; text-align:center; border-top:1px solid #e5e7eb;">
+        <p style="margin:0 0 6px; font-size:12px; color:#6b7280;">
+          alranatraders.pk &nbsp;|&nbsp; info@alranatraders.pk &nbsp;|&nbsp; mail.alranatraders.pk
+        </p>
+        <p style="margin:0; font-size:11px; color:#9ca3af;">
+          &copy; ${new Date().getFullYear()} Al Rana Traders. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+
+export async function sendJobOfferEmail(toEmail: string, fullName: string, offerToken: string, designation: string) {
+  const link = `${SITE_URL}/job-offer/${offerToken}`;
+  const html = emailWrapper(`
+    <p>Assalam-o-Alaikum <strong>${fullName}</strong>,</p>
+    <p>Aapko <strong>Al Rana Traders</strong> ki taraf se <strong>${designation}</strong> ki position ke liye job offer bheja gaya hai.</p>
+    <p style="text-align:center; margin:24px 0;">
+      <a href="${link}" style="background:#16a34a; color:#ffffff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; display:inline-block;">
+        Offer Dekhein
+      </a>
+    </p>
+    <p style="color:#6b7280; font-size:12px;">Agar button kaam na kare, ye link browser mein paste karein:<br/>${link}</p>
+  `);
+
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: `"Al Rana Traders" <${process.env.SMTP_USER}>`,
+      to: toEmail,
+      subject: `Job Offer - ${designation} at Al Rana Traders`,
+      html,
+    });
+  } catch (err) {
+    console.error("Failed to send job offer email:", err);
+  }
+}

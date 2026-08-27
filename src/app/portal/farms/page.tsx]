@@ -1,0 +1,230 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CheckCircle2, Clock } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { addFarmAction } from "./actions";
+import { DeleteFarmButton } from "./delete-farm-button";
+import { LocationPicker } from "./location-picker";
+import { MapLink } from "./map-link";
+import { checkProfileComplete } from "@/lib/utils/profile-gate";
+import { ProfileGateMessage } from "@/components/portal/profile-gate-message";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
+
+export default async function FarmsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const params = await searchParams;
+  const supabase = createClient();
+  const lang = getLanguageFromCookies();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: farmer } = await supabase
+    .from("farmers")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+  if (!farmer) redirect("/login");
+
+  if (!checkProfileComplete(farmer)) {
+    return <ProfileGateMessage />;
+  }
+
+  const { data: farms } = await supabase
+    .from("farms")
+    .select("id, name, area_acres, village, district, latitude, longitude, is_verified, ownership_type, rent_per_acre")
+    .eq("farmer_id", farmer.id)
+    .order("created_at", { ascending: false });
+
+  const totalLandAcres = (farms ?? []).reduce((sum, f) => sum + Number(f.area_acres), 0);
+  const totalFarmsCount = farms?.length ?? 0;
+
+  const farmIds = (farms ?? []).map((f) => f.id);
+
+  const { data: allHarvests } = farmIds.length
+    ? await supabase
+        .from("harvest_records")
+        .select("farm_id, crop_name, quantity_harvested, unit, sale_rate, total_expense")
+        .in("farm_id", farmIds)
+    : { data: [] };
+
+  const farmStats = (farms ?? []).map((f) => {
+    const records = (allHarvests ?? []).filter((h) => h.farm_id === f.id);
+    let totalProfit = 0;
+    let hasProfitData = false;
+    const cropCounts: Record<string, number> = {};
+
+    records.forEach((r) => {
+      cropCounts[r.crop_name] = (cropCounts[r.crop_name] ?? 0) + 1;
+      if (r.sale_rate !== null && r.total_expense !== null) {
+        totalProfit += r.quantity_harvested * r.sale_rate - r.total_expense;
+        hasProfitData = true;
+      }
+    });
+
+    const cropLossCounts: Record<string, number> = {};
+    records.forEach((r) => {
+      if (r.sale_rate !== null && r.total_expense !== null) {
+        const p = r.quantity_harvested * r.sale_rate - r.total_expense;
+        if (p < 0) cropLossCounts[r.crop_name] = (cropLossCounts[r.crop_name] ?? 0) + 1;
+      }
+    });
+    const lossCrops = Object.keys(cropLossCounts).filter((c) => cropLossCounts[c] >= 2);
+
+    return {
+      farm: f,
+      recordCount: records.length,
+      crops: Object.keys(cropCounts),
+      totalProfit,
+      hasProfitData,
+      lossCrops,
+    };
+  });
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
+        {t("back_to_dashboard", lang)}
+      </Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("my_farms_title", lang)}</h1>
+      <p className="mt-1 text-surface-500">{t("my_farms_subtitle", lang)}</p>
+
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card">
+          <p className="text-xs text-surface-500">{t("total_land_auto", lang)}</p>
+          <p className="mt-1 text-xl font-semibold text-surface-900">{totalLandAcres} {lang === "ur" ? "ایکڑ" : "acres"}</p>
+        </div>
+        <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card">
+          <p className="text-xs text-surface-500">{t("total_farms_auto", lang)}</p>
+          <p className="mt-1 text-xl font-semibold text-surface-900">{totalFarmsCount}</p>
+        </div>
+      </div>
+
+      {params.error && (
+        <p className="mt-4 rounded-card border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          Error: {params.error}
+        </p>
+      )}
+
+      <form action={addFarmAction} className="mt-6 space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card">
+        <h2 className="font-display text-sm font-semibold text-surface-900">{t("add_new_farm", lang)}</h2>
+        <div>
+          <label className="text-xs font-medium text-surface-600">{t("farm_name", lang)}</label>
+          <input type="text" name="name" required placeholder="e.g. Uncle ka Khet" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-surface-600">{t("area_acres", lang)}</label>
+          <input type="number" step="0.1" name="area_acres" required placeholder="e.g. 5" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-medium text-surface-600">{t("village_optional", lang)}</label>
+            <input type="text" name="village" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-surface-600">{t("district_optional", lang)}</label>
+            <input type="text" name="district" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-surface-600">{t("owned_or_rented", lang)}</label>
+          <select name="ownership_type" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" defaultValue="owned">
+            <option value="owned">{t("owned", lang)}</option>
+            <option value="rented">{t("rented", lang)}</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-surface-600">{t("rent_per_acre", lang)}</label>
+          <input type="number" step="1" name="rent_per_acre" placeholder="e.g. 30000" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-surface-600">{t("pin_location_optional", lang)}</label>
+          <LocationPicker />
+        </div>
+        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
+          {t("add_farm_btn", lang)}
+        </button>
+        <p className="text-center text-xs text-surface-400">
+          {t("unverified_hint", lang)}
+        </p>
+      </form>
+
+      <h2 className="mt-8 font-display text-lg font-semibold text-surface-900">{t("my_farms_list", lang)}</h2>
+      <div className="mt-3 space-y-3">
+        {farmStats.length === 0 ? (
+          <p className="rounded-card border border-dashed border-surface-200 bg-white p-6 text-center text-sm text-surface-400">
+            {t("no_farms_yet", lang)}
+          </p>
+        ) : (
+          farmStats.map((fs) => (
+            <div key={fs.farm.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-surface-900">{fs.farm.name}</p>
+                  {fs.farm.is_verified ? (
+                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                      <CheckCircle2 className="h-3 w-3" /> {t("verified", lang)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                      <Clock className="h-3 w-3" /> {t("unverified", lang)}
+                    </span>
+                  )}
+                  {fs.farm.ownership_type === "rented" && (
+                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700">
+                      {t("rented", lang)} - Rs {fs.farm.rent_per_acre}/{lang === "ur" ? "ایکڑ" : "acre"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-surface-500">
+                    {fs.farm.area_acres} {lang === "ur" ? "ایکڑ" : "acres"} {fs.farm.village ? `- ${fs.farm.village}` : ""} {fs.farm.district ? `, ${fs.farm.district}` : ""}
+                  </p>
+                  <DeleteFarmButton farmId={fs.farm.id} />
+                </div>
+              </div>
+
+              <MapLink latitude={fs.farm.latitude} longitude={fs.farm.longitude} />
+
+              <div className="mt-3 flex items-center justify-between border-t border-surface-100 pt-3 text-sm">
+                <div>
+                  <p className="text-xs text-surface-500">{t("harvest_records", lang)}</p>
+                  <p className="font-medium text-surface-900">{fs.recordCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-surface-500">{t("crops_grown", lang)}</p>
+                  <p className="font-medium text-surface-900">{fs.crops.length ? fs.crops.join(", ") : "-"}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-surface-500">{t("total_profit_loss", lang)}</p>
+                  <p className={`font-medium ${!fs.hasProfitData ? "text-surface-400" : fs.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {!fs.hasProfitData ? "-" : `${fs.totalProfit >= 0 ? "+" : ""}Rs. ${fs.totalProfit.toLocaleString()}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-surface-100 pt-3 text-xs">
+                {fs.recordCount < 2 ? (
+                  <p className="text-surface-400">Abhi pakka andaza lagane ke liye kaafi data nahi hai. Kam az kam 2-3 harvest records add karein.</p>
+                ) : (
+                  <>
+                    {fs.hasProfitData && fs.totalProfit < 0 && (
+                      <p className="text-red-600">Is farm mein overall nuksan ho raha hai.</p>
+                    )}
+                    {fs.lossCrops.length > 0 && (
+                      <p className="text-amber-600">{fs.lossCrops.join(", ")} mein baar baar loss ho raha hai.</p>
+                    )}
+                    {fs.hasProfitData && fs.totalProfit >= 0 && fs.lossCrops.length === 0 && (
+                      <p className="text-green-600">Is farm ka overall result acha hai.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

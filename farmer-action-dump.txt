@@ -1,0 +1,105 @@
+﻿"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+
+export interface FarmerProfileState {
+  error?: string;
+  success?: boolean;
+}
+
+// This is the ONLY place a farmer can write to their own row (see
+// migration 016's farmer_self_update RLS policy). Only these self-service
+// fields are ever written here â€” staff-only fields (is_verified,
+// milk_financing_enabled, auto_khata_bank_cashout, kms_id, farmer_code,
+// etc.) are never touched by this action, regardless of what a client
+// sends, since they're simply never read from formData below.
+export async function updateFarmerProfile(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be signed in." };
+
+  const serviceClient = createServiceClient();
+
+  const { data: farmer, error: lookupError } = await serviceClient
+    .from("farmers")
+    .select("id, crop_image_urls, animal_image_urls")
+    .eq("user_id", user.id)
+    .single();
+
+  if (lookupError || !farmer) return { error: "Farmer profile not found for this account." };
+
+  const cropTypes = String(formData.get("crop_types") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const landSizeRaw = formData.get("land_size_acres") as string;
+
+  const updates: Record<string, unknown> = {
+    full_name: (formData.get("full_name") as string) || null,
+    cnic: (formData.get("cnic") as string) || null,
+    village: (formData.get("village") as string) || null,
+    district: (formData.get("city") as string) || null, // "City" in the UI maps to the existing district column.
+    whatsapp_notifications_enabled: formData.get("whatsapp_notifications_enabled") === "on",
+    land_size_acres: landSizeRaw ? parseFloat(landSizeRaw) : null,
+    crop_types: cropTypes,
+    has_livestock: formData.get("has_livestock") === "yes",
+    livestock_details: (formData.get("livestock_details") as string) || null,
+  };
+
+  // Single-file fields: replace outright.
+  const singleFileFields: Array<[string, string]> = [
+    ["cnic_image", "cnic_image_url"],
+    ["land_ownership_proof", "land_ownership_proof_url"],
+  ];
+  for (const [fieldName, columnName] of singleFileFields) {
+    const file = formData.get(fieldName);
+    if (file instanceof File && file.size > 0) {
+      const url = await uploadOne(serviceClient, farmer.id, fieldName, file);
+      if (url) updates[columnName] = url;
+    }
+  }
+
+  // Multi-file fields: newly uploaded images are appended to whatever
+  // was already saved, so a farmer can add photos across multiple visits
+  // instead of losing earlier uploads every time they save again.
+  const multiFileFields: Array<[string, string, string[]]> = [
+    ["crop_images", "crop_image_urls", farmer.crop_image_urls ?? []],
+    ["animal_images", "animal_image_urls", farmer.animal_image_urls ?? []],
+  ];
+  for (const [fieldName, columnName, existingUrls] of multiFileFields) {
+    const files = formData.getAll(fieldName).filter((f): f is File => f instanceof File && f.size > 0);
+    if (files.length === 0) continue;
+    const newUrls = await Promise.all(files.map((file) => uploadOne(serviceClient, farmer.id, fieldName, file)));
+    updates[columnName] = [...existingUrls, ...newUrls.filter((u): u is string => Boolean(u))];
+  }
+
+  const { error: updateError } = await serviceClient.from("farmers").update(updates).eq("user_id", user.id);
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/portal/profile");
+  revalidatePath("/portal/dashboard");
+  return { success: true };
+}
+
+async function uploadOne(
+  serviceClient: ReturnType<typeof createServiceClient>,
+  farmerId: string,
+  fieldName: string,
+  file: File
+): Promise<string | null> {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const path = `${farmerId}/${fieldName}-${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await serviceClient.storage.from("farmer-documents").upload(path, file);
+  if (uploadError) return null;
+
+  const { data } = serviceClient.storage.from("farmer-documents").getPublicUrl(path);
+  return data.publicUrl;
+}
+
