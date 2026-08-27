@@ -4024,8 +4024,14 @@ export type Database = {
           full_name: string | null
           has_livestock: boolean
           id: string
+          interested_in_fertilizer: boolean
+          interested_in_grain: boolean
+          interested_in_machinery: boolean
+          interested_in_marketplace: boolean
+          interested_in_milk: boolean
           is_active: boolean
           is_deleted: boolean
+          is_profile_complete: boolean
           is_verified: boolean
           kms_id: string | null
           land_animal_details: string | null
@@ -4046,6 +4052,7 @@ export type Database = {
           phone_number: string | null
           profile_photo_url: string | null
           province: string | null
+          registration_source: string | null
           tehsil: string | null
           total_farms_count: number | null
           updated_at: string
@@ -4079,8 +4086,14 @@ export type Database = {
           full_name?: string | null
           has_livestock?: boolean
           id?: string
+          interested_in_fertilizer?: boolean
+          interested_in_grain?: boolean
+          interested_in_machinery?: boolean
+          interested_in_marketplace?: boolean
+          interested_in_milk?: boolean
           is_active?: boolean
           is_deleted?: boolean
+          is_profile_complete?: boolean
           is_verified?: boolean
           kms_id?: string | null
           land_animal_details?: string | null
@@ -4101,6 +4114,7 @@ export type Database = {
           phone_number?: string | null
           profile_photo_url?: string | null
           province?: string | null
+          registration_source?: string | null
           tehsil?: string | null
           total_farms_count?: number | null
           updated_at?: string
@@ -4134,8 +4148,14 @@ export type Database = {
           full_name?: string | null
           has_livestock?: boolean
           id?: string
+          interested_in_fertilizer?: boolean
+          interested_in_grain?: boolean
+          interested_in_machinery?: boolean
+          interested_in_marketplace?: boolean
+          interested_in_milk?: boolean
           is_active?: boolean
           is_deleted?: boolean
+          is_profile_complete?: boolean
           is_verified?: boolean
           kms_id?: string | null
           land_animal_details?: string | null
@@ -4156,6 +4176,7 @@ export type Database = {
           phone_number?: string | null
           profile_photo_url?: string | null
           province?: string | null
+          registration_source?: string | null
           tehsil?: string | null
           total_farms_count?: number | null
           updated_at?: string
@@ -10095,6 +10116,7 @@ export type Database = {
         }[]
       }
       fn_is_admin_level: { Args: never; Returns: boolean }
+      fn_is_any_staff: { Args: never; Returns: boolean }
       fn_is_staff: { Args: { p_user_id: string }; Returns: boolean }
       get_daily_sales_summary: {
         Args: { p_date?: string }
