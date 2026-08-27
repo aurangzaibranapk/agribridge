@@ -158,6 +158,14 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
 
   const toBranch = Array.isArray(order.branches) ? order.branches[0]?.name : order.branches?.name;
 
+  // Branch-to-branch order mein maal dene wali shop ka naam. Alag query
+  // se aata hai kyunke order ki apni select sirf order_to_branch_id wale
+  // rishte ko laati hai.
+  const { data: fromBranchRow } = order.order_from_branch_id
+    ? await supabase.from("branches").select("name").eq("id", order.order_from_branch_id).maybeSingle()
+    : { data: null };
+  const fromBranch = fromBranchRow?.name ?? null;
+
   const payments = (rawPayments ?? []).map((p) => ({
     id: p.id,
     payment_number: p.payment_number,
@@ -318,6 +326,16 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
               <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800"><span>Grand Total</span><span>Rs {Number(order.grand_total).toLocaleString()}</span></div>
             </div>
             <p className="mt-2 text-xs text-surface-500">Payment Mode: {advance.isAdvance ? "Advance Order (pehle payment)" : `Base Order / Khata (${order.payment_terms})`}</p>
+            <p className="mt-1 text-xs text-surface-500">
+              Maal Kahan Se: {order.order_from_branch_id ? `${fromBranch ?? "Doosri Shop"} (shop-to-shop)` : "Company / HQ Warehouse"}
+            </p>
+            {order.order_from_branch_id && (
+              <p className="mt-1 text-xs text-surface-500">
+                Settlement: {order.settlement_method === "direct_branch"
+                  ? "Seedha shops ke darmiyan (Company ka taalluq nahi)"
+                  : "Company ke zariye"}
+              </p>
+            )}
             {order.rejection_reason && <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">Reject Wajah: {order.rejection_reason}</p>}
           </div>
 

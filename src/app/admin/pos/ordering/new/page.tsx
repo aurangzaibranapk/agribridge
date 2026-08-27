@@ -80,10 +80,18 @@ export default async function NewBranchOrderPage() {
   const karyanaCategories = (allCategories ?? [])
     .filter((c) => karyanaCategoryIds.has(c.id) && !rootIds.includes(c.id))
     .map((c) => ({ id: c.id, name: c.name }));
+  // Doosri shops ki list, taake branch-to-branch order ho sake.
+  const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
+
   return (
     <div>
       <PageHeader title="Karyana Order" description={seller.name} />
-      <SimpleOrderForm products={productsFormatted} categories={karyanaCategories} />
+      <SimpleOrderForm
+        products={productsFormatted}
+        categories={karyanaCategories}
+        branches={branches ?? []}
+        ownBranchId={seller.id}
+      />
     </div>
   );
 }

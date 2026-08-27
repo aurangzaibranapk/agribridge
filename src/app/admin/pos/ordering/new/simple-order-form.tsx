@@ -4,6 +4,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createBranchAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";
 import { PaymentModeSelect } from "@/app/admin/agri-orders/new/payment-mode-select";
+import { SourcingSelect } from "@/app/admin/agri-orders/new/sourcing-select";
 
 const initialState: ActionState = {};
 
@@ -32,7 +33,22 @@ interface RowState {
   price: number;
 }
 
-export function SimpleOrderForm({ products, categories }: { products: Product[]; categories: Category[] }) {
+interface Branch {
+  id: string;
+  name: string;
+}
+
+export function SimpleOrderForm({
+  products,
+  categories,
+  branches,
+  ownBranchId,
+}: {
+  products: Product[];
+  categories: Category[];
+  branches: Branch[];
+  ownBranchId: string;
+}) {
   const [state, formAction] = useFormState(createBranchAgriOrder, initialState);
   const [orderType, setOrderType] = useState("FMCG / Other");
   const [rows, setRows] = useState<Record<string, RowState>>({});
@@ -83,6 +99,11 @@ export function SimpleOrderForm({ products, categories }: { products: Product[];
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Maal Kahan Se Aayega?</h2>
+        <SourcingSelect branches={branches} excludeBranchId={ownBranchId} />
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">

@@ -5,6 +5,7 @@ import { createAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { Search, LayoutGrid, List } from "lucide-react";
 import { ProductCardGrid } from "./product-card-grid";
 import { PaymentModeSelect } from "./payment-mode-select";
+import { SourcingSelect } from "./sourcing-select";
 
 const initialState: ActionState = {};
 
@@ -131,22 +132,7 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
               {ORDER_TO_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          <div>
-            <label className="text-xs font-medium text-surface-600">Order From</label>
-            <select value={orderFromKind} onChange={(e) => setOrderFromKind(e.target.value as "branch" | "supplier")} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-              <option value="branch">Apni Branch/Warehouse</option>
-              <option value="supplier">Bahar Ka Supplier</option>
-            </select>
-          </div>
-          {orderFromKind === "branch" ? (
-            <div>
-              <label className="text-xs font-medium text-surface-600">From Branch</label>
-              <select name="order_from_branch_id" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-                <option value="">- Select Karein -</option>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
-          ) : (
+          {orderFromKind === "supplier" && (
             <div>
               <label className="text-xs font-medium text-surface-600">Supplier Naam</label>
               <input name="shop_dealer_name" placeholder="Supplier ka naam likhein" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
@@ -160,6 +146,19 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Maal Kahan Se */}
+      <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Maal Kahan Se Aayega?</h2>
+        <div className="mb-3">
+          <label className="text-xs font-medium text-surface-600">Order From</label>
+          <select value={orderFromKind} onChange={(e) => setOrderFromKind(e.target.value as "branch" | "supplier")} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+            <option value="branch">Company / Doosri Shop</option>
+            <option value="supplier">Bahar Ka Supplier</option>
+          </select>
+        </div>
+        {orderFromKind === "branch" && <SourcingSelect branches={branches} />}
       </div>
 
       {/* Location */}

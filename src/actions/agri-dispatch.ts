@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
 import { getAdvancePaymentStatus } from "@/lib/order-payment-gate";
+import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 
 export interface ActionState {
   error?: string;
@@ -68,6 +69,14 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   // godown se nahi nikalta. Approval chain (sales > finance > manager)
   // pehle ki tarah chalti rehti hai — rok sirf isi aakhri qadam par
   // lagti hai. Base order is check se guzarta hi nahi.
+  // Ab dispatch banate hi stock kam hota hai, is liye do dafa dispatch
+  // banane se stock do dafa kat jayega. UI button chhupa deti hai magar
+  // wo kaafi nahi — rok yahan zaroori hai.
+  const { data: existingDispatch } = await supabase.from("agri_dispatches").select("dispatch_number").eq("order_id", orderId).maybeSingle();
+  if (existingDispatch) {
+    return { error: `Is order ka dispatch pehle hi ban chuka hai (${existingDispatch.dispatch_number}).` };
+  }
+
   const advance = await getAdvancePaymentStatus(orderId);
   if (!advance.isSatisfied) {
     return {
@@ -129,6 +138,41 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   }));
     const { error: itemsError } = await supabase.from("agri_dispatch_items").insert(itemRows);
   if (itemsError) return { error: itemsError.message };
+
+  // Maal godown se nikal gaya, is liye bhejne wale ka stock ab kam hona
+  // chahiye. Source wahi hai jahan se order maangaya gaya: branch-to-branch
+  // mein doosri shop ka godown, warna HQ ka.
+  //
+  // Yahan sirf NIKALNA hota hai, DAALNA nahi — maal lene wale ki inventory
+  // mein GRN par jata hai (agri-grn.ts), jab wo waqai pahunch jaye. Is beech
+  // ka maal kisi ke bhi stock mein nahi ginta, jo durust hai: wo raaste
+  // mein hai.
+  //
+  // agri_dispatch_items sirf product_name rakhti hai, is liye product_id
+  // order items se uthana parta hai.
+  const sourceWarehouseId = fromBranchId ? await mainWarehouseId(fromBranchId) : await hqWarehouseId();
+  if (sourceWarehouseId) {
+    const orderItemIds = items.map((i) => i.order_item_id).filter(Boolean);
+    const { data: orderItems } = orderItemIds.length
+      ? await supabase.from("agri_order_items").select("id, product_id").in("id", orderItemIds)
+      : { data: [] as { id: string; product_id: string | null }[] };
+    const productByOrderItem = new Map((orderItems ?? []).map((oi) => [oi.id, oi.product_id]));
+
+    for (const item of items) {
+      const productId = productByOrderItem.get(item.order_item_id);
+      if (!productId || item.dispatched_qty <= 0) continue;
+      await moveStock({
+        fromWarehouseId: sourceWarehouseId,
+        toWarehouseId: null,
+        productId,
+        qty: item.dispatched_qty,
+        referenceType: "agri_dispatch",
+        referenceId: dispatch.id,
+        userId: user?.id ?? null,
+        outType: "transfer_out",
+      });
+    }
+  }
 
   await supabase.from("agri_orders").update({ status: "dispatched" }).eq("id", orderId);
   await logTimeline(orderId, "dispatched", `Dispatch banaya: ${dispatchNumber}`);

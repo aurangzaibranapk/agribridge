@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { notifyRoles, notifyBranch } from "@/lib/notifications";
+import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
@@ -118,115 +119,6 @@ export async function createReturn(_prev: ActionState, formData: FormData): Prom
   return { success: true };
 }
 
-/** Warehouse ka MAIN godown dhoondta hai. */
-async function mainWarehouseId(branchId: string): Promise<string | null> {
-  const supabase = createClient();
-  const { data } = await supabase.from("warehouses").select("id").eq("branch_id", branchId).eq("code", "MAIN").maybeSingle();
-  return data?.id ?? null;
-}
-
-/**
- * Stock ek godown se doosre godown le jata hai. Bilkul wahi tareeqa jo
- * stock-transfer-workflow istemal karta hai — inventory ghatana/barhana,
- * FIFO batches se nikalna, aur har harkat stock_movements mein likhna.
- *
- * movement_type ek DB enum hai: shop se nikalne ke liye 'transfer_out'
- * (koi 'return_out' maujood nahi) aur HQ mein aane ke liye 'return_in'.
- * reference_type 'agri_order_return' batata hai ke ye return ki harkat
- * hai, transfer ki nahi.
- */
-async function moveStock(
-  fromWarehouseId: string | null,
-  toWarehouseId: string | null,
-  productId: string,
-  qty: number,
-  returnId: string,
-  userId: string | null
-) {
-  const supabase = createClient();
-
-  if (fromWarehouseId) {
-    let remaining = qty;
-    const { data: batches } = await supabase
-      .from("stock_batches")
-      .select("id, remaining_quantity")
-      .eq("warehouse_id", fromWarehouseId)
-      .eq("product_id", productId)
-      .gt("remaining_quantity", 0)
-      .order("created_at", { ascending: true });
-    for (const batch of batches ?? []) {
-      if (remaining <= 0) break;
-      const take = Math.min(remaining, Number(batch.remaining_quantity));
-      await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-      remaining -= take;
-    }
-
-    const { data: fromInv } = await supabase
-      .from("inventory")
-      .select("id, quantity_on_hand")
-      .eq("warehouse_id", fromWarehouseId)
-      .eq("product_id", productId)
-      .maybeSingle();
-    if (fromInv) {
-      const deduct = Math.min(qty, Number(fromInv.quantity_on_hand));
-      await supabase
-        .from("inventory")
-        .update({ quantity_on_hand: Number(fromInv.quantity_on_hand) - deduct, updated_at: new Date().toISOString() })
-        .eq("id", fromInv.id);
-      await supabase.from("stock_movements").insert({
-        inventory_id: fromInv.id,
-        movement_type: "transfer_out",
-        quantity: deduct,
-        balance_after: Number(fromInv.quantity_on_hand) - deduct,
-        reference_type: "agri_order_return",
-        reference_id: returnId,
-        created_by: userId,
-      });
-    }
-  }
-
-  if (toWarehouseId) {
-    const { data: toInv } = await supabase
-      .from("inventory")
-      .select("id, quantity_on_hand")
-      .eq("warehouse_id", toWarehouseId)
-      .eq("product_id", productId)
-      .maybeSingle();
-    if (toInv) {
-      await supabase
-        .from("inventory")
-        .update({ quantity_on_hand: Number(toInv.quantity_on_hand) + qty, updated_at: new Date().toISOString() })
-        .eq("id", toInv.id);
-      await supabase.from("stock_movements").insert({
-        inventory_id: toInv.id,
-        movement_type: "return_in",
-        quantity: qty,
-        balance_after: Number(toInv.quantity_on_hand) + qty,
-        reference_type: "agri_order_return",
-        reference_id: returnId,
-        created_by: userId,
-      });
-    } else {
-      const { data: newInv } = await supabase
-        .from("inventory")
-        .insert({ warehouse_id: toWarehouseId, product_id: productId, quantity_on_hand: qty })
-        .select("id")
-        .single();
-      if (newInv) {
-        await supabase.from("stock_movements").insert({
-          inventory_id: newInv.id,
-          movement_type: "return_in",
-          quantity: qty,
-          balance_after: qty,
-          reference_type: "agri_order_return",
-          reference_id: returnId,
-          created_by: userId,
-        });
-      }
-    }
-  }
-}
-
 /**
  * HQ maal receive karta hai. Yahi wo lamha hai jab sab kuch asal mein
  * hota hai: shop ka stock kam, HQ ka barhe, aur shop ke khate se return
@@ -259,14 +151,22 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
     .select("product_id, product_name, return_qty, line_total")
     .eq("return_id", returnId);
 
-  // HQ ka godown wo branch hai jo is_main_branch par nishan-zada hai.
-  const { data: hqBranch } = await supabase.from("branches").select("id").eq("is_main_branch", true).maybeSingle();
-  const hqWarehouse = hqBranch ? await mainWarehouseId(hqBranch.id) : null;
+  const hqWarehouse = await hqWarehouseId();
   const shopWarehouse = await mainWarehouseId(ret.branch_id);
 
   for (const item of items ?? []) {
     if (!item.product_id) continue;
-    await moveStock(shopWarehouse, hqWarehouse, item.product_id, Number(item.return_qty), returnId, user?.id ?? null);
+    await moveStock({
+      fromWarehouseId: shopWarehouse,
+      toWarehouseId: hqWarehouse,
+      productId: item.product_id,
+      qty: Number(item.return_qty),
+      referenceType: "agri_order_return",
+      referenceId: returnId,
+      userId: user?.id ?? null,
+      outType: "transfer_out",
+      inType: "return_in",
+    });
   }
 
   // Maal wapas aa gaya, is liye us ki value shop ke zimme nahi rahi.

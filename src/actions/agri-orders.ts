@@ -107,6 +107,7 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
   const contactPerson = (formData.get("contact_person") as string) || null;
   const mobileNumber = (formData.get("mobile_number") as string) || null;
   const paymentTerms = String(formData.get("payment_terms") ?? "Cash");
+  const settlementMethod = (formData.get("settlement_method") as string) || null;
   const freightCharges = Number(formData.get("freight_charges") ?? 0);
   const otherCharges = Number(formData.get("other_charges") ?? 0);
   const notes = (formData.get("notes") as string) || null;
@@ -146,6 +147,9 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
       order_type: orderType,
       order_from: orderFromBranchId ? "Branch" : "AgriBridge Company",
       order_from_branch_id: orderFromBranchId,
+      // Settlement sirf branch-to-branch par maani rakhta hai; Company se
+      // aane wale order mein khali rehta hai.
+      settlement_method: orderFromBranchId ? settlementMethod : null,
       order_to_type: orderToType,
       order_to_branch_id: orderToBranchId,
       partner_name: partnerName,
@@ -230,10 +234,17 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
 
   const orderType = String(formData.get("order_type") ?? "");
   const paymentTerms = String(formData.get("payment_terms") ?? "Credit");
+  const sourceBranchId = (formData.get("order_from_branch_id") as string) || null;
+  const settlementMethod = (formData.get("settlement_method") as string) || null;
   const notes = (formData.get("notes") as string) || null;
   const itemsJson = String(formData.get("items_json") ?? "[]");
 
   if (!orderType) return { error: "Order Type zaroori hai." };
+  if (sourceBranchId) {
+    if (sourceBranchId === seller.id) return { error: "Apni hi shop se order nahi ho sakta. Koi doosri shop chunein." };
+    if (!settlementMethod) return { error: "Settlement ka tareeqa chunein." };
+    if (!["company_ledger", "direct_branch"].includes(settlementMethod)) return { error: "Settlement ka tareeqa sahi nahi hai." };
+  }
 
   let items: OrderItemInput[] = [];
   try {
@@ -255,8 +266,9 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
     .insert({
       order_number: orderNumber,
       order_type: orderType,
-      order_from: "AgriBridge Company",
-      order_from_branch_id: null,
+      order_from: sourceBranchId ? "Branch" : "AgriBridge Company",
+      order_from_branch_id: sourceBranchId,
+      settlement_method: sourceBranchId ? settlementMethod : null,
       order_to_type: "Branch",
       order_to_branch_id: seller.id,
       shop_dealer_name: seller.name,
