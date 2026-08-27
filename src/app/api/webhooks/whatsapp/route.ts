@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { nextFarmerCode } from "@/actions/registration";
+import crypto from "crypto";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -16,9 +17,40 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ error: "Verification failed" }, { status: 403 });
 }
 
+/**
+ * Meta har webhook ke sath x-hub-signature-256 bhejta hai: raw body ka
+ * HMAC-SHA256, app secret se banaya hua. Iske baghair koi bhi jhoota
+ * payload bhej kar naye "kisan" bana sakta hai ya kisi asli kisan ka
+ * phone number de kar us ka roop dhar sakta hai — kyunke neeche wala
+ * code service client se chalta hai jo saari bandhishein bypass karta
+ * hai aur message.from par aankh band kar ke bharosa karta hai.
+ *
+ * Agar WHATSAPP_APP_SECRET set nahi hai to purana rawaiya barqarar
+ * rehta hai, taake live WhatsApp achanak band na ho jaye. Secret set
+ * karte hi tasdeeq khud-ba-khud chalu ho jayegi.
+ */
+function signatureIsValid(rawBody: string, header: string | null): boolean {
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) return true;
+  if (!header?.startsWith("sha256=")) return false;
+
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  // Lambai alag ho to timingSafeEqual phenk deta hai, is liye pehle check.
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Raw text chahiye — JSON parse karne ke baad asal bytes nahi milte,
+    // aur HMAC bilkul unhi bytes par banta hai jo Meta ne bheje the.
+    const rawBody = await request.text();
+    if (!signatureIsValid(rawBody, request.headers.get("x-hub-signature-256"))) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
     const serviceClient = createServiceClient();
 
     const entry = body.entry?.[0];

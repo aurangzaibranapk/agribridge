@@ -1,7 +1,13 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { requireStaff } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
+  // Bina rok ke ye SMTP ka khula darwaza tha — koi bhi kisi ko bhi email
+  // bhej sakta tha. Ise POS ka receipt bhejne wala staff hi chalata hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { to, subject, text } = await req.json();
 

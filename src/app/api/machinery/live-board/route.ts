@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // Live board admin panel ka andaruni safha hai. Middleware /api ko nahi bachata,
+  // is liye rok yahan lagani parti hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const supabase = createClient();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();

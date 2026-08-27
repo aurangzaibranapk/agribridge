@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { bridgeToolDeclarations, executeBridgeTool, classifyAgent, AGENT_SYSTEM_INSTRUCTIONS } from "@/lib/utils/bridge-tools";
+import { requireStaff } from "@/lib/api-auth";
 
 export async function POST(request: NextRequest) {
+  // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
+  // is liye rok yahan lagani parti hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const { message } = await request.json();
     if (!message || typeof message !== "string") {
