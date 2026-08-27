@@ -17,10 +17,14 @@ async function logTimeline(orderId: string, status: string, note: string) {
   await supabase.from("agri_order_timeline").insert({ order_id: orderId, status, note, created_by: user?.id ?? null });
 }
 
-async function getOrderBranchId(orderId: string): Promise<string | null> {
+// Branch-to-branch orders ke liye dono ids chahiye: order_to_branch_id
+// (jis shop ne order kiya) aur order_from_branch_id (jo shop apna stock de
+// rahi hai). Source branch ko dispatch banane ka haq getOrderPermissions
+// tabhi de sakta hai jab usay from-branch bhi mile.
+async function getOrderBranchIds(orderId: string): Promise<{ toBranchId: string | null; fromBranchId: string | null }> {
   const supabase = createClient();
-  const { data } = await supabase.from("agri_orders").select("order_to_branch_id").eq("id", orderId).maybeSingle();
-  return data?.order_to_branch_id ?? null;
+  const { data } = await supabase.from("agri_orders").select("order_to_branch_id, order_from_branch_id").eq("id", orderId).maybeSingle();
+  return { toBranchId: data?.order_to_branch_id ?? null, fromBranchId: data?.order_from_branch_id ?? null };
 }
 
 async function generateDispatchNumber(): Promise<string> {
@@ -55,8 +59,8 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
-  const branchId = await getOrderBranchId(orderId);
-  const permissions = await getOrderPermissions(branchId);
+  const { toBranchId, fromBranchId } = await getOrderBranchIds(orderId);
+  const permissions = await getOrderPermissions(toBranchId, fromBranchId);
   if (!permissions.canCreateDispatch) return { error: "Aapko dispatch create karne ki ijazat nahi hai. Ye warehouse/admin ka kaam hai." };
 
   const vehicleNo = (formData.get("vehicle_no") as string) || null;
@@ -127,8 +131,8 @@ export async function confirmDelivery(_prev: ActionState, formData: FormData): P
   const dispatchId = String(formData.get("dispatch_id") ?? "");
   if (!orderId || !dispatchId) return { error: "Missing ids." };
 
-  const branchId = await getOrderBranchId(orderId);
-  const permissions = await getOrderPermissions(branchId);
+  const { toBranchId, fromBranchId } = await getOrderBranchIds(orderId);
+  const permissions = await getOrderPermissions(toBranchId, fromBranchId);
   if (!permissions.canConfirmDelivery) return { error: "Sirf order karne wali branch delivery confirm kar sakti hai." };
 
   const receiverName = String(formData.get("receiver_name") ?? "").trim();

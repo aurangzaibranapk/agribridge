@@ -72,7 +72,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
     return <div className="p-8 text-center text-surface-400">Order nahi mila.</div>;
   }
 
-  const permissions = await getOrderPermissions(order.order_to_branch_id ?? null);
+  const permissions = await getOrderPermissions(order.order_to_branch_id ?? null, order.order_from_branch_id ?? null);
 
   // Logged-in user's own identity - passed down so the Delivery Confirm
   // modal can auto-fill "Receiver" fields instead of retyping what the
