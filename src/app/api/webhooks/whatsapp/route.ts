@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { nextFarmerCode } from "@/actions/registration";
-import crypto from "crypto";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
  * HMAC-SHA256, app secret se banaya hua. Iske baghair koi bhi jhoota
  * payload bhej kar naye "kisan" bana sakta hai ya kisi asli kisan ka
  * phone number de kar us ka roop dhar sakta hai — kyunke neeche wala
- * code service client se chalta hai jo saari bandhishein bypass karta
- * hai aur message.from par aankh band kar ke bharosa karta hai.
+ * code service client se chalta hai (jo saari bandhishein bypass karta
+ * hai) aur message.from par aankh band kar ke bharosa karta hai.
  *
  * Agar WHATSAPP_APP_SECRET set nahi hai to purana rawaiya barqarar
  * rehta hai, taake live WhatsApp achanak band na ho jaye. Secret set
@@ -64,10 +64,13 @@ export async function POST(request: NextRequest) {
 
     const fromPhone = normalizeWhatsAppPhone(message.from);
 
-    let { data: farmer } = await serviceClient.from("farmers").select("id").eq("whatsapp_number", fromPhone).maybeSingle();
+    let { data: farmer } = await serviceClient.from("farmers").select("id, is_profile_complete").eq("whatsapp_number", fromPhone).maybeSingle();
 
     if (!farmer) {
-      const { data: byPhone } = await serviceClient.from("farmers").select("id").eq("phone_number", fromPhone).maybeSingle();
+      // is_profile_complete yahan bhi uthana zaroori hai: warna phone se
+      // milne wale purane kisan ko har baar "profile adhoora" samajh kar
+      // dobara registration poochh li jayegi.
+      const { data: byPhone } = await serviceClient.from("farmers").select("id, is_profile_complete").eq("phone_number", fromPhone).maybeSingle();
       if (byPhone) {
         await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", byPhone.id);
         farmer = byPhone;
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
         const { data: newFarmer } = await serviceClient
           .from("farmers")
           .insert({ farmer_code: farmerCode, full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`, phone_number: fromPhone, whatsapp_number: fromPhone })
-          .select("id")
+          .select("id, is_profile_complete")
           .single();
         farmer = newFarmer;
       }
@@ -87,6 +90,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    const isProfileComplete = (farmer as any).is_profile_complete ?? false;
+
     let result;
     if (message.type === "audio" || message.type === "voice") {
       const mediaId = message.audio?.id ?? message.voice?.id;
@@ -95,9 +100,9 @@ export async function POST(request: NextRequest) {
         await sendWhatsAppMessage(fromPhone, "Voice note download nahi ho saki, dobara bhejein.");
         return NextResponse.json({ ok: true });
       }
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType });
+      result = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType, isProfileComplete });
     } else if (message.type === "text") {
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body });
+      result = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body, isProfileComplete });
     } else {
       await sendWhatsAppMessage(fromPhone, "Abhi sirf Text ya Voice message samajh sakte hain.");
       return NextResponse.json({ ok: true });
