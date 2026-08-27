@@ -6,6 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { getOrderPermissions } from "@/lib/order-permissions";
+import { getBranchCreditCheck, creditLimitMessage, isAdvanceOrder } from "@/lib/order-payment-gate";
 import { notifyRole, notifyRoles, notifyBranch } from "@/lib/notifications";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
@@ -348,6 +349,21 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
   const branchId = await getOrderBranchId(orderId);
   const permissions = await getOrderPermissions(branchId);
   if (!permissions.canFinanceVerify) return { error: "Aapko Finance Verify karne ki ijazat nahi hai." };
+
+  // Base (udhaar) order sirf branch ki credit limit ke andar hi chal
+  // sakta hai — yahi wo maqam hai jahan Finance udhaar ki tasdeeq
+  // karti hai. Advance order is check se guzarta nahi, kyunke usmein
+  // paisa pehle aata hai (rok createDispatch par lagti hai).
+  const { data: orderForCredit } = await supabase
+    .from("agri_orders")
+    .select("payment_terms, grand_total")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!isAdvanceOrder(orderForCredit?.payment_terms)) {
+    const credit = await getBranchCreditCheck(branchId, Number(orderForCredit?.grand_total ?? 0));
+    if (!credit.isWithinLimit) return { error: creditLimitMessage(credit) };
+  }
 
   const comment = String(formData.get("comment") ?? "").trim();
 

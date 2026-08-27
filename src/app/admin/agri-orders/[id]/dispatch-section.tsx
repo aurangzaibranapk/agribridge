@@ -67,6 +67,8 @@ export function DispatchSection({
   drivers,
   dispatchItems,
   currentUserIdentity,
+  advanceBlocked,
+  advanceRemaining,
 }: {
   orderId: string;
   orderStatus: string;
@@ -77,6 +79,9 @@ export function DispatchSection({
   drivers: Driver[];
   dispatchItems: DispatchItem[];
   currentUserIdentity: CurrentUserIdentity;
+  /** Advance order hai aur poori payment abhi verify nahi hui. */
+  advanceBlocked: boolean;
+  advanceRemaining: number;
 }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -87,10 +92,19 @@ export function DispatchSection({
         <Truck className="h-4 w-4" /> Dispatch & Delivery
       </h3>
 
+      {/* Advance order mein poori payment aaye baghair dispatch ka button
+          hi nahi khulta. Asal rok server par createDispatch mein hai —
+          ye sirf wajah samne rakhta hai. */}
       {!dispatch && orderStatus === "approved" && permissions.canCreateDispatch && (
-        <button onClick={() => setShowCreate(true)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          Dispatch Banayein
-        </button>
+        advanceBlocked ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            Advance Order hai — Rs {advanceRemaining.toLocaleString()} ki payment abhi verify nahi hui. Poori payment verify hone par Dispatch ka button khul jayega.
+          </p>
+        ) : (
+          <button onClick={() => setShowCreate(true)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
+            Dispatch Banayein
+          </button>
+        )
       )}
 
       {dispatch && (

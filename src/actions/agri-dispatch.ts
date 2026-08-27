@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
+import { getAdvancePaymentStatus } from "@/lib/order-payment-gate";
 
 export interface ActionState {
   error?: string;
@@ -62,6 +63,17 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   const { toBranchId, fromBranchId } = await getOrderBranchIds(orderId);
   const permissions = await getOrderPermissions(toBranchId, fromBranchId);
   if (!permissions.canCreateDispatch) return { error: "Aapko dispatch create karne ki ijazat nahi hai. Ye warehouse/admin ka kaam hai." };
+
+  // Advance Order ka usool: jab tak poori payment verify na ho, maal
+  // godown se nahi nikalta. Approval chain (sales > finance > manager)
+  // pehle ki tarah chalti rehti hai — rok sirf isi aakhri qadam par
+  // lagti hai. Base order is check se guzarta hi nahi.
+  const advance = await getAdvancePaymentStatus(orderId);
+  if (!advance.isSatisfied) {
+    return {
+      error: `Ye Advance Order hai. Grand Total Rs ${advance.grandTotal.toLocaleString()} mein se Rs ${advance.verifiedPaid.toLocaleString()} verify hui hai — Rs ${advance.remaining.toLocaleString()} baqi hai. Poori payment verify hone tak dispatch nahi ho sakta.`,
+    };
+  }
 
   const vehicleNo = (formData.get("vehicle_no") as string) || null;
   const driverName = (formData.get("driver_name") as string) || null;
