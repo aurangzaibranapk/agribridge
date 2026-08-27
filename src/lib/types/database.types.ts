@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -207,6 +207,60 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "agri_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agri_delivery_items: {
+        Row: {
+          created_at: string
+          damaged_qty: number
+          delivery_id: string
+          dispatch_item_id: string | null
+          dispatched_qty: number
+          id: string
+          product_name: string
+          reason: string | null
+          received_qty: number
+          short_qty: number
+        }
+        Insert: {
+          created_at?: string
+          damaged_qty?: number
+          delivery_id: string
+          dispatch_item_id?: string | null
+          dispatched_qty: number
+          id?: string
+          product_name: string
+          reason?: string | null
+          received_qty: number
+          short_qty?: number
+        }
+        Update: {
+          created_at?: string
+          damaged_qty?: number
+          delivery_id?: string
+          dispatch_item_id?: string | null
+          dispatched_qty?: number
+          id?: string
+          product_name?: string
+          reason?: string | null
+          received_qty?: number
+          short_qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agri_delivery_items_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "agri_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_delivery_items_dispatch_item_id_fkey"
+            columns: ["dispatch_item_id"]
+            isOneToOne: false
+            referencedRelation: "agri_dispatch_items"
             referencedColumns: ["id"]
           },
         ]
@@ -496,6 +550,7 @@ export type Database = {
       }
       agri_grns: {
         Row: {
+          additional_charges: number | null
           created_at: string
           created_by: string | null
           damage_amount: number
@@ -519,6 +574,7 @@ export type Database = {
           warehouse_reviewed_by: string | null
         }
         Insert: {
+          additional_charges?: number | null
           created_at?: string
           created_by?: string | null
           damage_amount?: number
@@ -542,6 +598,7 @@ export type Database = {
           warehouse_reviewed_by?: string | null
         }
         Update: {
+          additional_charges?: number | null
           created_at?: string
           created_by?: string | null
           damage_amount?: number
@@ -798,6 +855,134 @@ export type Database = {
           },
         ]
       }
+      agri_order_return_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_reason: string | null
+          line_total: number
+          product_id: string | null
+          product_name: string
+          return_id: string
+          return_qty: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_reason?: string | null
+          line_total?: number
+          product_id?: string | null
+          product_name: string
+          return_id: string
+          return_qty: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_reason?: string | null
+          line_total?: number
+          product_id?: string | null
+          product_name?: string
+          return_id?: string
+          return_qty?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agri_order_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "agri_order_returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agri_order_returns: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          reason: string
+          received_at: string | null
+          received_by: string | null
+          rejection_reason: string | null
+          return_number: string
+          status: string
+          total_amount: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason: string
+          received_at?: string | null
+          received_by?: string | null
+          rejection_reason?: string | null
+          return_number: string
+          status?: string
+          total_amount?: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason?: string
+          received_at?: string | null
+          received_by?: string | null
+          rejection_reason?: string | null
+          return_number?: string
+          status?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agri_order_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "agri_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_returns_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agri_order_timeline: {
         Row: {
           created_at: string
@@ -876,6 +1061,7 @@ export type Database = {
           requested_by: string | null
           sales_verified_at: string | null
           sales_verified_by: string | null
+          settlement_method: string | null
           shop_dealer_name: string | null
           status: string
           subtotal: number
@@ -917,6 +1103,7 @@ export type Database = {
           requested_by?: string | null
           sales_verified_at?: string | null
           sales_verified_by?: string | null
+          settlement_method?: string | null
           shop_dealer_name?: string | null
           status?: string
           subtotal?: number
@@ -958,6 +1145,7 @@ export type Database = {
           requested_by?: string | null
           sales_verified_at?: string | null
           sales_verified_by?: string | null
+          settlement_method?: string | null
           shop_dealer_name?: string | null
           status?: string
           subtotal?: number
@@ -1010,6 +1198,21 @@ export type Database = {
         ]
       }
       agri_payment_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      agri_return_counters: {
         Row: {
           last_number: number
           year: number
@@ -1209,6 +1412,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      announcement_dismissals: {
+        Row: {
+          announcement_id: string
+          dismissed_at: string
+          farmer_id: string
+          id: string
+          vote: string | null
+        }
+        Insert: {
+          announcement_id: string
+          dismissed_at?: string
+          farmer_id: string
+          id?: string
+          vote?: string | null
+        }
+        Update: {
+          announcement_id?: string
+          dismissed_at?: string
+          farmer_id?: string
+          id?: string
+          vote?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_dismissals_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          created_at: string
+          cta_label: string | null
+          cta_type: string
+          cta_url: string | null
+          id: string
+          is_active: boolean
+          message: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          cta_label?: string | null
+          cta_type?: string
+          cta_url?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          cta_label?: string | null
+          cta_type?: string
+          cta_url?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          title?: string
+        }
+        Relationships: []
       }
       application_activity_log: {
         Row: {
@@ -1646,6 +1942,7 @@ export type Database = {
       }
       bridge_ai_activity_log: {
         Row: {
+          agent_type: string | null
           answer: string | null
           created_at: string
           id: string
@@ -1653,6 +1950,7 @@ export type Database = {
           tools_called: string[]
         }
         Insert: {
+          agent_type?: string | null
           answer?: string | null
           created_at?: string
           id?: string
@@ -1660,6 +1958,7 @@ export type Database = {
           tools_called?: string[]
         }
         Update: {
+          agent_type?: string | null
           answer?: string | null
           created_at?: string
           id?: string
@@ -1730,7 +2029,10 @@ export type Database = {
       }
       bridge_orders: {
         Row: {
+          advance_paid: number
+          advance_required: number
           assigned_dealer_id: string | null
+          cart_group_id: string | null
           commission_amount: number
           commission_rate_applied: number | null
           created_by: string | null
@@ -1745,9 +2047,11 @@ export type Database = {
           district: string
           farmer_id: string
           id: string
+          last_payment_method: string | null
           order_number: string
           organization_id: string
           otp_verified_at: string | null
+          payment_mode: string | null
           placed_at: string
           source: Database["public"]["Enums"]["bridge_order_source"]
           status: Database["public"]["Enums"]["bridge_order_status"]
@@ -1757,7 +2061,10 @@ export type Database = {
           verified_at: string | null
         }
         Insert: {
+          advance_paid?: number
+          advance_required?: number
           assigned_dealer_id?: string | null
+          cart_group_id?: string | null
           commission_amount?: number
           commission_rate_applied?: number | null
           created_by?: string | null
@@ -1772,9 +2079,11 @@ export type Database = {
           district: string
           farmer_id: string
           id?: string
+          last_payment_method?: string | null
           order_number: string
           organization_id?: string
           otp_verified_at?: string | null
+          payment_mode?: string | null
           placed_at?: string
           source?: Database["public"]["Enums"]["bridge_order_source"]
           status?: Database["public"]["Enums"]["bridge_order_status"]
@@ -1784,7 +2093,10 @@ export type Database = {
           verified_at?: string | null
         }
         Update: {
+          advance_paid?: number
+          advance_required?: number
           assigned_dealer_id?: string | null
+          cart_group_id?: string | null
           commission_amount?: number
           commission_rate_applied?: number | null
           created_by?: string | null
@@ -1799,9 +2111,11 @@ export type Database = {
           district?: string
           farmer_id?: string
           id?: string
+          last_payment_method?: string | null
           order_number?: string
           organization_id?: string
           otp_verified_at?: string | null
+          payment_mode?: string | null
           placed_at?: string
           source?: Database["public"]["Enums"]["bridge_order_source"]
           status?: Database["public"]["Enums"]["bridge_order_status"]
@@ -2141,6 +2455,7 @@ export type Database = {
           id: string
           rejection_reason: string | null
           requested_by: string | null
+          shop_id: string | null
           status: string
           supplier_id: string | null
         }
@@ -2157,6 +2472,7 @@ export type Database = {
           id?: string
           rejection_reason?: string | null
           requested_by?: string | null
+          shop_id?: string | null
           status?: string
           supplier_id?: string | null
         }
@@ -2173,6 +2489,7 @@ export type Database = {
           id?: string
           rejection_reason?: string | null
           requested_by?: string | null
+          shop_id?: string | null
           status?: string
           supplier_id?: string | null
         }
@@ -2196,6 +2513,13 @@ export type Database = {
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
           {
@@ -2977,6 +3301,8 @@ export type Database = {
           district: string | null
           id: string
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           organization_id: string
           phone_number: string
           status: string
@@ -2999,6 +3325,8 @@ export type Database = {
           district?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           organization_id?: string
           phone_number: string
           status?: string
@@ -3021,6 +3349,8 @@ export type Database = {
           district?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           organization_id?: string
           phone_number?: string
           status?: string
@@ -3306,10 +3636,89 @@ export type Database = {
           },
         ]
       }
+      farmer_ai_requests: {
+        Row: {
+          created_at: string
+          description: string
+          details: Json | null
+          expert_response: string | null
+          farmer_id: string
+          id: string
+          intent_type: string
+          responded_at: string | null
+          responded_by: string | null
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          details?: Json | null
+          expert_response?: string | null
+          farmer_id: string
+          id?: string
+          intent_type: string
+          responded_at?: string | null
+          responded_by?: string | null
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          details?: Json | null
+          expert_response?: string | null
+          farmer_id?: string
+          id?: string
+          intent_type?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farmer_credit_ledger: {
         Row: {
           amount: number
           balance_after: number
+          collected_by: string | null
           created_at: string
           created_by: string | null
           farmer_id: string
@@ -3322,6 +3731,7 @@ export type Database = {
         Insert: {
           amount: number
           balance_after: number
+          collected_by?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id: string
@@ -3334,6 +3744,7 @@ export type Database = {
         Update: {
           amount?: number
           balance_after?: number
+          collected_by?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id?: string
@@ -3367,6 +3778,78 @@ export type Database = {
           },
           {
             foreignKeyName: "farmer_credit_ledger_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      farmer_loans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          farmer_id: string
+          id: string
+          notes: string | null
+          outstanding_balance: number
+          principal_amount: number
+          status: string
+          weekly_installment: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          farmer_id: string
+          id?: string
+          notes?: string | null
+          outstanding_balance: number
+          principal_amount: number
+          status?: string
+          weekly_installment: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          farmer_id?: string
+          id?: string
+          notes?: string | null
+          outstanding_balance?: number
+          principal_amount?: number
+          status?: string
+          weekly_installment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmer_loans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "milk_farmer_balances"
@@ -3440,12 +3923,88 @@ export type Database = {
           },
         ]
       }
+      farmer_subscriptions: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          created_by: string | null
+          end_date: string
+          farmer_id: string
+          id: string
+          payment_method: string | null
+          receipt_photo_url: string | null
+          start_date: string
+          status: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          farmer_id: string
+          id?: string
+          payment_method?: string | null
+          receipt_photo_url?: string | null
+          start_date?: string
+          status?: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          farmer_id?: string
+          id?: string
+          payment_method?: string | null
+          receipt_photo_url?: string | null
+          start_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmer_subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
       farmers: {
         Row: {
           address: string | null
           animal_image_urls: string[]
           auto_khata_bank_cashout: boolean
           backup_phone_number: string | null
+          booking_link_token: string | null
           branch_id: string | null
           buffalo_count: number | null
           calves_count: number | null
@@ -3456,6 +4015,7 @@ export type Database = {
           cnic_image_url: string | null
           cow_count: number | null
           created_at: string
+          credit_limit: number | null
           crop_image_urls: string[]
           crop_types: string[]
           district: string | null
@@ -3492,12 +4052,14 @@ export type Database = {
           user_id: string | null
           village: string | null
           whatsapp_notifications_enabled: boolean
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
           animal_image_urls?: string[]
           auto_khata_bank_cashout?: boolean
           backup_phone_number?: string | null
+          booking_link_token?: string | null
           branch_id?: string | null
           buffalo_count?: number | null
           calves_count?: number | null
@@ -3508,6 +4070,7 @@ export type Database = {
           cnic_image_url?: string | null
           cow_count?: number | null
           created_at?: string
+          credit_limit?: number | null
           crop_image_urls?: string[]
           crop_types?: string[]
           district?: string | null
@@ -3544,12 +4107,14 @@ export type Database = {
           user_id?: string | null
           village?: string | null
           whatsapp_notifications_enabled?: boolean
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
           animal_image_urls?: string[]
           auto_khata_bank_cashout?: boolean
           backup_phone_number?: string | null
+          booking_link_token?: string | null
           branch_id?: string | null
           buffalo_count?: number | null
           calves_count?: number | null
@@ -3560,6 +4125,7 @@ export type Database = {
           cnic_image_url?: string | null
           cow_count?: number | null
           created_at?: string
+          credit_limit?: number | null
           crop_image_urls?: string[]
           crop_types?: string[]
           district?: string | null
@@ -3596,6 +4162,7 @@ export type Database = {
           user_id?: string | null
           village?: string | null
           whatsapp_notifications_enabled?: boolean
+          whatsapp_number?: string | null
         }
         Relationships: [
           {
@@ -4119,16 +4686,155 @@ export type Database = {
           },
         ]
       }
-      grain_procurement_entries: {
+      grain_cut_presets: {
         Row: {
           created_at: string
+          cut_percentage: number
+          grain_type: string
+          id: string
+          is_active: boolean
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          cut_percentage: number
+          grain_type: string
+          id?: string
+          is_active?: boolean
+          label: string
+        }
+        Update: {
+          created_at?: string
+          cut_percentage?: number
+          grain_type?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+        }
+        Relationships: []
+      }
+      grain_expenses: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category: string
+          created_at: string
           created_by: string | null
+          description: string
+          entry_id: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          entry_id?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          entry_id?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grain_expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_expenses_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "grain_procurement_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grain_parties: {
+        Row: {
+          address: string | null
+          cnic: string | null
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          party_name: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          party_name: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          party_name?: string
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grain_parties_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grain_procurement_entries: {
+        Row: {
+          chungi_amount: number
+          chungi_kg: number | null
+          chungi_type: string | null
+          created_at: string
+          created_by: string | null
+          cut_kg: number | null
+          cut_percentage: number | null
           entry_date: string
-          farmer_id: string
+          farmer_id: string | null
           grain_type: Database["public"]["Enums"]["grain_type"]
+          gross_weight_kg: number | null
           id: string
           moisture_percentage: number | null
           notes: string | null
+          party_id: string | null
           quality_grade: string | null
           rate_per_kg: number
           total_amount: number
@@ -4136,14 +4842,21 @@ export type Database = {
           weight_kg: number
         }
         Insert: {
+          chungi_amount?: number
+          chungi_kg?: number | null
+          chungi_type?: string | null
           created_at?: string
           created_by?: string | null
+          cut_kg?: number | null
+          cut_percentage?: number | null
           entry_date?: string
-          farmer_id: string
+          farmer_id?: string | null
           grain_type: Database["public"]["Enums"]["grain_type"]
+          gross_weight_kg?: number | null
           id?: string
           moisture_percentage?: number | null
           notes?: string | null
+          party_id?: string | null
           quality_grade?: string | null
           rate_per_kg: number
           total_amount: number
@@ -4151,14 +4864,21 @@ export type Database = {
           weight_kg: number
         }
         Update: {
+          chungi_amount?: number
+          chungi_kg?: number | null
+          chungi_type?: string | null
           created_at?: string
           created_by?: string | null
+          cut_kg?: number | null
+          cut_percentage?: number | null
           entry_date?: string
-          farmer_id?: string
+          farmer_id?: string | null
           grain_type?: Database["public"]["Enums"]["grain_type"]
+          gross_weight_kg?: number | null
           id?: string
           moisture_percentage?: number | null
           notes?: string | null
+          party_id?: string | null
           quality_grade?: string | null
           rate_per_kg?: number
           total_amount?: number
@@ -4195,6 +4915,13 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "grain_procurement_entries_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "grain_parties"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -4208,33 +4935,58 @@ export type Database = {
           amount: number
           created_at: string
           created_by: string | null
-          farmer_id: string
+          edited_at: string | null
+          edited_by: string | null
+          farmer_id: string | null
           id: string
+          is_edited: boolean
           notes: string | null
+          original_amount: number | null
+          party_id: string | null
           payment_date: string
           payment_method: string | null
+          receipt_photo_url: string | null
         }
         Insert: {
           amount: number
           created_at?: string
           created_by?: string | null
-          farmer_id: string
+          edited_at?: string | null
+          edited_by?: string | null
+          farmer_id?: string | null
           id?: string
+          is_edited?: boolean
           notes?: string | null
+          original_amount?: number | null
+          party_id?: string | null
           payment_date?: string
           payment_method?: string | null
+          receipt_photo_url?: string | null
         }
         Update: {
           amount?: number
           created_at?: string
           created_by?: string | null
-          farmer_id?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          farmer_id?: string | null
           id?: string
+          is_edited?: boolean
           notes?: string | null
+          original_amount?: number | null
+          party_id?: string | null
           payment_date?: string
           payment_method?: string | null
+          receipt_photo_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "grain_procurement_payments_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "grain_procurement_payments_farmer_id_fkey"
             columns: ["farmer_id"]
@@ -4262,6 +5014,191 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "milk_farmer_balances"
             referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_payments_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "grain_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grain_sale_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      grain_sale_payments: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          sale_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          sale_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grain_sale_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sale_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "grain_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grain_sales: {
+        Row: {
+          amount_received: number
+          bardana_cost: number
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          delivery_term: string | null
+          grain_type: string
+          id: string
+          mazdoori_cost: number
+          notes: string | null
+          profit: number
+          quantity_kg: number
+          rate_per_kg: number
+          sale_date: string
+          sale_number: string
+          total_amount: number
+          total_cogs: number
+          warehouse_id: string
+        }
+        Insert: {
+          amount_received?: number
+          bardana_cost?: number
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_term?: string | null
+          grain_type: string
+          id?: string
+          mazdoori_cost?: number
+          notes?: string | null
+          profit?: number
+          quantity_kg: number
+          rate_per_kg: number
+          sale_date?: string
+          sale_number: string
+          total_amount: number
+          total_cogs?: number
+          warehouse_id: string
+        }
+        Update: {
+          amount_received?: number
+          bardana_cost?: number
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_term?: string | null
+          grain_type?: string
+          id?: string
+          mazdoori_cost?: number
+          notes?: string | null
+          profit?: number
+          quantity_kg?: number
+          rate_per_kg?: number
+          sale_date?: string
+          sale_number?: string
+          total_amount?: number
+          total_cogs?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grain_sales_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sales_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grain_type_products: {
+        Row: {
+          grain_type: string
+          product_id: string
+        }
+        Insert: {
+          grain_type: string
+          product_id: string
+        }
+        Update: {
+          grain_type?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grain_type_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4335,6 +5272,7 @@ export type Database = {
           id: string
           image_url: string
           is_active: boolean
+          mobile_image_url: string | null
           subheadline: string | null
         }
         Insert: {
@@ -4346,6 +5284,7 @@ export type Database = {
           id?: string
           image_url: string
           is_active?: boolean
+          mobile_image_url?: string | null
           subheadline?: string | null
         }
         Update: {
@@ -4357,6 +5296,7 @@ export type Database = {
           id?: string
           image_url?: string
           is_active?: boolean
+          mobile_image_url?: string | null
           subheadline?: string | null
         }
         Relationships: []
@@ -5189,10 +6129,222 @@ export type Database = {
           },
         ]
       }
+      loss_verifiers: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          profile_id: string
+          shop_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id: string
+          shop_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id?: string
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loss_verifiers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_booking_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_bookings: {
+        Row: {
+          acres: number | null
+          amount_paid_to_vendor: number
+          amount_received_from_farmer: number
+          booking_date: string
+          booking_number: string
+          commission_amount: number
+          commission_percentage: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          crop_type: string | null
+          days: number | null
+          diesel_amount: number | null
+          diesel_rate: number | null
+          farmer_id: string
+          hours: number | null
+          id: string
+          location_address: string | null
+          machine_id: string
+          notes: string | null
+          rate_amount: number
+          request_id: string | null
+          status: string
+          total_amount: number
+          vendor_id: string
+          vendor_payable: number
+          wants_next_season_reminder: boolean | null
+          will_sell_to_us: boolean | null
+        }
+        Insert: {
+          acres?: number | null
+          amount_paid_to_vendor?: number
+          amount_received_from_farmer?: number
+          booking_date?: string
+          booking_number: string
+          commission_amount?: number
+          commission_percentage?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          days?: number | null
+          diesel_amount?: number | null
+          diesel_rate?: number | null
+          farmer_id: string
+          hours?: number | null
+          id?: string
+          location_address?: string | null
+          machine_id: string
+          notes?: string | null
+          rate_amount: number
+          request_id?: string | null
+          status?: string
+          total_amount: number
+          vendor_id: string
+          vendor_payable?: number
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+        }
+        Update: {
+          acres?: number | null
+          amount_paid_to_vendor?: number
+          amount_received_from_farmer?: number
+          booking_date?: string
+          booking_number?: string
+          commission_amount?: number
+          commission_percentage?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          days?: number | null
+          diesel_amount?: number | null
+          diesel_rate?: number | null
+          farmer_id?: string
+          hours?: number | null
+          id?: string
+          location_address?: string | null
+          machine_id?: string
+          notes?: string | null
+          rate_amount?: number
+          request_id?: string | null
+          status?: string
+          total_amount?: number
+          vendor_id?: string
+          vendor_payable?: number
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendor_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machinery_requests: {
         Row: {
           acres: number | null
           created_at: string
+          crop_type: string | null
           estimated_cost: number | null
           estimated_cost_reasoning: string | null
           expected_date: string
@@ -5207,10 +6359,13 @@ export type Database = {
           requested_date: string
           status: string
           updated_at: string
+          wants_next_season_reminder: boolean | null
+          will_sell_to_us: boolean | null
         }
         Insert: {
           acres?: number | null
           created_at?: string
+          crop_type?: string | null
           estimated_cost?: number | null
           estimated_cost_reasoning?: string | null
           expected_date: string
@@ -5225,10 +6380,13 @@ export type Database = {
           requested_date?: string
           status?: string
           updated_at?: string
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
         }
         Update: {
           acres?: number | null
           created_at?: string
+          crop_type?: string | null
           estimated_cost?: number | null
           estimated_cost_reasoning?: string | null
           expected_date?: string
@@ -5243,6 +6401,8 @@ export type Database = {
           requested_date?: string
           status?: string
           updated_at?: string
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
         }
         Relationships: [
           {
@@ -5272,6 +6432,100 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "milk_farmer_balances"
             referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      machinery_vendor_machines: {
+        Row: {
+          commission_percentage: number
+          created_at: string
+          id: string
+          is_available: boolean
+          machine_type: string
+          model: string | null
+          notes: string | null
+          rate_amount: number
+          rate_type: string
+          vendor_id: string
+        }
+        Insert: {
+          commission_percentage?: number
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          machine_type: string
+          model?: string | null
+          notes?: string | null
+          rate_amount: number
+          rate_type: string
+          vendor_id: string
+        }
+        Update: {
+          commission_percentage?: number
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          machine_type?: string
+          model?: string | null
+          notes?: string | null
+          rate_amount?: number
+          rate_type?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_vendors: {
+        Row: {
+          address: string | null
+          cnic: string | null
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          phone: string | null
+          user_id: string | null
+          vendor_name: string
+        }
+        Insert: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          user_id?: string | null
+          vendor_name: string
+        }
+        Update: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          user_id?: string | null
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_vendors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5332,6 +6586,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mandi_rates: {
+        Row: {
+          created_at: string
+          crop_name: string
+          id: string
+          mandi_name: string
+          rate_date: string
+          rate_per_maund: number
+        }
+        Insert: {
+          created_at?: string
+          crop_name: string
+          id?: string
+          mandi_name: string
+          rate_date?: string
+          rate_per_maund: number
+        }
+        Update: {
+          created_at?: string
+          crop_name?: string
+          id?: string
+          mandi_name?: string
+          rate_date?: string
+          rate_per_maund?: number
+        }
+        Relationships: []
       }
       media_library: {
         Row: {
@@ -5868,6 +7149,32 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_method_account_map: {
+        Row: {
+          finance_account_id: string | null
+          payment_method: string
+          updated_at: string
+        }
+        Insert: {
+          finance_account_id?: string | null
+          payment_method: string
+          updated_at?: string
+        }
+        Update: {
+          finance_account_id?: string | null
+          payment_method?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -5941,28 +7248,34 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          line_cogs: number | null
           product_id: string
           quantity: number
           sale_id: string
           subtotal: number
+          unit_cost: number | null
           unit_price: number
         }
         Insert: {
           created_at?: string
           id?: string
+          line_cogs?: number | null
           product_id: string
           quantity: number
           sale_id: string
           subtotal: number
+          unit_cost?: number | null
           unit_price: number
         }
         Update: {
           created_at?: string
           id?: string
+          line_cogs?: number | null
           product_id?: string
           quantity?: number
           sale_id?: string
           subtotal?: number
+          unit_cost?: number | null
           unit_price?: number
         }
         Relationships: [
@@ -5989,6 +7302,7 @@ export type Database = {
           created_at: string
           id: string
           payment_method: string
+          receipt_url: string | null
           sale_id: string
           transaction_reference: string | null
         }
@@ -5998,6 +7312,7 @@ export type Database = {
           created_at?: string
           id?: string
           payment_method: string
+          receipt_url?: string | null
           sale_id: string
           transaction_reference?: string | null
         }
@@ -6007,6 +7322,7 @@ export type Database = {
           created_at?: string
           id?: string
           payment_method?: string
+          receipt_url?: string | null
           sale_id?: string
           transaction_reference?: string | null
         }
@@ -6024,8 +7340,11 @@ export type Database = {
           id: string
           khata_amount: number
           payment_mode: string
+          profit: number | null
+          shop_id: string | null
           status: string
           total_amount: number
+          total_cogs: number | null
         }
         Insert: {
           branch_id?: string | null
@@ -6038,8 +7357,11 @@ export type Database = {
           id?: string
           khata_amount?: number
           payment_mode: string
+          profit?: number | null
+          shop_id?: string | null
           status?: string
           total_amount: number
+          total_cogs?: number | null
         }
         Update: {
           branch_id?: string | null
@@ -6052,8 +7374,11 @@ export type Database = {
           id?: string
           khata_amount?: number
           payment_mode?: string
+          profit?: number | null
+          shop_id?: string | null
           status?: string
           total_amount?: number
+          total_cogs?: number | null
         }
         Relationships: [
           {
@@ -6082,6 +7407,13 @@ export type Database = {
             columns: ["dealer_id"]
             isOneToOne: false
             referencedRelation: "dealers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
@@ -6491,6 +7823,7 @@ export type Database = {
           organization_id: string
           phone_number: string | null
           role: Database["public"]["Enums"]["user_role"]
+          shop_id: string | null
           status: string
           status_changed_at: string | null
           status_reason: string | null
@@ -6505,6 +7838,7 @@ export type Database = {
           organization_id?: string
           phone_number?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          shop_id?: string | null
           status?: string
           status_changed_at?: string | null
           status_reason?: string | null
@@ -6519,6 +7853,7 @@ export type Database = {
           organization_id?: string
           phone_number?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          shop_id?: string | null
           status?: string
           status_changed_at?: string | null
           status_reason?: string | null
@@ -6536,6 +7871,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
@@ -7271,27 +8613,59 @@ export type Database = {
       }
       shops: {
         Row: {
+          address: string | null
+          branch_id: string | null
+          business_type: string
+          code: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
           name: string
+          organization_id: string | null
           owner_id: string | null
+          updated_at: string
         }
         Insert: {
+          address?: string | null
+          branch_id?: string | null
+          business_type?: string
+          code?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          organization_id?: string | null
           owner_id?: string | null
+          updated_at?: string
         }
         Update: {
+          address?: string | null
+          branch_id?: string | null
+          business_type?: string
+          code?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          organization_id?: string | null
           owner_id?: string | null
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shops_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shops_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shops_owner_id_fkey"
             columns: ["owner_id"]
@@ -7603,6 +8977,9 @@ export type Database = {
           investment_deal_id: string | null
           manufacture_date: string | null
           product_id: string
+          remaining_quantity: number | null
+          unit_cost: number | null
+          warehouse_id: string | null
         }
         Insert: {
           batch_number: string
@@ -7613,6 +8990,9 @@ export type Database = {
           investment_deal_id?: string | null
           manufacture_date?: string | null
           product_id: string
+          remaining_quantity?: number | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Update: {
           batch_number?: string
@@ -7623,6 +9003,9 @@ export type Database = {
           investment_deal_id?: string | null
           manufacture_date?: string | null
           product_id?: string
+          remaining_quantity?: number | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -7637,6 +9020,114 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_loss_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      stock_loss_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          loss_number: string
+          loss_type: string
+          loss_value: number
+          photo_url: string | null
+          product_id: string
+          quantity: number
+          reason: string
+          rejection_reason: string | null
+          reported_by: string | null
+          status: string
+          unit_cost: number
+          warehouse_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          loss_number: string
+          loss_type: string
+          loss_value?: number
+          photo_url?: string | null
+          product_id: string
+          quantity: number
+          reason: string
+          rejection_reason?: string | null
+          reported_by?: string | null
+          status?: string
+          unit_cost?: number
+          warehouse_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          loss_number?: string
+          loss_type?: string
+          loss_value?: number
+          photo_url?: string | null
+          product_id?: string
+          quantity?: number
+          reason?: string
+          rejection_reason?: string | null
+          reported_by?: string | null
+          status?: string
+          unit_cost?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_loss_records_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -7826,6 +9317,77 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_settings: {
+        Row: {
+          duration_days: number
+          id: boolean
+          is_enforced: boolean
+          minimum_amount: number
+        }
+        Insert: {
+          duration_days?: number
+          id?: boolean
+          is_enforced?: boolean
+          minimum_amount?: number
+        }
+        Update: {
+          duration_days?: number
+          id?: boolean
+          is_enforced?: boolean
+          minimum_amount?: number
+        }
+        Relationships: []
+      }
+      subscription_votes: {
+        Row: {
+          created_at: string
+          farmer_id: string
+          id: string
+          vote: string
+        }
+        Insert: {
+          created_at?: string
+          farmer_id: string
+          id?: string
+          vote: string
+        }
+        Update: {
+          created_at?: string
+          farmer_id?: string
+          id?: string
+          vote?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
           },
         ]
       }
@@ -8323,8 +9885,11 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           organization_id: string
+          shop_id: string | null
         }
         Insert: {
           address?: string | null
@@ -8333,8 +9898,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           organization_id?: string
+          shop_id?: string | null
         }
         Update: {
           address?: string | null
@@ -8343,8 +9911,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           organization_id?: string
+          shop_id?: string | null
         }
         Relationships: [
           {
@@ -8359,6 +9930,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouses_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
@@ -8465,16 +10043,28 @@ export type Database = {
       }
     }
     Functions: {
-      create_pos_sale: {
-        Args: {
-          p_cash_paid: number
-          p_customer_id: string
-          p_items: Json
-          p_khata_amount: number
-          p_payment_mode: string
-        }
-        Returns: string
-      }
+      create_pos_sale:
+        | {
+            Args: {
+              p_cash_paid: number
+              p_customer_id: string
+              p_items: Json
+              p_khata_amount: number
+              p_payment_mode: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cash_paid: number
+              p_customer_id: string
+              p_items: Json
+              p_khata_amount: number
+              p_payment_lines?: Json
+              p_payment_mode: string
+            }
+            Returns: string
+          }
       current_dealer_id: { Args: never; Returns: string }
       current_shop_id: { Args: never; Returns: string }
       fn_crop_profit_benchmarks: {
@@ -8489,6 +10079,7 @@ export type Database = {
       }
       fn_current_user_branch_id: { Args: never; Returns: string }
       fn_current_user_organization_id: { Args: never; Returns: string }
+      fn_current_user_warehouse_id: { Args: never; Returns: string }
       fn_default_branch_id: { Args: never; Returns: string }
       fn_default_organization_id: { Args: never; Returns: string }
       fn_find_marketplace_offer: {
@@ -8563,6 +10154,9 @@ export type Database = {
         | "machinery"
         | "produce_repayment"
         | "other"
+        | "milk"
+        | "wanda"
+        | "opening_balance"
       dealer_payout_status: "pending" | "paid" | "clawed_back"
       escrow_status: "held" | "released" | "refunded"
       farmer_payout_status: "pending" | "paid"
@@ -8638,6 +10232,7 @@ export type Database = {
         | "procurement"
         | "milk_collection"
         | "ai_assistant"
+        | "agronomist"
       wallet_owner_type:
         | "farmer"
         | "dealer"
@@ -8818,6 +10413,9 @@ export const Constants = {
         "machinery",
         "produce_repayment",
         "other",
+        "milk",
+        "wanda",
+        "opening_balance",
       ],
       dealer_payout_status: ["pending", "paid", "clawed_back"],
       escrow_status: ["held", "released", "refunded"],
@@ -8901,6 +10499,7 @@ export const Constants = {
         "procurement",
         "milk_collection",
         "ai_assistant",
+        "agronomist",
       ],
       wallet_owner_type: [
         "farmer",
