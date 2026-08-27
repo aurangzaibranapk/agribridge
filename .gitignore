@@ -9,3 +9,5 @@ build/
 src.backup/
 .vercel
 *.zip 
+
+*.tsbuildinfo
