@@ -327,6 +327,49 @@ export async function loadAlerts(): Promise<Alert[]> {
     });
   }
 
+  // ---- Cash jo abhi kisi ke haath mein hai ----
+  // Ye raqam "raaste mein" hai, gum nahi -- magar jitna waqt guzarta
+  // hai, utna kam mumkin hota jata hai ke wo kabhi mile. Is liye din
+  // ginte hain, sirf raqam nahi.
+  const { data: inTransit } = await service
+    .from("v_cash_in_transit")
+    .select("amount_sent, din_guzray, lene_wala, le_jane_wala");
+
+  const transitRows = inTransit ?? [];
+  if (transitRows.length > 0) {
+    const total = transitRows.reduce((sum, r) => sum + n(r.amount_sent), 0);
+    const stale = transitRows.filter((r) => n(r.din_guzray) >= 2);
+    const names = Array.from(
+      new Set(stale.map((r) => r.le_jane_wala ?? r.lene_wala ?? "—"))
+    );
+
+    alerts.push({
+      tone: stale.length > 0 ? "red" : "amber",
+      title: `Rs ${Math.round(total).toLocaleString()} abhi kisi ke haath mein hai`,
+      detail:
+        stale.length > 0
+          ? `${stale.length} raqam do ya us se zyada din se raaste mein hai — ${names.join(", ")}. Tasdeeq abhi tak nahi hui.`
+          : `${transitRows.length} handover ki tasdeeq baqi hai.`,
+      href: "/admin/cash-handover",
+    });
+  }
+
+  // ---- Bank ki wo qataren jo hamare khate mein hain hi nahi ----
+  const { data: bankGaps } = await service
+    .from("bank_statement_lines")
+    .select("amount")
+    .eq("status", "unmatched");
+
+  if ((bankGaps ?? []).length > 0) {
+    const total = (bankGaps ?? []).reduce((sum, r) => sum + Math.abs(n(r.amount)), 0);
+    alerts.push({
+      tone: "amber",
+      title: `Bank ki ${(bankGaps ?? []).length} qatar hamare khate mein nahi`,
+      detail: `Rs ${Math.round(total).toLocaleString()} ka farq. Bank ghalat nahi hota — ye entriyan hamari taraf reh gayi hain.`,
+      href: "/admin/bank-reconcile",
+    });
+  }
+
   if (alerts.length === 0) {
     alerts.push({
       tone: "green",

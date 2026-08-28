@@ -111,7 +111,9 @@ export interface MoneyTrail {
   cash: number;
   bank: number;
   inTransit: number;
+  cashWithPerson: number;
   receivableCustomers: number;
+  receivableFarmers: number;
   receivableBranches: number;
   advanceSuppliers: number;
   advanceStaff: number;
@@ -134,7 +136,9 @@ const GROUPS = {
   cash: ["1000"],
   bank: ["1010"],
   inTransit: ["1020"],
+  cashWithPerson: ["1030"],
   receivableCustomers: ["1100"],
+  receivableFarmers: ["1150"],
   receivableBranches: ["1110"],
   advanceSuppliers: ["1120"],
   advanceStaff: ["1130"],

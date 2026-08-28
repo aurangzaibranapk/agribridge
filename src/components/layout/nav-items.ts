@@ -109,6 +109,9 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/command-center", label: "Owner Command Center", icon: Scale },
       { href: "/admin/money-trail", label: "Paisa Kahan Hai (Money Trail)", icon: Scale },
+      { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Calculator },
+      { href: "/admin/cash-handover", label: "Cash Haath Badalna", icon: ArrowLeftRight },
+      { href: "/admin/bank-reconcile", label: "Bank se Milaan", icon: Landmark },
       { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Landmark },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Profit & Loss (Shop-wise)", icon: LineChart },

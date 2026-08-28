@@ -45,7 +45,12 @@ export function failed(result: PostResult): result is { error: string } {
 export const ACC = {
   cash: "1000",
   bank: "1010",
+  // 1020 bank ke raaste ka paisa hai (bheja, jama nahi hua).
+  // 1030 kisi BANDE ke haath ka paisa hai. Dono ka khatra alag hai aur
+  // peechha karne ka tareeqa bhi: bank ko phone kiya jata hai, bande se
+  // poochha jata hai.
   inTransit: "1020",
+  cashWithPerson: "1030",
   customerDue: "1100",
   branchDue: "1110",
   supplierAdvance: "1120",

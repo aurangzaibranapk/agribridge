@@ -1700,6 +1700,80 @@ export type Database = {
           },
         ]
       }
+      bank_statement_lines: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          imported_by: string | null
+          matched_at: string | null
+          matched_by: string | null
+          matched_entry_id: string | null
+          reference: string | null
+          status: string
+          txn_date: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          imported_by?: string | null
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_entry_id?: string | null
+          reference?: string | null
+          status?: string
+          txn_date: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          imported_by?: string | null
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_entry_id?: string | null
+          reference?: string | null
+          status?: string
+          txn_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statement_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_by_fkey"
+            columns: ["matched_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_entry_id_fkey"
+            columns: ["matched_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author_id: string | null
@@ -2389,6 +2463,8 @@ export type Database = {
         Row: {
           branch_id: string
           close_date: string
+          correction_reason: string | null
+          corrects_id: string | null
           counted_amount: number
           counted_by: string
           created_at: string
@@ -2403,6 +2479,8 @@ export type Database = {
         Insert: {
           branch_id: string
           close_date: string
+          correction_reason?: string | null
+          corrects_id?: string | null
           counted_amount: number
           counted_by: string
           created_at?: string
@@ -2417,6 +2495,8 @@ export type Database = {
         Update: {
           branch_id?: string
           close_date?: string
+          correction_reason?: string | null
+          corrects_id?: string | null
           counted_amount?: number
           counted_by?: string
           created_at?: string
@@ -2444,6 +2524,13 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
           {
+            foreignKeyName: "cash_closings_corrects_id_fkey"
+            columns: ["corrects_id"]
+            isOneToOne: false
+            referencedRelation: "cash_closings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_closings_counted_by_fkey"
             columns: ["counted_by"]
             isOneToOne: false
@@ -2455,6 +2542,143 @@ export type Database = {
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_handovers: {
+        Row: {
+          amount_received: number | null
+          amount_sent: number
+          carrier_note: string | null
+          carrier_profile_id: string | null
+          created_at: string
+          difference: number | null
+          difference_reason: string | null
+          from_branch_id: string | null
+          from_profile_id: string
+          id: string
+          received_at: string | null
+          received_by: string | null
+          received_entry_id: string | null
+          sent_at: string
+          sent_entry_id: string | null
+          sent_note: string | null
+          status: string
+          to_branch_id: string | null
+          to_profile_id: string
+        }
+        Insert: {
+          amount_received?: number | null
+          amount_sent: number
+          carrier_note?: string | null
+          carrier_profile_id?: string | null
+          created_at?: string
+          difference?: number | null
+          difference_reason?: string | null
+          from_branch_id?: string | null
+          from_profile_id: string
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          received_entry_id?: string | null
+          sent_at?: string
+          sent_entry_id?: string | null
+          sent_note?: string | null
+          status?: string
+          to_branch_id?: string | null
+          to_profile_id: string
+        }
+        Update: {
+          amount_received?: number | null
+          amount_sent?: number
+          carrier_note?: string | null
+          carrier_profile_id?: string | null
+          created_at?: string
+          difference?: number | null
+          difference_reason?: string | null
+          from_branch_id?: string | null
+          from_profile_id?: string
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          received_entry_id?: string | null
+          sent_at?: string
+          sent_entry_id?: string | null
+          sent_note?: string | null
+          status?: string
+          to_branch_id?: string | null
+          to_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_handovers_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_from_branch_id_fkey"
+            columns: ["from_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_from_branch_id_fkey"
+            columns: ["from_branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_from_profile_id_fkey"
+            columns: ["from_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_received_entry_id_fkey"
+            columns: ["received_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_sent_entry_id_fkey"
+            columns: ["sent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_branch_id_fkey"
+            columns: ["to_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_branch_id_fkey"
+            columns: ["to_branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_profile_id_fkey"
+            columns: ["to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -11456,6 +11680,21 @@ export type Database = {
           branch_id: string | null
           branch_name: string | null
           close_date: string | null
+        }
+        Relationships: []
+      }
+      v_cash_in_transit: {
+        Row: {
+          amount_sent: number | null
+          bheja: string | null
+          din_guzray: number | null
+          from_branch: string | null
+          id: string | null
+          le_jane_wala: string | null
+          lene_wala: string | null
+          sent_at: string | null
+          sent_note: string | null
+          to_branch: string | null
         }
         Relationships: []
       }
