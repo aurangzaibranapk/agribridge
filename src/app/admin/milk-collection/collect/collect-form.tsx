@@ -1,7 +1,9 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { shrinkImage } from "@/lib/image-capture";
-import { Camera, Check, Loader2, Search, AlertTriangle } from "lucide-react";
+import { queueAdd, queueAll, queueRemove, offlineSupported, type QueuedItem } from "@/lib/offline-queue";
+import { syncQueue } from "@/lib/milk-offline-sync";
+import { Camera, Check, Loader2, Search, AlertTriangle, CloudOff, RefreshCw, Trash2 } from "lucide-react";
 
 export interface FarmerOption {
   id: string;
@@ -40,6 +42,61 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState<SavedLine[]>([]);
+  const [queued, setQueued] = useState<QueuedItem[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [online, setOnline] = useState(true);
+
+  const refreshQueue = useCallback(async () => {
+    if (!offlineSupported()) return;
+    try {
+      setQueued(await queueAll());
+    } catch {
+      // Device ka khana na khule to offline sahara nahi milega, magar
+      // online kaam chalta rahega. Yahan rukna ghalat hoga.
+    }
+  }, []);
+
+  const runSync = useCallback(async () => {
+    if (!offlineSupported() || syncing) return;
+    setSyncing(true);
+    try {
+      await syncQueue();
+      await refreshQueue();
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshQueue, syncing]);
+
+  // Teen mauqon par sync: safha khulte hi, network wapas aane par, aur
+  // har minute. Sirf "online" event par bharosa nahi kiya ja sakta --
+  // phone kabhi kabhi keh deta hai ke network hai jabke asal mein nahi
+  // hota, aur us soorat mein qatar hamesha ke liye ruki reh jati.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setOnline(navigator.onLine);
+    void refreshQueue();
+    void runSync();
+
+    const onOnline = () => {
+      setOnline(true);
+      void runSync();
+    };
+    const onOffline = () => setOnline(false);
+
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    const timer = window.setInterval(() => void runSync(), 60_000);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const waiting = queued.filter((q) => !q.error);
+  const stuck = queued.filter((q) => q.error);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -65,6 +122,14 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
     }
   }
 
+  function clearForm() {
+    setFarmerId("");
+    setQuery("");
+    setLiters("");
+    setLr("");
+    setPhoto(null);
+  }
+
   async function submit() {
     if (!ready || busy) return;
     setBusy(true);
@@ -77,6 +142,27 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+    const item: QueuedItem = {
+      client_uuid: clientUuid,
+      farmer_id: farmerId,
+      farmer_label: chosen ? `${chosen.farmer_code} — ${chosen.full_name}` : "",
+      liters: Number(liters),
+      lr: lr === "" ? null : Number(lr),
+      shift,
+      collected_at: new Date().toISOString(),
+      lr_image_base64: photo?.base64,
+      lr_image_mime: photo?.mimeType,
+      queued_at: new Date().toISOString(),
+    };
+
+    // Network hi na ho to server tak jane ki koshish bhi nahi karte --
+    // MCA ko bekar ka intezar karwana maidan mein waqt ka nuqsan hai.
+    if (typeof navigator !== "undefined" && !navigator.onLine && offlineSupported()) {
+      await stash(item, "Network nahi hai");
+      setBusy(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/milk/collect", {
         method: "POST",
@@ -87,10 +173,10 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
             {
               client_uuid: clientUuid,
               farmer_id: farmerId,
-              liters: Number(liters),
-              lr: lr === "" ? null : Number(lr),
+              liters: item.liters,
+              lr: item.lr,
               shift,
-              collected_at: new Date().toISOString(),
+              collected_at: item.collected_at,
               lr_image_base64: photo?.base64,
               lr_image_mime: photo?.mimeType,
             },
@@ -106,6 +192,8 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
 
       const line = data.results?.[0];
       if (!line?.ok) {
+        // Server ne wajah batayi -- ise device par rakhne ka koi fayda
+        // nahi, wahi wajah dobara aayegi. MCA abhi theek kar sakta hai.
         setError(line?.error ?? "Mahfooz nahi ho saka.");
         return;
       }
@@ -121,20 +209,111 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
       ]);
 
       // Agla kisan foran — maidan mein qatar lagi hoti hai.
-      setFarmerId("");
-      setQuery("");
-      setLiters("");
-      setLr("");
-      setPhoto(null);
+      clearForm();
     } catch {
-      setError("Server tak nahi pahuncha ja saka. Dobara koshish karein.");
+      // Server tak nahi pahuncha ja saka. Entry kho dena sab se bura
+      // hoga, is liye device par mahfooz kar lete hain.
+      if (offlineSupported()) {
+        await stash(item, "Server tak nahi pahuncha ja saka");
+      } else {
+        setError("Server tak nahi pahuncha ja saka. Dobara koshish karein.");
+      }
     } finally {
       setBusy(false);
     }
   }
 
+  async function stash(item: QueuedItem, reason: string) {
+    try {
+      await queueAdd(item);
+      await refreshQueue();
+      clearForm();
+      setError("");
+      setSaved((prev) => [
+        {
+          collectionNumber: `${reason} — device par mahfooz`,
+          farmerName: item.farmer_label,
+          liters: item.liters,
+          flags: [],
+        },
+        ...prev,
+      ]);
+    } catch {
+      setError("Entry device par bhi mahfooz nahi ho saki. Kagaz par likh lein.");
+    }
+  }
+
+  async function dropStuck(clientUuid: string) {
+    await queueRemove(clientUuid);
+    await refreshQueue();
+  }
+
   return (
     <div className="space-y-4">
+      {(!online || waiting.length > 0 || stuck.length > 0) && (
+        <div
+          className={`rounded-card border p-3 ${
+            online
+              ? "border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20"
+              : "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-surface-800 dark:text-surface-200">
+              <CloudOff className="h-4 w-4" />
+              {online
+                ? `${waiting.length} entry device par, bheji ja rahi hai`
+                : "Network nahi hai — entries device par mahfooz ho rahi hain"}
+            </p>
+            {online && waiting.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void runSync()}
+                disabled={syncing}
+                className="flex items-center gap-1 rounded-lg border border-surface-300 px-2 py-1 text-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "Ja rahi hain" : "Abhi bhejein"}
+              </button>
+            )}
+          </div>
+
+          {!online && waiting.length > 0 && (
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">
+              {waiting.length} entry qatar mein. Network aate hi khud chali jayengi — safha band kar dein
+              to bhi mahfooz rahengi.
+            </p>
+          )}
+
+          {stuck.length > 0 && (
+            <div className="mt-2 border-t border-amber-200 pt-2 dark:border-amber-800">
+              <p className="text-xs font-medium text-red-700">
+                {stuck.length} entry ruk gayi — server ne qabool nahi ki:
+              </p>
+              <ul className="mt-1 space-y-1">
+                {stuck.map((q) => (
+                  <li key={q.client_uuid} className="flex items-start justify-between gap-2 text-xs">
+                    <span className="min-w-0 text-surface-700 dark:text-surface-300">
+                      {q.farmer_label || "—"} · {q.liters} L — {q.error}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void dropStuck(q.client_uuid)}
+                      className="flex shrink-0 items-center gap-1 text-red-600 underline"
+                    >
+                      <Trash2 className="h-3 w-3" /> hatayein
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-surface-500">
+                Inhein dobara website se daalna hoga — wajah theek kiye baghair ye khud nahi jayengi.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
@@ -252,7 +431,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-base font-semibold text-white disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {busy ? "Bheja ja raha hai..." : "Mahfooz Karein"}
+          {busy ? "Mahfooz ho raha hai..." : online ? "Mahfooz Karein" : "Device par Mahfooz Karein"}
         </button>
 
         <p className="mt-2 text-center text-xs text-surface-500">
