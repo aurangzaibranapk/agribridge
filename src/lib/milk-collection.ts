@@ -42,6 +42,14 @@ export const STATUS_LABEL: Record<MilkStatus, string> = {
   rejected: "Rad kar di gayi",
 };
 
+/**
+ * Manager ke comment ki hadd -- DB ka khana varchar(255) hai, dono ek
+ * jaise rahen. Ye yahan hain, action wali file mein nahi: "use server"
+ * file se sirf async function bahar ja sakte hain.
+ */
+export const VERIFY_COMMENT_MAX = 255;
+export const VERIFY_COMMENT_MIN = 5;
+
 /** LR ki photo ka private bucket -- signed URL ke baghair nahi khulta. */
 export const LR_BUCKET = "milk-lr";
 
