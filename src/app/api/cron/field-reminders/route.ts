@@ -57,7 +57,51 @@ export async function GET(request: Request) {
     staffReminders += 1;
   }
 
-  // ---- 2) Manager ko: jo cheezein der se pari hain ----
+  // ---- 2) Oil badalne ki yaad dihani ----
+  // Ye rider ko seedha jati hai, manager ko nahi: gaari us ke paas hai
+  // aur workshop bhi wohi le kar jata hai. Manager ko sirf tab pata
+  // chalna chahiye jab kaam ho jaye ya hadd se guzar jaye.
+  const { data: vehicles } = await service
+    .from("vehicles")
+    .select("id, vehicle_name, last_service_km, service_interval_km, assigned_profile_id")
+    .eq("is_active", true)
+    .not("assigned_profile_id", "is", null);
+
+  let oilReminders = 0;
+  for (const vehicle of vehicles ?? []) {
+    const { data: lastLog } = await service
+      .from("vehicle_daily_logs")
+      .select("closing_km")
+      .eq("vehicle_id", vehicle.id)
+      .not("closing_km", "is", null)
+      .order("log_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastLog?.closing_km == null) continue;
+
+    const since = Number(lastLog.closing_km) - Number(vehicle.last_service_km ?? 0);
+    const interval = Number(vehicle.service_interval_km ?? 1000);
+    if (since < interval) continue;
+
+    const { data: staff } = await service
+      .from("staff_details")
+      .select("whatsapp_number, whatsapp_verified_at")
+      .eq("profile_id", vehicle.assigned_profile_id!)
+      .maybeSingle();
+    if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
+
+    await sendWhatsAppMessage(
+      staff.whatsapp_number,
+      `Yaad dihani: ${vehicle.vehicle_name} ka oil badalne ka waqt ho gaya.\n\n` +
+        `Aakhri service: ${Math.round(Number(vehicle.last_service_km ?? 0)).toLocaleString()} km\n` +
+        `Ab tak chali: ${Math.round(since).toLocaleString()} km (hadd ${interval.toLocaleString()} km)\n\n` +
+        `Oil badalwa kar bill ki tafseel manager ko de dein.`
+    );
+    oilReminders += 1;
+  }
+
+  // ---- 3) Manager ko: jo cheezein der se pari hain ----
   const items = await collectWatchItems({ days: 14 });
   const urgent = items.filter((i) => i.severity === "alert");
 
@@ -77,6 +121,7 @@ export async function GET(request: Request) {
     success: true,
     date: today,
     staffReminders,
+    oilReminders,
     managerNotices,
     pendingAlertHours: PENDING_ALERT_HOURS,
   });

@@ -19,7 +19,9 @@ export type WatchKind =
   | "missing_closing"
   | "location_mismatch"
   | "fuel_gap"
-  | "unposted_log";
+  | "unposted_log"
+  | "oil_due"
+  | "maintenance_pending";
 
 export type WatchSeverity = "alert" | "warning";
 
@@ -45,6 +47,8 @@ export const WATCH_KIND_LABEL: Record<WatchKind, string> = {
   location_mismatch: "Hazri branch se door lagi",
   fuel_gap: "Petrol ka hisaab pura nahi",
   unposted_log: "Hisaab accounts mein nahi gaya",
+  oil_due: "Oil badalne ka waqt",
+  maintenance_pending: "Maintenance faisle ke intezar mein",
 };
 
 /** Kitne ghante baad pending entry ko dair samjha jaye. */
@@ -201,6 +205,81 @@ export async function collectWatchItems(options: Options = {}): Promise<WatchIte
         link: "/admin/vehicles",
       });
     }
+  }
+
+  // ---- Oil badalne ka waqt ----
+  // Gaari ka aakhri meter aur us ki aakhri service ka farq. Ye hisaab
+  // rozana ke log se aata hai, kisi alag khane se nahi -- warna do
+  // jagah do alag KM likhe jate aur reminder kabhi theek waqt par na
+  // aata.
+  const { data: vehicles } = await service
+    .from("vehicles")
+    .select("id, vehicle_name, last_service_km, service_interval_km, branch_id, assigned_profile_id")
+    .eq("is_active", true);
+
+  for (const vehicle of vehicles ?? []) {
+    if (branchId && vehicle.branch_id !== branchId) continue;
+
+    const { data: lastLog } = await service
+      .from("vehicle_daily_logs")
+      .select("closing_km, log_date")
+      .eq("vehicle_id", vehicle.id)
+      .not("closing_km", "is", null)
+      .order("log_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const currentKm = lastLog?.closing_km == null ? null : Number(lastLog.closing_km);
+    if (currentKm == null) continue;
+
+    const since = currentKm - Number(vehicle.last_service_km ?? 0);
+    const interval = Number(vehicle.service_interval_km ?? 1000);
+    if (since < interval) continue;
+
+    const over = Math.round(since - interval);
+    items.push({
+      id: `oil-${vehicle.id}`,
+      kind: "oil_due",
+      // Waqt par oil na badalne ka nuqsan baad mein engine par nikalta
+      // hai, is liye hadd se guzarne par ye alert ban jata hai.
+      severity: over > interval / 2 ? "alert" : "warning",
+      title: `${vehicle.vehicle_name} ka oil badalne ka waqt ho gaya`,
+      detail:
+        `Aakhri service ${Math.round(Number(vehicle.last_service_km ?? 0)).toLocaleString()} km par thi, ` +
+        `ab ${Math.round(currentKm).toLocaleString()} km hai — ${Math.round(since).toLocaleString()} km chal chuki ` +
+        `(hadd ${interval.toLocaleString()} km).`,
+      staffName: vehicle.assigned_profile_id ? (names.get(vehicle.assigned_profile_id) ?? "Staff") : "—",
+      branchId: vehicle.branch_id,
+      date: lastLog?.log_date ?? todayStr,
+      ageDays: 0,
+      link: "/admin/milk-collection/maintenance",
+    });
+  }
+
+  // ---- Maintenance jo faisle ke intezar mein hai ----
+  let maintQuery = service
+    .from("maintenance_logs")
+    .select("id, service_date, cost, status, branch_id, vehicles(vehicle_name)")
+    .in("status", ["pending", "branch_verified"])
+    .gte("service_date", sinceDate);
+  if (branchId) maintQuery = maintQuery.eq("branch_id", branchId);
+  const { data: maint } = await maintQuery;
+
+  for (const row of maint ?? []) {
+    const vehicle = Array.isArray(row.vehicles) ? row.vehicles[0] : row.vehicles;
+    const waitingFor = row.status === "pending" ? "Branch manager" : "Milk manager";
+    items.push({
+      id: `maint-${row.id}`,
+      kind: "maintenance_pending",
+      severity: daysSince(row.service_date) >= 3 ? "alert" : "warning",
+      title: `${vehicle?.vehicle_name ?? "Gaari"} ka kharcha ${waitingFor} ke intezar mein`,
+      detail: `Rs ${Number(row.cost).toLocaleString()} — faisle tak ye doodh ke khate mein nahi jata.`,
+      staffName: "—",
+      branchId: row.branch_id,
+      date: row.service_date,
+      ageDays: daysSince(row.service_date),
+      link: "/admin/milk-collection/maintenance",
+    });
   }
 
   // ---- 4: Hazri branch se door ----

@@ -133,6 +133,14 @@ function MaintenanceForm({ vehicles }: { vehicles: Vehicle[] }) {
           ))}
         </select>
         <input type="date" name="service_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <select name="maintenance_type" defaultValue="oil_change" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
+          <option value="oil_change">Oil Change</option>
+          <option value="service">Service</option>
+          <option value="repair">Marammat</option>
+          <option value="tyre">Tyre</option>
+          <option value="battery">Battery</option>
+          <option value="other">Deegar</option>
+        </select>
         <input type="number" step="0.1" name="km_at_service" required placeholder="KM Reading (is waqt)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <textarea name="description" required rows={2} placeholder="Kya kaam hua (oil change, tyre, waghera)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <input type="number" step="0.01" name="cost" placeholder="Cost (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />

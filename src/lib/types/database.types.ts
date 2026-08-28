@@ -6781,44 +6781,88 @@ export type Database = {
       }
       maintenance_logs: {
         Row: {
+          approve_comment: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bill_image_url: string | null
+          branch_comment: string | null
           branch_id: string | null
+          branch_verified_at: string | null
+          branch_verified_by: string | null
           cost: number
           created_at: string
           created_by: string | null
           description: string
           id: string
           km_at_service: number
+          maintenance_type: string
+          rejection_reason: string | null
           service_date: string
+          status: string
           vehicle_id: string
         }
         Insert: {
+          approve_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_image_url?: string | null
+          branch_comment?: string | null
           branch_id?: string | null
+          branch_verified_at?: string | null
+          branch_verified_by?: string | null
           cost?: number
           created_at?: string
           created_by?: string | null
           description: string
           id?: string
           km_at_service: number
+          maintenance_type?: string
+          rejection_reason?: string | null
           service_date: string
+          status?: string
           vehicle_id: string
         }
         Update: {
+          approve_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_image_url?: string | null
+          branch_comment?: string | null
           branch_id?: string | null
+          branch_verified_at?: string | null
+          branch_verified_by?: string | null
           cost?: number
           created_at?: string
           created_by?: string | null
           description?: string
           id?: string
           km_at_service?: number
+          maintenance_type?: string
+          rejection_reason?: string | null
           service_date?: string
+          status?: string
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "maintenance_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "maintenance_logs_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_branch_verified_by_fkey"
+            columns: ["branch_verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

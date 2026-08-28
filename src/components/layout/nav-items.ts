@@ -100,6 +100,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/milk-collection/fuel", label: "Fuel Tracker", icon: Bike },
       { href: "/admin/milk-collection/generator", label: "Generator Tracker", icon: Zap },
       { href: "/admin/milk-collection/maintenance", label: "Fleet & Maintenance", icon: Wrench },
+      { href: "/admin/milk-collection/cost-per-liter", label: "Fi Litre Kharcha", icon: Calculator },
       { href: "/admin/milk-collection/billing", label: "Company Billing & P&L", icon: Receipt },
     ],
   },
