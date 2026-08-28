@@ -9149,6 +9149,89 @@ export type Database = {
           },
         ]
       }
+      quantity_reconciliations: {
+        Row: {
+          booked_at: string
+          booked_by: string
+          branch_id: string | null
+          gap_value: number
+          id: string
+          journal_entry_id: string | null
+          period_month: number
+          period_year: number
+          qty_gap: number
+          qty_in: number
+          qty_out: number
+          reason: string
+          stream: string
+          unit: string
+          unit_cost: number
+        }
+        Insert: {
+          booked_at?: string
+          booked_by: string
+          branch_id?: string | null
+          gap_value: number
+          id?: string
+          journal_entry_id?: string | null
+          period_month: number
+          period_year: number
+          qty_gap: number
+          qty_in: number
+          qty_out: number
+          reason: string
+          stream: string
+          unit?: string
+          unit_cost: number
+        }
+        Update: {
+          booked_at?: string
+          booked_by?: string
+          branch_id?: string | null
+          gap_value?: number
+          id?: string
+          journal_entry_id?: string | null
+          period_month?: number
+          period_year?: number
+          qty_gap?: number
+          qty_in?: number
+          qty_out?: number
+          reason?: string
+          stream?: string
+          unit?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quantity_reconciliations_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quantity_reconciliations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quantity_reconciliations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "quantity_reconciliations_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       replacement_fund_settings: {
         Row: {
           fund_start_date: string

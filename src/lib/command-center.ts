@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
+import { quantityReport } from "@/lib/ledger/quantity-money";
 
 /**
  * Owner Command Center ke aankre.
@@ -390,6 +391,28 @@ export async function loadAlerts(): Promise<Alert[]> {
           ? `${never.length} godam to kabhi gina hi nahi gaya (${names.join(", ")}). Wahan farq ka jama hona shuru se jari hai.`
           : `${names.join(", ")} — ek mahine se zyada ho gaya.`,
       href: "/admin/stock-count",
+    });
+  }
+
+  // ---- Wo nuqsan jo "khareed" ke andar chhupa hua hai ----
+  // Ye raqam ghayab nahi -- wo kharch ho chuki hai aur ledger mein
+  // maujood hai. Masla ye hai ke wo khareed ke andar hai, jahan aam
+  // lagat jaisi nazar aati hai. Fi litre kharcha thora zyada dikhta hai
+  // aur koi ye nahi poochh sakta ke kyun -- kyunki kami ka apna koi
+  // khana nahi.
+  const qtyReport = await quantityReport({ month: now.getMonth() + 1, year: now.getFullYear() });
+  if (qtyReport.hiddenLossValue > 0) {
+    const worst = qtyReport.streams
+      .filter((s) => s.canBook && !s.booked && s.gapValue > 0)
+      .sort((a, b) => b.gapValue - a.gapValue)[0];
+
+    alerts.push({
+      tone: qtyReport.hiddenLossValue >= 10000 ? "red" : "amber",
+      title: `Rs ${Math.round(qtyReport.hiddenLossValue).toLocaleString()} ka nuqsan khareed ke andar chhupa hua hai`,
+      detail: worst
+        ? `Sab se bara: ${worst.label} — ${Math.abs(worst.gap)} ${worst.unit} ka farq. Alag khane mein daalne se kul kharcha nahi badalta, magar nuqsan nazar aane lagta hai.`
+        : "Alag khane mein daalne se kul kharcha nahi badalta, magar nuqsan nazar aane lagta hai.",
+      href: "/admin/quantity-money",
     });
   }
 
