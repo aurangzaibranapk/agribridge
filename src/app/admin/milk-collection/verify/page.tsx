@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { VerifyClient, type PricedEntry } from "./verify-client";
+import { canDo } from "@/lib/access/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function MilkVerifyPage() {
   if (!me?.is_active || !VERIFY_ROLES.includes(me.role)) {
     return <div className="p-8 text-center text-surface-400">Ye safha sirf Manager aur Admin ke liye hai.</div>;
   }
+
+  const mayVerify = await canDo("milk-collection.verify", "verify");
 
   const { data: rows } = await supabase
     .from("milk_entries")
@@ -67,7 +70,13 @@ export default async function MilkVerifyPage() {
         </Card>
       </div>
 
-      <VerifyClient entries={entries} />
+      {mayVerify ? (
+        <VerifyClient entries={entries} />
+      ) : (
+        <Card className="p-6 text-center text-sm text-surface-500">
+          Aap ye entries dekh sakte hain, magar tasdeeq ki ijazat aap ke paas nahi hai.
+        </Card>
+      )}
     </div>
   );
 }

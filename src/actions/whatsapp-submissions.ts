@@ -7,6 +7,7 @@ import { notifyBranch } from "@/lib/notifications";
 import { COMMENT_MAX, COMMENT_MIN, uploadManagerMedia, type SubmissionStatus } from "@/lib/whatsapp-submissions";
 import { partyDefinition, isBillCategory, type PartyType } from "@/lib/bill-cash";
 import { nextExpenseNumber } from "@/lib/expense-number";
+import { requireAction } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
@@ -52,6 +53,11 @@ export async function reviewSubmission(_prev: ActionState, formData: FormData): 
   if (!profile?.is_active || !MANAGER_ROLES.includes(profile.role)) {
     return { error: "Sirf Manager ya Admin ye faisla kar sakta hai." };
   }
+
+  // Role ki rok ke UPAR feature wali rok. Dono chalti hain, aur jo pehle
+  // rok de wo chalti hai.
+  const gate = await requireAction("submissions", decision === "approved" ? "approve" : "reject");
+  if ("error" in gate) return { error: gate.error };
 
   const { data: submission } = await service
     .from("whatsapp_submissions")

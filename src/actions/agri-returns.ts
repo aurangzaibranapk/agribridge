@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { notifyRoles, notifyBranch } from "@/lib/notifications";
 import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
+import { requireAction } from "@/lib/access/guard";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
@@ -138,6 +139,11 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
     return { error: "Sirf HQ warehouse/admin return receive kar sakta hai." };
   }
 
+  // Receive hote hi stock hilta hai aur shop ka khata kam hota hai --
+  // is liye ye 'verify' ki ijazat mangta hai.
+  const gate = await requireAction("agri-returns", "verify");
+  if ("error" in gate) return { error: gate.error };
+
   const { data: ret } = await supabase
     .from("agri_order_returns")
     .select("id, return_number, branch_id, status, total_amount")
@@ -214,6 +220,9 @@ export async function rejectReturn(_prev: ActionState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
   const role = profile?.role ?? "";
+  const gate = await requireAction("agri-returns", "reject");
+  if ("error" in gate) return { error: gate.error };
+
   if (!HQ_ROLES.includes(role) && role !== "warehouse") {
     return { error: "Sirf HQ warehouse/admin return reject kar sakta hai." };
   }

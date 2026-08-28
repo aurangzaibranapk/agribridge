@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { requireAction } from "@/lib/access/guard";
 import { COMMENT_MAX, COMMENT_MIN } from "@/lib/whatsapp-submissions";
 
 export interface ActionState {
@@ -26,6 +27,9 @@ export async function assignVehicleToStaff(_prev: ActionState, formData: FormDat
   if (!user) return { error: "Login zaroori hai." };
   const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
   if (!me?.is_active || !ADMIN_ROLES.includes(me.role)) return { error: "Sirf admin gaari assign kar sakta hai." };
+
+  const gate = await requireAction("vehicles", "assign");
+  if ("error" in gate) return { error: gate.error };
 
   const { error } = await supabase.from("vehicles").update({ assigned_profile_id: profileId }).eq("id", vehicleId);
   if (error) return { error: error.message };
@@ -62,6 +66,10 @@ export async function postVehicleDailyLog(_prev: ActionState, formData: FormData
   if (!user) return { error: "Login zaroori hai." };
   const { data: me } = await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle();
   if (!me?.is_active || !MANAGER_ROLES.includes(me.role)) return { error: "Sirf Manager ya Admin ye kar sakta hai." };
+
+  // Accounts mein jane wali entry -- 'approve' ki ijazat lazmi.
+  const gate = await requireAction("vehicles", "approve");
+  if ("error" in gate) return { error: gate.error };
 
   const { data: log } = await service
     .from("vehicle_daily_logs")

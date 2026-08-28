@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { recordCollection, applyFat, findFarmerByCode } from "@/lib/milk-collection";
 import { nextFarmerCode } from "@/actions/registration";
 import { logAudit } from "@/lib/audit";
+import { requireAction } from "@/lib/access/guard";
 
 /**
  * Kisan khud chiller par doodh le kar aata hai (Walk-in / Self Delivery).
@@ -135,6 +136,11 @@ export async function quickRegisterFarmer(
   const phone = String(formData.get("phone_number") ?? "").trim();
   const village = String(formData.get("village") ?? "").trim();
 
+  // Naya kisan banana alag kaam hai -- doodh lene ki ijazat rakhne wala
+  // har shakhs khate mein naya naam nahi daal sakta.
+  const gate = await requireAction("farmers", "create");
+  if ("error" in gate) return { error: gate.error };
+
   if (fullName.length < 3) return { error: "Poora naam likhein." };
   if (phone.replace(/\D/g, "").length < 10) return { error: "Mobile number sahi likhein." };
 
@@ -207,6 +213,9 @@ export async function recordWalkIn(_prev: WalkInState, formData: FormData): Prom
   const imageBase64 = String(formData.get("lr_image_base64") ?? "");
   const imageMime = String(formData.get("lr_image_mime") ?? "");
   const clientUuid = String(formData.get("client_uuid") ?? "") || null;
+
+  const gate = await requireAction("milk-collection.walk-in", "create");
+  if ("error" in gate) return { error: gate.error };
 
   if (!farmerId) return { error: "Kisan chunein." };
   if (!(liters > 0)) return { error: "Litre sahi likhein." };

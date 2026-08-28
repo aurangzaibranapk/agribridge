@@ -252,3 +252,36 @@ from user_feature_permissions ufp
 join features f on f.key = ufp.feature_key and f.is_active
 where (ufp.starts_at is null or ufp.starts_at <= now())
   and (ufp.expires_at is null or ufp.expires_at > now());
+
+-- =====================================================================
+-- Marhala 4: rozana kaam ke liye zaroori actions
+-- =====================================================================
+-- Seed mein hassas feature par sirf 'view' rakha gaya tha, jaan boojh
+-- kar. Magar us se manager approve hi nahi kar pata aur MCO chiller par
+-- FAT nahi laga pata -- yani wo rok kaam hi rok deti.
+--
+-- Is liye ye actions ek ek kar ke, soch kar diye ja rahe hain -- sab ko
+-- ek sath nahi. Jo yahan nahi likha, wo jaan boojh kar nahi diya gaya:
+-- admin /admin/dashboard-manager se kabhi bhi de sakta hai, aur us ka
+-- record audit mein rehta hai.
+
+update role_feature_permissions set actions = array['view','approve','reject']
+where role in ('manager','finance') and feature_key = 'submissions';
+
+update role_feature_permissions set actions = array['view','verify','reject']
+where role = 'manager' and feature_key = 'milk-collection.verify';
+
+update role_feature_permissions set actions = array['view','edit','verify']
+where role in ('manager','milk_collection') and feature_key = 'milk-collection.chiller';
+
+update role_feature_permissions set actions = array['view','create','edit','verify','reject']
+where role in ('manager','warehouse') and feature_key = 'agri-returns';
+
+update role_feature_permissions set actions = array['view','approve','assign']
+where role in ('manager','machinery') and feature_key = 'vehicles';
+
+update role_feature_permissions set actions = array['view','create']
+where role = 'milk_collection' and feature_key in ('milk-collection.walk-in','farmers');
+
+update role_feature_permissions set actions = array['view','create','edit']
+where role = 'finance' and feature_key in ('finance','finance.banks','branch-credit','wallets','payouts');

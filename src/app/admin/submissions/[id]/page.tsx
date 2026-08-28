@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/form";
 import { AlertTriangle, MessageSquare } from "lucide-react";
 import { ReviewForm } from "./review-form";
 import { signedMediaUrl, KIND_LABEL, STATUS_LABEL, type SubmissionKind, type SubmissionStatus } from "@/lib/whatsapp-submissions";
+import { canDo } from "@/lib/access/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,15 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   } = await supabase.auth.getUser();
   const { data: me } = user ? await supabase.from("profiles").select("role, branch_id").eq("id", user.id).maybeSingle() : { data: null };
   const isAdminLevel = me ? ["owner", "super_admin", "admin"].includes(me.role) : false;
+  // Feature wali ijazat bhi dekhte hain, sirf role nahi. Band button
+  // dikhana banday ka waqt bhi zaya karta hai aur bharosa bhi: wo
+  // dabata hai, kuch nahi hota, aur samajh nahi aata kis se kahe.
+  const mayApprove = await canDo("submissions", "approve");
+
   const canReview =
     !!me &&
     MANAGER_ROLES.includes(me.role) &&
+    mayApprove &&
     s.status === "pending" &&
     (isAdminLevel || !me.branch_id || !s.branch_id || me.branch_id === s.branch_id);
 

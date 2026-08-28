@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyFat, VERIFY_COMMENT_MAX, VERIFY_COMMENT_MIN } from "@/lib/milk-collection";
 import { logAudit } from "@/lib/audit";
+import { requireAction } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
@@ -38,6 +39,11 @@ async function caller(allowed: string[]) {
 export async function applyFatAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const who = await caller(CHILLER_ROLES);
   if ("error" in who) return { error: who.error };
+
+  // FAT lagne se paisa banta hai -- is liye ye 'verify' ki ijazat mangta
+  // hai, sirf safha khulne se kaam nahi chalta.
+  const gate = await requireAction("milk-collection.chiller", "verify");
+  if ("error" in gate) return { error: gate.error };
 
   const entryId = String(formData.get("entry_id") ?? "");
   const fat = Number(formData.get("fat_percentage") ?? 0);
@@ -74,6 +80,9 @@ export async function applyFatAction(_prev: ActionState, formData: FormData): Pr
 export async function applyFatToBatch(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const who = await caller(CHILLER_ROLES);
   if ("error" in who) return { error: who.error };
+
+  const gate = await requireAction("milk-collection.chiller", "verify");
+  if ("error" in gate) return { error: gate.error };
 
   const fat = Number(formData.get("fat_percentage") ?? 0);
   const date = String(formData.get("entry_date") ?? "");
@@ -142,6 +151,9 @@ export async function recordChillerReceipt(_prev: ActionState, formData: FormDat
 
   if (!date || !shift) return { error: "Tareekh aur shift zaroori hai." };
   if (!(received > 0)) return { error: "Chiller par pahuncha hua doodh likhein." };
+
+  const gate = await requireAction("milk-collection.chiller", "edit");
+  if ("error" in gate) return { error: gate.error };
 
   const service = createServiceClient();
 
@@ -233,6 +245,9 @@ export async function verifyMilkEntries(_prev: ActionState, formData: FormData):
 
   if (ids.length === 0) return { error: "Koi entry nahi chuni gayi." };
   if (!["verified", "rejected"].includes(decision)) return { error: "Faisla sahi nahi hai." };
+
+  const gate = await requireAction("milk-collection.verify", decision === "verified" ? "verify" : "reject");
+  if ("error" in gate) return { error: gate.error };
   if (comment.length < VERIFY_COMMENT_MIN) {
     return { error: `Comment kam az kam ${VERIFY_COMMENT_MIN} haroof ka hona chahiye — bina wajah likhe faisla nahi ho sakta.` };
   }
