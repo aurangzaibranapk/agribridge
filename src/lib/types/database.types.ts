@@ -1782,6 +1782,13 @@ export type Database = {
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bank_statement_lines_matched_entry_id_fkey"
+            columns: ["matched_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
         ]
       }
       blog_posts: {
@@ -2554,6 +2561,13 @@ export type Database = {
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cash_closings_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cash_handovers: {
@@ -2664,10 +2678,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_handovers_received_entry_id_fkey"
+            columns: ["received_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_handovers_sent_entry_id_fkey"
             columns: ["sent_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_sent_entry_id_fkey"
+            columns: ["sent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
             referencedColumns: ["id"]
           },
           {
@@ -6692,6 +6720,13 @@ export type Database = {
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "journal_entries_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
         ]
       }
       journal_entry_counters: {
@@ -6731,6 +6766,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_sources_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
             referencedColumns: ["id"]
           },
         ]
@@ -6782,6 +6824,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
             referencedColumns: ["id"]
           },
         ]
@@ -9230,6 +9279,13 @@ export type Database = {
             referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "quantity_reconciliations_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reconciliation_findings: {
@@ -10578,6 +10634,13 @@ export type Database = {
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
             referencedColumns: ["id"]
           },
           {
@@ -12110,6 +12173,23 @@ export type Database = {
           kind: string | null
           row_id: string | null
           source_table: string | null
+        }
+        Relationships: []
+      }
+      v_ledger_watch: {
+        Row: {
+          asal_entry: string | null
+          created_at: string | null
+          description: string | null
+          din_ka_faasla: number | null
+          entry_date: string | null
+          entry_number: string | null
+          id: string | null
+          kis_ne: string | null
+          kism: string | null
+          raqam: number | null
+          source_module: string | null
+          wajah: string | null
         }
         Relationships: []
       }
