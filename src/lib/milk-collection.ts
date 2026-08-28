@@ -65,6 +65,55 @@ async function nextCollectionNumber(): Promise<string> {
   return `MC-${year}-${String(next).padStart(6, "0")}`;
 }
 
+/**
+ * Kisan ka code dhoondna, jaisa MCA likhta hai.
+ *
+ * Khate mein code "FRM-000002" hota hai, magar maidan mein koi ye poora
+ * nahi likhta -- WhatsApp par "Farmer 2" aata hai aur zaban par bhi
+ * kisan "do number" hi kehlata hai. Is liye teen tareeqe se dekhte hain:
+ * jyon ka tyon, phir FRM wali poori shakal, phir wo code jis ke aakhir
+ * mein wahi hindse hon.
+ *
+ * Andaza yahan bhi nahi lagate: aadha milta hua code mil jaye to bhi
+ * sirf wohi manate hain jo poore taur par milta ho, kyunke ghalat kisan
+ * ke khate mein doodh chala jana theek karne se kahin mushkil hota hai.
+ */
+export async function findFarmerByCode(code: string) {
+  const service = createServiceClient();
+  const raw = code.trim();
+  if (!raw) return null;
+
+  const columns = "id, full_name, phone_number, branch_id, farmer_code";
+
+  // ilike, eq nahi: WhatsApp se code chhote haroof mein aata hai
+  // ("frm-000002") jabke khate mein bare haroof mein likha hai.
+  const { data: exact } = await service.from("farmers").select(columns).ilike("farmer_code", raw).maybeSingle();
+  if (exact) return exact;
+
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+
+  const padded = digits.padStart(6, "0");
+
+  const { data: framed } = await service
+    .from("farmers")
+    .select(columns)
+    .eq("farmer_code", `FRM-${padded}`)
+    .maybeSingle();
+  if (framed) return framed;
+
+  // Code ka silsila kal badal sakta hai (FRM- ki jagah kuch aur). Aakhri
+  // hindson par milana us tabdeeli ko bardasht kar leta hai.
+  const { data: tail } = await service
+    .from("farmers")
+    .select(columns)
+    .ilike("farmer_code", `%${padded}`)
+    .limit(2);
+  if (tail && tail.length === 1) return tail[0];
+
+  return null;
+}
+
 export interface CollectionInput {
   /** Farmer ka code (WhatsApp par "Farmer 2") ya seedha id. */
   farmerId?: string | null;
@@ -115,11 +164,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   let farmerBranch: string | null = null;
 
   if (!farmerId && input.farmerCode) {
-    const { data } = await service
-      .from("farmers")
-      .select("id, full_name, phone_number, branch_id")
-      .eq("farmer_code", input.farmerCode.trim())
-      .maybeSingle();
+    const data = await findFarmerByCode(input.farmerCode);
     if (!data) return { error: `Farmer code "${input.farmerCode}" ka koi kisan nahi mila.` };
     farmerId = data.id;
     farmerName = data.full_name ?? "";

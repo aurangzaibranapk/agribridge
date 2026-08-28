@@ -3,6 +3,7 @@ import { whatsappCheckIn, whatsappCheckOut } from "@/lib/staff-attendance";
 import { readVehiclePhoto } from "@/lib/ai/vehicle-photo-client";
 import { readBillOrCashPhoto, type BillCashReading } from "@/lib/ai/bill-cash-photo-client";
 import { recordSubmission, type SubmissionKind } from "@/lib/whatsapp-submissions";
+import { looksLikeMilk, handleMilkMessage } from "@/lib/milk-whatsapp";
 import { vehicleForStaff, todaysLog, recordOpening, recordFuel, recordClosing } from "@/lib/vehicle-daily-log";
 
 /**
@@ -49,6 +50,8 @@ const HELP =
   "• Subah meter ki photo bhejein\n" +
   "• Petrol ka bill photo bhejein\n" +
   "• Shaam meter ki photo bhejein\n\n" +
+  "*Doodh*\n" +
+  "• *Farmer 2*\n  *Milk 14 Liter*\n  *LR 25*\n  (sath LR ki photo bhej dein)\n\n" +
   "*Bill aur Cash*\n" +
   "• *Bill* likh kar bill ki photo bhejein (bijli, kiraya, marammat)\n" +
   "• *Cash diya* — jaise: Cash diya 5000 Ahmad ko\n" +
@@ -138,6 +141,13 @@ async function handlePhoto(
 ): Promise<string> {
   const image = msg.image!;
   const text = (msg.text ?? "").toLowerCase();
+
+  // Doodh sab se pehle. "Farmer 2 / Milk 14 / LR 25" ke sath aayi photo
+  // LR ki parchi hoti hai, koi bill nahi -- aur us par bill wala reader
+  // chala dena us ka matlab hi badal deta.
+  if (looksLikeMilk(msg.text)) {
+    return handleMilkMessage({ fromPhone: msg.fromPhone, text: msg.text, image: image }, staff);
+  }
 
   const saysFuelWord = matchesAny(text, FUEL_WORDS);
   const saysCashReceived = matchesAny(text, CASH_RECEIVED_WORDS);
@@ -305,6 +315,14 @@ export async function handleStaffMessage(msg: IncomingStaffMessage): Promise<str
   if (matchesAny(text, CHECK_OUT_WORDS)) {
     const result = await whatsappCheckOut(profileId, branchId, msg.latitude, msg.longitude);
     return result.message;
+  }
+
+  // Doodh bagair photo ke bhi darj ho jata hai -- photo na hone par
+  // nishan lag jata hai, magar entry rukti nahi. Maidan mein network
+  // kabhi kabhi photo nahi bhejne deta, aur us wajah se doodh ka record
+  // hi na banna sab se bura hoga.
+  if (looksLikeMilk(text)) {
+    return handleMilkMessage({ fromPhone: msg.fromPhone, text, image: null }, { profileId, branchId });
   }
 
   // Bagair photo ke bhi cash likh sakta hai — "5000 Ahmad ko diye". Photo
