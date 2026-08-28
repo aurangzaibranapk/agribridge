@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isStaffRole } from "@/lib/utils/roles";
+import { accessFrom, canOpen } from "@/lib/effective-permissions";
+import { homePageForRole } from "@/lib/departments";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,23 +48,35 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Page-level access control: Owner/Super Admin/Admin see everything.
-  // Every other staff role (Manager/Sales Staff) can ONLY visit pages
-  // an admin has specifically checked for them on /admin/permissions -
-  // this blocks direct URL access, not just hiding the sidebar link.
+  // Safha kholne ki rok. Owner/Super Admin/Admin ko har cheez khulti
+  // hai; baqi sab ko sirf wo jo un ke apne set mein ho, warna un ke
+  // department ke set mein. Ye rok seedhe URL par bhi lagti hai, sirf
+  // menu chhupane par nahi -- warna rok koi rok hi nahi hoti.
   if (pathname.startsWith("/admin")) {
-    const isUnrestricted = profile.role === "owner" || profile.role === "super_admin" || profile.role === "admin";
-    if (!isUnrestricted) {
-      const allowedPages = (profile.allowed_pages as string[] | null) ?? [];
-      const alwaysAllowed = ["/admin/permissions-denied", "/admin/my-attendance"];
-      const isAllowed =
-        alwaysAllowed.some((p) => pathname === p) ||
-        allowedPages.some((p) => pathname === p || pathname.startsWith(p + "/"));
-      if (!isAllowed) {
-        const url = request.nextUrl.clone();
-        url.pathname = allowedPages[0] ?? "/admin/permissions-denied";
-        return NextResponse.redirect(url);
-      }
+    const ownPages = (profile.allowed_pages as string[] | null) ?? null;
+
+    // Department ka set sirf tab poochhte hain jab shakhs ka apna khali
+    // ho -- har request par ek fazool query dalna poore admin ko dhima
+    // kar deta.
+    let rolePages: string[] | null = null;
+    if (!ownPages || ownPages.length === 0) {
+      const { data: rolePerm } = await supabase
+        .from("role_page_permissions")
+        .select("allowed_pages")
+        .eq("role", profile.role)
+        .maybeSingle();
+      rolePages = (rolePerm?.allowed_pages as string[] | null) ?? [];
+    }
+
+    const access = accessFrom(profile.role, ownPages, rolePages);
+    if (!canOpen(access, pathname)) {
+      const url = request.nextUrl.clone();
+      // Ghar bhejte hain, "ijazat nahi" wale safhe par nahi -- banda
+      // aksar sirf ghalat link par pahunch gaya hota hai, aur us ka
+      // apna dashboard us ke liye zyada kaam ka hai.
+      const home = homePageForRole(profile.role);
+      url.pathname = canOpen(access, home) ? home : (access.pages[2] ?? "/admin/permissions-denied");
+      return NextResponse.redirect(url);
     }
   }
 

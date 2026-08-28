@@ -8267,6 +8267,35 @@ export type Database = {
           },
         ]
       }
+      role_page_permissions: {
+        Row: {
+          allowed_pages: string[]
+          role: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allowed_pages?: string[]
+          role: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allowed_pages?: string[]
+          role?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_page_permissions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_payments: {
         Row: {
           advance_deduction: number | null
@@ -10769,6 +10798,7 @@ export type Database = {
         | "milk_collection"
         | "ai_assistant"
         | "agronomist"
+        | "machinery"
       wallet_owner_type:
         | "farmer"
         | "dealer"
@@ -11038,6 +11068,7 @@ export const Constants = {
         "milk_collection",
         "ai_assistant",
         "agronomist",
+        "machinery",
       ],
       wallet_owner_type: [
         "farmer",
