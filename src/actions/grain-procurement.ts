@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashOut, postWalletMovement, ACC } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 
@@ -135,17 +136,40 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   if (farmerId) {
     const { data: grainWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
     if (grainWallet) {
-      await supabase.from("wallet_transactions").insert({
-        wallet_id: grainWallet.id,
-        type: "grain_income",
-        direction: "credit",
-        amount: payableToSeller,
-        balance_after: 0,
-        reference_type: "grain_procurement_entry",
-        reference_id: entry.id,
-        notes: `Grain: ${netWeight}kg, ${grainType}, ${entryDate}`,
-        created_by: user?.id ?? null,
-      });
+      // Pehle yahan type "grain_income" likha tha jo wallet ki fehrist
+      // mein hai hi nahi -- is liye ye entry chup chaap nakaam ho jati
+      // thi aur kisan ka wallet khali reh jata tha.
+      const { data: grainWalletRow } = await supabase
+        .from("wallet_transactions")
+        .insert({
+          wallet_id: grainWallet.id,
+          type: "manual_adjustment",
+          direction: "credit",
+          amount: payableToSeller,
+          balance_after: 0,
+          reference_type: "grain_procurement_entry",
+          reference_id: entry.id,
+          notes: `Grain: ${netWeight}kg, ${grainType}, ${entryDate}`,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (grainWalletRow?.id) {
+        await postWalletMovement({
+          ownerType: "farmer",
+          ownerId: farmerId,
+          amount: payableToSeller,
+          direction: "credit",
+          against: ACC.grainPurchase,
+          description: `Grain khareed — ${netWeight}kg ${grainType}`,
+          ctx: {
+            createdBy: user?.id ?? null,
+            entryDate,
+            claims: [{ table: "wallet_transactions", rowId: grainWalletRow.id }],
+          },
+        });
+      }
     }
   }
 
@@ -203,15 +227,33 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       entry_id: entry.id,
       created_by: user?.id ?? null,
     });
-    await supabase.from("finance_transactions").insert({
-      account_id: exp.account_id,
-      transaction_type: "expense",
-      category: "Grain Operations",
-      amount: exp.amount,
-      transaction_date: entryDate,
-      notes: `${exp.description || exp.category} (Grain Operations - Entry linked)`,
-      created_by: user?.id ?? null,
-    });
+    const { data: opExpRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: exp.account_id,
+        transaction_type: "expense",
+        category: "Grain Operations",
+        amount: exp.amount,
+        transaction_date: entryDate,
+        notes: `${exp.description || exp.category} (Grain Operations - Entry linked)`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (opExpRow?.id) {
+      await postCashOut({
+        accountId: exp.account_id,
+        amount: Number(exp.amount),
+        description: `${exp.description || exp.category} (Grain Operations)`,
+        againstAccount: ACC.grainPurchase,
+        ctx: {
+          createdBy: user?.id ?? null,
+          entryDate,
+          claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
+        },
+      });
+    }
     const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", exp.account_id).single();
     if (account) {
       await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - exp.amount }).eq("id", exp.account_id);

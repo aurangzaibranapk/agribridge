@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -123,15 +124,33 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
   if ((bardanaCost > 0 || mazdooriCost > 0) && costAccountId) {
     const combinedCost = bardanaCost + mazdooriCost;
     const { data: costAccount } = await supabase.from("finance_accounts").select("current_balance").eq("id", costAccountId).single();
-    await supabase.from("finance_transactions").insert({
-      account_id: costAccountId,
-      transaction_type: "expense",
-      category: "Grain Sale - Bardana/Mazdoori",
-      amount: combinedCost,
-      transaction_date: saleDate,
-      notes: `Sale ${saleNumber} - Bardana Rs ${bardanaCost} + Mazdoori Rs ${mazdooriCost}`,
-      created_by: user?.id ?? null,
-    });
+    const { data: costRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: costAccountId,
+        transaction_type: "expense",
+        category: "Grain Sale - Bardana/Mazdoori",
+        amount: combinedCost,
+        transaction_date: saleDate,
+        notes: `Sale ${saleNumber} - Bardana Rs ${bardanaCost} + Mazdoori Rs ${mazdooriCost}`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (costRow?.id) {
+      await postCashOut({
+        accountId: costAccountId,
+        amount: combinedCost,
+        description: `Sale ${saleNumber} — Bardana + Mazdoori`,
+        againstAccount: ACC.grainPurchase,
+        ctx: {
+          createdBy: user?.id ?? null,
+          entryDate: saleDate,
+          claims: [{ table: "finance_transactions", rowId: costRow.id }],
+        },
+      });
+    }
     if (costAccount) {
       await supabase.from("finance_accounts").update({ current_balance: Number(costAccount.current_balance) - combinedCost }).eq("id", costAccountId);
     }
@@ -176,15 +195,33 @@ export async function recordGrainSalePayment(_prev: ActionState, formData: FormD
 
   await supabase.from("grain_sales").update({ amount_received: Number(sale.amount_received) + amount }).eq("id", saleId);
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "income",
-    category: "Grain Sale",
-    amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    notes: `Grain sale payment - ${sale.sale_number}`,
-    created_by: user?.id ?? null,
-  });
+  const { data: saleCashRow } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "income",
+      category: "Grain Sale",
+      amount,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Grain sale payment - ${sale.sale_number}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (saleCashRow?.id) {
+    const posted = await postCashIn({
+      accountId,
+      amount,
+      description: `Grain bikri ki adaigi — ${sale.sale_number}`,
+      againstAccount: ACC.salesGrain,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "finance_transactions", rowId: saleCashRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Adaigi darj hui magar ledger mein nahi gayi: ${posted.error}` };
+  }
   const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
   if (account) {
     await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);

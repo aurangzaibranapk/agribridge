@@ -26,6 +26,7 @@ export interface LedgerPost {
   notes: string;
   referenceId?: string | null;
   createdBy: string | null;
+  collectedBy?: string | null;
 }
 
 /** Kisan ka maujooda bojh (debit barhata hai, credit ghatata hai). */
@@ -41,23 +42,36 @@ export async function farmerBalanceDue(farmerId: string): Promise<number> {
   );
 }
 
-export async function postFarmerLedger(input: LedgerPost): Promise<{ error?: string }> {
+/**
+ * Row ka id bhi wapas aata hai. Zaroorat is liye hai ke double-entry ki
+ * entry ko batana parta hai ke wo kis row ka hisaab de rahi hai -- warna
+ * wo row "abhi ledger tak nahi pahunchi" wali fehrist mein pari rehti
+ * hai, halanke us ka hisaab ho chuka hota hai.
+ */
+export async function postFarmerLedger(
+  input: LedgerPost
+): Promise<{ error?: string; id?: string }> {
   const service = createServiceClient();
   const before = await farmerBalanceDue(input.farmerId);
   const after = input.ledgerType === "debit" ? before + input.amount : before - input.amount;
 
-  const { error } = await service.from("farmer_credit_ledger").insert({
-    farmer_id: input.farmerId,
-    source_type: input.sourceType,
-    ledger_type: input.ledgerType,
-    amount: input.amount,
-    balance_after: Math.round(after * 100) / 100,
-    reference_id: input.referenceId ?? null,
-    notes: input.notes,
-    created_by: input.createdBy,
-  });
+  const { data, error } = await service
+    .from("farmer_credit_ledger")
+    .insert({
+      farmer_id: input.farmerId,
+      source_type: input.sourceType,
+      ledger_type: input.ledgerType,
+      amount: input.amount,
+      balance_after: Math.round(after * 100) / 100,
+      reference_id: input.referenceId ?? null,
+      notes: input.notes,
+      collected_by: input.collectedBy ?? null,
+      created_by: input.createdBy,
+    })
+    .select("id")
+    .single();
 
-  return error ? { error: error.message } : {};
+  return error ? { error: error.message } : { id: data.id };
 }
 
 export interface WalletPost {
@@ -76,7 +90,7 @@ export interface WalletPost {
  * kisan ka wallet nahi hota, aur is wajah se doodh ki entry rok dena
  * ghalat hoga.
  */
-export async function postFarmerWallet(input: WalletPost): Promise<void> {
+export async function postFarmerWallet(input: WalletPost): Promise<string | null> {
   const service = createServiceClient();
   const { data: wallet } = await service
     .from("wallets")
@@ -84,22 +98,27 @@ export async function postFarmerWallet(input: WalletPost): Promise<void> {
     .eq("owner_type", "farmer")
     .eq("owner_id", input.farmerId)
     .maybeSingle();
-  if (!wallet) return;
+  if (!wallet) return null;
 
   const delta = input.direction === "credit" ? input.amount : -input.amount;
   const after = Math.round((Number(wallet.balance) + delta) * 100) / 100;
 
-  await service.from("wallet_transactions").insert({
-    wallet_id: wallet.id,
-    type: input.type,
-    direction: input.direction,
-    amount: input.amount,
-    balance_after: after,
-    reference_type: input.referenceType,
-    reference_id: input.referenceId ?? null,
-    notes: input.notes,
-    created_by: input.createdBy,
-  });
+  const { data: txn } = await service
+    .from("wallet_transactions")
+    .insert({
+      wallet_id: wallet.id,
+      type: input.type,
+      direction: input.direction,
+      amount: input.amount,
+      balance_after: after,
+      reference_type: input.referenceType,
+      reference_id: input.referenceId ?? null,
+      notes: input.notes,
+      created_by: input.createdBy,
+    })
+    .select("id")
+    .single();
 
   await service.from("wallets").update({ balance: after }).eq("id", wallet.id);
+  return txn?.id ?? null;
 }

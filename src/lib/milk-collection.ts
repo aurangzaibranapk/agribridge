@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { calculateMilkValue, buildMilkReceiptSms } from "@/lib/utils/milk-formula";
 import { sendMilkSms } from "@/lib/sms";
 import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
+import { postFarmerCreditRepaid, ACC, failed } from "@/lib/ledger/rules";
 
 /**
  * Doodh jama karne ka WAHID engine.
@@ -462,7 +463,7 @@ export async function applyFat(
     return { error: `Khate mein nahi ja saka: ${ledger.error}` };
   }
 
-  await postFarmerWallet({
+  const walletRowId = await postFarmerWallet({
     farmerId: entry.farmer_id,
     type: "milk_income",
     direction: "credit",
@@ -472,6 +473,29 @@ export async function applyFat(
     referenceId: entryId,
     createdBy: byProfileId,
   });
+
+  // Doodh ki EK khareed do jagah likhi jati hai: kisan ka khata (us ka
+  // bojh ghata) aur us ka wallet. Is liye double-entry bhi EK hi banti
+  // hai jo dono rows ka daawa karti hai -- warna wahi raqam do dafa gin
+  // li jayegi aur mahine ka doodh ka kharcha dugna nazar aayega.
+  //
+  // Doosri taraf 1150 hai, 2010 nahi -- taake ledger wahi dikhaye jo
+  // kisan ka khata dikhata hai. Do safhe alag alag adad dikhayen, isi se
+  // wo uljhan paida hoti hai jis mein kami chhup jati hai.
+  const claims: Array<{ table: string; rowId: string }> = [];
+  if (ledger.id) claims.push({ table: "farmer_credit_ledger", rowId: ledger.id });
+  if (walletRowId) claims.push({ table: "wallet_transactions", rowId: walletRowId });
+
+  const posted = await postFarmerCreditRepaid({
+    farmerId: entry.farmer_id,
+    amount: result.amount,
+    settledBy: ACC.milkPurchase,
+    description: label,
+    ctx: { createdBy: byProfileId, entryDate: entry.entry_date, claims },
+  });
+  if (failed(posted)) {
+    return { error: `Doodh darj ho gaya magar ledger mein nahi gaya: ${posted.error}` };
+  }
 
   if (farmer.phone_number) {
     await sendMilkSms(

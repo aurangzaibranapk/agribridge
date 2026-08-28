@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { moneyTrail, trialBalance, accountLedger } from "@/lib/ledger/money-trail";
-import { AlertTriangle, CheckCircle2, Wallet } from "lucide-react";
+import {
+  moneyTrail,
+  trialBalance,
+  accountLedger,
+  ledgerCoverage,
+  unpostedRows,
+  tableLabel,
+} from "@/lib/ledger/money-trail";
+import { AlertTriangle, CheckCircle2, Wallet, Link2Off } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +38,12 @@ export default async function MoneyTrailPage({
     return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager aur Admin ke liye hai.</div>;
   }
 
-  const [trail, tb] = await Promise.all([moneyTrail(), trialBalance()]);
+  const [trail, tb, coverage, pending] = await Promise.all([
+    moneyTrail(),
+    trialBalance(),
+    ledgerCoverage(),
+    unpostedRows(25),
+  ]);
   const openAccount = params.account ?? null;
   const ledger = openAccount ? await accountLedger(openAccount) : [];
 
@@ -87,6 +99,12 @@ export default async function MoneyTrailPage({
                 ? " — har entry par taala laga hua hai, is liye ye hamesha barabar rehna chahiye."
                 : " — ye kisi ke paisa lene ka nishan nahi, balke is baat ka ke system mein kuch bunyadi tor par toota hai. Foran batayein."}
             </p>
+            {trail.balanced && !coverage.complete && (
+              <p className="mt-1.5 text-xs font-medium text-amber-700 dark:text-amber-500">
+                Magar &quot;barabar&quot; ka matlab &quot;poora&quot; nahi. {coverage.totalPending} entriyan
+                ({rs(coverage.totalAmount)}) abhi ledger tak nahi pahunchin — neeche dekhein.
+              </p>
+            )}
           </div>
         </div>
       </Card>
@@ -122,6 +140,87 @@ export default async function MoneyTrailPage({
           ))}
         </div>
       </div>
+
+      {/* ---- Jo ledger tak nahi pahuncha ---- */}
+      <Card
+        className={`p-4 ${
+          coverage.complete
+            ? "border-l-4 border-l-green-500"
+            : "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          {coverage.complete ? (
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+          ) : (
+            <Link2Off className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-surface-900 dark:text-white">
+              {coverage.complete
+                ? "Har raqam ledger tak pahunch chuki hai"
+                : `${coverage.totalPending} raqmein ledger tak nahi pahunchin — ${rs(coverage.totalAmount)}`}
+            </p>
+            <p className="mt-0.5 text-xs text-surface-600 dark:text-surface-400">
+              Trial Balance hamesha barabar rehta hai, kyunki har entry par taala laga hai. Wo sirf ye
+              batata hai ke JO likha gaya wo theek likha gaya — ye nahi ke sab kuch likha bhi gaya. Paisa
+              isi farq mein se nikalta hai, is liye wo raqam yahan alag se ginti hai.
+            </p>
+
+            {!coverage.complete && (
+              <>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {coverage.rows.map((row) => (
+                    <span
+                      key={row.sourceTable}
+                      className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
+                    >
+                      <span className="text-surface-600 dark:text-surface-300">{row.label}</span>
+                      <span className="ml-1.5 font-semibold text-amber-800 dark:text-amber-400">
+                        {row.pending} • {rs(row.pendingAmount)}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-xs">
+                    <thead className="text-left text-surface-500">
+                      <tr>
+                        <th className="py-1 pr-3 font-medium">Kahan se</th>
+                        <th className="py-1 pr-3 font-medium">Qism</th>
+                        <th className="py-1 pr-3 font-medium">Tafseel</th>
+                        <th className="py-1 text-right font-medium">Raqam</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
+                      {pending.map((row) => (
+                        <tr key={`${row.sourceTable}-${row.rowId}`}>
+                          <td className="py-1.5 pr-3 text-surface-600 dark:text-surface-300">
+                            {tableLabel(row.sourceTable)}
+                          </td>
+                          <td className="py-1.5 pr-3 text-surface-500">{row.kind}</td>
+                          <td className="max-w-[260px] truncate py-1.5 pr-3 text-surface-700 dark:text-surface-200">
+                            {row.detail}
+                          </td>
+                          <td className="py-1.5 text-right font-medium text-amber-800 dark:text-amber-400">
+                            {rs(row.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {coverage.totalPending > pending.length && (
+                    <p className="mt-2 text-xs text-surface-500">
+                      … aur {coverage.totalPending - pending.length} aur.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {trail.suspense !== 0 && (
         <Card className="border-l-4 border-l-red-500 bg-red-50 p-4 dark:bg-red-950/20">

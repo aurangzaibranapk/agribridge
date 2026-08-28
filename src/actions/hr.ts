@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ActionState {
@@ -161,14 +162,32 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   const basicSalary = Number(staffDetails?.basic_salary ?? 0);
   if (basicSalary > 0) {
     const dailyWage = Math.round((basicSalary / 30) * 100) / 100;
-    await supabase.from("staff_credit_ledger").insert({
-      profile_id: user.id,
-      ledger_type: "credit",
-      source_type: "daily_wage",
-      amount: dailyWage,
-      notes: `Daily wage - ${today}`,
-      created_by: user.id,
-    });
+    const { data: wageRow } = await supabase
+      .from("staff_credit_ledger")
+      .insert({
+        profile_id: user.id,
+        ledger_type: "credit",
+        source_type: "daily_wage",
+        amount: dailyWage,
+        notes: `Daily wage - ${today}`,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    // Dihari us din kharcha ban jati hai jis din kaam hua, na ke jis din
+    // paisa diya gaya. Sirf dene par likhein to mahine ke beech mein ye
+    // nazar nahi aata ke kitni tankhwah ban chuki hai.
+    if (wageRow?.id) {
+      await postStaffLedger({
+        profileId: user.id,
+        amount: dailyWage,
+        ledgerType: "credit",
+        sourceType: "daily_wage",
+        description: `Dihari — ${today}`,
+        ctx: { createdBy: user.id, claims: [{ table: "staff_credit_ledger", rowId: wageRow.id }] },
+      });
+    }
   }
 
   revalidatePath("/admin/my-attendance");

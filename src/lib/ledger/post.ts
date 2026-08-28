@@ -31,6 +31,24 @@ export interface JournalLine {
   memo?: string | null;
 }
 
+/**
+ * Wo row jis ka hisaab ye entry de rahi hai.
+ *
+ * Ek kaarobari waqia aksar kai tables mein likha jata hai. Kisan Rs 5,000
+ * wapas kare to farmer_credit_ledger mein bhi row banti hai aur
+ * finance_transactions mein bhi -- magar waqia EK hai, is liye entry bhi
+ * EK banti hai jo dono rows ka daawa karti hai.
+ *
+ * Daawe par database mein primary key hai: ek row do entries mein nahi
+ * aa sakti. Is se dobara ginne ka darwaza band ho jata hai -- aur ye wo
+ * ghalti hai jo khud nahi pakri jati, kyunki kitab phir bhi barabar
+ * rehti hai.
+ */
+export interface SourceClaim {
+  table: string;
+  rowId: string;
+}
+
 export interface JournalInput {
   description: string;
   /** Kis hisse se aayi: pos / milk / expense / cash_close ... */
@@ -42,6 +60,8 @@ export interface JournalInput {
   lines: JournalLine[];
   /** Purani tareekh ki entry -- wajah lazmi. */
   backdateReason?: string | null;
+  /** Kaun si rows ka hisaab -- v_ledger_unposted isi se khali hota hai. */
+  claims?: SourceClaim[];
 }
 
 export interface PostedEntry {
@@ -157,6 +177,26 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
     // jo kisi report mein nazar nahi aati. Us se behtar hai ke bulane
     // wala ghalti dekh le.
     return { error: `Qataren mahfooz nahi ho sakin: ${lineError.message}` };
+  }
+
+  if (input.claims && input.claims.length > 0) {
+    const { error: claimError } = await service.from("journal_entry_sources").insert(
+      input.claims.map((c) => ({
+        entry_id: entry.id,
+        source_table: c.table,
+        source_row_id: c.rowId,
+      }))
+    );
+    // Daawa na lag saka -- yani ye row pehle hi kisi aur entry mein gin
+    // li gayi hai. Entry ban chuki hai (mitai nahi ja sakti), is liye
+    // bulane wale ko saaf batana zaroori hai ke ab do entries mein wahi
+    // raqam hai. Chup rehne ka matlab hoga: hisaab dugna, aur kitab phir
+    // bhi barabar.
+    if (claimError) {
+      return {
+        error: `Entry ${entry.entry_number} ban gayi magar us ka daawa nahi lag saka -- ye raqam shayad pehle hi gin li gayi hai. Money Trail par jaanch lein. (${claimError.message})`,
+      };
+    }
   }
 
   return { id: entry.id, entryNumber: entry.entry_number, total: debit };

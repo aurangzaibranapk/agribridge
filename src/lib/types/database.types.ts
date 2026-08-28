@@ -4640,6 +4640,7 @@ export type Database = {
           account_type: Database["public"]["Enums"]["finance_account_type"]
           created_at: string
           current_balance: number
+          gl_code: string | null
           id: string
           is_active: boolean
           logo_url: string | null
@@ -4651,6 +4652,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number
+          gl_code?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -4662,6 +4664,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number
+          gl_code?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -4670,6 +4673,13 @@ export type Database = {
           organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "finance_accounts_gl_code_fkey"
+            columns: ["gl_code"]
+            isOneToOne: false
+            referencedRelation: "gl_accounts"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "finance_accounts_organization_id_fkey"
             columns: ["organization_id"]
@@ -6271,6 +6281,32 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      journal_entry_sources: {
+        Row: {
+          entry_id: string
+          source_row_id: string
+          source_table: string
+        }
+        Insert: {
+          entry_id: string
+          source_row_id: string
+          source_table: string
+        }
+        Update: {
+          entry_id?: string
+          source_row_id?: string
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_sources_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journal_lines: {
         Row: {
@@ -11114,6 +11150,25 @@ export type Database = {
           phone_number: string | null
           total_paid: number | null
           total_supplied: number | null
+        }
+        Relationships: []
+      }
+      v_ledger_coverage: {
+        Row: {
+          pending: number | null
+          pending_amount: number | null
+          source_table: string | null
+        }
+        Relationships: []
+      }
+      v_ledger_unposted: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          detail: string | null
+          kind: string | null
+          row_id: string | null
+          source_table: string | null
         }
         Relationships: []
       }

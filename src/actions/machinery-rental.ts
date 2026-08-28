@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
 import { notifyRoles } from "@/lib/notifications";
 
 export interface ActionState {
@@ -199,15 +200,32 @@ export async function completeMachineryBooking(_prev: ActionState, formData: For
 
   if (dieselAmount > 0 && dieselAccountId) {
     const { data: booking } = await supabase.from("machinery_bookings").select("booking_number").eq("id", bookingId).single();
-    await supabase.from("finance_transactions").insert({
-      account_id: dieselAccountId,
-      transaction_type: "expense",
-      category: "Machinery - Diesel",
-      amount: dieselAmount,
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Diesel for booking ${booking?.booking_number ?? bookingId} - Rs ${dieselRate}/litre`,
-      created_by: user?.id ?? null,
-    });
+    const { data: dieselRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: dieselAccountId,
+        transaction_type: "expense",
+        category: "Machinery - Diesel",
+        amount: dieselAmount,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        notes: `Diesel for booking ${booking?.booking_number ?? bookingId} - Rs ${dieselRate}/litre`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (dieselRow?.id) {
+      await postCashOut({
+        accountId: dieselAccountId,
+        amount: dieselAmount,
+        description: `Diesel — booking ${booking?.booking_number ?? bookingId}`,
+        againstAccount: ACC.fuel,
+        ctx: {
+          createdBy: user?.id ?? null,
+          claims: [{ table: "finance_transactions", rowId: dieselRow.id }],
+        },
+      });
+    }
     const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", dieselAccountId).single();
     if (account) {
       await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - dieselAmount }).eq("id", dieselAccountId);
@@ -243,27 +261,68 @@ export async function recordFarmerPayment(_prev: ActionState, formData: FormData
     if (!wallet) return { error: "Is Farmer ka Wallet nahi mila." };
     if (Number(wallet.balance) < amount) return { error: `Wallet mein sirf Rs ${Number(wallet.balance).toLocaleString()} hai.` };
 
-    await supabase.from("wallet_transactions").insert({
-      wallet_id: wallet.id,
-      type: "machinery_payment",
-      direction: "debit",
-      amount,
-      balance_after: 0,
-      reference_type: "machinery_booking",
-      reference_id: bookingId,
-      notes: `Booking ${booking.booking_number} - Machinery payment from wallet`,
-      created_by: user?.id ?? null,
-    });
+    const { data: walletPayRow } = await supabase
+      .from("wallet_transactions")
+      .insert({
+        wallet_id: wallet.id,
+        type: "manual_adjustment",
+        direction: "debit",
+        amount,
+        balance_after: 0,
+        reference_type: "machinery_booking",
+        reference_id: bookingId,
+        notes: `Booking ${booking.booking_number} - Machinery payment from wallet`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    // Wallet se adaigi bhi utni hi asli aamdani hai jitni cash se. Sirf
+    // cash wali adaigi ginein to machinery ki kamai asal se kam nazar
+    // aati hai, aur kiraye ka faisla ghalat adad par hota hai.
+    if (walletPayRow?.id) {
+      const posted = await postWalletMovement({
+        ownerType: "farmer",
+        ownerId: booking.farmer_id,
+        amount,
+        direction: "debit",
+        against: ACC.machineryIncome,
+        description: `Booking ${booking.booking_number} — wallet se adaigi`,
+        ctx: {
+          createdBy: user?.id ?? null,
+          claims: [{ table: "wallet_transactions", rowId: walletPayRow.id }],
+        },
+      });
+      if (failed(posted)) return { error: `Adaigi hui magar ledger mein nahi gayi: ${posted.error}` };
+    }
   } else {
-    await supabase.from("finance_transactions").insert({
-      account_id: accountId,
-      transaction_type: "income",
-      category: "Machinery Rental - Farmer Payment",
-      amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Booking ${booking.booking_number} - Farmer payment`,
-      created_by: user?.id ?? null,
-    });
+    const { data: rentCashRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "income",
+        category: "Machinery Rental - Farmer Payment",
+        amount,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        notes: `Booking ${booking.booking_number} - Farmer payment`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (rentCashRow?.id && accountId) {
+      const posted = await postCashIn({
+        accountId,
+        amount,
+        description: `Booking ${booking.booking_number} — kisan se adaigi`,
+        againstAccount: ACC.machineryIncome,
+        ctx: {
+          createdBy: user?.id ?? null,
+          claims: [{ table: "finance_transactions", rowId: rentCashRow.id }],
+        },
+      });
+      if (failed(posted)) return { error: `Adaigi darj hui magar ledger mein nahi gayi: ${posted.error}` };
+    }
     const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId!).single();
     if (account) {
       await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId!);

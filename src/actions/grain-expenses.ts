@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -40,15 +41,37 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
   });
   if (error) return { error: error.message };
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "expense",
-    category: "Grain Operations",
-    amount,
-    transaction_date: expenseDate,
-    notes: `${description} (Grain Operations)`,
-    created_by: user?.id ?? null,
-  });
+  const { data: grainExpRow } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "expense",
+      category: "Grain Operations",
+      amount,
+      transaction_date: expenseDate,
+      notes: `${description} (Grain Operations)`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  // Bardana, mazdoori, chungi -- ye grain ki lagat ka hissa hain, aam
+  // daftari kharcha nahi. Inhen 6090 mein daal dein to grain ka asal
+  // nafa maloom hi nahi hota.
+  if (grainExpRow?.id) {
+    const posted = await postCashOut({
+      accountId,
+      amount,
+      description: `${description} (Grain Operations)`,
+      againstAccount: ACC.grainPurchase,
+      ctx: {
+        createdBy: user?.id ?? null,
+        entryDate: expenseDate,
+        claims: [{ table: "finance_transactions", rowId: grainExpRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Kharcha darj hua magar ledger mein nahi gaya: ${posted.error}` };
+  }
   const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
   if (account) {
     await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - amount }).eq("id", accountId);

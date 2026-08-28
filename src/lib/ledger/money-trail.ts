@@ -233,3 +233,88 @@ export async function accountLedger(
     })
     .sort((a, b) => b.entryDate.localeCompare(a.entryDate) || b.entryNumber.localeCompare(a.entryNumber));
 }
+
+/**
+ * Jo abhi ledger tak nahi pahuncha.
+ *
+ * Sab se ahem adad isi safhe par yahi hai, aur wajah ye hai:
+ *
+ * Trial Balance HAMESHA barabar rehta hai -- har entry par debit =
+ * credit ka taala laga hua hai. Is liye "Balanced" dekh kar ye nahi
+ * kaha ja sakta ke hisaab poora hai. Wo sirf ye batata hai ke JO likha
+ * gaya wo theek likha gaya; ye nahi ke sab kuch likha bhi gaya.
+ *
+ * Paisa is farq mein se nikalta hai: kaam hua, purani table mein darj
+ * bhi hua, magar double-entry tak nahi pahuncha. Is liye wo raqam yahan
+ * ginti hai -- taake "sab theek hai" ke peeche na chhup sake.
+ */
+export interface UnpostedRow {
+  sourceTable: string;
+  rowId: string;
+  amount: number;
+  createdAt: string;
+  kind: string;
+  detail: string;
+}
+
+export interface Coverage {
+  sourceTable: string;
+  label: string;
+  pending: number;
+  pendingAmount: number;
+}
+
+const TABLE_LABELS: Record<string, string> = {
+  finance_transactions: "Cash Book (finance)",
+  farmer_credit_ledger: "Kisan ka khata",
+  branch_credit_transactions: "Branch ka khata",
+  staff_credit_ledger: "Staff ka khata",
+  customer_ledger: "Customer ka khata",
+  wallet_transactions: "Wallet",
+  company_expense_requests: "Company ke kharche",
+};
+
+export function tableLabel(table: string): string {
+  return TABLE_LABELS[table] ?? table;
+}
+
+export async function ledgerCoverage(): Promise<{
+  rows: Coverage[];
+  totalPending: number;
+  totalAmount: number;
+  complete: boolean;
+}> {
+  const service = createServiceClient();
+  const { data } = await service.from("v_ledger_coverage").select("source_table, pending, pending_amount");
+
+  const rows: Coverage[] = (data ?? []).map((r) => ({
+    sourceTable: r.source_table ?? "",
+    label: tableLabel(r.source_table ?? ""),
+    pending: Number(r.pending ?? 0),
+    pendingAmount: Number(r.pending_amount ?? 0),
+  }));
+
+  const totalPending = rows.reduce((s, r) => s + r.pending, 0);
+  const totalAmount = round2(rows.reduce((s, r) => s + r.pendingAmount, 0));
+
+  return { rows, totalPending, totalAmount, complete: totalPending === 0 };
+}
+
+/** Wo rows khud, taake dekha ja sake ke kaunsi raqam reh gayi. */
+export async function unpostedRows(limit = 50): Promise<UnpostedRow[]> {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("v_ledger_unposted")
+    .select("source_table, row_id, amount, created_at, kind, detail")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((r) => ({
+    sourceTable: r.source_table ?? "",
+    rowId: r.row_id ?? "",
+    amount: Number(r.amount ?? 0),
+    createdAt: r.created_at ?? "",
+    kind: r.kind ?? "",
+    detail: r.detail ?? "",
+  }));
+}
