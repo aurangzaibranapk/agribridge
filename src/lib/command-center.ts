@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { loadCostSheet } from "@/lib/milk-cost-per-liter";
 
 /**
  * Owner Command Center ke aankre.
@@ -264,6 +265,25 @@ export async function loadAlerts(): Promise<Alert[]> {
       title: `${(dupMilk ?? []).length} doodh ki entry par duplicate ka nishan`,
       detail: "Usi kisan ki usi shift mein ek se zyada entry mili.",
       href: "/admin/milk-collection/verify",
+    });
+  }
+
+  // ---- Fi litre ka hisaab adhoora to nahi? ----
+  // Khali khana sifar ki tarah ginta hai, aur us se fi litre kharcha
+  // ASAL SE KAM nazar aata hai -- yani munafa asal se ZYADA. Ye ghalti
+  // chup rehti hai: safha bilkul theek nazar aata hai, bas adad chhota
+  // hota hai. Is liye ye baat yahan bhi aati hai, us safhe par jane ka
+  // intezar nahi kiya jata.
+  const now = new Date();
+  const sheet = await loadCostSheet(now.getMonth() + 1, now.getFullYear(), null);
+  if (sheet.liters > 0 && sheet.missing.length > 0) {
+    alerts.push({
+      tone: sheet.missing.length >= 3 ? "red" : "amber",
+      title: `Fi litre ka hisaab adhoora — ${sheet.missing.length} khane khali`,
+      detail:
+        `${sheet.missing.join(", ")} is mahine darj nahi huye. ` +
+        `Abhi fi litre Rs ${(sheet.perLiterRunning ?? 0).toFixed(2)} dikh raha hai — asal is se zyada hoga.`,
+      href: "/admin/milk-collection/cost-per-liter",
     });
   }
 
