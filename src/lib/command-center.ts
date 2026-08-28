@@ -370,6 +370,29 @@ export async function loadAlerts(): Promise<Alert[]> {
     });
   }
 
+  // ---- Jin godamon ki ginti bohat arse se nahi hui ----
+  // Kabhi na gina gaya godam sab se khatarnak hai: wahan farq ka jama
+  // hona shuru se jari hai aur kisi ne dekha hi nahi. Maal chupke se
+  // nikalna cash se aasan hota hai -- Rs 50,000 ghayab hon to raat ko
+  // pakre jate hain, paanch bori khaad ghayab ho to koi ginta hi nahi.
+  const { data: staleStock } = await service
+    .from("v_stock_count_overdue")
+    .select("warehouse_name, din_guzray");
+
+  if ((staleStock ?? []).length > 0) {
+    const never = (staleStock ?? []).filter((w) => n(w.din_guzray) >= 9999);
+    const names = (staleStock ?? []).map((w) => w.warehouse_name ?? "—");
+    alerts.push({
+      tone: never.length > 0 ? "red" : "amber",
+      title: `${(staleStock ?? []).length} godam ki ginti arse se nahi hui`,
+      detail:
+        never.length > 0
+          ? `${never.length} godam to kabhi gina hi nahi gaya (${names.join(", ")}). Wahan farq ka jama hona shuru se jari hai.`
+          : `${names.join(", ")} — ek mahine se zyada ho gaya.`,
+      href: "/admin/stock-count",
+    });
+  }
+
   if (alerts.length === 0) {
     alerts.push({
       tone: "green",

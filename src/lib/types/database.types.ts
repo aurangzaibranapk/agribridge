@@ -402,6 +402,13 @@ export type Database = {
             foreignKeyName: "agri_dispatches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "agri_dispatches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
@@ -1705,6 +1712,7 @@ export type Database = {
           account_id: string
           amount: number
           created_at: string
+          desc_hash: string | null
           description: string
           id: string
           imported_by: string | null
@@ -1719,6 +1727,7 @@ export type Database = {
           account_id: string
           amount: number
           created_at?: string
+          desc_hash?: string | null
           description: string
           id?: string
           imported_by?: string | null
@@ -1733,6 +1742,7 @@ export type Database = {
           account_id?: string
           amount?: number
           created_at?: string
+          desc_hash?: string | null
           description?: string
           id?: string
           imported_by?: string | null
@@ -5590,6 +5600,13 @@ export type Database = {
             foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
@@ -5834,6 +5851,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sales_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "grain_sales_warehouse_id_fkey"
@@ -6085,6 +6109,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "shops"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "inventory_warehouse_id_fkey"
@@ -10237,6 +10268,155 @@ export type Database = {
             foreignKeyName: "stock_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_count_lines: {
+        Row: {
+          count_id: string
+          counted_qty: number | null
+          difference_qty: number | null
+          difference_value: number | null
+          expected_qty: number
+          id: string
+          inventory_id: string | null
+          product_id: string
+          reason: string | null
+          unit_cost: number
+        }
+        Insert: {
+          count_id: string
+          counted_qty?: number | null
+          difference_qty?: number | null
+          difference_value?: number | null
+          expected_qty: number
+          id?: string
+          inventory_id?: string | null
+          product_id: string
+          reason?: string | null
+          unit_cost?: number
+        }
+        Update: {
+          count_id?: string
+          counted_qty?: number | null
+          difference_qty?: number | null
+          difference_value?: number | null
+          expected_qty?: number
+          id?: string
+          inventory_id?: string | null
+          product_id?: string
+          reason?: string | null
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_lines_count_id_fkey"
+            columns: ["count_id"]
+            isOneToOne: false
+            referencedRelation: "stock_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_counts: {
+        Row: {
+          count_date: string
+          created_at: string
+          id: string
+          journal_entry_id: string | null
+          notes: string | null
+          posted_at: string | null
+          posted_by: string | null
+          started_at: string
+          started_by: string
+          status: string
+          total_difference_value: number | null
+          warehouse_id: string
+        }
+        Insert: {
+          count_date?: string
+          created_at?: string
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          started_at?: string
+          started_by: string
+          status?: string
+          total_difference_value?: number | null
+          warehouse_id: string
+        }
+        Update: {
+          count_date?: string
+          created_at?: string
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          started_at?: string
+          started_by?: string
+          status?: string
+          total_difference_value?: number | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_counts_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_counts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
@@ -10333,6 +10513,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "stock_loss_records_warehouse_id_fkey"
@@ -10498,6 +10685,13 @@ export type Database = {
             foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
             columns: ["from_warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
@@ -10521,6 +10715,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
@@ -11371,6 +11572,13 @@ export type Database = {
             foreignKeyName: "warehouse_bins_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "warehouse_bins_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
@@ -11714,6 +11922,15 @@ export type Database = {
           kind: string | null
           row_id: string | null
           source_table: string | null
+        }
+        Relationships: []
+      }
+      v_stock_count_overdue: {
+        Row: {
+          aakhri_ginti: string | null
+          din_guzray: number | null
+          warehouse_id: string | null
+          warehouse_name: string | null
         }
         Relationships: []
       }
