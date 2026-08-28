@@ -6736,57 +6736,126 @@ export type Database = {
           },
         ]
       }
+      milk_collection_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
       milk_entries: {
         Row: {
           adjusted_volume: number | null
           branch_id: string | null
+          chiller_name: string | null
+          client_uuid: string | null
+          collected_at: string | null
+          collection_number: string | null
           created_at: string
           created_by: string | null
           entry_date: string
           farmer_id: string
+          fat_at: string | null
+          fat_by_profile_id: string | null
           fat_percentage: number | null
+          flags: Json
           id: string
           lr: number | null
+          lr_image_path: string | null
+          mca_profile_id: string | null
           notes: string | null
+          possible_duplicate_of: string | null
           quantity_liters: number
-          rate_per_liter: number
+          rate_per_liter: number | null
+          route_name: string | null
           shift: string
           snf_percentage: number | null
-          total_amount: number
+          source: string
+          status: string
+          synced_at: string | null
+          total_amount: number | null
+          ts_value: number | null
+          verified_at: string | null
+          verified_by_profile_id: string | null
+          verified_comment: string | null
         }
         Insert: {
           adjusted_volume?: number | null
           branch_id?: string | null
+          chiller_name?: string | null
+          client_uuid?: string | null
+          collected_at?: string | null
+          collection_number?: string | null
           created_at?: string
           created_by?: string | null
           entry_date?: string
           farmer_id: string
+          fat_at?: string | null
+          fat_by_profile_id?: string | null
           fat_percentage?: number | null
+          flags?: Json
           id?: string
           lr?: number | null
+          lr_image_path?: string | null
+          mca_profile_id?: string | null
           notes?: string | null
+          possible_duplicate_of?: string | null
           quantity_liters: number
-          rate_per_liter: number
+          rate_per_liter?: number | null
+          route_name?: string | null
           shift?: string
           snf_percentage?: number | null
-          total_amount: number
+          source?: string
+          status?: string
+          synced_at?: string | null
+          total_amount?: number | null
+          ts_value?: number | null
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
+          verified_comment?: string | null
         }
         Update: {
           adjusted_volume?: number | null
           branch_id?: string | null
+          chiller_name?: string | null
+          client_uuid?: string | null
+          collected_at?: string | null
+          collection_number?: string | null
           created_at?: string
           created_by?: string | null
           entry_date?: string
           farmer_id?: string
+          fat_at?: string | null
+          fat_by_profile_id?: string | null
           fat_percentage?: number | null
+          flags?: Json
           id?: string
           lr?: number | null
+          lr_image_path?: string | null
+          mca_profile_id?: string | null
           notes?: string | null
+          possible_duplicate_of?: string | null
           quantity_liters?: number
-          rate_per_liter?: number
+          rate_per_liter?: number | null
+          route_name?: string | null
           shift?: string
           snf_percentage?: number | null
-          total_amount?: number
+          source?: string
+          status?: string
+          synced_at?: string | null
+          total_amount?: number | null
+          ts_value?: number | null
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
+          verified_comment?: string | null
         }
         Relationships: [
           {
@@ -6823,6 +6892,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "milk_farmer_balances"
             referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_fat_by_profile_id_fkey"
+            columns: ["fat_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_mca_profile_id_fkey"
+            columns: ["mca_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_possible_duplicate_of_fkey"
+            columns: ["possible_duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "milk_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -8845,6 +8942,8 @@ export type Database = {
           hire_date: string | null
           id: string
           is_active: boolean
+          milk_chiller_name: string | null
+          milk_route_name: string | null
           phone: string | null
           photo_url: string | null
           profile_id: string
@@ -8865,6 +8964,8 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean
+          milk_chiller_name?: string | null
+          milk_route_name?: string | null
           phone?: string | null
           photo_url?: string | null
           profile_id: string
@@ -8885,6 +8986,8 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean
+          milk_chiller_name?: string | null
+          milk_route_name?: string | null
           phone?: string | null
           photo_url?: string | null
           profile_id?: string
@@ -10674,6 +10777,8 @@ export type Database = {
         | "escrow_hold"
         | "escrow_release"
         | "escrow_refund"
+        | "milk_income"
+        | "milk_payment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -10943,6 +11048,8 @@ export const Constants = {
         "escrow_hold",
         "escrow_release",
         "escrow_refund",
+        "milk_income",
+        "milk_payment",
       ],
     },
   },
