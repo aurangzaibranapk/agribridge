@@ -91,6 +91,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: "Dairy",
     items: [
+      { href: "/admin/milk-collection/collect", label: "Doodh Jama Karein", icon: Droplet },
       { href: "/admin/milk-collection", label: "Milk Collection", icon: Droplet },
       { href: "/admin/milk-collection/routes", label: "Route & Shortage", icon: AlertTriangle },
       { href: "/admin/milk-collection/fuel", label: "Fuel Tracker", icon: Bike },
