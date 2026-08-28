@@ -3076,6 +3076,69 @@ export type Database = {
           },
         ]
       }
+      dashboard_features: {
+        Row: {
+          dashboard_key: string
+          feature_key: string
+          sort_order: number
+        }
+        Insert: {
+          dashboard_key: string
+          feature_key: string
+          sort_order?: number
+        }
+        Update: {
+          dashboard_key?: string
+          feature_key?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_features_dashboard_key_fkey"
+            columns: ["dashboard_key"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "dashboard_features_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      dashboards: {
+        Row: {
+          created_at: string
+          icon: string | null
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          summary: string | null
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          summary?: string | null
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          summary?: string | null
+        }
+        Relationships: []
+      }
       dealer_customers: {
         Row: {
           address: string | null
@@ -3388,6 +3451,109 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_head_grants: {
+        Row: {
+          created_at: string
+          department_key: string
+          expires_at: string | null
+          granted_by: string | null
+          max_actions: string[]
+          max_data_scope: string
+          profile_id: string
+          starts_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          department_key: string
+          expires_at?: string | null
+          granted_by?: string | null
+          max_actions?: string[]
+          max_data_scope?: string
+          profile_id: string
+          starts_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          department_key?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          max_actions?: string[]
+          max_data_scope?: string
+          profile_id?: string
+          starts_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_head_grants_department_key_fkey"
+            columns: ["department_key"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "department_head_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_head_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          dashboard_key: string | null
+          head_profile_id: string | null
+          is_active: boolean
+          key: string
+          label: string
+          role: string
+          sort_order: number
+          summary: string | null
+        }
+        Insert: {
+          dashboard_key?: string | null
+          head_profile_id?: string | null
+          is_active?: boolean
+          key: string
+          label: string
+          role: string
+          sort_order?: number
+          summary?: string | null
+        }
+        Update: {
+          dashboard_key?: string | null
+          head_profile_id?: string | null
+          is_active?: boolean
+          key?: string
+          label?: string
+          role?: string
+          sort_order?: number
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_dashboard_key_fkey"
+            columns: ["dashboard_key"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "departments_head_profile_id_fkey"
+            columns: ["head_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4326,6 +4492,36 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
         ]
+      }
+      features: {
+        Row: {
+          created_at: string
+          icon: string | null
+          is_active: boolean
+          is_sensitive: boolean
+          key: string
+          label: string
+          route: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          is_active?: boolean
+          is_sensitive?: boolean
+          key: string
+          label: string
+          route: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          is_active?: boolean
+          is_sensitive?: boolean
+          key?: string
+          label?: string
+          route?: string
+        }
+        Relationships: []
       }
       fertilizer_items: {
         Row: {
@@ -8267,6 +8463,48 @@ export type Database = {
           },
         ]
       }
+      role_feature_permissions: {
+        Row: {
+          actions: string[]
+          data_scope: string
+          feature_key: string
+          role: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actions?: string[]
+          data_scope?: string
+          feature_key: string
+          role: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actions?: string[]
+          data_scope?: string
+          feature_key?: string
+          role?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_feature_permissions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "role_feature_permissions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_page_permissions: {
         Row: {
           allowed_pages: string[]
@@ -9892,6 +10130,67 @@ export type Database = {
           rating?: number | null
         }
         Relationships: []
+      }
+      user_feature_permissions: {
+        Row: {
+          actions: string[]
+          created_at: string
+          data_scope: string
+          expires_at: string | null
+          feature_key: string
+          granted_by: string | null
+          id: string
+          profile_id: string
+          reason: string | null
+          starts_at: string | null
+        }
+        Insert: {
+          actions?: string[]
+          created_at?: string
+          data_scope?: string
+          expires_at?: string | null
+          feature_key: string
+          granted_by?: string | null
+          id?: string
+          profile_id: string
+          reason?: string | null
+          starts_at?: string | null
+        }
+        Update: {
+          actions?: string[]
+          created_at?: string
+          data_scope?: string
+          expires_at?: string | null
+          feature_key?: string
+          granted_by?: string | null
+          id?: string
+          profile_id?: string
+          reason?: string | null
+          starts_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feature_permissions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "user_feature_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_feature_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehicle_daily_logs: {
         Row: {
