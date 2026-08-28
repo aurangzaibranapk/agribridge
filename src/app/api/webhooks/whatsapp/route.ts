@@ -69,11 +69,22 @@ export async function POST(request: NextRequest) {
     // un ke kaam (hazri waghera) gine chune hain aur unhein bilkul waisa
     // hi chalna chahiye jaisa likha gaya. null aaye to ye staff nahi —
     // neeche farmer wala purana raasta chalega.
+    // Tasveer sirf staff ke liye utarte hain — farmer wala raasta abhi
+    // photo istemal nahi karta, aur har aane wali image download karna
+    // bekar ka kharcha hai.
+    let staffImage: { base64: string; mimeType: string } | null = null;
+    if (message.type === "image" && message.image?.id) {
+      const media = await downloadWhatsAppMedia(message.image.id);
+      if (media) staffImage = { base64: media.base64, mimeType: media.mimeType };
+    }
+
     const staffReply = await handleStaffMessage({
       fromPhone,
-      text: message.type === "text" ? message.text.body : null,
+      // Image ke sath jo likha ho wo caption mein aata hai, text mein nahi.
+      text: message.type === "text" ? message.text.body : (message.image?.caption ?? null),
       latitude: message.location?.latitude ?? null,
       longitude: message.location?.longitude ?? null,
+      image: staffImage,
     });
     if (staffReply) {
       await sendWhatsAppMessage(fromPhone, staffReply);

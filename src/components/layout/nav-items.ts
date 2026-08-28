@@ -32,6 +32,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/shops", label: "Shops", icon: Store },
       { href: "/admin/shop-rent", label: "Shop Rent & Bills", icon: Home },
       { href: "/admin/drivers", label: "Drivers & Vehicles", icon: IdCard },
+      { href: "/admin/vehicles", label: "Gaariyan (Rozana)", icon: Bike },
       { href: "/admin/crm", label: "CRM", icon: Contact },
     ],
   },

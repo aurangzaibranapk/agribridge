@@ -9748,6 +9748,202 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_daily_logs: {
+        Row: {
+          branch_id: string | null
+          closing_at: string | null
+          closing_km: number | null
+          closing_submission_id: string | null
+          cost_per_km: number | null
+          created_at: string
+          expected_liters: number | null
+          flags: Json
+          fuel_amount: number | null
+          fuel_liters: number | null
+          id: string
+          km_per_liter: number | null
+          km_travelled: number | null
+          liters_difference: number | null
+          log_date: string
+          log_number: string
+          opening_at: string | null
+          opening_km: number | null
+          opening_submission_id: string | null
+          posted_at: string | null
+          posted_fuel_log_id: string | null
+          staff_profile_id: string
+          status: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          closing_at?: string | null
+          closing_km?: number | null
+          closing_submission_id?: string | null
+          cost_per_km?: number | null
+          created_at?: string
+          expected_liters?: number | null
+          flags?: Json
+          fuel_amount?: number | null
+          fuel_liters?: number | null
+          id?: string
+          km_per_liter?: number | null
+          km_travelled?: number | null
+          liters_difference?: number | null
+          log_date: string
+          log_number: string
+          opening_at?: string | null
+          opening_km?: number | null
+          opening_submission_id?: string | null
+          posted_at?: string | null
+          posted_fuel_log_id?: string | null
+          staff_profile_id: string
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          closing_at?: string | null
+          closing_km?: number | null
+          closing_submission_id?: string | null
+          cost_per_km?: number | null
+          created_at?: string
+          expected_liters?: number | null
+          flags?: Json
+          fuel_amount?: number | null
+          fuel_liters?: number | null
+          id?: string
+          km_per_liter?: number | null
+          km_travelled?: number | null
+          liters_difference?: number | null
+          log_date?: string
+          log_number?: string
+          opening_at?: string | null
+          opening_km?: number | null
+          opening_submission_id?: string | null
+          posted_at?: string | null
+          posted_fuel_log_id?: string | null
+          staff_profile_id?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_daily_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_daily_logs_closing_submission_id_fkey"
+            columns: ["closing_submission_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_daily_logs_opening_submission_id_fkey"
+            columns: ["opening_submission_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_daily_logs_posted_fuel_log_id_fkey"
+            columns: ["posted_fuel_log_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_daily_logs_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_daily_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_fuel_entries: {
+        Row: {
+          amount: number | null
+          amount_mismatch: boolean
+          created_at: string
+          daily_log_id: string
+          entered_at: string
+          id: string
+          liters: number | null
+          rate_per_liter: number | null
+          receipt_path: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          amount_mismatch?: boolean
+          created_at?: string
+          daily_log_id: string
+          entered_at?: string
+          id?: string
+          liters?: number | null
+          rate_per_liter?: number | null
+          receipt_path?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          amount_mismatch?: boolean
+          created_at?: string
+          daily_log_id?: string
+          entered_at?: string
+          id?: string
+          liters?: number | null
+          rate_per_liter?: number | null
+          receipt_path?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_fuel_entries_daily_log_id_fkey"
+            columns: ["daily_log_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_daily_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_fuel_entries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_log_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
       vehicle_maintenance_records: {
         Row: {
           amount: number
@@ -9801,6 +9997,7 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          assigned_profile_id: string | null
           assigned_rider: string | null
           branch_id: string | null
           created_at: string
@@ -9813,6 +10010,7 @@ export type Database = {
           vehicle_name: string
         }
         Insert: {
+          assigned_profile_id?: string | null
           assigned_rider?: string | null
           branch_id?: string | null
           created_at?: string
@@ -9825,6 +10023,7 @@ export type Database = {
           vehicle_name: string
         }
         Update: {
+          assigned_profile_id?: string | null
           assigned_rider?: string | null
           branch_id?: string | null
           created_at?: string
@@ -9837,6 +10036,13 @@ export type Database = {
           vehicle_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicles_assigned_profile_id_fkey"
+            columns: ["assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicles_branch_id_fkey"
             columns: ["branch_id"]
