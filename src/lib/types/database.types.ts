@@ -10098,6 +10098,121 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_submission_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      whatsapp_submissions: {
+        Row: {
+          ai_extracted: Json | null
+          ai_summary: string | null
+          branch_id: string | null
+          corrected_amount: number | null
+          created_at: string
+          flags: Json
+          id: string
+          kind: string
+          manager_comment: string | null
+          manager_media_paths: string[] | null
+          manager_profile_id: string | null
+          media_mime: string | null
+          media_path: string | null
+          original_amount: number | null
+          posted_at: string | null
+          posted_reference_id: string | null
+          posted_reference_type: string | null
+          raw_text: string | null
+          reviewed_at: string | null
+          staff_profile_id: string
+          status: string
+          submission_number: string
+          whatsapp_number: string
+        }
+        Insert: {
+          ai_extracted?: Json | null
+          ai_summary?: string | null
+          branch_id?: string | null
+          corrected_amount?: number | null
+          created_at?: string
+          flags?: Json
+          id?: string
+          kind: string
+          manager_comment?: string | null
+          manager_media_paths?: string[] | null
+          manager_profile_id?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          original_amount?: number | null
+          posted_at?: string | null
+          posted_reference_id?: string | null
+          posted_reference_type?: string | null
+          raw_text?: string | null
+          reviewed_at?: string | null
+          staff_profile_id: string
+          status?: string
+          submission_number: string
+          whatsapp_number: string
+        }
+        Update: {
+          ai_extracted?: Json | null
+          ai_summary?: string | null
+          branch_id?: string | null
+          corrected_amount?: number | null
+          created_at?: string
+          flags?: Json
+          id?: string
+          kind?: string
+          manager_comment?: string | null
+          manager_media_paths?: string[] | null
+          manager_profile_id?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          original_amount?: number | null
+          posted_at?: string | null
+          posted_reference_id?: string | null
+          posted_reference_type?: string | null
+          raw_text?: string | null
+          reviewed_at?: string | null
+          staff_profile_id?: string
+          status?: string
+          submission_number?: string
+          whatsapp_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_submissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_submissions_manager_profile_id_fkey"
+            columns: ["manager_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_submissions_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       farmer_credit_balances: {
