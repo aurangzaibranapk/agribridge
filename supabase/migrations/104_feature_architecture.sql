@@ -285,3 +285,23 @@ where role = 'milk_collection' and feature_key in ('milk-collection.walk-in','fa
 
 update role_feature_permissions set actions = array['view','create','edit']
 where role = 'finance' and feature_key in ('finance','finance.banks','branch-credit','wallets','payouts');
+
+-- =====================================================================
+-- Marhala 5: Department Head ka apna safha
+-- =====================================================================
+insert into features (key, label, route, icon, is_sensitive) values
+('my-department', 'Meri Team (Head)', '/admin/my-department', 'Users', true)
+on conflict (key) do update set label = excluded.label, is_sensitive = excluded.is_sensitive;
+
+insert into dashboard_features (dashboard_key, feature_key, sort_order)
+values ('admin', 'my-department', 15)
+on conflict do nothing;
+
+-- Har department ke role ko apna team-safha khulna chahiye. Ijazat na
+-- dein to head banaya to ja sakta hai magar wo apna safha khol hi nahi
+-- pata -- aur wajah kisi ko nazar nahi aati. Safha khud dekh leta hai ke
+-- ye shakhs waqai head hai ya nahi.
+insert into role_feature_permissions (role, feature_key, actions, data_scope)
+select d.role, 'my-department', array['view','assign']::text[], 'own_branch'
+from departments d
+on conflict (role, feature_key) do update set actions = excluded.actions;
