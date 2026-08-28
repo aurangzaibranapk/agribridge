@@ -25,14 +25,22 @@ import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
  * wo andaza hota, aur andaze par bana khata baad mein theek karna parta.
  */
 
-export type MilkSource = "website" | "offline" | "whatsapp" | "app";
+/** Entry system mein kaise hui. */
+export type MilkChannel = "website" | "offline" | "whatsapp" | "app";
+/** Doodh chiller tak kaise pahuncha. */
+export type CollectionSource = "mca_field" | "self_delivery";
 export type MilkStatus = "pending_fat" | "priced" | "verified" | "rejected";
 
-export const SOURCE_LABEL: Record<MilkSource, string> = {
+export const CHANNEL_LABEL: Record<MilkChannel, string> = {
   website: "Website",
   offline: "Offline (baad mein sync)",
   whatsapp: "WhatsApp",
   app: "Mobile App",
+};
+
+export const SOURCE_LABEL: Record<CollectionSource, string> = {
+  mca_field: "MCA Field Collection",
+  self_delivery: "Farmer Self Delivery",
 };
 
 export const STATUS_LABEL: Record<MilkStatus, string> = {
@@ -132,10 +140,18 @@ export interface CollectionInput {
   entryDate?: string;
   /** Kis waqt asal mein jama hua -- offline mein sync ke waqt se alag hota hai. */
   collectedAt?: string | null;
-  source: MilkSource;
+  /** Entry kis raaste se hui. */
+  channel: MilkChannel;
+  /** Doodh chiller tak kaise pahuncha. Na batayein to MCA wala. */
+  collectionSource?: CollectionSource;
   /** Device par bana nishan. Offline sync ki dobara koshish isi se rukti hai. */
   clientUuid?: string | null;
+  /** MCA -- self-delivery mein hamesha null. */
   mcaProfileId: string | null;
+  /** Self-delivery mein doodh wusool karne wala MCO. */
+  receivedByProfileId?: string | null;
+  /** Self-delivery par pehla SMS nahi jata -- raqam wala foran ban jata hai. */
+  skipInterimSms?: boolean;
   branchId?: string | null;
   routeName?: string | null;
   chillerName?: string | null;
@@ -164,6 +180,16 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   const service = createServiceClient();
 
   if (!(input.liters > 0)) return { error: "Litre sahi likhein." };
+
+  const collectionSource: CollectionSource = input.collectionSource ?? "mca_field";
+  const selfDelivery = collectionSource === "self_delivery";
+
+  if (selfDelivery && !input.receivedByProfileId) {
+    return { error: "Wusool karne wale MCO ka naam zaroori hai." };
+  }
+  if (!selfDelivery && !input.mcaProfileId) {
+    return { error: "MCA ka naam zaroori hai." };
+  }
 
   // ---- Farmer dhoondein ----
   let farmerId = input.farmerId ?? null;
@@ -228,7 +254,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
 
   const { data: sameShift } = await service
     .from("milk_entries")
-    .select("id, collection_number, source, quantity_liters")
+    .select("id, collection_number, entry_channel, quantity_liters")
     .eq("farmer_id", farmerId)
     .eq("entry_date", entryDate)
     .eq("shift", shift)
@@ -239,7 +265,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
     const first = sameShift[0];
     duplicateOf = first.id;
     flags.push(
-      `Isi kisan ki isi shift mein pehle se entry maujood hai (${first.collection_number ?? "—"}, ${Number(first.quantity_liters)}L, ${SOURCE_LABEL[first.source as MilkSource] ?? first.source}).`
+      `Isi kisan ki isi shift mein pehle se entry maujood hai (${first.collection_number ?? "—"}, ${Number(first.quantity_liters)}L, ${CHANNEL_LABEL[first.entry_channel as MilkChannel] ?? first.entry_channel}).`
     );
   }
 
@@ -277,10 +303,16 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
       rate_per_liter: null,
       total_amount: null,
       status: "pending_fat",
-      source: input.source,
+      entry_channel: input.channel,
+      collection_source: collectionSource,
+      // Self-delivery mein MCA ka khana KHALI rehta hai. Kisi MCA ka
+      // naam daal dena us ki karkardagi aur us ke route ka nuqsan dono
+      // ghalat kar deta hai -- wo doodh us ki gaari mein kabhi aaya hi
+      // nahi tha.
+      mca_profile_id: selfDelivery ? null : input.mcaProfileId,
+      received_by_profile_id: selfDelivery ? (input.receivedByProfileId ?? null) : null,
       client_uuid: input.clientUuid ?? null,
       collection_number: collectionNumber,
-      mca_profile_id: input.mcaProfileId,
       route_name: input.routeName ?? null,
       chiller_name: input.chillerName ?? null,
       lr_image_path: lrImagePath,
@@ -289,7 +321,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
       possible_duplicate_of: duplicateOf,
       flags: flags as never,
       notes: input.notes ?? null,
-      created_by: input.mcaProfileId,
+      created_by: selfDelivery ? (input.receivedByProfileId ?? null) : input.mcaProfileId,
     })
     .select("id, collection_number")
     .single();
@@ -304,7 +336,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   }
 
   // Kisan ko foran ittila -- raqam nahi, kyunke abhi bani hi nahi.
-  if (farmerPhone) {
+  if (farmerPhone && !input.skipInterimSms) {
     await sendMilkSms(
       farmerPhone,
       `AgriBridge: ${input.liters} litre doodh mausool hua (${collectionNumber}).\n` +

@@ -114,7 +114,7 @@ export async function handleMilkMessage(
     farmerCode: parsed.farmerCode,
     liters: parsed.liters,
     lr: parsed.lr,
-    source: "whatsapp",
+    channel: "whatsapp",
     mcaProfileId: staff.profileId,
     branchId: staff.branchId,
     routeName: staffRow?.milk_route_name ?? null,

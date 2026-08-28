@@ -92,6 +92,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Dairy",
     items: [
       { href: "/admin/milk-collection/collect", label: "Doodh Jama Karein", icon: Droplet },
+      { href: "/admin/milk-collection/walk-in", label: "Walk-in / Self Delivery", icon: Store },
       { href: "/admin/milk-collection/chiller", label: "Chiller — FAT", icon: Droplet },
       { href: "/admin/milk-collection/verify", label: "Milk Manager Verify", icon: ClipboardCheck },
       { href: "/admin/milk-collection", label: "Milk Collection", icon: Droplet },

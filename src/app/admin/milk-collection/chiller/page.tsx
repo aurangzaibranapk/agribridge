@@ -34,7 +34,7 @@ export default async function ChillerPage({
   const [{ data: entries }, { data: receipts }] = await Promise.all([
     supabase
       .from("milk_entries")
-      .select("id, collection_number, quantity_liters, lr, status, source, route_name, lr_image_path, flags, farmers(full_name, farmer_code)")
+      .select("id, collection_number, quantity_liters, lr, status, entry_channel, collection_source, route_name, lr_image_path, flags, farmers(full_name, farmer_code)")
       .eq("entry_date", date)
       .eq("shift", shift)
       .neq("status", "rejected")
@@ -53,10 +53,22 @@ export default async function ChillerPage({
   let pendingCount = 0;
   let totalLiters = 0;
 
+  let selfDeliveryLiters = 0;
+  let selfDeliveryCount = 0;
+
   for (const row of entries ?? []) {
-    const route = row.route_name ?? NO_ROUTE;
     const liters = Number(row.quantity_liters);
     totalLiters += liters;
+
+    // Kisan khud laya hua doodh kisi route ke hisaab mein nahi jata.
+    // Use MCA ke trip mein milane se us ka nuqsan ghalat nikalta hai.
+    if (row.collection_source === "self_delivery") {
+      selfDeliveryLiters += liters;
+      selfDeliveryCount += 1;
+      continue;
+    }
+
+    const route = row.route_name ?? NO_ROUTE;
 
     let group = groups.get(route);
     if (!group) {
@@ -83,7 +95,8 @@ export default async function ChillerPage({
       farmer_label: `${farmer?.farmer_code ?? "—"} — ${farmer?.full_name ?? "—"}`,
       liters,
       lr: row.lr == null ? null : Number(row.lr),
-      source: row.source,
+      channel: row.entry_channel,
+      collectionSource: row.collection_source,
       lr_url: await signedLrUrl(row.lr_image_path),
       flags: Array.isArray(row.flags) ? (row.flags as string[]) : [],
     };
@@ -129,10 +142,24 @@ export default async function ChillerPage({
         </form>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kul doodh</p>
+          <p className="text-xs text-surface-500">MCA ka doodh</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
+            {Math.round((totalLiters - selfDeliveryLiters) * 10) / 10} L
+          </p>
+          <p className="text-xs text-surface-400">{list.length} route</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-surface-500">Kisan khud laya</p>
+          <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
+            {Math.round(selfDeliveryLiters * 10) / 10} L
+          </p>
+          <p className="text-xs text-surface-400">{selfDeliveryCount} entries</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-surface-500">Kul mausool</p>
+          <p className="mt-1 text-2xl font-semibold text-brand-700 dark:text-brand-400">
             {Math.round(totalLiters * 10) / 10} L
           </p>
         </Card>
@@ -140,11 +167,12 @@ export default async function ChillerPage({
           <p className="text-xs text-surface-500">FAT ka intezar</p>
           <p className="mt-1 text-2xl font-semibold text-amber-600">{pendingCount}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs text-surface-500">Route</p>
-          <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{list.length}</p>
-        </Card>
       </div>
+
+      <p className="px-1 text-xs text-surface-400">
+        Neeche ke route sirf MCA ka doodh dikhate hain. Jo kisan khud le kar aaye, wo kisi MCA ke trip
+        mein nahi ginta — warna us ka nuqsan aur karkardagi dono ghalat nikalte.
+      </p>
 
       <ChillerClient groups={list} date={date} shift={shift} />
     </div>

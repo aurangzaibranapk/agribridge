@@ -89,6 +89,7 @@ export async function applyFatToBatch(_prev: ActionState, formData: FormData): P
     .select("id")
     .eq("entry_date", date)
     .eq("shift", shift)
+    .eq("collection_source", "mca_field")
     .eq("status", "pending_fat");
   query = route ? query.eq("route_name", route) : query.is("route_name", null);
 
@@ -144,16 +145,21 @@ export async function recordChillerReceipt(_prev: ActionState, formData: FormDat
 
   const service = createServiceClient();
 
+  // SIRF wo doodh jo MCA le kar aaya. Jo kisan khud chiller par de gaya,
+  // wo kisi MCA ki gaari mein kabhi tha hi nahi -- use is hisaab mein
+  // milane se us MCA ka nuqsan ghalat nikalta aur us ki karkardagi
+  // kharab nazar aati.
   let entriesQuery = service
     .from("milk_entries")
     .select("quantity_liters, branch_id")
     .eq("entry_date", date)
     .eq("shift", shift)
+    .eq("collection_source", "mca_field")
     .neq("status", "rejected");
   entriesQuery = route ? entriesQuery.eq("route_name", route) : entriesQuery.is("route_name", null);
 
   const { data: entries } = await entriesQuery;
-  if (!entries || entries.length === 0) return { error: "Is route ki koi entry nahi mili." };
+  if (!entries || entries.length === 0) return { error: "Is route ka MCA wala koi doodh nahi mila." };
 
   const fieldVolume = entries.reduce((sum, e) => sum + Number(e.quantity_liters), 0);
   const branchId = entries.find((e) => e.branch_id)?.branch_id ?? null;

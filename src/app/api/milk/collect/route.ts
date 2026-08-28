@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireStaff } from "@/lib/api-auth";
-import { recordCollection, type MilkSource } from "@/lib/milk-collection";
+import { recordCollection, type MilkChannel } from "@/lib/milk-collection";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ interface Item {
   lr_image_mime?: string;
 }
 
-const SOURCES: MilkSource[] = ["website", "offline", "whatsapp", "app"];
+const CHANNELS: MilkChannel[] = ["website", "offline", "whatsapp", "app"];
 
 /** Ek sync mein kitni entries tak. Offline se kabhi kabhi poora din aata hai. */
 const MAX_ITEMS = 200;
@@ -43,15 +43,18 @@ export async function POST(request: Request) {
   const auth = await requireStaff();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  let body: { source?: string; items?: Item[] };
+  let body: { source?: string; entry_channel?: string; items?: Item[] };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "JSON sahi nahi hai." }, { status: 400 });
   }
 
-  const source = (body.source ?? "website") as MilkSource;
-  if (!SOURCES.includes(source)) return NextResponse.json({ error: "Source sahi nahi hai." }, { status: 400 });
+  // "source" purana naam hai. Device par pehle se rukhi hui entries wohi
+  // bhejti hain, is liye dono qabool karte hain -- warna sync ke din
+  // qatar mein pari entries rad ho jatin.
+  const channel = (body.entry_channel ?? body.source ?? "website") as MilkChannel;
+  if (!CHANNELS.includes(channel)) return NextResponse.json({ error: "Entry channel sahi nahi hai." }, { status: 400 });
 
   const items = Array.isArray(body.items) ? body.items : [];
   if (items.length === 0) return NextResponse.json({ error: "Koi entry nahi bheji gayi." }, { status: 400 });
@@ -93,7 +96,7 @@ export async function POST(request: Request) {
       shift: item.shift,
       entryDate: item.entry_date,
       collectedAt: item.collected_at ?? null,
-      source,
+      channel,
       clientUuid: item.client_uuid ?? null,
       mcaProfileId: auth.caller.userId,
       branchId: item.branch_id ?? profile?.branch_id ?? null,

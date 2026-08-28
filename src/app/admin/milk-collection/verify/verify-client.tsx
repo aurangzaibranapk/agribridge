@@ -16,7 +16,8 @@ export interface PricedEntry {
   fat: number | null;
   ts: number | null;
   amount: number;
-  source: string;
+  channel: string;
+  collectionSource: string;
   flags: string[];
   duplicate: boolean;
 }
@@ -79,7 +80,8 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
                   {entry.route}
                 </p>
                 <p className="text-xs text-surface-400">
-                  {entry.collection_number} • {entry.source}
+                  {entry.collection_number} • {entry.channel}
+                  {entry.collectionSource === "self_delivery" && " • Khud laya"}
                 </p>
                 {entry.duplicate && (
                   <p className="mt-1 flex items-start gap-1 text-xs text-red-700">

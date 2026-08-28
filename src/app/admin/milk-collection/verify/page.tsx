@@ -21,7 +21,7 @@ export default async function MilkVerifyPage() {
 
   const { data: rows } = await supabase
     .from("milk_entries")
-    .select("id, collection_number, quantity_liters, fat_percentage, ts_value, total_amount, route_name, source, flags, possible_duplicate_of, entry_date, shift, farmers(full_name, farmer_code)")
+    .select("id, collection_number, quantity_liters, fat_percentage, ts_value, total_amount, route_name, entry_channel, collection_source, flags, possible_duplicate_of, entry_date, shift, farmers(full_name, farmer_code)")
     .eq("status", "priced")
     .order("entry_date", { ascending: false })
     .order("created_at")
@@ -38,7 +38,8 @@ export default async function MilkVerifyPage() {
       fat: row.fat_percentage == null ? null : Number(row.fat_percentage),
       ts: row.ts_value == null ? null : Number(row.ts_value),
       amount: row.total_amount == null ? 0 : Number(row.total_amount),
-      source: row.source,
+      channel: row.entry_channel,
+      collectionSource: row.collection_source,
       flags: Array.isArray(row.flags) ? (row.flags as string[]) : [],
       duplicate: row.possible_duplicate_of != null,
     };

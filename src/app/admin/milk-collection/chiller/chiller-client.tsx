@@ -12,7 +12,8 @@ export interface PendingEntry {
   farmer_label: string;
   liters: number;
   lr: number | null;
-  source: string;
+  channel: string;
+  collectionSource: string;
   lr_url: string | null;
   flags: string[];
 }

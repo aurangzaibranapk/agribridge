@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { CollectForm, type FarmerOption } from "./collect-form";
-import { STATUS_LABEL, SOURCE_LABEL, type MilkStatus, type MilkSource } from "@/lib/milk-collection";
+import { STATUS_LABEL, CHANNEL_LABEL, type MilkStatus, type MilkChannel } from "@/lib/milk-collection";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function MilkCollectPage() {
       .order("farmer_code"),
     supabase
       .from("milk_entries")
-      .select("id, collection_number, quantity_liters, lr, status, source, shift, flags, farmers(full_name, farmer_code)")
+      .select("id, collection_number, quantity_liters, lr, status, entry_channel, shift, flags, farmers(full_name, farmer_code)")
       .eq("mca_profile_id", user!.id)
       .eq("entry_date", today)
       .order("created_at", { ascending: false }),
@@ -103,7 +103,7 @@ export default async function MilkCollectPage() {
                         {" • "}
                         {e.shift === "morning" ? "Subah" : "Shaam"}
                         {" • "}
-                        {SOURCE_LABEL[e.source as MilkSource] ?? e.source}
+                        {CHANNEL_LABEL[e.entry_channel as MilkChannel] ?? e.entry_channel}
                       </p>
                       <p className="text-xs text-surface-400">{e.collection_number}</p>
                     </div>

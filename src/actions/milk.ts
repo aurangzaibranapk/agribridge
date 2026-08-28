@@ -53,7 +53,7 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
     lr,
     shift,
     entryDate,
-    source: "website",
+    channel: "website",
     mcaProfileId: user.id,
     branchId,
     notes,

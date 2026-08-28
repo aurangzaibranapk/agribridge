@@ -6759,8 +6759,10 @@ export type Database = {
           client_uuid: string | null
           collected_at: string | null
           collection_number: string | null
+          collection_source: string
           created_at: string
           created_by: string | null
+          entry_channel: string
           entry_date: string
           farmer_id: string
           fat_at: string | null
@@ -6775,10 +6777,10 @@ export type Database = {
           possible_duplicate_of: string | null
           quantity_liters: number
           rate_per_liter: number | null
+          received_by_profile_id: string | null
           route_name: string | null
           shift: string
           snf_percentage: number | null
-          source: string
           status: string
           synced_at: string | null
           total_amount: number | null
@@ -6794,8 +6796,10 @@ export type Database = {
           client_uuid?: string | null
           collected_at?: string | null
           collection_number?: string | null
+          collection_source?: string
           created_at?: string
           created_by?: string | null
+          entry_channel?: string
           entry_date?: string
           farmer_id: string
           fat_at?: string | null
@@ -6810,10 +6814,10 @@ export type Database = {
           possible_duplicate_of?: string | null
           quantity_liters: number
           rate_per_liter?: number | null
+          received_by_profile_id?: string | null
           route_name?: string | null
           shift?: string
           snf_percentage?: number | null
-          source?: string
           status?: string
           synced_at?: string | null
           total_amount?: number | null
@@ -6829,8 +6833,10 @@ export type Database = {
           client_uuid?: string | null
           collected_at?: string | null
           collection_number?: string | null
+          collection_source?: string
           created_at?: string
           created_by?: string | null
+          entry_channel?: string
           entry_date?: string
           farmer_id?: string
           fat_at?: string | null
@@ -6845,10 +6851,10 @@ export type Database = {
           possible_duplicate_of?: string | null
           quantity_liters?: number
           rate_per_liter?: number | null
+          received_by_profile_id?: string | null
           route_name?: string | null
           shift?: string
           snf_percentage?: number | null
-          source?: string
           status?: string
           synced_at?: string | null
           total_amount?: number | null
@@ -6912,6 +6918,13 @@ export type Database = {
             columns: ["possible_duplicate_of"]
             isOneToOne: false
             referencedRelation: "milk_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_received_by_profile_id_fkey"
+            columns: ["received_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
