@@ -2,7 +2,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MessagesWidget } from "@/components/layout/messages-widget";
 import { createClient } from "@/lib/supabase/server";
-import { effectiveAccess } from "@/lib/effective-permissions";
+import { loadNav } from "@/lib/access/nav";
 import { homePageForRole } from "@/lib/departments";
 export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -12,24 +12,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   } = await supabase.auth.getUser();
   let role = "";
   let allowedPages: string[] | null = null;
+  let navGroups: { key: string; label: string; items: { href: string; label: string; icon: string | null }[] }[] = [];
   if (user) {
-    const { data: profile } = await supabase.from("profiles").select("role, allowed_pages").eq("id", user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
     role = profile?.role ?? "";
-    // Menu wahi hisaab istemal karta hai jo rok istemal karti hai --
-    // shakhs ka apna set, warna us ke department ka. Do jagah alag
-    // hisaab hota to banda menu mein cheez dekhta magar khol na pata.
-    const access = await effectiveAccess(role, (profile?.allowed_pages as string[] | null) ?? null);
-    allowedPages = access.unrestricted ? null : access.pages;
+    // Menu ab database se banta hai. Rok bhi wahi fehrist parhti hai --
+    // do jagah alag hisaab hota to banda menu mein cheez dekhta aur khol
+    // na pata.
+    const nav = await loadNav(user.id, role);
+    navGroups = nav.groups;
+    allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
   }
   return (
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
-      <Sidebar subtitle="Website Admin" homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} />
+      <Sidebar subtitle="Website Admin" homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
       <div className="flex flex-1 flex-col">
         <Topbar
           subtitle="Website Admin"
           searchAction="/admin/dashboard"
           searchPlaceholder="Search..."
           notificationsHref="/admin/contact-messages"
+          navGroups={navGroups}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>

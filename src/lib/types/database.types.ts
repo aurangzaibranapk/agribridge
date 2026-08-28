@@ -10904,6 +10904,18 @@ export type Database = {
         }
         Relationships: []
       }
+      v_user_feature_access: {
+        Row: {
+          actions: string[] | null
+          data_scope: string | null
+          expires_at: string | null
+          feature_key: string | null
+          is_temporary: boolean | null
+          profile_id: string | null
+          route: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_pos_sale:

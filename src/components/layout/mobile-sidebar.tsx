@@ -4,9 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/format";
-import { ADMIN_NAV_GROUPS, DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { iconByName } from "@/lib/access/icons";
+import type { SidebarGroup } from "@/components/layout/sidebar";
 
-export function MobileSidebar({ subtitle }: { subtitle: string }) {
+/**
+ * Chhoti screen ka menu. Pehle ye HAR group dikhata tha, chahe banday ko
+ * ijazat ho ya na ho -- rok phir bhi lagti thi, magar banda band darwaze
+ * dekhta rehta tha. Ab ise wahi fehrist milti hai jo bari screen ko
+ * milti hai.
+ */
+export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; groups?: SidebarGroup[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -15,7 +23,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const activeGroupLabel = ADMIN_NAV_GROUPS.find((g) => g.items.some((item) => isActive(item.href)))?.label;
+  const activeGroupLabel = groups.find((g) => g.items.some((item) => isActive(item.href)))?.label;
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     new Set(activeGroupLabel ? [activeGroupLabel] : [])
@@ -69,7 +77,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
 
               <div className="my-2 border-t border-white/10" />
 
-              {ADMIN_NAV_GROUPS.map((group) => {
+              {groups.map((group) => {
                 const isOpen = openGroups.has(group.label);
                 const groupActive = group.items.some((item) => isActive(item.href));
                 return (
@@ -89,7 +97,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
                       <div className="space-y-0.5 pb-1">
                         {group.items.map((item) => {
                           const active = isActive(item.href);
-                          const Icon = item.icon;
+                          const Icon = iconByName(item.icon);
                           return (
                             <Link
                               key={item.href}

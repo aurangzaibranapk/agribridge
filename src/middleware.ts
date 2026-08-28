@@ -1,8 +1,10 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isStaffRole } from "@/lib/utils/roles";
-import { accessFrom, canOpen } from "@/lib/effective-permissions";
 import { homePageForRole } from "@/lib/departments";
+
+/** Ye hamesha khulte hain, chahe ijazat mein likhe hon ya na hon. */
+const ALWAYS_OPEN = ["/admin/permissions-denied", "/admin/my-attendance"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -49,34 +51,67 @@ export async function middleware(request: NextRequest) {
   }
 
   // Safha kholne ki rok. Owner/Super Admin/Admin ko har cheez khulti
-  // hai; baqi sab ko sirf wo jo un ke apne set mein ho, warna un ke
-  // department ke set mein. Ye rok seedhe URL par bhi lagti hai, sirf
-  // menu chhupane par nahi -- warna rok koi rok hi nahi hoti.
+  // hai; baqi sab ko sirf wo feature jin par un ki 'view' ki ijazat ho.
+  // Ye rok seedhe URL par bhi lagti hai, sirf menu chhupane par nahi --
+  // warna rok koi rok hi nahi hoti.
   if (pathname.startsWith("/admin")) {
-    const ownPages = (profile.allowed_pages as string[] | null) ?? null;
+    const unrestricted =
+      profile.role === "owner" || profile.role === "super_admin" || profile.role === "admin";
 
-    // Department ka set sirf tab poochhte hain jab shakhs ka apna khali
-    // ho -- har request par ek fazool query dalna poore admin ko dhima
-    // kar deta.
-    let rolePages: string[] | null = null;
-    if (!ownPages || ownPages.length === 0) {
-      const { data: rolePerm } = await supabase
-        .from("role_page_permissions")
-        .select("allowed_pages")
-        .eq("role", profile.role)
-        .maybeSingle();
-      rolePages = (rolePerm?.allowed_pages as string[] | null) ?? [];
-    }
+    if (!unrestricted) {
+      // Ek hi query: is banday ki poori ijazat (role ki + apni + waqti),
+      // wahi view jise menu bhi parhta hai. Do jagah alag hisaab hota to
+      // ek din menu aur rok alag baat kehne lagte.
+      const { data: rows } = await supabase
+        .from("v_user_feature_access")
+        .select("route, actions")
+        .eq("profile_id", user.id);
 
-    const access = accessFrom(profile.role, ownPages, rolePages);
-    if (!canOpen(access, pathname)) {
-      const url = request.nextUrl.clone();
-      // Ghar bhejte hain, "ijazat nahi" wale safhe par nahi -- banda
-      // aksar sirf ghalat link par pahunch gaya hota hai, aur us ka
-      // apna dashboard us ke liye zyada kaam ka hai.
-      const home = homePageForRole(profile.role);
-      url.pathname = canOpen(access, home) ? home : (access.pages.find((p) => p.startsWith("/admin/")) ?? "/admin/permissions-denied");
-      return NextResponse.redirect(url);
+      // Apna department dashboard hamesha khulta hai. Wo feature ki
+      // fehrist mein nahi hai (wo kaam nahi, kaam ka ghar hai), aur ise
+      // bhoolne ka matlab hota ke banda login ke foran baad rok par ja
+      // takraye -- pehli hi cheez jo wo dekhta, wo "ijazat nahi" hoti.
+      const allowed = [...ALWAYS_OPEN, homePageForRole(profile.role)];
+      for (const row of rows ?? []) {
+        if (!row.route) continue;
+        if (!((row.actions as string[] | null) ?? []).includes("view")) continue;
+        allowed.push(row.route);
+      }
+
+      // Nayi ijazat kahin se na mile to purane raaste par -- warna wo
+      // banda apne hi system se bahar ho jata hai. Ghalat menu se band
+      // system kahin bura hai.
+      if (allowed.length === ALWAYS_OPEN.length + 1) {
+        const ownPages = (profile.allowed_pages as string[] | null) ?? null;
+        let rolePages: string[] = [];
+        if (!ownPages || ownPages.length === 0) {
+          const { data: rolePerm } = await supabase
+            .from("role_page_permissions")
+            .select("allowed_pages")
+            .eq("role", profile.role)
+            .maybeSingle();
+          rolePages = (rolePerm?.allowed_pages as string[] | null) ?? [];
+        }
+        allowed.push(...(ownPages && ownPages.length > 0 ? ownPages : rolePages));
+      }
+
+      // Sab se lamba milta hua raasta jeetta hai -- warna
+      // /admin/milk-collection ki ijazat chiller ka darwaza bhi khol
+      // deti.
+      const canOpenPath = (path: string) =>
+        allowed.some((r) => path === r || path.startsWith(r + "/"));
+
+      if (!canOpenPath(pathname)) {
+        const url = request.nextUrl.clone();
+        // Ghar bhejte hain, "ijazat nahi" wale safhe par nahi -- banda
+        // aksar sirf ghalat link par pahunch gaya hota hai.
+        const home = homePageForRole(profile.role);
+        url.pathname = canOpenPath(home)
+          ? home
+          : (allowed.find((r) => r.startsWith("/admin/") && !ALWAYS_OPEN.includes(r)) ??
+             "/admin/permissions-denied");
+        return NextResponse.redirect(url);
+      }
     }
   }
 

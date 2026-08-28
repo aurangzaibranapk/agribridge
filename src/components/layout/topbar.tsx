@@ -4,14 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
+import type { SidebarGroup } from "@/components/layout/sidebar";
 import { BusinessSelector } from "@/components/layout/business-selector";
 import { getBusinessContext } from "@/lib/utils/get-business-context";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
 export async function Topbar({
-  subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications",
+  subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [],
 }: {
   subtitle: string;
+  navGroups?: SidebarGroup[];
   searchAction?: string;
   searchPlaceholder?: string;
   notificationsHref?: string;
@@ -34,7 +36,7 @@ export async function Topbar({
   return (
     <header className="flex h-16 items-center justify-between border-b border-surface-200 bg-white px-4 sm:px-6 dark:border-surface-800 dark:bg-surface-900">
       <div className="flex flex-1 items-center gap-3">
-        <MobileSidebar subtitle={subtitle} />
+        <MobileSidebar subtitle={subtitle} groups={navGroups} />
         <BusinessSelector current={businessContext} />
         <form action={searchAction} className="hidden max-w-md flex-1 items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 lg:flex dark:border-surface-700 dark:bg-surface-800">
           <Search className="h-4 w-4 text-surface-400" />

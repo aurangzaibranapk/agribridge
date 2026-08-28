@@ -4,19 +4,34 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/format";
-import { ADMIN_NAV_GROUPS, DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { iconByName } from "@/lib/access/icons";
 export type { NavItem } from "@/components/layout/nav-items";
+
+/**
+ * Menu ab database se aata hai, is liye group aur item yahan tak taiyar
+ * shakal mein pahunchte hain. Icon ka sirf naam aata hai -- us ka
+ * component yahan banta hai, kyunke component server se client tak bheja
+ * nahi ja sakta.
+ */
+export interface SidebarGroup {
+  key: string;
+  label: string;
+  items: { href: string; label: string; icon: string | null }[];
+}
 
 export function Sidebar({
   subtitle,
   homeHref = "/",
   role = "",
   allowedPages = null,
+  groups = null,
 }: {
   subtitle: string;
   homeHref?: string;
   role?: string;
   allowedPages?: string[] | null;
+  groups?: SidebarGroup[] | null;
 }) {
   const pathname = usePathname();
   function isActive(href: string) {
@@ -24,12 +39,7 @@ export function Sidebar({
   }
 
   const isUnrestricted = role === "owner" || role === "super_admin" || role === "admin";
-  const visibleGroups = isUnrestricted
-    ? ADMIN_NAV_GROUPS
-    : ADMIN_NAV_GROUPS.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => (allowedPages ?? []).includes(item.href)),
-      })).filter((g) => g.items.length > 0);
+  const visibleGroups: SidebarGroup[] = groups ?? [];
 
   const activeGroupLabel = visibleGroups.find((g) => g.items.some((item) => isActive(item.href)))?.label;
   const [openGroups, setOpenGroups] = useState<Set<string>>(
@@ -54,7 +64,7 @@ export function Sidebar({
         </div>
       </Link>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {(isUnrestricted || (allowedPages ?? []).includes(DASHBOARD_ITEM.href)) && (
+        {(isUnrestricted || (allowedPages ?? []).includes(DASHBOARD_ITEM.href)) && homeHref !== DASHBOARD_ITEM.href && (
           <Link
             href={DASHBOARD_ITEM.href}
             className={cn(
@@ -73,7 +83,7 @@ export function Sidebar({
           const isOpen = openGroups.has(group.label);
           const groupActive = group.items.some((item) => isActive(item.href));
           return (
-            <div key={group.label}>
+            <div key={group.key}>
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
@@ -89,7 +99,7 @@ export function Sidebar({
                 <div className="space-y-0.5 pb-1">
                   {group.items.map((item) => {
                     const active = isActive(item.href);
-                    const Icon = item.icon;
+                    const Icon = iconByName(item.icon);
                     return (
                       <Link
                         key={item.href}

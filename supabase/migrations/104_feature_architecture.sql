@@ -219,3 +219,36 @@ on conflict (key) do update set label = excluded.label, is_sensitive = excluded.
 insert into dashboard_features (dashboard_key, feature_key, sort_order)
 values ('admin', 'dashboard-manager', 5)
 on conflict do nothing;
+
+-- =====================================================================
+-- Ijazat ka ek hi zariya (menu aur rok, dono is se parhte hain)
+-- =====================================================================
+-- Teen jagah se ijazat aati hai: role ki, banday ke apne naam par di
+-- hui, aur waqti. Teenon ko har baar alag alag jorna do jagah likhne ka
+-- kaam banta -- aur do jagah ka hisaab ek din alag ho hi jata hai.
+-- Waqti ijazat ka waqt bhi yahin dekha jata hai, taake koi purani
+-- ijazat is liye chalti na rahe ke wapas lena kisi ko yaad nahi raha.
+create or replace view v_user_feature_access
+with (security_invoker = true) as
+select
+  p.id            as profile_id,
+  f.key           as feature_key,
+  f.route         as route,
+  rfp.actions     as actions,
+  rfp.data_scope  as data_scope,
+  false           as is_temporary,
+  null::timestamptz as expires_at
+from profiles p
+join role_feature_permissions rfp on rfp.role = p.role::text
+join features f on f.key = rfp.feature_key and f.is_active
+where p.is_active
+
+union all
+
+select
+  ufp.profile_id, f.key, f.route, ufp.actions, ufp.data_scope,
+  ufp.expires_at is not null, ufp.expires_at
+from user_feature_permissions ufp
+join features f on f.key = ufp.feature_key and f.is_active
+where (ufp.starts_at is null or ufp.starts_at <= now())
+  and (ufp.expires_at is null or ufp.expires_at > now());
