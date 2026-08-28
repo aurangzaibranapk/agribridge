@@ -108,6 +108,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Finance",
     items: [
       { href: "/admin/command-center", label: "Owner Command Center", icon: Scale },
+      { href: "/admin/money-trail", label: "Paisa Kahan Hai (Money Trail)", icon: Scale },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Profit & Loss (Shop-wise)", icon: LineChart },
       { href: "/admin/finance/queue", label: "Finance Queue", icon: CreditCard },

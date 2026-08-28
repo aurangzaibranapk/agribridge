@@ -4936,6 +4936,36 @@ export type Database = {
           },
         ]
       }
+      gl_accounts: {
+        Row: {
+          account_type: string
+          code: string
+          created_at: string
+          is_active: boolean
+          name: string
+          normal_side: string
+          sort_order: number
+        }
+        Insert: {
+          account_type: string
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name: string
+          normal_side: string
+          sort_order?: number
+        }
+        Update: {
+          account_type?: string
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name?: string
+          normal_side?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       grain_cut_presets: {
         Row: {
           created_at: string
@@ -6150,6 +6180,145 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          backdate_reason: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          entry_date: string
+          entry_number: string
+          id: string
+          is_backdated: boolean
+          is_reversal: boolean
+          reversal_of: string | null
+          reversal_reason: string | null
+          source_id: string | null
+          source_module: string
+        }
+        Insert: {
+          backdate_reason?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          entry_date?: string
+          entry_number: string
+          id?: string
+          is_backdated?: boolean
+          is_reversal?: boolean
+          reversal_of?: string | null
+          reversal_reason?: string | null
+          source_id?: string | null
+          source_module: string
+        }
+        Update: {
+          backdate_reason?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          entry_date?: string
+          entry_number?: string
+          id?: string
+          is_backdated?: boolean
+          is_reversal?: boolean
+          reversal_of?: string | null
+          reversal_reason?: string | null
+          source_id?: string | null
+          source_module?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entry_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      journal_lines: {
+        Row: {
+          account_code: string
+          credit: number
+          debit: number
+          entry_id: string
+          id: string
+          line_order: number
+          memo: string | null
+          party_id: string | null
+          party_type: string | null
+        }
+        Insert: {
+          account_code: string
+          credit?: number
+          debit?: number
+          entry_id: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          party_id?: string | null
+          party_type?: string | null
+        }
+        Update: {
+          account_code?: string
+          credit?: number
+          debit?: number
+          entry_id?: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          party_id?: string | null
+          party_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_lines_account_code_fkey"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "gl_accounts"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
         ]
