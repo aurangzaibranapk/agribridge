@@ -9232,6 +9232,111 @@ export type Database = {
           },
         ]
       }
+      reconciliation_findings: {
+        Row: {
+          amount: number | null
+          check_key: string
+          created_at: string
+          detail: string
+          first_seen_date: string
+          href: string | null
+          id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          run_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          amount?: number | null
+          check_key: string
+          created_at?: string
+          detail: string
+          first_seen_date?: string
+          href?: string | null
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id: string
+          severity: string
+          title: string
+        }
+        Update: {
+          amount?: number | null
+          check_key?: string
+          created_at?: string
+          detail?: string
+          first_seen_date?: string
+          href?: string | null
+          id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          run_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_findings_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "reconciliation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reconciliation_runs: {
+        Row: {
+          checks_failed: number
+          checks_passed: number
+          checks_skipped: number
+          checks_total: number
+          created_at: string
+          id: string
+          ran_at: string
+          run_date: string
+          summary: string | null
+          triggered_by: string
+          verdict: string
+        }
+        Insert: {
+          checks_failed?: number
+          checks_passed?: number
+          checks_skipped?: number
+          checks_total?: number
+          created_at?: string
+          id?: string
+          ran_at?: string
+          run_date: string
+          summary?: string | null
+          triggered_by?: string
+          verdict: string
+        }
+        Update: {
+          checks_failed?: number
+          checks_passed?: number
+          checks_skipped?: number
+          checks_total?: number
+          created_at?: string
+          id?: string
+          ran_at?: string
+          run_date?: string
+          summary?: string | null
+          triggered_by?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       replacement_fund_settings: {
         Row: {
           fund_start_date: string
@@ -12005,6 +12110,21 @@ export type Database = {
           kind: string | null
           row_id: string | null
           source_table: string | null
+        }
+        Relationships: []
+      }
+      v_open_findings: {
+        Row: {
+          amount: number | null
+          check_key: string | null
+          detail: string | null
+          din_purani: number | null
+          first_seen_date: string | null
+          href: string | null
+          id: string | null
+          run_date: string | null
+          severity: string | null
+          title: string | null
         }
         Relationships: []
       }

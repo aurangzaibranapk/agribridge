@@ -114,6 +114,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/bank-reconcile", label: "Bank se Milaan", icon: Landmark },
       { href: "/admin/stock-count", label: "Maal ki Ginti", icon: PackageSearch },
       { href: "/admin/quantity-money", label: "Miqdar aur Paisa", icon: Scale },
+      { href: "/admin/reconciliation", label: "Roz ka Milaan", icon: ClipboardCheck },
       { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Landmark },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Profit & Loss (Shop-wise)", icon: LineChart },

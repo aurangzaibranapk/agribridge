@@ -416,6 +416,45 @@ export async function loadAlerts(): Promise<Alert[]> {
     });
   }
 
+  // ---- Roz ki jaanch ka nateeja ----
+  // Ye alert baqi sab se pehle aata hai, kyunki ye un sab ka nichor hai.
+  // Aur "jaanch hui hi nahi" ko khamoshi se nahi guzara jata: khamosh
+  // safha "sab theek hai" ki tarah parha jata hai, jab ke us ka matlab
+  // sirf itna hai ke kisi ne dekha hi nahi.
+  const { data: lastRun } = await service
+    .from("reconciliation_runs")
+    .select("run_date, verdict, summary, checks_failed, checks_skipped")
+    .order("run_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const todayStr = today();
+  if (!lastRun) {
+    alerts.push({
+      tone: "amber",
+      title: "Roz ka milaan abhi kabhi chala hi nahi",
+      detail: "Jab tak jaanch nahi chalti, ye maloom nahi ho sakta ke sab theek hai ya nahi. Khamoshi tasalli nahi hoti.",
+      href: "/admin/reconciliation",
+    });
+  } else if (lastRun.run_date !== todayStr) {
+    alerts.push({
+      tone: "amber",
+      title: `Aaj ka milaan nahi hua — aakhri jaanch ${lastRun.run_date}`,
+      detail: "Cron chala ya nahi, ye dekh lein. Jis din jaanch na ho us din ka nateeja maloom nahi hota.",
+      href: "/admin/reconciliation",
+    });
+  } else if (lastRun.verdict !== "clean") {
+    alerts.push({
+      tone: lastRun.checks_failed > 0 ? "red" : "amber",
+      title:
+        lastRun.checks_failed > 0
+          ? `Aaj ke milaan mein ${lastRun.checks_failed} masle nikle`
+          : `Aaj ${lastRun.checks_skipped} jaanch chal hi nahi saki`,
+      detail: lastRun.summary ?? "Tafseel ke liye milaan ka safha dekhein.",
+      href: "/admin/reconciliation",
+    });
+  }
+
   if (alerts.length === 0) {
     alerts.push({
       tone: "green",
