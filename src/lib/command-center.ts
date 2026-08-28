@@ -1,0 +1,324 @@
+import { createServiceClient } from "@/lib/supabase/service";
+
+/**
+ * Owner Command Center ke aankre.
+ *
+ * Yahan har adad kisi asal khane se aata hai -- koi andaza nahi. Jo
+ * cheez maujooda data se nahi nikalti, wo "—" rehti hai. Dashboard par
+ * ghalat adad likhna khali khane se kahin bura hota: khali khana sawal
+ * paida karta hai, ghalat adad faisla badal deta hai.
+ *
+ * Isi wajah se har department ka wohi paimana liya gaya hai jo us ke
+ * apne khaton mein waqai maujood hai:
+ *
+ *   Retail    -- pos_sales mein nafa khud likha hota hai
+ *   Grain     -- grain_sales mein nafa aur lagat dono maujood hain
+ *   Machinery -- booking par commission, diesel aur vendor ka hissa
+ *   Milk      -- doodh KHAREEDA jata hai, is liye ye kharcha hai;
+ *                us ki bikri alag khane mein hai jo abhi khali hai
+ */
+
+export interface DeptKpi {
+  key: string;
+  label: string;
+  /** Aamdani -- na nikal sake to null. */
+  revenue: number | null;
+  /** Kharcha ya lagat. */
+  cost: number | null;
+  /** Nafa -- sirf tab jab dono asal mein maujood hon. */
+  profit: number | null;
+  /** Ek line mein wo cheez jo is department ko sab se zyada bayan karti hai. */
+  volumeLabel: string;
+  volume: string;
+  /** Jo kaam pare hue hain. */
+  pending: number;
+  /** Wo cheez jo abhi is khane se nahi nikalti. */
+  note: string | null;
+}
+
+export interface MoneyToday {
+  revenue: number;
+  expenses: number;
+  net: number;
+  cash: number;
+  receivable: number | null;
+  payable: number | null;
+}
+
+export interface Alert {
+  tone: "red" | "amber" | "green";
+  title: string;
+  detail: string;
+  href: string;
+}
+
+function n(value: unknown): number {
+  return Number(value ?? 0);
+}
+
+function sumOf<T extends Record<string, unknown>>(rows: T[] | null, column: keyof T): number {
+  return (rows ?? []).reduce((total, row) => total + n(row[column]), 0);
+}
+
+function monthStart(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export async function loadMoneyToday(): Promise<MoneyToday> {
+  const service = createServiceClient();
+  const t = today();
+
+  const [{ data: sales }, { data: grainSales }, { data: expenses }, { data: accounts }, { data: credit }] =
+    await Promise.all([
+      service.from("pos_sales").select("total_amount, profit").gte("created_at", t),
+      service.from("grain_sales").select("total_amount, profit").eq("sale_date", t),
+      service.from("company_expense_requests").select("amount").eq("status", "approved").gte("created_at", t),
+      service.from("finance_accounts").select("current_balance").eq("is_active", true),
+      service.from("branch_credit_transactions").select("transaction_type, amount"),
+    ]);
+
+  const revenue = sumOf(sales, "total_amount") + sumOf(grainSales, "total_amount");
+  const spent = sumOf(expenses, "amount");
+  // Nafa wahan se liya jata hai jahan wo pehle se gina hua hai, dobara
+  // nahi ginte -- COGS ka hisaab har jagah thora alag hota hai aur do
+  // jagah ginne se do alag adad nikal aate hain.
+  const grossProfit = sumOf(sales, "profit") + sumOf(grainSales, "profit");
+
+  // Shop ka bojh: charge barhata hai, adaigi ghatati hai. Wahi usool jo
+  // /admin/branch-credit dikhata hai.
+  let receivable: number | null = null;
+  if (credit) {
+    receivable = credit.reduce(
+      (total, row) => (row.transaction_type === "payment" ? total - n(row.amount) : total + n(row.amount)),
+      0
+    );
+  }
+
+  return {
+    revenue,
+    expenses: spent,
+    net: grossProfit - spent,
+    cash: sumOf(accounts, "current_balance"),
+    receivable,
+    payable: null,
+  };
+}
+
+export async function loadDeptKpis(): Promise<DeptKpi[]> {
+  const service = createServiceClient();
+  const from = monthStart();
+
+  const [
+    { data: pos },
+    { data: grain },
+    { data: grainBuy },
+    { data: machinery },
+    { data: milk },
+    { data: pendingSubs },
+    { data: pendingReturns },
+    { data: pendingFat },
+  ] = await Promise.all([
+    service.from("pos_sales").select("total_amount, profit, total_cogs").gte("created_at", from),
+    service.from("grain_sales").select("total_amount, profit, total_cogs, quantity_kg").gte("sale_date", from),
+    service.from("grain_procurement_entries").select("total_amount, weight_kg").gte("entry_date", from),
+    service
+      .from("machinery_bookings")
+      .select("total_amount, vendor_payable, diesel_amount, commission_amount")
+      .gte("booking_date", from),
+    service
+      .from("milk_entries")
+      .select("quantity_liters, total_amount")
+      .gte("entry_date", from)
+      .neq("status", "rejected"),
+    service.from("whatsapp_submissions").select("id").eq("status", "pending"),
+    service.from("agri_order_returns").select("id").eq("status", "pending"),
+    service.from("milk_entries").select("id").eq("status", "pending_fat"),
+  ]);
+
+  const machineryRevenue = sumOf(machinery, "total_amount");
+  const machineryCost = sumOf(machinery, "vendor_payable") + sumOf(machinery, "diesel_amount");
+
+  return [
+    {
+      key: "milk",
+      label: "Milk",
+      revenue: null,
+      cost: sumOf(milk, "total_amount"),
+      profit: null,
+      volumeLabel: "Doodh",
+      volume: `${Math.round(sumOf(milk, "quantity_liters"))} L`,
+      pending: (pendingFat ?? []).length,
+      note: "Doodh khareeda jata hai — bikri ka khana abhi khali hai, is liye nafa nahi nikalta.",
+    },
+    {
+      key: "grain",
+      label: "Grain",
+      revenue: sumOf(grain, "total_amount"),
+      cost: sumOf(grainBuy, "total_amount"),
+      profit: sumOf(grain, "profit"),
+      volumeLabel: "Bika",
+      volume: `${Math.round(sumOf(grain, "quantity_kg"))} kg`,
+      pending: 0,
+      note: null,
+    },
+    {
+      key: "machinery",
+      label: "Machinery",
+      revenue: machineryRevenue,
+      cost: machineryCost,
+      profit: machineryRevenue - machineryCost,
+      volumeLabel: "Booking",
+      volume: String((machinery ?? []).length),
+      pending: 0,
+      note: null,
+    },
+    {
+      key: "retail",
+      label: "Retail",
+      revenue: sumOf(pos, "total_amount"),
+      cost: sumOf(pos, "total_cogs"),
+      profit: sumOf(pos, "profit"),
+      volumeLabel: "Bikri",
+      volume: String((pos ?? []).length),
+      pending: (pendingReturns ?? []).length,
+      note: null,
+    },
+    {
+      key: "approvals",
+      label: "Approval",
+      revenue: null,
+      cost: null,
+      profit: null,
+      volumeLabel: "Intezar mein",
+      volume: String((pendingSubs ?? []).length),
+      pending: (pendingSubs ?? []).length,
+      note: null,
+    },
+  ];
+}
+
+export async function loadAlerts(): Promise<Alert[]> {
+  const service = createServiceClient();
+  const alerts: Alert[] = [];
+  const from = monthStart();
+
+  const [{ data: redRoutes }, { data: subs }, { data: expenses }, { data: openLogs }, { data: dupMilk }] =
+    await Promise.all([
+      service
+        .from("milk_route_collections")
+        .select("route_name, collection_date, shortage_liters")
+        .eq("is_red_alert", true)
+        .gte("collection_date", from)
+        .order("collection_date", { ascending: false })
+        .limit(3),
+      service.from("whatsapp_submissions").select("id").eq("status", "pending"),
+      service.from("company_expense_requests").select("id").eq("status", "pending"),
+      service.from("vehicle_daily_logs").select("id").not("opening_km", "is", null).is("closing_km", null).lt("log_date", today()),
+      service.from("milk_entries").select("id").not("possible_duplicate_of", "is", null).neq("status", "rejected"),
+    ]);
+
+  for (const route of redRoutes ?? []) {
+    alerts.push({
+      tone: "red",
+      title: `Doodh ki kami — ${route.route_name}`,
+      detail: `${route.collection_date}: ${Math.abs(n(route.shortage_liters))} L ka farq, hadd se zyada.`,
+      href: "/admin/milk-collection/routes",
+    });
+  }
+
+  if ((subs ?? []).length > 0) {
+    alerts.push({
+      tone: "amber",
+      title: `${(subs ?? []).length} entry approval ke intezar mein`,
+      detail: "In par faisla hone tak paisa kisi khate mein nahi jata.",
+      href: "/admin/submissions",
+    });
+  }
+
+  if ((expenses ?? []).length > 0) {
+    alerts.push({
+      tone: "amber",
+      title: `${(expenses ?? []).length} kharcha manzoori ke intezar mein`,
+      detail: "Finance ne abhi in par faisla nahi kiya.",
+      href: "/admin/company-expenses",
+    });
+  }
+
+  if ((openLogs ?? []).length > 0) {
+    alerts.push({
+      tone: "red",
+      title: `${(openLogs ?? []).length} gaari ka shaam wala meter nahi aaya`,
+      detail: "Guzray hue dinon ka hisaab adhoora hai.",
+      href: "/admin/field-watch",
+    });
+  }
+
+  if ((dupMilk ?? []).length > 0) {
+    alerts.push({
+      tone: "amber",
+      title: `${(dupMilk ?? []).length} doodh ki entry par duplicate ka nishan`,
+      detail: "Usi kisan ki usi shift mein ek se zyada entry mili.",
+      href: "/admin/milk-collection/verify",
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      tone: "green",
+      title: "Filhal koi cheez tawajjah nahi mangti",
+      detail: "Na koi kami ka nishan, na koi faisla atka hua.",
+      href: "/admin/field-watch",
+    });
+  }
+
+  return alerts;
+}
+
+/**
+ * Nateeja -- aankron se, andaze se nahi.
+ *
+ * Ye jaan boojh kar AI ko nahi bheja jata. Aankre pehle se maujood hain
+ * aur un se seedha nateeja nikalta hai; beech mein AI daalne se sirf ye
+ * khatra barhta hai ke wo koi aisi baat keh de jo aankron mein hai hi
+ * nahi. Dashboard par likhi baat par faisla hota hai, is liye us ka har
+ * lafz kisi khane se nikalna chahiye.
+ */
+export function conclude(depts: DeptKpi[]): string[] {
+  const withProfit = depts.filter((d) => d.profit != null && (d.revenue ?? 0) > 0);
+  if (withProfit.length === 0) {
+    return ["Is mahine abhi itna kaam nahi hua ke departments ka moqabla kiya ja sake."];
+  }
+
+  const sorted = [...withProfit].sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0));
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+
+  const lines: string[] = [];
+  lines.push(
+    `Sab se behtar: **${best.label}** — Rs ${Math.round(best.profit ?? 0).toLocaleString()} nafa, ` +
+      `Rs ${Math.round(best.revenue ?? 0).toLocaleString()} ki aamdani par.`
+  );
+
+  if (sorted.length > 1 && worst.key !== best.key) {
+    const margin = (worst.revenue ?? 0) > 0 ? ((worst.profit ?? 0) / (worst.revenue ?? 1)) * 100 : 0;
+    lines.push(
+      `Sab se kam: **${worst.label}** — margin ${margin.toFixed(1)}%. ` +
+        `Lagat Rs ${Math.round(worst.cost ?? 0).toLocaleString()} hai; nafa isi se dabta hai.`
+    );
+  }
+
+  const pending = depts.reduce((total, d) => total + d.pending, 0);
+  if (pending > 0) {
+    lines.push(`${pending} kaam faisle ke intezar mein pare hain — jab tak faisla nahi hota, hisaab adhoora rehta hai.`);
+  }
+
+  const noted = depts.filter((d) => d.note);
+  for (const d of noted) lines.push(`${d.label}: ${d.note}`);
+
+  return lines;
+}

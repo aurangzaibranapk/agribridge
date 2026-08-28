@@ -263,6 +263,6 @@ export function departmentByKey(key: string): Department | null {
  * banta hai ke system us ka kaam samajhta hi nahi.
  */
 export function homePageForRole(role: string): string {
-  if (UNRESTRICTED_ROLES.includes(role)) return "/admin/master-dashboard";
+  if (UNRESTRICTED_ROLES.includes(role)) return "/admin/command-center";
   return departmentForRole(role)?.dashboard ?? "/admin/dashboard";
 }

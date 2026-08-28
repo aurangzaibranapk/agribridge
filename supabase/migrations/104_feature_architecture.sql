@@ -305,3 +305,14 @@ insert into role_feature_permissions (role, feature_key, actions, data_scope)
 select d.role, 'my-department', array['view','assign']::text[], 'own_branch'
 from departments d
 on conflict (role, feature_key) do update set actions = excluded.actions;
+
+-- =====================================================================
+-- Marhala 7: Owner Command Center
+-- =====================================================================
+insert into features (key, label, route, icon, is_sensitive) values
+('command-center', 'Owner Command Center', '/admin/command-center', 'Scale', true)
+on conflict (key) do update set label = excluded.label;
+
+insert into dashboard_features (dashboard_key, feature_key, sort_order)
+values ('master', 'command-center', 1)
+on conflict do nothing;
