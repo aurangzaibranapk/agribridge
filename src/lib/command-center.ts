@@ -287,6 +287,46 @@ export async function loadAlerts(): Promise<Alert[]> {
     });
   }
 
+  // ---- Raat ki ginti chhoot to nahi rahi? ----
+  // Jis din ginti nahi hui, us din ka farq kabhi maloom nahi hoga --
+  // aur farq wahi ek cheez hai jo kaghaz aur golak ka faasla dikhati
+  // hai. Ye baat safhe par jane ka intezar nahi kar sakti, kyunki
+  // chhoote hue din khud koi shor nahi machate.
+  const [{ data: missedDays }, { data: bigGaps }] = await Promise.all([
+    service.from("v_cash_close_missing").select("branch_name, close_date"),
+    service
+      .from("cash_closings")
+      .select("branch_id, close_date, difference, branches(name)")
+      .neq("difference", 0)
+      .gte("close_date", from)
+      .order("close_date", { ascending: false })
+      .limit(5),
+  ]);
+
+  if ((missedDays ?? []).length > 0) {
+    const branchNames = Array.from(
+      new Set((missedDays ?? []).map((d) => d.branch_name ?? "—"))
+    );
+    alerts.push({
+      tone: (missedDays ?? []).length >= 3 ? "red" : "amber",
+      title: `${(missedDays ?? []).length} din ki cash ginti nahi hui`,
+      detail: `${branchNames.join(", ")} — un dinon cash hila magar raat ko gina nahi gaya. Us din ka farq ab maloom nahi ho sakta.`,
+      href: "/admin/cash-close",
+    });
+  }
+
+  const gapTotal = (bigGaps ?? []).reduce((sum, g) => sum + Math.abs(n(g.difference)), 0);
+  if (gapTotal > 0) {
+    alerts.push({
+      tone: gapTotal >= 2000 ? "red" : "amber",
+      title: `Cash ginti mein Rs ${Math.round(gapTotal).toLocaleString()} ka farq`,
+      detail:
+        `Is mahine ${(bigGaps ?? []).length} raat golak aur hisaab barabar nahi mile. ` +
+        `Har farq "Cash ka farq" khate mein darj hai — kisi kharche mein chhupaya nahi gaya.`,
+      href: "/admin/cash-close",
+    });
+  }
+
   if (alerts.length === 0) {
     alerts.push({
       tone: "green",
