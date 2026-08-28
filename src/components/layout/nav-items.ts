@@ -174,6 +174,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr/whatsapp", label: "Staff WhatsApp", icon: MessageCircle },
       { href: "/admin/hr/attendance-log", label: "Hazri Record", icon: ClipboardCheck },
       { href: "/admin/submissions", label: "Approval Inbox", icon: Inbox },
+      { href: "/admin/field-watch", label: "Maidan ki Nigrani", icon: AlertTriangle },
       { href: "/admin/permissions", label: "Staff Permissions", icon: ShieldCheck },
       { href: "/admin/product-permissions", label: "Product Permissions", icon: ShieldCheck },
       { href: "/admin/users", label: "Users & Roles", icon: UserCog },
