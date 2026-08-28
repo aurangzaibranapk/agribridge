@@ -10335,6 +10335,8 @@ export type Database = {
           media_mime: string | null
           media_path: string | null
           original_amount: number | null
+          party_name: string | null
+          party_type: string | null
           posted_at: string | null
           posted_reference_id: string | null
           posted_reference_type: string | null
@@ -10360,6 +10362,8 @@ export type Database = {
           media_mime?: string | null
           media_path?: string | null
           original_amount?: number | null
+          party_name?: string | null
+          party_type?: string | null
           posted_at?: string | null
           posted_reference_id?: string | null
           posted_reference_type?: string | null
@@ -10385,6 +10389,8 @@ export type Database = {
           media_mime?: string | null
           media_path?: string | null
           original_amount?: number | null
+          party_name?: string | null
+          party_type?: string | null
           posted_at?: string | null
           posted_reference_id?: string | null
           posted_reference_type?: string | null

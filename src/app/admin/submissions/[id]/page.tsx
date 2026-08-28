@@ -31,6 +31,15 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     ? await supabase.from("profiles").select("full_name").eq("id", s.manager_profile_id).maybeSingle()
     : { data: null };
 
+  // Cash ki entry kis khate mein jayegi — manager chunega. Sirf chaalu
+  // khate dikhate hain.
+  const { data: accounts } = await supabase
+    .from("finance_accounts")
+    .select("id, name, account_type")
+    .eq("is_active", true)
+    .order("account_type")
+    .order("name");
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -125,7 +134,15 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
             </Card>
           )}
 
-          {canReview && <ReviewForm submissionId={s.id} originalAmount={s.original_amount == null ? null : Number(s.original_amount)} />}
+          {canReview && (
+            <ReviewForm
+              submissionId={s.id}
+              kind={s.kind}
+              originalAmount={s.original_amount == null ? null : Number(s.original_amount)}
+              suggestedParty={typeof (s.ai_extracted as { partyName?: unknown } | null)?.partyName === "string" ? String((s.ai_extracted as { partyName?: string }).partyName) : ""}
+              accounts={accounts ?? []}
+            />
+          )}
 
           {!canReview && s.status === "pending" && (
             <Card className="p-4">

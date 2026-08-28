@@ -3,23 +3,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { nextExpenseNumber } from "@/lib/expense-number";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
-}
-
-async function generateExpenseNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await serviceClient.from("company_expense_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await serviceClient.from("company_expense_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("company_expense_counters").insert({ year, last_number: nextNumber });
-  }
-  return `EXP-${year}-${String(nextNumber).padStart(5, "0")}`;
 }
 
 export async function requestExpense(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -47,7 +35,7 @@ export async function requestExpense(_prev: ActionState, formData: FormData): Pr
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const expenseNumber = await generateExpenseNumber();
+  const expenseNumber = await nextExpenseNumber();
   const { data: expense, error } = await supabase
     .from("company_expense_requests")
     .insert({
