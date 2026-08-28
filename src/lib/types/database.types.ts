@@ -1541,6 +1541,71 @@ export type Database = {
         }
         Relationships: []
       }
+      anomaly_findings: {
+        Row: {
+          created_at: string
+          detail: string
+          detected_on: string
+          detector: string
+          evidence: Json
+          id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sample_size: number
+          severity: string
+          status: string
+          subject_id: string | null
+          subject_label: string
+          subject_type: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          detail: string
+          detected_on?: string
+          detector: string
+          evidence: Json
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_size: number
+          severity: string
+          status?: string
+          subject_id?: string | null
+          subject_label: string
+          subject_type: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          detected_on?: string
+          detector?: string
+          evidence?: Json
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_size?: number
+          severity?: string
+          status?: string
+          subject_id?: string | null
+          subject_label?: string
+          subject_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_findings_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_activity_log: {
         Row: {
           application_id: string

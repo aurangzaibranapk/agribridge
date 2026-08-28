@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runChecks, saveRun } from "@/lib/ledger/daily-reconcile";
+import { runDetectors, saveAnomalies } from "@/lib/ledger/anomalies";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,18 @@ export async function GET(request: Request) {
   const run = await runChecks();
   const saved = await saveRun(run, "cron");
 
+  // Tarteeb wali jaanch bhi isi cron se chalti hai. Alag cron banane se
+  // ek aur cheez lagani parti -- aur jo cheez lagani parti hai, wo aksar
+  // nahi lagti.
+  let anomaliesFound = 0;
+  try {
+    const scan = await runDetectors();
+    anomaliesFound = await saveAnomalies(scan.found);
+  } catch {
+    // Detector toot jaye to roz ka milaan phir bhi darj hona chahiye --
+    // wo zyada bunyadi cheez hai.
+  }
+
   if ("error" in saved) {
     // Aaj ki jaanch pehle ho chuki ho to ye kharabi nahi -- cron do
     // dafa chal gaya. Nateeja phir bhi wapas bhejte hain taake dekhne
@@ -35,6 +48,7 @@ export async function GET(request: Request) {
       note: saved.error,
       verdict: run.verdict,
       summary: run.summary,
+      anomalies: anomaliesFound,
     });
   }
 
@@ -46,5 +60,6 @@ export async function GET(request: Request) {
     passed: run.passed,
     failed: run.failed,
     skipped: run.skipped,
+    anomalies: anomaliesFound,
   });
 }

@@ -117,6 +117,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reconciliation", label: "Roz ka Milaan", icon: ClipboardCheck },
       { href: "/admin/leakage", label: "Paisa Kahan Se Nikal Raha Hai", icon: AlertTriangle },
       { href: "/admin/audit-trail", label: "Kis Ne Kya Kiya", icon: History },
+      { href: "/admin/anomalies", label: "Ghair-maamooli Tarteeb", icon: Bell },
       { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Landmark },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Profit & Loss (Shop-wise)", icon: LineChart },
