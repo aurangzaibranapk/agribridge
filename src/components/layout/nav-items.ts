@@ -179,6 +179,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr/attendance-log", label: "Hazri Record", icon: ClipboardCheck },
       { href: "/admin/submissions", label: "Approval Inbox", icon: Inbox },
       { href: "/admin/field-watch", label: "Maidan ki Nigrani", icon: AlertTriangle },
+      { href: "/admin/dashboard-manager", label: "Dashboard & Feature Manager", icon: LayoutGrid },
       { href: "/admin/departments", label: "Department aur Ijazat", icon: ShieldCheck },
       { href: "/admin/permissions", label: "Ek Banday ki Ijazat", icon: UserCog },
       { href: "/admin/product-permissions", label: "Product Permissions", icon: ShieldCheck },

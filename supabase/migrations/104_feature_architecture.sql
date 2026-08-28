@@ -211,3 +211,11 @@ end $$;
 -- rakha gaya, jaan boojh kar. Un par banane/badalne ki ijazat soch samajh
 -- kar, ek ek kar ke di jani chahiye -- ek hi migration mein sab ko de
 -- dena wahi purani ghalti hoti jo ye poora dhaancha door karne aaya hai.
+
+insert into features (key, label, route, icon, is_sensitive) values
+('dashboard-manager', 'Dashboard & Feature Manager', '/admin/dashboard-manager', 'LayoutGrid', true)
+on conflict (key) do update set label = excluded.label, is_sensitive = excluded.is_sensitive;
+
+insert into dashboard_features (dashboard_key, feature_key, sort_order)
+values ('admin', 'dashboard-manager', 5)
+on conflict do nothing;
