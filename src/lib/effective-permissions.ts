@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { UNRESTRICTED_ROLES } from "@/lib/departments";
+import { UNRESTRICTED_ROLES, homePageForRole } from "@/lib/departments";
 
 /**
  * Kisi shakhs ko waqai kaun se safhe khulte hain.
@@ -31,7 +31,11 @@ export interface EffectiveAccess {
 export function accessFrom(role: string, ownPages: string[] | null, rolePages: string[] | null): EffectiveAccess {
   if (UNRESTRICTED_ROLES.includes(role)) return { unrestricted: true, pages: [] };
   const chosen = ownPages && ownPages.length > 0 ? ownPages : (rolePages ?? []);
-  return { unrestricted: false, pages: [...ALWAYS_ALLOWED, ...chosen] };
+  // Apna department ka dashboard hamesha khulta hai. Ise ijazat ki
+  // fehrist mein daalna bhool jana bohot aasan hota, aur us soorat mein
+  // banda login ke foran baad hi rok par ja takrata -- pehli hi cheez
+  // jo wo dekhta, wo "ijazat nahi" hoti.
+  return { unrestricted: false, pages: [...ALWAYS_ALLOWED, homePageForRole(role), ...chosen] };
 }
 
 /** Server component ke liye -- department ka set khud le aata hai. */

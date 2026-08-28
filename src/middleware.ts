@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
       // aksar sirf ghalat link par pahunch gaya hota hai, aur us ka
       // apna dashboard us ke liye zyada kaam ka hai.
       const home = homePageForRole(profile.role);
-      url.pathname = canOpen(access, home) ? home : (access.pages[2] ?? "/admin/permissions-denied");
+      url.pathname = canOpen(access, home) ? home : (access.pages.find((p) => p.startsWith("/admin/")) ?? "/admin/permissions-denied");
       return NextResponse.redirect(url);
     }
   }
