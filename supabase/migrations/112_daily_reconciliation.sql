@@ -208,3 +208,27 @@ insert into role_feature_permissions (role, feature_key, actions, data_scope) va
 ('manager', 'reconciliation', array['view']::text[], 'own_branch')
 on conflict (role, feature_key) do update set
   actions = excluded.actions, data_scope = excluded.data_scope;
+
+-- =====================================================================
+-- Leakage safha (Step 8)
+-- =====================================================================
+-- Is safhe ki koi apni table nahi. Wo sirf wo jorta hai jo pehle se
+-- maujood hai -- yahan nayi table banana matlab wohi adad do jagah
+-- rakhna, aur do jagah rakha adad ek din alag ho jata hai.
+insert into features (key, label, route, icon, is_sensitive) values
+('leakage', 'Paisa Kahan Se Nikal Raha Hai', '/admin/leakage', 'AlertTriangle', true)
+on conflict (key) do update set
+  label = excluded.label, route = excluded.route, is_sensitive = excluded.is_sensitive;
+
+insert into dashboard_features (dashboard_key, feature_key, sort_order) values
+('master', 'leakage', 9),
+('finance', 'leakage', 8)
+on conflict do nothing;
+
+-- Ye safha naam le kar batata hai ke farq kis branch aur kis shakhs ke
+-- haath se guzra. Wo maloomat sirf un ke paas honi chahiye jo us par
+-- faisla karte hain -- warna wo ilzam ban jati hai, sawal nahi.
+insert into role_feature_permissions (role, feature_key, actions, data_scope) values
+('finance', 'leakage', array['view','export']::text[], 'all')
+on conflict (role, feature_key) do update set
+  actions = excluded.actions, data_scope = excluded.data_scope;
