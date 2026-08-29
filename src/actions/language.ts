@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-export async function setLanguage(lang: "en" | "ur") {
+export async function setLanguage(lang: "en" | "rm" | "ur") {
   cookies().set("agribridge_lang", lang, { path: "/", maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/", "layout");
 }

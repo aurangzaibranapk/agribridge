@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import type { Lang } from "@/lib/i18n/translations";
 
 // Client-side reader for the language cookie that src/actions/language.ts
 // sets. Returns "en" or "ur".
@@ -14,11 +15,11 @@ import { useEffect, useState } from "react";
 // safha pehle English mein banta aur cookie parhte hi Urdu mein badal
 // jata.
 export function useLanguage() {
-  const [language, setLanguage] = useState<"en" | "ur">("ur");
+  const [language, setLanguage] = useState<Lang>("ur");
 
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)agribridge_lang=([^;]+)/);
-    if (match && (match[1] === "en" || match[1] === "ur")) {
+    if (match && (match[1] === "en" || match[1] === "rm" || match[1] === "ur")) {
       setLanguage(match[1]);
     }
   }, []);

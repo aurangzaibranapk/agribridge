@@ -4,7 +4,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { submitMachineryRequest, type ActionState } from "@/actions/service-requests";
 import { Tractor, Loader2, MapPin } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { t } from "@/lib/i18n/translations";
+import { t, type Lang } from "@/lib/i18n/translations";
 
 const initialState: ActionState = {};
 
@@ -181,7 +181,7 @@ export function MachineryForm({
   );
 }
 
-function SubmitButton({ lang }: { lang: "en" | "ur" }) {
+function SubmitButton({ lang }: { lang: Lang }) {
   const { pending } = useFormStatus();
   return (
     <button

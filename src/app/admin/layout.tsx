@@ -4,9 +4,13 @@ import { MessagesWidget } from "@/components/layout/messages-widget";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { homePageForRole } from "@/lib/departments";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
+  // Admin panel Roman se shuru hota hai -- abhi wahan yahi likha hua hai,
+  // is liye purane staff ko koi jhatka nahi lagta. Farmer portal Urdu se.
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -19,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Menu ab database se banta hai. Rok bhi wahi fehrist parhti hai --
     // do jagah alag hisaab hota to banda menu mein cheez dekhta aur khol
     // na pata.
-    const nav = await loadNav(user.id, role);
+    const nav = await loadNav(user.id, role, lang);
     navGroups = nav.groups;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
   }
@@ -33,6 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           searchPlaceholder="Search..."
           notificationsHref="/admin/contact-messages"
           navGroups={navGroups}
+          lang={lang}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>

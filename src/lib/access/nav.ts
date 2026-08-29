@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadRegistry, featureForPath, type Registry } from "@/lib/access/registry";
+import type { Lang } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { homePageForRole } from "@/lib/departments";
 import { ADMIN_NAV_GROUPS } from "@/components/layout/nav-items";
@@ -67,13 +68,13 @@ function groupsFromRegistry(registry: Registry, visible: Set<string> | null): Na
     .filter((g) => g.items.length > 0);
 }
 
-export async function loadNav(profileId: string, role: string): Promise<NavResult> {
+export async function loadNav(profileId: string, role: string, lang: Lang = "rm"): Promise<NavResult> {
   const unrestricted = UNRESTRICTED_ROLES.includes(role);
   const service = createServiceClient();
 
   let registry: Registry;
   try {
-    registry = await loadRegistry();
+    registry = await loadRegistry(lang);
   } catch {
     return { groups: fallbackGroups(null), allowedRoutes: [], unrestricted, usedFallback: true };
   }

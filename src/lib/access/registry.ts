@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import type { Lang } from "@/lib/i18n/translations";
 
 /**
  * Dashboards aur features ki fehrist -- database se.
@@ -40,12 +41,26 @@ export interface Registry {
   byRoute: Map<string, string>;
 }
 
-export async function loadRegistry(): Promise<Registry> {
+/**
+ * Menu ka naam chuni hui zaban mein.
+ *
+ * `label` hamesha Roman Urdu hai aur hamesha bhara hua hota hai. English
+ * aur Urdu ke khane khali ho sakte hain (tarjuma abhi jari hai) -- us
+ * soorat mein Roman hi dikhta hai. Yani adhoora tarjuma menu ko khali
+ * nahi karta, sirf us ek lafz ko purani zaban mein chhoR deta hai.
+ */
+function pickLabel(row: { label: string; label_en: string | null; label_ur: string | null }, lang: Lang): string {
+  if (lang === "en") return row.label_en || row.label;
+  if (lang === "ur") return row.label_ur || row.label;
+  return row.label;
+}
+
+export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
   const service = createServiceClient();
 
   const [{ data: dashboards }, { data: features }, { data: links }] = await Promise.all([
-    service.from("dashboards").select("key, label, icon, summary, sort_order").eq("is_active", true).order("sort_order"),
-    service.from("features").select("key, label, route, icon, is_sensitive").eq("is_active", true).order("label"),
+    service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, sort_order").eq("is_active", true).order("sort_order"),
+    service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive").eq("is_active", true).order("label"),
     service.from("dashboard_features").select("dashboard_key, feature_key, sort_order").order("sort_order"),
   ]);
 
@@ -54,7 +69,7 @@ export async function loadRegistry(): Promise<Registry> {
   for (const f of features ?? []) {
     featureMap.set(f.key, {
       key: f.key,
-      label: f.label,
+      label: pickLabel(f, lang),
       route: f.route,
       icon: f.icon,
       isSensitive: f.is_sensitive,
@@ -74,7 +89,7 @@ export async function loadRegistry(): Promise<Registry> {
   return {
     dashboards: (dashboards ?? []).map((d) => ({
       key: d.key,
-      label: d.label,
+      label: pickLabel(d, lang),
       icon: d.icon,
       summary: d.summary,
       sortOrder: d.sort_order,

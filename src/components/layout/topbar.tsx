@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LanguageSwitch } from "@/components/ui/language-switch";
+import type { Lang } from "@/lib/i18n/translations";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import type { SidebarGroup } from "@/components/layout/sidebar";
 import { BusinessSelector } from "@/components/layout/business-selector";
@@ -10,13 +12,14 @@ import { getBusinessContext } from "@/lib/utils/get-business-context";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
 export async function Topbar({
-  subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [],
+  subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [], lang = "rm",
 }: {
   subtitle: string;
   navGroups?: SidebarGroup[];
   searchAction?: string;
   searchPlaceholder?: string;
   notificationsHref?: string;
+  lang?: Lang;
 }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -48,6 +51,7 @@ export async function Topbar({
         </form>
       </div>
       <div className="flex items-center gap-1 sm:gap-3">
+        <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />
         <NotificationBell initialCount={unreadCount} href={notificationsHref} />
         <div className="hidden items-center gap-3 border-l border-surface-200 pl-4 sm:flex dark:border-surface-700">

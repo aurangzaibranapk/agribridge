@@ -3580,6 +3580,8 @@ export type Database = {
           is_active: boolean
           key: string
           label: string
+          label_en: string | null
+          label_ur: string | null
           sort_order: number
           summary: string | null
         }
@@ -3589,6 +3591,8 @@ export type Database = {
           is_active?: boolean
           key: string
           label: string
+          label_en?: string | null
+          label_ur?: string | null
           sort_order?: number
           summary?: string | null
         }
@@ -3598,6 +3602,8 @@ export type Database = {
           is_active?: boolean
           key?: string
           label?: string
+          label_en?: string | null
+          label_ur?: string | null
           sort_order?: number
           summary?: string | null
         }
@@ -4987,6 +4993,8 @@ export type Database = {
           is_sensitive: boolean
           key: string
           label: string
+          label_en: string | null
+          label_ur: string | null
           route: string
         }
         Insert: {
@@ -4996,6 +5004,8 @@ export type Database = {
           is_sensitive?: boolean
           key: string
           label: string
+          label_en?: string | null
+          label_ur?: string | null
           route: string
         }
         Update: {
@@ -5005,6 +5015,8 @@ export type Database = {
           is_sensitive?: boolean
           key?: string
           label?: string
+          label_en?: string | null
+          label_ur?: string | null
           route?: string
         }
         Relationships: []
@@ -12784,6 +12796,10 @@ export type Database = {
           }
       current_dealer_id: { Args: never; Returns: string }
       current_shop_id: { Args: never; Returns: string }
+      fn_bump_farmer_code_counter: {
+        Args: { p_number: number }
+        Returns: undefined
+      }
       fn_can_machinery: { Args: { p_action: string }; Returns: boolean }
       fn_crop_profit_benchmarks: {
         Args: never

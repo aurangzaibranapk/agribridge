@@ -1,4 +1,19 @@
-export type Lang = "en" | "ur";
+/**
+ * Teen zabanein, ek hi safha.
+ *
+ *   en  English            -- daftar, reports, bahar bhejne wali cheezein
+ *   rm  Roman Urdu         -- "Nayi Machinery Booking" (abhi jo likha hai)
+ *   ur  Urdu script        -- اردو، khet aur counter ke staff ke liye
+ *
+ * `rm` jaan boojh kar optional hai. Portal ke 262 alfaz pehle se en/ur
+ * mein hain; un sab ka Roman ek sath likhna is kaam ko rok deta. Jab tak
+ * kisi lafz ka Roman na ho, us ki jagah URDU aata hai -- English nahi.
+ *
+ * Wajah: Roman Urdu aur Urdu script EK HI ZABAN hain, sirf harf alag
+ * hain. Jis bande ne Roman chuna, us ke liye Urdu script parhna English
+ * parhne se kahin qareeb hai.
+ */
+export type Lang = "en" | "rm" | "ur";
 
 const dict = {
   app_name: { en: "AgriBridge", ur: "ایگری برج" },
@@ -308,5 +323,15 @@ const dict = {
 export type TranslationKey = keyof typeof dict;
 
 export function t(key: TranslationKey, lang: Lang): string {
-  return dict[key]?.[lang] ?? String(key);
+  const entry = dict[key] as { en: string; rm?: string; ur: string } | undefined;
+  if (!entry) return String(key);
+  if (lang === "rm") return entry.rm ?? entry.ur;
+  return entry[lang] ?? entry.en;
 }
+
+/** Har zaban ka apna naam -- apni hi zaban mein. */
+export const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  rm: "Roman Urdu",
+  ur: "اردو",
+};
