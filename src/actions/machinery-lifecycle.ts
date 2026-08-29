@@ -775,18 +775,16 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   const advanceAdjusted = Math.min(advanceTotal, gross);
   const balance = Math.round((gross - advanceAdjusted - previousPayment) * 100) / 100;
 
-  // Commission ASAL raqbe par -- yani bill ke gross par, booking ke andaze
-  // par nahi. Rate platform_settings se aata hai (deploy ke baghair badla
-  // ja sake), aur bill us waqt ka rate apne andar likh leta hai: kal rate
-  // badle to pichle bill wahi rehte hain jo tay hue the.
-  const { data: rateRow } = await supabase
-    .from("platform_settings")
-    .select("value")
-    .eq("key", "machinery_commission_rate")
-    .maybeSingle();
-  const commissionPct = Number(rateRow?.value ?? 12);
-  const commissionAmount = Math.round(gross * (commissionPct / 100) * 100) / 100;
-  const vendorPayable = Math.round((gross - commissionAmount) * 100) / 100;
+  // Commission yahan hisaab NAHI hota.
+  //
+  // Gross, commission (12%) aur vendor ka hissa -- teenon database khud
+  // bharta hai (migration 119), asal tasdeeq shuda raqbe aur us rate par
+  // jis par kisan raazi hua. Yahan dobara hisaab karne ka matlab hota do
+  // jagah do qaide, aur kisi din wo alag ho jate.
+  //
+  // Is liye neeche insert ke baad wahi number wapas parhe jate hain jo
+  // database ne likhe, aur ledger unhi se banta hai -- taake bill aur
+  // ledger kabhi alag na keh saken.
 
   const billNumber = await nextNumber(supabase, "machinery_bill_counters", "MBL");
 
@@ -801,23 +799,27 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
       advance_adjusted: advanceAdjusted,
       previous_payment: previousPayment,
       balance_payable: balance,
-      commission_percentage: commissionPct,
-      commission_amount: commissionAmount,
-      vendor_payable: vendorPayable,
       created_by: actorId,
     })
-    .select("id")
+    .select("id, gross_amount, commission_percentage, commission_amount, vendor_payable, advance_adjusted, balance_payable")
     .single();
   if (error || !bill) return { error: error?.message ?? "Bill nahi bana." };
+
+  const commissionPct = Number(bill.commission_percentage);
+  const commissionAmount = Number(bill.commission_amount);
+  const vendorPayable = Number(bill.vendor_payable);
+  const finalGross = Number(bill.gross_amount);
+  const finalAdvance = Number(bill.advance_adjusted);
+  const finalBalance = Number(bill.balance_payable);
 
   const posted = await postMachineryBill({
     bookingId,
     farmerId: booking.farmer_id,
     vendorId: booking.vendor_id,
-    grossAmount: gross,
+    grossAmount: finalGross,
     commissionAmount,
     vendorPayable,
-    advanceAdjusted,
+    advanceAdjusted: finalAdvance,
     description: `Machinery ${booking.booking_number} — bill ${billNumber} (${area} acre x Rs ${rate})`,
     ctx: {
       createdBy: actorId,
@@ -833,8 +835,8 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   await supabase
     .from("machinery_bookings")
     .update({
-      status: balance > 0 ? "payment_pending" : "closed",
-      total_amount: gross,
+      status: finalBalance > 0 ? "payment_pending" : "closed",
+      total_amount: finalGross,
       commission_percentage: commissionPct,
       commission_amount: commissionAmount,
       vendor_payable: vendorPayable,
@@ -845,8 +847,8 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
     bookingId,
     eventType: "bill_generated",
     fromStatus: booking.status,
-    toStatus: balance > 0 ? "payment_pending" : "closed",
-    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${gross.toLocaleString()} (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${advanceAdjusted.toLocaleString()}, baqi Rs ${balance.toLocaleString()}`,
+    toStatus: finalBalance > 0 ? "payment_pending" : "closed",
+    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${finalGross.toLocaleString()} (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${finalAdvance.toLocaleString()}, baqi Rs ${finalBalance.toLocaleString()}`,
     actorId,
   });
 
