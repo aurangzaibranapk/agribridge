@@ -1,12 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
+import { t, type TranslationKey } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
 export const dynamic = "force-dynamic";
+
+/** Halat database mein angrezi mein rehti hai; screen ka lafz yahan se. */
+const PURCHASE_STATUS: Record<string, TranslationKey> = {
+  pending: "pu_s_pending",
+  received: "pu_s_received",
+  cancelled: "pu_s_cancelled",
+};
 export default async function AdminPurchasesPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -58,25 +68,25 @@ export default async function AdminPurchasesPage() {
 
   return (
     <div>
-      <PageHeader title="Purchases" description="Purchase orders from suppliers, and receiving stock" />
+      <PageHeader title={t("pu_title", lang)} description={t("pu_subtitle", lang)} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {normalizedPurchases.length === 0 ? (
-            <EmptyState title="No purchase orders yet" />
+            <EmptyState title={t("pu_empty", lang)} />
           ) : (
             <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                    <th className="px-4 py-3 font-medium text-surface-500">PO #</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Supplier</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Branch</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Date</th>
-                    <th className="px-4 py-3 text-right font-medium text-surface-500">Amount</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Action</th>
-                    {isAdminLevel && <th className="px-4 py-3 font-medium text-surface-500">Delete</th>}
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_po_no", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_supplier", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_branch", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_date", lang)}</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">{t("pu_amount", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_status", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("pu_action", lang)}</th>
+                    {isAdminLevel && <th className="px-4 py-3 font-medium text-surface-500">{t("pu_delete", lang)}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -90,7 +100,7 @@ export default async function AdminPurchasesPage() {
                         Rs {Number(p.total_amount).toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge tone={statusTone(p.status)}>{p.status}</Badge>
+                        <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
                       </td>
                       <td className="px-4 py-3">
                         {p.status === "pending" && <ReceiveButton purchaseId={p.id} />}
