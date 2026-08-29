@@ -7206,6 +7206,66 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_requests: {
+        Row: {
+          created_at: string
+          days: number | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          from_date: string
+          id: string
+          leave_type: string
+          profile_id: string
+          reason: string
+          status: string
+          to_date: string
+        }
+        Insert: {
+          created_at?: string
+          days?: number | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_date: string
+          id?: string
+          leave_type?: string
+          profile_id: string
+          reason: string
+          status?: string
+          to_date: string
+        }
+        Update: {
+          created_at?: string
+          days?: number | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_date?: string
+          id?: string
+          leave_type?: string
+          profile_id?: string
+          reason?: string
+          status?: string
+          to_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       livestock_loans: {
         Row: {
           buffalo_count: number
