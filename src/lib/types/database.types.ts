@@ -8430,6 +8430,95 @@ export type Database = {
         }
         Relationships: []
       }
+      milk_dispatches: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          dispatch_date: string
+          dispatched_liters: number
+          driver_name: string | null
+          fat_percentage: number | null
+          id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          received_liters: number | null
+          shift: string
+          shortage_liters: number | null
+          shortage_percentage: number | null
+          snf_percentage: number | null
+          vehicle_name: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_date?: string
+          dispatched_liters: number
+          driver_name?: string | null
+          fat_percentage?: number | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_liters?: number | null
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+          snf_percentage?: number | null
+          vehicle_name?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_date?: string
+          dispatched_liters?: number
+          driver_name?: string | null
+          fat_percentage?: number | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_liters?: number | null
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+          snf_percentage?: number | null
+          vehicle_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_dispatches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_entries: {
         Row: {
           adjusted_volume: number | null
@@ -13313,6 +13402,20 @@ export type Database = {
           booking_number: string | null
           detail: string | null
           issue: string | null
+        }
+        Relationships: []
+      }
+      v_milk_dispatch_watch: {
+        Row: {
+          chiller: string | null
+          dispatch_date: string | null
+          dispatched_liters: number | null
+          id: string | null
+          issue: string | null
+          received_liters: number | null
+          shift: string | null
+          shortage_liters: number | null
+          shortage_percentage: number | null
         }
         Relationships: []
       }
