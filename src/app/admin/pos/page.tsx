@@ -1,6 +1,7 @@
 ﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function PosPage() {
   const supabase = createClient();
@@ -110,6 +111,7 @@ export default async function PosPage() {
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
   return (
     <PosClient
+      lang={getLanguageFromCookies("rm")}
       sellerName={sellerName}
       inventory={inventory}
       customers={rawCustomers ?? []}

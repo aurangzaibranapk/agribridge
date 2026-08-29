@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { ReturnsClient } from "./returns-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 /**
  * POS ki wapsi ka safha.
@@ -18,6 +20,7 @@ import { ReturnsClient } from "./returns-client";
  */
 export default async function PosReturnsPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -69,39 +72,39 @@ export default async function PosReturnsPage() {
   return (
     <div>
       <PageHeader
-        title="POS — Wapsi"
-        description="Staff bharta hai, manager ka code bhejta hai. Paisa aur maal usi waqt wapas."
+        title={t("pos_returns_title", lang)}
+        description={t("pos_returns_subtitle", lang)}
       />
 
       <div className="space-y-4">
-        <ReturnsClient canHoldCode={canHoldCode} hasCode={Boolean(hasCode)} myName={me.full_name ?? ""} myId={me.id} />
+        <ReturnsClient canHoldCode={canHoldCode} hasCode={Boolean(hasCode)} myName={me.full_name ?? ""} myId={me.id} lang={lang} />
 
         {/* Sham ki fehrist */}
         <Card className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-surface-100 pb-2 dark:border-surface-800">
             <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-              Aaj ki wapsiyan
+              {t("pos_returns_today", lang)}
             </h2>
             <div className="flex flex-wrap gap-2">
-              <Badge tone="gray">{rows.length} wapsi</Badge>
-              <Badge tone={totalBack > 0 ? "amber" : "gray"}>Rs {totalBack.toLocaleString()} wapas</Badge>
+              <Badge tone="gray">{rows.length} {t("pos_returns_count", lang)}</Badge>
+              <Badge tone={totalBack > 0 ? "amber" : "gray"}>Rs {totalBack.toLocaleString()} {t("pos_returned_amount", lang)}</Badge>
             </div>
           </div>
 
           {rows.length === 0 ? (
-            <p className="text-sm text-surface-500">Aaj koi wapsi nahi hui.</p>
+            <p className="text-sm text-surface-500">{t("pos_no_returns_today", lang)}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-100 text-left text-xs text-surface-500 dark:border-surface-800">
-                    <th className="py-2 pr-3">Wapsi</th>
-                    <th className="py-2 pr-3">Waqt</th>
-                    <th className="py-2 pr-3">Raqam</th>
-                    <th className="py-2 pr-3">Kaise wapas</th>
-                    <th className="py-2 pr-3">Bhari kis ne</th>
-                    <th className="py-2 pr-3">Code kis ka</th>
-                    <th className="py-2">Wajah</th>
+                    <th className="py-2 pr-3">{t("pos_return_number", lang)}</th>
+                    <th className="py-2 pr-3">{t("pos_time", lang)}</th>
+                    <th className="py-2 pr-3">{t("pos_amount", lang)}</th>
+                    <th className="py-2 pr-3">{t("pos_how_refunded", lang)}</th>
+                    <th className="py-2 pr-3">{t("pos_filled_by", lang)}</th>
+                    <th className="py-2 pr-3">{t("pos_code_of", lang)}</th>
+                    <th className="py-2">{t("pos_reason", lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -114,8 +117,8 @@ export default async function PosReturnsPage() {
                       <td className="py-2 pr-3 font-medium">Rs {r.totalAmount.toLocaleString()}</td>
                       <td className="py-2 pr-3 text-surface-600 dark:text-surface-300">
                         {[
-                          r.cashRefund > 0 ? `naqad ${r.cashRefund.toLocaleString()}` : null,
-                          r.khataRefund > 0 ? `khata ${r.khataRefund.toLocaleString()}` : null,
+                          r.cashRefund > 0 ? `${t("pos_cash_paid", lang)} ${r.cashRefund.toLocaleString()}` : null,
+                          r.khataRefund > 0 ? `${t("pos_khata_credit", lang)} ${r.khataRefund.toLocaleString()}` : null,
                         ]
                           .filter(Boolean)
                           .join(" + ") || "—"}
@@ -125,7 +128,7 @@ export default async function PosReturnsPage() {
                         {/* Dono naam ek hon to manager ne khud ki -- wo bhi
                             jaiz hai, magar us ka alag dikhna zaroori hai. */}
                         {r.codeKisKa}
-                        {r.managerNeKhudKi && <span className="ml-1 text-xs text-surface-400">(khud)</span>}
+                        {r.managerNeKhudKi && <span className="ml-1 text-xs text-surface-400">{t("pos_self", lang)}</span>}
                       </td>
                       <td className="py-2 text-surface-600 dark:text-surface-300">{r.reason}</td>
                     </tr>
@@ -140,17 +143,16 @@ export default async function PosReturnsPage() {
         {(attempts ?? []).length > 0 && (
           <Card className="space-y-2 border-red-200 dark:border-red-900/40">
             <h2 className="font-display text-base font-semibold text-red-700 dark:text-red-400">
-              Ghalat code ki koshishein — aaj {attempts?.length}
+              {t("pos_wrong_code_attempts", lang)} — {attempts?.length}
             </h2>
             <p className="text-sm text-surface-600 dark:text-surface-300">
-              Ye fehrist khali rehni chahiye. Koi qatar aaye to iska matlab hai ke kisi ne manager ka code andaze se
-              lagane ki koshish ki.
+              {t("pos_wrong_code_explain", lang)}
             </p>
             <ul className="space-y-1 text-sm">
               {(attempts ?? []).map((a: any) => (
                 <li key={a.id} className="text-surface-700 dark:text-surface-200">
                   {new Date(a.attempted_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} —{" "}
-                  {a.profiles?.full_name ?? "koi"}
+                  {a.profiles?.full_name ?? t("pos_someone", lang)}
                 </li>
               ))}
             </ul>

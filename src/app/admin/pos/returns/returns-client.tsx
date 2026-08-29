@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { useFormState } from "react-dom";
 import { Search, RotateCcw, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -24,11 +25,14 @@ export function ReturnsClient({
   hasCode,
   myName,
   myId,
+  lang,
 }: {
   canHoldCode: boolean;
   hasCode: boolean;
   myName: string;
   myId: string;
+  /** Zaban server se aati hai -- dekhein pos-client.tsx ka note. */
+  lang: Lang;
 }) {
   const [state, formAction] = useFormState(returnPosSale, initialState);
   const [codeState, codeAction] = useFormState(setAuthCode, initialState);
@@ -48,7 +52,7 @@ export function ReturnsClient({
     setSale(null);
     const q = query.trim();
     if (q.length < 4) {
-      setLookupMsg("Raseed ka number likhein (kam az kam char harf).");
+      setLookupMsg(t("pos_receipt_number_short", lang));
       return;
     }
 
@@ -63,7 +67,7 @@ export function ReturnsClient({
         .maybeSingle();
 
       if (error || !data) {
-        setLookupMsg("Ye bikri nahi mili. Raseed ka number dobara dekh lein.");
+        setLookupMsg(t("pos_sale_not_found", lang));
         return;
       }
 
@@ -90,12 +94,12 @@ export function ReturnsClient({
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-brand-600" />
             <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-              Aap ka code {hasCode ? <Badge tone="green">laga hua hai</Badge> : <Badge tone="red">abhi nahi laga</Badge>}
+              {t("pos_your_code", lang)}{" "}
+              {hasCode ? <Badge tone="green">{t("pos_code_set", lang)}</Badge> : <Badge tone="red">{t("pos_code_not_set", lang)}</Badge>}
             </h2>
           </div>
           <p className="text-sm text-surface-600 dark:text-surface-300">
-            Ye code counter par wapsi bhejne ke liye chahiye hota hai. {myName} — har wapsi aap ke naam par darj hoti
-            hai, is liye ise kisi ko na batayein. Bhool jayen to naya banana paRta hai; purana kisi ko nazar nahi aata.
+            {myName} — {t("pos_code_explain", lang)}
           </p>
           {codeState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{codeState.error}</p>}
           {codeState.notice && (
@@ -104,15 +108,15 @@ export function ReturnsClient({
           <form action={codeAction} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="profile_id" value={myId} />
             <div>
-              <Label>Naya code</Label>
+              <Label>{t("pos_new_code", lang)}</Label>
               <Input name="code" type="password" inputMode="numeric" autoComplete="new-password" placeholder="****" />
             </div>
             <div>
-              <Label>Dobara likhein</Label>
+              <Label>{t("pos_code_again", lang)}</Label>
               <Input name="code_again" type="password" inputMode="numeric" autoComplete="new-password" placeholder="****" />
             </div>
             <Button type="submit" variant="secondary" size="sm">
-              {hasCode ? "Code badlein" : "Code lagayein"}
+              {hasCode ? t("pos_change_code", lang) : t("pos_set_code", lang)}
             </Button>
           </form>
         </Card>
@@ -121,11 +125,11 @@ export function ReturnsClient({
       <Card className="space-y-3">
         <div className="flex items-center gap-2">
           <RotateCcw className="h-4 w-4 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">Wapsi karein</h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("pos_return_do", lang)}</h2>
         </div>
 
         <div>
-          <Label>Raseed ka number</Label>
+          <Label>{t("pos_receipt_number", lang)}</Label>
           <div className="flex gap-2">
             <Input
               value={query}
@@ -136,10 +140,10 @@ export function ReturnsClient({
                   lookup();
                 }
               }}
-              placeholder="raseed par chhapa hua number"
+              placeholder={t("pos_receipt_number_hint", lang)}
             />
             <Button type="button" variant="secondary" onClick={lookup} disabled={pending}>
-              <Search className="h-4 w-4" /> {pending ? "Dhoond raha hai..." : "Dhoondein"}
+              <Search className="h-4 w-4" /> {pending ? t("pos_searching", lang) : t("pos_search", lang)}
             </Button>
           </div>
           {lookupMsg && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{lookupMsg}</p>}
@@ -152,7 +156,7 @@ export function ReturnsClient({
                 {new Date(sale.createdAt).toLocaleString()}
               </p>
               <Badge tone={sale.status === "completed" ? "green" : "red"}>
-                {sale.status === "completed" ? "Wapsi ho sakti hai" : `Pehle hi ${sale.status}`}
+                {sale.status === "completed" ? t("pos_return_possible", lang) : `${t("pos_already", lang)} ${sale.status}`}
               </Badge>
             </div>
             <ul className="mt-2 space-y-0.5 text-sm">
@@ -163,11 +167,11 @@ export function ReturnsClient({
               ))}
             </ul>
             <p className="mt-2 text-sm font-medium text-surface-900 dark:text-surface-100">
-              Kul Rs {sale.total.toLocaleString()}
-              {sale.khata > 0 && ` (khata Rs ${sale.khata.toLocaleString()})`}
+              {t("pos_total", lang)} Rs {sale.total.toLocaleString()}
+              {sale.khata > 0 && ` (${t("pos_khata_credit", lang)} Rs ${sale.khata.toLocaleString()})`}
             </p>
             <p className="mt-1 text-xs text-surface-500">
-              Poori bikri wapas hoti hai — kuch cheezein alag se nahi. Paisa usi tarah wapas jayega jis tarah aaya tha.
+              {t("pos_full_return_note", lang)}
             </p>
           </div>
         )}
@@ -175,7 +179,7 @@ export function ReturnsClient({
         {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
         {state.success && (
           <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            Wapsi ho gayi — {state.returnNumber}. {state.notice ?? "Maal godam mein wapas aa gaya aur paisa gahak ko ja chuka hai."}
+            {t("pos_return_number", lang)} — {state.returnNumber}. {state.notice ?? t("pos_return_done", lang)}
           </p>
         )}
 
@@ -183,18 +187,18 @@ export function ReturnsClient({
           <form action={formAction} className="space-y-3">
             <input type="hidden" name="sale_id" value={sale.id} />
             <div>
-              <Label>Wapsi ki wajah *</Label>
-              <Textarea name="reason" rows={2} placeholder="Gahak ko doosri khaad chahiye thi..." />
-              <p className="mt-1 text-xs text-surface-500">Ye wajah hamesha darj rahegi.</p>
+              <Label>{t("pos_return_reason", lang)}</Label>
+              <Textarea name="reason" rows={2} placeholder={t("pos_return_reason_example", lang)} />
+              <p className="mt-1 text-xs text-surface-500">{t("pos_return_reason_hint", lang)}</p>
             </div>
             <div>
-              <Label>Manager ka code *</Label>
+              <Label>{t("pos_manager_code", lang)}</Label>
               <Input name="manager_code" type="password" inputMode="numeric" autoComplete="off" placeholder="****" />
               <p className="mt-1 text-xs text-surface-500">
-                Code ke baghair wapsi nahi hoti. Ghalat code ki har koshish darj hoti hai.
+                {t("pos_manager_code_hint", lang)}
               </p>
             </div>
-            <Button type="submit">Wapsi karein</Button>
+            <Button type="submit">{t("pos_return_do", lang)}</Button>
           </form>
         )}
       </Card>

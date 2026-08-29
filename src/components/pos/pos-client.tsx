@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { posCheckout } from "@/actions/pos";
@@ -53,10 +54,20 @@ export function PosClient({
   sellerName,
   inventory,
   customers,
+  lang,
 }: {
   sellerName: string;
   inventory: InventoryItem[];
   customers: Customer[];
+  /**
+   * Zaban server se aati hai, yahan cookie parh kar nahi.
+   *
+   * useLanguage() cookie browser mein parhta hai -- yani safha pehle ek
+   * zaban mein banta hai aur phir doosri mein badal jata hai. Counter
+   * par ye jhatka saaf nazar aata hai. Server ko cookie pehle se maloom
+   * hai, is liye wahin se bhej di jati hai.
+   */
+  lang: Lang;
 }) {
   const supabase = createClient();
   const [search, setSearch] = useState("");
@@ -194,11 +205,11 @@ export function PosClient({
   async function handleCheckout() {
     setMessage(null);
     if (cart.length === 0) {
-      setMessage({ type: "error", text: "Cart is empty." });
+      setMessage({ type: "error", text: t("pos_cart_empty_error", lang) });
       return;
     }
     if (khataTotal > 0 && !customerId) {
-      setMessage({ type: "error", text: "Khata ke liye Customer select karein." });
+      setMessage({ type: "error", text: t("pos_khata_needs_customer", lang) });
       return;
     }
     if (Math.abs(remaining) > 0.5) {
@@ -238,7 +249,7 @@ export function PosClient({
     }
 
     if (!data) {
-      setMessage({ type: "error", text: "Bikri nahi ho saki." });
+      setMessage({ type: "error", text: t("pos_sale_failed", lang) });
       setSubmitting(false);
       return;
     }
@@ -249,8 +260,8 @@ export function PosClient({
     // ginti se pehle ise theek karwa sake.
     setMessage(
       result.notice
-        ? { type: "error", text: `Sale complete ho gayi — magar ${result.notice}` }
-        : { type: "success", text: "Sale complete ho gayi." }
+        ? { type: "error", text: `${t("pos_sale_done", lang)} — magar ${result.notice}` }
+        : { type: "success", text: t("pos_sale_done", lang) }
     );
     setCompletedSaleId(data);
     resetSale();
@@ -271,12 +282,12 @@ export function PosClient({
               href="/admin/pos/ordering"
               className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300"
             >
-              <PackagePlus className="h-4 w-4" /> Karyana Ordering
+              <PackagePlus className="h-4 w-4" /> {t("pos_karyana_ordering", lang)}
             </Link>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
               <Input
-                placeholder="Search products..."
+                placeholder={t("pos_search_products", lang)}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -292,7 +303,7 @@ export function PosClient({
               ref={barcodeRef}
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
-              placeholder="Scan barcode with scanner, or type and press Enter"
+              placeholder={t("pos_scan_hint", lang)}
               className="pl-9"
             />
           </div>
@@ -326,7 +337,7 @@ export function PosClient({
             ))}
             {filteredInventory.length === 0 && (
               <p className="col-span-full py-10 text-center text-sm text-surface-400">
-                No products found.
+                {t("pos_no_products", lang)}
               </p>
             )}
           </div>
@@ -343,7 +354,7 @@ export function PosClient({
 
         <div className="max-h-64 space-y-2 overflow-y-auto">
           {cart.length === 0 && (
-            <p className="py-6 text-center text-sm text-surface-400">No items in cart</p>
+            <p className="py-6 text-center text-sm text-surface-400">{t("pos_cart_empty", lang)}</p>
           )}
           {cart.map((line) => (
             <div key={line.product_id} className="flex items-center gap-2 rounded-lg border border-surface-100 p-2 dark:border-surface-800">
@@ -368,7 +379,7 @@ export function PosClient({
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>Customer {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-            <option value="">Walk-in / No customer</option>
+            <option value="">{t("pos_walk_in", lang)}</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -380,9 +391,9 @@ export function PosClient({
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <Label>Payment</Label>
+            <Label>{t("pos_payment", lang)}</Label>
             <button type="button" onClick={addPaymentLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-              <Plus className="h-3 w-3" /> Split Payment Add Karein
+              <Plus className="h-3 w-3" /> {t("pos_add_split", lang)}
             </button>
           </div>
           <div className="space-y-2">
@@ -397,12 +408,12 @@ export function PosClient({
                   <Input
                     type="number"
                     min={0}
-                    placeholder="Amount"
+                    placeholder={t("pos_amount", lang)}
                     value={line.amount}
                     onChange={(e) => updatePaymentLine(line.id, "amount", e.target.value)}
                     className="h-8 w-24 text-xs"
                   />
-                  <button type="button" onClick={() => fillRemaining(line.id)} className="whitespace-nowrap text-[10px] text-brand-600 hover:underline">Baaqi</button>
+                  <button type="button" onClick={() => fillRemaining(line.id)} className="whitespace-nowrap text-[10px] text-brand-600 hover:underline">{t("pos_remaining", lang)}</button>
                   {paymentLines.length > 1 && (
                     <button type="button" onClick={() => removePaymentLine(line.id)} className="text-surface-400 hover:text-red-600">
                       <X className="h-3.5 w-3.5" />
@@ -412,7 +423,7 @@ export function PosClient({
                 {line.method !== "cash" && line.method !== "khata" && (
                   <>
                     <Input
-                      placeholder="Transaction Reference (optional)"
+                      placeholder={t("pos_reference_optional", lang)}
                       value={line.reference}
                       onChange={(e) => updatePaymentLine(line.id, "reference", e.target.value)}
                       className="mt-1.5 h-7 text-xs"
@@ -421,9 +432,9 @@ export function PosClient({
                       {line.uploading ? (
                         "Upload ho raha hai..."
                       ) : line.receiptUrl ? (
-                        <span className="flex items-center gap-1 text-green-600"><Check className="h-3 w-3" /> Receipt attach ho gayi</span>
+                        <span className="flex items-center gap-1 text-green-600"><Check className="h-3 w-3" /> {t("pos_receipt_attached", lang)}</span>
                       ) : (
-                        <span className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> Payment Screenshot/Receipt Attach Karein</span>
+                        <span className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> {t("pos_attach_receipt", lang)}</span>
                       )}
                       <input
                         type="file"
@@ -443,13 +454,13 @@ export function PosClient({
         </div>
 
         <div className="flex items-center justify-between border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
-          <span className="text-surface-500">Total Quantity</span>
+          <span className="text-surface-500">{t("pos_total_quantity", lang)}</span>
           <span className="font-medium text-surface-900 dark:text-surface-100">
             {cart.reduce((s, l) => s + l.quantity, 0)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="font-display text-base font-semibold text-surface-900 dark:text-white">Grand Total</span>
+          <span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span>
           <span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">
             Rs {total.toLocaleString()}
           </span>
@@ -472,7 +483,7 @@ export function PosClient({
         )}
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={resetSale} disabled={submitting}>
-            Clear Cart
+            {t("pos_clear_cart", lang)}
           </Button>
           <Button className="flex-1" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
             {submitting ? "Processing..." : "Checkout"}
@@ -480,12 +491,13 @@ export function PosClient({
         </div>
       </Card>
       {completedSaleId && (
-        <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} />
+        <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} lang={lang} />
       )}
       {showCameraModal && (
         <BarcodeCameraModal
           onDetected={handleCameraDetected}
           onClose={() => setShowCameraModal(false)}
+          lang={lang}
         />
       )}
     </div>
