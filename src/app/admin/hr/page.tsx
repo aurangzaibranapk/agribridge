@@ -65,10 +65,19 @@ export default async function HRPage() {
     staff_name: staffNameMap.get(s.profile_id) ?? "-",
   }));
 
+  // Tankhwah dete waqt khata poochha jata hai (warna paisa kisi kitab
+  // mein nahi jata). Fehrist yahin se aati hai.
+  const { data: accountRows } = await supabase
+    .from("finance_accounts")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("account_type");
+  const accounts = (accountRows ?? []).map((a) => ({ id: a.id, name: a.name }));
+
   return (
     <div>
       <PageHeader title="HR - Staff Management" description="Staff details, attendance, and salary records" />
-      <HRClient staff={staff} attendance={attendance} salaries={salaries} branches={branches ?? []} />
+      <HRClient staff={staff} attendance={attendance} salaries={salaries} branches={branches ?? []} accounts={accounts} />
     </div>
   );
 }

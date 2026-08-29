@@ -90,8 +90,17 @@ export default async function MasterDashboardPage() {
   const totalAdjustedVolume = (milkEntries ?? []).reduce((s, e) => s + Number(e.adjusted_volume ?? e.quantity_liters ?? 0), 0);
   const milkGrossIncome = totalAdjustedVolume * serviceRate;
 
-  const { data: salaryPayments } = await supabase.from("salary_payments").select("amount").gte("payment_date", monthStart).lte("payment_date", monthEnd);
-  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Ye sawal toota hua tha: `amount` aur `payment_date` naam ke khane
+  // salary_payments mein hain hi nahi (wo net_salary aur paid_date hain).
+  // Sawal chup chaap nakaam hota tha aur is dashboard par tankhwah ka
+  // adad HAR MAHINE sifar aata tha.
+  const { data: salaryPayments } = await supabase
+    .from("salary_payments")
+    .select("net_salary")
+    .eq("status", "paid")
+    .gte("paid_date", monthStart)
+    .lte("paid_date", monthEnd);
+  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.net_salary ?? 0), 0);
 
   const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
   const milkPetrolCost = (fuelLogs ?? []).reduce((s, f) => s + Number(f.fuel_cost ?? 0), 0);

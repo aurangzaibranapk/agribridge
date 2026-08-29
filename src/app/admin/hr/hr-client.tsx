@@ -68,11 +68,14 @@ export function HRClient({
   attendance,
   salaries,
   branches,
+  accounts,
 }: {
   staff: Staff[];
   attendance: Attendance[];
   salaries: Salary[];
   branches: Branch[];
+  /** Tankhwah kis khate se nikle -- us ke baghair paisa kisi kitab mein nahi jata. */
+  accounts: { id: string; name: string }[];
 }) {
   const [tab, setTab] = useState<"staff" | "attendance" | "salary">("staff");
   const [selected, setSelected] = useState<string[]>([]);
@@ -205,7 +208,7 @@ export function HRClient({
                       <Badge tone={s.status === "paid" ? "green" : "amber"}>{s.status === "paid" ? "Paid" : "Pending"}</Badge>
                     </td>
                     <td className="px-3 py-2">
-                      {s.status !== "paid" && <MarkPaidButton paymentId={s.id} />}
+                      {s.status !== "paid" && <MarkPaidButton paymentId={s.id} accounts={accounts} />}
                     </td>
                   </tr>
                 ))}
@@ -396,14 +399,36 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
   );
 }
 
-function MarkPaidButton({ paymentId }: { paymentId: string }) {
+/**
+ * Tankhwah dena -- ab khata poochh kar.
+ *
+ * Pehle ye ek button tha jo sirf nishan laga deta tha. Paisa nikalta tha
+ * aur kisi kitab mein nahi aata tha. Ab ye poochhta hai ke kis khate se
+ * nikla, kyunke us ke baghair raat ki ginti mein farq nikal aata hai
+ * jis ki wajah nahi milti.
+ */
+function MarkPaidButton({ paymentId, accounts }: { paymentId: string; accounts: { id: string; name: string }[] }) {
   const [state, formAction] = useFormState(markSalaryPaid, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 600);
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="flex flex-col items-end gap-1">
       <input type="hidden" name="payment_id" value={paymentId} />
+      <select
+        name="account_id"
+        required
+        defaultValue=""
+        className="rounded border border-surface-200 px-1 py-0.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+      >
+        <option value="">Kis khate se...</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
       <button type="submit" className="text-xs font-medium text-green-600 hover:underline">Paid Mark Karein</button>
+      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
     </form>
   );
 }

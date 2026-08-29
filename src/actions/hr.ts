@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -90,10 +91,73 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
   return { success: true };
 }
 
+/**
+ * Tankhwah dena.
+ *
+ * Pehle ye sirf ek nishan lagata tha: status = 'paid'. Paisa nikalta
+ * tha aur na cash book ko pata chalta tha, na ledger ko -- yani mahine
+ * ki sab se baRi nikasi kisi kitab mein nahi aati thi. postSalaryPaid()
+ * rules.ts mein maujood tha magar usay koi bulata hi nahi tha.
+ *
+ * Ab kis khate se nikla, ye poochhna zaroori hai. Bina us ke ye maloom
+ * hi nahi hota ke paisa naqad diya gaya ya bank se -- aur raat ki ginti
+ * mein farq nikal aata hai jis ki wajah nahi milti.
+ */
 export async function markSalaryPaid(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const paymentId = String(formData.get("payment_id") ?? "");
-  if (!paymentId) return { error: "Missing payment id." };
+  const accountId = String(formData.get("account_id") ?? "");
+  if (!paymentId) return { error: "Kaun si tankhwah, wo saaf nahi." };
+  if (!accountId) return { error: "Kis khate se di ja rahi hai, wo chunein." };
+
+  const { data: row } = await supabase
+    .from("salary_payments")
+    .select("id, profile_id, net_salary, advance_deduction, status, pay_month, pay_year")
+    .eq("id", paymentId)
+    .maybeSingle();
+  if (!row) return { error: "Ye tankhwah nahi mili." };
+  if (row.status === "paid") return { error: "Ye tankhwah pehle hi di ja chuki hai." };
+
+  const net = Number(row.net_salary);
+  const advance = Number(row.advance_deduction ?? 0);
+
+  // Cash book ki qatar pehle. Balance us par trigger khud hilata hai
+  // (127) -- yahan se nahi.
+  const { data: txn, error: txnError } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "expense",
+      category: "Salary",
+      amount: net,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Tankhwah ${row.pay_month}/${row.pay_year}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (txnError) return { error: `Cash book mein darj nahi hui: ${txnError.message}` };
+
+  const posted = await postSalaryPaid({
+    profileId: row.profile_id,
+    gross: net + advance,
+    advanceAdjusted: advance,
+    accountId,
+    description: `Tankhwah ${row.pay_month}/${row.pay_year}`,
+    ctx: { createdBy: user?.id ?? null, claims: [{ table: "finance_transactions", rowId: txn.id }] },
+  });
+
+  // Ledger mein na ja sake to qatar bhi hata di jati hai. Yahan ye theek
+  // hai (POS ke ulat, jahan maal gahak ke haath mein ja chuka hota hai):
+  // is lamhe tak kuch hua nahi, sirf likha ja raha tha.
+  if (failed(posted)) {
+    await supabase.from("finance_transactions").delete().eq("id", txn.id);
+    return { error: `Ledger mein nahi gayi, is liye tankhwah darj nahi ki: ${posted.error}` };
+  }
 
   const { error } = await supabase
     .from("salary_payments")
@@ -102,6 +166,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   if (error) return { error: error.message };
 
   revalidatePath("/admin/hr");
+  revalidatePath("/admin/finance");
   return { success: true };
 }
 
