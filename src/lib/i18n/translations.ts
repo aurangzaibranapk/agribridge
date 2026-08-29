@@ -9,6 +9,7 @@ import { milkDict, milkPageDict } from "./dict/milk";
 import { financeDict } from "./dict/finance";
 import { cashCloseDict } from "./dict/cash-close";
 import { cashHandoverDict } from "./dict/cash-handover";
+import { hrDict, attendanceLogDict } from "./dict/hr";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -53,6 +54,8 @@ const dict = {
   ...financeDict,
   ...cashCloseDict,
   ...cashHandoverDict,
+  ...hrDict,
+  ...attendanceLogDict,
 };
 
 export type TranslationKey = keyof typeof dict;

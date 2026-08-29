@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { HRClient } from "./hr-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HRPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const { data: profiles } = await supabase
     .from("profiles")
@@ -76,7 +79,7 @@ export default async function HRPage() {
 
   return (
     <div>
-      <PageHeader title="HR - Staff Management" description="Staff details, attendance, and salary records" />
+      <PageHeader title={t("hr_title", lang)} description={t("hr_subtitle", lang)} />
       <HRClient staff={staff} attendance={attendance} salaries={salaries} branches={branches ?? []} accounts={accounts} />
     </div>
   );
