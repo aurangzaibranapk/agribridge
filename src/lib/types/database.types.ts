@@ -4679,6 +4679,10 @@ export type Database = {
           animal_image_urls: string[]
           auto_khata_bank_cashout: boolean
           backup_phone_number: string | null
+          bank_account_number: string | null
+          bank_account_title: string | null
+          bank_iban: string | null
+          bank_name: string | null
           booking_link_token: string | null
           branch_id: string | null
           buffalo_count: number | null
@@ -4696,6 +4700,7 @@ export type Database = {
           district: string | null
           email: string | null
           farmer_code: string
+          father_name: string | null
           full_name: string | null
           has_livestock: boolean
           id: string
@@ -4724,10 +4729,13 @@ export type Database = {
           milk_liters_per_day: number | null
           milk_sale_rate: number | null
           milking_animal_count: number | null
+          mobile_wallet_number: string | null
+          mobile_wallet_provider: string | null
           nickname: string | null
           organization_id: string
           phone_key: string | null
           phone_number: string | null
+          preferred_language: string | null
           profile_confirmed_at: string | null
           profile_photo_url: string | null
           profile_status: string | null
@@ -4747,6 +4755,10 @@ export type Database = {
           animal_image_urls?: string[]
           auto_khata_bank_cashout?: boolean
           backup_phone_number?: string | null
+          bank_account_number?: string | null
+          bank_account_title?: string | null
+          bank_iban?: string | null
+          bank_name?: string | null
           booking_link_token?: string | null
           branch_id?: string | null
           buffalo_count?: number | null
@@ -4764,6 +4776,7 @@ export type Database = {
           district?: string | null
           email?: string | null
           farmer_code?: string
+          father_name?: string | null
           full_name?: string | null
           has_livestock?: boolean
           id?: string
@@ -4792,10 +4805,13 @@ export type Database = {
           milk_liters_per_day?: number | null
           milk_sale_rate?: number | null
           milking_animal_count?: number | null
+          mobile_wallet_number?: string | null
+          mobile_wallet_provider?: string | null
           nickname?: string | null
           organization_id?: string
           phone_key?: string | null
           phone_number?: string | null
+          preferred_language?: string | null
           profile_confirmed_at?: string | null
           profile_photo_url?: string | null
           profile_status?: string | null
@@ -4815,6 +4831,10 @@ export type Database = {
           animal_image_urls?: string[]
           auto_khata_bank_cashout?: boolean
           backup_phone_number?: string | null
+          bank_account_number?: string | null
+          bank_account_title?: string | null
+          bank_iban?: string | null
+          bank_name?: string | null
           booking_link_token?: string | null
           branch_id?: string | null
           buffalo_count?: number | null
@@ -4832,6 +4852,7 @@ export type Database = {
           district?: string | null
           email?: string | null
           farmer_code?: string
+          father_name?: string | null
           full_name?: string | null
           has_livestock?: boolean
           id?: string
@@ -4860,10 +4881,13 @@ export type Database = {
           milk_liters_per_day?: number | null
           milk_sale_rate?: number | null
           milking_animal_count?: number | null
+          mobile_wallet_number?: string | null
+          mobile_wallet_provider?: string | null
           nickname?: string | null
           organization_id?: string
           phone_key?: string | null
           phone_number?: string | null
+          preferred_language?: string | null
           profile_confirmed_at?: string | null
           profile_photo_url?: string | null
           profile_status?: string | null

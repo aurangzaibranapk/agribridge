@@ -16,9 +16,19 @@ export default async function PortalLayout({ children }: { children: React.React
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: farmer } = await supabase.from("farmers").select("id, full_name, farmer_code, member_photo_url").eq("user_id", user.id).single();
+  const { data: farmer } = await supabase.from("farmers").select("id, full_name, farmer_code, member_photo_url, preferred_language").eq("user_id", user.id).single();
   if (!farmer) redirect("/login");
-  const lang = getLanguageFromCookies();
+  // Kisan ne apni profile mein jo zaban chuni hai wohi shuru mein lagti
+  // hai. Cookie us se upar rehti hai: jis ne abhi switch dabaya hai us ki
+  // marzi is waqt ki hai, aur profile ka jawab purana.
+  //
+  // Ye khana sirf yahan nahi parha jata -- WhatsApp aur SMS wahan se
+  // bhejte hain jahan cookie hoti hi nahi, aur kisan zyada tar wahin
+  // parhta hai.
+  const preferred = farmer?.preferred_language;
+  const lang = getLanguageFromCookies(
+    preferred === "en" || preferred === "rm" || preferred === "ur" ? preferred : "ur"
+  );
 
   const { hasAccess, minimumAmount } = await checkFarmerSubscriptionAccess(farmer.id);
   const activeAnnouncement = await getActiveAnnouncementForFarmer(farmer.id);

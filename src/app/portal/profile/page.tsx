@@ -4,9 +4,16 @@ import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
 import { getMotivationMessage } from "@/lib/utils/motivation";
-import { FarmerProfileForm } from "./farmer-profile-form";
+import { FarmerProfileForm, ConfirmProfileCard } from "./farmer-profile-form";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+
+const PROFILE_STATUS_LABEL: Record<string, string> = {
+  basic_registered: "Registered — buniyadi tafseel",
+  profile_incomplete: "Profile adhoori",
+  profile_complete: "Profile mukammal (aap ne confirm ki)",
+  verified: "Tasdeeq shuda",
+};
 
 export default async function FarmerProfilePage() {
   const supabase = createClient();
@@ -41,8 +48,21 @@ export default async function FarmerProfilePage() {
           {t("profile_incomplete_msg", lang)}
         </div>
       )}
+
+      {/* Darja database khud nikalta hai (migration 124) -- yahan sirf
+          dikhaya jata hai. Do jagah alag alag hisaab rakhna hi wo cheez
+          hai jis se ek din dono alag ho jate hain. */}
+      <p className="mt-2 text-xs text-surface-400">
+        Darja: {PROFILE_STATUS_LABEL[(farmer as any).profile_status] ?? (farmer as any).profile_status}
+      </p>
+
       <div className="mt-6">
         <FarmerProfileForm farmer={farmer} completion={completion} lang={lang} />
+        <ConfirmProfileCard
+          completion={completion}
+          confirmedAt={(farmer as any).profile_confirmed_at ?? null}
+          isVerified={Boolean(farmer.is_verified)}
+        />
       </div>
     </div>
   );
