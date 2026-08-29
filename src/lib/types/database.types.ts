@@ -13646,6 +13646,7 @@ export type Database = {
         | "milk"
         | "wanda"
         | "opening_balance"
+        | "grain_procurement"
       dealer_payout_status: "pending" | "paid" | "clawed_back"
       escrow_status: "held" | "released" | "refunded"
       farmer_payout_status: "pending" | "paid"
@@ -13747,6 +13748,7 @@ export type Database = {
         | "escrow_refund"
         | "milk_income"
         | "milk_payment"
+        | "grain_cash_payment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -13909,6 +13911,7 @@ export const Constants = {
         "milk",
         "wanda",
         "opening_balance",
+        "grain_procurement",
       ],
       dealer_payout_status: ["pending", "paid", "clawed_back"],
       escrow_status: ["held", "released", "refunded"],
@@ -14020,6 +14023,7 @@ export const Constants = {
         "escrow_refund",
         "milk_income",
         "milk_payment",
+        "grain_cash_payment",
       ],
     },
   },

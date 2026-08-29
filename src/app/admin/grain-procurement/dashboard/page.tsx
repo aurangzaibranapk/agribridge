@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Fuel } from "lucide-react";
@@ -17,6 +19,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default async function GrainDashboardPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const [
     { data: rawEntries },
@@ -100,7 +103,7 @@ export default async function GrainDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Grain Business Dashboard" description="Procurement + Sale + Operations - poora hisaab, 1-1 rupya, ek jagah" />
+      <PageHeader title={t("gr_dashboard_title", lang)} description={t("gr_dashboard_subtitle", lang)} />
 
       <div className="mb-4 flex gap-2">
         <Link href="/admin/grain-procurement" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">Procurement Page</Link>

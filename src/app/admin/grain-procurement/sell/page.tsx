@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { SellGrainClient } from "./sell-grain-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SellGrainPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const [{ data: buyers }, { data: warehouses }, { data: financeAccounts }, { data: rawSales }, { data: rawStock }] = await Promise.all([
     supabase.from("buyers").select("id, business_name, contact_person, phone_number").eq("is_active", true).order("business_name"),
@@ -59,7 +62,7 @@ export default async function SellGrainPage() {
 
   return (
     <div>
-      <PageHeader title="Grain Bechein (Sell to Buyers)" description="Procured grain ko Buyers ko bechna - Revenue, COGS, aur Profit poora track" />
+      <PageHeader title={t("gr_sell_title", lang)} description={t("gr_sell_subtitle", lang)} />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

@@ -5,6 +5,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
+import { t, type TranslationKey } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -50,13 +52,18 @@ interface Balance {
 }
 interface GrainTypeSummary { grain_type: string; totalKg: number; totalValue: number; entryCount: number; }
 
-const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "Rice (Chawal)", maize: "Maize (Makai)" };
-const EXPENSE_CATEGORIES = [
-  { value: "diesel_fuel", label: "Diesel / Fuel" },
-  { value: "labor_mazdoori", label: "Labor / Mazdoori" },
-  { value: "bardana", label: "Bardana" },
-  { value: "tractor_trolley_rent", label: "Tractor / Trolley Rent" },
-  { value: "other", label: "Other" },
+/**
+ * Fasal aur kharche ka naam database mein angrezi mein rehta hai (wo
+ * data hai). Yahan sirf lafz ki chaabi rakhi jati hai; asal lafz t()
+ * se aata hai.
+ */
+const GRAIN_LABELS: Record<string, TranslationKey> = { wheat: "gr_wheat", rice: "gr_rice", maize: "gr_maize" };
+const EXPENSE_CATEGORIES: { value: string; label: TranslationKey }[] = [
+  { value: "diesel_fuel", label: "gr_diesel" },
+  { value: "labor_mazdoori", label: "gr_labor" },
+  { value: "bardana", label: "gr_bardana" },
+  { value: "tractor_trolley_rent", label: "gr_tractor_rent" },
+  { value: "other", label: "gr_other" },
 ];
 
 export function GrainClient({
@@ -80,6 +87,7 @@ export function GrainClient({
   balances: Balance[];
   byGrainType: GrainTypeSummary[];
 }) {
+  const lang = useLang();
   const [tab, setTab] = useState<"entry" | "balances" | "entries">("entry");
   const [payingBalance, setPayingBalance] = useState<Balance | null>(null);
   const [showNewParty, setShowNewParty] = useState(false);
@@ -89,7 +97,7 @@ export function GrainClient({
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {byGrainType.map((g) => (
           <div key={g.grain_type} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-            <p className="text-xs font-medium text-surface-500">{GRAIN_LABELS[g.grain_type]}</p>
+            <p className="text-xs font-medium text-surface-500">{t(GRAIN_LABELS[g.grain_type] ?? "gr_grain", lang)}</p>
             <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">{g.totalKg.toLocaleString()} kg</p>
             <p className="text-xs text-surface-400">Rs {g.totalValue.toLocaleString()} - {g.entryCount} entries</p>
           </div>
@@ -97,9 +105,9 @@ export function GrainClient({
       </div>
 
       <div className="mb-4 flex gap-2 border-b border-surface-200 dark:border-surface-800">
-        <TabButton active={tab === "entry"} onClick={() => setTab("entry")}>Naya Entry</TabButton>
-        <TabButton active={tab === "balances"} onClick={() => setTab("balances")}>Balances (Farmer + Party)</TabButton>
-        <TabButton active={tab === "entries"} onClick={() => setTab("entries")}>Poori History</TabButton>
+        <TabButton active={tab === "entry"} onClick={() => setTab("entry")}>{t("gr_new_entry", lang)}</TabButton>
+        <TabButton active={tab === "balances"} onClick={() => setTab("balances")}>{t("gr_balances", lang)}</TabButton>
+        <TabButton active={tab === "entries"} onClick={() => setTab("entries")}>{t("gr_full_history", lang)}</TabButton>
       </div>
 
       {tab === "entry" && (
@@ -116,13 +124,13 @@ export function GrainClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Naam</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Type</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Entries</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Total Supply Value</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Total Paid</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Baaqi</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_name", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_type", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_entries", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_total_supply_value", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_total_paid", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_remaining", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_action", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -140,14 +148,14 @@ export function GrainClient({
                         <FileText className="h-3 w-3" /> Statement
                       </Link>
                       {b.balance_due > 0 && (
-                        <button onClick={() => setPayingBalance(b)} className="text-xs font-medium text-green-600 hover:underline">Payment Karein</button>
+                        <button onClick={() => setPayingBalance(b)} className="text-xs font-medium text-green-600 hover:underline">{t("gr_make_payment", lang)}</button>
                       )}
                     </div>
                   </td>
                 </tr>
               ))}
               {balances.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">Koi entry nahi hai abhi.</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">{t("gr_no_entries", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -159,14 +167,14 @@ export function GrainClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Seller</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Grain</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Gross</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Cut</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Net</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Rate</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_date", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_seller", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gr_grain", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_gross", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_cut", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_net", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_rate", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gr_total", lang)}</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -175,19 +183,19 @@ export function GrainClient({
                 <tr key={e.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{e.entry_date}</td>
                   <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{e.seller_name}</td>
-                  <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[e.grain_type]}</td>
+                  <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{t(GRAIN_LABELS[e.grain_type] ?? "gr_grain", lang)}</td>
                   <td className="px-3 py-2 text-right text-surface-500">{e.gross_weight_kg} kg</td>
                   <td className="px-3 py-2 text-right text-red-500">-{e.cut_kg.toFixed(1)} kg ({e.cut_percentage}%)</td>
                   <td className="px-3 py-2 text-right font-medium text-surface-800 dark:text-surface-200">{e.weight_kg.toFixed(1)} kg</td>
                   <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {e.rate_per_kg}</td>
                   <td className="px-3 py-2 text-right font-semibold text-surface-900 dark:text-white">Rs {e.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2">
-                    <Link href={`/admin/grain-procurement/bill/${e.id}`} className="text-xs font-medium text-brand-600 hover:underline">Bill</Link>
+                    <Link href={`/admin/grain-procurement/bill/${e.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("gr_bill", lang)}</Link>
                   </td>
                 </tr>
               ))}
               {entries.length === 0 && (
-                <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">Koi entry nahi hai.</td></tr>
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">{t("gr_no_entries_short", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -226,6 +234,7 @@ function NewEntryForm({
   cutPresets: CutPreset[];
   financeAccounts: FinanceAccount[];
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createGrainEntry, initialState);
   const [sellerType, setSellerType] = useState<"farmer" | "party">("farmer");
   const [grainType, setGrainType] = useState("wheat");
@@ -295,15 +304,15 @@ function NewEntryForm({
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Naya Grain Entry</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gr_new_grain_entry", lang)}</h2>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && (
         <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
           Entry record ho gayi, stock add ho gaya.{" "}
           {state.paymentId ? (
-            <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="underline">Payment Slip Dekhein</Link>
+            <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="underline">{t("gr_view_payment_slip", lang)}</Link>
           ) : (
-            <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="underline">Entry Slip Dekhein</Link>
+            <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="underline">{t("gr_view_entry_slip", lang)}</Link>
           )}
         </p>
       )}
@@ -318,15 +327,15 @@ function NewEntryForm({
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
-          <Label>Kon Leke Aaya? *</Label>
+          <Label>{t("gr_who_brought", lang)}</Label>
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => setSellerType("farmer")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${sellerType === "farmer" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Farmer</button>
-            <button type="button" onClick={() => setSellerType("party")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${sellerType === "party" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Party (Group)</button>
+            <button type="button" onClick={() => setSellerType("farmer")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${sellerType === "farmer" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_farmer", lang)}</button>
+            <button type="button" onClick={() => setSellerType("party")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${sellerType === "party" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_party", lang)}</button>
           </div>
         </div>
         {sellerType === "farmer" ? (
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("gr_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -336,7 +345,7 @@ function NewEntryForm({
           </div>
         ) : (
           <div>
-            <Label>Party *</Label>
+            <Label>{t("gr_party_req", lang)}</Label>
             <Select name="party_id" required>
               <option value="">- select -</option>
               {parties.map((p) => (
@@ -347,7 +356,7 @@ function NewEntryForm({
         )}
 
         <div>
-          <Label>Grain Type *</Label>
+          <Label>{t("gr_grain_type_req", lang)}</Label>
           <Select name="grain_type" value={grainType} onChange={(e) => { setGrainType(e.target.value); setSelectedPresetId(""); }}>
             <option value="wheat">Wheat (Gandum)</option>
             <option value="rice">Rice (Chawal)</option>
@@ -355,30 +364,30 @@ function NewEntryForm({
           </Select>
         </div>
         <div>
-          <Label>Date</Label>
+          <Label>{t("gr_date", lang)}</Label>
           <Input type="date" name="entry_date" defaultValue={new Date().toISOString().slice(0, 10)} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Gross Weight - KG *</Label>
+            <Label>{t("gr_gross_kg_req", lang)}</Label>
             <Input type="number" step="0.1" name="gross_weight_kg" value={grossWeight} onChange={(e) => handleKgChange(e.target.value)} required />
           </div>
           <div>
-            <Label>Gross Weight - Maund</Label>
-            <Input type="number" step="0.01" value={grossMaund} onChange={(e) => handleMaundChange(e.target.value)} placeholder="Khud ban jayega" />
+            <Label>{t("gr_gross_maund", lang)}</Label>
+            <Input type="number" step="0.01" value={grossMaund} onChange={(e) => handleMaundChange(e.target.value)} placeholder={t("gr_auto", lang)} />
           </div>
         </div>
         <div>
-          <Label>Rate per kg (Rs.) *</Label>
+          <Label>{t("gr_rate_per_kg_req", lang)}</Label>
           <Input type="number" step="0.01" name="rate_per_kg" value={rate} onChange={(e) => setRate(e.target.value)} required />
         </div>
 
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-          <Label>Kaat (Cut/Deduction)</Label>
+          <Label>{t("gr_cut_deduction", lang)}</Label>
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => setCutMode("preset")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${cutMode === "preset" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Preset Se</button>
-            <button type="button" onClick={() => setCutMode("manual")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${cutMode === "manual" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Manually Likhein</button>
+            <button type="button" onClick={() => setCutMode("preset")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${cutMode === "preset" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_from_preset", lang)}</button>
+            <button type="button" onClick={() => setCutMode("manual")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${cutMode === "manual" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_write_manually", lang)}</button>
           </div>
           {cutMode === "preset" ? (
             <select value={selectedPresetId} onChange={(e) => setSelectedPresetId(e.target.value)} className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm">
@@ -388,25 +397,25 @@ function NewEntryForm({
               ))}
             </select>
           ) : (
-            <Input type="number" step="0.01" placeholder="Cut % (jaise 2 ya 10)" value={manualCut} onChange={(e) => setManualCut(e.target.value)} className="mt-2" />
+            <Input type="number" step="0.01" placeholder={t("gr_cut_pc_ph", lang)} value={manualCut} onChange={(e) => setManualCut(e.target.value)} className="mt-2" />
           )}
           <div className="mt-2 space-y-0.5 text-xs">
-            <div className="flex justify-between text-surface-500"><span>Cut</span><span>{cutKg.toFixed(2)} kg ({effectiveCutPercentage}%)</span></div>
-            <div className="flex justify-between font-semibold text-surface-700 dark:text-surface-300"><span>Net Weight (payable)</span><span>{netWeight.toFixed(2)} kg</span></div>
+            <div className="flex justify-between text-surface-500"><span>{t("gr_cut", lang)}</span><span>{cutKg.toFixed(2)} kg ({effectiveCutPercentage}%)</span></div>
+            <div className="flex justify-between font-semibold text-surface-700 dark:text-surface-300"><span>{t("gr_net_weight", lang)}</span><span>{netWeight.toFixed(2)} kg</span></div>
           </div>
         </div>
 
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-          <Label>Chungi - Kaise Deni Hai?</Label>
+          <Label>{t("gr_chungi", lang)}</Label>
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Cash (Rs)</button>
-            <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Grain (kg)</button>
+            <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_cash_rs", lang)}</button>
+            <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_grain_kg", lang)}</button>
           </div>
           {chungiType === "cash" ? (
-            <Input type="number" step="0.01" value={chungiCash} onChange={(e) => setChungiCash(e.target.value)} placeholder="Rs amount" className="mt-2" />
+            <Input type="number" step="0.01" value={chungiCash} onChange={(e) => setChungiCash(e.target.value)} placeholder={t("gr_rs_amount", lang)} className="mt-2" />
           ) : (
             <div className="mt-2">
-              <Input type="number" step="0.01" value={chungiKg} onChange={(e) => setChungiKg(e.target.value)} placeholder="Kitne kg" />
+              <Input type="number" step="0.01" value={chungiKg} onChange={(e) => setChungiKg(e.target.value)} placeholder={t("gr_how_many_kg", lang)} />
               <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {(parseFloat(chungiKg) || 0)} kg x Rs {rateNum} = Rs {chungiAmount.toLocaleString()}</p>
             </div>
           )}
@@ -414,16 +423,16 @@ function NewEntryForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Moisture %</Label>
+            <Label>{t("gr_moisture", lang)}</Label>
             <Input type="number" step="0.01" name="moisture_percentage" />
           </div>
           <div>
-            <Label>Quality Grade</Label>
-            <Input name="quality_grade" placeholder="e.g. A, B, Premium" />
+            <Label>{t("gr_quality_grade", lang)}</Label>
+            <Input name="quality_grade" placeholder={t("gr_grade_eg", lang)} />
           </div>
         </div>
         <div>
-          <Label>Warehouse *</Label>
+          <Label>{t("gr_warehouse_req", lang)}</Label>
           <Select name="warehouse_id" required>
             <option value="">- select -</option>
             {warehouses.map((w) => (
@@ -432,15 +441,15 @@ function NewEntryForm({
           </Select>
         </div>
         <div>
-          <Label>Notes</Label>
+          <Label>{t("gr_notes", lang)}</Label>
           <Textarea name="notes" rows={2} />
         </div>
 
         <div className={`rounded-lg border-2 p-3 ${hasExpense === "" ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20" : "border-surface-200 dark:border-surface-700"}`}>
-          <Label>Is Entry Ke Sath Koi Expense Hai? (Diesel/Mazdoori/Bardana/Rent) *</Label>
+          <Label>{t("gr_any_expense", lang)}</Label>
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => setHasExpense("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${hasExpense === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Haan</button>
-            <button type="button" onClick={() => setHasExpense("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${hasExpense === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Nahi</button>
+            <button type="button" onClick={() => setHasExpense("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${hasExpense === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_yes", lang)}</button>
+            <button type="button" onClick={() => setHasExpense("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${hasExpense === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_no", lang)}</button>
           </div>
           {hasExpense === "" && (
             <p className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600">
@@ -462,11 +471,11 @@ function NewEntryForm({
                   <div className="grid grid-cols-2 gap-2">
                     <select value={row.category} onChange={(e) => updateExpenseRow(idx, "category", e.target.value)} className="rounded-lg border border-surface-200 p-1.5 text-xs">
                       {EXPENSE_CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
+                        <option key={c.value} value={c.value}>{t(c.label, lang)}</option>
                       ))}
                     </select>
-                    <input placeholder="Amount (Rs)" type="number" step="0.01" value={row.amount} onChange={(e) => updateExpenseRow(idx, "amount", e.target.value)} className="rounded-lg border border-surface-200 p-1.5 text-xs" />
-                    <input placeholder="Description" value={row.description} onChange={(e) => updateExpenseRow(idx, "description", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs" />
+                    <input placeholder={t("gr_amount_rs", lang)} type="number" step="0.01" value={row.amount} onChange={(e) => updateExpenseRow(idx, "amount", e.target.value)} className="rounded-lg border border-surface-200 p-1.5 text-xs" />
+                    <input placeholder={t("gr_description", lang)} value={row.description} onChange={(e) => updateExpenseRow(idx, "description", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs" />
                     <select value={row.account_id} onChange={(e) => updateExpenseRow(idx, "account_id", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs">
                       <option value="">- Konsa Account Se Paisa Gaya -</option>
                       {financeAccounts.map((a) => (
@@ -485,7 +494,7 @@ function NewEntryForm({
 
         <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-surface-700 dark:text-surface-300">Grain Value</span>
+            <span className="font-medium text-surface-700 dark:text-surface-300">{t("gr_grain_value", lang)}</span>
             <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span>
           </div>
           {chungiAmount > 0 && (
@@ -494,15 +503,15 @@ function NewEntryForm({
             </div>
           )}
           <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-surface-200">
-            <span>Farmer/Party Ko Payable</span><span>Rs {payableToSeller.toLocaleString()}</span>
+            <span>{t("gr_payable", lang)}</span><span>Rs {payableToSeller.toLocaleString()}</span>
           </div>
         </div>
 
         <div className={`rounded-lg border-2 p-3 ${makePayment === "" ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20" : "border-surface-200 dark:border-surface-700"}`}>
-          <Label>Is Waqt Payment Karni Hai? *</Label>
+          <Label>{t("gr_pay_now", lang)}</Label>
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => { setMakePayment("yes"); setPaymentAmount(payableToSeller.toFixed(2)); }} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${makePayment === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Haan</button>
-            <button type="button" onClick={() => setMakePayment("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${makePayment === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Nahi</button>
+            <button type="button" onClick={() => { setMakePayment("yes"); setPaymentAmount(payableToSeller.toFixed(2)); }} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${makePayment === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_yes", lang)}</button>
+            <button type="button" onClick={() => setMakePayment("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${makePayment === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_no", lang)}</button>
           </div>
           {makePayment === "" && (
             <p className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600">
@@ -512,20 +521,20 @@ function NewEntryForm({
           {makePayment === "yes" && (
             <div className="mt-3 space-y-2">
               <div>
-                <Label>Payment Amount (Rs.) - Payable se zyada nahi ho sakti</Label>
+                <Label>{t("gr_amount_cap", lang)}</Label>
                 <Input type="number" step="0.01" name="payment_amount" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} max={payableToSeller} required />
               </div>
               <div>
-                <Label>Payment Method</Label>
+                <Label>{t("gr_payment_method", lang)}</Label>
                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} name="payment_method" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-                  <option value="cash">Cash</option>
-                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">{t("gr_cash", lang)}</option>
+                  <option value="bank_transfer">{t("gr_bank_transfer", lang)}</option>
                   <option value="easypaisa">EasyPaisa</option>
                   <option value="jazzcash">JazzCash</option>
                 </select>
               </div>
               <div>
-                <Label>Konsa Account Se Paisa Gaya *</Label>
+                <Label>{t("gr_which_account_req", lang)}</Label>
                 <select value={paymentAccountId} onChange={(e) => setPaymentAccountId(e.target.value)} name="payment_account_id" required className="w-full rounded-lg border border-surface-200 p-2 text-sm">
                   <option value="">- select -</option>
                   {financeAccounts.map((a) => (
@@ -535,22 +544,23 @@ function NewEntryForm({
               </div>
               {paymentMethod === "cash" && (
                 <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-2 dark:border-amber-900/50 dark:bg-amber-950/20">
-                  <Label>Farmer Ki Signed Receiving - Photo *</Label>
+                  <Label>{t("gr_receiving_photo_req", lang)}</Label>
                   <input type="file" name="receipt_photo" accept="image/*" required className="mt-1 w-full text-xs" />
-                  <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">Cash dene se pehle Farmer se signed receiving lein aur uski photo yahan attach karein.</p>
+                  <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">{t("gr_receiving_note_short", lang)}</p>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <SubmitButton label="Entry Record Karein" disabled={hasExpense === "" || makePayment === ""} />
+        <SubmitButton label={t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
       </form>
     </div>
   );
 }
 
 function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance; financeAccounts: FinanceAccount[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(recordGrainPayment, initialState);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   if (state.success) setTimeout(onClose, 900);
@@ -559,34 +569,34 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Payment Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("gr_make_payment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-3 text-sm text-surface-500">{balance.seller_name} - Baaqi: Rs {balance.balance_due.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && (
           <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Payment record ho gayi. <Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">Slip Dekhein</Link>
+            Payment record ho gayi. <Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
           </p>
         )}
         <form action={formAction} encType="multipart/form-data" className="space-y-3">
           <input type="hidden" name="seller_type" value={balance.seller_type} />
           <input type="hidden" name={balance.seller_type === "farmer" ? "farmer_id" : "party_id"} value={balance.seller_id} />
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gr_amount_req", lang)}</Label>
             <Input type="number" step="0.01" name="amount" max={balance.balance_due} defaultValue={balance.balance_due} required />
           </div>
           <div>
-            <Label>Payment Method</Label>
+            <Label>{t("gr_payment_method", lang)}</Label>
             <Select name="payment_method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cash">{t("gr_cash", lang)}</option>
+              <option value="bank_transfer">{t("gr_bank_transfer", lang)}</option>
               <option value="easypaisa">EasyPaisa</option>
               <option value="jazzcash">JazzCash</option>
             </Select>
           </div>
           <div>
-            <Label>Konsa Account (jahan se paisa gaya) *</Label>
+            <Label>{t("gr_which_account_from_req", lang)}</Label>
             <Select name="account_id" required>
               <option value="">- select -</option>
               {financeAccounts.map((a) => (
@@ -596,19 +606,19 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
           </div>
           {paymentMethod === "cash" && (
             <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-2 dark:border-amber-900/50 dark:bg-amber-950/20">
-              <Label>Farmer Ki Signed Receiving - Photo *</Label>
+              <Label>{t("gr_receiving_photo_req", lang)}</Label>
               <input type="file" name="receipt_photo" accept="image/*" required className="mt-1 w-full text-xs" />
-              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">Cash dene se pehle Farmer se signed receiving lein aur uski photo yahan attach karein - kal ko koi disagreement na ho.</p>
+              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">{t("gr_receiving_note", lang)}</p>
             </div>
           )}
           <div>
-            <Label>Notes</Label>
+            <Label>{t("gr_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
           </div>
           {balance.seller_type === "farmer" && (
-            <p className="text-[11px] text-surface-400">Agar is Farmer pe pehle se koi credit/loan hai to wo automatically kaat kar baaqi paisa cash se jayega.</p>
+            <p className="text-[11px] text-surface-400">{t("gr_credit_note", lang)}</p>
           )}
-          <SubmitButton label="Payment Record Karein" />
+          <SubmitButton label={t("gr_record_payment", lang)} />
         </form>
       </div>
     </div>
@@ -616,6 +626,7 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
 }
 
 function NewPartyModal({ onClose }: { onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createGrainParty, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
@@ -623,18 +634,18 @@ function NewPartyModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Party Banayein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("gr_new_party", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Party ban gayi.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("gr_party_created", lang)}</p>}
         <form action={formAction} className="space-y-2">
-          <Input name="party_name" required placeholder="Party ka Naam *" />
-          <Input name="contact_person" placeholder="Contact Person" />
-          <Input name="phone" placeholder="Phone" />
-          <Input name="cnic" placeholder="CNIC (optional)" />
-          <Textarea name="address" rows={2} placeholder="Address" />
-          <SubmitButton label="Party Banayein" />
+          <Input name="party_name" required placeholder={t("gr_party_name_req", lang)} />
+          <Input name="contact_person" placeholder={t("gr_contact_person", lang)} />
+          <Input name="phone" placeholder={t("gr_phone", lang)} />
+          <Input name="cnic" placeholder={t("gr_cnic_optional", lang)} />
+          <Textarea name="address" rows={2} placeholder={t("gr_address", lang)} />
+          <SubmitButton label={t("gr_create_party", lang)} />
         </form>
       </div>
     </div>
@@ -642,6 +653,7 @@ function NewPartyModal({ onClose }: { onClose: () => void }) {
 }
 
 function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending || disabled} className="w-full">{pending ? "Saving..." : label}</Button>;
+  return <Button type="submit" disabled={pending || disabled} className="w-full">{pending ? t("gr_saving", lang) : label}</Button>;
 }

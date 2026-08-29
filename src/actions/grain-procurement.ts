@@ -309,7 +309,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         .limit(1)
         .maybeSingle();
       const prevBalance = Number(lastRow?.balance_after ?? 0);
-      await supabase.from("farmer_credit_ledger").insert({
+      const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
         farmer_id: farmerId,
         source_type: "grain_procurement",
         ledger_type: "credit",
@@ -318,6 +318,11 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         notes: "Grain payment se automatically kaata gaya",
         created_by: user?.id ?? null,
       });
+      // Ye chup chaap fail nahi hona chahiye. Naqad to kam diya ja chuka
+      // hai; agar katauti ledger mein na chare to kisan ka udhaar utna
+      // ka utna khara reh jata hai -- ek hi udhaar do dafa wasool hone
+      // ka raasta.
+      if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
     }
 
     if (actualCashOut > 0) {
@@ -437,7 +442,7 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       .limit(1)
       .maybeSingle();
     const prevBalance = Number(lastRow?.balance_after ?? 0);
-    await supabase.from("farmer_credit_ledger").insert({
+    const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
       farmer_id: farmerId,
       source_type: "grain_procurement",
       ledger_type: "credit",
@@ -446,6 +451,9 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       notes: "Grain payment se automatically kaata gaya",
       created_by: user?.id ?? null,
     });
+    // Upar wali wajah hi yahan bhi lagti hai -- katauti darj na ho to
+    // kisan ka udhaar khamoshi se khara reh jata hai.
+    if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
   }
 
   if (actualCashOut > 0) {

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { GrainClient } from "@/app/admin/grain-procurement/grain-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminGrainProcurementPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const [
     { data: farmers },
     { data: parties },
@@ -102,7 +105,7 @@ export default async function AdminGrainProcurementPage() {
 
   return (
     <div>
-      <PageHeader title="Grain Procurement" description="Wheat, Rice, aur Maize - Farmers aur Parties se kharidna, poora hisaab" />
+      <PageHeader title={t("gr_title", lang)} description={t("gr_subtitle", lang)} />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
