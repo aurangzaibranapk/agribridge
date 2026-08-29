@@ -208,10 +208,14 @@ export function NewBookingForm({
             </div>
           </div>
         ) : (
-          code.trim() !== "" &&
+          // Button hamesha nazar aata hai, sirf "kisan nahi mila" ke
+          // baad nahi. Nayi booking par khana khali hota hai -- us waqt
+          // button chhupa dena ka matlab tha ke staff pehle kuch likhe,
+          // phir us ke na milne ka intezar kare, tab jaa kar us ko
+          // naya kisan banane ka raasta dikhe.
           !quickOpen && (
             <div className="flex flex-wrap items-center gap-2 text-sm text-surface-500">
-              <span>Ye kisan nahi mila.</span>
+              <span>{code.trim() === "" ? "Kisan pehle se darj nahi?" : "Ye kisan nahi mila."}</span>
               <Button
                 type="button"
                 variant="secondary"
