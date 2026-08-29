@@ -92,6 +92,10 @@ function EscalationCard({ escalation }: { escalation: Escalation }) {
       <p className="mt-1 text-xs text-amber-700">Wajah: {escalation.reason}</p>
 
       {state.error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+      {/* Jawab mehfooz ho gaya magar kisan tak nahi pahuncha -- ye laal
+          nahi hai (kaam hua hai) magar chhupa hua bhi nahi, warna expert
+          ye samajh kar aage barh jata hai ke kisan ko bata diya gaya. */}
+      {state.notice && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{state.notice}</p>}
 
       <form action={formAction} className="mt-3 flex items-center gap-2">
         <input type="hidden" name="request_id" value={escalation.id} />

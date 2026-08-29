@@ -288,7 +288,15 @@ async function broadcastToFarmers(
 
     const { sendWhatsAppMessage } = await import("@/lib/whatsapp-client");
     const targetNumber = farmer.whatsapp_number ?? farmer.phone_number;
-    await sendWhatsAppMessage(targetNumber, `${args.title}\n\n${args.message}`);
+    if (!targetNumber) return { sent: false, message: "Is farmer ka koi number darj nahi hai." };
+    // AI ko sach batana yahan aur bhi zaroori hai: wo apne jawab mein
+    // wahi likhta hai jo yahan se milta hai, aur "bhej diya gaya" keh
+    // dena banda us par bharosa kar ke aage barh jata hai.
+    try {
+      await sendWhatsAppMessage(targetNumber, `${args.title}\n\n${args.message}`);
+    } catch (e) {
+      return { sent: false, message: `WhatsApp message nahi ja saka: ${e instanceof Error ? e.message : "wajah maloom nahi"}` };
+    }
     return { sent: true, message: `WhatsApp message ${targetNumber} ko bhej diya gaya.` };
   }
 

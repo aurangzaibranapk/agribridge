@@ -143,6 +143,58 @@ function revalidateAll(bookingId?: string) {
  * Is liye yahan jo rate liya jata hai wo `estimated_rate` hai, aur us ka
  * darja `estimated`. Bill kabhi is se nahi banta.
  */
+
+/**
+ * Kisan ko booking ki raseed WhatsApp par.
+ *
+ * Ye khud kuch nahi rokta. Paighaam na jaye to booking bani rehti hai aur
+ * paisa darj rehta hai -- timeline mein likh diya jata hai ke nahi gaya,
+ * taake staff phone kar sake. Ulta karna (paighaam na jane par booking
+ * rok dena) us paise ko gum kar deta jo counter par pehle hi liya ja
+ * chuka hai.
+ */
+async function notifyFarmerBookingCreated(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: string,
+  bookingNumber: string,
+  farmerId: string,
+  actorId: string | null
+) {
+  const [{ data: farmer }, { data: advanceRows }] = await Promise.all([
+    supabase.from("farmers").select("full_name, phone_number").eq("id", farmerId).maybeSingle(),
+    supabase.from("machinery_payments").select("amount").eq("booking_id", bookingId).eq("kind", "advance"),
+  ]);
+
+  const advanceTotal = (advanceRows ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
+
+  const message = [
+    `Assalam-o-Alaikum ${farmer?.full_name ?? ""} Sahib,`,
+    ``,
+    `Aapki Machinery Booking ${bookingNumber} register ho gayi hai.`,
+    advanceTotal > 0 ? `Advance Received: Rs ${advanceTotal.toLocaleString()}` : null,
+    ``,
+    // Rate ka zikr yahan jaan boojh kar nahi hai. Booking ke waqt rate tay
+    // nahi hota; koi number likh dena us ko tay shuda bana deta hai aur
+    // baad mein asal rate par jhagRa khaRa hota hai.
+    `Rate kaam se pehle aap ko alag se bheja jayega, aur aap ke confirm karne ke baad hi bill us par banega.`,
+    `Al Rana Traders`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  if (!farmer?.phone_number) {
+    await logEvent({ bookingId, eventType: "farmer_notified", note: "Kisan ka phone number nahi hai — raseed nahi ja saki", actorId });
+    return;
+  }
+
+  try {
+    await sendWhatsAppMessage(farmer.phone_number, message);
+    await logEvent({ bookingId, eventType: "farmer_notified", note: "Booking ki raseed WhatsApp par bheji gayi", actorId });
+  } catch {
+    await logEvent({ bookingId, eventType: "farmer_notified", note: "Raseed WhatsApp par nahi ja saki — kisan ko khud ittila dein", actorId });
+  }
+}
+
 export async function createBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
@@ -258,6 +310,12 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
     `Booking ${booking.booking_number} ban gayi hai.`,
     `/admin/machinery-rental/booking/${booking.id}`
   );
+
+  // Kisan ko uski apni raseed. Ye advance darj hone ke BAAD bheji jati
+  // hai, us se pehle nahi: kisan ke haath se abhi paisa gaya hai aur
+  // sab se pehla sawal wohi hota hai ke "wo darj hua ya nahi". Raqam
+  // paighaam mein isi liye likhi jati hai.
+  await notifyFarmerBookingCreated(supabase, booking.id, booking.booking_number, farmerId, actorId);
 
   revalidateAll(booking.id);
   return { success: true, bookingId: booking.id, bookingNumber: booking.booking_number };
@@ -739,6 +797,70 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
  * jis din bill ka number haath se bhara jane laga, usi din wo hisaab
  * nahi raha, ek raye ban gaya.
  */
+
+/**
+ * Kisan ko final bill ki raseed.
+ *
+ * Is paighaam mein COMMISSION aur VENDOR ka hissa jaan boojh kar nahi
+ * hai. Kisan ka hisaab teen adad ka hai: kaam kitna hua, rate kya tha,
+ * aur ab kitna dena hai. Commission hamara aur vendor ka maamla hai;
+ * usay kisan ke bill par likh dena us ke saamne ek naya sawal khaRa kar
+ * deta hai jis ka us ke apne hisaab se koi taalluq nahi.
+ *
+ * Adad yahan dobara ginay NAHI jaate -- wo wohi hain jo database ne bill
+ * banate waqt khud nikale (migration 119). Agar ye paighaam apna hisaab
+ * karta to ek din wo bill se alag ho jata, aur kisan ke haath mein do
+ * mukhtalif adad hote.
+ */
+async function sendFarmerBillReceipt(
+  supabase: ReturnType<typeof createClient>,
+  p: {
+    bookingId: string;
+    bookingNumber: string;
+    farmerId: string;
+    billNumber: string;
+    area: number;
+    rate: number;
+    gross: number;
+    advance: number;
+    balance: number;
+    actorId: string | null;
+  }
+) {
+  const { data: farmer } = await supabase
+    .from("farmers")
+    .select("full_name, phone_number")
+    .eq("id", p.farmerId)
+    .maybeSingle();
+
+  const message = [
+    `Assalam-o-Alaikum ${farmer?.full_name ?? ""} Sahib,`,
+    ``,
+    `Machinery Booking ${p.bookingNumber} ka final bill ${p.billNumber} ban gaya hai.`,
+    ``,
+    `Kaam: ${p.area} Acre x Rs ${p.rate.toLocaleString()} per acre`,
+    `Kul: Rs ${p.gross.toLocaleString()}`,
+    p.advance > 0 ? `Advance mujra: Rs ${p.advance.toLocaleString()}` : null,
+    p.balance > 0 ? `Baqi dena: Rs ${p.balance.toLocaleString()}` : `Hisaab poora ho gaya — kuch baqi nahi.`,
+    ``,
+    `Shukriya. Al Rana Traders`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  if (!farmer?.phone_number) {
+    await logEvent({ bookingId: p.bookingId, eventType: "farmer_notified", note: "Kisan ka phone number nahi hai — bill ki raseed nahi ja saki", actorId: p.actorId });
+    return;
+  }
+
+  try {
+    await sendWhatsAppMessage(farmer.phone_number, message);
+    await logEvent({ bookingId: p.bookingId, eventType: "farmer_notified", note: `Bill ${p.billNumber} ki raseed WhatsApp par bheji gayi`, actorId: p.actorId });
+  } catch {
+    await logEvent({ bookingId: p.bookingId, eventType: "farmer_notified", note: `Bill ${p.billNumber} ki raseed nahi ja saki — kisan ko khud ittila dein`, actorId: p.actorId });
+  }
+}
+
 export async function generateFinalBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
@@ -861,6 +983,19 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
     fromStatus: booking.status,
     toStatus: finalBalance > 0 ? "payment_pending" : "closed",
     note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${finalGross.toLocaleString()} (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${finalAdvance.toLocaleString()}, baqi Rs ${finalBalance.toLocaleString()}`,
+    actorId,
+  });
+
+  await sendFarmerBillReceipt(supabase, {
+    bookingId,
+    bookingNumber: booking.booking_number,
+    farmerId: booking.farmer_id,
+    billNumber,
+    area,
+    rate,
+    gross: finalGross,
+    advance: finalAdvance,
+    balance: finalBalance,
     actorId,
   });
 

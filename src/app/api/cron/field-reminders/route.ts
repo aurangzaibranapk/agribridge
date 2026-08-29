@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     .not("opening_km", "is", null)
     .is("closing_km", null);
 
+  const failures: string[] = [];
   let staffReminders = 0;
   for (const log of openLogs ?? []) {
     const { data: staff } = await service
@@ -47,14 +48,21 @@ export async function GET(request: Request) {
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
     const vehicle = Array.isArray(log.vehicles) ? log.vehicles[0] : log.vehicles;
-    await sendWhatsAppMessage(
-      staff.whatsapp_number,
-      `Yaad dihani: aaj ka shaam wala meter abhi nahi aaya.\n\n` +
-        `Gaari: ${vehicle?.vehicle_name ?? "aap ki gaari"}\n` +
-        `Subah ka meter: ${Number(log.opening_km).toLocaleString()} km\n\n` +
-        `Kaam khatam hone par meter ki photo bhej dein — warna aaj ka hisaab adhoora reh jayega.`
-    );
-    staffReminders += 1;
+    // Har paighaam apni jagah. Ek number kharab ho to poori fehrist
+    // rukni nahi chahiye -- baqi sab ko yaad dihani milti rehni chahiye.
+    // Ginti bhi tabhi barhti hai jab paighaam waqai chala gaya ho.
+    try {
+      await sendWhatsAppMessage(
+        staff.whatsapp_number,
+        `Yaad dihani: aaj ka shaam wala meter abhi nahi aaya.\n\n` +
+          `Gaari: ${vehicle?.vehicle_name ?? "aap ki gaari"}\n` +
+          `Subah ka meter: ${Number(log.opening_km).toLocaleString()} km\n\n` +
+          `Kaam khatam hone par meter ki photo bhej dein — warna aaj ka hisaab adhoora reh jayega.`
+      );
+      staffReminders += 1;
+    } catch (e) {
+      failures.push(`meter (${vehicle?.vehicle_name ?? "gaari"}): ${e instanceof Error ? e.message : "wajah maloom nahi"}`);
+    }
   }
 
   // ---- 2) Oil badalne ki yaad dihani ----
@@ -91,13 +99,18 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
-    await sendWhatsAppMessage(
-      staff.whatsapp_number,
-      `Yaad dihani: ${vehicle.vehicle_name} ka oil badalne ka waqt ho gaya.\n\n` +
-        `Aakhri service: ${Math.round(Number(vehicle.last_service_km ?? 0)).toLocaleString()} km\n` +
-        `Ab tak chali: ${Math.round(since).toLocaleString()} km (hadd ${interval.toLocaleString()} km)\n\n` +
-        `Oil badalwa kar bill ki tafseel manager ko de dein.`
-    );
+    try {
+      await sendWhatsAppMessage(
+        staff.whatsapp_number,
+        `Yaad dihani: ${vehicle.vehicle_name} ka oil badalne ka waqt ho gaya.\n\n` +
+          `Aakhri service: ${Math.round(Number(vehicle.last_service_km ?? 0)).toLocaleString()} km\n` +
+          `Ab tak chali: ${Math.round(since).toLocaleString()} km (hadd ${interval.toLocaleString()} km)\n\n` +
+          `Oil badalwa kar bill ki tafseel manager ko de dein.`
+      );
+    } catch (e) {
+      failures.push(`oil (${vehicle.vehicle_name}): ${e instanceof Error ? e.message : "wajah maloom nahi"}`);
+      continue;
+    }
     oilReminders += 1;
   }
 
@@ -124,5 +137,10 @@ export async function GET(request: Request) {
     oilReminders,
     managerNotices,
     pendingAlertHours: PENDING_ALERT_HOURS,
+    // Jo paighaam nahi ja sake wo yahan likhe jate hain. Pehle ye jawab
+    // hamesha "success: true" hi hota tha chahe ek bhi paighaam na gaya
+    // ho -- cron ka record dekh kar ye faisla karna namumkin tha ke kaam
+    // hua ya nahi.
+    failures,
   });
 }
