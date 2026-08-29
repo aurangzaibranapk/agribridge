@@ -54,14 +54,12 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const model = (formData.get("model") as string) || null;
   const rateType = String(formData.get("rate_type") ?? "");
   const rateAmount = Number(formData.get("rate_amount") ?? 0);
-  const commissionPercentage = Number(formData.get("commission_percentage") ?? 0);
   const notes = (formData.get("notes") as string) || null;
 
   if (!vendorId) return { error: "Vendor select karein." };
   if (!machineType) return { error: "Machine type likhein." };
   if (!["per_acre", "per_hour", "per_day"].includes(rateType)) return { error: "Rate type sahi select karein." };
   if (!rateAmount || rateAmount <= 0) return { error: "Rate sahi likhein." };
-  if (commissionPercentage < 0 || commissionPercentage > 100) return { error: "Commission % 0-100 ke darmiyan hona chahiye." };
 
   const { error } = await supabase.from("machinery_vendor_machines").insert({
     vendor_id: vendorId,
@@ -69,7 +67,6 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
     model,
     rate_type: rateType,
     rate_amount: rateAmount,
-    commission_percentage: commissionPercentage,
     notes,
   });
   if (error) return { error: error.message };

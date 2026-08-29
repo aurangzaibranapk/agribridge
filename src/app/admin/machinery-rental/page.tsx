@@ -30,6 +30,24 @@ export default async function MachineryRentalPage({
       .limit(100),
   ]);
 
+  // Commission ka rate ek hi jagah se aata hai -- machine par nahi
+  // (migration 120). Yahan se le kar screen par dikhaya jata hai, taake
+  // admin wahi number dekhe jo bill par lagta hai.
+  const { data: rateRow } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "machinery_commission_rate")
+    .maybeSingle();
+  const commissionRate = rateRow?.value === undefined || rateRow?.value === null ? 12 : Number(rateRow.value);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const canEditCommission = ["owner", "super_admin", "admin"].includes(me?.role ?? "");
+
   const machines = (rawMachines ?? []).map((m: any) => {
     const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
     return {
@@ -40,7 +58,6 @@ export default async function MachineryRentalPage({
       model: m.model,
       rate_type: m.rate_type,
       rate_amount: Number(m.rate_amount),
-      commission_percentage: Number(m.commission_percentage),
     };
   });
 
@@ -101,6 +118,8 @@ export default async function MachineryRentalPage({
         farmers={farmers ?? []}
         financeAccounts={financeAccounts ?? []}
         bookings={bookings}
+        commissionRate={commissionRate}
+        canEditCommission={canEditCommission}
         defaultFarmerId={params.convert_farmer}
         defaultRequestId={params.convert_request}
         defaultAcres={params.convert_acres}

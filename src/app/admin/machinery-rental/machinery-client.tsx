@@ -10,6 +10,7 @@ import {
   recordVendorPayout,
   type ActionState,
 } from "@/actions/machinery-rental";
+import { setMachineryCommissionRate } from "@/actions/machinery-lifecycle";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { LiveBoard } from "./live-board";
 import Link from "next/link";
@@ -26,7 +27,6 @@ interface Machine {
   model: string | null;
   rate_type: string;
   rate_amount: number;
-  commission_percentage: number;
 }
 interface Farmer { id: string; full_name: string; farmer_code: string; booking_link_token?: string; }
 interface FinanceAccount { id: string; name: string; account_type: string; }
@@ -57,6 +57,8 @@ export function MachineryClient({
   farmers,
   financeAccounts,
   bookings,
+  commissionRate,
+  canEditCommission,
   defaultFarmerId,
   defaultRequestId,
   defaultAcres,
@@ -67,6 +69,8 @@ export function MachineryClient({
   farmers: Farmer[];
   financeAccounts: FinanceAccount[];
   bookings: Booking[];
+  commissionRate: number;
+  canEditCommission: boolean;
   defaultFarmerId?: string;
   defaultRequestId?: string;
   defaultAcres?: string;
@@ -117,6 +121,7 @@ export function MachineryClient({
 
       {tab === "vendors" && (
         <div className="space-y-4">
+          <CommissionRateCard rate={commissionRate} canEdit={canEditCommission} />
           <div className="flex gap-2">
             <button onClick={() => setShowNewVendor(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
               <Plus className="h-4 w-4" /> Naya Vendor
@@ -132,7 +137,6 @@ export function MachineryClient({
                   <th className="px-3 py-2 font-medium text-surface-500">Vendor</th>
                   <th className="px-3 py-2 font-medium text-surface-500">Machine</th>
                   <th className="px-3 py-2 font-medium text-surface-500">Rate</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Commission %</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,11 +145,10 @@ export function MachineryClient({
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{m.vendor_name}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{m.machine_type}{m.model ? ` (${m.model})` : ""}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">Rs {m.rate_amount.toLocaleString()} / {RATE_TYPE_LABELS[m.rate_type]}</td>
-                    <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{m.commission_percentage}%</td>
                   </tr>
                 ))}
                 {machines.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">Koi machine nahi hai.</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">Koi machine nahi hai.</td></tr>
                 )}
               </tbody>
             </table>
@@ -529,11 +532,49 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
             <option value="per_day">Per Day</option>
           </Select>
           <Input type="number" step="0.01" name="rate_amount" required placeholder="Rate Amount (Rs) *" />
-          <Input type="number" step="0.01" name="commission_percentage" placeholder="AgriBridge Commission % (jaise 10)" />
           <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
           <SubmitButton label="Machine Add Karein" />
         </form>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Commission ka rate -- poori company ke liye ek hi.
+ *
+ * Pehle ye har machine par alag para tha aur kisi hisaab mein aata nahi
+ * tha: screen 10% dikhati thi aur bill 12% ka banta tha. Ab ek hi jagah
+ * hai, aur wahi bill par lagti hai.
+ */
+function CommissionRateCard({ rate, canEdit }: { rate: number; canEdit: boolean }) {
+  const [state, formAction] = useFormState(setMachineryCommissionRate, initialState);
+  return (
+    <div className="mb-4 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-surface-500">AgriBridge ka commission</p>
+          <p className="font-display text-2xl font-semibold text-brand-700 dark:text-brand-300">{rate}%</p>
+          <p className="mt-1 text-xs text-surface-500">
+            Har booking ke final bill par lagta hai — asal kaam ke gross par. Baqi {100 - rate}% vendor ka.
+          </p>
+        </div>
+        {canEdit && (
+          <form action={formAction} className="flex items-end gap-2">
+            <div>
+              <Label>Naya rate (%)</Label>
+              <Input type="number" name="rate" step="0.01" min={0} max={100} defaultValue={rate} className="w-28" />
+            </div>
+            <SubmitButton label="Badlein" />
+          </form>
+        )}
+      </div>
+      {state.error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state.success && <p className="mt-2 text-sm text-brand-700 dark:text-brand-300">Rate badal gaya.</p>}
+      <p className="mt-3 border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+        Rate badalne se <strong>purane bill nahi badalte</strong> — har bill us waqt ka rate apne andar likh leta hai.
+        Warna rate badalte hi mahinon purana munafa apne aap badal jata aur kisi ko pata na chalta.
+      </p>
     </div>
   );
 }

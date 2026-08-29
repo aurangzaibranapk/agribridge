@@ -7795,7 +7795,6 @@ export type Database = {
       }
       machinery_vendor_machines: {
         Row: {
-          commission_percentage: number
           created_at: string
           id: string
           is_available: boolean
@@ -7807,7 +7806,6 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
-          commission_percentage?: number
           created_at?: string
           id?: string
           is_available?: boolean
@@ -7819,7 +7817,6 @@ export type Database = {
           vendor_id: string
         }
         Update: {
-          commission_percentage?: number
           created_at?: string
           id?: string
           is_available?: boolean
@@ -12677,6 +12674,28 @@ export type Database = {
           wajah: string | null
         }
         Relationships: []
+      }
+      v_machinery_commission_watch: {
+        Row: {
+          bill_number: string | null
+          booking_id: string | null
+          booking_number: string | null
+          commission_amount: number | null
+          commission_hona_chahiye: number | null
+          commission_percentage: number | null
+          gross_amount: number | null
+          vendor_hona_chahiye: number | null
+          vendor_payable: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_machinery_watch: {
         Row: {

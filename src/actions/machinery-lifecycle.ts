@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import {
   postMachineryAdvance,
@@ -1059,5 +1060,69 @@ export async function cancelBooking(_prev: ActionState, formData: FormData): Pro
   });
 
   revalidateAll(bookingId);
+  return { success: true };
+}
+
+// =====================================================================
+// 9. Commission ka rate
+// =====================================================================
+/**
+ * Company ka machinery commission rate badalna.
+ *
+ * Rate poori company ke liye ek hi hai aur ek hi jagah rehta hai
+ * (platform_settings). Pehle wo har machine par bhi para tha; 120 mein wo
+ * khana gira diya gaya, kyunki do jagah rate rakhne ka matlab hota ke ek
+ * din screen kuch dikhaye aur bill kuch aur bane.
+ *
+ * Purane bill NAHI badalte. Har bill us waqt ka rate apne andar likh leta
+ * hai (migration 119), is liye aaj rate badalne se pichla hisaab jyun ka
+ * tyun rehta hai. Ye zaroori hai: warna rate badalte hi mahinon purana
+ * munafa apne aap badal jata aur kisi ko pata na chalta.
+ *
+ * Kaun badal sakta hai: sirf malik / admin darja. Ye faisla kisi ek
+ * booking ka nahi, poore kaarobar ka hai -- aur ye audit trail mein bhi
+ * likha jata hai, kyunki commission badalna wo cheez hai jis ka asar har
+ * agli booking par parta hai.
+ */
+export async function setMachineryCommissionRate(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", actorId ?? "")
+    .maybeSingle();
+  if (!profile || !["owner", "super_admin", "admin"].includes(profile.role)) {
+    return { error: "Commission ka rate sirf malik ya admin badal sakta hai." };
+  }
+
+  const rate = num(formData, "rate");
+  if (rate === null) return { error: "Rate likhein." };
+  if (rate < 0 || rate > 100) return { error: "Rate 0 se 100 ke darmiyan hona chahiye." };
+
+  const { data: current } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "machinery_commission_rate")
+    .maybeSingle();
+  const previous = current?.value === undefined || current?.value === null ? 12 : Number(current.value);
+
+  const { error } = await supabase
+    .from("platform_settings")
+    .upsert({ key: "machinery_commission_rate", value: rate }, { onConflict: "key" });
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "machinery",
+    recordLabel: "Machinery commission rate",
+    description: `Commission ${previous}% se ${rate}% kiya gaya. Purane bill nahi badle — har bill apna rate khud yaad rakhta hai.`,
+  });
+
+  revalidateAll();
   return { success: true };
 }
