@@ -1,12 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { createBooking, type ActionState } from "@/actions/machinery-lifecycle";
+import { createBooking, quickRegisterFarmer, type ActionState } from "@/actions/machinery-lifecycle";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, UserPlus, X } from "lucide-react";
 
 const initialState: ActionState = {};
 
@@ -73,7 +73,49 @@ export function NewBookingForm({
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
 
-  const farmer = useMemo(() => farmers.find((f) => f.id === farmerId) ?? null, [farmers, farmerId]);
+  // Naya kisan yahin ban jata hai. Ye alag <form> nahi ho sakta (HTML
+  // form ke andar form nahi chalta), is liye action seedha bulaya jata
+  // hai.
+  const [addedFarmers, setAddedFarmers] = useState<Farmer[]>([]);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickPhone, setQuickPhone] = useState("");
+  const [quickVillage, setQuickVillage] = useState("");
+  const [quickMsg, setQuickMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
+  const [quickPending, startQuick] = useTransition();
+
+  const allFarmers = useMemo(() => [...addedFarmers, ...farmers], [addedFarmers, farmers]);
+
+  function quickRegister() {
+    setQuickMsg(null);
+    startQuick(async () => {
+      const fd = new FormData();
+      fd.set("full_name", quickName);
+      fd.set("phone_number", quickPhone);
+      fd.set("village", quickVillage);
+      const res = await quickRegisterFarmer({}, fd);
+      if (res.error || !res.farmerId) {
+        setQuickMsg({ tone: "bad", text: res.error ?? "Kisan nahi bana." });
+        return;
+      }
+      const fresh: Farmer = {
+        id: res.farmerId,
+        full_name: res.farmerName ?? quickName,
+        farmer_code: res.farmerCode ?? "",
+        phone_number: quickPhone,
+        village: quickVillage,
+        previous_bookings: 0,
+        outstanding: 0,
+      };
+      setAddedFarmers((prev) => [fresh, ...prev.filter((f) => f.id !== fresh.id)]);
+      setFarmerId(fresh.id);
+      setCode(fresh.farmer_code);
+      setQuickOpen(false);
+      setQuickMsg({ tone: "ok", text: res.notice ?? `${fresh.farmer_code} — ${fresh.full_name} ban gaya aur chun liya gaya.` });
+    });
+  }
+
+  const farmer = useMemo(() => allFarmers.find((f) => f.id === farmerId) ?? null, [allFarmers, farmerId]);
 
   // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam ya phone,
   // teenon se. Staff ko yaad sirf ek cheez hoti hai, aur wo har baar
@@ -85,7 +127,7 @@ export function NewBookingForm({
       setFarmerId("");
       return;
     }
-    const found = farmers.find(
+    const found = allFarmers.find(
       (f) =>
         f.farmer_code.toLowerCase() === needle ||
         f.phone_number.replace(/\D/g, "") === needle.replace(/\D/g, "") ||
@@ -164,15 +206,71 @@ export function NewBookingForm({
             </div>
           </div>
         ) : (
-          code.trim() !== "" && (
-            <p className="text-sm text-surface-500">
-              Ye kisan nahi mila.{" "}
-              <a href="/admin/farmers" className="text-brand-600 hover:underline">
-                Pehle registration karein
-              </a>
-              .
-            </p>
+          code.trim() !== "" &&
+          !quickOpen && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-surface-500">
+              <span>Ye kisan nahi mila.</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setQuickName("");
+                  setQuickPhone(/^[0-9+\-\s]+$/.test(code.trim()) ? code.trim() : "");
+                  setQuickVillage("");
+                  setQuickOpen(true);
+                }}
+              >
+                <UserPlus className="h-4 w-4" /> Yahin naya kisan banayein
+              </Button>
+            </div>
           )
+        )}
+
+        {quickMsg && (
+          <p
+            className={
+              "text-sm " +
+              (quickMsg.tone === "ok"
+                ? "text-brand-700 dark:text-brand-300"
+                : "text-red-600 dark:text-red-400")
+            }
+          >
+            {quickMsg.text}
+          </p>
+        )}
+
+        {quickOpen && (
+          <div className="space-y-3 rounded-lg border border-brand-200 p-3 dark:border-brand-900/40">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-surface-900 dark:text-surface-100">Naya kisan</p>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setQuickOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div>
+              <Label>Naam *</Label>
+              <Input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="Muhammad Aslam" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Mobile</Label>
+                <Input value={quickPhone} onChange={(e) => setQuickPhone(e.target.value)} placeholder="03xx-xxxxxxx" />
+              </div>
+              <div>
+                <Label>Gaon</Label>
+                <Input value={quickVillage} onChange={(e) => setQuickVillage(e.target.value)} placeholder="Chak Mahabali" />
+              </div>
+            </div>
+            <Button type="button" size="sm" onClick={quickRegister} disabled={quickPending || !quickName.trim()}>
+              {quickPending ? "Ban raha hai..." : "Banayein aur chunein"}
+            </Button>
+            <p className="text-xs text-surface-500">
+              Sirf itna hi kaafi hai. CNIC, zameen aur kaghazat baad mein Farmers wale safhe se bhare ja sakte hain.
+              Mobile pehle se kisi kisan ka hua to naya nahi banega — wohi purana chun liya jayega, taake ek hi banda
+              do khaton mein na bat jaye.
+            </p>
+          </div>
         )}
       </Card>
 

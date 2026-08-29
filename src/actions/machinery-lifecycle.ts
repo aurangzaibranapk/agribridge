@@ -31,9 +31,13 @@ import {
 export interface ActionState {
   error?: string;
   success?: boolean;
+  notice?: string;
   bookingId?: string;
   bookingNumber?: string;
   billNumber?: string;
+  farmerId?: string;
+  farmerCode?: string;
+  farmerName?: string;
 }
 
 type Client = ReturnType<typeof createClient>;
@@ -1125,4 +1129,101 @@ export async function setMachineryCommissionRate(
 
   revalidateAll();
   return { success: true };
+}
+
+// =====================================================================
+// 10. Quick Farmer Registration
+// =====================================================================
+/**
+ * Booking ke beech mein hi naya kisan bana lena.
+ *
+ * Kisan counter par khara hai. Usay ye keh kar rokna ke "pehle aap ka
+ * ijra karna paRega, wo doosre safhe par hota hai" -- iska anjaam ye
+ * hota hai ke staff kisi purane kisan ke naam par booking laga deta hai,
+ * ya kaghaz par likh kar baad mein bhoolne ke liye chhoR deta hai.
+ *
+ * Is liye yahan sirf teen cheezein li jati hain: naam, mobile, gaon.
+ * Baqi tafseel (CNIC, zameen, kaghazat) baad mein Farmers wale safhe se.
+ *
+ * Mobile pehle se kisi ke paas ho to naya kisan NAHI banta -- wohi purana
+ * kisan chun liya jata hai. Ye jaan boojh kar hai: ek hi banda do khaton
+ * mein bat jaye to us ka udhaar do jagah bat jata hai, aur phir kisi ek
+ * jagah dekh kar ye keh dena mumkin ho jata hai ke "is par to kuch baqi
+ * nahi".
+ */
+export async function quickRegisterFarmer(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+
+  const fullName = str(formData, "full_name");
+  if (!fullName) return { error: "Kisan ka naam likhein." };
+  const phone = str(formData, "phone_number");
+  const village = str(formData, "village");
+
+  if (phone) {
+    const { data: already } = await supabase
+      .from("farmers")
+      .select("id, farmer_code, full_name")
+      .eq("phone_number", phone)
+      .eq("is_deleted", false)
+      .maybeSingle();
+    if (already) {
+      return {
+        success: true,
+        farmerId: already.id,
+        farmerCode: already.farmer_code,
+        farmerName: already.full_name ?? fullName,
+        notice: `Ye number pehle se ${already.farmer_code} — ${already.full_name} ka hai. Wohi kisan chun liya gaya.`,
+      };
+    }
+  }
+
+  // Code ka number maujooda sab se bare code se aage barhta hai, ginti se
+  // nahi. Ginti is liye nahi ke ek kisan bhi hat jaye to agla code kisi
+  // purane se takra jata hai -- aur us waqt kisan ban hi nahi pata.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data: last } = await supabase
+      .from("farmers")
+      .select("farmer_code")
+      .like("farmer_code", "FRM-%")
+      .order("farmer_code", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const lastNumber = Number(last?.farmer_code?.replace("FRM-", "") ?? 0);
+    const code = `FRM-${String((Number.isFinite(lastNumber) ? lastNumber : 0) + 1 + attempt).padStart(6, "0")}`;
+
+    const { data: created, error } = await supabase
+      .from("farmers")
+      .insert({
+        farmer_code: code,
+        full_name: fullName,
+        phone_number: phone,
+        village,
+        is_verified: true,
+      })
+      .select("id, farmer_code, full_name")
+      .single();
+
+    if (created) {
+      revalidatePath("/admin/farmers");
+      revalidatePath("/admin/machinery-rental/booking/new");
+      return {
+        success: true,
+        farmerId: created.id,
+        farmerCode: created.farmer_code,
+        farmerName: created.full_name ?? fullName,
+      };
+    }
+
+    // 23505 = wahi code ya wahi phone kisi aur ke paas. Code wala masla
+    // agli koshish mein khud hal ho jata hai; phone wala nahi.
+    if (error && error.code === "23505" && !error.message.includes("farmer_code")) {
+      return { error: `Ye number pehle se kisi aur kisan ka hai. Us ka Farmer ID likh kar chunein.` };
+    }
+    if (error && error.code !== "23505") {
+      return { error: error.message };
+    }
+  }
+
+  return { error: "Kisan ka code nahi ban saka. Dobara koshish karein." };
 }
