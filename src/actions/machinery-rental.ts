@@ -9,18 +9,16 @@ export interface ActionState {
   success?: boolean;
 }
 
-async function generateBookingNumber(): Promise<string> {
-  const supabase = createClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await supabase.from("machinery_booking_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await supabase.from("machinery_booking_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await supabase.from("machinery_booking_counters").insert({ year, last_number: nextNumber });
-  }
-  return `MACH-${year}-${String(nextNumber).padStart(5, "0")}`;
-}
+// Purana booking form aur us ka action hata diya gaya.
+//
+// Booking ab machinery-lifecycle.ts se banti hai, jahan booking ka
+// andaza, kisan se tay hua final rate, aur kattai ke baad ka asal kaam
+// teen alag cheezein hain. Purana action rate aur total seedha booking
+// par likh deta tha -- yani wahi ghalti jo is poore module ki wajah
+// bani: bill andaze par ban jata tha.
+//
+// Ise sirf istemal se hataana kaafi nahi tha: pari rehti to kisi din
+// koi ise dobara jorh deta aur zanjeer chup chaap bypass ho jati.
 
 export async function createMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -78,84 +76,6 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   return { success: true };
 }
 
-export async function createMachineryBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const farmerId = String(formData.get("farmer_id") ?? "");
-  const machineId = String(formData.get("machine_id") ?? "");
-  const bookingDate = String(formData.get("booking_date") ?? new Date().toISOString().slice(0, 10));
-  const acres = formData.get("acres") ? Number(formData.get("acres")) : null;
-  const hours = formData.get("hours") ? Number(formData.get("hours")) : null;
-  const days = formData.get("days") ? Number(formData.get("days")) : null;
-  const locationAddress = (formData.get("location_address") as string) || null;
-  const notes = (formData.get("notes") as string) || null;
-  const requestId = (formData.get("request_id") as string) || null;
-  const customRate = formData.get("custom_rate") ? Number(formData.get("custom_rate")) : null;
-
-  if (!farmerId) return { error: "Farmer select karein." };
-  if (!machineId) return { error: "Machine select karein." };
-
-  const { data: machine } = await supabase
-    .from("machinery_vendor_machines")
-    .select("vendor_id, rate_type, rate_amount, commission_percentage")
-    .eq("id", machineId)
-    .single();
-  if (!machine) return { error: "Machine nahi mili." };
-
-  let quantity = 0;
-  if (machine.rate_type === "per_acre") quantity = acres ?? 0;
-  if (machine.rate_type === "per_hour") quantity = hours ?? 0;
-  if (machine.rate_type === "per_day") quantity = days ?? 0;
-  if (!quantity || quantity <= 0) return { error: `${machine.rate_type === "per_acre" ? "Acres" : machine.rate_type === "per_hour" ? "Hours" : "Days"} sahi likhein.` };
-
-  const effectiveRate = customRate && customRate > 0 ? customRate : Number(machine.rate_amount);
-  if (effectiveRate <= 0) return { error: "Rate sahi likhein." };
-
-  const totalAmount = quantity * effectiveRate;
-  const commissionAmount = totalAmount * (Number(machine.commission_percentage) / 100);
-  const vendorPayable = totalAmount - commissionAmount;
-
-  const bookingNumber = await generateBookingNumber();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { error } = await supabase.from("machinery_bookings").insert({
-    booking_number: bookingNumber,
-    farmer_id: farmerId,
-    vendor_id: machine.vendor_id,
-    machine_id: machineId,
-    booking_date: bookingDate,
-    acres,
-    hours,
-    days,
-    rate_amount: effectiveRate,
-    total_amount: totalAmount,
-    commission_percentage: Number(machine.commission_percentage),
-    commission_amount: commissionAmount,
-    vendor_payable: vendorPayable,
-    location_address: locationAddress,
-    request_id: requestId,
-    notes,
-    created_by: user?.id ?? null,
-  });
-  if (error) return { error: error.message };
-
-  if (requestId) {
-    await supabase.from("machinery_requests").update({ status: "fulfilled" }).eq("id", requestId);
-  }
-
-  await notifyRoles(
-    ["sales_staff", "manager", "super_admin", "admin", "owner"],
-    "Nayi Machinery Booking",
-    `Booking ${bookingNumber} ban gayi hai.`,
-    `/admin/machinery-rental`
-  );
-
-  revalidatePath("/admin/machinery-rental");
-  revalidatePath("/admin/machinery-rental/dashboard");
-  return { success: true };
-}
 
 export async function updateBookingStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();

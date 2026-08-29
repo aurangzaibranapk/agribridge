@@ -4,7 +4,6 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   createMachineryVendor,
   createVendorMachine,
-  createMachineryBooking,
   updateBookingStatus,
   completeMachineryBooking,
   recordFarmerPayment,
@@ -73,12 +72,14 @@ export function MachineryClient({
   defaultAcres?: string;
   defaultLocation?: string;
 }) {
-  const [tab, setTabState] = useState<"live" | "booking" | "vendors" | "bookings">("live");
+  const [tab, setTabState] = useState<"live" | "vendors" | "bookings">("live");
   useEffect(() => {
     const saved = sessionStorage.getItem("machinery_active_tab");
-    if (saved === "live" || saved === "booking" || saved === "vendors" || saved === "bookings") setTabState(saved as any);
+    // "booking" ab tab nahi raha -- wo apne safhe par chala gaya. Purani
+    // session mein wo mehfooz ho to use nazarandaz kar dein.
+    if (saved === "live" || saved === "vendors" || saved === "bookings") setTabState(saved);
   }, []);
-  function setTab(next: "live" | "booking" | "vendors" | "bookings") {
+  function setTab(next: "live" | "vendors" | "bookings") {
     setTabState(next);
     sessionStorage.setItem("machinery_active_tab", next);
   }
@@ -98,7 +99,12 @@ export function MachineryClient({
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-surface-200 dark:border-surface-800">
         <div className="flex gap-2">
           <TabButton active={tab === "live"} onClick={() => setTab("live")}>Live Board</TabButton>
-          <TabButton active={tab === "booking"} onClick={() => setTab("booking")}>Nayi Booking</TabButton>
+          <Link
+            href="/admin/machinery-rental/booking/new"
+            className="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-surface-500 hover:text-brand-700 dark:hover:text-brand-300"
+          >
+            Nayi Booking
+          </Link>
           <TabButton active={tab === "vendors"} onClick={() => setTab("vendors")}>Vendors & Machines</TabButton>
           <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>Poori Bookings</TabButton>
         </div>
@@ -108,10 +114,6 @@ export function MachineryClient({
       </div>
 
       {tab === "live" && <LiveBoard />}
-
-      {tab === "booking" && (
-        <NewBookingForm farmers={farmers} machines={machines} defaultFarmerId={defaultFarmerId} defaultRequestId={defaultRequestId} defaultAcres={defaultAcres} defaultLocation={defaultLocation} />
-      )}
 
       {tab === "vendors" && (
         <div className="space-y-4">
@@ -278,7 +280,11 @@ function BookingsTab({
               const vendorRemaining = b.vendor_payable - b.amount_paid_to_vendor;
               return (
                 <tr key={b.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                  <td className="px-3 py-2 font-mono text-xs text-surface-500">{b.booking_number}</td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-brand-600 hover:underline">
+                      {b.booking_number}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2 text-xs text-surface-500">{new Date(b.booking_date).toLocaleDateString()}</td>
                   <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{b.farmer_name}</td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{b.vendor_name} - {b.machine_label}</td>
@@ -326,114 +332,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button onClick={onClick} className={`border-b-2 px-3 py-2 text-sm font-medium ${active ? "border-brand-600 text-brand-700" : "border-transparent text-surface-500 hover:text-surface-700"}`}>
       {children}
     </button>
-  );
-}
-
-function NewBookingForm({
-  farmers,
-  machines,
-  defaultFarmerId,
-  defaultRequestId,
-  defaultAcres,
-  defaultLocation,
-}: {
-  farmers: Farmer[];
-  machines: Machine[];
-  defaultFarmerId?: string;
-  defaultRequestId?: string;
-  defaultAcres?: string;
-  defaultLocation?: string;
-}) {
-  const [state, formAction] = useFormState(createMachineryBooking, initialState);
-  const [machineId, setMachineId] = useState("");
-  const [quantity, setQuantity] = useState(defaultAcres ?? "");
-  const [customRate, setCustomRate] = useState("");
-
-  const selectedMachine = machines.find((m) => m.id === machineId);
-  const effectiveRate = customRate ? parseFloat(customRate) || 0 : (selectedMachine?.rate_amount ?? 0);
-  const total = (parseFloat(quantity) || 0) * effectiveRate;
-  const commission = total * ((selectedMachine?.commission_percentage ?? 0) / 100);
-  const vendorPayable = total - commission;
-
-  function handleMachineChange(id: string) {
-    setMachineId(id);
-    setCustomRate("");
-  }
-
-  if (state.success) setTimeout(() => window.location.reload(), 900);
-
-  return (
-    <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Booking Karein</h2>
-      {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Booking ban gayi.</p>}
-      <form action={formAction} className="space-y-3">
-        {defaultRequestId && <input type="hidden" name="request_id" value={defaultRequestId} />}
-        <div>
-          <Label>Farmer *</Label>
-          <Select name="farmer_id" defaultValue={defaultFarmerId ?? ""} required>
-            <option value="">- select -</option>
-            {farmers.map((f) => (
-              <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Machine (Vendor) *</Label>
-          <Select value={machineId} onChange={(e) => handleMachineChange(e.target.value)} name="machine_id" required>
-            <option value="">- select -</option>
-            {machines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.vendor_name} - {m.machine_type}{m.model ? ` (${m.model})` : ""} - Rs {m.rate_amount}/{RATE_TYPE_LABELS[m.rate_type]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Date</Label>
-          <Input type="date" name="booking_date" defaultValue={new Date().toISOString().slice(0, 10)} />
-        </div>
-        {selectedMachine && (
-          <div>
-            <Label>
-              {selectedMachine.rate_type === "per_acre" ? "Kitne Acres *" : selectedMachine.rate_type === "per_hour" ? "Kitne Hours *" : "Kitne Days *"}
-            </Label>
-            <Input
-              type="number"
-              step="0.1"
-              name={selectedMachine.rate_type === "per_acre" ? "acres" : selectedMachine.rate_type === "per_hour" ? "hours" : "days"}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              required
-            />
-          </div>
-        )}
-        <div>
-          <Label>Location Address</Label>
-          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder="Kis jagah machine chahiye" />
-        </div>
-        <div>
-          <Label>Notes</Label>
-          <Textarea name="notes" rows={2} />
-        </div>
-        <input type="hidden" name="custom_rate" value={customRate} />
-        {selectedMachine && (
-          <div>
-            <Label>Rate (Rs.) - Machine ka default rate {selectedMachine.rate_amount} hai, safar/distance ke hisab se yahan badal sakte hain</Label>
-            <Input type="number" step="0.01" value={customRate} onChange={(e) => setCustomRate(e.target.value)} placeholder={String(selectedMachine.rate_amount)} />
-          </div>
-        )}
-        {selectedMachine && (
-          <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
-            <div className="flex justify-between text-xs text-surface-400"><span>Rate Istemal Ho Rahi Hai</span><span>Rs {effectiveRate.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-surface-500">Total (Farmer Se)</span><span className="font-medium">Rs {total.toLocaleString()}</span></div>
-            <div className="flex justify-between text-green-600"><span>AgriBridge Commission ({selectedMachine.commission_percentage}%)</span><span>Rs {commission.toLocaleString()}</span></div>
-            <div className="flex justify-between font-semibold text-surface-800 dark:text-surface-200"><span>Vendor Ko Milega</span><span>Rs {vendorPayable.toLocaleString()}</span></div>
-          </div>
-        )}
-        <SubmitButton label="Booking Confirm Karein" />
-      </form>
-    </div>
   );
 }
 

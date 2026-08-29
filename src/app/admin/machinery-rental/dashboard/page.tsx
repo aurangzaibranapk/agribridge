@@ -214,7 +214,7 @@ export default async function MachineryDashboardPage() {
                     <td className="px-3 py-2">{r.will_sell_to_us === true ? <span className="text-green-600">Haan</span> : r.will_sell_to_us === false ? <span className="text-surface-400">Nahi</span> : "-"}</td>
                     <td className="px-3 py-2">{r.wants_next_season_reminder === true ? <span className="text-brand-600">Haan</span> : r.wants_next_season_reminder === false ? <span className="text-surface-400">Nahi</span> : "-"}</td>
                     <td className="px-3 py-2">
-                      <Link href={`/admin/machinery-rental?convert_farmer=${r.farmer_id}&convert_request=${r.id}`} className="text-xs font-medium text-brand-600 hover:underline">
+                      <Link href={`/admin/machinery-rental/booking/new?convert_farmer=${r.farmer_id}&convert_request=${r.id}`} className="text-xs font-medium text-brand-600 hover:underline">
                         Booking Karein
                       </Link>
                     </td>

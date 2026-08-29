@@ -188,6 +188,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       estimated_rate: num(formData, "estimated_rate"),
       rate_status: "estimated",
 
+      request_id: str(formData, "request_id"),
       notes: str(formData, "notes"),
       created_by: actorId,
     })
@@ -195,6 +196,14 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
     .single();
 
   if (error || !booking) return { error: error?.message ?? "Booking nahi bani." };
+
+  // Kisan ki apni farmaish se booking bani ho to wo farmaish yahin band
+  // ho jati hai. Warna wo "abhi tak nahi hui" ki fehrist mein pari
+  // rehti hai aur koi doosra staff us par dobara booking bana deta hai.
+  const requestId = str(formData, "request_id");
+  if (requestId) {
+    await supabase.from("machinery_requests").update({ status: "fulfilled" }).eq("id", requestId);
+  }
 
   await logEvent({
     bookingId: booking.id,
