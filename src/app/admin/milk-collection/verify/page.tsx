@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { VerifyClient, type PricedEntry } from "./verify-client";
 import { canDo } from "@/lib/access/guard";
@@ -9,6 +11,7 @@ const VERIFY_ROLES = ["owner", "super_admin", "admin", "manager"];
 
 export default async function MilkVerifyPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -36,7 +39,7 @@ export default async function MilkVerifyPage() {
       id: row.id,
       collection_number: row.collection_number ?? "—",
       farmer_label: `${farmer?.farmer_code ?? "—"} — ${farmer?.full_name ?? "—"}`,
-      route: `${row.route_name ?? "Bagair route"} • ${row.entry_date} ${row.shift === "morning" ? "Subah" : "Shaam"}`,
+      route: `${row.route_name ?? t("mk_no_route", lang)} • ${row.entry_date} ${t(row.shift === "morning" ? "mk_morning" : "mk_evening", lang)}`,
       liters: Number(row.quantity_liters),
       fat: row.fat_percentage == null ? null : Number(row.fat_percentage),
       ts: row.ts_value == null ? null : Number(row.ts_value),
@@ -53,8 +56,8 @@ export default async function MilkVerifyPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Manager Verify"
-        description="Rate lag chuka hai. Tasdeeq bina wajah likhe nahi hoti — ye rok database mein bhi lagi hui hai."
+        title={t("mk_verify_title", lang)}
+        description={t("mk_verify_subtitle", lang)}
       />
 
       <div className="grid grid-cols-2 gap-3">

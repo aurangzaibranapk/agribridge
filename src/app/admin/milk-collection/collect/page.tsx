@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { CollectForm, type FarmerOption } from "./collect-form";
@@ -17,6 +19,7 @@ function statusTone(status: string) {
 
 export default async function MilkCollectPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -56,17 +59,17 @@ export default async function MilkCollectPage() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <PageHeader
-        title="Doodh Jama Karein"
+        title={t("mk_collect_page_title", lang)}
         description={
           staff?.milk_route_name
-            ? `Route: ${staff.milk_route_name}${staff.milk_chiller_name ? ` • Chiller: ${staff.milk_chiller_name}` : ""}`
-            : "Route abhi darj nahi — HR se kehein ke aap ka route aur chiller likh dein."
+            ? `${t("mk_route_label", lang)}: ${staff.milk_route_name}${staff.milk_chiller_name ? ` • ${t("mk_chiller", lang)}: ${staff.milk_chiller_name}` : ""}`
+            : t("mk_no_route_assigned", lang)
         }
       />
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Aaj ki entries</p>
+          <p className="text-xs text-surface-500">{t("mk_todays_entries", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{mine?.length ?? 0}</p>
         </Card>
         <Card className="p-4">

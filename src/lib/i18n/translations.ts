@@ -5,6 +5,7 @@ import { myWorkDict } from "./dict/my-work";
 import { machineryQueueDict } from "./dict/machinery-queue";
 import { leaveDict } from "./dict/leave";
 import { milkDispatchDict } from "./dict/milk-dispatch";
+import { milkDict, milkPageDict } from "./dict/milk";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -44,6 +45,8 @@ const dict = {
   ...machineryQueueDict,
   ...leaveDict,
   ...milkDispatchDict,
+  ...milkDict,
+  ...milkPageDict,
 };
 
 export type TranslationKey = keyof typeof dict;

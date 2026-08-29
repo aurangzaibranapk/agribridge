@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { signedLrUrl } from "@/lib/milk-collection";
+import { signedLrUrl, NO_ROUTE } from "@/lib/milk-collection";
 import { ChillerClient, type RouteGroup, type PendingEntry } from "./chiller-client";
 
 export const dynamic = "force-dynamic";
 
 const ALLOWED_ROLES = ["owner", "super_admin", "admin", "manager", "milk_collection"];
-const NO_ROUTE = "Bagair route";
 
 export default async function ChillerPage({
   searchParams,
@@ -16,6 +17,7 @@ export default async function ChillerPage({
 }) {
   const params = await searchParams;
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -108,8 +110,8 @@ export default async function ChillerPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Chiller — FAT aur Dispatch"
-        description="FAT yahan lagta hai. Us ke baad hi rate banta hai aur paisa kisan ke khate mein jata hai."
+        title={t("mk_chiller_title", lang)}
+        description={t("mk_chiller_subtitle", lang)}
       />
 
       <Card className="p-3">
@@ -126,8 +128,8 @@ export default async function ChillerPage({
           <div>
             <label className="text-xs text-surface-500">Shift</label>
             <select name="shift" defaultValue={shift} className="mt-1 rounded-lg border border-surface-200 p-2 text-sm">
-              <option value="morning">Subah</option>
-              <option value="evening">Shaam</option>
+              <option value="morning">{t("mk_morning", lang)}</option>
+              <option value="evening">{t("mk_evening", lang)}</option>
             </select>
           </div>
           <button type="submit" className="rounded-lg border border-surface-300 px-3 py-2 text-sm">

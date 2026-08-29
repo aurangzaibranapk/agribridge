@@ -10,6 +10,8 @@ import {
 } from "@/actions/milk-walkin";
 import { shrinkImage } from "@/lib/image-capture";
 import { Search, UserPlus, Camera, Check, Loader2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: WalkInState = {};
 
@@ -22,6 +24,7 @@ const initial: WalkInState = {};
  * maidan mein maujood na ho.
  */
 export function WalkInClient({ chiller }: { chiller: string }) {
+  const lang = useLang();
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<FarmerMatch[] | null>(null);
   const [chosen, setChosen] = useState<FarmerMatch | null>(null);
@@ -59,25 +62,25 @@ export function WalkInClient({ chiller }: { chiller: string }) {
       <div className="space-y-3">
         <div className="rounded-card border border-green-300 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/20">
           <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-            Doodh darj ho gaya — kisan ko paighaam bhej diya gaya.
+            {t("mk_walkin_saved", lang)}
           </p>
         </div>
 
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h3 className="mb-3 text-center text-sm font-semibold text-surface-900 dark:text-white">
-            AgriBridge Milk Receipt
+            {t("mk_receipt", lang)}
           </h3>
           <dl className="space-y-1.5 text-sm">
             {[
-              ["Kisan", r.farmerLabel],
-              ["Collection", "Self Delivery"],
-              ["Doodh", `${r.liters} L`],
+              [t("mk_farmer", lang), r.farmerLabel],
+              [t("mk_collection", lang), t("mk_self_delivery", lang)],
+              [t("mk_milk", lang), `${r.liters} L`],
               ["LR", String(r.lr)],
               ["FAT", `${r.fat}%`],
               ["TS", String(r.ts)],
-              ["Rate", `Rs ${r.ratePerLiter}/L`],
-              ["Chiller", r.chiller],
-              ["Collection ID", r.collectionNumber],
+              [t("mk_rate", lang), `Rs ${r.ratePerLiter}/L`],
+              [t("mk_chiller", lang), r.chiller],
+              [t("mk_collection_id", lang), r.collectionNumber],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-2">
                 <dt className="text-surface-500">{label}</dt>
@@ -86,7 +89,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
             ))}
           </dl>
           <div className="mt-3 flex justify-between border-t border-surface-200 pt-3 dark:border-surface-800">
-            <span className="text-sm font-semibold text-surface-700 dark:text-surface-300">Raqam</span>
+            <span className="text-sm font-semibold text-surface-700 dark:text-surface-300">{t("mk_amount", lang)}</span>
             <span className="text-xl font-bold text-brand-700 dark:text-brand-400">
               Rs {r.amount.toLocaleString()}
             </span>
@@ -98,7 +101,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
           onClick={() => window.location.reload()}
           className="w-full rounded-lg bg-brand-600 py-3 text-base font-semibold text-white"
         >
-          Agla Kisan
+          {t("mk_next_farmer", lang)}
         </button>
       </div>
     );
@@ -108,7 +111,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
     <div className="space-y-4">
       {/* ---- 1. Kisan pehchanein ---- */}
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">1. Kisan kaun hai?</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mk_step1_who", lang)}</h3>
 
         {chosen ? (
           <div className="rounded-lg border border-brand-300 bg-brand-50 p-3 dark:bg-brand-950/20">
@@ -118,15 +121,15 @@ export function WalkInClient({ chiller }: { chiller: string }) {
                   {chosen.farmer_code} — {chosen.full_name}
                 </p>
                 <p className="text-xs text-surface-600 dark:text-surface-400">
-                  {chosen.village ?? "Village darj nahi"}
+                  {chosen.village ?? t("mk_village_not_recorded", lang)}
                   {chosen.phone_number && ` • ${chosen.phone_number}`}
                 </p>
                 <p className={`text-xs ${chosen.is_active ? "text-green-700" : "text-red-700"}`}>
-                  {chosen.is_active ? "Active" : "Band"}
+                  {chosen.is_active ? t("mk_active", lang) : t("mk_closed", lang)}
                 </p>
               </div>
               <button type="button" onClick={() => setChosen(null)} className="text-xs text-brand-700 underline">
-                badlein
+                {t("mk_change", lang)}
               </button>
             </div>
           </div>
@@ -139,7 +142,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), runSearch())}
-                  placeholder="Farmer ID, mobile, CNIC ya naam"
+                  placeholder={t("mk_search_placeholder", lang)}
                   className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm"
                 />
               </div>
@@ -149,7 +152,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
                 disabled={searching}
                 className="rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {searching ? "..." : "Dhoondein"}
+                {searching ? "..." : t("mk_search", lang)}
               </button>
             </div>
 
@@ -157,7 +160,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
               <ul className="mt-2 divide-y divide-surface-100 rounded-lg border border-surface-200 dark:divide-surface-800 dark:border-surface-800">
                 {matches.length === 0 && (
                   <li className="px-3 py-3 text-xs text-surface-500">
-                    Koi kisan nahi mila. Naya kisan hai to neeche darj kar lein.
+                    {t("mk_none_found_register", lang)}
                   </li>
                 )}
                 {matches.map((f) => (
@@ -181,8 +184,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
             )}
 
             <p className="mt-2 text-xs text-surface-500">
-              Naam se kai kisan mil jayein to village aur mobile se pehchan lein — doodh hamesha asli
-              Farmer ID par hi jata hai.
+              {t("mk_same_name_note", lang)}
             </p>
 
             <button
@@ -190,7 +192,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
               onClick={() => setShowNew((v) => !v)}
               className="mt-3 flex items-center gap-1.5 text-sm font-medium text-brand-700"
             >
-              <UserPlus className="h-4 w-4" /> Naya kisan darj karein
+              <UserPlus className="h-4 w-4" /> {t("mk_register_new", lang)}
             </button>
 
             {showNew && <QuickRegister onDone={(f) => { setChosen(f); setShowNew(false); }} />}
@@ -201,7 +203,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
       {/* ---- 2. Naap ---- */}
       {chosen && (
         <form action={action} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">2. Chiller par naap</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mk_step2_measure", lang)}</h3>
 
           {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
@@ -211,9 +213,9 @@ export function WalkInClient({ chiller }: { chiller: string }) {
 
           <div className="grid grid-cols-3 gap-3">
             {[
-              { name: "liters", label: "Doodh (L) *", step: "0.1" },
-              { name: "lr", label: "LR *", step: "0.1" },
-              { name: "fat_percentage", label: "FAT % *", step: "0.1" },
+              { name: "liters", label: t("mk_milk_l_req", lang), step: "0.1" },
+              { name: "lr", label: t("mk_lr_req", lang), step: "0.1" },
+              { name: "fat_percentage", label: t("mk_fat_req", lang), step: "0.1" },
             ].map((f) => (
               <div key={f.name}>
                 <label className="text-xs font-medium text-surface-600">{f.label}</label>
@@ -230,16 +232,16 @@ export function WalkInClient({ chiller }: { chiller: string }) {
           </div>
 
           <div className="mt-3">
-            <label className="text-xs font-medium text-surface-600">Shift</label>
+            <label className="text-xs font-medium text-surface-600">{t("mk_shift", lang)}</label>
             <select name="shift" defaultValue={new Date().getHours() < 14 ? "morning" : "evening"} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-              <option value="morning">Subah</option>
-              <option value="evening">Shaam</option>
+              <option value="morning">{t("mk_morning", lang)}</option>
+              <option value="evening">{t("mk_evening", lang)}</option>
             </select>
           </div>
 
           <div className="mt-3">
             <label className="flex items-center gap-1 text-xs font-medium text-surface-600">
-              <Camera className="h-3 w-3" /> LR ki photo
+              <Camera className="h-3 w-3" /> {t("mk_lr_photo", lang)}
             </label>
             <input
               type="file"
@@ -248,13 +250,13 @@ export function WalkInClient({ chiller }: { chiller: string }) {
               onChange={(e) => onPhoto(e.target.files?.[0])}
               className="mt-1 w-full rounded-lg border border-surface-200 p-1.5 text-xs"
             />
-            {photoBusy && <p className="mt-1 text-xs text-surface-500">Tasveer taiyar ho rahi hai...</p>}
-            {photo && <p className="mt-1 text-xs text-green-700">Tasveer taiyar ({Math.round(photo.bytes / 1024)} KB)</p>}
+            {photoBusy && <p className="mt-1 text-xs text-surface-500">{t("mk_photo_preparing", lang)}</p>}
+            {photo && <p className="mt-1 text-xs text-green-700">{t("mk_photo_ready", lang)} ({Math.round(photo.bytes / 1024)} KB)</p>}
           </div>
 
           <p className="mt-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800/50 dark:text-surface-400">
-            Wusool karne wala: <span className="font-medium">aap</span> • Chiller:{" "}
-            <span className="font-medium">{chiller}</span> • Is entry par kisi MCA ka naam nahi lagta.
+            {t("mk_receiver_note_1", lang)} <span className="font-medium">{t("mk_receiver_you", lang)}</span> • {t("mk_chiller", lang)}:{" "}
+            <span className="font-medium">{chiller}</span> {t("mk_receiver_note_2", lang)}
           </p>
 
           <SubmitButton />
@@ -265,6 +267,7 @@ export function WalkInClient({ chiller }: { chiller: string }) {
 }
 
 function SubmitButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -273,12 +276,13 @@ function SubmitButton() {
       className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-base font-semibold text-white disabled:opacity-50"
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-      {pending ? "Mahfooz ho raha hai..." : "Mahfooz Karein aur Parchi Banayein"}
+      {pending ? t("mk_saving", lang) : t("mk_save_and_receipt", lang)}
     </button>
   );
 }
 
 function QuickRegister({ onDone }: { onDone: (farmer: FarmerMatch) => void }) {
+  const lang = useLang();
   const [state, action] = useFormState(quickRegisterFarmer, {} as { error?: string; farmerId?: string; farmerCode?: string });
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -308,7 +312,7 @@ function QuickRegister({ onDone }: { onDone: (farmer: FarmerMatch) => void }) {
         name="full_name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Poora naam *"
+        placeholder={t("mk_full_name_req", lang)}
         className="w-full rounded-lg border border-surface-200 p-2 text-sm"
       />
       <input
@@ -316,26 +320,26 @@ function QuickRegister({ onDone }: { onDone: (farmer: FarmerMatch) => void }) {
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         inputMode="tel"
-        placeholder="Mobile number *"
+        placeholder={t("mk_mobile_req", lang)}
         className="w-full rounded-lg border border-surface-200 p-2 text-sm"
       />
       <input
         name="village"
         value={village}
         onChange={(e) => setVillage(e.target.value)}
-        placeholder="Village"
+        placeholder={t("mk_village", lang)}
         className="w-full rounded-lg border border-surface-200 p-2 text-sm"
       />
       <RegisterButton />
       <p className="text-xs text-surface-500">
-        Baqi tafseel HR baad mein bhar dega — yahan sirf utna poochha jata hai jitna doodh lene ke liye
-        waqai chahiye.
+        {t("mk_quick_register_note", lang)}
       </p>
     </form>
   );
 }
 
 function RegisterButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -343,7 +347,7 @@ function RegisterButton() {
       disabled={pending}
       className="w-full rounded-lg border border-brand-600 py-2 text-sm font-semibold text-brand-700 disabled:opacity-50"
     >
-      {pending ? "Ban raha hai..." : "Farmer ID banayein"}
+      {pending ? t("mk_creating", lang) : t("mk_make_farmer_id", lang)}
     </button>
   );
 }

@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { verifyMilkEntries, type ActionState } from "@/actions/milk-chiller";
 import { VERIFY_COMMENT_MAX, VERIFY_COMMENT_MIN } from "@/lib/milk-collection";
 import { Check, X, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -23,6 +25,7 @@ export interface PricedEntry {
 }
 
 export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
+  const lang = useLang();
   const [state, action] = useFormState(verifyMilkEntries, initial);
   const [picked, setPicked] = useState<string[]>([]);
   const [comment, setComment] = useState("");
@@ -39,7 +42,7 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
   if (entries.length === 0) {
     return (
       <div className="rounded-card border border-surface-200 bg-white p-8 text-center text-sm text-surface-400 dark:border-surface-800 dark:bg-surface-900">
-        Tasdeeq ke intezar mein koi entry nahi.
+        {t("mk_nothing_to_verify", lang)}
       </div>
     );
   }
@@ -54,9 +57,9 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
               checked={allPicked}
               onChange={() => setPicked(allPicked ? [] : entries.map((e) => e.id))}
             />
-            Sab chunein ({entries.length})
+            {t("mk_select_all", lang)} ({entries.length})
           </label>
-          <span className="text-xs text-surface-500">{picked.length} chuni gayin</span>
+          <span className="text-xs text-surface-500">{picked.length} {t("mk_selected", lang)}</span>
         </div>
 
         <ul className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -81,12 +84,12 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
                 </p>
                 <p className="text-xs text-surface-400">
                   {entry.collection_number} • {entry.channel}
-                  {entry.collectionSource === "self_delivery" && " • Khud laya"}
+                  {entry.collectionSource === "self_delivery" && ` • ${t("mk_self_delivery", lang)}`}
                 </p>
                 {entry.duplicate && (
                   <p className="mt-1 flex items-start gap-1 text-xs text-red-700">
                     <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                    Isi kisan ki isi shift mein doosri entry bhi hai.
+                    {t("mk_duplicate_warn", lang)}
                   </p>
                 )}
                 {entry.flags.map((f) => (
@@ -117,7 +120,7 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
                 : "border-surface-200 text-surface-600"
             }`}
           >
-            <Check className="h-4 w-4" /> Tasdeeq
+            <Check className="h-4 w-4" /> {t("mk_verify", lang)}
           </button>
           <button
             type="button"
@@ -128,12 +131,12 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
                 : "border-surface-200 text-surface-600"
             }`}
           >
-            <X className="h-4 w-4" /> Rad karein
+            <X className="h-4 w-4" /> {t("mk_reject", lang)}
           </button>
         </div>
 
         <label className="text-xs font-medium text-surface-600">
-          Comment * <span className="text-surface-400">(lazmi — wajah likhein)</span>
+          {t("mk_comment_req", lang)} <span className="text-surface-400">{t("mk_comment_required_note", lang)}</span>
         </label>
         <textarea
           name="verified_comment"
@@ -141,16 +144,16 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
           maxLength={VERIFY_COMMENT_MAX}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Misal: Chiller ka naap aur entries mila kar dekh li, sab durust hai."
+          placeholder={t("mk_comment_eg", lang)}
           className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
         />
         <div className="mt-1 flex justify-between text-xs text-surface-400">
-          <span>Ye comment hamesha ke liye record mein rahega</span>
+          <span>{t("mk_comment_permanent", lang)}</span>
           <span>{comment.length} / {VERIFY_COMMENT_MAX}</span>
         </div>
 
         <p className="mt-3 text-sm text-surface-600 dark:text-surface-400">
-          Chuni hui raqam: <span className="font-semibold">Rs {Math.round(total).toLocaleString()}</span>
+          {t("mk_selected_amount", lang)}: <span className="font-semibold">Rs {Math.round(total).toLocaleString()}</span>
         </p>
 
         <SubmitButton ready={ready} decision={decision} />
@@ -160,6 +163,7 @@ export function VerifyClient({ entries }: { entries: PricedEntry[] }) {
 }
 
 function SubmitButton({ ready, decision }: { ready: boolean; decision: string }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -168,12 +172,12 @@ function SubmitButton({ ready, decision }: { ready: boolean; decision: string })
       className="mt-3 w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
     >
       {pending
-        ? "Ho raha hai..."
+        ? t("mk_working", lang)
         : ready
           ? decision === "verified"
-            ? "Tasdeeq Karein"
-            : "Rad Karein"
-          : "Pehle entries chunein aur comment likhein"}
+            ? t("mk_verify_now", lang)
+            : t("mk_reject_now", lang)
+          : t("mk_pick_first", lang)}
     </button>
   );
 }

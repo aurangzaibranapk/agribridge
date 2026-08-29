@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { WalkInClient } from "./walk-in-client";
 
@@ -8,6 +10,7 @@ const MCO_ROLES = ["owner", "super_admin", "admin", "manager", "milk_collection"
 
 export default async function WalkInPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -38,13 +41,13 @@ export default async function WalkInPage() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <PageHeader
-        title="Walk-in / Self Delivery"
-        description="Kisan khud chiller par doodh laya. Is entry par kisi MCA ka naam nahi lagta."
+        title={t("mk_walkin_page_title", lang)}
+        description={t("mk_walkin_page_sub", lang)}
       />
 
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Aaj</p>
+          <p className="text-xs text-surface-500">{t("mk_today", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{mine?.length ?? 0}</p>
         </Card>
         <Card className="p-4">

@@ -56,6 +56,15 @@ export const STATUS_LABEL: Record<MilkStatus, string> = {
  * jaise rahen. Ye yahan hain, action wali file mein nahi: "use server"
  * file se sirf async function bahar ja sakte hain.
  */
+/**
+ * Jis entry par koi route nahi lagta, us ka group ka naam.
+ *
+ * Ye DATA hai, screen ka lafz nahi -- entries isi naam ke neeche jama
+ * hoti hain. Screen par ise t("mk_no_route") se dikhaya jata hai, warna
+ * zaban badalte hi grouping toot jati.
+ */
+export const NO_ROUTE = "Bagair route";
+
 export const VERIFY_COMMENT_MAX = 255;
 export const VERIFY_COMMENT_MIN = 5;
 

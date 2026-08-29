@@ -4,6 +4,8 @@ import { shrinkImage } from "@/lib/image-capture";
 import { queueAdd, queueAll, queueRemove, offlineSupported, type QueuedItem } from "@/lib/offline-queue";
 import { syncQueue } from "@/lib/milk-offline-sync";
 import { Camera, Check, Loader2, Search, AlertTriangle, CloudOff, RefreshCw, Trash2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 export interface FarmerOption {
   id: string;
@@ -32,6 +34,7 @@ interface SavedLine {
  * client_uuid dobara jane se entry do dafa nahi banti.
  */
 export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
+  const lang = useLang();
   const [query, setQuery] = useState("");
   const [farmerId, setFarmerId] = useState("");
   const [liters, setLiters] = useState("");
@@ -116,7 +119,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
     try {
       setPhoto(await shrinkImage(file));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Tasveer nahi li ja saki.");
+      setError(e instanceof Error ? e.message : t("mk_photo_failed", lang));
     } finally {
       setPhotoBusy(false);
     }
@@ -158,7 +161,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
     // Network hi na ho to server tak jane ki koshish bhi nahi karte --
     // MCA ko bekar ka intezar karwana maidan mein waqt ka nuqsan hai.
     if (typeof navigator !== "undefined" && !navigator.onLine && offlineSupported()) {
-      await stash(item, "Network nahi hai");
+      await stash(item, t("mk_no_network", lang));
       setBusy(false);
       return;
     }
@@ -186,7 +189,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
 
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? "Mahfooz nahi ho saka.");
+        setError(data.error ?? t("mk_not_saved", lang));
         return;
       }
 
@@ -194,7 +197,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
       if (!line?.ok) {
         // Server ne wajah batayi -- ise device par rakhne ka koi fayda
         // nahi, wahi wajah dobara aayegi. MCA abhi theek kar sakta hai.
-        setError(line?.error ?? "Mahfooz nahi ho saka.");
+        setError(line?.error ?? t("mk_not_saved", lang));
         return;
       }
 
@@ -214,9 +217,9 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
       // Server tak nahi pahuncha ja saka. Entry kho dena sab se bura
       // hoga, is liye device par mahfooz kar lete hain.
       if (offlineSupported()) {
-        await stash(item, "Server tak nahi pahuncha ja saka");
+        await stash(item, t("mk_server_unreachable", lang));
       } else {
-        setError("Server tak nahi pahuncha ja saka. Dobara koshish karein.");
+        setError(t("mk_server_unreachable_retry", lang));
       }
     } finally {
       setBusy(false);
@@ -231,7 +234,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
       setError("");
       setSaved((prev) => [
         {
-          collectionNumber: `${reason} — device par mahfooz`,
+          collectionNumber: `${reason} — ${t("mk_saved_on_device", lang)}`,
           farmerName: item.farmer_label,
           liters: item.liters,
           flags: [],
@@ -239,7 +242,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
         ...prev,
       ]);
     } catch {
-      setError("Entry device par bhi mahfooz nahi ho saki. Kagaz par likh lein.");
+      setError(t("mk_device_save_failed", lang));
     }
   }
 
@@ -262,8 +265,8 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
             <p className="flex items-center gap-1.5 text-sm font-medium text-surface-800 dark:text-surface-200">
               <CloudOff className="h-4 w-4" />
               {online
-                ? `${waiting.length} entry device par, bheji ja rahi hai`
-                : "Network nahi hai — entries device par mahfooz ho rahi hain"}
+                ? `${waiting.length} ${t("mk_offline_sending", lang)}`
+                : t("mk_offline_saving", lang)}
             </p>
             {online && waiting.length > 0 && (
               <button
@@ -273,22 +276,21 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
                 className="flex items-center gap-1 rounded-lg border border-surface-300 px-2 py-1 text-xs disabled:opacity-50"
               >
                 <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "Ja rahi hain" : "Abhi bhejein"}
+                {syncing ? t("mk_sending", lang) : t("mk_send_now", lang)}
               </button>
             )}
           </div>
 
           {!online && waiting.length > 0 && (
             <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">
-              {waiting.length} entry qatar mein. Network aate hi khud chali jayengi — safha band kar dein
-              to bhi mahfooz rahengi.
+              {waiting.length} {t("mk_offline_queue_note", lang)}
             </p>
           )}
 
           {stuck.length > 0 && (
             <div className="mt-2 border-t border-amber-200 pt-2 dark:border-amber-800">
               <p className="text-xs font-medium text-red-700">
-                {stuck.length} entry ruk gayi — server ne qabool nahi ki:
+                {stuck.length} {t("mk_stuck", lang)}
               </p>
               <ul className="mt-1 space-y-1">
                 {stuck.map((q) => (
@@ -301,13 +303,13 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
                       onClick={() => void dropStuck(q.client_uuid)}
                       className="flex shrink-0 items-center gap-1 text-red-600 underline"
                     >
-                      <Trash2 className="h-3 w-3" /> hatayein
+                      <Trash2 className="h-3 w-3" /> {t("mk_remove", lang)}
                     </button>
                   </li>
                 ))}
               </ul>
               <p className="mt-1 text-xs text-surface-500">
-                Inhein dobara website se daalna hoga — wajah theek kiye baghair ye khud nahi jayengi.
+                {t("mk_stuck_note", lang)}
               </p>
             </div>
           )}
@@ -317,14 +319,14 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-        <label className="text-xs font-medium text-surface-600">Kisan *</label>
+        <label className="text-xs font-medium text-surface-600">{t("mk_farmer_req", lang)}</label>
         {chosen ? (
           <div className="mt-1 flex items-center justify-between rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 dark:bg-brand-950/20">
             <span className="text-sm font-medium text-surface-900 dark:text-white">
               {chosen.farmer_code} — {chosen.full_name}
             </span>
             <button type="button" onClick={() => setFarmerId("")} className="text-xs text-brand-700 underline">
-              badlein
+              {t("mk_change", lang)}
             </button>
           </div>
         ) : (
@@ -334,12 +336,12 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Naam ya code likhein"
+                placeholder={t("mk_search_name_code", lang)}
                 className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm"
               />
             </div>
             <ul className="mt-1 divide-y divide-surface-100 rounded-lg border border-surface-200 dark:divide-surface-800 dark:border-surface-800">
-              {matches.length === 0 && <li className="px-3 py-2 text-xs text-surface-400">Koi kisan nahi mila.</li>}
+              {matches.length === 0 && <li className="px-3 py-2 text-xs text-surface-400">{t("mk_no_farmer_found", lang)}</li>}
               {matches.map((f) => (
                 <li key={f.id}>
                   <button
@@ -357,7 +359,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-surface-600">Litre *</label>
+            <label className="text-xs font-medium text-surface-600">{t("mk_liters_req", lang)}</label>
             <input
               value={liters}
               onChange={(e) => setLiters(e.target.value)}
@@ -383,11 +385,11 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
         </div>
 
         <div className="mt-3">
-          <label className="text-xs font-medium text-surface-600">Shift</label>
+          <label className="text-xs font-medium text-surface-600">{t("mk_shift", lang)}</label>
           <div className="mt-1 grid grid-cols-2 gap-2">
             {[
-              { value: "morning", label: "Subah" },
-              { value: "evening", label: "Shaam" },
+              { value: "morning", label: t("mk_morning", lang) },
+              { value: "evening", label: t("mk_evening", lang) },
             ].map((s) => (
               <button
                 key={s.value}
@@ -407,7 +409,7 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
 
         <div className="mt-3">
           <label className="flex items-center gap-1 text-xs font-medium text-surface-600">
-            <Camera className="h-3 w-3" /> LR ki photo
+            <Camera className="h-3 w-3" /> {t("mk_lr_photo", lang)}
           </label>
           <input
             type="file"
@@ -416,10 +418,10 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
             onChange={(e) => onPhoto(e.target.files?.[0])}
             className="mt-1 w-full rounded-lg border border-surface-200 p-1.5 text-xs"
           />
-          {photoBusy && <p className="mt-1 text-xs text-surface-500">Tasveer taiyar ho rahi hai...</p>}
+          {photoBusy && <p className="mt-1 text-xs text-surface-500">{t("mk_photo_preparing", lang)}</p>}
           {photo && (
             <p className="mt-1 text-xs text-green-700">
-              Tasveer taiyar ({Math.round(photo.bytes / 1024)} KB)
+              {t("mk_photo_ready", lang)} ({Math.round(photo.bytes / 1024)} KB)
             </p>
           )}
         </div>
@@ -431,18 +433,18 @@ export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-base font-semibold text-white disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {busy ? "Mahfooz ho raha hai..." : online ? "Mahfooz Karein" : "Device par Mahfooz Karein"}
+          {busy ? t("mk_saving", lang) : online ? t("mk_save", lang) : t("mk_save_on_device", lang)}
         </button>
 
         <p className="mt-2 text-center text-xs text-surface-500">
-          FAT chiller par lagega — raqam us waqt banegi.
+          {t("mk_fat_at_chiller_note", lang)}
         </p>
       </div>
 
       {saved.length > 0 && (
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">
-            Abhi mahfooz kiye ({saved.length})
+            {t("mk_just_saved", lang)} ({saved.length})
           </h3>
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {saved.map((s) => (
