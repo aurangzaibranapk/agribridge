@@ -181,31 +181,34 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       .eq("warehouse_id", warehouseId)
       .eq("product_id", productId)
       .maybeSingle();
+    // Ginti yahan se NAHI badalti -- wo harkat par trigger karta hai (129).
     let inventoryId: string;
-    let balanceAfter: number;
     if (existingInv) {
       inventoryId = existingInv.id;
-      balanceAfter = Number(existingInv.quantity_on_hand) + netWeight;
-      await supabase.from("inventory").update({ quantity_on_hand: balanceAfter, updated_at: new Date().toISOString() }).eq("id", inventoryId);
     } else {
-      balanceAfter = netWeight;
       const { data: newInv } = await supabase
         .from("inventory")
-        .insert({ warehouse_id: warehouseId, product_id: productId, quantity_on_hand: netWeight })
+        .insert({ warehouse_id: warehouseId, product_id: productId })
         .select("id")
         .single();
       inventoryId = newInv?.id ?? "";
     }
     if (inventoryId) {
-      await supabase.from("stock_movements").insert({
+      // Pehle yahan "grain_procurement_in" likha hua tha. Wo lafz
+      // stock_movement_type enum mein hai hi nahi, is liye ye qatar
+      // HAMESHA nakaam hoti thi -- aur error kabhi parha nahi jata tha.
+      // Yani anaj ka stock sirf upar wali hath ki likhai se barhta tha
+      // aur us ka koi kaghaz nahi banta tha. "purchase_in" wohi baat hai
+      // jo yahan ho rahi hai: kisan se maal khareeda gaya.
+      const { error: movementError } = await supabase.from("stock_movements").insert({
         inventory_id: inventoryId,
-        movement_type: "grain_procurement_in",
+        movement_type: "purchase_in",
         quantity: netWeight,
-        balance_after: balanceAfter,
         reference_type: "grain_procurement",
         reference_id: entry.id,
         created_by: user?.id ?? null,
       });
+      if (movementError) return { error: `Anaj ka stock darj nahi hua: ${movementError.message}` };
     }
     await supabase.from("stock_batches").insert({
       product_id: productId,

@@ -259,16 +259,15 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     if (diff === 0 || !line.inventory_id) continue;
     const counted = Number(line.counted_qty);
 
-    await service
-      .from("inventory")
-      .update({ quantity_on_hand: counted, updated_at: new Date().toISOString() })
-      .eq("id", line.inventory_id);
+    // Ginti seedha nahi likhi jati -- neeche wali adjustment daalte hi
+    // trigger khud ginti gine hue adad par le aata hai (129). Pehle dono
+    // kaam hote the, yani farq dugna lag jata tha.
+    void counted;
 
     await service.from("stock_movements").insert({
       inventory_id: line.inventory_id,
       movement_type: diff < 0 ? "adjustment_decrease" : "adjustment_increase",
       quantity: Math.abs(diff),
-      balance_after: counted,
       reference_type: "stock_count",
       reference_id: countId,
       notes: updates.find((u) => u.id === line.id)?.reason ?? "Ginti se milaan",

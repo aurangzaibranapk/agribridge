@@ -36,6 +36,7 @@ declare
   v_warehouse uuid;
   v_org uuid;
   v_product uuid;
+  v_inventory uuid;
   r record;
 begin
   -- Shakh wo chuni jati hai jis se koi staff juRa hua ho. Wajah:
@@ -81,8 +82,16 @@ begin
 
     -- Godam ka stock. Sau adad, har cheez ki -- ek gol adad is liye ke
     -- jaanch ka jawab zehen mein bhi nikala ja sake.
-    insert into inventory (product_id, warehouse_id, quantity_on_hand)
-    values (v_product, v_warehouse, 100);
+    --
+    -- Qatar sifar se banti hai aur maal us mein HARKAT se aata hai (129).
+    -- Seedha ginti likhne ka koi raasta nahi -- aur ye theek hai: test ke
+    -- stock ka bhi wohi kaghaz hona chahiye jo asli maal ka hota hai.
+    insert into inventory (product_id, warehouse_id)
+    values (v_product, v_warehouse)
+    returning id into v_inventory;
+
+    insert into stock_movements (inventory_id, movement_type, quantity, reference_type, notes)
+    values (v_inventory, 'purchase_in', 100, 'seed', 'ZZTEST: shuruati stock');
 
     -- Batch alag se: POS ki LAGAT isi se nikalti hai, inventory se nahi.
     -- Batch na ho to lagat product ki purchase_price se li jati hai --

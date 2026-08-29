@@ -256,12 +256,13 @@ async function moveStock(
     .maybeSingle();
   if (fromInv) {
     const deduct = Math.min(qty, Number(fromInv.quantity_on_hand));
-    await supabase.from("inventory").update({ quantity_on_hand: Number(fromInv.quantity_on_hand) - deduct, updated_at: new Date().toISOString() }).eq("id", fromInv.id);
+    // Ginti yahan se NAHI badalti -- wo neeche wali harkat par trigger
+    // karta hai (129). Pehle dono kaam hote the, is liye har transfer par
+    // maal dugna nikalta tha. balance_after bhi trigger hi likhta hai.
     await supabase.from("stock_movements").insert({
       inventory_id: fromInv.id,
       movement_type: "transfer_out",
       quantity: deduct,
-      balance_after: Number(fromInv.quantity_on_hand) - deduct,
       reference_type: "stock_transfer",
       reference_id: transferId,
       created_by: userId,
@@ -275,12 +276,10 @@ async function moveStock(
     .eq("product_id", productId)
     .maybeSingle();
   if (toInv) {
-    await supabase.from("inventory").update({ quantity_on_hand: Number(toInv.quantity_on_hand) + qty, updated_at: new Date().toISOString() }).eq("id", toInv.id);
     await supabase.from("stock_movements").insert({
       inventory_id: toInv.id,
       movement_type: "transfer_in",
       quantity: qty,
-      balance_after: Number(toInv.quantity_on_hand) + qty,
       reference_type: "stock_transfer",
       reference_id: transferId,
       created_by: userId,
@@ -288,7 +287,9 @@ async function moveStock(
   } else {
     const { data: newInv } = await supabase
       .from("inventory")
-      .insert({ warehouse_id: toWarehouseId, product_id: productId, quantity_on_hand: qty })
+      // Nayi qatar hamesha sifar se banti hai (129); maal us mein neeche
+      // wali harkat se aata hai.
+      .insert({ warehouse_id: toWarehouseId, product_id: productId })
       .select("id")
       .single();
     if (newInv) {
@@ -296,7 +297,6 @@ async function moveStock(
         inventory_id: newInv.id,
         movement_type: "transfer_in",
         quantity: qty,
-        balance_after: qty,
         reference_type: "stock_transfer",
         reference_id: transferId,
         created_by: userId,

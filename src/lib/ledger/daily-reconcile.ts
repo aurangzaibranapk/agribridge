@@ -486,6 +486,48 @@ async function checkCashBookBalance(): Promise<CheckResult> {
   );
 }
 
+/**
+ * Godam ki ginti aur us ki apni harkaton ka jorh -- barabar?
+ *
+ * Cash book wali jaanch ka jorha. 129 se ginti likhne ka sirf ek raasta
+ * bacha hai (stock_movements) aur trigger us par pehra deta hai. Magar
+ * pehra trigger se lagta hai, aur trigger band bhi kiya ja sakta hai --
+ * is liye rok se alag ek nazar bhi chahiye.
+ */
+async function checkInventoryQuantity(): Promise<CheckResult> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("v_inventory_balance_check")
+    .select("product_name, warehouse_name, yaad_kiya_hua, asal_hisaab, farq");
+
+  if (error) {
+    return skip("inventory_quantity", "Godam ki ginti jaanchi nahi ja saki", error.message, "/admin/inventory");
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return pass(
+      "inventory_quantity",
+      "Godam ki ginti us ki harkaton ke barabar hai",
+      "Har cheez ka stock wohi hai jo us ke aane jaane ke jorh se nikalta hai."
+    );
+  }
+
+  const detail = rows
+    .slice(0, 3)
+    .map((r) => `${r.product_name} (${r.warehouse_name}): likha ${r.yaad_kiya_hua}, hona chahiye ${r.asal_hisaab}`)
+    .join(" | ");
+
+  return fail(
+    "inventory_quantity",
+    "red",
+    `${rows.length} jagah godam ki ginti harkaton se hat chuki hai`,
+    `${detail}. Ye ginti kisi ne seedha likhi hai, ya koi harkat bina trigger ke daali gayi hai.`,
+    round2(rows.reduce((sum, r) => sum + Math.abs(Number(r.farq ?? 0)), 0)),
+    "/admin/inventory"
+  );
+}
+
 export interface RunSummary {
   verdict: "clean" | "issues" | "partial";
   total: number;
@@ -509,6 +551,7 @@ export async function runChecks(): Promise<RunSummary> {
     // upar khari hain. Buniyad hi ghalat ho to un sab ka "theek hai"
     // jhooti tasalli hai.
     checkCashBookBalance,
+    checkInventoryQuantity,
     checkBalanced,
     checkAllPosted,
     checkSuspense,

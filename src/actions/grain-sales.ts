@@ -109,12 +109,13 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
   if (error) return { error: error.message };
 
   if (inv) {
-    await supabase.from("inventory").update({ quantity_on_hand: available - quantity, updated_at: new Date().toISOString() }).eq("id", inv.id);
+    // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
+    // "grain_sale_out" bhi enum mein nahi tha, yani ye qatar hamesha
+    // nakaam hoti thi aur anaj ka nikalna kahin darj hi nahi hota tha.
     await supabase.from("stock_movements").insert({
       inventory_id: inv.id,
-      movement_type: "grain_sale_out",
+      movement_type: "sale_out",
       quantity,
-      balance_after: available - quantity,
       reference_type: "grain_sale",
       reference_id: sale.id,
       created_by: user?.id ?? null,

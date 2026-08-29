@@ -232,21 +232,37 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
 
         const { data: existingStock } = await supabase
           .from("inventory")
-          .select("id, quantity_on_hand")
+          .select("id")
           .eq("warehouse_id", warehouse.id)
           .eq("product_id", item.product_id)
           .maybeSingle();
 
-        if (existingStock) {
-          await supabase
-            .from("inventory")
-            .update({ quantity_on_hand: Number(existingStock.quantity_on_hand) + item.received_qty })
-            .eq("id", existingStock.id);
-        } else {
-          await supabase.from("inventory").insert({
-            warehouse_id: warehouse.id,
-            product_id: item.product_id,
-            quantity_on_hand: item.received_qty,
+        // Ye jagah baqi sab se alag tarah kharab thi: yahan ginti to
+        // badalti thi magar stock_movements mein KUCH LIKHA HI NAHI
+        // JATA tha. Yani maal godam mein aata tha aur us ka koi kaghaz
+        // nahi banta -- "ye sau bore kahan se aaye" ka jawab kahin nahi
+        // milta, aur GRN ka poora maqsad yehi sawal hai.
+        //
+        // Ab ginti khud nahi likhi jati (trigger karta hai, 129) aur
+        // harkat darj hoti hai.
+        const inventoryId =
+          existingStock?.id ??
+          (
+            await supabase
+              .from("inventory")
+              .insert({ warehouse_id: warehouse.id, product_id: item.product_id })
+              .select("id")
+              .single()
+          ).data?.id;
+
+        if (inventoryId) {
+          await supabase.from("stock_movements").insert({
+            inventory_id: inventoryId,
+            movement_type: "purchase_in",
+            quantity: item.received_qty,
+            reference_type: "agri_grn",
+            reference_id: orderId,
+            created_by: user?.id ?? null,
           });
         }
         if (item.batch_no) {

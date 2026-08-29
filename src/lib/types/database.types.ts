@@ -11224,6 +11224,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_count_lines_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balance_check"
+            referencedColumns: ["inventory_id"]
+          },
+          {
             foreignKeyName: "stock_count_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -11430,7 +11437,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
-          balance_after: number
+          balance_after: number | null
           created_at: string
           created_by: string | null
           id: string
@@ -11442,7 +11449,7 @@ export type Database = {
           reference_type: string | null
         }
         Insert: {
-          balance_after: number
+          balance_after?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -11454,7 +11461,7 @@ export type Database = {
           reference_type?: string | null
         }
         Update: {
-          balance_after?: number
+          balance_after?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -11472,6 +11479,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balance_check"
+            referencedColumns: ["inventory_id"]
           },
         ]
       }
@@ -12834,6 +12848,17 @@ export type Database = {
         }
         Relationships: []
       }
+      v_inventory_balance_check: {
+        Row: {
+          asal_hisaab: number | null
+          farq: number | null
+          inventory_id: string | null
+          product_name: string | null
+          warehouse_name: string | null
+          yaad_kiya_hua: number | null
+        }
+        Relationships: []
+      }
       v_ledger_coverage: {
         Row: {
           pending: number | null
@@ -12940,28 +12965,17 @@ export type Database = {
       }
     }
     Functions: {
-      create_pos_sale:
-        | {
-            Args: {
-              p_cash_paid: number
-              p_customer_id: string
-              p_items: Json
-              p_khata_amount: number
-              p_payment_mode: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_cash_paid: number
-              p_customer_id: string
-              p_items: Json
-              p_khata_amount: number
-              p_payment_lines?: Json
-              p_payment_mode: string
-            }
-            Returns: string
-          }
+      create_pos_sale: {
+        Args: {
+          p_cash_paid: number
+          p_customer_id: string
+          p_items: Json
+          p_khata_amount: number
+          p_payment_lines?: Json
+          p_payment_mode: string
+        }
+        Returns: string
+      }
       current_dealer_id: { Args: never; Returns: string }
       current_shop_id: { Args: never; Returns: string }
       fn_bump_farmer_code_counter: {
@@ -13020,6 +13034,10 @@ export type Database = {
           dealer_id: string
           unit_price: number
         }[]
+      }
+      fn_inventory_true_quantity: {
+        Args: { p_inventory_id: string }
+        Returns: number
       }
       fn_is_admin_level: { Args: never; Returns: boolean }
       fn_is_any_staff: { Args: never; Returns: boolean }
@@ -13137,6 +13155,7 @@ export type Database = {
         | "return_in"
         | "damaged_out"
         | "expired_out"
+        | "loss_write_off"
       stock_transfer_status:
         | "pending"
         | "in_transit"
@@ -13405,6 +13424,7 @@ export const Constants = {
         "return_in",
         "damaged_out",
         "expired_out",
+        "loss_write_off",
       ],
       stock_transfer_status: [
         "pending",

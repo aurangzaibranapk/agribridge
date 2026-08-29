@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Stock ki harkat ka ek hi markazi tareeqa — inventory ghatana/barhana,
- * FIFO se batches nikalna, aur har harkat stock_movements mein likhna.
+ * Stock ki harkat ka ek hi markazi tareeqa — FIFO se batches nikalna,
+ * aur har harkat stock_movements mein likhna.
+ *
+ * Ginti (inventory.quantity_on_hand) yahan se NAHI badalti. Wo un
+ * harkaton ka jorh hai, aur us ka hisaab database khud karta hai (129).
+ * Pehle ye file dono kaam karti thi -- apne haath se ginti bhi badalti
+ * thi aur harkat bhi daalti thi -- is liye har transfer, GRN, dispatch
+ * aur return par maal DUGNA hilta tha.
  *
  * Pehle ye code stock-transfer-workflow ke andar band tha, is liye
  * ordering aur returns mein stock kabhi hilta hi nahi tha. Ab jo bhi
@@ -74,15 +80,18 @@ async function deductStock(
   // ho to utna hi nikalte hain jitna maujood hai, warna ginti ulti par
   // chali jati hai aur baad mein pata bhi nahi chalta.
   const deduct = Math.min(qty, Number(inv.quantity_on_hand));
-  await supabase
-    .from("inventory")
-    .update({ quantity_on_hand: Number(inv.quantity_on_hand) - deduct, updated_at: new Date().toISOString() })
-    .eq("id", inv.id);
+
+  // Sirf HARKAT. Ginti khud nahi badalte -- wo is qatar par trigger
+  // karta hai (129). Pehle yahan dono kaam hote the, is liye har transfer,
+  // GRN aur dispatch par maal DUGNA hilta tha.
+  //
+  // balance_after bhi nahi bhejte: wo bhi trigger likhta hai, aur yahan
+  // se bheja gaya adad us waqt purana ho chuka hota hai jab do kaam ek
+  // sath ho rahe hon.
   await supabase.from("stock_movements").insert({
     inventory_id: inv.id,
     movement_type: movementType,
     quantity: deduct,
-    balance_after: Number(inv.quantity_on_hand) - deduct,
     reference_type: referenceType,
     reference_id: referenceId,
     created_by: userId,
@@ -107,39 +116,32 @@ async function addStock(
     .eq("product_id", productId)
     .maybeSingle();
 
-  if (inv) {
-    await supabase
-      .from("inventory")
-      .update({ quantity_on_hand: Number(inv.quantity_on_hand) + qty, updated_at: new Date().toISOString() })
-      .eq("id", inv.id);
-    await supabase.from("stock_movements").insert({
-      inventory_id: inv.id,
-      movement_type: movementType,
-      quantity: qty,
-      balance_after: Number(inv.quantity_on_hand) + qty,
-      reference_type: referenceType,
-      reference_id: referenceId,
-      created_by: userId,
-    });
-    return;
-  }
+  // Nayi qatar ho ya purani, kaam ek hi hai: harkat daal do. Nayi qatar
+  // hamesha sifar se banti hai (129 ka trigger), aur maal us mein isi
+  // harkat se aata hai -- yani har bori ka koi na koi kaghaz hota hai.
+  //
+  // Pehle nayi qatar seedha ginti ke sath banti thi AUR uske baad harkat
+  // bhi daali jati thi, yani pehli hi dafa maal dugna ho jata tha.
+  const inventoryId =
+    inv?.id ??
+    (
+      await supabase
+        .from("inventory")
+        .insert({ warehouse_id: warehouseId, product_id: productId })
+        .select("id")
+        .single()
+    ).data?.id;
 
-  const { data: newInv } = await supabase
-    .from("inventory")
-    .insert({ warehouse_id: warehouseId, product_id: productId, quantity_on_hand: qty })
-    .select("id")
-    .single();
-  if (newInv) {
-    await supabase.from("stock_movements").insert({
-      inventory_id: newInv.id,
-      movement_type: movementType,
-      quantity: qty,
-      balance_after: qty,
-      reference_type: referenceType,
-      reference_id: referenceId,
-      created_by: userId,
-    });
-  }
+  if (!inventoryId) return;
+
+  await supabase.from("stock_movements").insert({
+    inventory_id: inventoryId,
+    movement_type: movementType,
+    quantity: qty,
+    reference_type: referenceType,
+    reference_id: referenceId,
+    created_by: userId,
+  });
 }
 
 export interface StockMoveOptions {
