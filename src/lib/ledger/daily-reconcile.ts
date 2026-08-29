@@ -487,6 +487,54 @@ async function checkCashBookBalance(): Promise<CheckResult> {
 }
 
 /**
+ * Supplier ko jitna dena likha hai, utna hi banta bhi hai?
+ *
+ * Cash book aur godam wali jaanch ka teesra jorha. 139 se pehle ye adad
+ * teen jagah se haath se ghataya jata tha aur kahin se barhta hi nahi
+ * tha -- yani jis adad par ye faisla hota hai ke kis supplier ko paisa
+ * bhejna hai, wo kisi hisaab se nahi banta tha.
+ */
+async function checkSupplierPayable(): Promise<CheckResult> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("v_supplier_payable_check")
+    .select("supplier_name, yaad_kiya_hua, asal_hisaab, farq");
+
+  if (error) {
+    return skip(
+      "supplier_payable",
+      "Supplier ka dena jaancha nahi ja saka",
+      error.message,
+      "/admin/purchases/bills"
+    );
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return pass(
+      "supplier_payable",
+      "Supplier ka dena asal hisaab ke barabar hai",
+      "Har supplier ka baqi wohi hai jo wusool shuda kharidari mein se adaigi nikal kar banta hai."
+    );
+  }
+
+  const total = round2(rows.reduce((sum, r) => sum + Math.abs(Number(r.farq ?? 0)), 0));
+  const detail = rows
+    .slice(0, 3)
+    .map((r) => `${r.supplier_name}: likha Rs ${Number(r.yaad_kiya_hua ?? 0).toLocaleString()}, hona chahiye Rs ${Number(r.asal_hisaab ?? 0).toLocaleString()}`)
+    .join(" | ");
+
+  return fail(
+    "supplier_payable",
+    "red",
+    `${rows.length} supplier ka dena asal hisaab se hat chuka hai`,
+    `${detail}. Ye adad kisi ne seedha likha hai, ya koi kharidari/adaigi bina trigger ke daali gayi hai.`,
+    total,
+    "/admin/purchases/bills"
+  );
+}
+
+/**
  * Godam ki ginti aur us ki apni harkaton ka jorh -- barabar?
  *
  * Cash book wali jaanch ka jorha. 129 se ginti likhne ka sirf ek raasta
@@ -552,6 +600,7 @@ export async function runChecks(): Promise<RunSummary> {
     // jhooti tasalli hai.
     checkCashBookBalance,
     checkInventoryQuantity,
+    checkSupplierPayable,
     checkBalanced,
     checkAllPosted,
     checkSuspense,

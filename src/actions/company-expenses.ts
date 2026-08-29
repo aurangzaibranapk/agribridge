@@ -97,11 +97,9 @@ export async function approveExpense(_prev: ActionState, formData: FormData): Pr
     return { error: `Kharcha manzoor to ho gaya magar ledger mein nahi gaya: ${posted.error}` };
   }
 
-  if (expense?.category === "supplier_payment" && expense.supplier_id) {
-    const { data: supplier } = await supabase.from("suppliers").select("current_payable").eq("id", expense.supplier_id).single();
-    const newPayable = Math.max(0, Number(supplier?.current_payable ?? 0) - Number(expense.amount));
-    await supabase.from("suppliers").update({ current_payable: newPayable }).eq("id", expense.supplier_id);
-  }
+  // Supplier ka payable yahan se NAHI ghataya jata. Kharche ki halat
+  // "approved" hote hi trigger khud hisaab dobara laga deta hai (139) --
+  // aur wo is raaste ko ginta bhi hai, is liye adaigi gum nahi hoti.
   await logAudit({
     actionType: "approve",
     module: "company_expenses",

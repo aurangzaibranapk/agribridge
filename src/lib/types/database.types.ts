@@ -127,6 +127,13 @@ export type Database = {
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agri_complaints_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       agri_deliveries: {
@@ -203,11 +210,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_deliveries_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["dispatch_id"]
+          },
+          {
             foreignKeyName: "agri_deliveries_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -326,6 +347,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_dispatch_items_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["dispatch_id"]
+          },
+          {
             foreignKeyName: "agri_dispatch_items_order_item_id_fkey"
             columns: ["order_item_id"]
             isOneToOne: false
@@ -399,6 +427,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_dispatches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "agri_dispatches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
             foreignKeyName: "agri_dispatches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -465,6 +507,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_feedback_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -545,6 +594,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_grns"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_grn_items_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["grn_id"]
           },
           {
             foreignKeyName: "agri_grn_items_order_item_id_fkey"
@@ -644,6 +700,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_grns_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["dispatch_id"]
+          },
+          {
             foreignKeyName: "agri_grns_finalized_by_fkey"
             columns: ["finalized_by"]
             isOneToOne: false
@@ -656,6 +719,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_grns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "agri_grns_warehouse_reviewed_by_fkey"
@@ -778,6 +848,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "agri_order_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -852,6 +929,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "agri_order_payments_verified_by_fkey"
@@ -989,6 +1073,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_order_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "agri_order_returns_received_by_fkey"
             columns: ["received_by"]
             isOneToOne: false
@@ -1036,6 +1127,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_timeline_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -2009,6 +2107,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agri_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_credit_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -3016,6 +3121,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -5837,6 +5949,13 @@ export type Database = {
             foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -6100,6 +6219,13 @@ export type Database = {
             foreignKeyName: "grain_sales_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "grain_sales_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -6353,6 +6479,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "shops"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "inventory_warehouse_id_fkey"
@@ -10258,6 +10391,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
         ]
       }
       quantity_reconciliations: {
@@ -11443,6 +11583,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "staff_messages_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "v_grn_queue"
+            referencedColumns: ["order_id"]
+          },
+          {
             foreignKeyName: "staff_messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
@@ -11610,6 +11757,13 @@ export type Database = {
             foreignKeyName: "stock_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -11766,6 +11920,13 @@ export type Database = {
             foreignKeyName: "stock_counts_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_counts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -11869,6 +12030,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "stock_loss_records_warehouse_id_fkey"
@@ -12048,6 +12216,13 @@ export type Database = {
             foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
             columns: ["from_warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -12078,6 +12253,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
           },
           {
             foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
@@ -12166,6 +12348,60 @@ export type Database = {
           },
         ]
       }
+      supplier_payable_repairs: {
+        Row: {
+          adaigi_ginti: number
+          farq: number
+          id: string
+          kharidari_ginti: number
+          naya_payable: number
+          purana_payable: number
+          repaired_at: string
+          supplier_id: string
+          supplier_name: string
+          wajah: string
+        }
+        Insert: {
+          adaigi_ginti: number
+          farq: number
+          id?: string
+          kharidari_ginti: number
+          naya_payable: number
+          purana_payable: number
+          repaired_at?: string
+          supplier_id: string
+          supplier_name: string
+          wajah: string
+        }
+        Update: {
+          adaigi_ginti?: number
+          farq?: number
+          id?: string
+          kharidari_ginti?: number
+          naya_payable?: number
+          purana_payable?: number
+          repaired_at?: string
+          supplier_id?: string
+          supplier_name?: string
+          wajah?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payable_repairs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payable_repairs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       supplier_payment_request_counters: {
         Row: {
           last_number: number
@@ -12249,6 +12485,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_payment_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
         ]
       }
       supplier_payments: {
@@ -12299,6 +12542,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -12935,6 +13185,13 @@ export type Database = {
             foreignKeyName: "warehouse_bins_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "warehouse_bins_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -13299,6 +13556,42 @@ export type Database = {
         }
         Relationships: []
       }
+      v_grain_warehouse_stock: {
+        Row: {
+          aausat_lagat_fi_kg: number | null
+          aaya_kg: number | null
+          gaya_kg: number | null
+          grain_type: string | null
+          kharidari_ki_raqam: number | null
+          maujood_kg: number | null
+          maujood_ki_lagat: number | null
+          warehouse_id: string | null
+          warehouse_name: string | null
+        }
+        Relationships: []
+      }
+      v_grn_queue: {
+        Row: {
+          damage_amount: number | null
+          din_purani: number | null
+          dispatch_date: string | null
+          dispatch_id: string | null
+          dispatch_number: string | null
+          driver_name: string | null
+          final_payable_amount: number | null
+          grand_total: number | null
+          grn_id: string | null
+          grn_number: string | null
+          order_id: string | null
+          order_number: string | null
+          payable_amount: number | null
+          queue: string | null
+          shop_dealer_name: string | null
+          shortage_amount: number | null
+          vehicle_no: string | null
+        }
+        Relationships: []
+      }
       v_inventory_balance_check: {
         Row: {
           asal_hisaab: number | null
@@ -13479,6 +13772,30 @@ export type Database = {
         }
         Relationships: []
       }
+      v_supplier_payable_check: {
+        Row: {
+          asal_hisaab: number | null
+          farq: number | null
+          supplier_id: string | null
+          supplier_name: string | null
+          yaad_kiya_hua: number | null
+        }
+        Insert: {
+          asal_hisaab?: never
+          farq?: never
+          supplier_id?: string | null
+          supplier_name?: string | null
+          yaad_kiya_hua?: number | null
+        }
+        Update: {
+          asal_hisaab?: never
+          farq?: never
+          supplier_id?: string | null
+          supplier_name?: string | null
+          yaad_kiya_hua?: number | null
+        }
+        Relationships: []
+      }
       v_user_feature_access: {
         Row: {
           actions: string[] | null
@@ -13584,6 +13901,10 @@ export type Database = {
       fn_set_staff_auth_code: {
         Args: { p_code: string; p_profile_id: string }
         Returns: undefined
+      }
+      fn_supplier_true_payable: {
+        Args: { p_supplier_id: string }
+        Returns: number
       }
       get_daily_sales_summary: {
         Args: { p_date?: string }

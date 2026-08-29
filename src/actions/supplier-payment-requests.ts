@@ -114,13 +114,9 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
   });
   if (paymentError) return { error: paymentError.message };
 
-  const { data: supplier } = await supabase.from("suppliers").select("current_payable").eq("id", request.supplier_id).single();
-  if (supplier) {
-    await supabase
-      .from("suppliers")
-      .update({ current_payable: Math.max(0, Number(supplier.current_payable) - Number(request.amount)) })
-      .eq("id", request.supplier_id);
-  }
+  // Payable yahan se NAHI ghataya jata -- upar wali supplier_payments
+  // ki qatar daalte hi trigger khud kar deta hai (139). Pehle dono kaam
+  // hote the, yani ek hi adaigi do dafa katne ka raasta khula tha.
 
   revalidatePath("/admin/finance/queue");
   revalidatePath("/admin/suppliers");

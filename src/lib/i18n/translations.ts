@@ -13,6 +13,7 @@ import { hrDict, attendanceLogDict } from "./dict/hr";
 import { inventoryDict, stockCountDict, stockTransferDict } from "./dict/inventory";
 import { purchasesDict } from "./dict/purchases";
 import { grainDict } from "./dict/grain";
+import { purchaseGrainPagesDict } from "./dict/purchase-grain-pages";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -64,6 +65,7 @@ const dict = {
   ...stockTransferDict,
   ...purchasesDict,
   ...grainDict,
+  ...purchaseGrainPagesDict,
 };
 
 export type TranslationKey = keyof typeof dict;
