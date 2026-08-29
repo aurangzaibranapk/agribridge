@@ -40,6 +40,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
   const machine = Array.isArray(booking.machinery_vendor_machines)
     ? booking.machinery_vendor_machines[0]
     : booking.machinery_vendor_machines;
+  const vendorRow = Array.isArray(booking.machinery_vendors) ? booking.machinery_vendors[0] : booking.machinery_vendors;
+  const vendorName = vendorRow?.vendor_name ?? null;
 
   const advanceTotal = (payments ?? [])
     .filter((p) => p.kind === "advance")
@@ -123,6 +125,9 @@ export default async function MachineryBookingPage({ params }: { params: Promise
               advance_adjusted: Number(bill.advance_adjusted),
               previous_payment: Number(bill.previous_payment),
               balance_payable: Number(bill.balance_payable),
+              commission_percentage: Number(bill.commission_percentage),
+              commission_amount: Number(bill.commission_amount),
+              vendor_payable: Number(bill.vendor_payable),
             }
           : null
       }
@@ -137,6 +142,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
       advanceTotal={advanceTotal}
       finalPaid={finalPaid}
+      vendorName={vendorName}
+      paidToVendor={Number(booking.amount_paid_to_vendor ?? 0)}
       canOverride={["owner", "super_admin", "admin", "manager"].includes(profile?.role ?? "")}
     />
   );

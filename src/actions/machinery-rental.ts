@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { postCashIn, postCashOut, postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
+import { createServiceClient } from "@/lib/supabase/service";
+import { postCashIn, postCashOut, postWalletMovement, postMachineryVendorPayout, ACC, failed } from "@/lib/ledger/rules";
 import { notifyRoles } from "@/lib/notifications";
 
 export interface ActionState {
@@ -265,32 +266,60 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
   if (!accountId) return { error: "Account select karein." };
 
-  const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number").eq("id", bookingId).single();
+  const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number, vendor_id").eq("id", bookingId).single();
   if (!booking) return { error: "Booking nahi mili." };
-  const remaining = Number(booking.vendor_payable) - Number(booking.amount_paid_to_vendor);
+  const remaining = Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor);
   if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} Vendor ko dena baaqi hai.` };
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  await supabase.from("machinery_bookings").update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + amount }).eq("id", bookingId);
+  const { data: txn, error: txnError } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "expense",
+      category: "Machinery Rental - Vendor Payout",
+      amount,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Booking ${booking.booking_number} - Vendor payout`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (txnError || !txn) return { error: txnError?.message ?? "Payout darj nahi hua." };
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "expense",
-    category: "Machinery Rental - Vendor Payout",
+  // Account ka balance yahan haath se KAM NAHI kiya jata.
+  //
+  // finance_transactions par trigger (trg_finance_transaction_apply) khud
+  // ye kaam karta hai. Pehle yahan dobara bhi kata jata tha, yani Rs 1,000
+  // ke payout par balance Rs 2,000 kam hota tha. Jaanch kar ke dekha:
+  // 0 -> trigger ke baad -1000 -> code ke apne update ke baad -2000.
+
+  const posted = await postMachineryVendorPayout({
+    bookingId,
+    vendorId: booking.vendor_id,
     amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    notes: `Booking ${booking.booking_number} - Vendor payout`,
-    created_by: user?.id ?? null,
+    accountId,
+    description: `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: [{ table: "finance_transactions", rowId: txn.id }],
+    },
   });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - amount }).eq("id", accountId);
+  if (failed(posted)) {
+    await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }
 
+  await supabase
+    .from("machinery_bookings")
+    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + amount })
+    .eq("id", bookingId);
+
   revalidatePath("/admin/machinery-rental");
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
   revalidatePath("/admin/finance");
   return { success: true };
 }

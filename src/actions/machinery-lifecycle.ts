@@ -735,7 +735,7 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number, status, farmer_id, final_rate, rate_status")
+    .select("id, booking_number, status, farmer_id, vendor_id, final_rate, rate_status")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
@@ -775,6 +775,19 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   const advanceAdjusted = Math.min(advanceTotal, gross);
   const balance = Math.round((gross - advanceAdjusted - previousPayment) * 100) / 100;
 
+  // Commission ASAL raqbe par -- yani bill ke gross par, booking ke andaze
+  // par nahi. Rate platform_settings se aata hai (deploy ke baghair badla
+  // ja sake), aur bill us waqt ka rate apne andar likh leta hai: kal rate
+  // badle to pichle bill wahi rehte hain jo tay hue the.
+  const { data: rateRow } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "machinery_commission_rate")
+    .maybeSingle();
+  const commissionPct = Number(rateRow?.value ?? 12);
+  const commissionAmount = Math.round(gross * (commissionPct / 100) * 100) / 100;
+  const vendorPayable = Math.round((gross - commissionAmount) * 100) / 100;
+
   const billNumber = await nextNumber(supabase, "machinery_bill_counters", "MBL");
 
   const { data: bill, error } = await supabase
@@ -788,6 +801,9 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
       advance_adjusted: advanceAdjusted,
       previous_payment: previousPayment,
       balance_payable: balance,
+      commission_percentage: commissionPct,
+      commission_amount: commissionAmount,
+      vendor_payable: vendorPayable,
       created_by: actorId,
     })
     .select("id")
@@ -797,7 +813,10 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   const posted = await postMachineryBill({
     bookingId,
     farmerId: booking.farmer_id,
+    vendorId: booking.vendor_id,
     grossAmount: gross,
+    commissionAmount,
+    vendorPayable,
     advanceAdjusted,
     description: `Machinery ${booking.booking_number} — bill ${billNumber} (${area} acre x Rs ${rate})`,
     ctx: {
@@ -813,7 +832,13 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
 
   await supabase
     .from("machinery_bookings")
-    .update({ status: balance > 0 ? "payment_pending" : "closed", total_amount: gross })
+    .update({
+      status: balance > 0 ? "payment_pending" : "closed",
+      total_amount: gross,
+      commission_percentage: commissionPct,
+      commission_amount: commissionAmount,
+      vendor_payable: vendorPayable,
+    })
     .eq("id", bookingId);
 
   await logEvent({
@@ -821,7 +846,7 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
     eventType: "bill_generated",
     fromStatus: booking.status,
     toStatus: balance > 0 ? "payment_pending" : "closed",
-    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${gross.toLocaleString()}, advance Rs ${advanceAdjusted.toLocaleString()}, baqi Rs ${balance.toLocaleString()}`,
+    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${gross.toLocaleString()} (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${advanceAdjusted.toLocaleString()}, baqi Rs ${balance.toLocaleString()}`,
     actorId,
   });
 

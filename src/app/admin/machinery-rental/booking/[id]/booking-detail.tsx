@@ -13,6 +13,7 @@ import {
   cancelBooking,
   type ActionState,
 } from "@/actions/machinery-lifecycle";
+import { recordVendorPayout } from "@/actions/machinery-rental";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
@@ -92,23 +93,28 @@ export function BookingDetail({
   accounts,
   advanceTotal,
   finalPaid,
+  vendorName,
+  paidToVendor,
   canOverride,
 }: {
   booking: Booking;
   payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null }>;
   dispatches: Array<{ id: string; operator_name: string | null; departure_at: string; opening_meter: number | null; fuel_litres: number | null }>;
   work: { actual_area: number; started_at: string | null; finished_at: string | null; completion_photo_url: string | null; farmer_confirmed: boolean } | null;
-  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number } | null;
+  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string }>;
   machines: Array<{ id: string; label: string }>;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   advanceTotal: number;
   finalPaid: number;
+  vendorName: string | null;
+  paidToVendor: number;
   canOverride: boolean;
 }) {
   const confirmed = Boolean(booking.farmer_confirmed_at) || Boolean(booking.confirmation_override_reason);
   const balance = bill ? Math.round((bill.balance_payable - finalPaid) * 100) / 100 : null;
   const cancelled = booking.status === "cancelled";
+  const vendorRemaining = bill ? Math.round((bill.vendor_payable - paidToVendor) * 100) / 100 : 0;
 
   return (
     <div className="space-y-4 pb-24">
@@ -281,6 +287,32 @@ export function BookingDetail({
               work && <BillForm bookingId={booking.id} />
             )}
           </StepCard>
+
+          {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
+          {bill && (
+            <StepCard n={7} title="Vendor ka Hissa" done={vendorRemaining <= 0}>
+              <div className="mb-3 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
+                <Row label={`Gross bill (${bill.actual_area} acre)`} value={bill.gross_amount} />
+                <Row label={`Hamara commission (${bill.commission_percentage}%)`} value={-bill.commission_amount} />
+                <div className="mt-1 flex justify-between border-t border-surface-200 pt-1 font-medium dark:border-surface-700">
+                  <span>{vendorName ?? "Vendor"} ko dena</span>
+                  <span>Rs {bill.vendor_payable.toLocaleString()}</span>
+                </div>
+                {paidToVendor > 0 && <Row label="Ab tak diya" value={-paidToVendor} />}
+                <div className="mt-1 flex justify-between font-display font-semibold">
+                  <span>Baqi</span>
+                  <span className={vendorRemaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-brand-700 dark:text-brand-300"}>
+                    Rs {vendorRemaining.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <p className="mb-3 text-xs text-surface-500">
+                Kisan ka poora paisa hamari aamdani nahi. Bill bante hi commission hamara aur baqi vendor ka ho jata
+                hai — wo raqam sirf hamare paas se guzar rahi hoti hai.
+              </p>
+              {vendorRemaining > 0 && <VendorPayoutForm bookingId={booking.id} accounts={accounts} remaining={vendorRemaining} />}
+            </StepCard>
+          )}
 
           {/* Final payment */}
           {bill && (balance ?? 0) > 0 && (
@@ -717,6 +749,42 @@ function PaymentForm({
         <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
       </div>
       <Submit label="Payment darj karein" />
+    </form>
+  );
+}
+
+function VendorPayoutForm({
+  bookingId,
+  accounts,
+  remaining,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  remaining: number;
+}) {
+  const [state, action] = useFormState(recordVendorPayout, initialState);
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Raqam (baqi Rs {remaining.toLocaleString()})</Label>
+          <Input type="number" name="amount" step="0.01" />
+        </div>
+        <div>
+          <Label>Kis khate se</Label>
+          <Select name="account_id" defaultValue="">
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </div>
+      <Submit label="Vendor ko payout darj karein" />
     </form>
   );
 }

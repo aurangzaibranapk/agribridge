@@ -802,10 +802,19 @@ export async function postMachineryAdvance(args: {
 /**
  * Final bill bana -- yahan aamdani paida hoti hai.
  *
- * Do jorey ek hi entry mein:
+ * Teen jorey ek hi entry mein:
  *
- *   1. Kisan par bojh aaya, aamdani bani     (1150 / 4030)
- *   2. Jo advance pehle pakRa tha, wo khula  (2030 / 1150)
+ *   1. Kisan par poora bojh aaya             (1150 debit, gross)
+ *   2. Us mein se hamari aamdani sirf         (4030 credit, commission)
+ *      commission hai
+ *   3. Baqi vendor ka hai, hamare paas amanat (2000 credit, vendor ka hissa)
+ *   4. Jo advance pehle pakRa tha, wo khula   (2030 / 1150)
+ *
+ * Sab se ahem baat teesri hai: machine vendor ki hai. Kisan Rs 71,250 deta
+ * hai magar hamara us mein sirf 12% hai -- baqi Rs 62,700 vendor ka hai aur
+ * sirf hamare paas se guzar raha hai. Poora gross aamdani ginana mahine ka
+ * munafa asal se kai guna zyada dikhata hai, aur wo ghalti cash barabar
+ * rehne ki wajah se kabhi khud nazar nahi aati.
  *
  * Dono ek hi entry mein is liye hain ke ye ek hi waqia hai. Alag alag
  * entries banane par ye mumkin ho jata hai ke pehli ban jaye aur doosri
@@ -818,7 +827,10 @@ export async function postMachineryAdvance(args: {
 export async function postMachineryBill(args: {
   bookingId: string;
   farmerId: string;
+  vendorId?: string | null;
   grossAmount: number;
+  commissionAmount: number;
+  vendorPayable: number;
   advanceAdjusted: number;
   description: string;
   ctx: EventContext;
@@ -831,8 +843,18 @@ export async function postMachineryBill(args: {
       partyId: args.farmerId,
       memo: args.description,
     },
-    { account: ACC.machineryIncome, credit: args.grossAmount, memo: args.description },
+    { account: ACC.machineryIncome, credit: args.commissionAmount, memo: `${args.description} — hamara commission` },
   ];
+
+  if (args.vendorPayable > 0) {
+    lines.push({
+      account: ACC.supplierPayable,
+      credit: args.vendorPayable,
+      partyType: "machinery_vendor",
+      partyId: args.vendorId ?? null,
+      memo: `${args.description} — vendor ka hissa`,
+    });
+  }
 
   if (args.advanceAdjusted > 0) {
     lines.push({
@@ -924,6 +946,45 @@ export async function postMachineryPayment(args: {
         partyId: args.farmerId,
         memo: args.description,
       },
+    ],
+  });
+}
+
+/**
+ * Vendor ko us ka hissa diya.
+ *
+ * Ye kharcha NAHI hai. Kharcha us din ho chuka tha jis din bill bana aur
+ * vendor ka hissa 2000 mein rakha gaya. Aaj sirf wo bojh utar raha hai.
+ * Ise dobara kharcha ginana wahi ek raqam do dafa ginana hoga -- aur us
+ * soorat mein munafa asal se kam dikhta hai, jo utni hi bari ghalti hai
+ * jitni zyada dikhana.
+ */
+export async function postMachineryVendorPayout(args: {
+  bookingId: string;
+  vendorId?: string | null;
+  amount: number;
+  accountId?: string | null;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_vendor_payout",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      {
+        account: ACC.supplierPayable,
+        debit: args.amount,
+        partyType: "machinery_vendor",
+        partyId: args.vendorId ?? null,
+        memo: args.description,
+      },
+      { account: gl, credit: args.amount, memo: args.description },
     ],
   });
 }

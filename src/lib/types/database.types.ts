@@ -7201,12 +7201,15 @@ export type Database = {
           bill_date: string
           bill_number: string
           booking_id: string
+          commission_amount: number
+          commission_percentage: number
           created_at: string
           created_by: string | null
           gross_amount: number
           id: string
           previous_payment: number
           rate_amount: number
+          vendor_payable: number
         }
         Insert: {
           actual_area: number
@@ -7215,12 +7218,15 @@ export type Database = {
           bill_date?: string
           bill_number: string
           booking_id: string
+          commission_amount?: number
+          commission_percentage?: number
           created_at?: string
           created_by?: string | null
           gross_amount: number
           id?: string
           previous_payment?: number
           rate_amount: number
+          vendor_payable?: number
         }
         Update: {
           actual_area?: number
@@ -7229,12 +7235,15 @@ export type Database = {
           bill_date?: string
           bill_number?: string
           booking_id?: string
+          commission_amount?: number
+          commission_percentage?: number
           created_at?: string
           created_by?: string | null
           gross_amount?: number
           id?: string
           previous_payment?: number
           rate_amount?: number
+          vendor_payable?: number
         }
         Relationships: [
           {
