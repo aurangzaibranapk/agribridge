@@ -6,7 +6,6 @@ import {
   createVendorMachine,
   updateBookingStatus,
   completeMachineryBooking,
-  recordFarmerPayment,
   recordVendorPayout,
   type ActionState,
 } from "@/actions/machinery-rental";
@@ -46,6 +45,9 @@ interface Booking {
   amount_received_from_farmer: number;
   amount_paid_to_vendor: number;
   status: string;
+  farmer_remaining: number;
+  vendor_remaining: number;
+  has_bill: boolean;
 }
 
 const RATE_TYPE_LABELS: Record<string, string> = { per_acre: "Per Acre", per_hour: "Per Hour", per_day: "Per Day" };
@@ -90,7 +92,6 @@ export function MachineryClient({
   const [showNewVendor, setShowNewVendor] = useState(false);
   const [showNewMachine, setShowNewMachine] = useState(false);
   const [showShareLink, setShowShareLink] = useState(false);
-  const [payingBooking, setPayingBooking] = useState<{ booking: Booking; type: "farmer" | "vendor" } | null>(null);
   const [completingBookingId, setCompletingBookingId] = useState<string | null>(null);
 
   return (
@@ -157,15 +158,12 @@ export function MachineryClient({
       )}
 
       {tab === "bookings" && (
-        <BookingsTab bookings={bookings} setPayingBooking={setPayingBooking} setCompletingBookingId={setCompletingBookingId} />
+        <BookingsTab bookings={bookings} setCompletingBookingId={setCompletingBookingId} />
       )}
 
       {showNewVendor && <NewVendorModal onClose={() => setShowNewVendor(false)} />}
       {showNewMachine && <NewMachineModal vendors={vendors} onClose={() => setShowNewMachine(false)} />}
       {showShareLink && <ShareLinkModal farmers={farmers} onClose={() => setShowShareLink(false)} />}
-      {payingBooking && (
-        <PaymentModal booking={payingBooking.booking} type={payingBooking.type} financeAccounts={financeAccounts} onClose={() => setPayingBooking(null)} />
-      )}
       {completingBookingId && (
         <CompleteBookingModal bookingId={completingBookingId} financeAccounts={financeAccounts} onClose={() => setCompletingBookingId(null)} />
       )}
@@ -201,11 +199,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function BookingsTab({
   bookings,
-  setPayingBooking,
   setCompletingBookingId,
 }: {
   bookings: Booking[];
-  setPayingBooking: (v: { booking: Booking; type: "farmer" | "vendor" } | null) => void;
   setCompletingBookingId: (id: string | null) => void;
 }) {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week">("all");
@@ -279,8 +275,8 @@ function BookingsTab({
           </thead>
           <tbody>
             {filtered.map((b) => {
-              const farmerRemaining = b.total_amount - b.amount_received_from_farmer;
-              const vendorRemaining = b.vendor_payable - b.amount_paid_to_vendor;
+              const farmerRemaining = b.farmer_remaining;
+              const vendorRemaining = b.vendor_remaining;
               return (
                 <tr key={b.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-3 py-2 font-mono text-xs">
@@ -301,17 +297,23 @@ function BookingsTab({
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
-                      {farmerRemaining > 0 && (
-                        <button onClick={() => setPayingBooking({ booking: b, type: "farmer" })} className="text-left text-xs font-medium text-brand-600 hover:underline">
+                      {/* Paisa yahan se NAHI liya jata.
+                          Booking ke safhe par poori zanjeer hai -- bill,
+                          advance ka adjustment, split payment, vendor ka
+                          hissa. Do jagah payment lene ka matlab hota ek
+                          hi raqam do dafa darj ho jana. */}
+                      {!b.has_bill && <span className="text-xs text-surface-400">Bill abhi nahi bana</span>}
+                      {b.has_bill && farmerRemaining > 0 && (
+                        <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-left text-xs font-medium text-brand-600 hover:underline">
                           Farmer Se Lena: Rs {farmerRemaining.toLocaleString()}
-                        </button>
+                        </Link>
                       )}
-                      {vendorRemaining > 0 && b.amount_received_from_farmer > 0 && (
-                        <button onClick={() => setPayingBooking({ booking: b, type: "vendor" })} className="text-left text-xs font-medium text-amber-600 hover:underline">
+                      {b.has_bill && vendorRemaining > 0 && (
+                        <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-left text-xs font-medium text-amber-600 hover:underline">
                           Vendor Ko Dena: Rs {vendorRemaining.toLocaleString()}
-                        </button>
+                        </Link>
                       )}
-                      {farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">Poora Settle</Badge>}
+                      {b.has_bill && farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">Poora Settle</Badge>}
                     </div>
                   </td>
                   <td className="px-3 py-2">
@@ -427,57 +429,15 @@ function CompleteBookingModal({ bookingId, financeAccounts, onClose }: { booking
   );
 }
 
-function PaymentModal({
-  booking,
-  type,
-  financeAccounts,
-  onClose,
-}: {
-  booking: Booking;
-  type: "farmer" | "vendor";
-  financeAccounts: FinanceAccount[];
-  onClose: () => void;
-}) {
-  const action = type === "farmer" ? recordFarmerPayment : recordVendorPayout;
-  const [state, formAction] = useFormState(action, initialState);
-  const remaining = type === "farmer" ? booking.total_amount - booking.amount_received_from_farmer : booking.vendor_payable - booking.amount_paid_to_vendor;
-  if (state.success) setTimeout(onClose, 900);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">
-            {type === "farmer" ? "Farmer Se Payment Lena" : "Vendor Ko Payment Dena"}
-          </h3>
-          <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
-        </div>
-        <p className="mb-3 text-sm text-surface-500">
-          {type === "farmer" ? booking.farmer_name : booking.vendor_name} - Baaqi: Rs {remaining.toLocaleString()}
-        </p>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Record ho gaya.</p>}
-        <form action={formAction} className="space-y-3">
-          <input type="hidden" name="booking_id" value={booking.id} />
-          <div>
-            <Label>Amount (Rs.) *</Label>
-            <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={remaining} required />
-          </div>
-          <div>
-            <Label>Konsa Account *</Label>
-            <Select name="account_id" required>
-              <option value="">- select -</option>
-              {financeAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
-          <SubmitButton label="Record Karein" />
-        </form>
-      </div>
-    </div>
-  );
-}
+// PaymentModal aur recordFarmerPayment hata diye gaye.
+//
+// Booking ka paisa ab sirf booking ke apne safhe se liya jata hai,
+// jahan bill, advance ka adjustment aur split payment ek sath nazar
+// aate hain. Do jagah payment lene ka matlab hota ek hi raqam do dafa
+// darj ho jana -- aur ye modal booking par pare purane khanon
+// (amount_received_from_farmer) se hisaab karta tha, jinhen nayi
+// zanjeer chhooti hi nahi. Yani ye poori payment ke baad bhi kehta
+// rehta ke paisa baqi hai.
 
 function NewVendorModal({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useFormState(createMachineryVendor, initialState);

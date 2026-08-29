@@ -48,6 +48,28 @@ export default async function MachineryRentalPage({
     : { data: null };
   const canEditCommission = ["owner", "super_admin", "admin"].includes(me?.role ?? "");
 
+  // Har booking ka asal baqi -- bill aur machinery_payments se, booking
+  // par pare hue purane khanon se nahi.
+  //
+  // Ye zaroori tha: nayi zanjeer amount_received_from_farmer ko haath
+  // nahi lagati (wo paisa machinery_payments mein jata hai). Us purane
+  // khane par bharosa karte to poori payment ke baad bhi ye fehrist
+  // "Farmer Se Lena Rs 95,000" dikhati rehti.
+  const [{ data: allBills }, { data: allPayments }] = await Promise.all([
+    supabase.from("machinery_bills").select("booking_id, balance_payable, vendor_payable"),
+    supabase.from("machinery_payments").select("booking_id, amount, kind"),
+  ]);
+
+  const finalPaidBy = new Map<string, number>();
+  (allPayments ?? [])
+    .filter((p) => p.kind === "final")
+    .forEach((p) => finalPaidBy.set(p.booking_id, (finalPaidBy.get(p.booking_id) ?? 0) + Number(p.amount)));
+
+  const billBy = new Map<string, { balance: number; vendor: number }>();
+  (allBills ?? []).forEach((b) =>
+    billBy.set(b.booking_id, { balance: Number(b.balance_payable), vendor: Number(b.vendor_payable) })
+  );
+
   const machines = (rawMachines ?? []).map((m: any) => {
     const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
     return {
@@ -81,6 +103,15 @@ export default async function MachineryRentalPage({
       amount_received_from_farmer: Number(b.amount_received_from_farmer),
       amount_paid_to_vendor: Number(b.amount_paid_to_vendor),
       status: b.status,
+      // Bill ban chuka ho to asal baqi wahin se; warna abhi kuch maangna
+      // hi nahi banta -- rate tak tay nahi hua hota.
+      farmer_remaining: billBy.has(b.id)
+        ? Math.max(0, Math.round((billBy.get(b.id)!.balance - (finalPaidBy.get(b.id) ?? 0)) * 100) / 100)
+        : 0,
+      vendor_remaining: billBy.has(b.id)
+        ? Math.max(0, Math.round((billBy.get(b.id)!.vendor - Number(b.amount_paid_to_vendor)) * 100) / 100)
+        : 0,
+      has_bill: billBy.has(b.id),
     };
   });
 
