@@ -123,7 +123,6 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
 
   if ((bardanaCost > 0 || mazdooriCost > 0) && costAccountId) {
     const combinedCost = bardanaCost + mazdooriCost;
-    const { data: costAccount } = await supabase.from("finance_accounts").select("current_balance").eq("id", costAccountId).single();
     const { data: costRow } = await supabase
       .from("finance_transactions")
       .insert({
@@ -151,9 +150,11 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
         },
       });
     }
-    if (costAccount) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(costAccount.current_balance) - combinedCost }).eq("id", costAccountId);
-    }
+    // Balance yahan se NAHI hilaya jata -- trigger khud hilata hai (023,
+    // 127). Ye jagah baqi das se alag tarah kharab thi: balance INSERT SE
+    // PEHLE parha jata tha aur baad mein likha jata tha. Jawab ittefaqan
+    // theek aata tha, magar us darmiyan agar kisi aur ne usi khate par
+    // kuch darj kar diya ho to us ka asar chup chaap mit jata.
   }
 
   revalidatePath("/admin/grain-procurement");
@@ -222,10 +223,10 @@ export async function recordGrainSalePayment(_prev: ActionState, formData: FormD
     });
     if (failed(posted)) return { error: `Adaigi darj hui magar ledger mein nahi gayi: ${posted.error}` };
   }
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);
-  }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
 
   revalidatePath("/admin/grain-procurement/sell");
   revalidatePath("/admin/finance");

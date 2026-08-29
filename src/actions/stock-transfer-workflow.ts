@@ -131,10 +131,10 @@ export async function verifyTransferPayment(_prev: ActionState, formData: FormDa
     created_by: user.id,
   });
   if (financeError) return { error: `Failed to record payment in Cash Book: ${financeError.message}` };
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + Number(transfer.total_amount) }).eq("id", accountId);
-  }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
   const { error } = await supabase
     .from("stock_transfers")
     .update({ status: "payment_verified", payment_verified_by: user.id, payment_verified_at: new Date().toISOString() })

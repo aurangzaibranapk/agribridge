@@ -113,10 +113,10 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
     .select("id")
     .single();
 
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);
-  }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
 
   // Kisan ne paisa wapas kiya -- ye EK waqia hai jo DO tables mein likha
   // gaya: us ka bojh ghata, aur cash aaya. Is liye entry bhi EK hai jo

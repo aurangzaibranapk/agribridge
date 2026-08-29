@@ -275,6 +275,68 @@ export async function reverseJournal(
   );
   if (lineError) return { error: lineError.message };
 
+  // ---------------------------------------------------------------
+  // Cash book bhi ulti karni paRti hai
+  // ---------------------------------------------------------------
+  // Ye hissa pehle tha hi nahi, aur us ki wajah se reversal aadha kaam
+  // karta tha: ledger keh deta ke paisa wapas aa gaya, jabke cash book
+  // par wo abhi bhi gaya hua likha rehta. Do kitabein alag ho jatin --
+  // aur poore Zero-Rupee nizam ka maqsad hi ye hai ke wo kabhi alag na
+  // hon.
+  //
+  // Kaun si qatarein ulti karni hain, ye andaze se nahi maloom hota:
+  // journal_entry_sources mein pehle se likha hai ke is entry ne kis
+  // qatar par daawa kiya tha.
+  const { data: claimed } = await service
+    .from("journal_entry_sources")
+    .select("source_row_id")
+    .eq("entry_id", entryId)
+    .eq("source_table", "finance_transactions");
+
+  const claimedIds = (claimed ?? []).map((c) => c.source_row_id).filter(Boolean) as string[];
+
+  if (claimedIds.length > 0) {
+    const { data: cashRows } = await service
+      .from("finance_transactions")
+      .select("account_id, transaction_type, category, amount, notes")
+      .in("id", claimedIds);
+
+    // Qatar mitai ja chuki ho to kuch ulta karne ko bacha hi nahi.
+    for (const row of cashRows ?? []) {
+      const { data: back } = await service
+        .from("finance_transactions")
+        .insert({
+          account_id: row.account_id,
+          transaction_type: OPPOSITE[row.transaction_type],
+          category: row.category,
+          amount: row.amount,
+          transaction_date: new Date().toISOString().slice(0, 10),
+          notes: `Reversal of ${original.entry_number}${row.notes ? ` — ${row.notes}` : ""}`,
+          created_by: byProfileId,
+        })
+        .select("id")
+        .single();
+
+      // Nayi qatar par nayi entry ka daawa. Bina daawe ke wo qatar
+      // "ledger mein nahi gayi" ki fehrist mein aa kar khaRi ho jati.
+      if (back?.id) {
+        await service.from("journal_entry_sources").insert({
+          entry_id: entry.id,
+          source_table: "finance_transactions",
+          source_row_id: back.id,
+        });
+      }
+    }
+  }
+
   const total = lines.reduce((sum, l) => sum + Number(l.debit), 0);
   return { id: entry.id, entryNumber: entry.entry_number, total: round2(total) };
 }
+
+/** Cash book ki har harkat ka ulat. */
+const OPPOSITE: Record<string, "income" | "expense" | "transfer_in" | "transfer_out"> = {
+  income: "expense",
+  expense: "income",
+  transfer_in: "transfer_out",
+  transfer_out: "transfer_in",
+};

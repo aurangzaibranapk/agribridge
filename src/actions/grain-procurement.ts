@@ -254,10 +254,10 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         },
       });
     }
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", exp.account_id).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - exp.amount }).eq("id", exp.account_id);
-    }
+    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+    // 1,000 ka asar Rs 2,000 hota tha.
   }
 
   let paymentId: string | undefined;
@@ -327,10 +327,10 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         notes: `Grain payment (${paymentMethod ?? "cash"}) - Entry ke sath`,
         created_by: user?.id ?? null,
       });
-      const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", paymentAccountId).single();
-      if (account) {
-        await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - actualCashOut }).eq("id", paymentAccountId);
-      }
+      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+      // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+      // 1,000 ka asar Rs 2,000 hota tha.
       if (farmerId) {
         const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
         if (payWallet) {
@@ -455,10 +455,10 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       notes: `Grain payment (${paymentMethod ?? "cash"})`,
       created_by: user?.id ?? null,
     });
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - actualCashOut }).eq("id", accountId);
-    }
+    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+    // 1,000 ka asar Rs 2,000 hota tha.
     if (farmerId) {
       const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
       if (payWallet) {

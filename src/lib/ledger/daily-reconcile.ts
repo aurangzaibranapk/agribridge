@@ -433,6 +433,59 @@ async function checkMachineryChain(): Promise<CheckResult> {
   );
 }
 
+/**
+ * Cash book ka yaad kiya hua balance aur us ka asal hisaab -- barabar?
+ *
+ * current_balance ek yaad kiya hua adad hai; asal hisaab
+ * finance_transactions hai. 127 se ye adad likhne ka sirf ek raasta bacha
+ * hai aur trigger us par pehra deta hai. Magar pehra trigger se lagta
+ * hai, aur trigger band bhi kiya ja sakta hai (ya koi migration usay
+ * badal sakti hai) -- is liye rok se alag ek nazar bhi chahiye.
+ *
+ * Ye jaanch us liye khaas ahem hai: baqi saari jaanchein isi adad ke upar
+ * khari hain. Buniyad hi ghalat ho to un sab ka "theek hai" jhooti
+ * tasalli hai.
+ */
+async function checkCashBookBalance(): Promise<CheckResult> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("v_finance_balance_check")
+    .select("account_name, yaad_kiya_hua, asal_hisaab, farq");
+
+  if (error) {
+    return skip(
+      "cash_book_balance",
+      "Cash book ka balance jaancha nahi ja saka",
+      error.message,
+      "/admin/finance"
+    );
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return pass(
+      "cash_book_balance",
+      "Cash book ka balance asal hisaab ke barabar hai",
+      "Har khate ka balance wohi hai jo khulne ki raqam aur us ki qataron ke jorh se nikalta hai."
+    );
+  }
+
+  const total = round2(rows.reduce((sum, r) => sum + Math.abs(Number(r.farq ?? 0)), 0));
+  const detail = rows
+    .slice(0, 3)
+    .map((r) => `${r.account_name}: likha Rs ${Number(r.yaad_kiya_hua ?? 0).toLocaleString()}, hona chahiye Rs ${Number(r.asal_hisaab ?? 0).toLocaleString()}`)
+    .join(" | ");
+
+  return fail(
+    "cash_book_balance",
+    "red",
+    `Cash book ke ${rows.length} khaton ka balance asal hisaab se hat chuka hai`,
+    `${detail}. Ye adad kisi ne seedha likha hai, ya koi qatar bina trigger ke daali gayi hai.`,
+    total,
+    "/admin/finance"
+  );
+}
+
 export interface RunSummary {
   verdict: "clean" | "issues" | "partial";
   total: number;
@@ -452,6 +505,10 @@ export interface RunSummary {
  */
 export async function runChecks(): Promise<RunSummary> {
   const checks = [
+    // Sab se pehle yehi: baqi saari jaanchein cash book ke balance ke
+    // upar khari hain. Buniyad hi ghalat ho to un sab ka "theek hai"
+    // jhooti tasalli hai.
+    checkCashBookBalance,
     checkBalanced,
     checkAllPosted,
     checkSuspense,

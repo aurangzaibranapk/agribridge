@@ -144,10 +144,10 @@ export async function completeMachineryBooking(_prev: ActionState, formData: For
         },
       });
     }
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", dieselAccountId).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - dieselAmount }).eq("id", dieselAccountId);
-    }
+    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+    // 1,000 ka asar Rs 2,000 hota tha.
   }
 
   revalidatePath("/admin/machinery-rental");

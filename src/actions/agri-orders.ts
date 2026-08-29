@@ -573,13 +573,10 @@ export async function verifyOrderPayment(_prev: ActionState, formData: FormData)
         notes: `AgriBridge order payment verified (${payment.payment_method})`,
         created_by: user?.id ?? null,
       });
-      const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", mapping.finance_account_id).single();
-      if (account) {
-        await supabase
-          .from("finance_accounts")
-          .update({ current_balance: Number(account.current_balance) + Number(payment.paid_amount) })
-          .eq("id", mapping.finance_account_id);
-      }
+      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane
+      // aur badalne par bhi). Pehle yahan dobara bhi hilaya jata tha,
+      // yani Rs 1,000 ka asar Rs 2,000 hota tha.
     }
   }
 

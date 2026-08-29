@@ -1827,6 +1827,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bank_statement_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
             foreignKeyName: "bank_statement_lines_imported_by_fkey"
             columns: ["imported_by"]
             isOneToOne: false
@@ -5220,6 +5227,57 @@ export type Database = {
           },
         ]
       }
+      finance_balance_repairs: {
+        Row: {
+          account_id: string
+          account_name: string
+          farq: number
+          id: string
+          naya_balance: number
+          purana_balance: number
+          repaired_at: string
+          transactions_ginti: number
+          wajah: string
+        }
+        Insert: {
+          account_id: string
+          account_name: string
+          farq: number
+          id?: string
+          naya_balance: number
+          purana_balance: number
+          repaired_at?: string
+          transactions_ginti: number
+          wajah: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string
+          farq?: number
+          id?: string
+          naya_balance?: number
+          purana_balance?: number
+          repaired_at?: string
+          transactions_ginti?: number
+          wajah?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_balance_repairs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_balance_repairs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+        ]
+      }
       finance_transactions: {
         Row: {
           account_id: string
@@ -5264,6 +5322,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
         ]
       }
@@ -5585,6 +5650,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "grain_expenses_created_by_fkey"
@@ -5912,6 +5984,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sale_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "grain_sale_payments_created_by_fkey"
@@ -7762,6 +7841,13 @@ export type Database = {
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
         ]
       }
       machinery_requests: {
@@ -8846,6 +8932,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
         ]
       }
@@ -12711,6 +12804,36 @@ export type Database = {
         }
         Relationships: []
       }
+      v_finance_balance_check: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          account_type: string | null
+          asal_hisaab: number | null
+          farq: number | null
+          opening_balance: number | null
+          yaad_kiya_hua: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          account_type?: never
+          asal_hisaab?: never
+          farq?: never
+          opening_balance?: number | null
+          yaad_kiya_hua?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          account_type?: never
+          asal_hisaab?: never
+          farq?: never
+          opening_balance?: number | null
+          yaad_kiya_hua?: number | null
+        }
+        Relationships: []
+      }
       v_ledger_coverage: {
         Row: {
           pending: number | null
@@ -12872,6 +12995,10 @@ export type Database = {
           p_village: string
         }
         Returns: string
+      }
+      fn_finance_account_true_balance: {
+        Args: { p_account_id: string; p_opening: number }
+        Returns: number
       }
       fn_find_farmer_by_phone: {
         Args: { p_phone: string }
