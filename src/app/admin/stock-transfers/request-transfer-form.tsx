@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { requestInternalTransfer, type ActionState } from "@/actions/stock-transfer-workflow";
 import { Button, Label, Select } from "@/components/ui/form";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -46,6 +48,7 @@ export function RequestTransferForm({
   centralWarehouseId: string | null;
   stockByWarehouse: Record<string, Record<string, number>>;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(requestInternalTransfer, initialState);
   const [fromLocation, setFromLocation] = useState(currentShopId ?? "central");
   const [toLocation, setToLocation] = useState("");
@@ -101,7 +104,7 @@ export function RequestTransferForm({
       )}
       {state.success && (
         <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Request submit ho gayi.
+          {t("st_request_sent", lang)}
         </p>
       )}
       <form action={formAction} className="space-y-3">
@@ -112,9 +115,9 @@ export function RequestTransferForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {isAdminLevel ? (
             <div>
-              <Label>From (Source Shop)</Label>
+              <Label>{t("st_from_source", lang)}</Label>
               <Select value={fromLocation} onChange={(e) => { setFromLocation(e.target.value); setRows({}); }} required>
-                <option value="central">Central Warehouse (HQ)</option>
+                <option value="central">{t("st_central_warehouse", lang)}</option>
                 {shops.map((s) => (
                   <option key={s.id} value={s.id}>{shopLabel(s)}</option>
                 ))}
@@ -122,17 +125,17 @@ export function RequestTransferForm({
             </div>
           ) : (
             <div>
-              <Label>From (Your Shop)</Label>
+              <Label>{t("st_from_your_shop", lang)}</Label>
               <p className="mt-1 rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm text-surface-600 dark:bg-surface-800">
-                {shops.find((s) => s.id === currentShopId) ? shopLabel(shops.find((s) => s.id === currentShopId)!) : "Aapki Shop"}
+                {shops.find((s) => s.id === currentShopId) ? shopLabel(shops.find((s) => s.id === currentShopId)!) : t("st_your_shop", lang)}
               </p>
             </div>
           )}
 
           <div>
-            <Label>To (Destination Shop) *</Label>
+            <Label>{t("st_to_destination", lang)}</Label>
             <Select value={toLocation} onChange={(e) => setToLocation(e.target.value)} required>
-              <option value="">— shop select karein —</option>
+              <option value="">{t("st_pick_shop", lang)}</option>
               {shops.filter((s) => s.id !== fromLocation).map((s) => (
                 <option key={s.id} value={s.id}>{shopLabel(s)}</option>
               ))}
@@ -141,7 +144,7 @@ export function RequestTransferForm({
         </div>
 
         <div>
-          <Label>Products Select Karein (ek se zyada bhi le sakte hain)</Label>
+          <Label>{t("st_pick_products", lang)}</Label>
           <div className="mt-1">
             <ProductCardGrid products={productsWithStock} categories={categories} rows={rows} onUpdateRow={handleUpdateRow} />
           </div>
@@ -156,7 +159,7 @@ export function RequestTransferForm({
               </div>
             ))}
             <div className="mt-1 flex justify-between border-t border-surface-200 pt-1 font-semibold dark:border-surface-700">
-              <span>Total</span>
+              <span>{t("st_total", lang)}</span>
               <span>Rs. {total.toLocaleString()}</span>
             </div>
           </div>
@@ -169,10 +172,11 @@ export function RequestTransferForm({
 }
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <Button type="submit" className="w-full" disabled={pending || disabled}>
-      {pending ? "Submitting..." : "Submit Request"}
+      {pending ? t("st_submitting", lang) : t("st_submit", lang)}
     </Button>
   );
 }

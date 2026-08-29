@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { startCount, saveCounts, postCount, type ActionState } from "@/actions/stock-count";
 import { EyeOff, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -10,6 +12,7 @@ function rs(v: number): string {
 }
 
 function Submit({ label, variant = "brand" }: { label: string; variant?: "brand" | "amber" }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
   const colour =
     variant === "amber"
@@ -21,7 +24,7 @@ function Submit({ label, variant = "brand" }: { label: string; variant?: "brand"
       disabled={pending}
       className={`rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${colour}`}
     >
-      {pending ? "Ruk jayein…" : label}
+      {pending ? t("sc_waiting", lang) : label}
     </button>
   );
 }
@@ -45,20 +48,21 @@ function Feedback({ state }: { state: ActionState }) {
 }
 
 export function StartCountForm({ warehouses }: { warehouses: { id: string; name: string }[] }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(startCount, initialState);
 
   return (
     <form action={formAction} className="space-y-3">
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">
-          Kaunsa godam ginna hai
+          {t("sc_which_warehouse", lang)}
         </span>
         <select
           name="warehouse_id"
           required
           className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
         >
-          <option value="">— select karein —</option>
+          <option value="">{t("sc_pick", lang)}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -67,7 +71,7 @@ export function StartCountForm({ warehouses }: { warehouses: { id: string; name:
         </select>
       </label>
       <Feedback state={state} />
-      <Submit label="Ginti shuru karein" />
+      <Submit label={t("sc_start_count", lang)} />
     </form>
   );
 }
@@ -84,6 +88,7 @@ export function CountingSheet({
   countId: string;
   lines: { id: string; productName: string; unit: string | null; packSize: string | null; counted: number | null }[];
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(saveCounts, initialState);
 
   return (
@@ -93,8 +98,7 @@ export function CountingSheet({
       <div className="flex items-start gap-2 rounded-lg bg-surface-100 px-3 py-2.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-300">
         <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          System ka adad jaan boojh kar chhupaya gaya hai. Jo aap ginein, bilkul wohi likhein — agar farq
-          nikla to wo agle safhe par saamne aayega. Adad dekh kar likhne se ginti ka koi faida nahi rehta.
+          {t("sc_hidden_note", lang)}
         </span>
       </div>
 
@@ -102,8 +106,8 @@ export function CountingSheet({
         <table className="w-full text-sm">
           <thead className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-900">
             <tr>
-              <th className="px-4 py-2 font-medium">Cheez</th>
-              <th className="w-32 px-4 py-2 text-right font-medium">Aap ne gina</th>
+              <th className="px-4 py-2 font-medium">{t("sc_item", lang)}</th>
+              <th className="w-32 px-4 py-2 text-right font-medium">{t("sc_you_counted", lang)}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -136,7 +140,7 @@ export function CountingSheet({
       </div>
 
       <Feedback state={state} />
-      <Submit label="Gine hue adad mahfooz karein" />
+      <Submit label={t("sc_save_counts", lang)} />
     </form>
   );
 }
@@ -161,6 +165,7 @@ export function ReviewSheet({
     reason: string | null;
   }[];
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(postCount, initialState);
   const gaps = lines.filter((l) => (l.difference ?? 0) !== 0);
   const matched = lines.length - gaps.length;
@@ -170,8 +175,8 @@ export function ReviewSheet({
       <input type="hidden" name="count_id" value={countId} />
 
       <p className="text-sm text-surface-600 dark:text-surface-400">
-        {matched} cheezen bilkul theek milin.
-        {gaps.length > 0 && ` ${gaps.length} mein farq hai — har ek ki wajah likhna zaroori hai.`}
+        {matched} {t("sc_matched", lang)}
+        {gaps.length > 0 && ` ${gaps.length} ${t("sc_gaps_note", lang)}`}
       </p>
 
       {gaps.length > 0 && (
@@ -179,11 +184,11 @@ export function ReviewSheet({
           <table className="w-full text-sm">
             <thead className="border-b border-red-200 bg-red-50 text-left text-xs text-red-800 dark:border-red-900 dark:bg-red-950/20 dark:text-red-400">
               <tr>
-                <th className="px-3 py-2 font-medium">Cheez</th>
-                <th className="px-3 py-2 text-right font-medium">Hona chahiye</th>
-                <th className="px-3 py-2 text-right font-medium">Mila</th>
-                <th className="px-3 py-2 text-right font-medium">Farq</th>
-                <th className="px-3 py-2 text-right font-medium">Qeemat</th>
+                <th className="px-3 py-2 font-medium">{t("sc_item", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("sc_expected", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("sc_found", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("sc_difference", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("sc_worth", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-red-100 dark:divide-red-900/40">
@@ -200,7 +205,7 @@ export function ReviewSheet({
                         minLength={5}
                         maxLength={255}
                         defaultValue={l.reason ?? ""}
-                        placeholder="Kya samajh aaya? (lazmi)"
+                        placeholder={t("sc_what_happened", lang)}
                         className="mt-1 w-full rounded-lg border border-surface-300 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
                       />
                     </td>
@@ -229,12 +234,11 @@ export function ReviewSheet({
 
       <p className="flex items-start gap-1.5 text-xs text-surface-500">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Mukammal karne par stock gine hue adad par set ho jayega aur nuqsan &quot;Stock ka nuqsan&quot;
-        khate mein chala jayega. Us ke baad ye ginti badli nahi ja sakti.
+        {t("sc_post_note", lang)}
       </p>
 
       <Feedback state={state} />
-      <Submit label="Milaan mukammal karein" variant={gaps.length > 0 ? "amber" : "brand"} />
+      <Submit label={t("sc_finish_review", lang)} variant={gaps.length > 0 ? "amber" : "brand"} />
     </form>
   );
 }

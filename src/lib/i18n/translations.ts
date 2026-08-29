@@ -10,6 +10,7 @@ import { financeDict } from "./dict/finance";
 import { cashCloseDict } from "./dict/cash-close";
 import { cashHandoverDict } from "./dict/cash-handover";
 import { hrDict, attendanceLogDict } from "./dict/hr";
+import { inventoryDict, stockCountDict, stockTransferDict } from "./dict/inventory";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -56,6 +57,9 @@ const dict = {
   ...cashHandoverDict,
   ...hrDict,
   ...attendanceLogDict,
+  ...inventoryDict,
+  ...stockCountDict,
+  ...stockTransferDict,
 };
 
 export type TranslationKey = keyof typeof dict;

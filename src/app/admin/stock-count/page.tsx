@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { StartCountForm, CountingSheet, ReviewSheet } from "./count-client";
 import {
@@ -24,6 +26,7 @@ export default async function StockCountPage({
 }) {
   const params = await searchParams;
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -58,8 +61,8 @@ export default async function StockCountPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Maal ki Ginti"
-        description="Ginne wale ko system ka adad nazar nahi aata. Jo gina jaye wahi likha jaye — tabhi ginti asal mein ginti hai."
+        title={t("sc_title", lang)}
+        description={t("sc_subtitle", lang)}
       />
 
       {/* ---- Jin godamon ki ginti nahi hui ---- */}
@@ -68,18 +71,16 @@ export default async function StockCountPage({
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <strong>{overdue.length} godam</strong> ki ginti {COUNT_OVERDUE_DAYS} din se zyada arse se
-              nahi hui.
+              <strong>{overdue.length} {t("sc_overdue_1", lang)}</strong> {t("sc_overdue_2", lang)} {COUNT_OVERDUE_DAYS} {t("sc_overdue_3", lang)}
               <span className="mt-1 block text-xs font-normal">
                 {overdue.map((o) => (
                   <span key={o.warehouseId} className="mr-3 inline-block">
-                    {o.warehouseName} — {o.lastCount ? `aakhri ginti ${o.lastCount}` : "kabhi nahi gina gaya"}
+                    {o.warehouseName} — {o.lastCount ? `${t("sc_last_count", lang)} ${o.lastCount}` : t("sc_never_counted", lang)}
                   </span>
                 ))}
               </span>
               <span className="mt-1 block text-xs font-normal">
-                Kabhi na gina gaya godam sab se khatarnak hai — wahan farq ka jama hona shuru se jari hai
-                aur kisi ne dekha hi nahi.
+                {t("sc_never_counted_note", lang)}
               </span>
             </span>
           </p>
@@ -88,14 +89,14 @@ export default async function StockCountPage({
 
       {warehouses.length === 0 ? (
         <Card className="p-4">
-          <EmptyState title="Koi godam nahi mila" description="Pehle Admin → Warehouses mein godam banayein." />
+          <EmptyState title={t("sc_no_warehouse", lang)} description={t("sc_no_warehouse_note", lang)} />
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
           <div className="space-y-4">
             {/* ---- Godam chunna ---- */}
             <Card className="p-4">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Godam</h2>
+              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("sc_warehouse", lang)}</h2>
               <ul className="space-y-1">
                 {warehouses.map((w) => (
                   <li key={w.id}>
@@ -117,7 +118,7 @@ export default async function StockCountPage({
             {!current && (
               <Card className="p-4">
                 <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-                  <PackageSearch className="h-4 w-4" /> Nayi ginti
+                  <PackageSearch className="h-4 w-4" /> {t("sc_new_count", lang)}
                 </h2>
                 <StartCountForm warehouses={warehouses} />
               </Card>
@@ -131,10 +132,10 @@ export default async function StockCountPage({
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-semibold text-surface-900 dark:text-white">
-                      {current.warehouseName} — {reviewing ? "milaan" : "ginti jari hai"}
+                      {current.warehouseName} — {reviewing ? t("sc_review", lang) : t("sc_counting", lang)}
                     </h2>
                     <p className="text-xs text-surface-500">
-                      {current.countDate} • {current.lines.length} cheezen
+                      {current.countDate} • {current.lines.length} {t("sc_items", lang)}
                       {current.startedByName && ` • ${current.startedByName}`}
                     </p>
                   </div>
@@ -143,7 +144,7 @@ export default async function StockCountPage({
                       href={`/admin/stock-count?w=${current.warehouseId}&step=review`}
                       className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
                     >
-                      Milaan par jayein →
+                      {t("sc_go_to_review", lang)}
                     </a>
                   )}
                   {reviewing && (
@@ -151,7 +152,7 @@ export default async function StockCountPage({
                       href={`/admin/stock-count?w=${current.warehouseId}`}
                       className="text-xs text-surface-500 underline"
                     >
-                      ← ginti par wapas
+                      {t("sc_back_to_count", lang)}
                     </a>
                   )}
                 </div>
@@ -174,16 +175,15 @@ export default async function StockCountPage({
                 {!reviewing && !current.allCounted && (
                   <p className="mt-3 flex items-start gap-1.5 text-xs text-surface-500">
                     <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Sab cheezen bhar jayen to &quot;Milaan par jayein&quot; ka button aa jayega. Us se
-                    pehle system ka adad nahi kholta.
+                    {t("sc_hidden_until_all", lang)}
                   </p>
                 )}
               </Card>
             ) : (
               <Card className="p-6">
                 <EmptyState
-                  title="Is godam ki koi ginti khuli nahi"
-                  description="Bayen taraf se nayi ginti shuru karein. Shuru karte hi system ka adad mahfooz ho jayega aur chhup jayega."
+                  title={t("sc_no_open_count", lang)}
+                  description={t("sc_no_open_count_note", lang)}
                 />
               </Card>
             )}
@@ -191,20 +191,20 @@ export default async function StockCountPage({
             {/* ---- Purani gintiyan ---- */}
             <Card className="overflow-hidden">
               <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-                Pichhli gintiyan
+                {t("sc_past_counts", lang)}
               </div>
               {history.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-surface-400">Abhi koi ginti mukammal nahi hui.</p>
+                <p className="px-4 py-6 text-center text-sm text-surface-400">{t("sc_no_past_counts", lang)}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[560px] text-sm">
                     <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
                       <tr>
-                        <th className="px-4 py-2 font-medium">Godam</th>
-                        <th className="px-4 py-2 font-medium">Tareekh</th>
-                        <th className="px-4 py-2 text-right font-medium">Cheezen</th>
-                        <th className="px-4 py-2 text-right font-medium">Farq wali</th>
-                        <th className="px-4 py-2 text-right font-medium">Nuqsan / izafa</th>
+                        <th className="px-4 py-2 font-medium">{t("sc_warehouse", lang)}</th>
+                        <th className="px-4 py-2 font-medium">{t("sc_date", lang)}</th>
+                        <th className="px-4 py-2 text-right font-medium">{t("sc_items", lang)}</th>
+                        <th className="px-4 py-2 text-right font-medium">{t("sc_with_gaps", lang)}</th>
+                        <th className="px-4 py-2 text-right font-medium">{t("sc_loss_gain", lang)}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -247,7 +247,7 @@ export default async function StockCountPage({
       {overdue.length === 0 && history.length > 0 && (
         <Card className="border-l-4 border-l-green-500 p-4">
           <p className="flex items-center gap-2 text-sm text-green-800 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4" /> Har godam ki ginti {COUNT_OVERDUE_DAYS} din ke andar hui hai.
+            <CheckCircle2 className="h-4 w-4" /> {t("sc_all_on_time", lang)} {COUNT_OVERDUE_DAYS} {t("sc_all_on_time_days", lang)}
           </p>
         </Card>
       )}

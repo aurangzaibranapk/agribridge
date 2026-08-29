@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StockLedgerPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const { data: movements } = await supabase
     .from("stock_movements")
@@ -55,9 +58,9 @@ export default async function StockLedgerPage() {
 
   return (
     <div>
-      <PageHeader title="Stock Ledger" description="Recent stock movements across all branches" />
+      <PageHeader title={t("sl_title", lang)} description={t("sl_subtitle", lang)} />
       {!movements || movements.length === 0 ? (
-        <EmptyState title="No stock movements yet" />
+        <EmptyState title={t("sl_empty", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
