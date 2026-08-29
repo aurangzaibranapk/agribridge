@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { MachineryClient } from "./machinery-client";
 
@@ -9,6 +11,7 @@ export default async function MachineryRentalPage({
 }: {
   searchParams: Promise<{ convert_farmer?: string; convert_request?: string; convert_acres?: string; convert_location?: string }>;
 }) {
+  const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const supabase = createClient();
 
@@ -122,23 +125,23 @@ export default async function MachineryRentalPage({
 
   return (
     <div>
-      <PageHeader title="Machinery Rental (Vendor Broker Model)" description="Vendor ki machines, Farmer ko book karna, Commission earn karna" />
+      <PageHeader title={t("mc_title", lang)} description={t("mc_subtitle", lang)} />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Bookings Value</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mc_total_bookings_value", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalBookingsValue.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Commission Earned (AgriBridge)</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("mc_commission_earned", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalCommissionEarned.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Farmers Se Wasool</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mc_from_farmers", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalReceivedFromFarmers.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Vendors Ko Diya</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("mc_to_vendors", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalPaidToVendors.toLocaleString()}</p>
         </Card>
       </div>

@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { MachinerySlipClient } from "./slip-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function MachineryBookingSlipPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
@@ -16,7 +19,7 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
     .maybeSingle();
 
   if (!booking) {
-    return <div className="p-8 text-center text-surface-400">Booking nahi mili.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("mc_booking_not_found", lang)}</div>;
   }
 
   const farmer = Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers;

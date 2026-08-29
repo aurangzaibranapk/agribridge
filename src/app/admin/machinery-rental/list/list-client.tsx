@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { emailMachineryBookingsList, type ActionState } from "@/actions/machinery-rental";
@@ -20,6 +22,7 @@ interface Row {
 }
 
 export function MachineryListClient({ rows }: { rows: Row[] }) {
+  const lang = useLang();
   const [showEmail, setShowEmail] = useState(false);
 
   function handlePrint() {
@@ -41,14 +44,14 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
     <div className="mx-auto max-w-5xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/machinery-rental" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
+          <ArrowLeft className="h-4 w-4" /> {t("mc_back", lang)}
         </Link>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print
+            <Printer className="h-3.5 w-3.5" /> {t("mc_print", lang)}
           </button>
           <button onClick={handleDownload} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-200">
-            <Download className="h-3.5 w-3.5" /> Download
+            <Download className="h-3.5 w-3.5" /> {t("mc_download", lang)}
           </button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
@@ -67,14 +70,14 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-surface-200 text-left">
-              <th className="py-1.5 pr-2 font-medium text-surface-500">Booking #</th>
-              <th className="py-1.5 pr-2 font-medium text-surface-500">Date</th>
-              <th className="py-1.5 pr-2 font-medium text-surface-500">Farmer</th>
-              <th className="py-1.5 pr-2 font-medium text-surface-500">Phone</th>
-              <th className="py-1.5 pr-2 font-medium text-surface-500">Machine</th>
-              <th className="py-1.5 pr-2 text-right font-medium text-surface-500">Total</th>
-              <th className="py-1.5 pr-2 text-right font-medium text-surface-500">Received</th>
-              <th className="py-1.5 font-medium text-surface-500">Status</th>
+              <th className="py-1.5 pr-2 font-medium text-surface-500">{t("mc_booking_no", lang)}</th>
+              <th className="py-1.5 pr-2 font-medium text-surface-500">{t("mc_date", lang)}</th>
+              <th className="py-1.5 pr-2 font-medium text-surface-500">{t("mc_farmer", lang)}</th>
+              <th className="py-1.5 pr-2 font-medium text-surface-500">{t("mc_phone", lang)}</th>
+              <th className="py-1.5 pr-2 font-medium text-surface-500">{t("mc_machine", lang)}</th>
+              <th className="py-1.5 pr-2 text-right font-medium text-surface-500">{t("mc_total_amount", lang)}</th>
+              <th className="py-1.5 pr-2 text-right font-medium text-surface-500">{t("mc_received_so_far", lang)}</th>
+              <th className="py-1.5 font-medium text-surface-500">{t("mc_status", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -91,7 +94,7 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-surface-400">Koi booking nahi hai.</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-surface-400">{t("mc_no_bookings", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -103,6 +106,7 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
 }
 
 function EmailModal({ onClose }: { onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(emailMachineryBookingsList, initialState);
   if (state.success) setTimeout(onClose, 1200);
 
@@ -110,13 +114,13 @@ function EmailModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Email Se Bhejein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mc_send_by_email", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Email bhej di gayi.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("mc_email_sent", lang)}</p>}
         <form action={formAction} className="space-y-2">
-          <input type="email" name="to_email" required placeholder="Email address" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="email" name="to_email" required placeholder={t("mc_email_address", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton />
         </form>
       </div>

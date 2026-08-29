@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import Link from "next/link";
 
@@ -14,6 +16,7 @@ const MACHINE_LABELS: Record<string, string> = {
 };
 
 export default async function MachineryDashboardPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [{ data: bookings }, { data: requests }] = await Promise.all([
@@ -79,52 +82,52 @@ export default async function MachineryDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Machinery Business Dashboard" description="Bookings + Vendor Commission + Farmer Requests - poora hisaab" />
+      <PageHeader title={t("mc_dashboard_title", lang)} description={t("mc_dashboard_subtitle", lang)} />
 
       <div className="mb-4 flex gap-2">
-        <Link href="/admin/machinery-rental" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">Booking Page</Link>
+        <Link href="/admin/machinery-rental" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">{t("mc_booking_page", lang)}</Link>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Bookings Value</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mc_total_bookings_value", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalBookingsValue.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Commission Earned</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("mc_commission_earned", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalCommission.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Farmers Se Wasool</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mc_from_farmers", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalReceivedFromFarmers.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Vendors Ko Diya</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("mc_to_vendors", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalPaidToVendors.toLocaleString()}</p>
         </Card>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-500">Diesel Total</p>
+          <p className="text-xs text-surface-500">{t("mc_diesel_total", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">Rs {totalDiesel.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-500">Completed Bookings</p>
+          <p className="text-xs text-surface-500">{t("mc_completed_bookings", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">{completedCount}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-500">Pending Bookings</p>
+          <p className="text-xs text-surface-500">{t("mc_pending_bookings", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">{pendingCount}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-500">Hamein Bechenge (Yes)</p>
+          <p className="text-xs text-surface-500">{t("mc_will_sell_to_us", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">{willSellCount}</p>
         </div>
       </div>
 
       <div className="mb-6">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Machine Type Ke Hisaab Se</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mc_by_machine_type", lang)}</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Object.entries(byMachineType).map(([type, stat]) => (
             <div key={type} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -133,12 +136,12 @@ export default async function MachineryDashboardPage() {
               <p className="text-xs text-surface-400">Rs {stat.value.toLocaleString()}</p>
             </div>
           ))}
-          {Object.keys(byMachineType).length === 0 && <p className="text-sm text-surface-400">Koi booking nahi hai.</p>}
+          {Object.keys(byMachineType).length === 0 && <p className="text-sm text-surface-400">{t("mc_no_bookings", lang)}</p>}
         </div>
       </div>
 
       <div className="mb-6 rounded-card border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
-        <strong>{wantsReminderCount}</strong> Farmers ne agli season ke liye Machinery Booking Reminder mangi hai.
+        <strong>{wantsReminderCount}</strong> {t("mc_reminder_wanted", lang)}
       </div>
 
       {overdueBookings.length > 0 && (
@@ -159,13 +162,13 @@ export default async function MachineryDashboardPage() {
       )}
 
       <div className="mb-6">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Farmer-wise Outstanding (Total Baaqi)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mc_farmer_outstanding", lang)}</h3>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Total Baaqi</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_farmer", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_total_outstanding", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -176,7 +179,7 @@ export default async function MachineryDashboardPage() {
                 </tr>
               ))}
               {outstandingList.length === 0 && (
-                <tr><td colSpan={2} className="px-3 py-8 text-center text-surface-400">Koi outstanding nahi hai.</td></tr>
+                <tr><td colSpan={2} className="px-3 py-8 text-center text-surface-400">{t("mc_no_outstanding", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -184,18 +187,18 @@ export default async function MachineryDashboardPage() {
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Farmer Se Aayi Hui Naye Requests (Pending)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mc_new_requests", lang)}</h3>
         <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Machine</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Acres</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Crop</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Kab Chahiye</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Bechega?</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Reminder?</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_farmer", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_machine", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_acres", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_crop", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_when", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_will_sell_q", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("mc_reminder_q", lang)}</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -211,18 +214,18 @@ export default async function MachineryDashboardPage() {
                     <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{r.acres ?? "-"}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{r.crop_type ?? "-"}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{r.expected_date}</td>
-                    <td className="px-3 py-2">{r.will_sell_to_us === true ? <span className="text-green-600">Haan</span> : r.will_sell_to_us === false ? <span className="text-surface-400">Nahi</span> : "-"}</td>
-                    <td className="px-3 py-2">{r.wants_next_season_reminder === true ? <span className="text-brand-600">Haan</span> : r.wants_next_season_reminder === false ? <span className="text-surface-400">Nahi</span> : "-"}</td>
+                    <td className="px-3 py-2">{r.will_sell_to_us === true ? <span className="text-green-600">{t("mc_yes", lang)}</span> : r.will_sell_to_us === false ? <span className="text-surface-400">{t("mc_no", lang)}</span> : "-"}</td>
+                    <td className="px-3 py-2">{r.wants_next_season_reminder === true ? <span className="text-brand-600">{t("mc_yes", lang)}</span> : r.wants_next_season_reminder === false ? <span className="text-surface-400">{t("mc_no", lang)}</span> : "-"}</td>
                     <td className="px-3 py-2">
                       <Link href={`/admin/machinery-rental/booking/new?convert_farmer=${r.farmer_id}&convert_request=${r.id}`} className="text-xs font-medium text-brand-600 hover:underline">
-                        Booking Karein
+                        {t("mc_make_booking", lang)}
                       </Link>
                     </td>
                   </tr>
                 );
               })}
               {pendingRequests.length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">Koi pending request nahi hai.</td></tr>
+                <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">{t("mc_no_pending_requests", lang)}</td></tr>
               )}
             </tbody>
           </table>

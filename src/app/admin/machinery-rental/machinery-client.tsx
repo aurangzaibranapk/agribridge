@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createMachineryVendor,
@@ -78,6 +80,7 @@ export function MachineryClient({
   defaultAcres?: string;
   defaultLocation?: string;
 }) {
+  const lang = useLang();
   const [tab, setTabState] = useState<"live" | "vendors" | "bookings">("live");
   useEffect(() => {
     const saved = sessionStorage.getItem("machinery_active_tab");
@@ -103,18 +106,18 @@ export function MachineryClient({
       )}
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-surface-200 dark:border-surface-800">
         <div className="flex gap-2">
-          <TabButton active={tab === "live"} onClick={() => setTab("live")}>Live Board</TabButton>
+          <TabButton active={tab === "live"} onClick={() => setTab("live")}>{t("mc_live_board", lang)}</TabButton>
           <Link
             href="/admin/machinery-rental/booking/new"
             className="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-surface-500 hover:text-brand-700 dark:hover:text-brand-300"
           >
-            Nayi Booking
+            {t("mc_new_booking", lang)}
           </Link>
-          <TabButton active={tab === "vendors"} onClick={() => setTab("vendors")}>Vendors & Machines</TabButton>
-          <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>Poori Bookings</TabButton>
+          <TabButton active={tab === "vendors"} onClick={() => setTab("vendors")}>{t("mc_vendors_machines", lang)}</TabButton>
+          <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>{t("mc_all_bookings", lang)}</TabButton>
         </div>
         <button onClick={() => setShowShareLink(true)} className="mb-2 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
-          <Share2 className="h-3.5 w-3.5" /> Farmer Ko Link Bhejein
+          <Share2 className="h-3.5 w-3.5" /> {t("mc_send_link_to_farmer", lang)}
         </button>
       </div>
 
@@ -125,19 +128,19 @@ export function MachineryClient({
           <CommissionRateCard rate={commissionRate} canEdit={canEditCommission} />
           <div className="flex gap-2">
             <button onClick={() => setShowNewVendor(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              <Plus className="h-4 w-4" /> Naya Vendor
+              <Plus className="h-4 w-4" /> {t("mc_new_vendor", lang)}
             </button>
             <button onClick={() => setShowNewMachine(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">
-              <Plus className="h-4 w-4" /> Nayi Machine
+              <Plus className="h-4 w-4" /> {t("mc_new_machine", lang)}
             </button>
           </div>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Vendor</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Machine</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Rate</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_vendor", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_machine", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_rate", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,7 +152,7 @@ export function MachineryClient({
                   </tr>
                 ))}
                 {machines.length === 0 && (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">Koi machine nahi hai.</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("mc_no_machines", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -204,6 +207,7 @@ function BookingsTab({
   bookings: Booking[];
   setCompletingBookingId: (id: string | null) => void;
 }) {
+  const lang = useLang();
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
 
@@ -253,8 +257,8 @@ function BookingsTab({
           ))}
         </div>
         <div className="ml-auto flex gap-3 text-xs text-surface-500">
-          <span><strong className="text-red-600">{pendingCount}</strong> Pending</span>
-          <span><strong className="text-green-600">{confirmedCount}</strong> Confirmed</span>
+          <span><strong className="text-red-600">{pendingCount}</strong> {t("mc_pending", lang)}</span>
+          <span><strong className="text-green-600">{confirmedCount}</strong> {t("mc_confirmed", lang)}</span>
         </div>
       </div>
 
@@ -263,13 +267,13 @@ function BookingsTab({
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
               <th className="px-3 py-2 font-medium text-surface-500">No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Vendor / Machine</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Commission</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Payments</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_date", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_farmer", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_vendor_machine", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_total_amount", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_commission", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_status", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_payments", lang)}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -302,7 +306,7 @@ function BookingsTab({
                           advance ka adjustment, split payment, vendor ka
                           hissa. Do jagah payment lene ka matlab hota ek
                           hi raqam do dafa darj ho jana. */}
-                      {!b.has_bill && <span className="text-xs text-surface-400">Bill abhi nahi bana</span>}
+                      {!b.has_bill && <span className="text-xs text-surface-400">{t("mc_bill_not_made", lang)}</span>}
                       {b.has_bill && farmerRemaining > 0 && (
                         <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-left text-xs font-medium text-brand-600 hover:underline">
                           Farmer Se Lena: Rs {farmerRemaining.toLocaleString()}
@@ -313,17 +317,17 @@ function BookingsTab({
                           Vendor Ko Dena: Rs {vendorRemaining.toLocaleString()}
                         </Link>
                       )}
-                      {b.has_bill && farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">Poora Settle</Badge>}
+                      {b.has_bill && farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">{t("mc_fully_settled", lang)}</Badge>}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <Link href={`/admin/machinery-rental/booking-slip/${b.id}`} className="text-xs font-medium text-brand-600 hover:underline">Slip</Link>
+                    <Link href={`/admin/machinery-rental/booking-slip/${b.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("mc_slip", lang)}</Link>
                   </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">Is filter mein koi booking nahi hai.</td></tr>
+              <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">{t("mc_no_booking_filter", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -440,6 +444,7 @@ function CompleteBookingModal({ bookingId, financeAccounts, onClose }: { booking
 // rehta ke paisa baqi hai.
 
 function NewVendorModal({ onClose }: { onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createMachineryVendor, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
@@ -447,17 +452,17 @@ function NewVendorModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Naya Vendor Banayein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("mc_create_vendor", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Input name="vendor_name" required placeholder="Vendor ka Naam *" />
-          <Input name="contact_person" placeholder="Contact Person" />
-          <Input name="phone" placeholder="Phone" />
-          <Input name="cnic" placeholder="CNIC (optional)" />
-          <Textarea name="address" rows={2} placeholder="Address" />
-          <SubmitButton label="Vendor Banayein" />
+          <Input name="vendor_name" required placeholder={t("mc_vendor_name_req", lang)} />
+          <Input name="contact_person" placeholder={t("mc_contact_person", lang)} />
+          <Input name="phone" placeholder={t("mc_phone", lang)} />
+          <Input name="cnic" placeholder={t("mc_cnic_optional", lang)} />
+          <Textarea name="address" rows={2} placeholder={t("mc_address", lang)} />
+          <SubmitButton label={t("mc_create_vendor", lang)} />
         </form>
       </div>
     </div>
@@ -465,6 +470,7 @@ function NewVendorModal({ onClose }: { onClose: () => void }) {
 }
 
 function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createVendorMachine, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
@@ -472,28 +478,28 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Machine Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("mc_add_machine", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <Select name="vendor_id" required>
-            <option value="">- Vendor Select Karein -</option>
+            <option value="">{t("mc_select_vendor", lang)}</option>
             {vendors.map((v) => (
               <option key={v.id} value={v.id}>{v.vendor_name}</option>
             ))}
           </Select>
-          <Input name="machine_type" required placeholder="Machine Type (Tractor, Thresher, wagera) *" />
-          <Input name="model" placeholder="Model (optional)" />
+          <Input name="machine_type" required placeholder={t("mc_machine_type_field", lang)} />
+          <Input name="model" placeholder={t("mc_model_optional", lang)} />
           <Select name="rate_type" required>
-            <option value="">- Rate Type Select Karein -</option>
-            <option value="per_acre">Per Acre</option>
-            <option value="per_hour">Per Hour</option>
-            <option value="per_day">Per Day</option>
+            <option value="">{t("mc_select_rate_type", lang)}</option>
+            <option value="per_acre">{t("mc_per_acre", lang)}</option>
+            <option value="per_hour">{t("mc_per_hour", lang)}</option>
+            <option value="per_day">{t("mc_per_day", lang)}</option>
           </Select>
-          <Input type="number" step="0.01" name="rate_amount" required placeholder="Rate Amount (Rs) *" />
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
-          <SubmitButton label="Machine Add Karein" />
+          <Input type="number" step="0.01" name="rate_amount" required placeholder={t("mc_rate_amount_req", lang)} />
+          <Textarea name="notes" rows={2} placeholder={t("mc_notes_optional", lang)} />
+          <SubmitButton label={t("mc_add_machine", lang)} />
         </form>
       </div>
     </div>
@@ -508,12 +514,13 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
  * hai, aur wahi bill par lagti hai.
  */
 function CommissionRateCard({ rate, canEdit }: { rate: number; canEdit: boolean }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(setMachineryCommissionRate, initialState);
   return (
     <div className="mb-4 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-surface-500">AgriBridge ka commission</p>
+          <p className="text-xs text-surface-500">{t("mc_our_commission", lang)}</p>
           <p className="font-display text-2xl font-semibold text-brand-700 dark:text-brand-300">{rate}%</p>
           <p className="mt-1 text-xs text-surface-500">
             Har booking ke final bill par lagta hai — asal kaam ke gross par. Baqi {100 - rate}% vendor ka.
@@ -522,24 +529,24 @@ function CommissionRateCard({ rate, canEdit }: { rate: number; canEdit: boolean 
         {canEdit && (
           <form action={formAction} className="flex items-end gap-2">
             <div>
-              <Label>Naya rate (%)</Label>
+              <Label>{t("mc_new_rate_pct", lang)}</Label>
               <Input type="number" name="rate" step="0.01" min={0} max={100} defaultValue={rate} className="w-28" />
             </div>
-            <SubmitButton label="Badlein" />
+            <SubmitButton label={t("mc_change", lang)} />
           </form>
         )}
       </div>
       {state.error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{state.error}</p>}
-      {state.success && <p className="mt-2 text-sm text-brand-700 dark:text-brand-300">Rate badal gaya.</p>}
+      {state.success && <p className="mt-2 text-sm text-brand-700 dark:text-brand-300">{t("mc_rate_changed", lang)}</p>}
       <p className="mt-3 border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
-        Rate badalne se <strong>purane bill nahi badalte</strong> — har bill us waqt ka rate apne andar likh leta hai.
-        Warna rate badalte hi mahinon purana munafa apne aap badal jata aur kisi ko pata na chalta.
+        {t("mc_rate_change_note", lang)}
       </p>
     </div>
   );
 }
 
 function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_link_token?: string })[]; onClose: () => void }) {
+  const lang = useLang();
   const [selectedFarmer, setSelectedFarmer] = useState("");
   const [copied, setCopied] = useState(false);
   const farmer = farmers.find((f) => f.id === selectedFarmer);
@@ -560,14 +567,14 @@ function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_lin
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Farmer Ko Booking Link Bhejein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mc_send_booking_link", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-surface-500">Farmer Select Karein</label>
+            <label className="text-xs text-surface-500">{t("mc_select_farmer", lang)}</label>
             <select value={selectedFarmer} onChange={(e) => setSelectedFarmer(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-              <option value="">- select -</option>
+              <option value="">{t("mc_select", lang)}</option>
               {farmers.map((f) => (
                 <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
               ))}
@@ -581,7 +588,7 @@ function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_lin
                   {copied ? "Copy Ho Gaya!" : "Link Copy Karein"}
                 </button>
                 <button onClick={handleWhatsApp} className="flex-1 rounded-lg bg-green-600 py-2 text-xs font-medium text-white hover:bg-green-700">
-                  WhatsApp Se Bhejein
+                  {t("mc_send_on_whatsapp", lang)}
                 </button>
               </div>
               <p className="text-[11px] text-surface-400">Ye link is Farmer ke liye hamesha wahi rahega - jitni marzi booking, isi link se aati rahengi.</p>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LangProvider } from "@/lib/i18n/lang-context";
 export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -27,7 +28,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     navGroups = nav.groups;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
   }
+  // Zaban poore admin panel ke liye ek hi jagah se. Andar ke saare
+  // client components isi se parhte hain -- kisi ko prop bhejne ki
+  // zaroorat nahi, aur cookie browser mein parhne wala jhatka bhi nahi
+  // aata (dekhein lang-context.tsx).
   return (
+    <LangProvider lang={lang}>
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
       <Sidebar subtitle="Website Admin" homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
       <div className="flex flex-1 flex-col">
@@ -43,5 +49,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
       {user && <MessagesWidget />}
     </div>
+    </LangProvider>
   );
 }

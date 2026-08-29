@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewBookingForm } from "./new-booking-form";
 
@@ -9,6 +11,7 @@ export default async function NewMachineryBookingPage({
 }: {
   searchParams: Promise<{ convert_farmer?: string; convert_request?: string; convert_acres?: string; convert_location?: string }>;
 }) {
+  const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const supabase = createClient();
 
@@ -62,8 +65,8 @@ export default async function NewMachineryBookingPage({
   return (
     <div>
       <PageHeader
-        title="Nayi Machinery Booking"
-        description="Booking se le kar final payment tak sab kuch isi Booking ID ke neeche chalega."
+        title={t("mc_new_booking_title", lang)}
+        description={t("mc_new_booking_note", lang)}
       />
       <NewBookingForm
         farmers={(farmers ?? []).map((f) => ({

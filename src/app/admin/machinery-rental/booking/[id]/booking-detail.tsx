@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   recordAdvance,
@@ -116,6 +118,7 @@ export function BookingDetail({
   paidToVendor: number;
   canOverride: boolean;
 }) {
+  const lang = useLang();
   const confirmed = Boolean(booking.farmer_confirmed_at) || Boolean(booking.confirmation_override_reason);
   const balance = bill ? Math.round((bill.balance_payable - finalPaid) * 100) / 100 : null;
   const cancelled = booking.status === "cancelled";
@@ -172,14 +175,14 @@ export function BookingDetail({
       {/* Paise ka khulasa -- teen alag concepts, teen alag khane */}
       <Card>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Andaza (booking)" value={booking.estimated_rate ? `Rs ${booking.estimated_rate.toLocaleString()}/acre` : "—"} />
+          <Stat label={t("mc_estimated_rate", lang)} value={booking.estimated_rate ? `Rs ${booking.estimated_rate.toLocaleString()}/acre` : "—"} />
           <Stat
-            label="Final rate"
+            label={t("mc_final_rate", lang)}
             value={booking.final_rate ? `Rs ${booking.final_rate.toLocaleString()}/acre` : "—"}
             tone={booking.rate_status === "final" ? "green" : booking.rate_status === "agreed" ? "amber" : "gray"}
             hint={booking.rate_status}
           />
-          <Stat label="Advance mila" value={`Rs ${advanceTotal.toLocaleString()}`} />
+          <Stat label={t("mc_step_advance", lang)} value={`Rs ${advanceTotal.toLocaleString()}`} />
           <Stat
             label={bill ? "Baqi" : "Bill"}
             value={bill ? `Rs ${(balance ?? 0).toLocaleString()}` : "Abhi nahi bana"}
@@ -191,7 +194,7 @@ export function BookingDetail({
       {!cancelled && (
         <>
           {/* Advance */}
-          <StepCard n={1} title="Advance" done={advanceTotal > 0}>
+          <StepCard n={1} title={t("mc_advance", lang)} done={advanceTotal > 0}>
             {payments.filter((p) => p.kind === "advance").length > 0 && (
               <ul className="mb-3 space-y-1 text-sm">
                 {payments
@@ -214,7 +217,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Kisan ki tasdeeq */}
-          <StepCard n={2} title="Kisan ki Tasdeeq (final rate)" done={confirmed}>
+          <StepCard n={2} title={t("mc_step_confirm", lang)} done={confirmed}>
             {confirmed ? (
               <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-900/40 dark:bg-brand-950/20">
                 {booking.farmer_confirmed_at ? (
@@ -255,7 +258,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Machine rawangi */}
-          <StepCard n={3} title="Machine Rawangi" done={dispatches.length > 0} locked={!confirmed}>
+          <StepCard n={3} title={t("mc_step_dispatch", lang)} done={dispatches.length > 0} locked={!confirmed}>
             {dispatches.map((d) => (
               <p key={d.id} className="mb-2 text-sm text-surface-600 dark:text-surface-300">
                 {new Date(d.departure_at).toLocaleString()} · {d.operator_name ?? "operator darj nahi"}
@@ -267,7 +270,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Asal kaam */}
-          <StepCard n={4} title="Asal Kaam (kattai ke baad)" done={Boolean(work)} locked={!confirmed}>
+          <StepCard n={4} title={t("mc_step_work", lang)} done={Boolean(work)} locked={!confirmed}>
             {work ? (
               <div className="text-sm">
                 <p className="font-medium text-surface-900 dark:text-surface-100">{work.actual_area} acre waqai kaate gaye</p>
@@ -283,7 +286,7 @@ export function BookingDetail({
                 )}
                 {work.completion_photo_url && (
                   <a href={work.completion_photo_url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
-                    Khet ki tasveer
+                    {t("mc_field_photo", lang)}
                   </a>
                 )}
               </div>
@@ -293,16 +296,16 @@ export function BookingDetail({
           </StepCard>
 
           {/* Bill */}
-          <StepCard n={5} title="Final Bill" done={Boolean(bill)} locked={!work}>
+          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!work}>
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
                 <Row label={`Machinery charges (${bill.actual_area} acre × Rs ${bill.rate_amount.toLocaleString()})`} value={bill.gross_amount} />
-                <Row label="Advance paid" value={-bill.advance_adjusted} />
-                {bill.previous_payment > 0 && <Row label="Previous payment" value={-bill.previous_payment} />}
-                {finalPaid > 0 && <Row label="Ab tak mila" value={-finalPaid} />}
+                <Row label={t("mc_advance_paid", lang)} value={-bill.advance_adjusted} />
+                {bill.previous_payment > 0 && <Row label={t("mc_previous_payment", lang)} value={-bill.previous_payment} />}
+                {finalPaid > 0 && <Row label={t("mc_received_so_far", lang)} value={-finalPaid} />}
                 <div className="mt-2 flex justify-between border-t border-surface-200 pt-2 font-display font-semibold dark:border-surface-700">
-                  <span>Balance</span>
+                  <span>{t("mc_balance", lang)}</span>
                   <span className={balance && balance > 0 ? "text-red-600 dark:text-red-400" : "text-brand-700 dark:text-brand-300"}>
                     Rs {(balance ?? 0).toLocaleString()}
                   </span>
@@ -317,7 +320,7 @@ export function BookingDetail({
           {payments.filter((p) => p.kind === "final").length > 0 && (
             <Card>
               <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-                Kisan se aayi payments
+                {t("mc_payments_from_farmer", lang)}
               </h2>
               <ul className="space-y-1 text-sm">
                 {payments
@@ -340,7 +343,7 @@ export function BookingDetail({
 
           {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
           {bill && (
-            <StepCard n={7} title="Vendor ka Hissa" done={vendorRemaining <= 0}>
+            <StepCard n={7} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
               <div className="mb-3 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <Row label={`Gross bill (${bill.actual_area} acre)`} value={bill.gross_amount} />
                 <Row label={`Hamara commission (${bill.commission_percentage}%)`} value={-bill.commission_amount} />
@@ -348,9 +351,9 @@ export function BookingDetail({
                   <span>{vendorName ?? "Vendor"} ko dena</span>
                   <span>Rs {bill.vendor_payable.toLocaleString()}</span>
                 </div>
-                {paidToVendor > 0 && <Row label="Ab tak diya" value={-paidToVendor} />}
+                {paidToVendor > 0 && <Row label={t("mc_paid_so_far", lang)} value={-paidToVendor} />}
                 <div className="mt-1 flex justify-between font-display font-semibold">
-                  <span>Baqi</span>
+                  <span>{t("mc_balance", lang)}</span>
                   <span className={vendorRemaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-brand-700 dark:text-brand-300"}>
                     Rs {vendorRemaining.toLocaleString()}
                   </span>
@@ -366,7 +369,7 @@ export function BookingDetail({
 
           {/* Final payment */}
           {bill && (balance ?? 0) > 0 && (
-            <StepCard n={6} title="Final Payment" done={false}>
+            <StepCard n={6} title={t("mc_step_final_payment", lang)} done={false}>
               <PaymentForm bookingId={booking.id} accounts={accounts} remaining={balance ?? 0} />
             </StepCard>
           )}
@@ -378,7 +381,7 @@ export function BookingDetail({
       {/* Timeline */}
       <Card>
         <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Kis ne kya kiya
+          {t("mc_who_did_what", lang)}
         </h2>
         <ul className="space-y-2">
           {events.map((e) => (
@@ -394,7 +397,7 @@ export function BookingDetail({
               </div>
             </li>
           ))}
-          {events.length === 0 && <li className="text-sm text-surface-400">Abhi kuch nahi.</li>}
+          {events.length === 0 && <li className="text-sm text-surface-400">{t("mc_nothing_yet", lang)}</li>}
         </ul>
       </Card>
     </div>
@@ -515,6 +518,7 @@ function Err({ state }: { state: ActionState }) {
 // ---------------------------------------------------------------------
 
 function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Array<{ id: string; name: string; account_type: string }> }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordAdvance, initialState);
   const [evidence, setEvidence] = useState("");
   return (
@@ -524,21 +528,21 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
       <input type="hidden" name="evidence_url" value={evidence} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Raqam</Label>
+          <Label>{t("mc_amount", lang)}</Label>
           <Input type="number" name="amount" step="0.01" />
         </div>
         <div>
-          <Label>Tareeqa</Label>
+          <Label>{t("mc_method", lang)}</Label>
           <Select name="method" defaultValue="cash">
-            <option value="cash">Cash</option>
-            <option value="bank">Bank</option>
-            <option value="wallet">Wallet</option>
-            <option value="other">Deegar</option>
+            <option value="cash">{t("mc_cash", lang)}</option>
+            <option value="bank">{t("mc_bank", lang)}</option>
+            <option value="wallet">{t("mc_wallet", lang)}</option>
+            <option value="other">{t("mc_other", lang)}</option>
           </Select>
         </div>
       </div>
       <div>
-        <Label>Khata</Label>
+        <Label>{t("mc_khata", lang)}</Label>
         <Select name="finance_account_id" defaultValue="">
           <option value="">—</option>
           {accounts.map((a) => (
@@ -550,40 +554,42 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Tareekh</Label>
+          <Label>{t("mc_date", lang)}</Label>
           <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
         </div>
         <div>
-          <Label>Reference</Label>
+          <Label>{t("mc_reference", lang)}</Label>
           <Input name="reference" />
         </div>
       </div>
       <PaymentSlipUpload onUploaded={setEvidence} />
-      <Submit label="Advance darj karein" />
+      <Submit label={t("mc_record_advance", lang)} />
     </form>
   );
 }
 
 function RateConfirmationForm({ bookingId, defaultRate }: { bookingId: string; defaultRate: number | null }) {
+  const lang = useLang();
   const [state, action] = useFormState(sendRateConfirmation, initialState);
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <div>
-        <Label>Final rate (Rs per acre)</Label>
+        <Label>{t("mc_final_rate_per_acre", lang)}</Label>
         <Input type="number" name="final_rate" step="0.01" defaultValue={defaultRate ?? ""} />
       </div>
       <p className="text-xs text-surface-500">
         Bhejte hi purani tasdeeq (agar thi) khatam ho jayegi — warna kisan ne kisi aur rate par haan ki hoti aur record
         naye rate par &ldquo;tasdeeq shuda&rdquo; dikhata rehta.
       </p>
-      <Submit label="Rate confirmation bhejein" />
+      <Submit label={t("mc_send_rate_confirmation", lang)} />
     </form>
   );
 }
 
 function FarmerResponseForm({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordFarmerConfirmation, initialState);
   return (
     <form action={action} className="space-y-3">
@@ -591,31 +597,32 @@ function FarmerResponseForm({ bookingId }: { bookingId: string }) {
       <input type="hidden" name="booking_id" value={bookingId} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Jawab kaise aaya</Label>
+          <Label>{t("mc_how_reply_came", lang)}</Label>
           <Select name="channel" defaultValue="whatsapp">
             <option value="whatsapp">WhatsApp</option>
-            <option value="call">Phone call</option>
-            <option value="in_person">Rubaru</option>
+            <option value="call">{t("mc_phone_call", lang)}</option>
+            <option value="in_person">{t("mc_in_person", lang)}</option>
           </Select>
         </div>
       </div>
       <div>
-        <Label>Kisan ne kya kaha (jaisa kaha, waisa likhein)</Label>
+        <Label>{t("mc_what_farmer_said", lang)}</Label>
         <Textarea name="response" rows={2} placeholder="CONFIRM" />
       </div>
-      <Submit label="Jawab darj karein" />
+      <Submit label={t("mc_record_reply", lang)} />
     </form>
   );
 }
 
 function OverrideForm({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
   const [state, action] = useFormState(overrideConfirmation, initialState);
   const [open, setOpen] = useState(false);
   const [evidence, setEvidence] = useState("");
   if (!open) {
     return (
       <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        Kisan ka jawab nahi aa raha — manager override
+        {t("mc_override_title", lang)}
       </Button>
     );
   }
@@ -629,12 +636,12 @@ function OverrideForm({ bookingId }: { bookingId: string }) {
       <input type="hidden" name="booking_id" value={bookingId} />
       <input type="hidden" name="evidence_url" value={evidence} />
       <div>
-        <Label>Wajah</Label>
-        <Textarea name="reason" rows={2} placeholder="Kisan ka phone band hai, machine khet par khari hai..." />
+        <Label>{t("mc_reason", lang)}</Label>
+        <Textarea name="reason" rows={2} placeholder={t("mc_override_placeholder", lang)} />
       </div>
       <PaymentSlipUpload onUploaded={setEvidence} />
       <div className="flex gap-2">
-        <Submit label="Override karein" />
+        <Submit label={t("mc_override_do", lang)} />
         <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
           <X className="h-4 w-4" />
         </Button>
@@ -644,13 +651,14 @@ function OverrideForm({ bookingId }: { bookingId: string }) {
 }
 
 function DispatchForm({ bookingId, machines }: { bookingId: string; machines: Array<{ id: string; label: string }> }) {
+  const lang = useLang();
   const [state, action] = useFormState(dispatchMachine, initialState);
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <div>
-        <Label>Machine</Label>
+        <Label>{t("mc_machine", lang)}</Label>
         <Select name="machine_id" defaultValue="">
           <option value="">—</option>
           {machines.map((m) => (
@@ -662,28 +670,29 @@ function DispatchForm({ bookingId, machines }: { bookingId: string; machines: Ar
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Operator / Driver</Label>
+          <Label>{t("mc_operator", lang)}</Label>
           <Input name="operator_name" />
         </div>
         <div>
-          <Label>Driver ka phone</Label>
+          <Label>{t("mc_driver_phone", lang)}</Label>
           <Input name="driver_phone" />
         </div>
         <div>
-          <Label>Opening meter / hours</Label>
+          <Label>{t("mc_opening_meter", lang)}</Label>
           <Input type="number" name="opening_meter" step="0.01" />
         </div>
         <div>
-          <Label>Diesel (litre)</Label>
+          <Label>{t("mc_diesel_litre", lang)}</Label>
           <Input type="number" name="fuel_litres" step="0.01" />
         </div>
       </div>
-      <Submit label="Rawangi darj karein" />
+      <Submit label={t("mc_record_dispatch", lang)} />
     </form>
   );
 }
 
 function WorkForm({ bookingId, estimated }: { bookingId: string; estimated: number }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
   const [photo, setPhoto] = useState("");
   return (
@@ -696,37 +705,38 @@ function WorkForm({ bookingId, estimated }: { bookingId: string; estimated: numb
       </p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Asal raqba (acre)</Label>
+          <Label>{t("mc_actual_area", lang)}</Label>
           <Input type="number" name="actual_area_acres" step="0.01" />
         </div>
         <div>
-          <Label>Kanal</Label>
+          <Label>{t("mc_kanal", lang)}</Label>
           <Input type="number" name="actual_area_kanal" step="0.01" />
         </div>
         <div>
-          <Label>Shuru</Label>
+          <Label>{t("mc_start", lang)}</Label>
           <Input type="datetime-local" name="started_at" />
         </div>
         <div>
-          <Label>Khatam</Label>
+          <Label>{t("mc_end", lang)}</Label>
           <Input type="datetime-local" name="finished_at" />
         </div>
         <div>
-          <Label>Meter / hours</Label>
+          <Label>{t("mc_meter_hours", lang)}</Label>
           <Input type="number" name="meter_reading" step="0.01" />
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
         <input type="checkbox" name="farmer_confirmed" className="h-4 w-4" />
-        Kisan ne mauqe par kaam ki tasdeeq ki
+        {t("mc_farmer_verified_onsite", lang)}
       </label>
       <PaymentSlipUpload onUploaded={setPhoto} />
-      <Submit label="Kaam darj karein" />
+      <Submit label={t("mc_record_work", lang)} />
     </form>
   );
 }
 
 function BillForm({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
   const [state, action] = useFormState(generateFinalBill, initialState);
   return (
     <form action={action} className="space-y-3">
@@ -736,7 +746,7 @@ function BillForm({ bookingId }: { bookingId: string }) {
         Bill system khud banayega: asal raqba × wo rate jis par kisan raazi hua, minus poora advance. Koi raqam haath se
         nahi bhari jati.
       </p>
-      <Submit label="Bill banayein" />
+      <Submit label={t("mc_make_bill", lang)} />
     </form>
   );
 }
@@ -750,6 +760,7 @@ function PaymentForm({
   accounts: Array<{ id: string; name: string; account_type: string }>;
   remaining: number;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordFinalPayment, initialState);
   const [lines, setLines] = useState([0]);
   return (
@@ -761,20 +772,20 @@ function PaymentForm({
       {lines.map((i) => (
         <div key={i} className="grid grid-cols-3 gap-2 rounded-lg border border-surface-200 p-2 dark:border-surface-700">
           <div>
-            <Label>Tareeqa</Label>
+            <Label>{t("mc_method", lang)}</Label>
             <Select name={`line_${i}_method`} defaultValue="cash">
-              <option value="cash">Cash</option>
-              <option value="bank">Bank</option>
-              <option value="wallet">Wallet</option>
-              <option value="khata">Khata (udhaar)</option>
+              <option value="cash">{t("mc_cash", lang)}</option>
+              <option value="bank">{t("mc_bank", lang)}</option>
+              <option value="wallet">{t("mc_wallet", lang)}</option>
+              <option value="khata">{t("mc_khata_credit", lang)}</option>
             </Select>
           </div>
           <div>
-            <Label>Raqam</Label>
+            <Label>{t("mc_amount", lang)}</Label>
             <Input type="number" name={`line_${i}_amount`} step="0.01" />
           </div>
           <div>
-            <Label>Khata</Label>
+            <Label>{t("mc_khata", lang)}</Label>
             <Select name={`line_${i}_account_id`} defaultValue="">
               <option value="">—</option>
               {accounts.map((a) => (
@@ -789,7 +800,7 @@ function PaymentForm({
 
       {lines.length < 5 && (
         <Button type="button" variant="ghost" size="sm" onClick={() => setLines([...lines, lines.length])}>
-          <Plus className="h-4 w-4" /> Split payment add karein
+          <Plus className="h-4 w-4" /> {t("mc_add_split", lang)}
         </Button>
       )}
 
@@ -798,10 +809,10 @@ function PaymentForm({
         raaste ka apna khata hona zaroori hai, warna paisa aa to gaya magar pahuncha kahin nahi.
       </p>
       <div>
-        <Label>Tareekh</Label>
+        <Label>{t("mc_date", lang)}</Label>
         <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
       </div>
-      <Submit label="Payment darj karein" />
+      <Submit label={t("mc_record_payment", lang)} />
     </form>
   );
 }
@@ -815,6 +826,7 @@ function VendorPayoutForm({
   accounts: Array<{ id: string; name: string; account_type: string }>;
   remaining: number;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordVendorPayout, initialState);
   return (
     <form action={action} className="space-y-3">
@@ -826,7 +838,7 @@ function VendorPayoutForm({
           <Input type="number" name="amount" step="0.01" />
         </div>
         <div>
-          <Label>Kis khate se</Label>
+          <Label>{t("mc_which_account_from", lang)}</Label>
           <Select name="account_id" defaultValue="">
             <option value="">—</option>
             {accounts.map((a) => (
@@ -837,18 +849,19 @@ function VendorPayoutForm({
           </Select>
         </div>
       </div>
-      <Submit label="Vendor ko payout darj karein" />
+      <Submit label={t("mc_record_vendor_payout", lang)} />
     </form>
   );
 }
 
 function CancelForm({ bookingId, advanceTotal }: { bookingId: string; advanceTotal: number }) {
+  const lang = useLang();
   const [state, action] = useFormState(cancelBooking, initialState);
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
       <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        Booking cancel karein
+        {t("mc_cancel_booking", lang)}
       </Button>
     );
   }
@@ -858,7 +871,7 @@ function CancelForm({ bookingId, advanceTotal }: { bookingId: string; advanceTot
         <Err state={state} />
         <input type="hidden" name="booking_id" value={bookingId} />
         <div>
-          <Label>Cancel ki wajah</Label>
+          <Label>{t("mc_cancel_reason", lang)}</Label>
           <Textarea name="reason" rows={2} />
         </div>
         {advanceTotal > 0 && (
@@ -871,7 +884,7 @@ function CancelForm({ bookingId, advanceTotal }: { bookingId: string; advanceTot
           </label>
         )}
         <div className="flex gap-2">
-          <Submit label="Cancel karein" />
+          <Submit label={t("mc_cancel_do", lang)} />
           <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
             <X className="h-4 w-4" />
           </Button>

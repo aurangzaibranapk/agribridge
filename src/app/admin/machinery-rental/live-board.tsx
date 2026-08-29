@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { CheckCircle2, Clock, RefreshCw } from "lucide-react";
 
 interface LiveBoardCard {
@@ -18,6 +20,7 @@ interface LiveBoardCard {
 const CONFIRMED_STATUSES = ["confirmed", "in_progress", "completed"];
 
 export function LiveBoard() {
+  const lang = useLang();
   const [cards, setCards] = useState<LiveBoardCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -51,10 +54,10 @@ export function LiveBoard() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-4 text-sm">
           <span className="text-surface-600">
-            <strong className="text-surface-900">{todayCount}</strong> Aaj
+            <strong className="text-surface-900">{todayCount}</strong> {t("mc_today", lang)}
           </span>
           <span className="text-surface-600">
-            <strong className="text-surface-900">{yesterdayCount}</strong> Kal
+            <strong className="text-surface-900">{yesterdayCount}</strong> {t("mc_yesterday", lang)}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-surface-400">
@@ -77,11 +80,11 @@ export function LiveBoard() {
                 <span className="font-mono text-xs text-surface-400">{card.booking_number}</span>
                 {isConfirmed ? (
                   <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Confirmed
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {t("mc_confirmed", lang)}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                    <Clock className="h-3.5 w-3.5" /> Pending
+                    <Clock className="h-3.5 w-3.5" /> {t("mc_pending", lang)}
                   </span>
                 )}
               </div>
@@ -96,7 +99,7 @@ export function LiveBoard() {
           );
         })}
         {cards.length === 0 && !loading && (
-          <p className="col-span-full py-8 text-center text-sm text-surface-400">Pichle 7 din mein koi booking nahi hai.</p>
+          <p className="col-span-full py-8 text-center text-sm text-surface-400">{t("mc_no_booking_7_days", lang)}</p>
         )}
       </div>
     </div>

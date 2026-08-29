@@ -1,5 +1,7 @@
 "use client";
 import { useMemo, useRef, useState, useTransition } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createBooking, quickRegisterFarmer, type ActionState } from "@/actions/machinery-lifecycle";
@@ -57,6 +59,7 @@ export function NewBookingForm({
   defaultAcres?: string;
   defaultLocation?: string;
 }) {
+  const lang = useLang();
   const router = useRouter();
   const [state, formAction] = useFormState(createBooking, initialState);
   const [code, setCode] = useState(
@@ -208,17 +211,17 @@ export function NewBookingForm({
   if (state.success && state.bookingNumber) {
     return (
       <Card className="mx-auto max-w-lg text-center">
-        <p className="text-sm text-surface-500">Booking ban gayi</p>
+        <p className="text-sm text-surface-500">{t("mc_booking_made", lang)}</p>
         <p className="mt-1 font-display text-2xl font-bold text-brand-700 dark:text-brand-300">{state.bookingNumber}</p>
         <p className="mt-3 text-sm text-surface-600 dark:text-surface-300">
           Advance, rate confirmation, machine rawangi, asal kaam, bill aur payment — sab isi Booking ID ke neeche.
         </p>
         <div className="mt-4 flex justify-center gap-2">
           <Button onClick={() => router.push(`/admin/machinery-rental/booking/${state.bookingId}`)}>
-            Booking kholein
+            {t("mc_open_booking", lang)}
           </Button>
           <Button variant="secondary" onClick={() => router.refresh()}>
-            Ek aur booking
+            {t("mc_one_more_booking", lang)}
           </Button>
         </div>
       </Card>
@@ -242,14 +245,14 @@ export function NewBookingForm({
 
       {/* 1 — Kisan */}
       <Card className="space-y-3">
-        <SectionTitle n={1} title="Kisan" />
+        <SectionTitle n={1} title={t("mc_farmer", lang)} />
         <div>
-          <Label>Farmer ID / Mobile / Naam</Label>
+          <Label>{t("mc_farmer_lookup", lang)}</Label>
           <Input
             id="fld-farmer"
             value={code}
             onChange={(e) => lookup(e.target.value)}
-            placeholder="0025"
+            placeholder={t("mc_eg_farmer_code", lang)}
             autoFocus
             className={errors.farmer ? "border-red-500 focus:ring-red-500" : undefined}
           />
@@ -289,7 +292,7 @@ export function NewBookingForm({
                   setQuickOpen(true);
                 }}
               >
-                <UserPlus className="h-4 w-4" /> Yahin naya kisan banayein
+                <UserPlus className="h-4 w-4" /> {t("mc_new_farmer_here", lang)}
               </Button>
             </div>
           )
@@ -311,23 +314,23 @@ export function NewBookingForm({
         {quickOpen && (
           <div className="space-y-3 rounded-lg border border-brand-200 p-3 dark:border-brand-900/40">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-surface-900 dark:text-surface-100">Naya kisan</p>
+              <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{t("mc_new_farmer", lang)}</p>
               <Button type="button" variant="ghost" size="sm" onClick={() => setQuickOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <div>
-              <Label>Naam *</Label>
-              <Input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="Muhammad Aslam" />
+              <Label>{t("mc_name_req", lang)}</Label>
+              <Input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder={t("mc_eg_name", lang)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Mobile *</Label>
-                <Input value={quickPhone} onChange={(e) => setQuickPhone(e.target.value)} placeholder="03xx-xxxxxxx" />
+                <Label>{t("mc_mobile_req", lang)}</Label>
+                <Input value={quickPhone} onChange={(e) => setQuickPhone(e.target.value)} placeholder={t("mc_eg_phone", lang)} />
               </div>
               <div>
-                <Label>Zila</Label>
-                <Input value={quickDistrict} onChange={(e) => setQuickDistrict(e.target.value)} placeholder="Sahiwal" />
+                <Label>{t("mc_district", lang)}</Label>
+                <Input value={quickDistrict} onChange={(e) => setQuickDistrict(e.target.value)} placeholder={t("mc_eg_district", lang)} />
               </div>
             </div>
             <Button
@@ -349,14 +352,14 @@ export function NewBookingForm({
 
       {/* 2 — Kaam */}
       <Card className="space-y-3">
-        <SectionTitle n={2} title="Kaam" />
+        <SectionTitle n={2} title={t("mc_work", lang)} />
 
         <div>
-          <Label>Machine ki qism *</Label>
+          <Label>{t("mc_machine_type_req", lang)}</Label>
           <Input
             id="fld-machine_type_requested"
             name="machine_type_requested"
-            placeholder="Kubota Harvester / Combine / Rotavator"
+            placeholder={t("mc_eg_machine", lang)}
             className={errors.machine_type_requested ? "border-red-500 focus:ring-red-500" : undefined}
           />
           {errors.machine_type_requested && (
@@ -369,22 +372,22 @@ export function NewBookingForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Fasal</Label>
+            <Label>{t("mc_crop", lang)}</Label>
             <Select name="crop_type" defaultValue="wheat">
-              <option value="wheat">Gandum (Wheat)</option>
-              <option value="rice">Chawal (Rice)</option>
-              <option value="maize">Makai (Maize)</option>
-              <option value="other">Deegar</option>
+              <option value="wheat">{t("mc_crop_wheat", lang)}</option>
+              <option value="rice">{t("mc_crop_rice", lang)}</option>
+              <option value="maize">{t("mc_crop_maize", lang)}</option>
+              <option value="other">{t("mc_other", lang)}</option>
             </Select>
           </div>
           <div>
-            <Label>Kab chahiye</Label>
+            <Label>{t("mc_when_needed", lang)}</Label>
             <Input type="date" name="preferred_date" min={new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
 
         <AreaPair
-          label="Raqba (kitna kaam)"
+          label={t("mc_area_work", lang)}
           acresName="harvest_area_acres"
           kanalName="harvest_area_kanal"
           required
@@ -394,8 +397,8 @@ export function NewBookingForm({
         />
 
         <div>
-          <Label>Khet ka pata</Label>
-          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder="Gaon / khet tak pahunchne ka pata" />
+          <Label>{t("mc_field_address", lang)}</Label>
+          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder={t("mc_field_address_hint", lang)} />
           <input type="hidden" name="village" value="" />
           <input type="hidden" name="location_lat" value={coords?.lat ?? ""} />
           <input type="hidden" name="location_lng" value={coords?.lng ?? ""} />
@@ -413,14 +416,14 @@ export function NewBookingForm({
         </div>
 
         <YesNo
-          label="Khet tayyar hai?"
+          label={t("mc_field_ready", lang)}
           name="field_ready"
           value={fieldReady}
           onChange={setFieldReady}
           hint="Paani khara ho ya pichli fasal ka rehna baqi ho to machine wapas aa jati hai."
         />
         <YesNo
-          label="Fasal pakk gayi?"
+          label={t("mc_harvest_ready", lang)}
           name="harvest_ready"
           value={harvestReady}
           onChange={setHarvestReady}
@@ -430,7 +433,7 @@ export function NewBookingForm({
 
       {/* 5 — Advance */}
       <Card className="space-y-3">
-        <SectionTitle n={3} title="Advance" />
+        <SectionTitle n={3} title={t("mc_advance", lang)} />
         <div className="flex gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -440,7 +443,7 @@ export function NewBookingForm({
               checked={!advance}
               onChange={() => setAdvance(false)}
             />
-            Advance nahi liya
+            {t("mc_no_advance", lang)}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -450,7 +453,7 @@ export function NewBookingForm({
               checked={advance}
               onChange={() => setAdvance(true)}
             />
-            Advance liya hai
+            {t("mc_advance_taken", lang)}
           </label>
         </div>
 
@@ -458,13 +461,13 @@ export function NewBookingForm({
           <div className="space-y-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Raqam *</Label>
+                <Label>{t("mc_amount_req", lang)}</Label>
                 <Input
                   id="fld-advance_amount"
                   type="number"
                   name="advance_amount"
                   step="0.01"
-                  placeholder="20000"
+                  placeholder={t("mc_eg_amount", lang)}
                   className={errors.advance_amount ? "border-red-500 focus:ring-red-500" : undefined}
                 />
                 {errors.advance_amount && (
@@ -472,17 +475,17 @@ export function NewBookingForm({
                 )}
               </div>
               <div>
-                <Label>Tareeqa</Label>
+                <Label>{t("mc_method", lang)}</Label>
                 <Select name="advance_method" value={advanceMethod} onChange={(e) => setAdvanceMethod(e.target.value)}>
-                  <option value="cash">Cash</option>
-                  <option value="bank">Bank</option>
-                  <option value="wallet">Wallet</option>
-                  <option value="other">Deegar</option>
+                  <option value="cash">{t("mc_cash", lang)}</option>
+                  <option value="bank">{t("mc_bank", lang)}</option>
+                  <option value="wallet">{t("mc_wallet", lang)}</option>
+                  <option value="other">{t("mc_other", lang)}</option>
                 </Select>
               </div>
             </div>
             <div>
-              <Label>Kis khate mein aaya *</Label>
+              <Label>{t("mc_which_account_in", lang)}</Label>
               <Select
                 id="fld-advance_account_id"
                 name="advance_account_id"
@@ -502,11 +505,11 @@ export function NewBookingForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Tareekh</Label>
+                <Label>{t("mc_date", lang)}</Label>
                 <Input type="date" name="advance_date" defaultValue={new Date().toISOString().slice(0, 10)} />
               </div>
               <div>
-                <Label>Reference / Receipt no.</Label>
+                <Label>{t("mc_reference_receipt", lang)}</Label>
                 <Input name="advance_reference" />
               </div>
             </div>
@@ -516,7 +519,16 @@ export function NewBookingForm({
             </div>
             {staffName && (
               <p className="rounded bg-surface-50 px-2 py-1 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
-                Ye paisa <strong>{staffName}</strong> ke naam par darj hoga — jo abhi login hai.
+                {/* Naam beech mein aata hai, is liye jumla do hisson mein
+                    toRne ke bajaye poora jumla fehrist mein rakha gaya hai
+                    aur naam us mein daala jata hai -- warna Urdu mein
+                    lafzon ki tarteeb ulti hoti hai aur jumla toot jata. */}
+                {t("mc_money_recorded_under", lang).split("{name}").map((part, i) => (
+                  <span key={i}>
+                    {part}
+                    {i === 0 && <strong>{staffName}</strong>}
+                  </span>
+                ))}
               </p>
             )}
             <p className="text-xs text-surface-500">
@@ -529,7 +541,7 @@ export function NewBookingForm({
 
       <Card className="space-y-3">
         <div>
-          <Label>Notes</Label>
+          <Label>{t("mc_notes", lang)}</Label>
           <Textarea name="notes" rows={2} />
         </div>
         <SubmitButton onCheck={handleSubmit} />

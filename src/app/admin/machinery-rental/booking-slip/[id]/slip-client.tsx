@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { emailMachineryBookingSlip, type ActionState } from "@/actions/machinery-rental";
@@ -24,6 +26,7 @@ interface Slip {
 }
 
 export function MachinerySlipClient({ slip }: { slip: Slip }) {
+  const lang = useLang();
   const [showEmail, setShowEmail] = useState(false);
   const shareText = `Al Rana Traders - Machinery Booking Slip ${slip.bookingNumber}\n${slip.farmerName}\n${slip.vendorName} - ${slip.machineLabel}\nTotal: Rs ${slip.totalAmount.toLocaleString()}\nReceived: Rs ${slip.amountReceived.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
@@ -40,11 +43,11 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
     <div className="mx-auto max-w-xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/machinery-rental" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
+          <ArrowLeft className="h-4 w-4" /> {t("mc_back", lang)}
         </Link>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print/Download
+            <Printer className="h-3.5 w-3.5" /> {t("mc_print_download", lang)}
           </button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
@@ -59,7 +62,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
         <div className="mb-6 flex items-center justify-between border-b border-surface-200 pb-4">
           <div>
             <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders</h1>
-            <p className="text-sm text-surface-500">AgriBridge - Machinery Booking Slip</p>
+            <p className="text-sm text-surface-500">{t("mc_slip_title", lang)}</p>
           </div>
           <div className="text-right">
             <p className="font-mono text-sm font-semibold text-surface-700">{slip.bookingNumber}</p>
@@ -68,14 +71,14 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
         </div>
 
         <div className="mb-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-400">Farmer</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-400">{t("mc_farmer", lang)}</p>
           <p className="font-display text-lg font-semibold text-surface-900">{slip.farmerName}</p>
           {slip.farmerCode && <p className="text-xs text-surface-500">Code: {slip.farmerCode}</p>}
           {slip.farmerPhone && <p className="text-xs text-surface-500">Phone: {slip.farmerPhone}</p>}
         </div>
 
         <div className="mb-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-400">Vendor / Machine</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-400">{t("mc_vendor_machine", lang)}</p>
           <p className="text-base font-semibold text-surface-800">{slip.vendorName} - {slip.machineLabel}</p>
           {slip.locationAddress && <p className="text-xs text-surface-500">Location: {slip.locationAddress}</p>}
         </div>
@@ -87,11 +90,11 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
           </div>
           <div className="mt-2 flex items-center justify-between">
             <div>
-              <p className="text-xs text-surface-500">Total Amount</p>
+              <p className="text-xs text-surface-500">{t("mc_total_amount", lang)}</p>
               <p className="font-display text-2xl font-bold text-green-700">Rs {slip.totalAmount.toLocaleString()}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-surface-500">Received So Far</p>
+              <p className="text-xs text-surface-500">{t("mc_received_so_far", lang)}</p>
               <p className="text-base font-semibold text-surface-800">Rs {slip.amountReceived.toLocaleString()}</p>
             </div>
           </div>
@@ -103,7 +106,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
         </div>
 
         <div className="mt-8 border-t border-surface-100 pt-3">
-          <p className="text-center text-[10px] text-surface-300">This is a computer-generated booking slip from the AgriBridge system.</p>
+          <p className="text-center text-[10px] text-surface-300">{t("mc_slip_footer", lang)}</p>
           <div className="mt-2 flex items-center justify-between">
             <p className="text-xs font-semibold text-surface-400">Software by ZR Technologies</p>
             <p className="text-xs text-surface-400">0312-6513294</p>
@@ -117,6 +120,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
 }
 
 function EmailModal({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(emailMachineryBookingSlip, initialState);
   if (state.success) setTimeout(onClose, 1200);
 
@@ -124,15 +128,15 @@ function EmailModal({ bookingId, onClose }: { bookingId: string; onClose: () => 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Email Se Bhejein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mc_send_by_email", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-2 text-xs text-surface-400">Professional PDF slip seedha attachment ki tarah email mein chali jayegi.</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Email bhej di gayi.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("mc_email_sent", lang)}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="booking_id" value={bookingId} />
-          <input type="email" name="to_email" required placeholder="Email address" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="email" name="to_email" required placeholder={t("mc_email_address", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton />
         </form>
       </div>
