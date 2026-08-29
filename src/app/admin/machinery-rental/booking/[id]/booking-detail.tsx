@@ -60,6 +60,8 @@ interface Booking {
   status: string;
   booking_date: string;
   crop_type: string | null;
+  field_ready: string | null;
+  harvest_ready: string | null;
   village: string | null;
   location_address: string | null;
   harvest_area: number;
@@ -81,6 +83,9 @@ interface Booking {
   farmer_phone: string;
   farmer_village: string;
 }
+
+const READY_LABEL: Record<string, string> = { yes: "Haan", no: "Nahi", unknown: "Pata nahi" };
+const READY_TONE: Record<string, "green" | "red" | "amber"> = { yes: "green", no: "red", unknown: "amber" };
 
 export function BookingDetail({
   booking,
@@ -132,6 +137,23 @@ export function BookingDetail({
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            {/* Ye do jawab yahan sarnama par hain, kisi andar wale khane
+                mein nahi: machine bhejne se pehle bande ne inhi ko dekhna
+                hota hai. "Nahi" laal hai taake nazar se na guzre. */}
+            {(booking.field_ready || booking.harvest_ready) && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {booking.field_ready && (
+                  <Badge tone={READY_TONE[booking.field_ready] ?? "gray"}>
+                    Khet tayyar: {READY_LABEL[booking.field_ready] ?? booking.field_ready}
+                  </Badge>
+                )}
+                {booking.harvest_ready && (
+                  <Badge tone={READY_TONE[booking.harvest_ready] ?? "gray"}>
+                    Fasal pakki: {READY_LABEL[booking.harvest_ready] ?? booking.harvest_ready}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
           <Badge tone={cancelled ? "red" : booking.status === "closed" ? "green" : "blue"}>
             {STATUS_LABEL[booking.status] ?? booking.status}

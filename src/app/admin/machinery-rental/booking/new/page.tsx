@@ -12,18 +12,13 @@ export default async function NewMachineryBookingPage({
   const params = await searchParams;
   const supabase = createClient();
 
-  const [{ data: farmers }, { data: rawMachines }, { data: accounts }, { data: bills }, { data: payments }] =
+  const [{ data: farmers }, { data: accounts }, { data: bills }, { data: payments }] =
     await Promise.all([
       supabase
         .from("farmers")
         .select("id, full_name, farmer_code, phone_number, district, village")
         .eq("is_deleted", false)
         .order("full_name"),
-      supabase
-        .from("machinery_vendor_machines")
-        .select("id, machine_type, model, rate_type, rate_amount, machinery_vendors(vendor_name)")
-        .eq("is_available", true)
-        .order("machine_type"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
       supabase.from("machinery_bills").select("booking_id, balance_payable"),
       supabase.from("machinery_payments").select("booking_id, amount, kind"),
@@ -64,18 +59,6 @@ export default async function NewMachineryBookingPage({
     ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
     : { data: null };
 
-  const machines = (rawMachines ?? []).map((m: any) => {
-    const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
-    return {
-      id: m.id,
-      machine_type: m.machine_type,
-      model: m.model,
-      rate_type: m.rate_type,
-      rate_amount: Number(m.rate_amount),
-      vendor_name: vendor?.vendor_name ?? "-",
-    };
-  });
-
   return (
     <div>
       <PageHeader
@@ -93,7 +76,6 @@ export default async function NewMachineryBookingPage({
           previous_bookings: history.get(f.id)?.bookings ?? 0,
           outstanding: history.get(f.id)?.outstanding ?? 0,
         }))}
-        machines={machines}
         accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
         staffName={me?.full_name ?? null}
         defaultFarmerId={params.convert_farmer}

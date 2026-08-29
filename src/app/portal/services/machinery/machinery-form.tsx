@@ -1,12 +1,12 @@
 ﻿"use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { submitMachineryRequest, type ActionState } from "@/actions/service-requests";
+import { submitMachineryRequest, type ServiceRequestState } from "@/actions/service-requests";
 import { Tractor, Loader2, MapPin } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { t, type Lang } from "@/lib/i18n/translations";
 
-const initialState: ActionState = {};
+const initialState: ServiceRequestState = {};
 
 interface MachineryRequest {
   id: string;

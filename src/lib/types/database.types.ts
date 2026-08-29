@@ -7380,10 +7380,12 @@ export type Database = {
           farmer_confirmed_at: string | null
           farmer_id: string
           field_access: string | null
+          field_ready: string | null
           final_rate: number | null
           harvest_area: number | null
           harvest_area_acres: number | null
           harvest_area_kanal: number | null
+          harvest_ready: string | null
           hours: number | null
           id: string
           location_address: string | null
@@ -7444,10 +7446,12 @@ export type Database = {
           farmer_confirmed_at?: string | null
           farmer_id: string
           field_access?: string | null
+          field_ready?: string | null
           final_rate?: number | null
           harvest_area?: number | null
           harvest_area_acres?: number | null
           harvest_area_kanal?: number | null
+          harvest_ready?: string | null
           hours?: number | null
           id?: string
           location_address?: string | null
@@ -7508,10 +7512,12 @@ export type Database = {
           farmer_confirmed_at?: string | null
           farmer_id?: string
           field_access?: string | null
+          field_ready?: string | null
           final_rate?: number | null
           harvest_area?: number | null
           harvest_area_acres?: number | null
           harvest_area_kanal?: number | null
+          harvest_ready?: string | null
           hours?: number | null
           id?: string
           location_address?: string | null
@@ -7743,6 +7749,8 @@ export type Database = {
           estimated_cost_reasoning: string | null
           expected_date: string
           farmer_id: string
+          field_ready: string | null
+          harvest_ready: string | null
           id: string
           location_address: string | null
           location_lat: number | null
@@ -7764,6 +7772,8 @@ export type Database = {
           estimated_cost_reasoning?: string | null
           expected_date: string
           farmer_id: string
+          field_ready?: string | null
+          harvest_ready?: string | null
           id?: string
           location_address?: string | null
           location_lat?: number | null
@@ -7785,6 +7795,8 @@ export type Database = {
           estimated_cost_reasoning?: string | null
           expected_date?: string
           farmer_id?: string
+          field_ready?: string | null
+          harvest_ready?: string | null
           id?: string
           location_address?: string | null
           location_lat?: number | null

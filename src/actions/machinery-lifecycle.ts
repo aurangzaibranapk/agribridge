@@ -180,6 +180,12 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       preferred_time: str(formData, "preferred_time"),
       special_instructions: str(formData, "special_instructions"),
 
+      // Do sawal jin ka jawab na hone se machine khali jati hai
+      // (migration 125). "unknown" bhi ek sahi jawab hai -- booking
+      // aksar hafta pehle hoti hai.
+      field_ready: str(formData, "field_ready"),
+      harvest_ready: str(formData, "harvest_ready"),
+
       total_area_acres: num(formData, "total_area_acres"),
       total_area_kanal: num(formData, "total_area_kanal"),
       harvest_area_acres: harvestAcres,

@@ -20,14 +20,6 @@ interface Farmer {
   previous_bookings: number;
   outstanding: number;
 }
-interface Machine {
-  id: string;
-  machine_type: string;
-  model: string | null;
-  rate_type: string;
-  rate_amount: number;
-  vendor_name: string;
-}
 interface Account {
   id: string;
   name: string;
@@ -40,14 +32,16 @@ interface Account {
  * Sections mein is liye hai ke ye form khet par, mobile par bhara jata
  * hai -- ek lambi fehrist mein staff aadha bhar kar chhoR deta hai.
  *
- * Rate yahan sirf ANDAZA hai. Us par "Estimated" ka nishan jaan boojh
- * kar saamne likha hai, taake koi ise tay shuda rate na samajh le:
- * asal rate kattai se pehle kisan se confirm hota hai, aur bill usi se
- * banta hai.
+ * Rate ka koi khana yahan NAHI hai. Pehle "andaza" ka ek khana tha, aur
+ * wo aksar bill ka rate samajh liya jata tha. Asal rate kattai se pehle
+ * kisan se confirm hota hai aur bill sirf usi se banta hai -- is liye
+ * booking ke waqt koi number likhwana sirf ghalat fehmi paida karta hai.
+ *
+ * Machine bhi yahan nahi chuni jati: wo rawangi ke waqt chunti hai, jab
+ * ye maloom ho ke us din kaun si machine khali hai.
  */
 export function NewBookingForm({
   farmers,
-  machines,
   accounts,
   staffName,
   defaultFarmerId,
@@ -56,7 +50,6 @@ export function NewBookingForm({
   defaultLocation,
 }: {
   farmers: Farmer[];
-  machines: Machine[];
   accounts: Account[];
   staffName?: string | null;
   defaultFarmerId?: string;
@@ -85,6 +78,12 @@ export function NewBookingForm({
   const [quickPhone, setQuickPhone] = useState("");
   const [quickDistrict, setQuickDistrict] = useState("");
   const [quickMsg, setQuickMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
+  // Dono sawalon ka teesra jawab "pata nahi" hai, aur wo jaan boojh kar
+  // hai. Booking aksar hafta pehle hoti hai; us waqt "pata nahi" hi sach
+  // hota hai. Usay majboori se "haan" likhwana jhoot ko record bana deta
+  // hai -- aur record par bharosa khatam ho jata hai.
+  const [fieldReady, setFieldReady] = useState("");
+  const [harvestReady, setHarvestReady] = useState("");
   const [quickPending, startQuick] = useTransition();
 
   const allFarmers = useMemo(() => [...addedFarmers, ...farmers], [addedFarmers, farmers]);
@@ -348,99 +347,10 @@ export function NewBookingForm({
         )}
       </Card>
 
-      {/* 2 — Khet aur fasal */}
+      {/* 2 — Kaam */}
       <Card className="space-y-3">
-        <SectionTitle n={2} title="Khet aur Fasal" />
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Fasal</Label>
-            <Select name="crop_type" defaultValue="wheat">
-              <option value="wheat">Gandum (Wheat)</option>
-              <option value="rice">Chawal (Rice)</option>
-              <option value="maize">Makai (Maize)</option>
-              <option value="other">Deegar</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Gaon / Farm</Label>
-            <Input name="village" defaultValue={farmer?.village ?? ""} placeholder="Chak Mahabali" />
-          </div>
-        </div>
+        <SectionTitle n={2} title="Kaam" />
 
-        <AreaPair label="Kul raqba" acresName="total_area_acres" kanalName="total_area_kanal" />
-        <AreaPair
-          label="Kattai ka raqba"
-          acresName="harvest_area_acres"
-          kanalName="harvest_area_kanal"
-          required
-          defaultAcres={defaultAcres}
-          fieldId="fld-harvest_area"
-          error={errors.harvest_area}
-        />
-
-        <div>
-          <Label>Pata</Label>
-          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder="Khet tak pahunchne ka pata" />
-        </div>
-
-        <div>
-          <Label>Google Location</Label>
-          <input type="hidden" name="location_lat" value={coords?.lat ?? ""} />
-          <input type="hidden" name="location_lng" value={coords?.lng ?? ""} />
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={captureLocation} disabled={locating}>
-              {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-              {coords ? "Dobara lein" : "Location capture karein"}
-            </Button>
-            {coords && (
-              <span className="text-xs text-green-700 dark:text-green-400">
-                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-surface-500">
-            Location baad mein raasta banane aur machine bhejne ke kaam aati hai.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Khet tak rasai</Label>
-            <Select name="field_access" defaultValue="">
-              <option value="">—</option>
-              <option value="easy">Asaan</option>
-              <option value="medium">Darmiyana</option>
-              <option value="difficult">Mushkil</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Kattai kab tak</Label>
-            <Input type="date" name="expected_harvest_date" />
-          </div>
-          <div>
-            <Label>Pasandeeda tareekh</Label>
-            <Input type="date" name="preferred_date" />
-          </div>
-          <div>
-            <Label>Pasandeeda waqt</Label>
-            <Select name="preferred_time" defaultValue="any">
-              <option value="morning">Subah</option>
-              <option value="afternoon">Dopahar</option>
-              <option value="evening">Shaam</option>
-              <option value="any">Koi bhi</option>
-            </Select>
-          </div>
-        </div>
-
-        <div>
-          <Label>Khaas hidayat</Label>
-          <Textarea name="special_instructions" rows={2} placeholder="Khet mein khaal hai, choti machine behtar rahegi..." />
-        </div>
-      </Card>
-
-      {/* 3 — Machinery */}
-      <Card className="space-y-3">
-        <SectionTitle n={3} title="Machinery ki Zaroorat" />
         <div>
           <Label>Machine ki qism *</Label>
           <Input
@@ -452,57 +362,75 @@ export function NewBookingForm({
           {errors.machine_type_requested && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.machine_type_requested}</p>
           )}
-        </div>
-        <div>
-          <Label>Machine (abhi tay ho to)</Label>
-          <Select name="machine_id" defaultValue="">
-            <option value="">Abhi tay nahi (Unassigned)</option>
-            {machines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.machine_type}
-                {m.model ? ` (${m.model})` : ""} — {m.vendor_name} — Rs {m.rate_amount.toLocaleString()}/{m.rate_type.replace("per_", "")}
-              </option>
-            ))}
-          </Select>
           <p className="mt-1 text-xs text-surface-500">
-            Booking ke waqt machine tay karna zaroori nahi — baad mein rawangi ke waqt bhi tay ho sakti hai.
+            Kaun si machine jayegi, ye abhi tay karna zaroori nahi — wo rawangi ke waqt chuni jati hai.
           </p>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Kitni machinein</Label>
-            <Input type="number" name="required_units" min={1} defaultValue={1} />
+            <Label>Fasal</Label>
+            <Select name="crop_type" defaultValue="wheat">
+              <option value="wheat">Gandum (Wheat)</option>
+              <option value="rice">Chawal (Rice)</option>
+              <option value="maize">Makai (Maize)</option>
+              <option value="other">Deegar</option>
+            </Select>
           </div>
           <div>
-            <Label>Deegar service</Label>
-            <Input name="other_service" placeholder="Thresher, loading..." />
+            <Label>Kab chahiye</Label>
+            <Input type="date" name="preferred_date" min={new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
-          <input type="checkbox" name="trolley_required" className="h-4 w-4" />
-          Trolley chahiye
-        </label>
-      </Card>
 
-      {/* 4 — Rate */}
-      <Card className="space-y-3">
-        <SectionTitle n={4} title="Rate — booking ke waqt" />
+        <AreaPair
+          label="Raqba (kitna kaam)"
+          acresName="harvest_area_acres"
+          kanalName="harvest_area_kanal"
+          required
+          defaultAcres={defaultAcres}
+          fieldId="fld-harvest_area"
+          error={errors.harvest_area}
+        />
+
         <div>
-          <Label>Andaza (Rs per acre)</Label>
-          <Input type="number" name="estimated_rate" step="0.01" placeholder="7000" />
+          <Label>Khet ka pata</Label>
+          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder="Gaon / khet tak pahunchne ka pata" />
+          <input type="hidden" name="village" value="" />
+          <input type="hidden" name="location_lat" value={coords?.lat ?? ""} />
+          <input type="hidden" name="location_lng" value={coords?.lng ?? ""} />
+          <div className="mt-2 flex items-center gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={captureLocation} disabled={locating}>
+              {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+              {coords ? "Dobara lein" : "Location capture karein"}
+            </Button>
+            {coords && (
+              <span className="text-xs text-green-700 dark:text-green-400">
+                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
-          <p className="font-medium">Ye rate abhi sirf ANDAZA hai.</p>
-          <p className="mt-1">
-            Bill kabhi is se nahi banega. Kattai se pehle final rate kisan ko bheja jayega, aur us ke confirm karne ke
-            baad hi wo rate "final" ban kar bill ki bunyad banega.
-          </p>
-        </div>
+
+        <YesNo
+          label="Khet tayyar hai?"
+          name="field_ready"
+          value={fieldReady}
+          onChange={setFieldReady}
+          hint="Paani khara ho ya pichli fasal ka rehna baqi ho to machine wapas aa jati hai."
+        />
+        <YesNo
+          label="Fasal pakk gayi?"
+          name="harvest_ready"
+          value={harvestReady}
+          onChange={setHarvestReady}
+          hint="Kachi fasal par harvester bhejna nuqsan hai."
+        />
       </Card>
 
       {/* 5 — Advance */}
       <Card className="space-y-3">
-        <SectionTitle n={5} title="Advance" />
+        <SectionTitle n={3} title="Advance" />
         <div className="flex gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -607,6 +535,57 @@ export function NewBookingForm({
         <SubmitButton onCheck={handleSubmit} />
       </Card>
     </form>
+  );
+}
+
+/**
+ * Haan / Nahi / Pata nahi -- teen baRe button.
+ *
+ * Dropdown se bacha gaya hai: counter par khara banda mobile par ek haath
+ * se form bharta hai, aur dropdown kholna, scroll karna, phir chunna teen
+ * kaam hain. Yahan ek chhoona kaafi hai.
+ */
+function YesNo({
+  label,
+  name,
+  value,
+  onChange,
+  hint,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  hint?: string;
+}) {
+  const options = [
+    { v: "yes", t: "Haan" },
+    { v: "no", t: "Nahi" },
+    { v: "unknown", t: "Pata nahi" },
+  ];
+  return (
+    <div>
+      <Label>{label}</Label>
+      <input type="hidden" name={name} value={value} />
+      <div className="mt-1 flex gap-2">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(value === o.v ? "" : o.v)}
+            className={
+              "flex-1 rounded-lg border py-2 text-sm font-medium transition " +
+              (value === o.v
+                ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950/30 dark:text-brand-300"
+                : "border-surface-200 text-surface-500 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800")
+            }
+          >
+            {o.t}
+          </button>
+        ))}
+      </div>
+      {hint && <p className="mt-1 text-xs text-surface-500">{hint}</p>}
+    </div>
   );
 }
 

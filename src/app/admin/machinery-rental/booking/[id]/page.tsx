@@ -86,6 +86,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         status: booking.status,
         booking_date: booking.booking_date,
         crop_type: booking.crop_type,
+        field_ready: booking.field_ready,
+        harvest_ready: booking.harvest_ready,
         village: booking.village,
         location_address: booking.location_address,
         harvest_area: Number(booking.harvest_area ?? 0),
