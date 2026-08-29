@@ -12669,6 +12669,16 @@ export type Database = {
         }
         Relationships: []
       }
+      v_machinery_watch: {
+        Row: {
+          amount: number | null
+          booking_id: string | null
+          booking_number: string | null
+          detail: string | null
+          issue: string | null
+        }
+        Relationships: []
+      }
       v_open_findings: {
         Row: {
           amount: number | null

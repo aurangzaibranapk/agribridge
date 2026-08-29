@@ -358,6 +358,81 @@ async function checkOrphanCash(): Promise<CheckResult> {
 // Poora amal
 // =====================================================================
 
+/**
+ * Machinery ki zanjeer -- booking se paisay tak.
+ *
+ * Rok migration 116 mein lagi hui hai: ye haalatein banni hi nahi
+ * chahiyen. Ye jaanch us se alag sawal poochhti hai -- agar phir bhi ban
+ * gayin to? Trigger band kiya ja sakta hai, migration se badla ja sakta
+ * hai, aur seedha SQL us se pehle chal sakta hai. "Rok lagi hui hai" aur
+ * "haalat theek hai" ek baat nahi.
+ *
+ * Do cheezein yahan nahi hain kyunki wo pehle se checkAllPosted mein aa
+ * jati hain: advance ya payment jo ledger tak nahi pahuncha. 117 ne
+ * machinery ko Money Trail ki fehrist mein daal diya hai.
+ */
+async function checkMachineryChain(): Promise<CheckResult> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("v_machinery_watch")
+    .select("issue, booking_number, amount, detail");
+
+  if (error) {
+    return skip(
+      "machinery_chain",
+      "Machinery ki zanjeer jaanchi nahi ja saki",
+      error.message,
+      "/admin/machinery-rental"
+    );
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return pass(
+      "machinery_chain",
+      "Machinery ki zanjeer poori hai",
+      "Har booking par rate wahi hai jis par kisan raazi hua, kaam ka bill bana, advance kata, aur band booking par kuch baqi nahi."
+    );
+  }
+
+  const LABEL: Record<string, string> = {
+    rate_changed_after_confirm: "kisan ki tasdeeq ke baad rate badla",
+    work_without_bill: "kaam mukammal magar bill nahi bana",
+    advance_not_adjusted: "advance bill mein poora nahi kata",
+    closed_with_balance: "booking band magar paisa baqi",
+    work_without_dispatch: "kaam hua magar machine ki rawangi darj nahi",
+    dispatch_on_cancelled: "cancel shuda booking par machine nikli",
+  };
+
+  const counts = new Map<string, number>();
+  // View se aane wale column TypeScript ki nazar mein nullable hain
+  // (view par NOT NULL ka pata nahi chalta), is liye yahan naam pakka
+  // kiya jata hai.
+  rows.forEach((r) => {
+    const key = r.issue ?? "unknown";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  const total = round2(rows.reduce((sum, r) => sum + Math.abs(Number(r.amount ?? 0)), 0));
+  const summary = [...counts.entries()]
+    .map(([issue, n]) => `${n} × ${LABEL[issue] ?? issue}`)
+    .join("، ");
+
+  const first = rows
+    .slice(0, 3)
+    .map((r) => `${r.booking_number}: ${r.detail}`)
+    .join(" | ");
+
+  return fail(
+    "machinery_chain",
+    "red",
+    `Machinery ki zanjeer mein ${rows.length} jagah farq hai`,
+    `${summary}. ${first}`,
+    total,
+    "/admin/machinery-rental"
+  );
+}
+
 export interface RunSummary {
   verdict: "clean" | "issues" | "partial";
   total: number;
@@ -389,6 +464,7 @@ export async function runChecks(): Promise<RunSummary> {
     checkHiddenLoss,
     checkCostSheet,
     checkOrphanCash,
+    checkMachineryChain,
   ];
 
   const results: CheckResult[] = [];
