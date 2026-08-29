@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { posCheckout } from "@/actions/pos";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { ShoppingCart, Trash2, Search, ScanLine, Camera, Plus, X, PackagePlus, Paperclip, Check } from "lucide-react";
@@ -209,31 +210,49 @@ export function PosClient({
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
     setSubmitting(true);
-    const { data, error } = await supabase.rpc("create_pos_sale", {
-      p_customer_id: customerId || null,
-      p_payment_mode: primaryMethod,
-      p_cash_paid: cashCollected,
-      p_khata_amount: khataTotal,
-      p_items: cart.map((l) => ({
+    // Bikri ab seedha database ko nahi jati -- server ke raaste jati hai,
+    // taake wo ledger mein bhi darj ho. Pehle browser khud create_pos_sale
+    // bulata tha aur ledger ko bikri ka pata hi nahi chalta tha; us ka
+    // nateeja raat ki ginti par nikalta tha, jahan golak mein har roz
+    // poore din ki bikri jitna "zyada" paisa nazar aata.
+    const result = await posCheckout({
+      customerId: customerId || null,
+      paymentMode: primaryMethod,
+      cashPaid: cashCollected,
+      khataAmount: khataTotal,
+      items: cart.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
         unit_price: l.unit_price,
       })),
-      p_payment_lines: paymentLines
+      paymentLines: paymentLines
         .filter((l) => (parseFloat(l.amount) || 0) > 0)
         .map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
     });
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
+    const data = result.saleId;
+    if (result.error) {
+      setMessage({ type: "error", text: result.error });
       setSubmitting(false);
       return;
     }
 
-    const saleId = data as string;
+    if (!data) {
+      setMessage({ type: "error", text: "Bikri nahi ho saki." });
+      setSubmitting(false);
+      return;
+    }
 
-    setMessage({ type: "success", text: "Sale complete ho gayi." });
-    setCompletedSaleId(saleId);
+    // Bikri ho gayi magar ledger mein na ja saki -- ye chhupaya nahi
+    // jata. Bikri sahi hai (maal ja chuka hai, paisa aa chuka hai) magar
+    // counter par khare bande ko maloom hona chahiye, taake wo raat ki
+    // ginti se pehle ise theek karwa sake.
+    setMessage(
+      result.notice
+        ? { type: "error", text: `Sale complete ho gayi — magar ${result.notice}` }
+        : { type: "success", text: "Sale complete ho gayi." }
+    );
+    setCompletedSaleId(data);
     resetSale();
     setSubmitting(false);
   }

@@ -9011,6 +9011,218 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_return_code_attempts: {
+        Row: {
+          attempted_at: string
+          attempted_by: string | null
+          branch_id: string | null
+          id: string
+          sale_id: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          attempted_by?: string | null
+          branch_id?: string | null
+          id?: string
+          sale_id?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          attempted_by?: string | null
+          branch_id?: string | null
+          id?: string
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_return_code_attempts_attempted_by_fkey"
+            columns: ["attempted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
+          },
+        ]
+      }
+      pos_return_counters: {
+        Row: {
+          id: boolean
+          last_number: number
+        }
+        Insert: {
+          id?: boolean
+          last_number?: number
+        }
+        Update: {
+          id?: boolean
+          last_number?: number
+        }
+        Relationships: []
+      }
+      pos_return_items: {
+        Row: {
+          id: string
+          line_cogs: number
+          product_id: string
+          quantity: number
+          return_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          line_cogs?: number
+          product_id: string
+          quantity: number
+          return_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          line_cogs?: number
+          product_id?: string
+          quantity?: number
+          return_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "pos_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_returns: {
+        Row: {
+          authorized_by: string
+          branch_id: string | null
+          cash_refund: number
+          created_at: string
+          created_by: string | null
+          id: string
+          khata_refund: number
+          reason: string
+          return_number: string
+          sale_id: string
+          total_amount: number
+        }
+        Insert: {
+          authorized_by: string
+          branch_id?: string | null
+          cash_refund?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_refund?: number
+          reason: string
+          return_number: string
+          sale_id: string
+          total_amount: number
+        }
+        Update: {
+          authorized_by?: string
+          branch_id?: string | null
+          cash_refund?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_refund?: number
+          reason?: string
+          return_number?: string
+          sale_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_returns_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
+          },
+        ]
+      }
       pos_sale_items: {
         Row: {
           created_at: string
@@ -9059,6 +9271,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pos_sales"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
           },
         ]
       }
@@ -10813,6 +11032,42 @@ export type Database = {
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_auth_codes: {
+        Row: {
+          code_hash: string
+          profile_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code_hash: string
+          profile_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code_hash?: string
+          profile_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_auth_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_auth_codes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -12942,6 +13197,39 @@ export type Database = {
         }
         Relationships: []
       }
+      v_pos_returns_today: {
+        Row: {
+          bhari_kis_ne: string | null
+          branch_id: string | null
+          branch_name: string | null
+          cash_refund: number | null
+          code_kis_ka: string | null
+          created_at: string | null
+          id: string | null
+          khata_refund: number | null
+          manager_ne_khud_ki: boolean | null
+          reason: string | null
+          return_number: string | null
+          sale_id: string | null
+          total_amount: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       v_stock_count_overdue: {
         Row: {
           aakhri_ginti: string | null
@@ -13042,8 +13330,20 @@ export type Database = {
       fn_is_admin_level: { Args: never; Returns: boolean }
       fn_is_any_staff: { Args: never; Returns: boolean }
       fn_is_staff: { Args: { p_user_id: string }; Returns: boolean }
+      fn_log_return_code_attempt: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
       fn_next_farmer_code: { Args: never; Returns: string }
       fn_phone_key: { Args: { p_phone: string }; Returns: string }
+      fn_pos_return: {
+        Args: { p_manager_code: string; p_reason: string; p_sale_id: string }
+        Returns: string
+      }
+      fn_set_staff_auth_code: {
+        Args: { p_code: string; p_profile_id: string }
+        Returns: undefined
+      }
       get_daily_sales_summary: {
         Args: { p_date?: string }
         Returns: {
