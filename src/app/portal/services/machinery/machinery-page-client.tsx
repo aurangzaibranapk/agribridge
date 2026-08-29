@@ -18,6 +18,7 @@ interface FarmData {
   totalArea: number;
   crops: CropAllocation[];
   khaliZameen: number;
+  hasLocation: boolean;
 }
 
 export function MachineryPageClient({ farms }: { farms: FarmData[] }) {
@@ -73,7 +74,12 @@ export function MachineryPageClient({ farms }: { farms: FarmData[] }) {
           )}
         </div>
       )}
-      <MachineryForm initialMachineType={suggestion?.machineType} initialAcres={suggestion?.acres} />
+      <MachineryForm
+        initialMachineType={suggestion?.machineType}
+        initialAcres={suggestion?.acres}
+        farmId={selectedFarmId}
+        farmHasLocation={selectedFarm?.hasLocation ?? false}
+      />
     </div>
   );
 }

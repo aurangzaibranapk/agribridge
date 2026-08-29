@@ -60,7 +60,7 @@ export default async function PortalMachineryPage() {
   // rakh de aur kisi aur se machine le le.
   const { data: farms } = await supabase
     .from("farms")
-    .select("id, name, area_acres")
+    .select("id, name, area_acres, latitude, longitude")
     .eq("farmer_id", farmer.id)
     .order("name");
 
@@ -94,6 +94,68 @@ export default async function PortalMachineryPage() {
       // raqba khet se zyada likha ho (aisa hota hai) to "-2 acre khali"
       // likhna sirf uljhan paida karta hai.
       khaliZameen: Math.max(0, totalArea - sown),
+      // Khet ki jagah pehle se maujood ho to booking par dobara nahi
+      // maangi jati -- yehi is poore rishte ka faida hai.
+      hasLocation: f.latitude !== null && f.longitude !== null,
+    };
+  });
+
+  // Kisan ki apni bookings ki live haalat.
+  //
+  // Ye jaan boojh kar us ke apne safhe par hai: farmaish bhejne ke baad
+  // kisan ka agla sawal hamesha "ab kya ho raha hai?" hota hai, aur us
+  // ka jawab abhi tak sirf phone kar ke milta tha. Adad wohi hain jo
+  // hisaab mein hain -- yahan dobara ginti nahi ki gayi.
+  const { data: bookings } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, status, booking_date, crop_type, harvest_area, final_rate")
+    .eq("farmer_id", farmer.id)
+    .order("booking_date", { ascending: false })
+    .limit(10);
+
+  const bookingIds = (bookings ?? []).map((b) => b.id);
+  const [{ data: bills }, { data: pays }] = bookingIds.length
+    ? await Promise.all([
+        supabase
+          .from("machinery_bills")
+          .select("booking_id, bill_number, gross_amount, advance_adjusted, balance_payable")
+          .in("booking_id", bookingIds),
+        supabase
+          .from("machinery_payments")
+          .select("booking_id, kind, amount, verification_status")
+          .in("booking_id", bookingIds),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const bookingRows = (bookings ?? []).map((b) => {
+    const bill = (bills ?? []).find((x) => x.booking_id === b.id) ?? null;
+    const mine = (pays ?? []).filter((p) => p.booking_id === b.id);
+    const paid = mine
+      .filter((p) => p.kind === "final" && p.verification_status === "verified")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    const advanceVerified = mine
+      .filter((p) => p.kind === "advance" && p.verification_status === "verified")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    // Dawa alag rakha jata hai. Kisan ko ye dikhana zaroori hai --
+    // warna wo samajhta hai ke us ka paisa gum ho gaya -- magar use
+    // baqi mein se ghataya NAHI jata, kyunke tasdeeq abhi baqi hai.
+    const advanceClaimed = mine
+      .filter((p) => p.kind === "advance" && p.verification_status === "claimed")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    return {
+      id: b.id,
+      bookingNumber: b.booking_number,
+      status: b.status,
+      bookingDate: b.booking_date,
+      cropType: b.crop_type,
+      area: Number(b.harvest_area ?? 0),
+      rate: b.final_rate === null ? null : Number(b.final_rate),
+      billNumber: bill?.bill_number ?? null,
+      gross: bill ? Number(bill.gross_amount) : null,
+      balance: bill ? Math.max(Number(bill.balance_payable) - paid, 0) : null,
+      paid,
+      advanceVerified,
+      advanceClaimed,
     };
   });
 
@@ -104,9 +166,110 @@ export default async function PortalMachineryPage() {
       </Link>
       <h1 className="font-display text-2xl font-semibold text-surface-900">{t("machinery_title", lang)}</h1>
       <p className="mt-1 text-sm text-surface-500">{t("machinery_subtitle", lang)}</p>
+      {bookingRows.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 font-display text-sm font-semibold text-surface-900">
+            {t("my_bookings_heading", lang)}
+          </h2>
+          <div className="space-y-2">
+            {bookingRows.map((b) => (
+              <BookingStatusCard key={b.id} booking={b} lang={lang} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6">
         <MachineryPageClient farms={farmData} />
       </div>
+    </div>
+  );
+}
+
+// Kisan ki zabaan mein halat. Andar ke naam (bill_pending waghera)
+// system ke liye hain, kisan ke liye nahi.
+const FARMER_STATUS: Record<string, Parameters<typeof t>[0]> = {
+  new: "farmer_status_new",
+  ready_for_harvest: "farmer_status_scheduled",
+  in_progress: "farmer_status_working",
+  bill_pending: "farmer_status_bill_making",
+  payment_pending: "farmer_status_payment_due",
+  closed: "farmer_status_closed",
+  cancelled: "farmer_status_cancelled",
+};
+
+function BookingStatusCard({
+  booking,
+  lang,
+}: {
+  booking: {
+    bookingNumber: string;
+    status: string;
+    bookingDate: string;
+    cropType: string | null;
+    area: number;
+    rate: number | null;
+    billNumber: string | null;
+    gross: number | null;
+    balance: number | null;
+    paid: number;
+    advanceVerified: number;
+    advanceClaimed: number;
+  };
+  lang: ReturnType<typeof getLanguageFromCookies>;
+}) {
+  const statusKey = FARMER_STATUS[booking.status] ?? "farmer_status_new";
+  return (
+    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-xs text-surface-400">{booking.bookingNumber}</p>
+          <p className="text-sm font-medium text-surface-900">
+            {booking.cropType ?? "-"} · {booking.area} {t("acres_unit", lang)}
+          </p>
+          <p className="text-xs text-surface-500">{booking.bookingDate}</p>
+        </div>
+        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+          {t(statusKey, lang)}
+        </span>
+      </div>
+
+      {booking.rate !== null && (
+        <p className="mt-2 text-xs text-surface-600">
+          {t("rate_label_portal", lang)}: Rs {booking.rate.toLocaleString()} / {t("acres_unit", lang)}
+        </p>
+      )}
+
+      {booking.gross !== null && (
+        <div className="mt-2 space-y-0.5 border-t border-surface-100 pt-2 text-sm">
+          <Row label={t("bill_label_portal", lang)} value={booking.gross} />
+          {booking.advanceVerified > 0 && (
+            <Row label={t("advance_label_portal", lang)} value={-booking.advanceVerified} />
+          )}
+          {booking.paid > 0 && <Row label={t("paid_label_portal", lang)} value={-booking.paid} />}
+          <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold">
+            <span>{t("outstanding_label_portal", lang)}</span>
+            <span className={(booking.balance ?? 0) > 0 ? "text-red-600" : "text-brand-700"}>
+              Rs {(booking.balance ?? 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {booking.advanceClaimed > 0 && (
+        <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
+          {t("advance_claim_waiting", lang)}: Rs {booking.advanceClaimed.toLocaleString()}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between text-surface-600">
+      <span>{label}</span>
+      <span>{value < 0 ? `- Rs ${Math.abs(value).toLocaleString()}` : `Rs ${value.toLocaleString()}`}</span>
     </div>
   );
 }

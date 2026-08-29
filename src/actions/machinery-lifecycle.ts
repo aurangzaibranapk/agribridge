@@ -234,15 +234,34 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
   const requestIdIn = str(formData, "request_id");
   let willSell = tribool(formData, "will_sell_to_us");
   let wantsReminder = tribool(formData, "wants_next_season_reminder");
+  let farmId = str(formData, "farm_id");
+  let claim: {
+    amount: number;
+    method: string | null;
+    reference: string | null;
+    proofUrl: string | null;
+  } | null = null;
+
   if (requestIdIn) {
     const { data: req } = await supabase
       .from("machinery_requests")
-      .select("will_sell_to_us, wants_next_season_reminder")
+      .select(
+        "will_sell_to_us, wants_next_season_reminder, farm_id, advance_claimed_amount, advance_claimed_method, advance_claimed_reference, advance_proof_url"
+      )
       .eq("id", requestIdIn)
       .maybeSingle();
     if (req) {
       willSell = willSell ?? req.will_sell_to_us;
       wantsReminder = wantsReminder ?? req.wants_next_season_reminder;
+      farmId = farmId ?? req.farm_id;
+      if (req.advance_claimed_amount && Number(req.advance_claimed_amount) > 0) {
+        claim = {
+          amount: Number(req.advance_claimed_amount),
+          method: req.advance_claimed_method,
+          reference: req.advance_claimed_reference,
+          proofUrl: req.advance_proof_url,
+        };
+      }
     }
   }
 
@@ -289,6 +308,11 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
 
       will_sell_to_us: willSell,
       wants_next_season_reminder: wantsReminder,
+
+      // Khet ka rishta. Jagah yahan se khud bhar jati hai (144) -- is
+      // liye location ke khane upar khali chhore jate hain jab khet
+      // maloom ho.
+      farm_id: farmId,
 
       request_id: requestIdIn,
       notes: str(formData, "notes"),
@@ -339,6 +363,47 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
         bookingNumber: booking.booking_number,
         error: `Booking ${booking.booking_number} ban gayi, magar advance darj nahi hua: ${advanceResult}`,
       };
+    }
+  }
+
+  // Kisan ne apni farmaish par kaha tha ke advance de diya hai. Wo dawa
+  // yahan qatar mein aata hai magar 'claimed' halat mein: ledger mein
+  // kuch nahi jata, bill us ko nahi kaatta, cash book mein nazar nahi
+  // aata. Sirf staff ki fehrist mein khara ho jata hai ke ise dekho.
+  //
+  // Isay khud tasdeeq maan lena poore hisaab ko jhoota kar deta:
+  // "20,000 diye" keh dene se bill mein 20,000 kam ho jate, chahe paisa
+  // aaya hi na ho.
+  if (claim) {
+    const { data: claimRow, error: claimError } = await supabase
+      .from("machinery_payments")
+      .insert({
+        booking_id: booking.id,
+        kind: "advance",
+        amount: claim.amount,
+        method: claim.method ?? "cash",
+        payment_date: new Date().toISOString().slice(0, 10),
+        reference: claim.reference,
+        proof_url: claim.proofUrl,
+        verification_status: "claimed",
+        claimed_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (!claimError && claimRow) {
+      await logEvent({
+        bookingId: booking.id,
+        eventType: "advance_claimed",
+        note: `Kisan ka dawa: Rs ${claim.amount.toLocaleString()} — tasdeeq baqi`,
+        actorId,
+      });
+      await notifyRoles(
+        ["finance", "manager", "super_admin", "admin", "owner"],
+        "Advance ka dawa — tasdeeq baqi",
+        `Booking ${booking.booking_number}: kisan ka kehna hai Rs ${claim.amount.toLocaleString()} advance diya hai.`,
+        `/admin/machinery-rental/advance-claims`
+      );
     }
   }
 
@@ -484,6 +549,112 @@ export async function recordAdvance(_prev: ActionState, formData: FormData): Pro
  * kisan ka jawab aa jaye -- aur ye farq DB mein bhi lagta hai
  * (migration 116), sirf yahan nahi.
  */
+/**
+ * Kisan ke dawe ki tasdeeq.
+ *
+ * Dawa qatar mein pehle se para hota hai magar "claimed" halat mein --
+ * wahan se wo kahin nahi ginta: na cash book mein, na bill ke advance
+ * mein. Ledger yahin banta hai, us waqt jab koi insaan keh de ke haan,
+ * paisa waqai aaya, aur ye bataye ke kis khate mein aaya.
+ *
+ * Khata kisan se nahi poochha ja sakta -- usay pata hi nahi hota ke
+ * paisa hamare kis khate mein gira. Ye staff ka ilm hai, is liye ye
+ * sawal yahan hai.
+ */
+export async function verifyAdvanceClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const paymentId = str(formData, "payment_id");
+  const decision = str(formData, "decision");
+  if (!paymentId) return { error: "Payment nahi mili." };
+  if (decision !== "accept" && decision !== "reject") return { error: "Faisla batayein." };
+
+  const { data: payment } = await supabase
+    .from("machinery_payments")
+    .select("id, booking_id, amount, method, verification_status, payment_date")
+    .eq("id", paymentId)
+    .maybeSingle();
+  if (!payment) return { error: "Payment nahi mili." };
+  if (payment.verification_status !== "claimed") {
+    return { error: "Is dawe ka faisla pehle ho chuka hai." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, farmer_id")
+    .eq("id", payment.booking_id)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  if (decision === "reject") {
+    const reason = str(formData, "rejection_reason");
+    if (!reason) return { error: "Rad karne ki wajah likhein." };
+    const { error } = await supabase
+      .from("machinery_payments")
+      .update({ verification_status: "rejected", rejection_reason: reason, verified_by: actorId, verified_at: new Date().toISOString() })
+      .eq("id", paymentId);
+    if (error) return { error: error.message };
+
+    await logEvent({
+      bookingId: payment.booking_id,
+      eventType: "advance_claim_rejected",
+      note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa rad: ${reason}`,
+      actorId,
+    });
+    revalidateAll(payment.booking_id);
+    return { success: true };
+  }
+
+  const accountId = str(formData, "finance_account_id");
+  if (!accountId) return { error: "Paisa kis khate mein aaya, wo select karein." };
+
+  const { error } = await supabase
+    .from("machinery_payments")
+    .update({
+      verification_status: "verified",
+      finance_account_id: accountId,
+      verified_by: actorId,
+      verified_at: new Date().toISOString(),
+      received_by: actorId,
+    })
+    .eq("id", paymentId);
+  if (error) return { error: error.message };
+
+  const posted = await postMachineryAdvance({
+    bookingId: payment.booking_id,
+    farmerId: booking.farmer_id,
+    amount: Number(payment.amount),
+    accountId,
+    description: `Machinery booking ${booking.booking_number} — advance (kisan ka dawa, tasdeeq shuda)`,
+    ctx: {
+      createdBy: actorId,
+      entryDate: payment.payment_date ?? undefined,
+      claims: [{ table: "machinery_payments", rowId: paymentId }],
+    },
+  });
+
+  // Ledger mein na ja sake to tasdeeq bhi wapas -- dawa phir se dawa.
+  // Verified likha rehna aur ledger khali hona sab se buri shakal hai:
+  // bill us paise ko kaat leta jo kabhi kisi khate mein aaya hi nahi.
+  if (failed(posted)) {
+    await createServiceClient()
+      .from("machinery_payments")
+      .update({ verification_status: "claimed", finance_account_id: null, verified_by: null, verified_at: null })
+      .eq("id", paymentId);
+    return { error: `Ledger mein nahi gaya, is liye tasdeeq nahi ki: ${posted.error}` };
+  }
+
+  await logEvent({
+    bookingId: payment.booking_id,
+    eventType: "advance_claim_verified",
+    note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa tasdeeq shuda`,
+    actorId,
+  });
+
+  revalidateAll(payment.booking_id);
+  return { success: true };
+}
+
 export async function sendRateConfirmation(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
