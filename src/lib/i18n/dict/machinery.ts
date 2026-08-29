@@ -110,6 +110,16 @@ export const machineryDict = {
     ur: "کیا یہ کسان فصل ہمیں بیچے گا؟",
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
+  mc_advance_already: {
+    en: "Advance is already recorded (shown above). To correct it, reverse the entry — do not add it again.",
+    rm: "Advance darj ho chuka hai (upar nazar aa raha hai). Ghalti ho to us qatar ko ulta karein — dobara add na karein.",
+    ur: "ایڈوانس درج ہو چکا ہے (اوپر نظر آ رہا ہے)۔ غلطی ہو تو اس اندراج کو الٹا کریں — دوبارہ شامل نہ کریں۔",
+  },
+  mc_advance_after_bill: {
+    en: "Bill is made — money that comes now is a bill payment, not an advance. Record it below.",
+    rm: "Bill ban chuka hai — ab jo paisa aaye wo advance nahi, bill ki adaigi hai. Usay neeche darj karein.",
+    ur: "بل بن چکا ہے — اب جو پیسہ آئے وہ ایڈوانس نہیں، بل کی ادائیگی ہے۔ اسے نیچے درج کریں۔",
+  },
   mc_dont_know: { en: "Don't know", rm: "Pata nahi", ur: "پتہ نہیں" },
   mc_notes: { en: "Notes", rm: "Notes", ur: "نوٹس" },
 

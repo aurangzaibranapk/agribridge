@@ -235,7 +235,25 @@ export function BookingDetail({
                   ))}
               </ul>
             )}
-            <AdvanceForm bookingId={booking.id} accounts={accounts} />
+            {/* Advance ek hi dafa poochha jata hai -- booking ke form par.
+                Yahan wo form sirf us soorat mein khulta hai jab booking ke
+                waqt advance nahi liya gaya tha (kisan ne baad mein dene ka
+                kaha ho). Advance aa chuka ho to dobara poochhna staff ko
+                ye shak deta hai ke shayad pehle wala darj hi nahi hua, aur
+                wohi ek hi raqam do dafa likhwa deta hai.
+
+                Bill ban jane ke baad advance ka darwaza band: us ke baad
+                jo paisa aata hai wo advance nahi, bill ki adaigi hai --
+                aur us ki apni jagah neeche hai. */}
+            {advanceTotal > 0 ? (
+              <p className="text-xs text-surface-500">
+                {t("mc_advance_already", lang)}
+              </p>
+            ) : bill ? (
+              <p className="text-xs text-surface-500">{t("mc_advance_after_bill", lang)}</p>
+            ) : (
+              <AdvanceForm bookingId={booking.id} accounts={accounts} />
+            )}
           </StepCard>
 
           {/* Kisan ki tasdeeq */}
