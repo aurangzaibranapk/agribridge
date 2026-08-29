@@ -2,6 +2,7 @@ import { portalDict } from "./dict/portal";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
 import { myWorkDict } from "./dict/my-work";
+import { machineryQueueDict } from "./dict/machinery-queue";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -38,6 +39,7 @@ const dict = {
   ...posDict,
   ...machineryDict,
   ...myWorkDict,
+  ...machineryQueueDict,
 };
 
 export type TranslationKey = keyof typeof dict;
