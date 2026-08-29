@@ -6,6 +6,9 @@ import { machineryQueueDict } from "./dict/machinery-queue";
 import { leaveDict } from "./dict/leave";
 import { milkDispatchDict } from "./dict/milk-dispatch";
 import { milkDict, milkPageDict } from "./dict/milk";
+import { financeDict } from "./dict/finance";
+import { cashCloseDict } from "./dict/cash-close";
+import { cashHandoverDict } from "./dict/cash-handover";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -47,6 +50,9 @@ const dict = {
   ...milkDispatchDict,
   ...milkDict,
   ...milkPageDict,
+  ...financeDict,
+  ...cashCloseDict,
+  ...cashHandoverDict,
 };
 
 export type TranslationKey = keyof typeof dict;

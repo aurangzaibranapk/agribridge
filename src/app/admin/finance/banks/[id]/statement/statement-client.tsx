@@ -3,10 +3,12 @@ import { Printer, Download, Mail, MessageCircle } from "lucide-react";
 
 interface Transaction {
   id: string;
-  created_at: string;
+  /** Karobar ki tareekh (transaction_date), na ke jab entry likhi gayi. */
+  date: string;
   description: string;
   amount: number;
-  type: string;
+  /** Khate mein paisa aaya (income ya transfer_in), warna gaya. */
+  isCredit: boolean;
   runningBalance: number;
 }
 
@@ -33,7 +35,7 @@ export function StatementClient(props: Props) {
       "",
       ...props.transactions.map(
         (t) =>
-          `${new Date(t.created_at).toLocaleDateString()} | ${t.description} | ${t.type === "income" ? "+" : "-"}Rs ${t.amount.toLocaleString()} | Balance: Rs ${t.runningBalance.toLocaleString()}`
+          `${t.date} | ${t.description} | ${t.isCredit ? "+" : "-"}Rs ${t.amount.toLocaleString()} | Balance: Rs ${t.runningBalance.toLocaleString()}`
       ),
       "",
       `Total Credit: Rs ${props.totalCredit.toLocaleString()}`,
@@ -112,10 +114,10 @@ export function StatementClient(props: Props) {
           <tbody>
             {props.transactions.map((t) => (
               <tr key={t.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
-                <td className="px-2 py-1.5 text-surface-500">{new Date(t.created_at).toLocaleDateString()}</td>
+                <td className="px-2 py-1.5 text-surface-500">{t.date}</td>
                 <td className="px-2 py-1.5 text-surface-700 dark:text-surface-300">{t.description}</td>
-                <td className={`px-2 py-1.5 text-right font-medium ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                  {t.type === "income" ? "+" : "-"}Rs {t.amount.toLocaleString()}
+                <td className={`px-2 py-1.5 text-right font-medium ${t.isCredit ? "text-green-600" : "text-red-600"}`}>
+                  {t.isCredit ? "+" : "-"}Rs {t.amount.toLocaleString()}
                 </td>
                 <td className="px-2 py-1.5 text-right text-surface-600 dark:text-surface-400">Rs {t.runningBalance.toLocaleString()}</td>
               </tr>

@@ -5184,6 +5184,7 @@ export type Database = {
       }
       finance_accounts: {
         Row: {
+          account_number: string | null
           account_type: Database["public"]["Enums"]["finance_account_type"]
           created_at: string
           current_balance: number
@@ -5196,6 +5197,7 @@ export type Database = {
           organization_id: string
         }
         Insert: {
+          account_number?: string | null
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number
@@ -5208,6 +5210,7 @@ export type Database = {
           organization_id?: string
         }
         Update: {
+          account_number?: string | null
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number

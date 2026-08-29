@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { CountingSheet } from "./counting-sheet";
 import {
@@ -22,6 +24,7 @@ function rs(value: number): string {
 
 export default async function CashClosePage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -74,8 +77,8 @@ export default async function CashClosePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Raat ki Cash Ginti"
-        description="Ledger batata hai kitna hona chahiye. Ginti batati hai kitna hai. Farq wahin darj hota hai — chhupta nahi."
+        title={t("cc_title", lang)}
+        description={t("cc_subtitle", lang)}
       />
 
       {/* ---- Aaj ki haalat ---- */}
@@ -95,8 +98,8 @@ export default async function CashClosePage() {
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
               {pendingToday.length === 0
-                ? "Aaj sab branches ki ginti ho chuki hai"
-                : `${pendingToday.length} branch ki aaj ki ginti baqi hai`}
+                ? t("cc_all_done", lang)
+                : `${pendingToday.length} ${t("cc_pending_count", lang)}`}
             </p>
             {pendingToday.length > 0 && (
               <p className="mt-0.5 text-xs text-surface-600 dark:text-surface-400">
@@ -113,11 +116,9 @@ export default async function CashClosePage() {
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-300">
             <HelpCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <strong>{rs(orphanCash)}</strong> aisa cash hai jo kisi branch ke naam darj nahi.
+              <strong>{rs(orphanCash)}</strong> {t("cc_orphan_cash", lang)}
               <span className="mt-0.5 block text-xs font-normal">
-                Har branch sirf apna cash ginti hai, is liye ye raqam kisi ki bhi ginti mein nahi aati —
-                yani is par kabhi farq nahi nikalta. Jab tak ye sifar nahi hota, roz ki ginti poori nahi
-                kehlati.
+                {t("cc_orphan_note", lang)}
               </span>
             </span>
           </p>
@@ -131,8 +132,8 @@ export default async function CashClosePage() {
             branches.length === 0 ? (
               <Card className="p-4">
                 <EmptyState
-                  title="Koi branch nahi mili"
-                  description="Pehle Admin → Branches mein branch banayein."
+                  title={t("cc_no_branch", lang)}
+                  description={t("cc_no_branch_note", lang)}
                 />
               </Card>
             ) : (
@@ -143,8 +144,7 @@ export default async function CashClosePage() {
           ) : (
             <Card className="p-4">
               <p className="text-sm text-surface-500">
-                Ginti branch manager karta hai. Aap yahan sirf dekh sakte hain — ginne wala aur jaanchne
-                wala ek shakhs ho to jaanch ka koi matlab nahi rehta.
+                {t("cc_manager_only", lang)}
               </p>
             </Card>
           )}
@@ -155,17 +155,16 @@ export default async function CashClosePage() {
           <Card className="overflow-hidden">
             <div className="flex items-center gap-1.5 border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
               <CalendarX2 className="h-4 w-4" />
-              Jin dinon cash hila magar ginti nahi hui
+              {t("cc_missed_days", lang)}
             </div>
             {missing.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-green-700 dark:text-green-400">
-                Koi din chhoota nahi — pichhle 30 din poore hain.
+                {t("cc_no_missed", lang)}
               </p>
             ) : (
               <>
                 <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-400">
-                  Jis din ginti nahi hui, us din ka farq kabhi maloom nahi hoga. Ye fehrist khali honi
-                  chahiye.
+                  {t("cc_missed_note", lang)}
                 </p>
                 <ul className="divide-y divide-surface-100 dark:divide-surface-800">
                   {missing.map((m) => (
@@ -185,21 +184,21 @@ export default async function CashClosePage() {
           {/* ---- Pichhli gintiyan ---- */}
           <Card className="overflow-hidden">
             <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-              Pichhli gintiyan
+              {t("cc_past_counts", lang)}
             </div>
             {closings.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-surface-400">Abhi koi ginti nahi hui.</p>
+              <p className="px-4 py-6 text-center text-sm text-surface-400">{t("cc_no_counts", lang)}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[620px] text-sm">
                   <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
                     <tr>
-                      <th className="px-4 py-2 font-medium">Tareekh</th>
-                      <th className="px-4 py-2 font-medium">Branch</th>
-                      <th className="px-4 py-2 text-right font-medium">Hona chahiye</th>
-                      <th className="px-4 py-2 text-right font-medium">Gina gaya</th>
-                      <th className="px-4 py-2 text-right font-medium">Farq</th>
-                      <th className="px-4 py-2 font-medium">Wajah</th>
+                      <th className="px-4 py-2 font-medium">{t("cc_date", lang)}</th>
+                      <th className="px-4 py-2 font-medium">{t("cc_branch", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("cc_expected", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("cc_counted", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("cc_difference", lang)}</th>
+                      <th className="px-4 py-2 font-medium">{t("cc_reason", lang)}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -249,9 +248,7 @@ export default async function CashClosePage() {
       </div>
 
       <p className="px-1 text-xs text-surface-400">
-        Farq hamesha &quot;Cash ka farq&quot; (6100) khate mein jata hai — kisi kharche mein adjust nahi
-        hota. Chhota chhota farq bhi wahin jama hota rehta hai, taake mahine ke aakhir mein us par sawal
-        kiya ja sake.
+        {t("cc_footer_note", lang)}
       </p>
     </div>
   );

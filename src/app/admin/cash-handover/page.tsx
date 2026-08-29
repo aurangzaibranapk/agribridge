@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { SendCashForm, ReceiveCard } from "./handover-client";
 import { cashInTransit, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
@@ -14,6 +16,7 @@ function rs(value: number): string {
 
 export default async function CashHandoverPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -64,8 +67,8 @@ export default async function CashHandoverPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Cash Haath Badalna"
-        description="Dene wala aur lene wala — dono alag alag likhte hain. Jab tak dono ki baat ek na ho, raqam “raaste mein” rehti hai."
+        title={t("ch_title", lang)}
+        description={t("ch_subtitle", lang)}
       />
 
       {/* ---- Raaste mein kitna hai ---- */}
@@ -87,18 +90,17 @@ export default async function CashHandoverPage() {
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
               {transit.length === 0
-                ? "Koi raqam raaste mein nahi"
-                : `${rs(transitTotal)} abhi raaste mein hai — ${transit.length} handover`}
+                ? t("ch_none_in_transit", lang)
+                : `${rs(transitTotal)} ${t("ch_in_transit_now", lang)} ${transit.length} ${t("ch_handovers", lang)}`}
             </p>
             <p className="mt-0.5 text-xs text-surface-600 dark:text-surface-400">
               {transit.length === 0
-                ? "Har bheji hui raqam wusool ho chuki hai."
-                : "“Raaste mein” ka matlab ye nahi ke sab theek hai — matlab ye hai ke us raqam ka abhi ek zimmedar hai."}
+                ? t("ch_all_received", lang)
+                : t("ch_transit_meaning", lang)}
             </p>
             {stale.length > 0 && (
               <p className="mt-1.5 text-xs font-medium text-red-700 dark:text-red-400">
-                In mein se {stale.length} raqam {TRANSIT_ALERT_DAYS}+ din se raaste mein hai. Jitna waqt
-                guzarta hai, utna kam mumkin hota jata hai ke wo kabhi mile.
+                {t("ch_stale_1", lang)} {stale.length} — {TRANSIT_ALERT_DAYS}+ {t("ch_stale_2", lang)}
               </p>
             )}
           </div>
@@ -109,7 +111,7 @@ export default async function CashHandoverPage() {
       {awaitingMe.length > 0 && (
         <div>
           <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
-            <HandCoins className="h-3.5 w-3.5" /> Aap ke naam bheja gaya cash — tasdeeq karein
+            <HandCoins className="h-3.5 w-3.5" /> {t("ch_amounts_for_you", lang)}
           </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {awaitingMe.map((h) => (
@@ -134,12 +136,12 @@ export default async function CashHandoverPage() {
         {/* ---- Bhejne ka form ---- */}
         <Card className="p-4">
           <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-            <Send className="h-4 w-4" /> Cash bhejein
+            <Send className="h-4 w-4" /> {t("ch_send_cash", lang)}
           </h2>
           {people.length === 0 ? (
             <EmptyState
-              title="Koi doosra shakhs nahi mila"
-              description="Cash bhejne ke liye kam az kam ek aur active staff hona zaroori hai — dene aur lene wala ek shakhs nahi ho sakta."
+              title={t("ch_no_one_else", lang)}
+              description={t("ch_no_one_else_note", lang)}
             />
           ) : (
             <SendCashForm people={people} branches={branches} />
@@ -150,33 +152,33 @@ export default async function CashHandoverPage() {
           {/* ---- Raaste wali raqmein ---- */}
           <Card className="overflow-hidden">
             <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-              Abhi raaste mein
+              {t("ch_in_transit_now_title", lang)}
             </div>
             {transit.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-green-700 dark:text-green-400">
-                Kuch bhi raaste mein nahi.
+                {t("ch_nothing_in_transit", lang)}
               </p>
             ) : (
               <ul className="divide-y divide-surface-100 dark:divide-surface-800">
-                {transit.map((t) => (
-                  <li key={t.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                {transit.map((row) => (
+                  <li key={row.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-surface-900 dark:text-white">
-                        {rs(t.amount)}
+                        {rs(row.amount)}
                       </p>
                       <p className="truncate text-xs text-surface-500">
-                        {t.sentBy ?? "—"} → {t.toPerson ?? "—"}
-                        {t.carrier ? ` (${t.carrier} le kar gaya)` : ""}
+                        {row.sentBy ?? "—"} → {row.toPerson ?? "—"}
+                        {row.carrier ? ` (${row.carrier} ${t("ch_carried_by", lang)})` : ""}
                       </p>
                     </div>
                     <span
                       className={`shrink-0 text-xs ${
-                        t.daysOld >= TRANSIT_ALERT_DAYS
+                        row.daysOld >= TRANSIT_ALERT_DAYS
                           ? "font-medium text-red-700 dark:text-red-400"
                           : "text-surface-400"
                       }`}
                     >
-                      {t.daysOld === 0 ? "aaj" : `${t.daysOld} din`}
+                      {row.daysOld === 0 ? t("ch_today", lang) : `${row.daysOld} ${t("ch_days", lang)}`}
                     </span>
                   </li>
                 ))}
@@ -187,20 +189,20 @@ export default async function CashHandoverPage() {
           {/* ---- Purana record ---- */}
           <Card className="overflow-hidden">
             <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-              Pichhle handover
+              {t("ch_past_handovers", lang)}
             </div>
             {history.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-surface-400">Abhi koi handover nahi hua.</p>
+              <p className="px-4 py-6 text-center text-sm text-surface-400">{t("ch_no_handovers", lang)}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
                     <tr>
-                      <th className="px-4 py-2 font-medium">Kaun → Kaun</th>
-                      <th className="px-4 py-2 text-right font-medium">Bheja</th>
-                      <th className="px-4 py-2 text-right font-medium">Mila</th>
-                      <th className="px-4 py-2 text-right font-medium">Farq</th>
-                      <th className="px-4 py-2 font-medium">Wajah</th>
+                      <th className="px-4 py-2 font-medium">{t("ch_who_to_who", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("ch_sent", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("ch_got", lang)}</th>
+                      <th className="px-4 py-2 text-right font-medium">{t("ch_difference", lang)}</th>
+                      <th className="px-4 py-2 font-medium">{t("ch_reason", lang)}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -212,7 +214,7 @@ export default async function CashHandoverPage() {
                           </span>
                           <span className="block text-xs text-surface-400">
                             {h.sentAt.slice(0, 10)}
-                            {h.status === "sent" && " • abhi raaste mein"}
+                            {h.status === "sent" && t("ch_still_in_transit", lang)}
                           </span>
                         </td>
                         <td className="px-4 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
@@ -249,8 +251,7 @@ export default async function CashHandoverPage() {
 
       <p className="flex items-start gap-1.5 px-1 text-xs text-surface-400">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Bheji hui raqam badli nahi ja sakti, aur wusooli sirf wohi shakhs darj kar sakta hai jis ke naam
-        bheji gayi ho. Ek hi banda dono taraf likh sake to farq kabhi nahi nikle ga.
+        {t("ch_footer_note", lang)}
       </p>
     </div>
   );
