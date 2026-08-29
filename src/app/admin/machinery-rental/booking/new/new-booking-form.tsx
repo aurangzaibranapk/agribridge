@@ -87,6 +87,7 @@ export function NewBookingForm({
   // hai -- aur record par bharosa khatam ho jata hai.
   const [fieldReady, setFieldReady] = useState("");
   const [harvestReady, setHarvestReady] = useState("");
+  const [willSell, setWillSell] = useState("");
   const [quickPending, startQuick] = useTransition();
 
   const allFarmers = useMemo(() => [...addedFarmers, ...farmers], [addedFarmers, farmers]);
@@ -428,6 +429,17 @@ export function NewBookingForm({
           value={harvestReady}
           onChange={setHarvestReady}
           hint="Kachi fasal par harvester bhejna nuqsan hai."
+        />
+        {/* Ye sawal BOOKING ke waqt ka hai, kaam khatam hone ka nahi:
+            fasal ki kharidari ki tayari isi din se shuru hoti hai. Agli
+            fasal ki yaad dahani ka sawal us se ulta hai -- wo kaam
+            mukammal hone par poochha jata hai. */}
+        <YesNo
+          label={t("mc_will_sell_full", lang)}
+          name="will_sell_to_us"
+          value={willSell}
+          onChange={setWillSell}
+          hint="Iska jawab Grain kharidari ki fehrist banata hai."
         />
       </Card>
 

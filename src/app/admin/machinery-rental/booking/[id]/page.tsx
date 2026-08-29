@@ -22,7 +22,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
-      supabase.from("machinery_work_records").select("*").eq("booking_id", id).maybeSingle(),
+      supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
       supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
       supabase
@@ -53,7 +53,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         ...(payments ?? []).map((p) => p.received_by),
         ...(events ?? []).map((e) => e.actor_id),
         ...(dispatches ?? []).map((d) => d.created_by),
-        work?.created_by ?? null,
+        ...(work ?? []).map((w) => w.created_by),
         bill?.created_by ?? null,
       ].filter((id): id is string => Boolean(id))
     ),
@@ -125,18 +125,19 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         departure_at: d.departure_at,
         opening_meter: d.opening_meter === null ? null : Number(d.opening_meter),
         fuel_litres: d.fuel_litres === null ? null : Number(d.fuel_litres),
+        fuel_amount: d.fuel_amount === null ? null : Number(d.fuel_amount),
+        fuel_paid_by: d.fuel_paid_by,
       }))}
-      work={
-        work
-          ? {
-              actual_area: Number(work.actual_area),
-              started_at: work.started_at,
-              finished_at: work.finished_at,
-              completion_photo_url: work.completion_photo_url,
-              farmer_confirmed: work.farmer_confirmed,
-            }
-          : null
-      }
+      work={(work ?? []).map((w) => ({
+        id: w.id,
+        work_date: w.work_date,
+        is_final: w.is_final,
+        actual_area: Number(w.actual_area),
+        started_at: w.started_at,
+        finished_at: w.finished_at,
+        completion_photo_url: w.completion_photo_url,
+        farmer_confirmed: w.farmer_confirmed,
+      }))}
       bill={
         bill
           ? {

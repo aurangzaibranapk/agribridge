@@ -6,8 +6,6 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   createMachineryVendor,
   createVendorMachine,
-  updateBookingStatus,
-  completeMachineryBooking,
   recordVendorPayout,
   type ActionState,
 } from "@/actions/machinery-rental";
@@ -30,7 +28,6 @@ interface Machine {
   rate_amount: number;
 }
 interface Farmer { id: string; full_name: string; farmer_code: string; booking_link_token?: string; }
-interface FinanceAccount { id: string; name: string; account_type: string; }
 interface Booking {
   id: string;
   booking_number: string;
@@ -53,13 +50,11 @@ interface Booking {
 }
 
 const RATE_TYPE_LABELS: Record<string, string> = { per_acre: "Per Acre", per_hour: "Per Hour", per_day: "Per Day" };
-const STATUS_OPTIONS = ["pending", "confirmed", "in_progress", "completed", "cancelled"];
 
 export function MachineryClient({
   vendors,
   machines,
   farmers,
-  financeAccounts,
   bookings,
   commissionRate,
   canEditCommission,
@@ -71,7 +66,6 @@ export function MachineryClient({
   vendors: Vendor[];
   machines: Machine[];
   farmers: Farmer[];
-  financeAccounts: FinanceAccount[];
   bookings: Booking[];
   commissionRate: number;
   canEditCommission: boolean;
@@ -95,7 +89,6 @@ export function MachineryClient({
   const [showNewVendor, setShowNewVendor] = useState(false);
   const [showNewMachine, setShowNewMachine] = useState(false);
   const [showShareLink, setShowShareLink] = useState(false);
-  const [completingBookingId, setCompletingBookingId] = useState<string | null>(null);
 
   return (
     <div>
@@ -161,15 +154,12 @@ export function MachineryClient({
       )}
 
       {tab === "bookings" && (
-        <BookingsTab bookings={bookings} setCompletingBookingId={setCompletingBookingId} />
+        <BookingsTab bookings={bookings} />
       )}
 
       {showNewVendor && <NewVendorModal onClose={() => setShowNewVendor(false)} />}
       {showNewMachine && <NewMachineModal vendors={vendors} onClose={() => setShowNewMachine(false)} />}
       {showShareLink && <ShareLinkModal farmers={farmers} onClose={() => setShowShareLink(false)} />}
-      {completingBookingId && (
-        <CompleteBookingModal bookingId={completingBookingId} financeAccounts={financeAccounts} onClose={() => setCompletingBookingId(null)} />
-      )}
     </div>
   );
 }
@@ -200,13 +190,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function BookingsTab({
-  bookings,
-  setCompletingBookingId,
-}: {
-  bookings: Booking[];
-  setCompletingBookingId: (id: string | null) => void;
-}) {
+function BookingsTab({ bookings }: { bookings: Booking[] }) {
   const lang = useLang();
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
@@ -294,10 +278,7 @@ function BookingsTab({
                   <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {b.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-green-600">Rs {b.commission_amount.toLocaleString()}</td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-col gap-1">
-                      <StatusBadge status={b.status} />
-                      <StatusForm bookingId={b.id} currentStatus={b.status} onWantsComplete={() => setCompletingBookingId(b.id)} />
-                    </div>
+                    <StatusBadge status={b.status} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
@@ -343,105 +324,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     </button>
   );
 }
-
-function StatusForm({ bookingId, currentStatus, onWantsComplete }: { bookingId: string; currentStatus: string; onWantsComplete: () => void }) {
-  const [state, formAction] = useFormState(updateBookingStatus, initialState);
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="booking_id" value={bookingId} />
-      <select
-        name="status"
-        defaultValue={currentStatus}
-        onChange={(e) => {
-          if (e.target.value === "completed") {
-            onWantsComplete();
-            e.target.value = currentStatus;
-            return;
-          }
-          e.target.form?.requestSubmit();
-        }}
-        className="rounded-lg border border-surface-200 p-1.5 text-xs"
-      >
-        {STATUS_OPTIONS.map((s) => (
-          <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-        ))}
-      </select>
-    </form>
-  );
-}
-
-function CompleteBookingModal({ bookingId, financeAccounts, onClose }: { bookingId: string; financeAccounts: FinanceAccount[]; onClose: () => void }) {
-  const [state, formAction] = useFormState(completeMachineryBooking, initialState);
-  const [willSell, setWillSell] = useState<"" | "yes" | "no">("");
-  const [wantsReminder, setWantsReminder] = useState<"" | "yes" | "no">("");
-  const [dieselAmount, setDieselAmount] = useState("0");
-  if (state.success) setTimeout(() => window.location.reload(), 900);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div dir="rtl" className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">بکنگ مکمل کریں</h3>
-          <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
-        </div>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">مکمل ہو گیا۔</p>}
-        <form action={formAction} className="space-y-3">
-          <input type="hidden" name="booking_id" value={bookingId} />
-          <input type="hidden" name="will_sell_to_us" value={willSell} />
-          <input type="hidden" name="wants_next_season_reminder" value={wantsReminder} />
-
-          <div className={`rounded-lg border-2 p-3 ${willSell === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
-            <label className="block text-sm font-medium text-surface-700">کیا فارمر ہمیں فصل بیچے گا؟ *</label>
-            <div className="mt-2 flex gap-2">
-              <button type="button" onClick={() => setWillSell("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
-              <button type="button" onClick={() => setWillSell("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
-            </div>
-          </div>
-
-          <div className={`rounded-lg border-2 p-3 ${wantsReminder === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
-            <label className="block text-sm font-medium text-surface-700">کیا اگلی فصل کے لیے مشینری بکنگ کی یاد دہانی چاہیے؟ *</label>
-            <div className="mt-2 flex gap-2">
-              <button type="button" onClick={() => setWantsReminder("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
-              <button type="button" onClick={() => setWantsReminder("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-surface-500">ڈیزل کتنا دیا؟ (روپے)</label>
-            <input type="number" step="0.01" name="diesel_amount" value={dieselAmount} onChange={(e) => setDieselAmount(e.target.value)} placeholder="0" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-surface-500">ڈیزل ریٹ (فی لیٹر)</label>
-            <input type="number" step="0.01" name="diesel_rate" placeholder="0" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          </div>
-          {parseFloat(dieselAmount) > 0 && (
-            <div>
-              <label className="block text-xs text-surface-500">کون سا اکاؤنٹ سے ادا کیا *</label>
-              <select name="diesel_account_id" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-                <option value="">- منتخب کریں -</option>
-                {financeAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <SubmitButtonUrdu disabled={willSell === "" || wantsReminder === ""} />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// PaymentModal aur recordFarmerPayment hata diye gaye.
-//
-// Booking ka paisa ab sirf booking ke apne safhe se liya jata hai,
-// jahan bill, advance ka adjustment aur split payment ek sath nazar
-// aate hain. Do jagah payment lene ka matlab hota ek hi raqam do dafa
-// darj ho jana -- aur ye modal booking par pare purane khanon
-// (amount_received_from_farmer) se hisaab karta tha, jinhen nayi
-// zanjeer chhooti hi nahi. Yani ye poori payment ke baad bhi kehta
-// rehta ke paisa baqi hai.
 
 function NewVendorModal({ onClose }: { onClose: () => void }) {
   const lang = useLang();

@@ -10,6 +10,8 @@ import {
   postMachineryAdvance,
   postMachineryBill,
   postMachineryPayment,
+  postCashOut,
+  ACC,
   failed,
 } from "@/lib/ledger/rules";
 
@@ -42,6 +44,20 @@ export interface ActionState {
 }
 
 type Client = ReturnType<typeof createClient>;
+
+/**
+ * Haan / nahi / abhi pata nahi.
+ *
+ * Teesri soorat waqai hoti hai -- booking aksar hafta pehle hoti hai
+ * aur kisan ne abhi socha hi nahi. Usay "nahi" likh dena jhoot hai,
+ * aur usi jhoot par aage report banti hai.
+ */
+function tribool(formData: FormData, key: string): boolean | null {
+  const v = formData.get(key);
+  if (v === "yes" || v === "on" || v === "true") return true;
+  if (v === "no" || v === "false") return false;
+  return null;
+}
 
 function num(formData: FormData, key: string): number | null {
   const raw = formData.get(key);
@@ -211,6 +227,25 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
   const machineType = str(formData, "machine_type_requested");
   if (!machineType) return { error: "Machine ki qism likhein." };
 
+  // Do sawal jo kisan ke apne form par poochhe jate hain: fasal hamein
+  // bechega? aur agli fasal par yaad dilayein? Kisan ki farmaish se
+  // booking bane to jawab wahin se aata hai -- dobara nahi poochha
+  // jata. Staff seedhi booking banaye to form par se.
+  const requestIdIn = str(formData, "request_id");
+  let willSell = tribool(formData, "will_sell_to_us");
+  let wantsReminder = tribool(formData, "wants_next_season_reminder");
+  if (requestIdIn) {
+    const { data: req } = await supabase
+      .from("machinery_requests")
+      .select("will_sell_to_us, wants_next_season_reminder")
+      .eq("id", requestIdIn)
+      .maybeSingle();
+    if (req) {
+      willSell = willSell ?? req.will_sell_to_us;
+      wantsReminder = wantsReminder ?? req.wants_next_season_reminder;
+    }
+  }
+
   const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
 
   const { data: booking, error } = await supabase
@@ -252,7 +287,10 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       estimated_rate: num(formData, "estimated_rate"),
       rate_status: "estimated",
 
-      request_id: str(formData, "request_id"),
+      will_sell_to_us: willSell,
+      wants_next_season_reminder: wantsReminder,
+
+      request_id: requestIdIn,
       notes: str(formData, "notes"),
       created_by: actorId,
     })
@@ -661,6 +699,63 @@ export async function overrideConfirmation(_prev: ActionState, formData: FormDat
 // =====================================================================
 // 4. Machine ki rawangi
 // =====================================================================
+/**
+ * Diesel ka kharcha: ek hi jagah likha jata hai.
+ *
+ * Raqam finance_transactions ki qatar hai (wahan ka trigger khata ka
+ * balance khud hilata hai, 127), aur dispatch us qatar ki taraf ishara
+ * karta hai. Dispatch par raqam dobara "yaad" nahi rakhi jati jise koi
+ * haath se badal sake.
+ */
+async function saveDieselExpense(args: {
+  supabase: Client;
+  dispatchId: string;
+  bookingNumber: string;
+  amount: number;
+  accountId: string;
+  litres: number | null;
+  actorId: string | null;
+}): Promise<string | null> {
+  const litrePart = args.litres && args.litres > 0 ? ` — ${args.litres} litre` : "";
+
+  const { data: expense, error } = await args.supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: args.accountId,
+      transaction_type: "expense",
+      category: "Machinery - Diesel",
+      amount: args.amount,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Diesel — machinery booking ${args.bookingNumber}${litrePart}`,
+      created_by: args.actorId,
+    })
+    .select("id")
+    .single();
+  if (error || !expense) return error?.message ?? "Diesel ka kharcha darj nahi hua.";
+
+  const posted = await postCashOut({
+    accountId: args.accountId,
+    amount: args.amount,
+    description: `Diesel — machinery booking ${args.bookingNumber}`,
+    againstAccount: ACC.fuel,
+    ctx: {
+      createdBy: args.actorId,
+      claims: [{ table: "finance_transactions", rowId: expense.id }],
+    },
+  });
+  if (failed(posted)) {
+    await createServiceClient().from("finance_transactions").delete().eq("id", expense.id);
+    return `Ledger mein nahi gaya, is liye diesel darj nahi kiya: ${posted.error}`;
+  }
+
+  await args.supabase
+    .from("machinery_dispatches")
+    .update({ fuel_expense_id: expense.id })
+    .eq("id", args.dispatchId);
+
+  return null;
+}
+
 export async function dispatchMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
@@ -671,7 +766,7 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, status, location_address, location_lat, location_lng")
+    .select("id, booking_number, status, location_address, location_lat, location_lng")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
@@ -682,22 +777,67 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
     .eq("id", machineId)
     .maybeSingle();
 
-  const { error: dispatchError } = await supabase.from("machinery_dispatches").insert({
-    booking_id: bookingId,
-    machine_id: machineId,
-    operator_name: str(formData, "operator_name"),
-    driver_phone: str(formData, "driver_phone"),
-    departure_at: str(formData, "departure_at") ?? new Date().toISOString(),
-    opening_meter: num(formData, "opening_meter"),
-    fuel_litres: num(formData, "fuel_litres"),
-    fuel_amount: num(formData, "fuel_amount"),
-    destination_address: str(formData, "destination_address") ?? booking.location_address,
-    destination_lat: num(formData, "destination_lat") ?? booking.location_lat,
-    destination_lng: num(formData, "destination_lng") ?? booking.location_lng,
-    notes: str(formData, "notes"),
-    created_by: actorId,
-  });
-  if (dispatchError) return { error: dispatchError.message };
+  // Diesel jo company ne khud dala.
+  //
+  // Ye paisa waqai jata hai, is liye ise ledger mein jana hai -- warna
+  // machine chalti rehti hai aur kharcha kahin nazar nahi aata. Raqam
+  // aur khata dono chahiye: raqam bina khate ke ye nahi batati ke paisa
+  // kahan se gaya (migration 142 mein yehi rok DB par bhi lagi hai).
+  const fuelAmount = num(formData, "fuel_amount") ?? 0;
+  const fuelPaidBy = str(formData, "fuel_paid_by");
+  const fuelAccountId = str(formData, "fuel_account_id");
+  if (fuelAmount < 0) return { error: "Diesel ki raqam manfi nahi ho sakti." };
+  if (fuelAmount > 0 && !fuelPaidBy) {
+    return { error: "Diesel kis ne dala — kisan, vendor ya ART — wo select karein." };
+  }
+  if (fuelAmount > 0 && fuelPaidBy === "company" && !fuelAccountId) {
+    return { error: "ART ka diesel hai to khata bhi select karein ke kis khate se nikla." };
+  }
+  const companyFuel = fuelAmount > 0 && fuelPaidBy === "company";
+
+  const { data: dispatch, error: dispatchError } = await supabase
+    .from("machinery_dispatches")
+    .insert({
+      booking_id: bookingId,
+      machine_id: machineId,
+      operator_name: str(formData, "operator_name"),
+      driver_phone: str(formData, "driver_phone"),
+      departure_at: str(formData, "departure_at") ?? new Date().toISOString(),
+      opening_meter: num(formData, "opening_meter"),
+      fuel_litres: num(formData, "fuel_litres"),
+      fuel_amount: fuelAmount > 0 ? fuelAmount : null,
+      fuel_paid_by: fuelAmount > 0 ? fuelPaidBy : null,
+      // Khata sirf ART ke diesel par. Kisan ya vendor ka diesel darj to
+      // hota hai magar hamare paise se us ka koi taalluq nahi.
+      fuel_account_id: companyFuel ? fuelAccountId : null,
+      destination_address: str(formData, "destination_address") ?? booking.location_address,
+      destination_lat: num(formData, "destination_lat") ?? booking.location_lat,
+      destination_lng: num(formData, "destination_lng") ?? booking.location_lng,
+      notes: str(formData, "notes"),
+      created_by: actorId,
+    })
+    .select("id")
+    .single();
+  if (dispatchError || !dispatch) return { error: dispatchError?.message ?? "Rawangi darj nahi hui." };
+
+  if (companyFuel && fuelAccountId) {
+    const fuelError = await saveDieselExpense({
+      supabase,
+      dispatchId: dispatch.id,
+      bookingNumber: booking.booking_number,
+      amount: fuelAmount,
+      accountId: fuelAccountId,
+      litres: num(formData, "fuel_litres"),
+      actorId,
+    });
+    // Diesel ka kharcha ledger mein na ja saka to rawangi bhi wapas.
+    // Aadhi qatar -- rawangi likhi hui aur paisa kahin darj nahi --
+    // sab se buri shakal hai: machine chali gayi aur hisaab khali.
+    if (fuelError) {
+      await createServiceClient().from("machinery_dispatches").delete().eq("id", dispatch.id);
+      return { error: fuelError };
+    }
+  }
 
   const { error } = await supabase
     .from("machinery_bookings")
@@ -742,15 +882,37 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   const kanal = num(formData, "actual_area_kanal");
   if (toAcres(acres, kanal) <= 0) return { error: "Asal raqba likhein (acre ya kanal)." };
 
+  const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
+  const isFinal = formData.get("is_final") === "on";
+
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, status")
+    .select("id, status, harvest_area, rate_status, final_rate")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
 
-  const { error: workError } = await supabase.from("machinery_work_records").insert({
+  // Kaam poora ho chuka ho to us ke baad ka koi indraj nahi. Warna
+  // bill ban jane ke baad bhi raqba barhta rehta aur bill us se alag
+  // ho jata.
+  const { data: existing } = await supabase
+    .from("machinery_work_records")
+    .select("id, work_date, actual_area, is_final")
+    .eq("booking_id", bookingId);
+
+  if ((existing ?? []).some((w) => w.is_final)) {
+    return { error: "Is booking ka kaam mukammal ho chuka hai -- ab naya indraj nahi ho sakta." };
+  }
+
+  const sameDay = (existing ?? []).find((w) => w.work_date === workDate);
+
+  // Ek din ki ek hi qatar (migration 143). Usi din ka dobara indraj
+  // ghalti ki durusti hai, nayi qatar nahi -- warna 3 acre do dafa
+  // chaRh kar 6 ho jate.
+  const payload = {
     booking_id: bookingId,
+    work_date: workDate,
+    is_final: isFinal,
     actual_area_acres: acres,
     actual_area_kanal: kanal,
     started_at: str(formData, "started_at"),
@@ -763,27 +925,87 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
     farmer_confirmation_note: str(formData, "farmer_confirmation_note"),
     notes: str(formData, "notes"),
     created_by: actorId,
-  });
+  };
+
+  const { error: workError } = sameDay
+    ? await supabase.from("machinery_work_records").update(payload).eq("id", sameDay.id)
+    : await supabase.from("machinery_work_records").insert(payload);
   if (workError) return { error: workError.message };
+
+  // Ab tak ka jor -- yehi adad bill banate waqt bhi istemal hoga.
+  const doneSoFar =
+    (existing ?? [])
+      .filter((w) => w.work_date !== workDate)
+      .reduce((sum, w) => sum + Number(w.actual_area), 0) + toAcres(acres, kanal);
+  const remaining = Math.max(Number(booking.harvest_area ?? 0) - doneSoFar, 0);
+
+  // Booking sirf tab bill ki halat mein jati hai jab kaam poora ho.
+  // Warna wo "kaam darj karna" ki qatar mein khari rehti hai -- aur
+  // yehi wo qatar hai jo agle din yaad dilati hai ke wahan jana hai.
+  const nextStatus = isFinal ? "bill_pending" : "in_progress";
 
   const { error } = await supabase
     .from("machinery_bookings")
-    .update({ status: "bill_pending", completed_at: new Date().toISOString() })
+    .update(
+      isFinal
+        ? { status: nextStatus, completed_at: new Date().toISOString() }
+        : { status: nextStatus }
+    )
     .eq("id", bookingId);
   if (error) return { error: error.message };
 
   await logEvent({
     bookingId,
-    eventType: "work_completed",
+    eventType: isFinal ? "work_completed" : "work_progress",
     fromStatus: booking.status,
-    toStatus: "bill_pending",
-    note: `${toAcres(acres, kanal)} acre`,
+    toStatus: nextStatus,
+    note: isFinal
+      ? `${toAcres(acres, kanal)} acre (${workDate}) — kaam mukammal, kul ${doneSoFar} acre`
+      : `${toAcres(acres, kanal)} acre (${workDate}) — ab tak ${doneSoFar} acre, baqi ${remaining} acre`,
     evidenceUrl: str(formData, "completion_photo_url"),
     actorId,
   });
 
+  if (!isFinal) {
+    revalidateAll(bookingId);
+    return { success: true, notice: `Ab tak ${doneSoFar} acre — baqi ${remaining} acre.` };
+  }
+
+  // Agli fasal ki yaad dahani ka sawal YAHAN poochha jata hai, booking
+  // par nahi. Booking ke waqt kisan ko abhi tajurba hi nahi hua ke kaam
+  // kaisa raha -- us waqt ka "haan" sirf adab hai. Kaam khatam hone par
+  // diya gaya jawab wo hai jis par agle saal phone kiya ja sakta hai.
+  const reminder = tribool(formData, "wants_next_season_reminder");
+  if (reminder !== null) {
+    await supabase
+      .from("machinery_bookings")
+      .update({ wants_next_season_reminder: reminder })
+      .eq("id", bookingId);
+  }
+
+  // Kaam poora hote hi bill khud ban jata hai -- staff ko dobara kuch
+  // dabana nahi parta. Hisaab wahi: kul raqba x tay shuda rate, us mein
+  // se advance, baqi kisan ke zimme. Rate abhi tak confirm na hua ho to
+  // bill nahi banta -- us soorat mein rate confirm karne ke baad "Bill
+  // banayein" wala button apna kaam karta hai.
+  if (booking.rate_status !== "final" || !booking.final_rate) {
+    revalidateAll(bookingId);
+    return {
+      success: true,
+      notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill abhi nahi bana: pehle kisan se final rate confirm karwayein.`,
+    };
+  }
+
+  const billed = await buildFinalBill(supabase, bookingId, actorId);
   revalidateAll(bookingId);
-  return { success: true };
+  if (billed.error) {
+    return { success: true, notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill nahi bana: ${billed.error}` };
+  }
+  return {
+    success: true,
+    billNumber: billed.billNumber,
+    notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill ${billed.billNumber ?? ""} khud ban gaya hai.`,
+  };
 }
 
 // =====================================================================
@@ -866,6 +1088,22 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
   if (!bookingId) return { error: "Booking nahi mili." };
+  return buildFinalBill(supabase, bookingId, actorId);
+}
+
+/**
+ * Bill banane ka asal kaam -- ek hi jagah.
+ *
+ * Do jagah se bulaya jata hai: kaam mukammal hote hi khud-ba-khud, aur
+ * "Bill banayein" ke button se (jab rate us waqt tak confirm na hua ho).
+ * Dono raaste ek hi hisaab par jate hain -- warna kisi din wo alag ho
+ * jate aur kisan ke haath do mukhtalif bill hote.
+ */
+async function buildFinalBill(
+  supabase: Client,
+  bookingId: string,
+  actorId: string | null
+): Promise<ActionState> {
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
@@ -877,12 +1115,21 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
     return { error: "Bill se pehle final rate kisan se confirm karwana zaroori hai." };
   }
 
-  const { data: work } = await supabase
+  // Bill kai din ke kaam ke JOR se banta hai, kisi ek din se nahi
+  // (migration 143). Kattai aksar ek din mein poori nahi hoti.
+  const { data: workRows } = await supabase
     .from("machinery_work_records")
-    .select("actual_area")
-    .eq("booking_id", bookingId)
-    .maybeSingle();
-  if (!work) return { error: "Pehle asal kaam darj karein (kitne acre waqai kaate gaye)." };
+    .select("actual_area, is_final")
+    .eq("booking_id", bookingId);
+
+  if (!workRows || workRows.length === 0) {
+    return { error: "Pehle asal kaam darj karein (kitne acre waqai kaate gaye)." };
+  }
+  if (!workRows.some((w) => w.is_final)) {
+    return {
+      error: "Kaam abhi mukammal nishaan zada nahi hua. Aakhri indraj par \"kaam poora ho gaya\" par nishaan lagayein, phir bill banega.",
+    };
+  }
 
   const { data: existingBill } = await supabase
     .from("machinery_bills")
@@ -903,7 +1150,8 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
     .filter((p) => p.kind === "final")
     .reduce((sum, p) => sum + Number(p.amount), 0);
 
-  const area = Number(work.actual_area);
+  const area =
+    Math.round(workRows.reduce((sum, w) => sum + Number(w.actual_area), 0) * 10000) / 10000;
   const rate = Number(booking.final_rate);
   const gross = Math.round(area * rate * 100) / 100;
   const advanceAdjusted = Math.min(advanceTotal, gross);

@@ -2,8 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { postCashIn, postCashOut, postWalletMovement, postMachineryVendorPayout, ACC, failed } from "@/lib/ledger/rules";
-import { notifyRoles } from "@/lib/notifications";
+import { postMachineryVendorPayout, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -75,86 +74,20 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
 }
 
 
-export async function updateBookingStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const bookingId = String(formData.get("booking_id") ?? "");
-  const status = String(formData.get("status") ?? "");
-  if (!bookingId) return { error: "Missing booking id." };
-  if (!["pending", "confirmed", "in_progress", "completed", "cancelled"].includes(status)) return { error: "Status sahi select karein." };
-
-  const { error } = await supabase.from("machinery_bookings").update({ status }).eq("id", bookingId);
-  if (error) return { error: error.message };
-  revalidatePath("/admin/machinery-rental");
-  return { success: true };
-}
-
-export async function completeMachineryBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const bookingId = String(formData.get("booking_id") ?? "");
-  const willSellToUs = formData.get("will_sell_to_us") === "yes";
-  const wantsReminder = formData.get("wants_next_season_reminder") === "yes";
-  const dieselAmount = Number(formData.get("diesel_amount") ?? 0);
-  const dieselRate = Number(formData.get("diesel_rate") ?? 0);
-  const dieselAccountId = (formData.get("diesel_account_id") as string) || null;
-
-  if (!bookingId) return { error: "Missing booking id." };
-  if (dieselAmount > 0 && !dieselAccountId) return { error: "Diesel ka konsa account, wo select karein." };
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  await supabase
-    .from("machinery_bookings")
-    .update({
-      status: "completed",
-      will_sell_to_us: willSellToUs,
-      wants_next_season_reminder: wantsReminder,
-      diesel_amount: dieselAmount,
-      diesel_rate: dieselRate,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", bookingId);
-
-  if (dieselAmount > 0 && dieselAccountId) {
-    const { data: booking } = await supabase.from("machinery_bookings").select("booking_number").eq("id", bookingId).single();
-    const { data: dieselRow } = await supabase
-      .from("finance_transactions")
-      .insert({
-        account_id: dieselAccountId,
-        transaction_type: "expense",
-        category: "Machinery - Diesel",
-        amount: dieselAmount,
-        transaction_date: new Date().toISOString().slice(0, 10),
-        notes: `Diesel for booking ${booking?.booking_number ?? bookingId} - Rs ${dieselRate}/litre`,
-        created_by: user?.id ?? null,
-      })
-      .select("id")
-      .single();
-
-    if (dieselRow?.id) {
-      await postCashOut({
-        accountId: dieselAccountId,
-        amount: dieselAmount,
-        description: `Diesel — booking ${booking?.booking_number ?? bookingId}`,
-        againstAccount: ACC.fuel,
-        ctx: {
-          createdBy: user?.id ?? null,
-          claims: [{ table: "finance_transactions", rowId: dieselRow.id }],
-        },
-      });
-    }
-    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
-    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
-    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
-    // 1,000 ka asar Rs 2,000 hota tha.
-  }
-
-  revalidatePath("/admin/machinery-rental");
-  revalidatePath("/admin/finance");
-  return { success: true };
-}
-
+// updateBookingStatus aur completeMachineryBooking hata diye gaye.
+//
+// Dono ek hi darwaza the: booking ko seedha "completed" kar dena --
+// bina asal raqbe ke, bina bill ke. Jo booking is raaste se guzarti thi
+// wo har qatar se nikal jati thi, aur kisan se lena kabhi darj hi na
+// hota. Diesel us modal mein darj ho jata tha, yani kharcha likha hua
+// aur aamdani ghayab.
+//
+// Ab dono cheezein apni jagah par hain: diesel machine ki rawangi par
+// (142), aur booking ki halat sirf zanjeer ke qadmon se badalti hai --
+// kaam darj hone par, bill banne par, paisa aane par.
+//
+// Inhein sirf istemal se hataana kaafi nahi tha: pari rehti to kisi din
+// koi dobara jorh deta aur zanjeer chup chaap bypass ho jati.
 
 export async function recordVendorPayout(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();

@@ -7941,8 +7941,11 @@ export type Database = {
           destination_lat: number | null
           destination_lng: number | null
           driver_phone: string | null
+          fuel_account_id: string | null
           fuel_amount: number | null
+          fuel_expense_id: string | null
           fuel_litres: number | null
+          fuel_paid_by: string | null
           id: string
           machine_id: string | null
           notes: string | null
@@ -7960,8 +7963,11 @@ export type Database = {
           destination_lat?: number | null
           destination_lng?: number | null
           driver_phone?: string | null
+          fuel_account_id?: string | null
           fuel_amount?: number | null
+          fuel_expense_id?: string | null
           fuel_litres?: number | null
+          fuel_paid_by?: string | null
           id?: string
           machine_id?: string | null
           notes?: string | null
@@ -7979,8 +7985,11 @@ export type Database = {
           destination_lat?: number | null
           destination_lng?: number | null
           driver_phone?: string | null
+          fuel_account_id?: string | null
           fuel_amount?: number | null
+          fuel_expense_id?: string | null
           fuel_litres?: number | null
+          fuel_paid_by?: string | null
           id?: string
           machine_id?: string | null
           notes?: string | null
@@ -8001,6 +8010,27 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_expense_id_fkey"
+            columns: ["fuel_expense_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -8288,11 +8318,13 @@ export type Database = {
           farmer_confirmed: boolean
           finished_at: string | null
           id: string
+          is_final: boolean
           location_lat: number | null
           location_lng: number | null
           meter_reading: number | null
           notes: string | null
           started_at: string | null
+          work_date: string
         }
         Insert: {
           actual_area?: number | null
@@ -8306,11 +8338,13 @@ export type Database = {
           farmer_confirmed?: boolean
           finished_at?: string | null
           id?: string
+          is_final?: boolean
           location_lat?: number | null
           location_lng?: number | null
           meter_reading?: number | null
           notes?: string | null
           started_at?: string | null
+          work_date?: string
         }
         Update: {
           actual_area?: number | null
@@ -8324,11 +8358,13 @@ export type Database = {
           farmer_confirmed?: boolean
           finished_at?: string | null
           id?: string
+          is_final?: boolean
           location_lat?: number | null
           location_lng?: number | null
           meter_reading?: number | null
           notes?: string | null
           started_at?: string | null
+          work_date?: string
         }
         Relationships: [
           {
@@ -13668,8 +13704,35 @@ export type Database = {
           },
         ]
       }
+      v_machinery_diesel_check: {
+        Row: {
+          booking_number: string | null
+          departure_at: string | null
+          dispatch_id: string | null
+          fuel_account_id: string | null
+          fuel_amount: number | null
+          fuel_paid_by: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+        ]
+      }
       v_machinery_queue: {
         Row: {
+          aakhri_kaam_ki_tareekh: string | null
           booking_date: string | null
           booking_number: string | null
           crop_type: string | null
@@ -13682,6 +13745,9 @@ export type Database = {
           harvest_area: number | null
           harvest_ready: string | null
           id: string | null
+          kaam_baqi: number | null
+          kaam_ho_chuka: number | null
+          kaam_mukammal: boolean | null
           location_address: string | null
           machine_type_requested: string | null
           preferred_date: string | null
@@ -13712,6 +13778,14 @@ export type Database = {
           shift: string | null
           shortage_liters: number | null
           shortage_percentage: number | null
+        }
+        Relationships: []
+      }
+      v_missing_table_grants: {
+        Row: {
+          object_kind: string | null
+          object_name: unknown
+          policy_count: number | null
         }
         Relationships: []
       }

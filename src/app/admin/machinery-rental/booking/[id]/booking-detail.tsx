@@ -106,8 +106,25 @@ export function BookingDetail({
 }: {
   booking: Booking;
   payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null; received_by_name: string | null }>;
-  dispatches: Array<{ id: string; operator_name: string | null; departure_at: string; opening_meter: number | null; fuel_litres: number | null }>;
-  work: { actual_area: number; started_at: string | null; finished_at: string | null; completion_photo_url: string | null; farmer_confirmed: boolean } | null;
+  dispatches: Array<{
+    id: string;
+    operator_name: string | null;
+    departure_at: string;
+    opening_meter: number | null;
+    fuel_litres: number | null;
+    fuel_amount: number | null;
+    fuel_paid_by: string | null;
+  }>;
+  work: Array<{
+    id: string;
+    work_date: string;
+    is_final: boolean;
+    actual_area: number;
+    started_at: string | null;
+    finished_at: string | null;
+    completion_photo_url: string | null;
+    farmer_confirmed: boolean;
+  }>;
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{ id: string; label: string }>;
@@ -122,6 +139,11 @@ export function BookingDetail({
   const confirmed = Boolean(booking.farmer_confirmed_at) || Boolean(booking.confirmation_override_reason);
   const balance = bill ? Math.round((bill.balance_payable - finalPaid) * 100) / 100 : null;
   const cancelled = booking.status === "cancelled";
+
+  // Kaam ka jor -- bill isi se banta hai, kisi ek din se nahi.
+  const workDone = Math.round(work.reduce((sum, w) => sum + w.actual_area, 0) * 10000) / 10000;
+  const workFinished = work.some((w) => w.is_final);
+  const workRemaining = Math.max(Math.round((booking.harvest_area - workDone) * 10000) / 10000, 0);
   const vendorRemaining = bill ? Math.round((bill.vendor_payable - paidToVendor) * 100) / 100 : 0;
 
   return (
@@ -264,39 +286,54 @@ export function BookingDetail({
                 {new Date(d.departure_at).toLocaleString()} · {d.operator_name ?? "operator darj nahi"}
                 {d.opening_meter !== null && ` · meter ${d.opening_meter}`}
                 {d.fuel_litres !== null && ` · ${d.fuel_litres} L`}
+                {d.fuel_amount !== null && d.fuel_amount > 0 &&
+                  ` · diesel Rs ${d.fuel_amount.toLocaleString()} (${
+                    d.fuel_paid_by === "company" ? "ART" : d.fuel_paid_by === "vendor" ? "vendor" : "kisan"
+                  })`}
               </p>
             ))}
-            {confirmed && <DispatchForm bookingId={booking.id} machines={machines} />}
+            {confirmed && <DispatchForm bookingId={booking.id} machines={machines} accounts={accounts} />}
           </StepCard>
 
-          {/* Asal kaam */}
-          <StepCard n={4} title={t("mc_step_work", lang)} done={Boolean(work)} locked={!confirmed}>
-            {work ? (
-              <div className="text-sm">
-                <p className="font-medium text-surface-900 dark:text-surface-100">{work.actual_area} acre waqai kaate gaye</p>
-                {booking.harvest_area !== work.actual_area && (
-                  <p className="mt-1 text-amber-700 dark:text-amber-300">
-                    Booking par andaza {booking.harvest_area} acre tha — bill asal {work.actual_area} acre ka banega.
+          {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
+          <StepCard n={4} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
+            {work.length > 0 && (
+              <div className="mb-3 space-y-1 text-sm">
+                {work.map((w) => (
+                  <div
+                    key={w.id}
+                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
+                  >
+                    <span className="text-surface-600 dark:text-surface-300">
+                      {new Date(w.work_date).toLocaleDateString()}
+                      {w.is_final && ` · ${t("mc_work_done_flag", lang)}`}
+                    </span>
+                    <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-surface-200 pt-1 font-display font-semibold dark:border-surface-700">
+                  <span>{t("mc_work_done_total", lang)}</span>
+                  <span>{workDone} acre</span>
+                </div>
+                {!workFinished && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    {t("mc_work_remaining", lang)}: {workRemaining} acre — {t("mc_work_not_final_hint", lang)}
                   </p>
                 )}
-                {work.started_at && work.finished_at && (
-                  <p className="text-surface-500">
-                    {new Date(work.started_at).toLocaleTimeString()} se {new Date(work.finished_at).toLocaleTimeString()}
+                {workFinished && booking.harvest_area !== workDone && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Booking par andaza {booking.harvest_area} acre tha — bill asal {workDone} acre ka banega.
                   </p>
-                )}
-                {work.completion_photo_url && (
-                  <a href={work.completion_photo_url} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
-                    {t("mc_field_photo", lang)}
-                  </a>
                 )}
               </div>
-            ) : (
-              confirmed && <WorkForm bookingId={booking.id} estimated={booking.harvest_area} />
+            )}
+            {confirmed && !workFinished && (
+              <WorkForm bookingId={booking.id} estimated={booking.harvest_area} done={workDone} />
             )}
           </StepCard>
 
           {/* Bill */}
-          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!work}>
+          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
@@ -312,7 +349,7 @@ export function BookingDetail({
                 </div>
               </div>
             ) : (
-              work && <BillForm bookingId={booking.id} />
+              workFinished && <BillForm bookingId={booking.id} />
             )}
           </StepCard>
 
@@ -507,12 +544,24 @@ function Submit({ label }: { label: string }) {
 }
 
 function Err({ state }: { state: ActionState }) {
-  if (!state.error) return null;
-  return (
-    <p className="mb-2 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-      {state.error}
-    </p>
-  );
+  if (state.error) {
+    return (
+      <p className="mb-2 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+        {state.error}
+      </p>
+    );
+  }
+  // Kaam theek ho gaya magar us ka nateeja batana zaroori hai -- kitna
+  // baqi raha, bill bana ya nahi. Khamoshi se guzar jana staff ko ye
+  // sochne par majboor karta hai ke kuch hua bhi ya nahi.
+  if (state.notice) {
+    return (
+      <p className="mb-2 rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
+        {state.notice}
+      </p>
+    );
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------
@@ -650,9 +699,19 @@ function OverrideForm({ bookingId }: { bookingId: string }) {
   );
 }
 
-function DispatchForm({ bookingId, machines }: { bookingId: string; machines: Array<{ id: string; label: string }> }) {
+function DispatchForm({
+  bookingId,
+  machines,
+  accounts,
+}: {
+  bookingId: string;
+  machines: Array<{ id: string; label: string }>;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
   const lang = useLang();
   const [state, action] = useFormState(dispatchMachine, initialState);
+  const [diesel, setDiesel] = useState("");
+  const [paidBy, setPaidBy] = useState("");
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -686,24 +745,89 @@ function DispatchForm({ bookingId, machines }: { bookingId: string; machines: Ar
           <Input type="number" name="fuel_litres" step="0.01" />
         </div>
       </div>
+
+      {/* Diesel: teenon soortein maidan mein hoti hain -- kisan ne dala,
+          vendor ne dala, ya ART ne. Teenon likhi jati hain, magar hamare
+          khate se paisa sirf ART wale par nikalta hai. */}
+      <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+        <p className="mb-2 text-xs text-surface-500">{t("mc_diesel_section", lang)}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>{t("mc_diesel_amount", lang)}</Label>
+            <Input
+              type="number"
+              name="fuel_amount"
+              step="0.01"
+              min="0"
+              value={diesel}
+              onChange={(e) => setDiesel(e.target.value)}
+            />
+          </div>
+          {Number(diesel) > 0 && (
+            <div>
+              <Label>{t("mc_diesel_paid_by", lang)}</Label>
+              <select
+                name="fuel_paid_by"
+                required
+                value={paidBy}
+                onChange={(e) => setPaidBy(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+              >
+                <option value="">-</option>
+                <option value="farmer">{t("mc_diesel_by_farmer", lang)}</option>
+                <option value="vendor">{t("mc_diesel_by_vendor", lang)}</option>
+                <option value="company">{t("mc_diesel_by_company", lang)}</option>
+              </select>
+            </div>
+          )}
+          {Number(diesel) > 0 && paidBy === "company" && (
+            <div className="col-span-2">
+              <Label>{t("mc_diesel_account", lang)}</Label>
+              <select
+                name="fuel_account_id"
+                required
+                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+              >
+                <option value="">-</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        {Number(diesel) > 0 && paidBy && paidBy !== "company" && (
+          <p className="mt-2 text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
+        )}
+      </div>
+
       <Submit label={t("mc_record_dispatch", lang)} />
     </form>
   );
 }
 
-function WorkForm({ bookingId, estimated }: { bookingId: string; estimated: number }) {
+function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated: number; done: number }) {
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
   const [photo, setPhoto] = useState("");
+  const [isFinal, setIsFinal] = useState(false);
+  const [reminder, setReminder] = useState("");
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <input type="hidden" name="completion_photo_url" value={photo} />
       <p className="text-xs text-surface-500">
-        Booking par andaza {estimated} acre tha. Yahan wohi likhein jo WAQAI kaata gaya — bill isi se banega.
+        {done > 0
+          ? `Booking par andaza ${estimated} acre tha, ab tak ${done} acre ho chuke. Yahan SIRF is din ka kaam likhein — jor khud ban jayega.`
+          : `Booking par andaza ${estimated} acre tha. Yahan wohi likhein jo WAQAI kaata gaya — bill isi se banega.`}
       </p>
       <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_work_date", lang)}</Label>
+          <Input type="date" name="work_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+        </div>
+        <div />
         <div>
           <Label>{t("mc_actual_area", lang)}</Label>
           <Input type="number" name="actual_area_acres" step="0.01" />
@@ -730,6 +854,54 @@ function WorkForm({ bookingId, estimated }: { bookingId: string; estimated: numb
         {t("mc_farmer_verified_onsite", lang)}
       </label>
       <PaymentSlipUpload onUploaded={setPhoto} />
+      {/* Kaam poora hone ka nishaan tareekh se nahi lagta -- tareekh ka
+          andaza ghalat ho sakta hai, kaam poora hone ka nahi. Jab tak ye
+          khali hai, booking "kaam darj karna" ki qatar mein khari rehti
+          hai aur agle din khud yaad dilati hai. */}
+      <label className="flex items-start gap-2 rounded-lg border-2 border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+        <input
+          type="checkbox"
+          name="is_final"
+          checked={isFinal}
+          onChange={(e) => setIsFinal(e.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
+        <span>
+          <span className="font-medium text-surface-900 dark:text-surface-100">{t("mc_work_is_final", lang)}</span>
+          <span className="block text-xs text-surface-500">{t("mc_work_is_final_hint", lang)}</span>
+        </span>
+      </label>
+
+      {/* Agli fasal ka sawal yahin poochha jata hai -- booking ke waqt
+          nahi. Us waqt kisan ne kaam dekha hi nahi hota; jawab abhi
+          waqai jawab hai. */}
+      {isFinal && (
+        <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+          <Label>{t("mc_next_season_q", lang)}</Label>
+          <div className="mt-2 flex gap-2">
+            {[
+              { v: "yes", label: t("mc_yes", lang) },
+              { v: "no", label: t("mc_no", lang) },
+            ].map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setReminder(o.v)}
+                className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
+                  reminder === o.v
+                    ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/30"
+                    : "border-surface-200 text-surface-500 dark:border-surface-700"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="wants_next_season_reminder" value={reminder} />
+          <p className="mt-2 text-xs text-surface-500">{t("mc_bill_auto_hint", lang)}</p>
+        </div>
+      )}
+
       <Submit label={t("mc_record_work", lang)} />
     </form>
   );

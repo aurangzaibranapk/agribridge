@@ -19,13 +19,11 @@ export default async function MachineryRentalPage({
     { data: vendors },
     { data: rawMachines },
     { data: farmers },
-    { data: financeAccounts },
     { data: rawBookings },
   ] = await Promise.all([
     supabase.from("machinery_vendors").select("id, vendor_name, contact_person, phone").eq("is_active", true).order("vendor_name"),
     supabase.from("machinery_vendor_machines").select("*, machinery_vendors(vendor_name)").eq("is_available", true).order("machine_type"),
     supabase.from("farmers").select("id, full_name, farmer_code, booking_link_token").eq("is_deleted", false).order("full_name"),
-    supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
     supabase
       .from("machinery_bookings")
       .select("*, farmers(full_name), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)")
@@ -150,7 +148,6 @@ export default async function MachineryRentalPage({
         vendors={vendors ?? []}
         machines={machines}
         farmers={farmers ?? []}
-        financeAccounts={financeAccounts ?? []}
         bookings={bookings}
         commissionRate={commissionRate}
         canEditCommission={canEditCommission}
