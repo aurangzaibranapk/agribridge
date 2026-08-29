@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { phoneKey } from "@/lib/farmers/identity";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
@@ -108,25 +109,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    let { data: farmer } = await serviceClient.from("farmers").select("id, is_profile_complete").eq("whatsapp_number", fromPhone).maybeSingle();
+    // WhatsApp se aane wala number kabhi 92 se shuru hota hai, kabhi 0
+    // se, aur kabhi + ke sath. Pehle yahan harf-ba-harf milaya jata tha,
+    // is liye wohi kisan jo counter par 0300-1234567 likha kar bana tha,
+    // WhatsApp par ek naya ajnabi ban jata tha -- naye khate ke sath.
+    const key = phoneKey(fromPhone);
+    let { data: farmer } = await serviceClient
+      .from("farmers")
+      .select("id, is_profile_complete")
+      .eq("phone_key", key ?? "")
+      .eq("is_deleted", false)
+      .maybeSingle();
 
     if (!farmer) {
-      // is_profile_complete yahan bhi uthana zaroori hai: warna phone se
-      // milne wale purane kisan ko har baar "profile adhoora" samajh kar
-      // dobara registration poochh li jayegi.
-      const { data: byPhone } = await serviceClient.from("farmers").select("id, is_profile_complete").eq("phone_number", fromPhone).maybeSingle();
-      if (byPhone) {
-        await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", byPhone.id);
-        farmer = byPhone;
-      } else {
-        // farmer_code database khud bharta hai (migration 121).
-        const { data: newFarmer } = await serviceClient
-          .from("farmers")
-          .insert({ full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`, phone_number: fromPhone, whatsapp_number: fromPhone })
-          .select("id, is_profile_complete")
-          .single();
-        farmer = newFarmer;
-      }
+      // farmer_code database khud bharta hai (migration 121).
+      const { data: newFarmer } = await serviceClient
+        .from("farmers")
+        .insert({
+          full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`,
+          phone_number: fromPhone,
+          whatsapp_number: fromPhone,
+          registration_source: "WHATSAPP",
+        })
+        .select("id, is_profile_complete")
+        .single();
+      farmer = newFarmer;
+    } else {
+      // Purana kisan mil gaya -- us par WhatsApp number darj kar dein
+      // taake agli baar seedha isi se mile.
+      await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", farmer.id);
     }
 
     if (!farmer) {

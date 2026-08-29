@@ -15,6 +15,7 @@ interface Farmer {
   full_name: string;
   farmer_code: string;
   phone_number: string;
+  district: string;
   village: string;
   previous_bookings: number;
   outstanding: number;
@@ -82,7 +83,7 @@ export function NewBookingForm({
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
   const [quickPhone, setQuickPhone] = useState("");
-  const [quickVillage, setQuickVillage] = useState("");
+  const [quickDistrict, setQuickDistrict] = useState("");
   const [quickMsg, setQuickMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [quickPending, startQuick] = useTransition();
 
@@ -94,7 +95,7 @@ export function NewBookingForm({
       const fd = new FormData();
       fd.set("full_name", quickName);
       fd.set("phone_number", quickPhone);
-      fd.set("village", quickVillage);
+      fd.set("district", quickDistrict);
       const res = await quickRegisterFarmer({}, fd);
       if (res.error || !res.farmerId) {
         setQuickMsg({ tone: "bad", text: res.error ?? "Kisan nahi bana." });
@@ -105,7 +106,8 @@ export function NewBookingForm({
         full_name: res.farmerName ?? quickName,
         farmer_code: res.farmerCode ?? "",
         phone_number: quickPhone,
-        village: quickVillage,
+        district: quickDistrict,
+        village: "",
         previous_bookings: 0,
         outstanding: 0,
       };
@@ -260,7 +262,7 @@ export function NewBookingForm({
           <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-900/40 dark:bg-brand-950/20">
             <p className="font-medium text-surface-900 dark:text-surface-100">{farmer.full_name}</p>
             <p className="text-surface-600 dark:text-surface-300">{farmer.phone_number || "Mobile darj nahi"}</p>
-            {farmer.village && <p className="text-surface-600 dark:text-surface-300">{farmer.village}</p>}
+            {farmer.district && <p className="text-surface-600 dark:text-surface-300">{farmer.district}</p>}
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge tone="gray">Pichli bookings: {farmer.previous_bookings}</Badge>
               <Badge tone={farmer.outstanding > 0 ? "red" : "green"}>
@@ -284,7 +286,7 @@ export function NewBookingForm({
                 onClick={() => {
                   setQuickName("");
                   setQuickPhone(/^[0-9+\-\s]+$/.test(code.trim()) ? code.trim() : "");
-                  setQuickVillage("");
+                  setQuickDistrict("");
                   setQuickOpen(true);
                 }}
               >
@@ -321,21 +323,26 @@ export function NewBookingForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Mobile</Label>
+                <Label>Mobile *</Label>
                 <Input value={quickPhone} onChange={(e) => setQuickPhone(e.target.value)} placeholder="03xx-xxxxxxx" />
               </div>
               <div>
-                <Label>Gaon</Label>
-                <Input value={quickVillage} onChange={(e) => setQuickVillage(e.target.value)} placeholder="Chak Mahabali" />
+                <Label>Zila</Label>
+                <Input value={quickDistrict} onChange={(e) => setQuickDistrict(e.target.value)} placeholder="Sahiwal" />
               </div>
             </div>
-            <Button type="button" size="sm" onClick={quickRegister} disabled={quickPending || !quickName.trim()}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={quickRegister}
+              disabled={quickPending || !quickName.trim() || quickPhone.replace(/\D/g, "").length < 10}
+            >
               {quickPending ? "Ban raha hai..." : "Banayein aur chunein"}
             </Button>
             <p className="text-xs text-surface-500">
-              Sirf itna hi kaafi hai. CNIC, zameen aur kaghazat baad mein Farmers wale safhe se bhare ja sakte hain.
-              Mobile pehle se kisi kisan ka hua to naya nahi banega — wohi purana chun liya jayega, taake ek hi banda
-              do khaton mein na bat jaye.
+              Sirf itna hi kaafi hai. Baqi tafseel (walid ka naam, CNIC, gaon, zameen, bank, kaghazat) kisan apni
+              profile se ek hi baar bharta hai, aur phir har service wohi parhti hai. Mobile zaroori hai — wohi kisan
+              ki pehchan hai; pehle se kisi ka hua to naya nahi banega, wohi purana chun liya jayega.
             </p>
           </div>
         )}

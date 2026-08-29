@@ -1,5 +1,6 @@
 "use server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { findFarmerByPhone } from "@/lib/farmers/identity";
 
 export interface QuickBookingState {
   error?: string;
@@ -34,7 +35,10 @@ export async function quickFarmerMachineryBooking(_prev: QuickBookingState, form
   if (machineType === "other" && !machineTypeOther) return { error: "Machine ka naam likhein." };
   if (!expectedDate) return { error: "Tareekh select karein." };
 
-  const { data: existingFarmer } = await serviceClient.from("farmers").select("id").eq("phone_number", phoneNumber).maybeSingle();
+  // Kisan khud website par khara hai. Agar wo pehle se hamare paas hai --
+  // chahe number kisi bhi andaz mein likha ho -- to naya khata nahi
+  // banta, usi purane par booking chali jati hai.
+  const existingFarmer = await findFarmerByPhone(serviceClient, phoneNumber);
 
   let farmerId = existingFarmer?.id as string | undefined;
   if (!farmerId) {
@@ -44,6 +48,7 @@ export async function quickFarmerMachineryBooking(_prev: QuickBookingState, form
       .insert({
         full_name: fullName,
         phone_number: phoneNumber,
+        registration_source: "SELF",
       })
       .select("id")
       .single();

@@ -47,6 +47,7 @@ export async function GET(request: Request) {
           user_id: data.user.id,
           email: data.user.email ?? null,
           full_name: (data.user.user_metadata?.full_name as string) || (data.user.user_metadata?.name as string) || null,
+          registration_source: "SELF",
         });
       }
     }

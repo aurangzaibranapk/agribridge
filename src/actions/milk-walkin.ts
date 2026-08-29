@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { recordCollection, applyFat, findFarmerByCode } from "@/lib/milk-collection";
 import { logAudit } from "@/lib/audit";
 import { requireAction } from "@/lib/access/guard";
@@ -148,15 +149,9 @@ export async function quickRegisterFarmer(
   // Wohi number pehle se kisi ke paas ho to naya kisan nahi banate --
   // do khate ek hi shakhs ke naam par bann jana baad mein sulajhana
   // bohot mushkil hota hai.
-  const tail = phone.replace(/\D/g, "").slice(-9);
-  const { data: already } = await service
-    .from("farmers")
-    .select("id, farmer_code, full_name")
-    .ilike("phone_number", `%${tail}`)
-    .eq("is_deleted", false)
-    .maybeSingle();
+  const already = await findFarmerByPhone(service, phone);
   if (already) {
-    return { error: `Ye number pehle se ${already.farmer_code} — ${already.full_name} ka hai. Usi ko chunein.` };
+    return { error: `${alreadyRegisteredMessage(already)} Usi ko chunein.` };
   }
 
   // farmer_code database khud bharta hai (migration 121).
@@ -170,6 +165,7 @@ export async function quickRegisterFarmer(
       village: village || null,
       branch_id: who.branchId,
       interested_in_milk: true,
+      registration_source: "STAFF",
       ...(org?.organization_id ? { organization_id: org.organization_id } : {}),
     })
     .select("id, farmer_code")

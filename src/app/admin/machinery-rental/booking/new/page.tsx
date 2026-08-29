@@ -16,7 +16,7 @@ export default async function NewMachineryBookingPage({
     await Promise.all([
       supabase
         .from("farmers")
-        .select("id, full_name, farmer_code, phone_number, village")
+        .select("id, full_name, farmer_code, phone_number, district, village")
         .eq("is_deleted", false)
         .order("full_name"),
       supabase
@@ -88,6 +88,7 @@ export default async function NewMachineryBookingPage({
           full_name: f.full_name ?? "",
           farmer_code: f.farmer_code ?? "",
           phone_number: f.phone_number ?? "",
+          district: f.district ?? "",
           village: f.village ?? "",
           previous_bookings: history.get(f.id)?.bookings ?? 0,
           outstanding: history.get(f.id)?.outstanding ?? 0,

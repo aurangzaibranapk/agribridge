@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { findFarmerByPhone } from "@/lib/farmers/identity";
 import { notifyRoles } from "@/lib/notifications";
 
 export interface CartState {
@@ -74,14 +75,17 @@ export async function submitMarketplaceCart(_prev: CartState, formData: FormData
       return { error: "Account mein masla hai, dobara login karein." };
     }
   } else {
-    const { data: byPhone } = await serviceClient.from("farmers").select("id").eq("phone_number", phoneNumber).maybeSingle();
+    // Number ki asal par talash (migration 124) -- warna wahi banda jo
+    // pehle 0300-1234567 likh kar bana tha, ab +92300... likhne par naya
+    // khata bana leta hai aur us ka purana udhaar peeche reh jata hai.
+    const byPhone = await findFarmerByPhone(serviceClient, phoneNumber);
     if (byPhone) {
       farmerId = byPhone.id;
     } else {
       // farmer_code database khud bharta hai (migration 121).
       const { data: newFarmer, error: farmerError } = await serviceClient
         .from("farmers")
-        .insert({ full_name: fullName, phone_number: phoneNumber, district: district || null })
+        .insert({ full_name: fullName, phone_number: phoneNumber, district: district || null, registration_source: "SELF" })
         .select("id")
         .single();
       if (farmerError) return { error: farmerError.message };

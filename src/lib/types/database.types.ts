@@ -4726,10 +4726,13 @@ export type Database = {
           milking_animal_count: number | null
           nickname: string | null
           organization_id: string
+          phone_key: string | null
           phone_number: string | null
+          profile_confirmed_at: string | null
           profile_photo_url: string | null
+          profile_status: string | null
           province: string | null
-          registration_source: string | null
+          registration_source: string
           registration_stage: string
           tehsil: string | null
           total_farms_count: number | null
@@ -4791,10 +4794,13 @@ export type Database = {
           milking_animal_count?: number | null
           nickname?: string | null
           organization_id?: string
+          phone_key?: string | null
           phone_number?: string | null
+          profile_confirmed_at?: string | null
           profile_photo_url?: string | null
+          profile_status?: string | null
           province?: string | null
-          registration_source?: string | null
+          registration_source?: string
           registration_stage?: string
           tehsil?: string | null
           total_farms_count?: number | null
@@ -4856,10 +4862,13 @@ export type Database = {
           milking_animal_count?: number | null
           nickname?: string | null
           organization_id?: string
+          phone_key?: string | null
           phone_number?: string | null
+          profile_confirmed_at?: string | null
           profile_photo_url?: string | null
+          profile_status?: string | null
           province?: string | null
-          registration_source?: string | null
+          registration_source?: string
           registration_stage?: string
           tehsil?: string | null
           total_farms_count?: number | null
@@ -12816,6 +12825,27 @@ export type Database = {
       fn_current_user_warehouse_id: { Args: never; Returns: string }
       fn_default_branch_id: { Args: never; Returns: string }
       fn_default_organization_id: { Args: never; Returns: string }
+      fn_farmer_profile_status: {
+        Args: {
+          p_address: string
+          p_cnic: string
+          p_confirmed: string
+          p_crops: string[]
+          p_land: number
+          p_verified: boolean
+          p_village: string
+        }
+        Returns: string
+      }
+      fn_find_farmer_by_phone: {
+        Args: { p_phone: string }
+        Returns: {
+          farmer_code: string
+          full_name: string
+          id: string
+          phone_number: string
+        }[]
+      }
       fn_find_marketplace_offer: {
         Args: {
           p_organization_id: string
@@ -12832,6 +12862,7 @@ export type Database = {
       fn_is_any_staff: { Args: never; Returns: boolean }
       fn_is_staff: { Args: { p_user_id: string }; Returns: boolean }
       fn_next_farmer_code: { Args: never; Returns: string }
+      fn_phone_key: { Args: { p_phone: string }; Returns: string }
       get_daily_sales_summary: {
         Args: { p_date?: string }
         Returns: {

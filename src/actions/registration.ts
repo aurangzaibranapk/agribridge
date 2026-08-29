@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 
 export interface RegisterState {
   error?: string;
@@ -45,11 +46,13 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
     return { error: "Password must be at least 6 characters." };
   }
 
-  const [{ data: phoneMatch }, { data: emailMatch }] = await Promise.all([
-    serviceClient.from("farmers").select("id").eq("phone_number", phoneNumber).maybeSingle(),
+  // Number ki asal par sawal, harf-ba-harf nahi: 0300-1234567 aur
+  // +923001234567 ek hi banda hai (migration 124).
+  const [phoneMatch, { data: emailMatch }] = await Promise.all([
+    findFarmerByPhone(serviceClient, phoneNumber),
     serviceClient.from("farmers").select("id").eq("email", email).maybeSingle(),
   ]);
-  if (phoneMatch) return { error: "A farmer with this mobile number is already registered." };
+  if (phoneMatch) return { error: alreadyRegisteredMessage(phoneMatch) };
   if (emailMatch) return { error: "A farmer with this email is already registered." };
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -69,10 +72,14 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
     phone_number: phoneNumber,
     email,
     district,
+    registration_source: "SELF",
   });
 
   if (farmerError) {
-    if (farmerError.message.includes("farmers_phone_number_key")) return { error: "A farmer with this mobile number is already registered." };
+    // Pehra ab phone_key par hai (aakhri das hindse), purane
+    // farmers_phone_number_key par nahi -- wo migration 124 mein hata
+    // diya gaya, kyunke wo ek hi number ke teen andaz alag samajhta tha.
+    if (farmerError.message.includes("farmers_phone_key_uniq")) return { error: "A farmer with this mobile number is already registered." };
     if (farmerError.message.includes("farmers_email_key")) return { error: "A farmer with this email is already registered." };
     return { error: farmerError.message };
   }

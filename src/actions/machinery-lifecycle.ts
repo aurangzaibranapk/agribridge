@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
@@ -1142,8 +1143,15 @@ export async function setMachineryCommissionRate(
  * hota hai ke staff kisi purane kisan ke naam par booking laga deta hai,
  * ya kaghaz par likh kar baad mein bhoolne ke liye chhoR deta hai.
  *
- * Is liye yahan sirf teen cheezein li jati hain: naam, mobile, gaon.
- * Baqi tafseel (CNIC, zameen, kaghazat) baad mein Farmers wale safhe se.
+ * Is liye yahan sirf teen cheezein li jati hain: naam, mobile, zila.
+ * Baqi tafseel (walid ka naam, CNIC, gaon, zameen, bank, kaghazat) baad
+ * mein 360 profile se -- ek hi baar, aur phir har service usi ko parhti
+ * hai.
+ *
+ * Gaon ki jagah ZILA jaan boojh kar hai. Gaon ka naam poochhne par
+ * counter par khara banda "Chak 45" likh deta hai, aur Pakistan mein Chak
+ * 45 darjanon hain -- us se na wo dhoonda ja sakta hai na koi hisaab
+ * banta. Zila kam likhna hai aur us se kaam ban jata hai.
  *
  * Mobile pehle se kisi ke paas ho to naya kisan NAHI banta -- wohi purana
  * kisan chun liya jata hai. Ye jaan boojh kar hai: ek hi banda do khaton
@@ -1157,24 +1165,23 @@ export async function quickRegisterFarmer(_prev: ActionState, formData: FormData
   const fullName = str(formData, "full_name");
   if (!fullName) return { error: "Kisan ka naam likhein." };
   const phone = str(formData, "phone_number");
-  const village = str(formData, "village");
+  const district = str(formData, "district");
 
-  if (phone) {
-    const { data: already } = await supabase
-      .from("farmers")
-      .select("id, farmer_code, full_name")
-      .eq("phone_number", phone)
-      .eq("is_deleted", false)
-      .maybeSingle();
-    if (already) {
-      return {
-        success: true,
-        farmerId: already.id,
-        farmerCode: already.farmer_code,
-        farmerName: already.full_name ?? fullName,
-        notice: `Ye number pehle se ${already.farmer_code} — ${already.full_name} ka hai. Wohi kisan chun liya gaya.`,
-      };
-    }
+  // Mobile ke baghair kisan banana mana hai. Wajah pehchan hai: farmer
+  // code hum dete hain, magar dobara aane wale bande ko usi khate se
+  // milane ke liye sirf mobile hai. Bina mobile ke banaya gaya kisan agli
+  // baar dhoonda nahi ja sakta -- aur staff naya bana deta hai.
+  if ((phone ?? "").replace(/\D/g, "").length < 10) return { error: "Mobile number sahi likhein — kisan ki pehchan yahi hai." };
+
+  const already = await findFarmerByPhone(supabase, phone);
+  if (already) {
+    return {
+      success: true,
+      farmerId: already.id,
+      farmerCode: already.farmerCode,
+      farmerName: already.fullName ?? fullName,
+      notice: `${alreadyRegisteredMessage(already)} Wohi kisan chun liya gaya.`,
+    };
   }
 
   // Farmer code yahan NAHI banta -- database ka apna silsila hai
@@ -1186,8 +1193,8 @@ export async function quickRegisterFarmer(_prev: ActionState, formData: FormData
     .insert({
       full_name: fullName,
       phone_number: phone,
-      village,
-      is_verified: true,
+      district,
+      registration_source: "STAFF",
     })
     .select("id, farmer_code, full_name")
     .single();
