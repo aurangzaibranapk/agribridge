@@ -264,5 +264,17 @@ export function departmentByKey(key: string): Department | null {
  */
 export function homePageForRole(role: string): string {
   if (UNRESTRICTED_ROLES.includes(role)) return "/admin/command-center";
-  return departmentForRole(role)?.dashboard ?? "/admin/dashboard";
+
+  // Staff ka ghar ab "Mera Kaam" hai -- department cards ka safha (131).
+  //
+  // Pehle har role ko us ke apne department ke dashboard par bhej diya
+  // jata tha. Us mein do kharabiyan thin: jis bande ke paas DO
+  // department hon (machinery ka banda jo diesel ka cash bhi leta hai)
+  // usay doosra department dhoondna paRta tha, aur jis ke paas us
+  // dashboard ki ijazat na ho usay pehle hi qadam par "ijazat nahi" ka
+  // safha milta tha.
+  //
+  // Cards wala safha dono soorat mein theek rehta hai: wahan wohi aata
+  // hai jo waqai khulta hai.
+  return "/admin/my-work";
 }

@@ -29,6 +29,9 @@ export interface NavEntry {
 export interface NavGroupData {
   key: string;
   label: string;
+  /** Department card ke liye: nishan aur doosra jumla (131). */
+  icon?: string | null;
+  description?: string | null;
   items: NavEntry[];
 }
 
@@ -42,7 +45,14 @@ export interface NavResult {
 }
 
 /** Ye hamesha khulte hain, chahe ijazat mein likhe hon ya na hon. */
-const ALWAYS = ["/admin/permissions-denied", "/admin/my-attendance"];
+//
+// "Mera Kaam" is fehrist mein is liye hai ke wo har staff ka ghar hai
+// (131). Us par rok lagana ka matlab hota: login ke foran baad "ijazat
+// nahi" ka safha -- aur wahan se aage koi raasta nahi.
+//
+// Us par kuch chhupane ka khatra bhi nahi: wo safha khud kuch nahi
+// dikhata, sirf wo card dikhata hai jin ki ijazat pehle se hai.
+const ALWAYS = ["/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
 
 function fallbackGroups(allowed: Set<string> | null): NavGroupData[] {
   return ADMIN_NAV_GROUPS.map((g) => ({
@@ -59,6 +69,8 @@ function groupsFromRegistry(registry: Registry, visible: Set<string> | null): Na
     .map((d) => ({
       key: d.key,
       label: d.label,
+      icon: d.icon,
+      description: d.description,
       items: (registry.byDashboard.get(d.key) ?? [])
         .filter((key) => visible == null || visible.has(key))
         .map((key) => registry.features.get(key))

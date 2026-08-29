@@ -1,6 +1,7 @@
 import { portalDict } from "./dict/portal";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
+import { myWorkDict } from "./dict/my-work";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -36,6 +37,7 @@ const dict = {
   ...portalDict,
   ...posDict,
   ...machineryDict,
+  ...myWorkDict,
 };
 
 export type TranslationKey = keyof typeof dict;

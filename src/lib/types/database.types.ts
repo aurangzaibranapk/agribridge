@@ -3583,6 +3583,9 @@ export type Database = {
       dashboards: {
         Row: {
           created_at: string
+          description: string | null
+          description_en: string | null
+          description_ur: string | null
           icon: string | null
           is_active: boolean
           key: string
@@ -3594,6 +3597,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          description_en?: string | null
+          description_ur?: string | null
           icon?: string | null
           is_active?: boolean
           key: string
@@ -3605,6 +3611,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
+          description_en?: string | null
+          description_ur?: string | null
           icon?: string | null
           is_active?: boolean
           key?: string
@@ -13323,6 +13332,7 @@ export type Database = {
           unit_price: number
         }[]
       }
+      fn_has_auth_code: { Args: never; Returns: boolean }
       fn_inventory_true_quantity: {
         Args: { p_inventory_id: string }
         Returns: number

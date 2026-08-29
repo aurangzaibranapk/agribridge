@@ -27,6 +27,8 @@ export interface DashboardRow {
   label: string;
   icon: string | null;
   summary: string | null;
+  /** Card ka doosra jumla -- "Booking se kattai tak" (131). */
+  description: string | null;
   sortOrder: number;
 }
 
@@ -55,11 +57,21 @@ function pickLabel(row: { label: string; label_en: string | null; label_ur: stri
   return row.label;
 }
 
+/** Wohi usool jo naam ka hai -- Roman hamesha bhara, baqi do khali ho sakte hain. */
+function pickText(
+  row: { description: string | null; description_en: string | null; description_ur: string | null },
+  lang: Lang
+): string | null {
+  if (lang === "en") return row.description_en || row.description;
+  if (lang === "ur") return row.description_ur || row.description;
+  return row.description;
+}
+
 export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
   const service = createServiceClient();
 
   const [{ data: dashboards }, { data: features }, { data: links }] = await Promise.all([
-    service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, sort_order").eq("is_active", true).order("sort_order"),
+    service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, description, description_en, description_ur, sort_order").eq("is_active", true).order("sort_order"),
     service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive").eq("is_active", true).order("label"),
     service.from("dashboard_features").select("dashboard_key, feature_key, sort_order").order("sort_order"),
   ]);
@@ -92,6 +104,7 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
       label: pickLabel(d, lang),
       icon: d.icon,
       summary: d.summary,
+      description: pickText(d, lang),
       sortOrder: d.sort_order,
     })),
     features: featureMap,
