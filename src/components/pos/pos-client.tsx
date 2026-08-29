@@ -239,9 +239,9 @@ export function PosClient({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-[1fr_380px]">
-      <div>
-        <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="grid grid-cols-1 gap-6 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[1fr_380px] lg:overflow-hidden">
+      <div className="flex flex-col lg:min-h-0">
+        <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-xl font-semibold text-surface-900 dark:text-white">
               {sellerName} - POS
@@ -266,7 +266,7 @@ export function PosClient({
           </div>
         </div>
 
-        <form onSubmit={handleBarcodeSubmit} className="mb-4 flex gap-2">
+        <form onSubmit={handleBarcodeSubmit} className="mb-4 flex shrink-0 gap-2">
           <div className="relative flex-1">
             <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
             <Input
@@ -285,34 +285,36 @@ export function PosClient({
           <p className="-mt-3 mb-4 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {filteredInventory.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => addToCart(item)}
-              className="rounded-card border border-surface-200 bg-white p-3 text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
-            >
-              <p className="text-sm font-medium text-surface-900 dark:text-surface-100 line-clamp-2">
-                {item.products?.name}
+        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {filteredInventory.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => addToCart(item)}
+                className="rounded-card border border-surface-200 bg-white p-3 text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
+              >
+                <p className="text-sm font-medium text-surface-900 dark:text-surface-100 line-clamp-2">
+                  {item.products?.name}
+                </p>
+                {item.products?.pack_size && (
+                  <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
+                )}
+                <p className="mt-2 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
+                  Rs {item.selling_price.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-surface-400">Stock: {item.stock_quantity}</p>
+              </button>
+            ))}
+            {filteredInventory.length === 0 && (
+              <p className="col-span-full py-10 text-center text-sm text-surface-400">
+                No products found.
               </p>
-              {item.products?.pack_size && (
-                <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
-              )}
-              <p className="mt-2 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
-                Rs {item.selling_price.toLocaleString()}
-              </p>
-              <p className="mt-1 text-xs text-surface-400">Stock: {item.stock_quantity}</p>
-            </button>
-          ))}
-          {filteredInventory.length === 0 && (
-            <p className="col-span-full py-10 text-center text-sm text-surface-400">
-              No products found.
-            </p>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      <Card className="flex h-fit flex-col gap-4">
+      <Card className="flex h-fit flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
