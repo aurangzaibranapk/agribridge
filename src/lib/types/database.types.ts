@@ -4368,6 +4368,21 @@ export type Database = {
           },
         ]
       }
+      farmer_code_counters: {
+        Row: {
+          id: boolean
+          last_number: number
+        }
+        Insert: {
+          id?: boolean
+          last_number?: number
+        }
+        Update: {
+          id?: boolean
+          last_number?: number
+        }
+        Relationships: []
+      }
       farmer_credit_ledger: {
         Row: {
           amount: number
@@ -4739,7 +4754,7 @@ export type Database = {
           crop_types?: string[]
           district?: string | null
           email?: string | null
-          farmer_code: string
+          farmer_code?: string
           full_name?: string | null
           has_livestock?: boolean
           id?: string
@@ -12800,6 +12815,7 @@ export type Database = {
       fn_is_admin_level: { Args: never; Returns: boolean }
       fn_is_any_staff: { Args: never; Returns: boolean }
       fn_is_staff: { Args: { p_user_id: string }; Returns: boolean }
+      fn_next_farmer_code: { Args: never; Returns: string }
       get_daily_sales_summary: {
         Args: { p_date?: string }
         Returns: {

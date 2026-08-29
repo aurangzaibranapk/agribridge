@@ -17,11 +17,10 @@ export async function adminAddFarmer(_prev: ActionState, formData: FormData): Pr
   const district = (formData.get("district") as string) || null;
   const cnic = (formData.get("cnic") as string) || null;
 
-  const { count } = await supabase.from("farmers").select("id", { count: "exact", head: true });
-  const farmerCode = `FRM-${String((count ?? 0) + 1).padStart(6, "0")}`;
-
+  // Code database khud bharta hai (migration 121). Pehle yahan count(*)
+  // + 1 tha -- wo us din tootta jis din ek kisan bhi hataya jaye: ginti
+  // ek kam ho jati aur agla code kisi purane se takra jata.
   const { error } = await supabase.from("farmers").insert({
-    farmer_code: farmerCode,
     full_name: fullName,
     phone_number: phoneNumber,
     village,

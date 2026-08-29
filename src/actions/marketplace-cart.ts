@@ -2,7 +2,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { nextFarmerCode } from "@/actions/registration";
 import { notifyRoles } from "@/lib/notifications";
 
 export interface CartState {
@@ -79,10 +78,10 @@ export async function submitMarketplaceCart(_prev: CartState, formData: FormData
     if (byPhone) {
       farmerId = byPhone.id;
     } else {
-      const farmerCode = await nextFarmerCode(serviceClient);
+      // farmer_code database khud bharta hai (migration 121).
       const { data: newFarmer, error: farmerError } = await serviceClient
         .from("farmers")
-        .insert({ farmer_code: farmerCode, full_name: fullName, phone_number: phoneNumber, district: district || null })
+        .insert({ full_name: fullName, phone_number: phoneNumber, district: district || null })
         .select("id")
         .single();
       if (farmerError) return { error: farmerError.message };

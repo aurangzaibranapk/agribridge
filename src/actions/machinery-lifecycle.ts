@@ -1177,53 +1177,34 @@ export async function quickRegisterFarmer(_prev: ActionState, formData: FormData
     }
   }
 
-  // Code ka number maujooda sab se bare code se aage barhta hai, ginti se
-  // nahi. Ginti is liye nahi ke ek kisan bhi hat jaye to agla code kisi
-  // purane se takra jata hai -- aur us waqt kisan ban hi nahi pata.
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { data: last } = await supabase
-      .from("farmers")
-      .select("farmer_code")
-      .like("farmer_code", "FRM-%")
-      .order("farmer_code", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  // Farmer code yahan NAHI banta -- database ka apna silsila hai
+  // (migration 121). Pehle ye teen jagah teen alag tareeqon se banta tha,
+  // aur do log ek hi lamhe mein kisan banayen to dono ko ek hi number mil
+  // jata tha.
+  const { data: created, error } = await supabase
+    .from("farmers")
+    .insert({
+      full_name: fullName,
+      phone_number: phone,
+      village,
+      is_verified: true,
+    })
+    .select("id, farmer_code, full_name")
+    .single();
 
-    const lastNumber = Number(last?.farmer_code?.replace("FRM-", "") ?? 0);
-    const code = `FRM-${String((Number.isFinite(lastNumber) ? lastNumber : 0) + 1 + attempt).padStart(6, "0")}`;
-
-    const { data: created, error } = await supabase
-      .from("farmers")
-      .insert({
-        farmer_code: code,
-        full_name: fullName,
-        phone_number: phone,
-        village,
-        is_verified: true,
-      })
-      .select("id, farmer_code, full_name")
-      .single();
-
-    if (created) {
-      revalidatePath("/admin/farmers");
-      revalidatePath("/admin/machinery-rental/booking/new");
-      return {
-        success: true,
-        farmerId: created.id,
-        farmerCode: created.farmer_code,
-        farmerName: created.full_name ?? fullName,
-      };
+  if (error || !created) {
+    if (error?.code === "23505") {
+      return { error: "Ye number pehle se kisi aur kisan ka hai. Us ka Farmer ID likh kar chunein." };
     }
-
-    // 23505 = wahi code ya wahi phone kisi aur ke paas. Code wala masla
-    // agli koshish mein khud hal ho jata hai; phone wala nahi.
-    if (error && error.code === "23505" && !error.message.includes("farmer_code")) {
-      return { error: `Ye number pehle se kisi aur kisan ka hai. Us ka Farmer ID likh kar chunein.` };
-    }
-    if (error && error.code !== "23505") {
-      return { error: error.message };
-    }
+    return { error: error?.message ?? "Kisan nahi bana." };
   }
 
-  return { error: "Kisan ka code nahi ban saka. Dobara koshish karein." };
+  revalidatePath("/admin/farmers");
+  revalidatePath("/admin/machinery-rental/booking/new");
+  return {
+    success: true,
+    farmerId: created.id,
+    farmerCode: created.farmer_code,
+    farmerName: created.full_name ?? fullName,
+  };
 }

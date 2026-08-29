@@ -1,6 +1,5 @@
 "use server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { nextFarmerCode } from "@/actions/registration";
 
 export interface QuickBookingState {
   error?: string;
@@ -39,11 +38,10 @@ export async function quickFarmerMachineryBooking(_prev: QuickBookingState, form
 
   let farmerId = existingFarmer?.id as string | undefined;
   if (!farmerId) {
-    const farmerCode = await nextFarmerCode(serviceClient);
+    // farmer_code database khud bharta hai (migration 121).
     const { data: newFarmer, error: farmerError } = await serviceClient
       .from("farmers")
       .insert({
-        farmer_code: farmerCode,
         full_name: fullName,
         phone_number: phoneNumber,
       })

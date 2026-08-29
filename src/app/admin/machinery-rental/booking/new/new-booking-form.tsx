@@ -48,6 +48,7 @@ export function NewBookingForm({
   farmers,
   machines,
   accounts,
+  staffName,
   defaultFarmerId,
   defaultRequestId,
   defaultAcres,
@@ -56,6 +57,7 @@ export function NewBookingForm({
   farmers: Farmer[];
   machines: Machine[];
   accounts: Account[];
+  staffName?: string | null;
   defaultFarmerId?: string;
   defaultRequestId?: string;
   defaultAcres?: string;
@@ -484,6 +486,11 @@ export function NewBookingForm({
               <input type="hidden" name="advance_evidence_url" value={advanceEvidence} />
               <PaymentSlipUpload onUploaded={setAdvanceEvidence} />
             </div>
+            {staffName && (
+              <p className="rounded bg-surface-50 px-2 py-1 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
+                Ye paisa <strong>{staffName}</strong> ke naam par darj hoga — jo abhi login hai.
+              </p>
+            )}
             <p className="text-xs text-surface-500">
               Advance aamdani nahi hai. Jab tak kaam na ho, ye paisa kisan ki amanat ke taur par darj hota hai — aur
               bill bante waqt poora ka poora us mein se kata jata hai.

@@ -3,7 +3,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { recordCollection, applyFat, findFarmerByCode } from "@/lib/milk-collection";
-import { nextFarmerCode } from "@/actions/registration";
 import { logAudit } from "@/lib/audit";
 import { requireAction } from "@/lib/access/guard";
 
@@ -160,14 +159,12 @@ export async function quickRegisterFarmer(
     return { error: `Ye number pehle se ${already.farmer_code} — ${already.full_name} ka hai. Usi ko chunein.` };
   }
 
-  const farmerCode = await nextFarmerCode(service);
-
+  // farmer_code database khud bharta hai (migration 121).
   const { data: org } = await service.from("farmers").select("organization_id").limit(1).maybeSingle();
 
   const { data, error } = await service
     .from("farmers")
     .insert({
-      farmer_code: farmerCode,
       full_name: fullName,
       phone_number: phone,
       village: village || null,

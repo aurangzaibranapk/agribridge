@@ -98,11 +98,11 @@ export function BookingDetail({
   canOverride,
 }: {
   booking: Booking;
-  payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null }>;
+  payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null; received_by_name: string | null }>;
   dispatches: Array<{ id: string; operator_name: string | null; departure_at: string; opening_meter: number | null; fuel_litres: number | null }>;
   work: { actual_area: number; started_at: string | null; finished_at: string | null; completion_photo_url: string | null; farmer_confirmed: boolean } | null;
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
-  events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string }>;
+  events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{ id: string; label: string }>;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   advanceTotal: number;
@@ -179,6 +179,9 @@ export function BookingDetail({
                       <span>
                         {p.payment_date} · {p.method}
                         {p.reference ? ` · ${p.reference}` : ""}
+                        {p.received_by_name && (
+                          <span className="text-surface-500"> · liya: {p.received_by_name}</span>
+                        )}
                       </span>
                       <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
                     </li>
@@ -288,6 +291,31 @@ export function BookingDetail({
             )}
           </StepCard>
 
+          {/* Kisan se aayi hui payments -- kis ne li, ye saamne */}
+          {payments.filter((p) => p.kind === "final").length > 0 && (
+            <Card>
+              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                Kisan se aayi payments
+              </h2>
+              <ul className="space-y-1 text-sm">
+                {payments
+                  .filter((p) => p.kind === "final")
+                  .map((p) => (
+                    <li key={p.id} className="flex justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800">
+                      <span>
+                        {p.payment_date} · {p.method}
+                        {p.reference ? ` · ${p.reference}` : ""}
+                        {p.received_by_name && (
+                          <span className="text-surface-500"> · liya: {p.received_by_name}</span>
+                        )}
+                      </span>
+                      <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
+                    </li>
+                  ))}
+              </ul>
+            </Card>
+          )}
+
           {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
           {bill && (
             <StepCard n={7} title="Vendor ka Hissa" done={vendorRemaining <= 0}>
@@ -337,7 +365,10 @@ export function BookingDetail({
               <div>
                 <p className="text-surface-800 dark:text-surface-200">{e.event_type.replace(/_/g, " ")}</p>
                 {e.note && <p className="text-surface-500">{e.note}</p>}
-                <p className="text-xs text-surface-400">{new Date(e.created_at).toLocaleString()}</p>
+                <p className="text-xs text-surface-400">
+                  {new Date(e.created_at).toLocaleString()}
+                  {e.actor_name && ` · ${e.actor_name}`}
+                </p>
               </div>
             </li>
           ))}

@@ -53,6 +53,17 @@ export default async function NewMachineryBookingPage({
     history.set(b.farmer_id, entry);
   });
 
+  // Paisa lene wale ka naam form par pehle se dikhta hai. Baad mein
+  // record se pata chal jana kaafi nahi -- jo banda cash pakaR raha hai
+  // usay usi waqt nazar aana chahiye ke ye us ke naam par likha ja raha
+  // hai.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+    : { data: null };
+
   const machines = (rawMachines ?? []).map((m: any) => {
     const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
     return {
@@ -83,6 +94,7 @@ export default async function NewMachineryBookingPage({
         }))}
         machines={machines}
         accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
+        staffName={me?.full_name ?? null}
         defaultFarmerId={params.convert_farmer}
         defaultRequestId={params.convert_request}
         defaultAcres={params.convert_acres}

@@ -3,7 +3,6 @@ import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
-import { nextFarmerCode } from "@/actions/registration";
 import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
 import { handleMachineryConfirmation } from "@/lib/machinery-whatsapp-confirm";
 
@@ -120,10 +119,10 @@ export async function POST(request: NextRequest) {
         await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", byPhone.id);
         farmer = byPhone;
       } else {
-        const farmerCode = await nextFarmerCode(serviceClient);
+        // farmer_code database khud bharta hai (migration 121).
         const { data: newFarmer } = await serviceClient
           .from("farmers")
-          .insert({ farmer_code: farmerCode, full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`, phone_number: fromPhone, whatsapp_number: fromPhone })
+          .insert({ full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`, phone_number: fromPhone, whatsapp_number: fromPhone })
           .select("id, is_profile_complete")
           .single();
         farmer = newFarmer;

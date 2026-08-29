@@ -43,6 +43,26 @@ export default async function MachineryBookingPage({ params }: { params: Promise
   const vendorRow = Array.isArray(booking.machinery_vendors) ? booking.machinery_vendors[0] : booking.machinery_vendors;
   const vendorName = vendorRow?.vendor_name ?? null;
 
+  // Har qadam ke sath us ka karne wala. Timeline ka unwan hi "kis ne kya
+  // kiya" hai -- naam ke baghair wo sirf "kya kiya" reh jata hai, aur
+  // sawal poochhne ke liye naam hi chahiye hota hai.
+  const actorIds = [
+    ...new Set(
+      [
+        booking.created_by,
+        ...(payments ?? []).map((p) => p.received_by),
+        ...(events ?? []).map((e) => e.actor_id),
+        ...(dispatches ?? []).map((d) => d.created_by),
+        work?.created_by ?? null,
+        bill?.created_by ?? null,
+      ].filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const { data: actorRows } = actorIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", actorIds)
+    : { data: [] };
+  const actorName = new Map((actorRows ?? []).map((a) => [a.id, a.full_name ?? "—"]));
+
   const advanceTotal = (payments ?? [])
     .filter((p) => p.kind === "advance")
     .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -95,6 +115,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         payment_date: p.payment_date,
         reference: p.reference,
         evidence_url: p.evidence_url,
+        received_by_name: p.received_by ? actorName.get(p.received_by) ?? "—" : null,
       }))}
       dispatches={(dispatches ?? []).map((d) => ({
         id: d.id,
@@ -137,6 +158,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         note: e.note,
         to_status: e.to_status,
         created_at: e.created_at,
+        actor_name: e.actor_id ? actorName.get(e.actor_id) ?? "—" : null,
       }))}
       machines={machines}
       accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}

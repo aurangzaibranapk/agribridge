@@ -8,17 +8,13 @@ export interface RegisterState {
   success?: boolean;
 }
 
-export async function nextFarmerCode(serviceClient: ReturnType<typeof createServiceClient>): Promise<string> {
-  const { data } = await serviceClient
-    .from("farmers")
-    .select("farmer_code")
-    .order("farmer_code", { ascending: false })
-    .limit(1);
-
-  const lastCode = data?.[0]?.farmer_code;
-  const lastNumber = lastCode ? parseInt(lastCode.replace("FRM-", ""), 10) : 0;
-  return `FRM-${String(lastNumber + 1).padStart(6, "0")}`;
-}
+// nextFarmerCode hata diya gaya.
+//
+// Farmer code ab database khud bharta hai (migration 121): ek counter,
+// ek trigger. Pehle ye kaam teen jagah teen tareeqon se hota tha, aur
+// do log ek hi lamhe mein kisan banayen to dono ko ek hi number mil
+// jata tha -- kyunki dono ne ek hi purana code parh kar us mein 1 jora
+// tha.
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "");
@@ -67,11 +63,8 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
 
   await serviceClient.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
 
-  const farmerCode = await nextFarmerCode(serviceClient);
-
   const { error: farmerError } = await serviceClient.from("farmers").insert({
     user_id: signUpData.user.id,
-    farmer_code: farmerCode,
     full_name: fullName,
     phone_number: phoneNumber,
     email,
