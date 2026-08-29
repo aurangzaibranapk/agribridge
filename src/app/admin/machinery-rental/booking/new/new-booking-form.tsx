@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createBooking, quickRegisterFarmer, type ActionState } from "@/actions/machinery-lifecycle";
@@ -119,6 +119,59 @@ export function NewBookingForm({
 
   const farmer = useMemo(() => allFarmers.find((f) => f.id === farmerId) ?? null, [allFarmers, farmerId]);
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /**
+   * Bharne se pehle jaanch -- yahin, safha bheje baghair.
+   *
+   * Do usool:
+   *   1. Button kabhi band nahi hota. Band button ye nahi batata ke kya
+   *      kam hai; banda usay dabata rehta hai aur samajhta hai app kharab
+   *      hai.
+   *   2. Jo cheez kam ho, us tak khud le jaya jata hai aur surkh kar diya
+   *      jata hai. Upar likha hua paigham us waqt kaam nahi aata jab khana
+   *      teen safhe neeche ho.
+   *
+   * Sirf WAJIBI cheezein rokti hain. Baqi sab khali chhoRa ja sakta hai.
+   */
+  function findMissing(): Record<string, string> {
+    const form = formRef.current;
+    if (!form) return {};
+    const fd = new FormData(form);
+    const nextErrors: Record<string, string> = {};
+    const numberOf = (key: string) => Number(fd.get(key) ?? 0) || 0;
+
+    if (!farmerId) nextErrors.farmer = "Kisan chunein — ya yahin naya bana lein.";
+    if (numberOf("harvest_area_acres") + numberOf("harvest_area_kanal") / 8 <= 0) {
+      nextErrors.harvest_area = "Kattai ka raqba likhein (acre ya kanal).";
+    }
+    if (!String(fd.get("machine_type_requested") ?? "").trim()) {
+      nextErrors.machine_type_requested = "Machine ki qism likhein.";
+    }
+
+    if (advance) {
+      if (numberOf("advance_amount") <= 0) nextErrors.advance_amount = "Advance ki raqam likhein.";
+      if (!String(fd.get("advance_account_id") ?? "").trim()) {
+        nextErrors.advance_account_id = "Advance kis khate mein aaya, wo chunein.";
+      }
+    }
+
+    return nextErrors;
+  }
+
+  function handleSubmit(e: React.MouseEvent<HTMLButtonElement>) {
+    const missing = findMissing();
+    setErrors(missing);
+    const first = Object.keys(missing)[0];
+    if (!first) return;
+
+    e.preventDefault();
+    const el = document.getElementById(`fld-${first}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    (el as HTMLElement | null)?.focus?.();
+  }
+
   // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam ya phone,
   // teenon se. Staff ko yaad sirf ek cheez hoti hai, aur wo har baar
   // wahi nahi hoti.
@@ -172,7 +225,7 @@ export function NewBookingForm({
   }
 
   return (
-    <form action={formAction} className="space-y-4 pb-24">
+    <form ref={formRef} action={formAction} className="space-y-4 pb-24">
       {defaultRequestId && (
         <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
           Kisan ki apni farmaish se booking bana rahe hain. Booking ban'ne par wo farmaish poori shudah ho jayegi.
@@ -191,7 +244,15 @@ export function NewBookingForm({
         <SectionTitle n={1} title="Kisan" />
         <div>
           <Label>Farmer ID / Mobile / Naam</Label>
-          <Input value={code} onChange={(e) => lookup(e.target.value)} placeholder="0025" autoFocus />
+          <Input
+            id="fld-farmer"
+            value={code}
+            onChange={(e) => lookup(e.target.value)}
+            placeholder="0025"
+            autoFocus
+            className={errors.farmer ? "border-red-500 focus:ring-red-500" : undefined}
+          />
+          {errors.farmer && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.farmer}</p>}
         </div>
         <input type="hidden" name="farmer_id" value={farmerId} />
 
@@ -306,6 +367,8 @@ export function NewBookingForm({
           kanalName="harvest_area_kanal"
           required
           defaultAcres={defaultAcres}
+          fieldId="fld-harvest_area"
+          error={errors.harvest_area}
         />
 
         <div>
@@ -373,7 +436,15 @@ export function NewBookingForm({
         <SectionTitle n={3} title="Machinery ki Zaroorat" />
         <div>
           <Label>Machine ki qism *</Label>
-          <Input name="machine_type_requested" placeholder="Kubota Harvester / Combine / Rotavator" required />
+          <Input
+            id="fld-machine_type_requested"
+            name="machine_type_requested"
+            placeholder="Kubota Harvester / Combine / Rotavator"
+            className={errors.machine_type_requested ? "border-red-500 focus:ring-red-500" : undefined}
+          />
+          {errors.machine_type_requested && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.machine_type_requested}</p>
+          )}
         </div>
         <div>
           <Label>Machine (abhi tay ho to)</Label>
@@ -453,7 +524,17 @@ export function NewBookingForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Raqam *</Label>
-                <Input type="number" name="advance_amount" step="0.01" placeholder="20000" />
+                <Input
+                  id="fld-advance_amount"
+                  type="number"
+                  name="advance_amount"
+                  step="0.01"
+                  placeholder="20000"
+                  className={errors.advance_amount ? "border-red-500 focus:ring-red-500" : undefined}
+                />
+                {errors.advance_amount && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.advance_amount}</p>
+                )}
               </div>
               <div>
                 <Label>Tareeqa</Label>
@@ -467,7 +548,12 @@ export function NewBookingForm({
             </div>
             <div>
               <Label>Kis khate mein aaya *</Label>
-              <Select name="advance_account_id" defaultValue="">
+              <Select
+                id="fld-advance_account_id"
+                name="advance_account_id"
+                defaultValue=""
+                className={errors.advance_account_id ? "border-red-500 focus:ring-red-500" : undefined}
+              >
                 <option value="">—</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -475,6 +561,9 @@ export function NewBookingForm({
                   </option>
                 ))}
               </Select>
+              {errors.advance_account_id && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.advance_account_id}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -508,7 +597,7 @@ export function NewBookingForm({
           <Label>Notes</Label>
           <Textarea name="notes" rows={2} />
         </div>
-        <SubmitButton disabled={!farmerId} />
+        <SubmitButton onCheck={handleSubmit} />
       </Card>
     </form>
   );
@@ -537,12 +626,16 @@ function AreaPair({
   kanalName,
   required,
   defaultAcres,
+  fieldId,
+  error,
 }: {
   label: string;
   acresName: string;
   kanalName: string;
   required?: boolean;
   defaultAcres?: string;
+  fieldId?: string;
+  error?: string;
 }) {
   return (
     <div>
@@ -551,26 +644,48 @@ function AreaPair({
       </Label>
       <div className="grid grid-cols-2 gap-3">
         <div className="relative">
-          <Input type="number" name={acresName} step="0.01" placeholder="0" defaultValue={defaultAcres ?? ""} />
+          <Input
+            id={fieldId}
+            type="number"
+            name={acresName}
+            step="0.01"
+            placeholder="0"
+            defaultValue={defaultAcres ?? ""}
+            className={error ? "border-red-500 focus:ring-red-500" : undefined}
+          />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">
             acre
           </span>
         </div>
         <div className="relative">
-          <Input type="number" name={kanalName} step="0.01" placeholder="0" />
+          <Input
+            type="number"
+            name={kanalName}
+            step="0.01"
+            placeholder="0"
+            className={error ? "border-red-500 focus:ring-red-500" : undefined}
+          />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">
             kanal
           </span>
         </div>
       </div>
+      {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+/**
+ * Button sirf us waqt band hota hai jab booking waqai ban rahi ho.
+ *
+ * Pehle ye kisan chune baghair bhi band rehta tha -- aur band button ye
+ * nahi batata ke kya kam hai. Ab wo hamesha dabta hai, aur jo cheez kam
+ * ho wo khud surkh ho kar saamne aa jati hai.
+ */
+function SubmitButton({ onCheck }: { onCheck: (e: React.MouseEvent<HTMLButtonElement>) => void }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending || disabled} className="w-full">
+    <Button type="submit" onClick={onCheck} disabled={pending} className="w-full">
       {pending ? "Ban rahi hai..." : "Booking Banayein"}
     </Button>
   );
