@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { postJournal, type PostedEntry, type SourceClaim } from "@/lib/ledger/post";
+import { postJournal, type JournalLine, type PostedEntry, type SourceClaim } from "@/lib/ledger/post";
 
 /**
  * Kaarobari waqia -> journal entry. Sirf yahan.
@@ -740,6 +740,188 @@ export async function postCustomerPayment(args: {
         credit: args.amount,
         partyType: "customer",
         partyId: args.customerId,
+        memo: args.description,
+      },
+    ],
+  });
+}
+
+// =====================================================================
+// Machinery -- booking se paisay tak
+// =====================================================================
+// Yahan ek hi baat baar baar dohrayi gayi hai, kyunki isi ek baat par
+// poora machinery ka hisaab tikka hai:
+//
+//   ADVANCE AAMDANI NAHI HAI.
+//
+// Jab kisan kattai se pehle Rs 20,000 deta hai, wo paisa hamare paas
+// AMANAT hai -- kaam abhi hua hi nahi. Us waqt cash barhta hai aur
+// saath hi hamara BOJH barhta hai (khata 2030: "customer ka advance").
+// Aamdani us din banti hai jis din bill banta hai, aur utni hi jitna
+// kaam waqai hua.
+//
+// Ye farq na rakhein to do nuqsan hote hain: mahine ka munafa us paise
+// se barh jata hai jo abhi kamaya hi nahi, aur bill ke din wahi
+// Rs 20,000 dobara aamdani ban jata hai -- yani ek hi raqam do dafa.
+
+/**
+ * Kisan ne booking par advance diya.
+ *
+ * Cash/bank barha, aur utna hi bojh barha. Koi aamdani nahi.
+ */
+export async function postMachineryAdvance(args: {
+  bookingId: string;
+  farmerId: string;
+  amount: number;
+  accountId?: string | null;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_advance",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      { account: gl, debit: args.amount, memo: args.description },
+      {
+        account: ACC.customerAdvance,
+        credit: args.amount,
+        partyType: "farmer",
+        partyId: args.farmerId,
+        memo: args.description,
+      },
+    ],
+  });
+}
+
+/**
+ * Final bill bana -- yahan aamdani paida hoti hai.
+ *
+ * Do jorey ek hi entry mein:
+ *
+ *   1. Kisan par bojh aaya, aamdani bani     (1150 / 4030)
+ *   2. Jo advance pehle pakRa tha, wo khula  (2030 / 1150)
+ *
+ * Dono ek hi entry mein is liye hain ke ye ek hi waqia hai. Alag alag
+ * entries banane par ye mumkin ho jata hai ke pehli ban jaye aur doosri
+ * reh jaye -- aur phir kisan se advance ke Rs 20,000 dobara maange
+ * jayen, jabke wo de chuka hai.
+ *
+ * Amount hamesha ASAL kaam ka: actual acre x wo rate jis par kisan raazi
+ * hua. Booking ka andaza yahan nahi aata.
+ */
+export async function postMachineryBill(args: {
+  bookingId: string;
+  farmerId: string;
+  grossAmount: number;
+  advanceAdjusted: number;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const lines: JournalLine[] = [
+    {
+      account: ACC.farmerDue,
+      debit: args.grossAmount,
+      partyType: "farmer",
+      partyId: args.farmerId,
+      memo: args.description,
+    },
+    { account: ACC.machineryIncome, credit: args.grossAmount, memo: args.description },
+  ];
+
+  if (args.advanceAdjusted > 0) {
+    lines.push({
+      account: ACC.customerAdvance,
+      debit: args.advanceAdjusted,
+      partyType: "farmer",
+      partyId: args.farmerId,
+      memo: "Booking ka advance bill mein adjust hua",
+    });
+    lines.push({
+      account: ACC.farmerDue,
+      credit: args.advanceAdjusted,
+      partyType: "farmer",
+      partyId: args.farmerId,
+      memo: "Booking ka advance bill mein adjust hua",
+    });
+  }
+
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_bill",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines,
+  });
+}
+
+/**
+ * Bill ke baad kisan ne baqi paisa diya.
+ *
+ * `method` batata hai ke paisa kis raaste aaya, aur har raaste ka rukh
+ * alag hai:
+ *
+ *   cash / bank / other -> us khate mein jama, kisan ka bojh kam
+ *   wallet              -> hum kisan ko jo dene the, us mein se kata
+ *   khata               -> KOI ENTRY NAHI
+ *
+ * Khata par koi entry is liye nahi ke khata "paisa mila" hai hi nahi.
+ * Bill bante waqt wo raqam pehle hi kisan ke naam 1150 mein likhi ja
+ * chuki hai; "khata par daal do" ka matlab sirf itna hai ke wo wahin
+ * pari rahegi. Yahan entry banate to wo 1150 se 1150 hi hoti -- yani
+ * kuch bhi nahi, magar dekhne mein aisa lagta ke paisa aa gaya.
+ *
+ * Bulane wale ka kaam: khata ke liye ye poster bulao hi mat.
+ */
+export async function postMachineryPayment(args: {
+  bookingId: string;
+  farmerId: string;
+  amount: number;
+  method: string;
+  accountId?: string | null;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  if (args.method === "khata") {
+    return { error: "Khata par paisa nahi aata -- is ke liye entry nahi banti." };
+  }
+
+  const debitAccount =
+    args.method === "wallet"
+      ? ACC.walletPayable
+      : args.accountId
+        ? await glForFinanceAccount(args.accountId)
+        : ACC.cash;
+
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_payment",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      {
+        account: debitAccount,
+        debit: args.amount,
+        partyType: args.method === "wallet" ? "farmer" : null,
+        partyId: args.method === "wallet" ? args.farmerId : null,
+        memo: args.description,
+      },
+      {
+        account: ACC.farmerDue,
+        credit: args.amount,
+        partyType: "farmer",
+        partyId: args.farmerId,
         memo: args.description,
       },
     ],

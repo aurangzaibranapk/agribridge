@@ -7178,6 +7178,74 @@ export type Database = {
           },
         ]
       }
+      machinery_bill_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_bills: {
+        Row: {
+          actual_area: number
+          advance_adjusted: number
+          balance_payable: number
+          bill_date: string
+          bill_number: string
+          booking_id: string
+          created_at: string
+          created_by: string | null
+          gross_amount: number
+          id: string
+          previous_payment: number
+          rate_amount: number
+        }
+        Insert: {
+          actual_area: number
+          advance_adjusted?: number
+          balance_payable: number
+          bill_date?: string
+          bill_number: string
+          booking_id: string
+          created_at?: string
+          created_by?: string | null
+          gross_amount: number
+          id?: string
+          previous_payment?: number
+          rate_amount: number
+        }
+        Update: {
+          actual_area?: number
+          advance_adjusted?: number
+          balance_payable?: number
+          bill_date?: string
+          bill_number?: string
+          booking_id?: string
+          created_at?: string
+          created_by?: string | null
+          gross_amount?: number
+          id?: string
+          previous_payment?: number
+          rate_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machinery_booking_counters: {
         Row: {
           last_number: number
@@ -7193,6 +7261,50 @@ export type Database = {
         }
         Relationships: []
       }
+      machinery_booking_events: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          created_at: string
+          event_type: string
+          evidence_url: string | null
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          created_at?: string
+          event_type: string
+          evidence_url?: string | null
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event_type?: string
+          evidence_url?: string | null
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machinery_bookings: {
         Row: {
           acres: number | null
@@ -7200,27 +7312,61 @@ export type Database = {
           amount_received_from_farmer: number
           booking_date: string
           booking_number: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          closed_at: string | null
           commission_amount: number
           commission_percentage: number
           completed_at: string | null
+          confirmation_override_by: string | null
+          confirmation_override_evidence_url: string | null
+          confirmation_override_reason: string | null
           created_at: string
           created_by: string | null
           crop_type: string | null
           days: number | null
           diesel_amount: number | null
           diesel_rate: number | null
+          estimated_rate: number | null
+          expected_harvest_date: string | null
+          farmer_confirmation_channel: string | null
+          farmer_confirmation_response: string | null
+          farmer_confirmed_at: string | null
           farmer_id: string
+          field_access: string | null
+          final_rate: number | null
+          harvest_area: number | null
+          harvest_area_acres: number | null
+          harvest_area_kanal: number | null
           hours: number | null
           id: string
           location_address: string | null
-          machine_id: string
+          location_lat: number | null
+          location_lng: number | null
+          machine_id: string | null
+          machine_type_requested: string | null
           notes: string | null
-          rate_amount: number
+          other_service: string | null
+          preferred_date: string | null
+          preferred_time: string | null
+          rate_amount: number | null
+          rate_confirmation_rate: number | null
+          rate_confirmation_sent_at: string | null
+          rate_confirmation_sent_by: string | null
+          rate_status: string
           request_id: string | null
+          required_units: number
+          special_instructions: string | null
           status: string
-          total_amount: number
-          vendor_id: string
+          total_amount: number | null
+          total_area: number | null
+          total_area_acres: number | null
+          total_area_kanal: number | null
+          trolley_required: boolean
+          vendor_id: string | null
           vendor_payable: number
+          village: string | null
           wants_next_season_reminder: boolean | null
           will_sell_to_us: boolean | null
         }
@@ -7230,27 +7376,61 @@ export type Database = {
           amount_received_from_farmer?: number
           booking_date?: string
           booking_number: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_at?: string | null
           commission_amount?: number
           commission_percentage?: number
           completed_at?: string | null
+          confirmation_override_by?: string | null
+          confirmation_override_evidence_url?: string | null
+          confirmation_override_reason?: string | null
           created_at?: string
           created_by?: string | null
           crop_type?: string | null
           days?: number | null
           diesel_amount?: number | null
           diesel_rate?: number | null
+          estimated_rate?: number | null
+          expected_harvest_date?: string | null
+          farmer_confirmation_channel?: string | null
+          farmer_confirmation_response?: string | null
+          farmer_confirmed_at?: string | null
           farmer_id: string
+          field_access?: string | null
+          final_rate?: number | null
+          harvest_area?: number | null
+          harvest_area_acres?: number | null
+          harvest_area_kanal?: number | null
           hours?: number | null
           id?: string
           location_address?: string | null
-          machine_id: string
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_id?: string | null
+          machine_type_requested?: string | null
           notes?: string | null
-          rate_amount: number
+          other_service?: string | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          rate_amount?: number | null
+          rate_confirmation_rate?: number | null
+          rate_confirmation_sent_at?: string | null
+          rate_confirmation_sent_by?: string | null
+          rate_status?: string
           request_id?: string | null
+          required_units?: number
+          special_instructions?: string | null
           status?: string
-          total_amount: number
-          vendor_id: string
+          total_amount?: number | null
+          total_area?: number | null
+          total_area_acres?: number | null
+          total_area_kanal?: number | null
+          trolley_required?: boolean
+          vendor_id?: string | null
           vendor_payable?: number
+          village?: string | null
           wants_next_season_reminder?: boolean | null
           will_sell_to_us?: boolean | null
         }
@@ -7260,27 +7440,61 @@ export type Database = {
           amount_received_from_farmer?: number
           booking_date?: string
           booking_number?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_at?: string | null
           commission_amount?: number
           commission_percentage?: number
           completed_at?: string | null
+          confirmation_override_by?: string | null
+          confirmation_override_evidence_url?: string | null
+          confirmation_override_reason?: string | null
           created_at?: string
           created_by?: string | null
           crop_type?: string | null
           days?: number | null
           diesel_amount?: number | null
           diesel_rate?: number | null
+          estimated_rate?: number | null
+          expected_harvest_date?: string | null
+          farmer_confirmation_channel?: string | null
+          farmer_confirmation_response?: string | null
+          farmer_confirmed_at?: string | null
           farmer_id?: string
+          field_access?: string | null
+          final_rate?: number | null
+          harvest_area?: number | null
+          harvest_area_acres?: number | null
+          harvest_area_kanal?: number | null
           hours?: number | null
           id?: string
           location_address?: string | null
-          machine_id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_id?: string | null
+          machine_type_requested?: string | null
           notes?: string | null
-          rate_amount?: number
+          other_service?: string | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          rate_amount?: number | null
+          rate_confirmation_rate?: number | null
+          rate_confirmation_sent_at?: string | null
+          rate_confirmation_sent_by?: string | null
+          rate_status?: string
           request_id?: string | null
+          required_units?: number
+          special_instructions?: string | null
           status?: string
-          total_amount?: number
-          vendor_id?: string
+          total_amount?: number | null
+          total_area?: number | null
+          total_area_acres?: number | null
+          total_area_kanal?: number | null
+          trolley_required?: boolean
+          vendor_id?: string | null
           vendor_payable?: number
+          village?: string | null
           wants_next_season_reminder?: boolean | null
           will_sell_to_us?: boolean | null
         }
@@ -7339,6 +7553,138 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_dispatches: {
+        Row: {
+          booking_id: string
+          closing_meter: number | null
+          created_at: string
+          created_by: string | null
+          departure_at: string
+          destination_address: string | null
+          destination_lat: number | null
+          destination_lng: number | null
+          driver_phone: string | null
+          fuel_amount: number | null
+          fuel_litres: number | null
+          id: string
+          machine_id: string | null
+          notes: string | null
+          opening_meter: number | null
+          operator_name: string | null
+          returned_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          closing_meter?: number | null
+          created_at?: string
+          created_by?: string | null
+          departure_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_phone?: string | null
+          fuel_amount?: number | null
+          fuel_litres?: number | null
+          id?: string
+          machine_id?: string | null
+          notes?: string | null
+          opening_meter?: number | null
+          operator_name?: string | null
+          returned_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          closing_meter?: number | null
+          created_at?: string
+          created_by?: string | null
+          departure_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_phone?: string | null
+          fuel_amount?: number | null
+          fuel_litres?: number | null
+          id?: string
+          machine_id?: string | null
+          notes?: string | null
+          opening_meter?: number | null
+          operator_name?: string | null
+          returned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendor_machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          evidence_url: string | null
+          finance_account_id: string | null
+          id: string
+          kind: string
+          method: string
+          payment_date: string
+          received_by: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          evidence_url?: string | null
+          finance_account_id?: string | null
+          id?: string
+          kind: string
+          method: string
+          payment_date?: string
+          received_by?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          evidence_url?: string | null
+          finance_account_id?: string | null
+          id?: string
+          kind?: string
+          method?: string
+          payment_date?: string
+          received_by?: string | null
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -7528,6 +7874,71 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_work_records: {
+        Row: {
+          actual_area: number | null
+          actual_area_acres: number | null
+          actual_area_kanal: number | null
+          booking_id: string
+          completion_photo_url: string | null
+          created_at: string
+          created_by: string | null
+          farmer_confirmation_note: string | null
+          farmer_confirmed: boolean
+          finished_at: string | null
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          meter_reading: number | null
+          notes: string | null
+          started_at: string | null
+        }
+        Insert: {
+          actual_area?: number | null
+          actual_area_acres?: number | null
+          actual_area_kanal?: number | null
+          booking_id: string
+          completion_photo_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_confirmation_note?: string | null
+          farmer_confirmed?: boolean
+          finished_at?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          meter_reading?: number | null
+          notes?: string | null
+          started_at?: string | null
+        }
+        Update: {
+          actual_area?: number | null
+          actual_area_acres?: number | null
+          actual_area_kanal?: number | null
+          booking_id?: string
+          completion_photo_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_confirmation_note?: string | null
+          farmer_confirmed?: boolean
+          finished_at?: string | null
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          meter_reading?: number | null
+          notes?: string | null
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -12320,6 +12731,7 @@ export type Database = {
           }
       current_dealer_id: { Args: never; Returns: string }
       current_shop_id: { Args: never; Returns: string }
+      fn_can_machinery: { Args: { p_action: string }; Returns: boolean }
       fn_crop_profit_benchmarks: {
         Args: never
         Returns: {
