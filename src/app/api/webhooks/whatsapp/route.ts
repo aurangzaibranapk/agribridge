@@ -5,6 +5,7 @@ import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { nextFarmerCode } from "@/actions/registration";
 import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
+import { handleMachineryConfirmation } from "@/lib/machinery-whatsapp-confirm";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -88,6 +89,23 @@ export async function POST(request: NextRequest) {
     });
     if (staffReply) {
       await sendWhatsAppMessage(fromPhone, staffReply);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Machinery ka rate confirmation. Ye AI se pehle is liye hai ke
+    // "CONFIRM" ka matlab hamesha tasdeeq hi hona chahiye -- AI ka is par
+    // raye qaim karna wahi ek jagah hai jahan ghalti ka natija ye hota
+    // hai ke machine bina tasdeeq ke khet par pahunch jaye.
+    //
+    // Ye tabhi pakaRta hai jab kisan ki koi booking waqai jawab ki
+    // muntazir ho AUR paigham CONFIRM/ISSUE jaisa ho; warna null de kar
+    // purana raasta chalne deta hai.
+    const machineryReply = await handleMachineryConfirmation({
+      fromPhone,
+      text: message.type === "text" ? message.text.body : (message.image?.caption ?? null),
+    });
+    if (machineryReply) {
+      await sendWhatsAppMessage(fromPhone, machineryReply);
       return NextResponse.json({ ok: true });
     }
 
