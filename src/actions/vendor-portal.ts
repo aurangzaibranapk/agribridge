@@ -170,6 +170,12 @@ export async function submitVendorWork(
   if (isFinal && str(formData, "farmer_diesel") === "haan") {
     const fd = new FormData();
     fd.set("booking_id", bookingId);
+    // Diesel ki APNI chaabi -- wo alag qatar hai, aur us ka taala bhi
+    // alag hai. Kaam wali chaabi se jorh kar nahi banayi ja sakti:
+    // khana `uuid` ka hai, aur "<uuid>:diesel" us mein jata hi nahi.
+    // Device teenon ke liye teen alag nishan banata hai.
+    const dieselKey = str(formData, "client_action_id_diesel");
+    if (dieselKey) fd.set("client_action_id", dieselKey);
     fd.set("litres", String(num(formData, "farmer_diesel_litres") ?? 0));
     fd.set("rate_per_litre", String(num(formData, "farmer_diesel_rate") ?? 0));
     fd.set("paid_by", "farmer");
@@ -182,6 +188,8 @@ export async function submitVendorWork(
   if (isFinal && str(formData, "farmer_paid") === "haan") {
     const fd = new FormData();
     fd.set("booking_id", bookingId);
+    const cashKey = str(formData, "client_action_id_cash");
+    if (cashKey) fd.set("client_action_id", cashKey);
     fd.set("amount", String(num(formData, "farmer_paid_amount") ?? 0));
     // Kisan ne paisa VENDOR ko diya hai -- wo abhi us ke paas hai.
     // "Hamein de rahe hain" wala jawab alag qadam par aata hai.
@@ -368,8 +376,24 @@ export async function submitVendorFuel(
     return { error: "Ye booking aap ki machine ki nahi hai." };
   }
 
+  // Device par bani chaabi (189) -- wohi teen qadam jo kaam wale
+  // indraj par hain: pehle dekho, phir likho, aur index aakhri faisla
+  // karta hai.
+  const clientActionId = str(formData, "client_action_id");
+  if (clientActionId) {
+    const { data: already } = await supabase
+      .from("machinery_fuel_logs")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (already) {
+      return { success: true, notice: "Ye indraj pehle hi pohanch chuka tha — dobara nahi bheja gaya." };
+    }
+  }
+
   const { error } = await supabase.from("machinery_fuel_logs").insert({
     booking_id: bookingId,
+    client_action_id: clientActionId,
     log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
     litres,
     rate_per_litre: ratePerLitre,
@@ -470,8 +494,24 @@ export async function submitVendorCollection(
   // Shart DB par bhi lagi hui hai (167). Yahan wohi qeematein bheji
   // ja rahi hain -- agar kabhi yahan koi ghalti ho jaye to indraj
   // wahan ruk jayega, aur wohi theek hai.
+  // Device par bani chaabi (189) -- wohi teen qadam jo kaam wale
+  // indraj par hain: pehle dekho, phir likho, aur index aakhri faisla
+  // karta hai.
+  const clientActionId = str(formData, "client_action_id");
+  if (clientActionId) {
+    const { data: already } = await supabase
+      .from("machinery_payments")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (already) {
+      return { success: true, notice: "Ye indraj pehle hi pohanch chuka tha — dobara nahi bheja gaya." };
+    }
+  }
+
   const { error } = await supabase.from("machinery_payments").insert({
     booking_id: bookingId,
+    client_action_id: clientActionId,
     kind: "final",
     amount,
     method: "vendor_collected",
