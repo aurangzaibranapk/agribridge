@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { t } from "@/lib/i18n/translations";
+import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
@@ -24,6 +24,13 @@ interface Row {
 export function MachineryListClient({ rows }: { rows: Row[] }) {
   const lang = useLang();
   const [showEmail, setShowEmail] = useState(false);
+  const [filter, setFilter] = useState<string>("all");
+
+  const counts = rows.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const shown = filter === "all" ? rows : rows.filter((r) => r.status === filter);
 
   function handlePrint() {
     window.print();
@@ -62,10 +69,35 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
         </div>
       </div>
 
+      {/* Halat ka khulasa. Poori fehrist mein "kitni mukammal ho
+          chukin" ka jawab dhoondna parta tha -- aur wohi sawal roz
+          poochha jata hai. Har adad ek chhaanti bhi hai. */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 print:hidden">
+        <StatusChip
+          label={t("mc_all", lang)}
+          count={rows.length}
+          active={filter === "all"}
+          onClick={() => setFilter("all")}
+        />
+        {STATUS_ORDER.filter((k) => counts[k]).map((k) => (
+          <StatusChip
+            key={k}
+            label={t(STATUS_LABEL[k], lang)}
+            count={counts[k]}
+            active={filter === k}
+            tone={k === "closed" ? "green" : k === "cancelled" ? "gray" : "amber"}
+            onClick={() => setFilter(k)}
+          />
+        ))}
+      </div>
+
       <div className="rounded-card border border-surface-200 bg-white p-6 shadow-card print:border-0 print:shadow-none">
         <div className="mb-4 border-b border-surface-200 pb-3">
           <h1 className="font-display text-lg font-bold text-surface-900">Al Rana Traders - Machinery Bookings List</h1>
-          <p className="text-xs text-surface-400">Total Bookings: {rows.length}</p>
+          <p className="text-xs text-surface-400">
+            Total Bookings: {rows.length}
+            {filter !== "all" && ` · ${t("mc_showing", lang)}: ${shown.length}`}
+          </p>
         </div>
         <table className="w-full text-xs">
           <thead>
@@ -81,7 +113,7 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id} className="border-b border-surface-100">
                 <td className="py-1.5 pr-2 font-mono text-surface-500">{r.bookingNumber}</td>
                 <td className="py-1.5 pr-2 text-surface-600">{new Date(r.bookingDate).toLocaleDateString()}</td>
@@ -93,7 +125,7 @@ export function MachineryListClient({ rows }: { rows: Row[] }) {
                 <td className="py-1.5 capitalize text-surface-600">{r.status.replace(/_/g, " ")}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {shown.length === 0 && (
               <tr><td colSpan={8} className="py-8 text-center text-surface-400">{t("mc_no_bookings", lang)}</td></tr>
             )}
           </tbody>
@@ -131,4 +163,59 @@ function EmailModal({ onClose }: { onClose: () => void }) {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : "Bhejein"}</button>;
+}
+
+// Halat ki tarteeb wohi jo asal silsile ki hai -- fehrist us tarteeb
+// se parhi jati hai jis se kaam hota hai, harf-e-tahajji se nahi.
+const STATUS_ORDER = [
+  "new",
+  "ready_for_harvest",
+  "in_progress",
+  "bill_pending",
+  "payment_pending",
+  "closed",
+  "cancelled",
+] as const;
+
+const STATUS_LABEL: Record<string, TranslationKey> = {
+  new: "mc_st_new",
+  ready_for_harvest: "mc_st_ready",
+  in_progress: "mc_st_working",
+  bill_pending: "mc_st_bill",
+  payment_pending: "mc_st_payment",
+  closed: "mc_st_closed",
+  cancelled: "mc_st_cancelled",
+};
+
+function StatusChip({
+  label,
+  count,
+  active,
+  tone = "blue",
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  tone?: "blue" | "green" | "amber" | "gray";
+  onClick: () => void;
+}) {
+  const tones: Record<string, string> = {
+    blue: "border-brand-500 bg-brand-50 text-brand-700",
+    green: "border-green-500 bg-green-50 text-green-700",
+    amber: "border-amber-500 bg-amber-50 text-amber-700",
+    gray: "border-surface-400 bg-surface-100 text-surface-600",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border p-2 text-left transition ${
+        active ? tones[tone] : "border-surface-200 text-surface-500 hover:border-surface-300"
+      }`}
+    >
+      <p className="font-display text-lg font-semibold">{count}</p>
+      <p className="text-xs">{label}</p>
+    </button>
+  );
 }

@@ -82,9 +82,90 @@ export async function MachineryQueue({
     byQueue.set(k, [...(byQueue.get(k) ?? []), r]);
   }
 
+  // Agle saat din ka khulasa -- sirf schedule wale roop par.
+  //
+  // Qatar batati hai ke "kya karna hai". Ye batata hai ke "KAB karna
+  // hai": kis din kitni kattai, kitne acre, kaun kaun. Ye do alag
+  // sawal hain aur dono roz poochhe jate hain. Din wo bhi dikhte hain
+  // jin par kuch nahi -- khali din bhi khabar hai, us par doosri
+  // booking rakhi ja sakti hai.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const week = byDate
+    ? Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + i);
+        const key = d.toISOString().slice(0, 10);
+        const dayRows = rows.filter((r) => r.preferred_date === key);
+        return {
+          key,
+          date: d,
+          rows: dayRows,
+          acres: dayRows.reduce((sum, r) => sum + Number(r.harvest_area ?? 0), 0),
+        };
+      })
+    : [];
+
+  // Jo tareekh guzar chuki aur kaam abhi baqi hai -- ye saat dinon mein
+  // nahi aati, aur yehi wo bookings hain jo bhool jati hain.
+  const overdue = byDate ? rows.filter((r) => r.tareekh_guzar_gayi) : [];
+
   return (
     <div>
       <PageHeader title={t(title, lang)} description={t("mq_subtitle", lang)} />
+
+      {byDate && (
+        <Card className="mb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              {t("mq_week_title", lang)}
+            </h2>
+            {overdue.length > 0 && (
+              <Badge tone="red">
+                {overdue.length} {t("mq_week_overdue", lang)}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {week.map((d, i) => (
+              <div
+                key={d.key}
+                className={`rounded-lg border p-2 ${
+                  d.rows.length > 0
+                    ? "border-brand-300 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20"
+                    : "border-surface-200 dark:border-surface-700"
+                }`}
+              >
+                <p className="text-xs font-medium text-surface-700 dark:text-surface-300">
+                  {i === 0 ? t("mq_today", lang) : i === 1 ? t("mq_tomorrow", lang) : d.date.toLocaleDateString(undefined, { weekday: "short" })}
+                </p>
+                <p className="text-xs text-surface-500">{d.date.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</p>
+                {d.rows.length > 0 ? (
+                  <>
+                    <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">
+                      {d.rows.length}
+                    </p>
+                    <p className="text-xs text-surface-600 dark:text-surface-400">{d.acres} acre</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {d.rows.slice(0, 3).map((r) => (
+                        <li key={r.id} className="truncate text-xs text-surface-600 dark:text-surface-400">
+                          {r.farmer_name}
+                        </li>
+                      ))}
+                      {d.rows.length > 3 && (
+                        <li className="text-xs text-surface-400">+{d.rows.length - 3}</li>
+                      )}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-surface-400">{t("mq_day_free", lang)}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {rows.length === 0 ? (
         <Card>
@@ -140,14 +221,25 @@ export async function MachineryQueue({
                             .filter(Boolean)
                             .join(" · ")}
                         </p>
-                        <p className="mt-0.5 text-xs text-surface-400">
-                          {b.preferred_date && (
-                            <>
-                              <CalendarClock className="mr-1 inline h-3 w-3" />
-                              {b.preferred_date} ·{" "}
-                            </>
+                        {/* Do tareekhein alag alag: booking kab hui, aur
+                            kattai kab honi hai. Ek hi jagah do adad
+                            dikhana in ko aik samajh lene ki wajah banta
+                            hai, aur donon ke sath alag sawal juRe hain. */}
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-surface-400">
+                          {b.booking_date && (
+                            <span>
+                              {t("mq_booked_on", lang)} {new Date(b.booking_date).toLocaleDateString()}
+                            </span>
                           )}
-                          {b.din_purani} {t("mq_days_old", lang)}
+                          {b.preferred_date && (
+                            <span className={b.tareekh_guzar_gayi ? "font-medium text-red-600 dark:text-red-400" : "text-surface-600 dark:text-surface-300"}>
+                              <CalendarClock className="mr-1 inline h-3 w-3" />
+                              {t("mq_harvest_on", lang)} {new Date(b.preferred_date).toLocaleDateString()}
+                            </span>
+                          )}
+                          <span>
+                            {b.din_purani} {t("mq_days_old", lang)}
+                          </span>
                         </p>
                       </div>
                       <ArrowRight className="h-4 w-4 shrink-0 text-surface-400" />

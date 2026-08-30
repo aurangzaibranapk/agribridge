@@ -3,6 +3,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewBookingForm } from "./new-booking-form";
+import { BackButton } from "@/components/ui/back-button";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function NewMachineryBookingPage({
 
   return (
     <div>
+      <BackButton fallback="/admin/machinery-rental" label={t("mc_back", lang)} />
       <PageHeader
         title={t("mc_new_booking_title", lang)}
         description={t("mc_new_booking_note", lang)}

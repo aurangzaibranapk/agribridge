@@ -1847,6 +1847,7 @@ export type Database = {
           actor_id: string | null
           actor_name: string | null
           actor_role: string | null
+          changes: Json | null
           created_at: string
           description: string | null
           id: string
@@ -1860,6 +1861,7 @@ export type Database = {
           actor_id?: string | null
           actor_name?: string | null
           actor_role?: string | null
+          changes?: Json | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1873,6 +1875,7 @@ export type Database = {
           actor_id?: string | null
           actor_name?: string | null
           actor_role?: string | null
+          changes?: Json | null
           created_at?: string
           description?: string | null
           id?: string
@@ -14613,6 +14616,45 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
         ]
+      }
+      v_record_changes: {
+        Row: {
+          action_type: string | null
+          actor_name: string | null
+          actor_role: string | null
+          changes: Json | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          module: string | null
+          record_id: string | null
+          record_label: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          changes?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          module?: string | null
+          record_id?: string | null
+          record_label?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          changes?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          module?: string | null
+          record_id?: string | null
+          record_label?: string | null
+        }
+        Relationships: []
       }
       v_stock_count_overdue: {
         Row: {

@@ -1,6 +1,7 @@
 ﻿"use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logAudit, diffFields } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/service";
 import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
 export interface FarmerProfileState {
@@ -144,7 +145,38 @@ async function uploadOne(
   const { data } = serviceClient.storage.from("farmer-documents").getPublicUrl(path);
   return data.publicUrl;
 }
+/**
+ * Admin ki taraf se kisan ki tafseel badalna.
+ *
+ * Do cheezein pehle nahi thin aur dono zaroori hain.
+ *
+ * Pehli: ijazat ki jaanch. Ye action service client se chalta hai --
+ * yani RLS ise nahi rokti. Jaanch na hone ka matlab tha ke jo bhi is
+ * action tak pohanch jaye wo KISI bhi kisan ka mobile number badal
+ * sakta tha.
+ *
+ * Doosri: kya badla. Audit mein sirf "kisi ne update kiya" likha jata
+ * tha. Asal sawal hafte baad aata hai -- "is kisan ka number pehle kya
+ * tha?" -- aur us ka jawab kahin nahi hota tha.
+ */
 export async function adminUpdateFarmerDetails(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const allowed = ["admin", "owner", "super_admin", "manager", "admin_assistant"];
+  if (!profile?.is_active || !allowed.includes(String(profile.role))) {
+    return { error: "Kisan ki tafseel badalne ki ijazat nahi." };
+  }
+
   const serviceClient = createServiceClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   if (!farmerId) return { error: "Missing farmer id." };
@@ -174,13 +206,62 @@ export async function adminUpdateFarmerDetails(_prev: FarmerProfileState, formDa
     milk_advance_loan_amount: formData.get("milk_advance_loan_amount") ? parseFloat(formData.get("milk_advance_loan_amount") as string) : null,
   };
 
+  // Purani qatar pehle -- warna baad mein farq nikalne ka koi rasta
+  // nahi rehta.
+  const { data: before } = await serviceClient
+    .from("farmers")
+    .select("*")
+    .eq("id", farmerId)
+    .maybeSingle();
+  if (!before) return { error: "Kisan nahi mila." };
+
   const { error } = await serviceClient.from("farmers").update(updates).eq("id", farmerId);
   if (error) return { error: error.message };
 
+  const changes = diffFields(before as Record<string, unknown>, updates, FARMER_FIELD_LABELS);
+  if (Object.keys(changes).length > 0) {
+    await logAudit({
+      actionType: "update",
+      module: "farmers",
+      recordId: farmerId,
+      recordLabel: (before as { full_name?: string }).full_name ?? farmerId,
+      description: `${Object.keys(changes).length} khane badle`,
+      changes,
+    });
+  }
+
   revalidatePath("/admin/farmers");
   revalidatePath(`/admin/farmers/${farmerId}`);
-  return { success: true };
+  return {
+    success: true,
+    notice:
+      Object.keys(changes).length > 0
+        ? `${Object.keys(changes).length} khane badle: ${Object.keys(changes).join(", ")}`
+        : "Kuch nahi badla.",
+  };
 }
+
+// Khane ka naam jaisa aadmi bolta hai. "phone_number" ki jagah
+// "Mobile" -- audit ki fehrist parhne wale ke liye.
+const FARMER_FIELD_LABELS: Record<string, string> = {
+  full_name: "Naam",
+  phone_number: "Mobile",
+  email: "Email",
+  cnic: "CNIC",
+  village: "Gaon",
+  district: "Zila",
+  crop_types: "Fasal",
+  has_livestock: "Maweshi hain",
+  cow_count: "Gaayein",
+  buffalo_count: "Bhainsein",
+  calves_count: "Bachhre",
+  milking_animal_count: "Doodh wale janwar",
+  meat_animal_count: "Gosht wale janwar",
+  milk_liters_per_day: "Rozana doodh (litre)",
+  milk_buyer_name: "Doodh kaun leta hai",
+  milk_sale_rate: "Doodh ka rate",
+  milk_advance_loan_amount: "Doodh ka advance",
+};
 
 export async function updateFarmingOverview(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
   const supabase = createClient();

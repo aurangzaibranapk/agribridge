@@ -63,4 +63,15 @@ export const machineryQueueDict = {
     rm: "Bill ban chuka hai aur paisa baqi hai. Sifar hone tak booking band nahi hoti.",
     ur: "بل بن چکا ہے اور پیسہ باقی ہے۔ صفر ہونے تک بکنگ بند نہیں ہوتی۔",
   },
+  mq_week_title: {
+    en: "Next 7 days — who is cut on which day",
+    rm: "Agle 7 din — kis din kis ki kattai",
+    ur: "اگلے 7 دن — کس دن کس کی کٹائی",
+  },
+  mq_week_overdue: { en: "past their date", rm: "tareekh guzar chuki", ur: "تاریخ گزر چکی" },
+  mq_today: { en: "Today", rm: "Aaj", ur: "آج" },
+  mq_tomorrow: { en: "Tomorrow", rm: "Kal", ur: "کل" },
+  mq_day_free: { en: "free", rm: "khali", ur: "خالی" },
+  mq_booked_on: { en: "booked", rm: "booking", ur: "بکنگ" },
+  mq_harvest_on: { en: "harvest", rm: "kattai", ur: "کٹائی" },
 } as const;

@@ -4,6 +4,9 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { AdminFarmerForm } from "@/app/admin/farmers/[id]/admin-farmer-form";
 import { FarmVerifyActions } from "@/app/admin/farmers/[id]/farm-verify-actions";
 import { ExpenseStatement } from "@/components/portal/expense-statement";
+import { FarmerChangeHistory } from "@/app/admin/farmers/[id]/change-history";
+import { FarmerMachineryHistory } from "@/app/admin/farmers/[id]/machinery-history";
+import { BackButton } from "@/components/ui/back-button";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +47,7 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
 
   return (
     <div>
+      <BackButton fallback="/admin/farmers" label="Peechhe" />
       <PageHeader title={`Farmer: ${farmer.full_name}`} description={farmer.farmer_code} />
 
       <div className="mb-6">
@@ -71,7 +75,16 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
         )}
       </div>
 
+      <FarmerMachineryHistory farmerId={farmer.id} />
+
       <AdminFarmerForm farmer={farmer} />
+
+      {/* Edit ka haq hai, magar us ke sath uska record bhi. Ijazat
+          bina nishaan ke dena wo cheez hai jis ka jawab baad mein koi
+          nahi de pata. */}
+      <div className="mt-6">
+        <FarmerChangeHistory farmerId={farmer.id} />
+      </div>
     </div>
   );
 }
