@@ -67,6 +67,13 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const driverName = (formData.get("driver_name") as string)?.trim() || null;
   const driverPhone = (formData.get("driver_phone") as string)?.trim() || null;
 
+  // Is machine ki apni rozana hadd (180). Khali ho to poore nizam wali
+  // hadd lagti hai -- ek jagah badalne se sab par lag jati hai.
+  const dailyCapacity = Number(formData.get("daily_capacity_acres") ?? 0) || null;
+  if (dailyCapacity !== null && dailyCapacity <= 0) {
+    return { error: "Rozana hadd sifar se ziyada honi chahiye, ya khali chhoR dein." };
+  }
+
   if (owner === "vendor" && !vendorId) return { error: "Vendor select karein." };
   if (!machineType) return { error: "Machine type likhein." };
   if (!["per_acre", "per_hour", "per_day"].includes(rateType)) return { error: "Rate type sahi select karein." };
@@ -98,10 +105,12 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
     rate_amount: rateAmount,
     driver_name: driverName,
     driver_phone: driverPhone,
+    daily_capacity_acres: dailyCapacity,
     notes,
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/machinery-rental");
+  revalidatePath("/admin/machinery-rental/calendar");
   return { success: true };
 }
 

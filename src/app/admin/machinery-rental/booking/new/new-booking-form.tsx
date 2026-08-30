@@ -81,11 +81,13 @@ export function NewBookingForm({
   accounts,
   crops,
   rateCards,
+  capacity,
   staffName,
   defaultFarmerId,
   defaultRequestId,
   defaultAcres,
   defaultLocation,
+  defaultDate,
   draft,
 }: {
   farmers: Farmer[];
@@ -94,11 +96,15 @@ export function NewBookingForm({
   crops: { key: string; label: string }[];
   /** Default rate ki fehrist (177) -- sirf khana bharne ke liye. */
   rateCards: RateCard[];
+  /** Agle 30 din ki gunjaish (180) -- planner wale view se. */
+  capacity: { date: string; capacity: number; booked: number; free: number }[];
   staffName?: string | null;
   defaultFarmerId?: string;
   defaultRequestId?: string;
   defaultAcres?: string;
   defaultLocation?: string;
+  /** Planner se aayi hui tareekh (180) -- wahan se seedha yahan. */
+  defaultDate?: string;
   draft?: DraftPayload | null;
 }) {
   const lang = useLang();
@@ -353,6 +359,9 @@ export function NewBookingForm({
   const [cropKey, setCropKey] = useState<string>(crops[0]?.key ?? "other");
   const [machineTypeReq, setMachineTypeReq] = useState<string>("");
 
+  // Kattai ki tareekh -- gunjaish isi par parkhi jati hai (180).
+  const [preferredDate, setPreferredDate] = useState<string>(defaultDate ?? "");
+
   // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam, phone ya
   // CNIC, chaaron se. Staff ko yaad sirf ek cheez hoti hai, aur wo har
   // baar wahi nahi hoti. Khet par aksar sirf shanakhti card hota hai.
@@ -593,7 +602,13 @@ export function NewBookingForm({
           </div>
           <div>
             <Label>{t("mc_when_needed", lang)}</Label>
-            <Input type="date" name="preferred_date" min={new Date().toISOString().slice(0, 10)} />
+            <Input
+              type="date"
+              name="preferred_date"
+              min={new Date().toISOString().slice(0, 10)}
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+            />
           </div>
         </div>
 
@@ -606,6 +621,14 @@ export function NewBookingForm({
           fieldId="fld-harvest_area"
           error={errors.harvest_area}
           onTotal={setHarvestTotal}
+        />
+
+        <DayCapacity
+          rows={capacity}
+          date={preferredDate}
+          acres={harvestTotal}
+          lang={lang}
+          onPick={setPreferredDate}
         />
 
         <HarvestTypePicker
@@ -853,6 +876,85 @@ function YesNo({
  * hote; database wali us soorat ke liye hai jab koi doosra raasta
  * (portal, purani screen) yahi ghalti le kar aaye.
  */
+/**
+ * Us din kitni jagah hai (180).
+ *
+ * Booking lete waqt sab se aam sawal yehi hai. Pehle us ka jawab tab
+ * milta tha jab form bhar chuka hota aur database rok deta -- yani
+ * kisan saamne khaRa hota aur staff ko phir se sab kuch badalna parta.
+ *
+ * Ye ROKTA nahi. Malik ka faisla hai ke rok na ho: manager kabhi doosri
+ * machine ka bandobast kar leta hai. Ye sirf saamne rakh deta hai, aur
+ * jin dinon mein jagah hai wo bhi dikha deta hai -- ek click par tareekh
+ * badal jati hai.
+ */
+function DayCapacity({
+  rows,
+  date,
+  acres,
+  lang,
+  onPick,
+}: {
+  rows: { date: string; capacity: number; booked: number; free: number }[];
+  date: string;
+  acres: number;
+  lang: Lang;
+  onPick: (d: string) => void;
+}) {
+  if (!date) return null;
+  const day = rows.find((r) => r.date === date);
+  // Chuni hui tareekh agle 30 din se bahar ho to planner ke paas us ka
+  // jawab hai hi nahi -- khamoshi behtar hai, jhoota "jagah hai" nahi.
+  if (!day) return null;
+
+  const fits = acres <= 0 || acres <= day.free + 0.001;
+  // Wo din jin mein maanga gaya raqba poora aa jata hai.
+  const options = rows
+    .filter((r) => r.date >= new Date().toISOString().slice(0, 10) && r.free >= acres && acres > 0)
+    .slice(0, 4);
+
+  return (
+    <div
+      className={`rounded-card border p-3 text-sm ${
+        fits
+          ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20"
+          : "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20"
+      }`}
+    >
+      <p className={fits ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}>
+        <strong>{date}</strong> — {day.booked} / {day.capacity} acre bandhe hain, <strong>{day.free} acre</strong>{" "}
+        bachi hai.
+      </p>
+
+      {!fits && (
+        <>
+          <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+            Aap {acres} acre maang rahe hain. Booking phir bhi ho sakti hai — magar us par manager ki ijazat aur wajah
+            darj karni hogi.
+          </p>
+          {options.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-surface-700 dark:text-surface-300">In dinon mein poori jagah hai:</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {options.map((o) => (
+                  <button
+                    key={o.date}
+                    type="button"
+                    onClick={() => onPick(o.date)}
+                    className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-brand-700 shadow-sm hover:bg-brand-50 dark:bg-surface-800 dark:text-brand-300"
+                  >
+                    {o.date} — {o.free} acre
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function HarvestTypePicker({
   total,
   lang,

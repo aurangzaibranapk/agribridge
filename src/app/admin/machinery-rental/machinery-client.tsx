@@ -425,6 +425,11 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
           <Input name="driver_name" placeholder={t("mc_driver_name_optional", lang)} />
           <Input name="driver_phone" placeholder={t("mc_driver_phone_optional", lang)} />
           <Input name="registration_number" placeholder={t("mc_registration_optional", lang)} />
+          {/* Is machine ki apni rozana hadd (180). Khali chhoRein to
+              poore nizam wali hadd lagti hai -- yani ek jagah badal kar
+              sab machinon par lag jati hai. */}
+          <Input type="number" step="0.01" name="daily_capacity_acres" placeholder={t("mcal_daily_cap", lang)} />
+          <p className="text-xs text-surface-500">{t("mcal_cap_hint", lang)}</p>
           <Textarea name="notes" rows={2} placeholder={t("mc_notes_optional", lang)} />
           <SubmitButton label={t("mc_add_machine", lang)} />
         </form>
