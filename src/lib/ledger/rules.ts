@@ -774,10 +774,18 @@ export async function postMachineryAdvance(args: {
   farmerId: string;
   amount: number;
   accountId?: string | null;
+  /** Advance ka cash kis ke paas gaya. Sirf cash par. */
+  custodyProfileId?: string | null;
   description: string;
   ctx: EventContext;
 }): Promise<PostResult> {
-  const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  // Advance ka cash bhi wahi qanoon: jis ke haath aaya, us ke naam.
+  const gl = args.custodyProfileId
+    ? ACC.cashWithPerson
+    : args.accountId
+      ? await glForFinanceAccount(args.accountId)
+      : ACC.cash;
+
   return postJournal({
     description: args.description,
     sourceModule: "machinery_advance",
@@ -787,7 +795,13 @@ export async function postMachineryAdvance(args: {
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
-      { account: gl, debit: args.amount, memo: args.description },
+      {
+        account: gl,
+        debit: args.amount,
+        partyType: args.custodyProfileId ? "staff" : null,
+        partyId: args.custodyProfileId ?? null,
+        memo: args.description,
+      },
       {
         account: ACC.customerAdvance,
         credit: args.amount,
@@ -997,12 +1011,31 @@ export async function postVendorCashHandover(args: {
   });
 }
 
+/**
+ * Kisan ki adaigi.
+ *
+ * Cash kahan jata hai, ye us baat par hai ke wo KIS KE HAATH aaya.
+ *
+ * Khet par ya counter par cash lene wale ke paas wo cash waqai maujood
+ * hota hai -- kisi khate mein nahi. Usay seedha khate mein likh dena
+ * ye kehta hai ke paisa daftar pahunch gaya, jabke wo abhi us bande ki
+ * jeb mein hai. Aur jis din wo nahi pahunchta, kisi ke naam par kuch
+ * khara nahi hota.
+ *
+ * Is liye cash lene wale ke NAAM par khara hota hai (1030) aur wahin
+ * rehta hai jab tak handover na ho aur lene wala tasdeeq na kare.
+ *
+ * Bank, wallet aur online is se guzarte hi nahi -- un mein paisa kisi
+ * ke haath mein aata hi nahi.
+ */
 export async function postMachineryPayment(args: {
   bookingId: string;
   farmerId: string;
   amount: number;
   method: string;
   accountId?: string | null;
+  /** Cash kis ke paas gaya. Sirf cash par. */
+  custodyProfileId?: string | null;
   description: string;
   ctx: EventContext;
 }): Promise<PostResult> {
@@ -1010,12 +1043,21 @@ export async function postMachineryPayment(args: {
     return { error: "Khata par paisa nahi aata -- is ke liye entry nahi banti." };
   }
 
-  const debitAccount =
-    args.method === "wallet"
+  const custody = args.method === "cash" && args.custodyProfileId ? args.custodyProfileId : null;
+
+  const debitAccount = custody
+    ? ACC.cashWithPerson
+    : args.method === "wallet"
       ? ACC.walletPayable
       : args.accountId
         ? await glForFinanceAccount(args.accountId)
         : ACC.cash;
+
+  const debitParty = custody
+    ? { partyType: "staff", partyId: custody }
+    : args.method === "wallet"
+      ? { partyType: "farmer", partyId: args.farmerId }
+      : { partyType: null, partyId: null };
 
   return postJournal({
     description: args.description,
@@ -1029,8 +1071,8 @@ export async function postMachineryPayment(args: {
       {
         account: debitAccount,
         debit: args.amount,
-        partyType: args.method === "wallet" ? "farmer" : null,
-        partyId: args.method === "wallet" ? args.farmerId : null,
+        partyType: debitParty.partyType,
+        partyId: debitParty.partyId,
         memo: args.description,
       },
       {

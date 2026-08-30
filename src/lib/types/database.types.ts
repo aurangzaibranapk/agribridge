@@ -114,11 +114,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_complaints_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_complaints_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_complaints_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "agri_complaints_order_id_fkey"
@@ -201,6 +215,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "agri_deliveries_dispatch_id_fkey"
@@ -420,6 +441,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_dispatches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_dispatches_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -500,6 +528,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_feedback_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "agri_feedback_order_id_fkey"
@@ -693,6 +728,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_grns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_grns_dispatch_id_fkey"
             columns: ["dispatch_id"]
             isOneToOne: false
@@ -714,6 +756,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_grns_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_grns_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -733,6 +782,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_grns_warehouse_reviewed_by_fkey"
+            columns: ["warehouse_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -924,6 +980,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_order_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_order_payments_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -943,6 +1006,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_payments_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1066,6 +1136,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_order_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_order_returns_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1085,6 +1162,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_returns_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1120,6 +1204,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_timeline_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "agri_order_timeline_order_id_fkey"
@@ -1273,11 +1364,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_orders_finance_verified_by_fkey"
             columns: ["finance_verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_orders_finance_verified_by_fkey"
+            columns: ["finance_verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "agri_orders_order_from_branch_id_fkey"
@@ -1315,11 +1420,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agri_orders_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "agri_orders_sales_verified_by_fkey"
             columns: ["sales_verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_orders_sales_verified_by_fkey"
+            columns: ["sales_verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1497,6 +1616,13 @@ export type Database = {
             foreignKeyName: "ai_crop_reports_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "ai_crop_reports_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -1551,6 +1677,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_purchase_suggestions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "ai_purchase_suggestions_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -1599,6 +1732,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_report_instructions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1706,6 +1846,13 @@ export type Database = {
             foreignKeyName: "announcement_dismissals_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -1807,6 +1954,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "anomaly_findings_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       application_activity_log: {
@@ -1848,6 +2002,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_activity_log_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1923,6 +2084,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "attendance_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       audit_logs: {
@@ -1975,6 +2143,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -2047,11 +2222,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bank_statement_lines_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "bank_statement_lines_matched_by_fkey"
             columns: ["matched_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_matched_by_fkey"
+            columns: ["matched_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "bank_statement_lines_matched_entry_id_fkey"
@@ -2208,6 +2397,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_credit_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "branch_credit_transactions_order_id_fkey"
@@ -2648,6 +2844,13 @@ export type Database = {
             foreignKeyName: "bridge_orders_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "bridge_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -2808,6 +3011,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "capital_injections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       cash_closings: {
@@ -2889,6 +3099,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_closings_counted_by_fkey"
+            columns: ["counted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "cash_closings_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -2915,6 +3132,7 @@ export type Database = {
           difference_reason: string | null
           from_branch_id: string | null
           from_profile_id: string
+          from_source: string
           id: string
           received_at: string | null
           received_by: string | null
@@ -2936,6 +3154,7 @@ export type Database = {
           difference_reason?: string | null
           from_branch_id?: string | null
           from_profile_id: string
+          from_source?: string
           id?: string
           received_at?: string | null
           received_by?: string | null
@@ -2957,6 +3176,7 @@ export type Database = {
           difference_reason?: string | null
           from_branch_id?: string | null
           from_profile_id?: string
+          from_source?: string
           id?: string
           received_at?: string | null
           received_by?: string | null
@@ -2975,6 +3195,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "cash_handovers_from_branch_id_fkey"
@@ -2998,11 +3225,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_handovers_from_profile_id_fkey"
+            columns: ["from_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "cash_handovers_received_by_fkey"
             columns: ["received_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "cash_handovers_received_entry_id_fkey"
@@ -3052,6 +3293,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_profile_id_fkey"
+            columns: ["to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -3245,6 +3493,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "company_expense_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "company_expense_requests_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -3264,6 +3519,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "company_expense_requests_shop_id_fkey"
@@ -3501,6 +3763,13 @@ export type Database = {
             foreignKeyName: "credit_requests_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "credit_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -3628,6 +3897,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "crop_diagnoses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -4362,11 +4638,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "department_head_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "department_head_grants_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_head_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -4415,6 +4705,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "departments_head_profile_id_fkey"
+            columns: ["head_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -4491,6 +4788,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "driver_payments_driver_id_fkey"
@@ -4808,6 +5112,13 @@ export type Database = {
             foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -4817,6 +5128,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -4950,6 +5268,13 @@ export type Database = {
             foreignKeyName: "farmer_credit_ledger_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_credit_ledger_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -4996,6 +5321,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "farmer_loans_farmer_id_fkey"
@@ -5065,6 +5397,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -5179,6 +5518,13 @@ export type Database = {
             foreignKeyName: "farmer_produce_payouts_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_produce_payouts_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -5235,6 +5581,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
@@ -5304,6 +5657,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -5716,6 +6076,13 @@ export type Database = {
             foreignKeyName: "farms_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farms_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -5907,6 +6274,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "fertilizer_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -6147,6 +6521,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fuel_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "fuel_logs_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -6295,6 +6676,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "generator_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       gl_accounts: {
@@ -6414,6 +6802,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grain_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "grain_expenses_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
@@ -6463,6 +6858,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_parties_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -6608,6 +7010,13 @@ export type Database = {
             foreignKeyName: "grain_procurement_entries_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -6699,6 +7108,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grain_procurement_payments_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "grain_procurement_payments_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
@@ -6766,6 +7182,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -6853,6 +7276,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grain_sale_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "grain_sale_payments_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -6936,6 +7366,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "grain_sales_warehouse_id_fkey"
@@ -7146,6 +7583,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_scores_interviewer_id_fkey"
+            columns: ["interviewer_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -7406,6 +7850,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "investor_investments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "investor_investments_investor_id_fkey"
             columns: ["investor_id"]
             isOneToOne: false
@@ -7449,6 +7900,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "investor_returns_investor_id_fkey"
@@ -7592,6 +8050,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_created_profile_id_fkey"
+            columns: ["created_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "job_applications_vacancy_id_fkey"
@@ -7790,6 +8255,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "journal_entries_reversal_of_fkey"
@@ -8123,11 +8595,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "leave_requests_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -8249,6 +8735,13 @@ export type Database = {
             foreignKeyName: "livestock_loans_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -8285,11 +8778,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "loss_verifiers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "loss_verifiers_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "loss_verifiers_shop_id_fkey"
@@ -8801,6 +9308,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "machinery_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "machinery_bookings_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -8882,6 +9396,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -9515,6 +10036,13 @@ export type Database = {
             foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -9528,6 +10056,7 @@ export type Database = {
           claimed_by: string | null
           collected_by_vendor_id: string | null
           created_at: string
+          custody_profile_id: string | null
           evidence_url: string | null
           finance_account_id: string | null
           id: string
@@ -9535,7 +10064,9 @@ export type Database = {
           method: string
           payment_date: string
           proof_url: string | null
+          receipt_number: string | null
           received_by: string | null
+          received_location: string | null
           reference: string | null
           rejection_reason: string | null
           vendor_settlement: string | null
@@ -9550,6 +10081,7 @@ export type Database = {
           claimed_by?: string | null
           collected_by_vendor_id?: string | null
           created_at?: string
+          custody_profile_id?: string | null
           evidence_url?: string | null
           finance_account_id?: string | null
           id?: string
@@ -9557,7 +10089,9 @@ export type Database = {
           method: string
           payment_date?: string
           proof_url?: string | null
+          receipt_number?: string | null
           received_by?: string | null
+          received_location?: string | null
           reference?: string | null
           rejection_reason?: string | null
           vendor_settlement?: string | null
@@ -9572,6 +10106,7 @@ export type Database = {
           claimed_by?: string | null
           collected_by_vendor_id?: string | null
           created_at?: string
+          custody_profile_id?: string | null
           evidence_url?: string | null
           finance_account_id?: string | null
           id?: string
@@ -9579,7 +10114,9 @@ export type Database = {
           method?: string
           payment_date?: string
           proof_url?: string | null
+          receipt_number?: string | null
           received_by?: string | null
+          received_location?: string | null
           reference?: string | null
           rejection_reason?: string | null
           vendor_settlement?: string | null
@@ -9694,6 +10231,20 @@ export type Database = {
             referencedColumns: ["vendor_id"]
           },
           {
+            foreignKeyName: "machinery_payments_custody_profile_id_fkey"
+            columns: ["custody_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_custody_profile_id_fkey"
+            columns: ["custody_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "machinery_payments_finance_account_id_fkey"
             columns: ["finance_account_id"]
             isOneToOne: false
@@ -9708,6 +10259,21 @@ export type Database = {
             referencedColumns: ["account_id"]
           },
         ]
+      }
+      machinery_receipt_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
       }
       machinery_requests: {
         Row: {
@@ -9883,6 +10449,13 @@ export type Database = {
             foreignKeyName: "machinery_requests_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -10017,6 +10590,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_vendors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -10241,6 +10821,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "maintenance_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "maintenance_logs_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -10262,11 +10849,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "maintenance_logs_branch_verified_by_fkey"
+            columns: ["branch_verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "maintenance_logs_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "maintenance_logs_vehicle_id_fkey"
@@ -10468,11 +11069,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "milk_dispatches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "milk_dispatches_received_by_fkey"
             columns: ["received_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -10677,6 +11292,13 @@ export type Database = {
             foreignKeyName: "milk_entries_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -10688,11 +11310,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "milk_entries_fat_by_profile_id_fkey"
+            columns: ["fat_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "milk_entries_mca_profile_id_fkey"
             columns: ["mca_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_mca_profile_id_fkey"
+            columns: ["mca_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "milk_entries_possible_duplicate_of_fkey"
@@ -10709,11 +11345,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "milk_entries_received_by_profile_id_fkey"
+            columns: ["received_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "milk_entries_verified_by_profile_id_fkey"
             columns: ["verified_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -10817,6 +11467,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -10929,6 +11586,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "milk_route_collections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       milk_type_migrations: {
@@ -10963,6 +11627,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "milk_type_migrations_farmer_id_fkey"
@@ -11038,6 +11709,13 @@ export type Database = {
             foreignKeyName: "milk_type_migrations_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -11098,6 +11776,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -11339,6 +12024,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pos_return_code_attempts_attempted_by_fkey"
+            columns: ["attempted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "pos_return_code_attempts_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -11484,6 +12176,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pos_returns_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "pos_returns_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -11503,6 +12202,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "pos_returns_sale_id_fkey"
@@ -11826,6 +12532,13 @@ export type Database = {
             foreignKeyName: "produce_listings_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -11979,6 +12692,13 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -12190,6 +12910,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "products_organization_id_fkey"
@@ -12527,6 +13254,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quantity_reconciliations_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "quantity_reconciliations_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -12609,6 +13343,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_findings_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "reconciliation_findings_run_id_fkey"
@@ -12712,6 +13453,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "replacement_fund_withdrawals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       role_feature_permissions: {
@@ -12754,6 +13502,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "role_feature_permissions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       role_page_permissions: {
@@ -12782,6 +13537,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_page_permissions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -12838,6 +13600,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13095,6 +13864,13 @@ export type Database = {
             foreignKeyName: "service_categories_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "service_categories_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -13167,6 +13943,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_bills_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13304,6 +14087,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shop_rent_agreements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       shop_rent_payments: {
@@ -13360,6 +14150,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_rent_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13431,6 +14228,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shops_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13522,11 +14326,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "staff_auth_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "staff_auth_codes_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_auth_codes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13570,11 +14388,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "staff_credit_ledger_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "staff_credit_ledger_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_credit_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13653,6 +14485,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "staff_details_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       staff_messages: {
@@ -13698,6 +14537,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "staff_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "staff_messages_related_order_id_fkey"
             columns: ["related_order_id"]
             isOneToOne: false
@@ -13717,6 +14563,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -13765,6 +14618,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "staff_product_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
         ]
       }
       staff_whatsapp_pending: {
@@ -13796,6 +14656,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_whatsapp_pending_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -14032,11 +14899,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_counts_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "stock_counts_started_by_fkey"
             columns: ["started_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "stock_counts_warehouse_id_fkey"
@@ -14140,6 +15021,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_loss_records_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "stock_loss_records_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -14152,6 +15040,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "stock_loss_records_warehouse_id_fkey"
@@ -14328,11 +15223,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_transfers_discrepancy_resolved_by_fkey"
+            columns: ["discrepancy_resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "stock_transfers_dispatched_by_fkey"
             columns: ["dispatched_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_dispatched_by_fkey"
+            columns: ["dispatched_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
@@ -14363,6 +15272,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_transfers_payment_verified_by_fkey"
+            columns: ["payment_verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "stock_transfers_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -14375,6 +15291,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_shop_accepted_by_fkey"
+            columns: ["shop_accepted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
@@ -14514,6 +15437,13 @@ export type Database = {
             foreignKeyName: "subscription_votes_farmer_id_fkey"
             columns: ["farmer_id"]
             isOneToOne: true
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
             referencedRelation: "v_machinery_vendor_collection_claims"
             referencedColumns: ["farmer_id"]
           },
@@ -14643,11 +15573,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_payment_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "supplier_payment_requests_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "supplier_payment_requests_supplier_id_fkey"
@@ -14706,6 +15650,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "supplier_payments_supplier_id_fkey"
@@ -14912,11 +15863,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "user_feature_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "user_feature_permissions_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_feature_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -15046,6 +16011,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vehicle_daily_logs_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "vehicle_daily_logs_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -15166,6 +16138,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vehicle_maintenance_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "vehicle_maintenance_records_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -15221,6 +16200,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_assigned_profile_id_fkey"
+            columns: ["assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "vehicles_branch_id_fkey"
@@ -15638,11 +16624,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whatsapp_submissions_manager_profile_id_fkey"
+            columns: ["manager_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
             foreignKeyName: "whatsapp_submissions_staff_profile_id_fkey"
             columns: ["staff_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_submissions_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -15688,6 +16688,32 @@ export type Database = {
           close_date: string | null
         }
         Relationships: []
+      }
+      v_cash_custody: {
+        Row: {
+          aakhri_harkat: string | null
+          branch_id: string | null
+          cash_paas_hai: number | null
+          full_name: string | null
+          profile_id: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
       }
       v_cash_in_transit: {
         Row: {
@@ -16505,6 +17531,99 @@ export type Database = {
           wada_aa_gaya: boolean | null
         }
         Relationships: []
+      }
+      v_machinery_payment_receipts: {
+        Row: {
+          amount: number | null
+          bill_ka_baqi: number | null
+          bill_ki_raqam: number | null
+          bill_number: string | null
+          booking_id: string | null
+          booking_number: string | null
+          created_at: string | null
+          custody_name: string | null
+          farmer_code: string | null
+          farmer_id: string | null
+          farmer_name: string | null
+          farmer_phone: string | null
+          kind: string | null
+          method: string | null
+          naya_baqi: number | null
+          payment_date: string | null
+          payment_id: string | null
+          pehla_baqi: number | null
+          pehle_mila: number | null
+          receipt_number: string | null
+          received_by_name: string | null
+          received_location: string | null
+          reference: string | null
+          village: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
       }
       v_machinery_queue: {
         Row: {

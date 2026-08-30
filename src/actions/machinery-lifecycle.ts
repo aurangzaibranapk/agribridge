@@ -129,7 +129,7 @@ async function logEvent(args: {
  */
 async function nextNumber(
   supabase: Client,
-  table: "machinery_booking_counters" | "machinery_bill_counters",
+  table: "machinery_booking_counters" | "machinery_bill_counters" | "machinery_receipt_counters",
   prefix: string
 ): Promise<string> {
   const year = new Date().getFullYear();
@@ -379,6 +379,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       reference: str(formData, "advance_reference"),
       evidenceUrl: str(formData, "advance_evidence_url"),
       paymentDate: str(formData, "advance_date"),
+      receivedLocation: str(formData, "received_location"),
       bookingNumber: booking.booking_number,
       actorId,
     });
@@ -472,6 +473,7 @@ async function saveAdvance(args: {
   reference: string | null;
   evidenceUrl: string | null;
   paymentDate: string | null;
+  receivedLocation?: string | null;
   bookingNumber: string;
   actorId: string | null;
 }): Promise<string | null> {
@@ -486,7 +488,14 @@ async function saveAdvance(args: {
   // us par advance nahi hota, warna hum khud ko apna hi advance de kar
   // hisaab barabar dikha sakte hain.
   if (method === "khata") return "Advance khata par nahi liya ja sakta -- paisa waqai aana chahiye.";
-  if (!args.accountId) return "Advance kis khate mein aaya, wo select karein.";
+
+  // Cash lene wale ke paas jata hai, kisi khate mein nahi (171). Baqi
+  // har raaste mein paisa waqai kisi khate mein aata hai, is liye
+  // wahan khata abhi bhi lazmi hai.
+  const inCustody = method === "cash" && Boolean(args.actorId);
+  if (!inCustody && !args.accountId) return "Advance kis khate mein aaya, wo select karein.";
+
+  const receiptNumber = await nextNumber(args.supabase, "machinery_receipt_counters", "MR");
 
   const { data: payment, error } = await args.supabase
     .from("machinery_payments")
@@ -495,10 +504,13 @@ async function saveAdvance(args: {
       kind: "advance",
       amount: args.amount,
       method,
-      finance_account_id: args.accountId,
+      finance_account_id: inCustody ? null : args.accountId,
+      custody_profile_id: inCustody ? args.actorId : null,
+      received_location: inCustody ? (args.receivedLocation ?? "office") : null,
       payment_date: args.paymentDate ?? new Date().toISOString().slice(0, 10),
       reference: args.reference,
       evidence_url: args.evidenceUrl,
+      receipt_number: receiptNumber,
       received_by: args.actorId,
     })
     .select("id")
@@ -510,7 +522,8 @@ async function saveAdvance(args: {
     bookingId: args.bookingId,
     farmerId: args.farmerId,
     amount: args.amount,
-    accountId: args.accountId,
+    accountId: inCustody ? null : args.accountId,
+    custodyProfileId: inCustody ? args.actorId : null,
     description: `Machinery booking ${args.bookingNumber} — advance`,
     ctx: {
       createdBy: args.actorId,
@@ -568,6 +581,7 @@ export async function recordAdvance(_prev: ActionState, formData: FormData): Pro
     reference: str(formData, "reference"),
     evidenceUrl: str(formData, "evidence_url"),
     paymentDate: str(formData, "payment_date"),
+    receivedLocation: str(formData, "received_location"),
     bookingNumber: booking.booking_number,
     actorId,
   });
@@ -1826,6 +1840,10 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
       }
       continue;
     }
+    // Cash ab khata nahi maangta -- wo lene wale ke paas jata hai
+    // (171). Bank/wallet ka khata pehle jaisa lazmi hai: un mein
+    // paisa waqai kisi khate mein aata hai.
+    if (line.method === "cash") continue;
     if (line.method !== "khata" && !line.accountId) {
       return { error: `"${line.method}" ke liye khata select karein — warna paisa aaya to hai magar pahuncha kahin nahi.` };
     }
@@ -1846,7 +1864,20 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
 
   const paymentDate = str(formData, "payment_date") ?? new Date().toISOString().slice(0, 10);
 
+  // Cash kahan liya gaya. Dono soorton mein wo lene wale ke naam par
+  // khara hota hai -- magar do mahine baad poochho to ye farq kisi ko
+  // yaad nahi rehta, aur wahin se "maine to daftar mein diya tha"
+  // wali baat shuru hoti hai.
+  const receivedLocation = str(formData, "received_location") === "office" ? "office" : "field";
+
   for (const line of lines) {
+    // Cash lene wale ke paas jata hai, kisi khate mein nahi. Ye us
+    // waqt ka sach hai: khet par ya counter par liya hua cash abhi us
+    // bande ki jeb mein hai.
+    const inCustody = line.method === "cash";
+
+    const receiptNumber = await nextNumber(supabase, "machinery_receipt_counters", "MR");
+
     const { data: payment, error } = await supabase
       .from("machinery_payments")
       .insert({
@@ -1854,12 +1885,16 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
         kind: "final",
         amount: line.amount,
         method: line.method,
-        finance_account_id: line.method === "vendor_collected" ? null : line.accountId,
+        finance_account_id:
+          line.method === "vendor_collected" || inCustody ? null : line.accountId,
+        custody_profile_id: inCustody ? actorId : null,
+        received_location: inCustody ? receivedLocation : null,
         collected_by_vendor_id: line.method === "vendor_collected" ? booking.vendor_id : null,
         vendor_settlement: line.method === "vendor_collected" ? line.settlement : null,
         payment_date: paymentDate,
         reference: line.reference,
         evidence_url: str(formData, "evidence_url"),
+        receipt_number: receiptNumber,
         received_by: actorId,
       })
       .select("id")
@@ -1915,6 +1950,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
       amount: line.amount,
       method: line.method,
       accountId: line.accountId,
+      custodyProfileId: inCustody ? actorId : null,
       description: `Machinery ${booking.booking_number} — payment (${line.method})`,
       ctx: {
         createdBy: actorId,

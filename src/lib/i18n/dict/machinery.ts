@@ -960,4 +960,82 @@ export const machineryDict = {
     rm: "Kisan ka apna diesel ({amount}) vendor ke hisse se kata \u2014 rate mein diesel shamil tha, is liye wo kharcha us ka bacha.",
     ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0627 \u0627\u067e\u0646\u0627 \u0688\u06cc\u0632\u0644 ({amount}) \u0648\u06cc\u0646\u0688\u0631 \u06a9\u06d2 \u062d\u0635\u06d2 \u0633\u06d2 \u06a9\u0679\u0627\u06d4",
   },
+  mc_cash_where: {
+    en: "Where was the cash taken?",
+    rm: "Cash kahan liya?",
+    ur: "\u06a9\u06cc\u0634 \u06a9\u06c1\u0627\u06ba \u0644\u06cc\u0627\u061f",
+  },
+  mc_cash_field: { en: "At the farm", rm: "Khet par", ur: "\u06a9\u06be\u06cc\u062a \u067e\u0631" },
+  mc_cash_office: { en: "At the office counter", rm: "Daftar ke counter par", ur: "\u062f\u0641\u062a\u0631 \u06a9\u06d2 \u06a9\u0627\u0624\u0646\u0679\u0631 \u067e\u0631" },
+  mc_cash_custody_note: {
+    en: "This cash stands in your name until you hand it over and the receiver confirms.",
+    rm: "Ye cash aap ke naam par khara rahega -- jab tak aap handover na karein aur lene wala tasdeeq na kare.",
+    ur: "\u06cc\u06c1 \u06a9\u06cc\u0634 \u0622\u067e \u06a9\u06d2 \u0646\u0627\u0645 \u067e\u0631 \u06a9\u06be\u0691\u0627 \u0631\u06c1\u06d2 \u06af\u0627 \u2014 \u062c\u0628 \u062a\u06a9 \u0622\u067e \u06c1\u06cc\u0646\u0688 \u0627\u0648\u0648\u0631 \u0646\u06c1 \u06a9\u0631\u06cc\u06ba\u06d4",
+  },
+  ch_from_where: {
+    en: "Where is this cash coming from?",
+    rm: "Ye cash kahan se ja raha hai?",
+    ur: "\u06cc\u06c1 \u06a9\u06cc\u0634 \u06a9\u06c1\u0627\u06ba \u0633\u06d2 \u062c\u0627 \u0631\u06c1\u0627 \u06c1\u06d2\u061f",
+  },
+  ch_from_custody: {
+    en: "The cash I am holding",
+    rm: "Jo cash mere paas hai",
+    ur: "\u062c\u0648 \u06a9\u06cc\u0634 \u0645\u06cc\u0631\u06d2 \u067e\u0627\u0633 \u06c1\u06d2",
+  },
+  ch_from_branch: {
+    en: "Branch cash",
+    rm: "Branch ka cash",
+    ur: "\u0628\u0631\u0627\u0646\u0686 \u06a9\u0627 \u06a9\u06cc\u0634",
+  },
+  cc_title: {
+    en: "Cash with people",
+    rm: "Kis ke paas kitna cash",
+    ur: "\u06a9\u0633 \u06a9\u06d2 \u067e\u0627\u0633 \u06a9\u062a\u0646\u0627 \u06a9\u06cc\u0634",
+  },
+  cc_subtitle: {
+    en: "Cash that has come in but has not yet reached an account. It stands in the receiver's name until handed over.",
+    rm: "Jo cash aa to gaya magar abhi kisi khate tak nahi pahuncha. Handover tak wo lene wale ke naam par khara rehta hai.",
+    ur: "\u062c\u0648 \u06a9\u06cc\u0634 \u0622 \u062a\u0648 \u06af\u06cc\u0627 \u0645\u06af\u0631 \u0627\u0628\u06be\u06cc \u06a9\u0633\u06cc \u06a9\u06be\u0627\u062a\u06d2 \u062a\u06a9 \u0646\u06c1\u06cc\u06ba \u067e\u06c1\u0646\u0686\u0627\u06d4",
+  },
+  cc_total: {
+    en: "Total lying with people",
+    rm: "Kul cash logon ke paas",
+    ur: "\u06a9\u0644 \u06a9\u06cc\u0634 \u0644\u0648\u06af\u0648\u06ba \u06a9\u06d2 \u067e\u0627\u0633",
+  },
+  cc_person: { en: "Person", rm: "Banda", ur: "\u0628\u0646\u062f\u06c1" },
+  cc_amount: { en: "Cash held", rm: "Cash paas hai", ur: "\u06a9\u06cc\u0634 \u067e\u0627\u0633 \u06c1\u06d2" },
+  cc_last_move: { en: "Last movement", rm: "Aakhri harkat", ur: "\u0622\u062e\u0631\u06cc \u062d\u0631\u06a9\u062a" },
+  cc_empty: {
+    en: "No cash is lying with anyone right now.",
+    rm: "Is waqt kisi ke paas cash nahi para.",
+    ur: "\u0627\u0633 \u0648\u0642\u062a \u06a9\u0633\u06cc \u06a9\u06d2 \u067e\u0627\u0633 \u06a9\u06cc\u0634 \u0646\u06c1\u06cc\u06ba \u067e\u0691\u0627\u06d4",
+  },
+  mr_receipt_title: {
+    en: "Payment Receipt",
+    rm: "Adaigi ki Raseed",
+    ur: "\u0627\u062f\u0627\u0626\u06cc\u06af\u06cc \u06a9\u06cc \u0631\u0633\u06cc\u062f",
+  },
+  mr_amount_received: {
+    en: "Amount received",
+    rm: "Mili raqam",
+    ur: "\u0645\u0644\u06cc \u0631\u0642\u0645",
+  },
+  mr_previous_balance: {
+    en: "Previous balance",
+    rm: "Pehla baqi",
+    ur: "\u067e\u06c1\u0644\u0627 \u0628\u0627\u0642\u06cc",
+  },
+  mr_new_balance: { en: "New balance", rm: "Naya baqi", ur: "\u0646\u06cc\u0627 \u0628\u0627\u0642\u06cc" },
+  mr_paid_full: {
+    en: "PAID IN FULL \u2014 Rs 0",
+    rm: "HISAAB POORA \u2014 Rs 0",
+    ur: "\u062d\u0633\u0627\u0628 \u067e\u0648\u0631\u0627 \u2014 Rs 0",
+  },
+  mr_received_by: { en: "Received by", rm: "Kis ne li", ur: "\u06a9\u0633 \u0646\u06d2 \u0644\u06cc" },
+  mr_receipt_footer: {
+    en: "This is a computer-generated receipt from the AgriBridge system.",
+    rm: "Ye AgriBridge se khud bani hui raseed hai.",
+    ur: "\u06cc\u06c1 \u0627\u06cc\u06af\u0631\u06cc \u0628\u0631\u062c \u0633\u06d2 \u062e\u0648\u062f \u0628\u0646\u06cc \u06c1\u0648\u0626\u06cc \u0631\u0633\u06cc\u062f \u06c1\u06d2\u06d4",
+  },
+  mr_receipt_link: { en: "Receipt", rm: "Raseed", ur: "\u0631\u0633\u06cc\u062f" },
 } as const;

@@ -21,6 +21,13 @@ export default async function CashHandoverPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Mere apne paas is waqt kitna cash hai. Ye adad ledger se aata hai
+  // (171) -- kahin rakha hua nahi, warna wo kisi din jhoot ban jata.
+  const { data: custodyRow } = user
+    ? await supabase.from("v_cash_custody").select("cash_paas_hai").eq("profile_id", user.id).maybeSingle()
+    : { data: null };
+  const myCustody = Number(custodyRow?.cash_paas_hai ?? 0);
   const { data: me } = user
     ? await supabase.from("profiles").select("role, is_active, full_name").eq("id", user.id).maybeSingle()
     : { data: null };
@@ -144,7 +151,7 @@ export default async function CashHandoverPage() {
               description={t("ch_no_one_else_note", lang)}
             />
           ) : (
-            <SendCashForm people={people} branches={branches} />
+            <SendCashForm people={people} branches={branches} myCustody={myCustody} />
           )}
         </Card>
 

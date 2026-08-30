@@ -282,7 +282,19 @@ export function BookingDetail({
                           <span className="text-surface-500"> · liya: {p.received_by_name}</span>
                         )}
                       </span>
-                      <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
+                      <span className="flex items-center gap-3">
+                        <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
+                        {/* Har adaigi ki apni raseed. Booking ki slip
+                            kaafi nahi -- ek booking par kai adaigiyan
+                            hoti hain, aur kisan ko us adaigi ka kaghaz
+                            chahiye jo us ne abhi ki hai. */}
+                        <Link
+                          href={`/admin/machinery-rental/receipt/${p.id}`}
+                          className="text-xs text-brand-600 underline hover:text-brand-700"
+                        >
+                          {t("mr_receipt_link", lang)}
+                        </Link>
+                      </span>
                     </li>
                   ))}
               </ul>
@@ -827,6 +839,7 @@ function AdvanceDeclined({
 function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Array<{ id: string; name: string; account_type: string }> }) {
   const lang = useLang();
   const [state, action] = useFormState(recordAdvance, initialState);
+  const [method, setMethod] = useState("cash");
   const [evidence, setEvidence] = useState("");
   return (
     <form action={action} className="space-y-3">
@@ -846,7 +859,7 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
         </div>
         <div>
           <Label>{t("mc_method", lang)}</Label>
-          <Select name="method" defaultValue="cash">
+          <Select name="method" value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="cash">{t("mc_cash", lang)}</option>
             <option value="bank">{t("mc_bank", lang)}</option>
             <option value="wallet">{t("mc_wallet", lang)}</option>
@@ -854,17 +867,32 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
           </Select>
         </div>
       </div>
-      <div>
-        <Label>{t("mc_khata", lang)}</Label>
-        <Select name="finance_account_id" defaultValue="">
-          <option value="">—</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} ({a.account_type})
-            </option>
-          ))}
-        </Select>
-      </div>
+
+      {/* Cash par khata nahi poochha jata -- wo lene wale ke naam par
+          khara hota hai (171). Us ki jagah sirf ye poochha jata hai ke
+          kahan liya. */}
+      {method === "cash" ? (
+        <div>
+          <Label>{t("mc_cash_where", lang)}</Label>
+          <Select name="received_location" defaultValue="office">
+            <option value="office">{t("mc_cash_office", lang)}</option>
+            <option value="field">{t("mc_cash_field", lang)}</option>
+          </Select>
+          <p className="mt-1 text-xs text-surface-500">{t("mc_cash_custody_note", lang)}</p>
+        </div>
+      ) : (
+        <div>
+          <Label>{t("mc_khata", lang)}</Label>
+          <Select name="finance_account_id" defaultValue="">
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.account_type})
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_date", lang)}</Label>
@@ -1613,6 +1641,14 @@ function PaymentForm({
                   <option value="handed_over">{t("mc_vendor_hands_over", lang)}</option>
                 </Select>
               </>
+            ) : methods[i] === "cash" ? (
+              /* Cash par khata nahi poochha jata.
+                 Khet par ya counter par liya hua cash us waqt kisi
+                 khate mein hota hi nahi -- wo lene wale ki jeb mein
+                 hota hai. Us ko khate mein likh dena ye kehta hai ke
+                 paisa daftar pahunch gaya, jabke wo abhi raaste mein
+                 hai. */
+              <p className="mt-6 text-xs text-surface-500">{t("mc_cash_custody_note", lang)}</p>
             ) : (
               <>
                 <Label>{t("mc_khata", lang)}</Label>
@@ -1640,9 +1676,23 @@ function PaymentForm({
         Khata par daali gayi raqam ka koi cash/bank entry nahi banta — wo kisan ke khate mein hi pari rehti hai. Baqi har
         raaste ka apna khata hona zaroori hai, warna paisa aa to gaya magar pahuncha kahin nahi.
       </p>
-      <div>
-        <Label>{t("mc_date", lang)}</Label>
-        <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_date", lang)}</Label>
+          <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+        </div>
+        {/* Cash kahan liya. Dono soorton mein wo lene wale ke naam par
+            khara hota hai -- magar do mahine baad poochho to ye farq
+            kisi ko yaad nahi rehta. */}
+        {Object.values(methods).includes("cash") && (
+          <div>
+            <Label>{t("mc_cash_where", lang)}</Label>
+            <Select name="received_location" defaultValue="field">
+              <option value="field">{t("mc_cash_field", lang)}</option>
+              <option value="office">{t("mc_cash_office", lang)}</option>
+            </Select>
+          </div>
+        )}
       </div>
       <Submit label={t("mc_record_payment", lang)} />
     </form>

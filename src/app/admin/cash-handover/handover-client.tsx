@@ -29,15 +29,44 @@ function Submit({ label, blocked }: { label: string; blocked?: boolean }) {
 export function SendCashForm({
   people,
   branches,
+  myCustody = 0,
 }: {
   people: { id: string; name: string; role: string }[];
   branches: { id: string; name: string }[];
+  /** Mere apne paas is waqt kitna cash hai (ledger se). */
+  myCustody?: number;
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(sendCash, initialState);
 
+  // Cash do jagah se ja sakta hai aur wo do bilkul alag cheezein hain.
+  // Khet se aaya hua cash branch ke khate mein kabhi tha hi nahi.
+  const [source, setSource] = useState(myCustody > 0 ? "my_custody" : "branch_cash");
+
   return (
     <form action={formAction} className="space-y-3">
+      {/* Ye sawal sirf tab poochha jata hai jab bande ke paas apna
+          cash ho. Warna wo ek aisa sawal hai jis ka jawab hamesha ek
+          hi hota hai, aur aise sawal log parhna chhoR dete hain. */}
+      {myCustody > 0 && (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">
+            {t("ch_from_where", lang)}
+          </span>
+          <select
+            name="from_source"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+          >
+            <option value="my_custody">
+              {t("ch_from_custody", lang)} — Rs {myCustody.toLocaleString()}
+            </option>
+            <option value="branch_cash">{t("ch_from_branch", lang)}</option>
+          </select>
+        </label>
+      )}
+      {myCustody <= 0 && <input type="hidden" name="from_source" value="branch_cash" />}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">
           {t("ch_to_whom", lang)} <span className="text-red-600">{t("ch_required", lang)}</span>
