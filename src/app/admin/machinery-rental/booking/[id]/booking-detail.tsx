@@ -619,6 +619,12 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
+      {/* Advance lazmi nahi. Bohat si bookings bina advance ke hoti
+          hain -- kisan kehta hai kaam ke baad de dunga. Ye qadam pehla
+          hai is liye lagta tha ke ise bharay baghair aage nahi ja
+          sakte, aur khali form bhejne par ek laal error milta tha jo is
+          ghalat fehmi ko pakka kar deta. */}
+      <p className="text-xs text-surface-500">{t("mc_advance_optional", lang)}</p>
       <input type="hidden" name="booking_id" value={bookingId} />
       <input type="hidden" name="evidence_url" value={evidence} />
       <div className="grid grid-cols-2 gap-3">

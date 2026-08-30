@@ -450,7 +450,11 @@ async function saveAdvance(args: {
   bookingNumber: string;
   actorId: string | null;
 }): Promise<string | null> {
-  if (!args.amount || args.amount <= 0) return "Advance ki raqam sahi likhein.";
+  if (!args.amount || args.amount <= 0) {
+    // Ye ghalti nahi, aksar iraada hi nahi hota. Advance lazmi nahi --
+    // is liye jawab bhi rukawat ki tarah nahi, raah dikhane wala.
+    return "Advance nahi liya to ye qadam chhor dein — booking bina advance ke bhi chalti hai. Advance liya ho to raqam likhein.";
+  }
   const method = args.method ?? "cash";
 
   // Advance ka matlab hai paisa haath mein aa gaya. Khata udhaar hai --

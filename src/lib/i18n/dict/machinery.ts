@@ -110,6 +110,11 @@ export const machineryDict = {
     ur: "کیا یہ کسان فصل ہمیں بیچے گا؟",
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
+  mc_advance_optional: {
+    en: "Advance is not required. If none was taken, skip this step — the booking runs without it, and the next step below is already open.",
+    rm: "Advance lazmi nahi. Na liya ho to ye qadam chhor dein — booking us ke baghair bhi chalti hai, aur neeche wala qadam pehle se khula hai.",
+    ur: "ایڈوانس لازمی نہیں۔ نہ لیا ہو تو یہ قدم چھوڑ دیں — بکنگ اس کے بغیر بھی چلتی ہے، اور نیچے والا قدم پہلے سے کھلا ہے۔",
+  },
   mc_farmer_decision: {
     en: "What did the farmer decide?",
     rm: "Kisan ne kya faisla kiya?",
