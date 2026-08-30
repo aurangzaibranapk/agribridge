@@ -10,6 +10,7 @@ import {
   bulkDeactivateStaff,
   type ActionState,
 } from "@/actions/hr";
+import { DEPARTMENTS } from "@/lib/departments";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Plus, X, CheckSquare, UserPlus } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -290,9 +291,15 @@ function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: 
         <form action={formAction} className="space-y-2">
           <Input name="full_name" required placeholder={t("hr_name_req", lang)} />
           <Input type="email" name="email" required placeholder={t("hr_email_req", lang)} />
-          <Select name="role" required>
-            <option value="sales_staff">Sales Staff</option>
-            <option value="manager">Manager</option>
+          {/* Role yani DEPARTMENT. Yahan pehle sirf teen option the --
+              is liye Machinery, HR, Procurement ya Dairy ka banda bulaya
+              hi nahi ja sakta tha, aur /admin/departments par un ke
+              saamne hamesha "0 banday" likha aata tha. Ab fehrist
+              DEPARTMENTS se banti hai. */}
+          <Select name="role" required defaultValue="sales_staff">
+            {DEPARTMENTS.map((d) => (
+              <option key={d.role} value={d.role}>{d.label}</option>
+            ))}
             <option value="admin">Admin</option>
           </Select>
           <Select name="branch_id">
