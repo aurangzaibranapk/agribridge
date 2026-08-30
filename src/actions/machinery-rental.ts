@@ -55,19 +55,43 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const rateAmount = Number(formData.get("rate_amount") ?? 0);
   const notes = (formData.get("notes") as string) || null;
 
+  // Machine kis ki hai. ART ki apni ho to vendor hota hi nahi -- aur
+  // wo shart DB par bhi lagi hui hai (173), taake "commission kis ko
+  // jaye" wala sawal kabhi khula na rahe.
+  const owner = String(formData.get("owner") ?? "vendor") === "art" ? "art" : "vendor";
+  const registrationNumber = (formData.get("registration_number") as string)?.trim() || null;
+
   // Driver machine ke sath likha jata hai, har booking par nahi. Wohi
   // machine, wohi driver -- har dafa naya likhwana ek hi naam ke teen
   // hijje aur ek galat phone number paida karta hai.
   const driverName = (formData.get("driver_name") as string)?.trim() || null;
   const driverPhone = (formData.get("driver_phone") as string)?.trim() || null;
 
-  if (!vendorId) return { error: "Vendor select karein." };
+  if (owner === "vendor" && !vendorId) return { error: "Vendor select karein." };
   if (!machineType) return { error: "Machine type likhein." };
   if (!["per_acre", "per_hour", "per_day"].includes(rateType)) return { error: "Rate type sahi select karein." };
   if (!rateAmount || rateAmount <= 0) return { error: "Rate sahi likhein." };
 
+  // Machine ka apna number -- "kabota wali" kehna kaam nahi karta
+  // jab teen kabota hon.
+  const year = new Date().getFullYear();
+  const { data: counter } = await supabase
+    .from("machinery_machine_counters")
+    .select("last_number")
+    .eq("year", year)
+    .maybeSingle();
+  const next = (counter?.last_number ?? 0) + 1;
+  if (counter) {
+    await supabase.from("machinery_machine_counters").update({ last_number: next }).eq("year", year);
+  } else {
+    await supabase.from("machinery_machine_counters").insert({ year, last_number: next });
+  }
+
   const { error } = await supabase.from("machinery_vendor_machines").insert({
-    vendor_id: vendorId,
+    vendor_id: owner === "art" ? null : vendorId,
+    owner,
+    machine_code: `MC-${String(next).padStart(3, "0")}`,
+    registration_number: registrationNumber,
     machine_type: machineType,
     model,
     rate_type: rateType,

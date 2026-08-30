@@ -381,6 +381,7 @@ function NewVendorModal({ onClose }: { onClose: () => void }) {
 function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () => void }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createVendorMachine, initialState);
+  const [owner, setOwner] = useState("vendor");
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
   return (
@@ -392,12 +393,23 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Select name="vendor_id" required>
-            <option value="">{t("mc_select_vendor", lang)}</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.vendor_name}</option>
-            ))}
+          {/* Machine kis ki hai. ART ki apni ho to vendor hota hi
+              nahi -- aur us par commission bhi nahi banta, poori
+              aamdani hamari hoti hai. Pehle ye mumkin hi nahi tha:
+              har machine kisi vendor ki hoti thi, aur apni machine
+              ke liye jhoota vendor banana parta. */}
+          <Select name="owner" value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="vendor">{t("mc_owner_vendor", lang)}</option>
+            <option value="art">{t("mc_owner_art", lang)}</option>
           </Select>
+          {owner === "vendor" && (
+            <Select name="vendor_id" required>
+              <option value="">{t("mc_select_vendor", lang)}</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.vendor_name}</option>
+              ))}
+            </Select>
+          )}
           <Input name="machine_type" required placeholder={t("mc_machine_type_field", lang)} />
           <Input name="model" placeholder={t("mc_model_optional", lang)} />
           <Select name="rate_type" required>
@@ -412,6 +424,7 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
               sakega, kyunke kisi din koi doosra bhi le jata hai. */}
           <Input name="driver_name" placeholder={t("mc_driver_name_optional", lang)} />
           <Input name="driver_phone" placeholder={t("mc_driver_phone_optional", lang)} />
+          <Input name="registration_number" placeholder={t("mc_registration_optional", lang)} />
           <Textarea name="notes" rows={2} placeholder={t("mc_notes_optional", lang)} />
           <SubmitButton label={t("mc_add_machine", lang)} />
         </form>

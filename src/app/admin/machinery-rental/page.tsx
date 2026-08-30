@@ -76,7 +76,9 @@ export default async function MachineryRentalPage({
     return {
       id: m.id,
       vendor_id: m.vendor_id,
-      vendor_name: vendor?.vendor_name ?? "-",
+      // ART ki apni machine par vendor hota hi nahi -- wahan "-" likhna
+      // ye samjhata hai ke vendor darj karna reh gaya.
+      vendor_name: m.owner === "art" ? "ART (apni machine)" : (vendor?.vendor_name ?? "-"),
       machine_type: m.machine_type,
       model: m.model,
       rate_type: m.rate_type,
