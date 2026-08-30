@@ -39,6 +39,7 @@ export default async function MachineryBookingsListPage() {
         cropType: r.crop_type as string | null,
         machineType: r.machine_type as string | null,
         machineModel: r.machine_model as string | null,
+        vendorId: r.vendor_id as string | null,
         vendorName: r.vendor_name as string | null,
         area: Number(r.harvest_area ?? 0),
         rate: r.final_rate === null ? null : Number(r.final_rate),

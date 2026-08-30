@@ -111,10 +111,30 @@ export const machineryDict = {
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
   mc_back: { en: "Back", rm: "Peechhe", ur: "واپس" },
-  mc_vendor_paid_open: {
-    en: "Money was paid to the vendor — record it",
-    rm: "Vendor ko paisa diya hai — darj karein",
-    ur: "وینڈر کو پیسہ دیا ہے — درج کریں",
+  mc_vendor_paid_q: {
+    en: "Has the vendor been paid?",
+    rm: "Vendor ko paisa diya hai?",
+    ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u067e\u06cc\u0633\u06c1 \u062f\u06cc\u0627 \u06c1\u06d2\u061f",
+  },
+  mc_vendor_paid_yes: {
+    en: "Yes \u2014 record how much",
+    rm: "Haan \u2014 kitna diya, darj karein",
+    ur: "\u06c1\u0627\u06ba \u2014 \u06a9\u062a\u0646\u0627 \u062f\u06cc\u0627\u060c \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_vendor_paid_no: {
+    en: "No \u2014 not yet",
+    rm: "Nahi \u2014 abhi nahi diya",
+    ur: "\u0646\u06c1\u06cc\u06ba \u2014 \u0627\u0628\u06be\u06cc \u0646\u06c1\u06cc\u06ba \u062f\u06cc\u0627",
+  },
+  mc_vendor_outstanding_note: {
+    en: "Fine. {amount} stays outstanding to {vendor} \u2014 the money is held with ART and shows in his account until it is paid.",
+    rm: "Theek hai. {amount} {vendor} ka baqi rahega \u2014 wo paisa ART ke paas jama hai aur us ke khate mein khara rahega jab tak diya na jaye.",
+    ur: "\u0679\u06be\u06cc\u06a9 \u06c1\u06d2\u06d4 {amount} {vendor} \u06a9\u0627 \u0628\u0627\u0642\u06cc \u0631\u06c1\u06d2 \u06af\u0627 \u2014 \u0648\u06c1 \u067e\u06cc\u0633\u06c1 \u0627\u06cc \u0622\u0631 \u0679\u06cc \u06a9\u06d2 \u067e\u0627\u0633 \u062c\u0645\u0639 \u06c1\u06d2 \u0627\u0648\u0631 \u0627\u0633 \u06a9\u06d2 \u06a9\u06be\u0627\u062a\u06d2 \u0645\u06cc\u06ba \u06a9\u06be\u0691\u0627 \u0631\u06c1\u06d2 \u06af\u0627\u06d4",
+  },
+  mc_how_much_paid: {
+    en: "How much was paid",
+    rm: "Kitna diya",
+    ur: "\u06a9\u062a\u0646\u0627 \u062f\u06cc\u0627",
   },
   mc_vendor_paid_none: {
     en: "Nothing paid yet? Then leave this — the amount above stays owed to him.",
@@ -706,4 +726,14 @@ export const machineryDict = {
   mca_vendor: { en: "Pay the vendor", rm: "Vendor ko dena hai", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0646\u0627 \u06c1\u06d2" },
   mca_done: { en: "Done", rm: "Mukammal", ur: "\u0645\u06a9\u0645\u0644" },
   mca_cancelled: { en: "Cancelled", rm: "Mansookh", ur: "\u0645\u0646\u0633\u0648\u062e" },
+  mc_vendor_statement: {
+    en: "Owed to vendors (held with us)",
+    rm: "Vendors ko dena (hamare paas jama)",
+    ur: "\u0648\u06cc\u0646\u0688\u0631\u0648\u06ba \u06a9\u0648 \u062f\u06cc\u0646\u0627 (\u06c1\u0645\u0627\u0631\u06d2 \u067e\u0627\u0633 \u062c\u0645\u0639)",
+  },
+  mc_vendor_statement_hint: {
+    en: "The bill made this theirs \u2014 it is our money only until it is handed over.",
+    rm: "Bill bante hi ye raqam un ki ho gayi \u2014 hamare paas sirf amanat hai.",
+    ur: "\u0628\u0644 \u0628\u0646\u062a\u06d2 \u06c1\u06cc \u06cc\u06c1 \u0631\u0642\u0645 \u0627\u0646 \u06a9\u06cc \u06c1\u0648 \u06af\u0626\u06cc \u2014 \u06c1\u0645\u0627\u0631\u06d2 \u067e\u0627\u0633 \u0635\u0631\u0641 \u0627\u0645\u0627\u0646\u062a \u06c1\u06d2\u06d4",
+  },
 } as const;

@@ -22,6 +22,7 @@ interface Row {
   cropType: string | null;
   machineType: string | null;
   machineModel: string | null;
+  vendorId: string | null;
   vendorName: string | null;
   area: number;
   rate: number | null;
@@ -343,7 +344,73 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
 
       <FarmerStatement farmers={farmers} />
 
+      <VendorStatement rows={rows} />
+
       {showEmail && <EmailModal onClose={() => setShowEmail(false)} />}
+    </div>
+  );
+}
+
+/**
+ * Vendor ka khata -- ART ke paas kis ka kitna para hai.
+ *
+ * Bill bante hi kisan ka poora paisa hamara nahi ho jata: commission
+ * hamara, baqi vendor ka. Jab tak wo diya na jaye, wo raqam hamare
+ * paas AMANAT hai. Amanat ka hisaab dikhna chahiye, warna wo aahista
+ * aahista "hamara paisa" lagne lagti hai.
+ *
+ * Adad wohi qatarein hain jo upar hain -- dobara nahi ginte.
+ */
+function VendorStatement({ rows }: { rows: Row[] }) {
+  const lang = useLang();
+
+  const vendors = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; bookings: number; baqi: number }>();
+    for (const r of rows) {
+      if (!r.vendorId || r.nextAction === "cancelled") continue;
+      const v = map.get(r.vendorId) ?? { id: r.vendorId, name: r.vendorName ?? "-", bookings: 0, baqi: 0 };
+      v.bookings += 1;
+      v.baqi += r.vendorOutstanding > 0 ? r.vendorOutstanding : 0;
+      map.set(r.vendorId, v);
+    }
+    return [...map.values()].filter((v) => v.baqi > 0).sort((a, b) => b.baqi - a.baqi);
+  }, [rows]);
+
+  if (vendors.length === 0) return null;
+
+  const kul = vendors.reduce((a, v) => a + v.baqi, 0);
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
+        <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">
+          {t("mc_vendor_statement", lang)}
+        </h2>
+        <p className="text-xs text-surface-500">{t("mc_vendor_statement_hint", lang)}</p>
+      </div>
+      <table className="w-full text-xs">
+        <tbody>
+          {vendors.map((v) => (
+            <tr key={v.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+              <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{v.name}</td>
+              <td className="px-3 py-2 text-right text-surface-500">
+                {v.bookings} {t("mc_bookings", lang)}
+              </td>
+              <td className="px-3 py-2 text-right font-semibold text-amber-700 dark:text-amber-300">
+                Rs {v.baqi.toLocaleString()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t border-surface-200 bg-surface-50 font-semibold dark:border-surface-700 dark:bg-surface-800/50">
+            <td className="px-3 py-2 text-surface-700 dark:text-surface-300" colSpan={2}>
+              {t("mc_total", lang)}
+            </td>
+            <td className="px-3 py-2 text-right text-amber-700 dark:text-amber-300">Rs {kul.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }

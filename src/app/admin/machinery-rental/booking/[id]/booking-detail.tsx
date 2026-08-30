@@ -574,6 +574,7 @@ export function BookingDetail({
                   accounts={accounts}
                   remaining={vendorRemaining}
                   paidSoFar={paidToVendor}
+                  vendorName={vendorName}
                 />
               )}
             </StepCard>
@@ -1492,34 +1493,66 @@ function VendorPayoutForm({
   accounts,
   remaining,
   paidSoFar,
+  vendorName,
 }: {
   bookingId: string;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   remaining: number;
   paidSoFar: number;
+  vendorName: string | null;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordVendorPayout, initialState);
-  const [open, setOpen] = useState(false);
+  const [answer, setAnswer] = useState<"haan" | "nahi" | null>(null);
 
-  // Form band rehta hai jab tak koi ye na kahe ke paisa waqai diya
-  // gaya. Khula hua form "0" ke sath khara rehna ek sawal ban jata
-  // hai jis ka jawab aksar nahi hota -- aur kabhi kabhi ghalti se
-  // jawab de bhi diya jata hai. Vendor ko dena hai ye baat upar
-  // likhi hui hai; ye khana sirf us waqt ka hai jab paisa nikla ho.
-  if (!open && !state.success) {
+  // Sawal pehle, khana baad mein.
+  //
+  // Khula hua form jis mein raqam pehle se likhi ho ek jhoota sawal
+  // hai: wo poochhta nahi, wo tajweez karta hai. Aur tajweez ka
+  // jawab aksar "Enter" hota hai. Is liye pehle saaf sawal --
+  // diya hai ya nahi -- aur raqam ka khana sirf "haan" ke baad.
+  //
+  // "Nahi" par kuch likha nahi jata, aur likhne ki zaroorat bhi
+  // nahi: bill bante hi ye raqam vendor ke naam khari ho chuki hai
+  // (supplier payable), yani paisa ART ke paas jama hai. "Nahi"
+  // sirf us baat ko screen par kehta hai.
+  if (answer !== "haan" && !state.success) {
     return (
-      <div className="space-y-1">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          {t("mc_vendor_paid_open", lang)}
-        </button>
-        <p className="text-xs text-surface-500">
-          {paidSoFar > 0 ? t("mc_vendor_paid_some", lang) : t("mc_vendor_paid_none", lang)}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-surface-800 dark:text-surface-200">
+          {t("mc_vendor_paid_q", lang)}
         </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setAnswer("haan")}
+            className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            {t("mc_vendor_paid_yes", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnswer("nahi")}
+            className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+              answer === "nahi"
+                ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                : "border-surface-200 text-surface-700 dark:border-surface-700 dark:text-surface-300"
+            }`}
+          >
+            {t("mc_vendor_paid_no", lang)}
+          </button>
+        </div>
+        {answer === "nahi" ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {t("mc_vendor_outstanding_note", lang)
+              .replace("{amount}", `Rs ${remaining.toLocaleString()}`)
+              .replace("{vendor}", vendorName ?? "Vendor")}
+          </p>
+        ) : (
+          <p className="text-xs text-surface-500">
+            {paidSoFar > 0 ? t("mc_vendor_paid_some", lang) : t("mc_vendor_paid_none", lang)}
+          </p>
+        )}
       </div>
     );
   }
@@ -1530,8 +1563,11 @@ function VendorPayoutForm({
       <input type="hidden" name="booking_id" value={bookingId} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>{t("mc_amount", lang)} (baqi Rs {remaining.toLocaleString()})</Label>
-          <Input type="number" name="amount" step="0.01" defaultValue={remaining} />
+          <Label>{t("mc_how_much_paid", lang)} (baqi Rs {remaining.toLocaleString()})</Label>
+          {/* Khali chhora hai jaan boojh kar: sawal "kitna diya" hai,
+              aur pehle se likhi hui poori raqam us sawal ka jawab de
+              deti hai. Adha diya ho to wo adha yahin likha jayega. */}
+          <Input type="number" name="amount" step="0.01" placeholder={String(remaining)} />
         </div>
         <div>
           <Label>{t("mc_which_account_from", lang)}</Label>
@@ -1549,7 +1585,7 @@ function VendorPayoutForm({
         <Submit label={t("mc_record_vendor_payout", lang)} />
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => setAnswer(null)}
           className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
         >
           {t("ac_cancel", lang)}
