@@ -176,11 +176,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Row({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
+  // Manfi sifar ko sifar likha jaye.
+  //
+  // Kharche wali lakeerein `value={-total.diesel}` bhejti hain. Diesel
+  // sifar ho to JavaScript mein `-0` banta hai, aur `-0 < 0` GHALAT hai
+  // -- to neeche wali shart sifar ko manfi nahi samajhti aur seedha
+  // `(-0).toLocaleString()` chhaap deti hai, yani "Rs -0".
+  //
+  // Paise ke safhe par "Rs -0" parh kar banda rukta hai aur sochta hai
+  // ke kya cheez manfi hai. Kuch bhi nahi -- sirf sifar hai.
+  const v = value === 0 ? 0 : value;
   return (
     <div className={`flex justify-between text-sm ${strong ? "font-medium" : ""}`}>
       <span className="text-surface-600 dark:text-surface-300">{label}</span>
       <span className="text-surface-800 dark:text-surface-200">
-        {value < 0 ? `- Rs ${Math.abs(value).toLocaleString()}` : `Rs ${value.toLocaleString()}`}
+        {v < 0 ? `- Rs ${Math.abs(v).toLocaleString()}` : `Rs ${v.toLocaleString()}`}
       </span>
     </div>
   );

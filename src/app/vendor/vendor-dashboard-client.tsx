@@ -1072,11 +1072,17 @@ function DrillDiesel({ rows, kind }: { rows: Booking[]; kind: string }) {
 }
 
 function Row3({ label, value, strong, tone }: { label: string; value: number; strong?: boolean; tone?: string }) {
+  // Manfi sifar ko sifar likha jaye: kharche wali lakeerein `value={-x}`
+  // bhejti hain, aur x sifar ho to JavaScript mein `-0` banta hai. `-0 < 0`
+  // GHALAT hai, is liye neeche wali shart usay manfi nahi samajhti aur
+  // seedha "-0" chhaap deti hai. Paise ke safhe par "Rs -0" parh kar banda
+  // rukta hai aur sochta hai kya cheez manfi hai. Kuch bhi nahi.
+  const v = value === 0 ? 0 : value;
   return (
     <div className={`flex justify-between text-sm ${strong ? "font-medium" : ""}`}>
       <span className="text-surface-600">{label}</span>
       <span className={tone ?? "text-surface-800"}>
-        {value < 0 ? `- Rs ${Math.abs(value).toLocaleString()}` : `Rs ${value.toLocaleString()}`}
+        {v < 0 ? `- Rs ${Math.abs(v).toLocaleString()}` : `Rs ${v.toLocaleString()}`}
       </span>
     </div>
   );
@@ -1518,10 +1524,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Row({ label, value }: { label: string; value: number }) {
+  // Manfi sifar ko sifar likha jaye: kharche wali lakeerein `value={-x}`
+  // bhejti hain, aur x sifar ho to JavaScript mein `-0` banta hai. `-0 < 0`
+  // GHALAT hai, is liye neeche wali shart usay manfi nahi samajhti aur
+  // seedha "-0" chhaap deti hai. Paise ke safhe par "Rs -0" parh kar banda
+  // rukta hai aur sochta hai kya cheez manfi hai. Kuch bhi nahi.
+  const v = value === 0 ? 0 : value;
   return (
     <div className="flex justify-between text-surface-600">
       <span>{label}</span>
-      <span>{value < 0 ? `- Rs ${Math.abs(value).toLocaleString()}` : `Rs ${value.toLocaleString()}`}</span>
+      <span>{v < 0 ? `- Rs ${Math.abs(v).toLocaleString()}` : `Rs ${v.toLocaleString()}`}</span>
     </div>
   );
 }
