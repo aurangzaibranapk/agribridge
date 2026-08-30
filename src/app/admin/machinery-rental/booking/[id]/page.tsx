@@ -30,7 +30,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
       supabase
         .from("machinery_vendor_machines")
-        .select("id, machine_type, model, rate_type, rate_amount, machinery_vendors(vendor_name)")
+        .select("id, machine_type, model, rate_type, rate_amount, driver_name, driver_phone, machinery_vendors(vendor_name)")
         .eq("is_available", true)
         .order("machine_type"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
@@ -78,6 +78,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     return {
       id: m.id,
       label: `${m.machine_type}${m.model ? ` (${m.model})` : ""} — ${vendor?.vendor_name ?? "-"}`,
+      driverName: (m.driver_name as string | null) ?? "",
+      driverPhone: (m.driver_phone as string | null) ?? "",
     };
   });
 

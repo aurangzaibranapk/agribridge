@@ -756,4 +756,15 @@ export const machineryDict = {
     rm: "Tareekh badal dein",
     ur: "\u062a\u0627\u0631\u06cc\u062e \u0628\u062f\u0644 \u062f\u06cc\u06ba",
   },
+  mc_driver: { en: "Driver", rm: "Driver", ur: "\u0688\u0631\u0627\u0626\u06cc\u0648\u0631" },
+  mc_driver_name_optional: {
+    en: "Driver's name (optional)",
+    rm: "Driver ka naam (marzi se)",
+    ur: "\u0688\u0631\u0627\u0626\u06cc\u0648\u0631 \u06a9\u0627 \u0646\u0627\u0645 (\u0645\u0631\u0636\u06cc \u0633\u06d2)",
+  },
+  mc_driver_phone_optional: {
+    en: "Driver's phone (optional)",
+    rm: "Driver ka phone (marzi se)",
+    ur: "\u0688\u0631\u0627\u0626\u06cc\u0648\u0631 \u06a9\u0627 \u0641\u0648\u0646 (\u0645\u0631\u0636\u06cc \u0633\u06d2)",
+  },
 } as const;

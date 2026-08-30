@@ -9038,6 +9038,8 @@ export type Database = {
       machinery_vendor_machines: {
         Row: {
           created_at: string
+          driver_name: string | null
+          driver_phone: string | null
           id: string
           is_available: boolean
           machine_type: string
@@ -9049,6 +9051,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
           id?: string
           is_available?: boolean
           machine_type: string
@@ -9060,6 +9064,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
           id?: string
           is_available?: boolean
           machine_type?: string

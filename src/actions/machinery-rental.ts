@@ -55,6 +55,12 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const rateAmount = Number(formData.get("rate_amount") ?? 0);
   const notes = (formData.get("notes") as string) || null;
 
+  // Driver machine ke sath likha jata hai, har booking par nahi. Wohi
+  // machine, wohi driver -- har dafa naya likhwana ek hi naam ke teen
+  // hijje aur ek galat phone number paida karta hai.
+  const driverName = (formData.get("driver_name") as string)?.trim() || null;
+  const driverPhone = (formData.get("driver_phone") as string)?.trim() || null;
+
   if (!vendorId) return { error: "Vendor select karein." };
   if (!machineType) return { error: "Machine type likhein." };
   if (!["per_acre", "per_hour", "per_day"].includes(rateType)) return { error: "Rate type sahi select karein." };
@@ -66,6 +72,8 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
     model,
     rate_type: rateType,
     rate_amount: rateAmount,
+    driver_name: driverName,
+    driver_phone: driverPhone,
     notes,
   });
   if (error) return { error: error.message };

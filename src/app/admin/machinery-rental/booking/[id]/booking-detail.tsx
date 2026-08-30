@@ -150,7 +150,7 @@ export function BookingDetail({
   }>;
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
-  machines: Array<{ id: string; label: string }>;
+  machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   advanceTotal: number;
   finalPaid: number;
@@ -972,12 +972,19 @@ function DispatchForm({
   already,
 }: {
   bookingId: string;
-  machines: Array<{ id: string; label: string }>;
+  machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
   already: boolean;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(dispatchMachine, initialState);
   const [again, setAgain] = useState(false);
+
+  // Driver machine ke sath likha hua hai (162), is liye machine
+  // chunte hi wo khud aa jata hai. Khane phir bhi khule hain: kisi
+  // din koi doosra le jata hai, aur us din sach wohi hai jo yahan
+  // likha jaye.
+  const [driverName, setDriverName] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
 
   // Rawangi darj ho chuki ho to form band. Diesel ke liye neeche apna
   // qadam hai -- pehle log yahi form dobara bhar dete the.
@@ -1012,7 +1019,14 @@ function DispatchForm({
         {again && <input type="hidden" name="again" value="on" />}
       <div>
         <Label>{t("mc_machine", lang)}</Label>
-        <Select name="machine_id">
+        <Select
+          name="machine_id"
+          onChange={(e) => {
+            const m = machines.find((x) => x.id === e.target.value);
+            setDriverName(m?.driverName ?? "");
+            setDriverPhone(m?.driverPhone ?? "");
+          }}
+        >
           <option value="">—</option>
           {machines.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
@@ -1022,11 +1036,11 @@ function DispatchForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_operator", lang)}</Label>
-          <Input name="operator_name" />
+          <Input name="operator_name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
         </div>
         <div>
           <Label>{t("mc_driver_phone", lang)}</Label>
-          <Input name="driver_phone" />
+          <Input name="driver_phone" value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} />
         </div>
       </div>
       {/* Shuru ka meter yahan se hata diya gaya.

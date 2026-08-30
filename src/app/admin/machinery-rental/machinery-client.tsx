@@ -28,6 +28,8 @@ interface Machine {
   machine_type: string;
   model: string | null;
   rate_type: string;
+  driver_name: string | null;
+  driver_phone: string | null;
   rate_amount: number;
 }
 interface Farmer { id: string; full_name: string; farmer_code: string; booking_link_token?: string; }
@@ -153,6 +155,7 @@ export function MachineryClient({
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
                   <th className="px-3 py-2 font-medium text-surface-500">{t("mc_vendor", lang)}</th>
                   <th className="px-3 py-2 font-medium text-surface-500">{t("mc_machine", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_driver", lang)}</th>
                   <th className="px-3 py-2 font-medium text-surface-500">{t("mc_rate", lang)}</th>
                 </tr>
               </thead>
@@ -161,11 +164,15 @@ export function MachineryClient({
                   <tr key={m.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{m.vendor_name}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{m.machine_type}{m.model ? ` (${m.model})` : ""}</td>
+                    <td className="px-3 py-2 text-surface-600 dark:text-surface-400">
+                      {m.driver_name ?? "—"}
+                      {m.driver_phone && <span className="block text-xs text-surface-400">{m.driver_phone}</span>}
+                    </td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">Rs {m.rate_amount.toLocaleString()} / {RATE_TYPE_LABELS[m.rate_type]}</td>
                   </tr>
                 ))}
                 {machines.length === 0 && (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("mc_no_machines", lang)}</td></tr>
+                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">{t("mc_no_machines", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -400,6 +407,11 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
             <option value="per_day">{t("mc_per_day", lang)}</option>
           </Select>
           <Input type="number" step="0.01" name="rate_amount" required placeholder={t("mc_rate_amount_req", lang)} />
+          {/* Driver yahan likha jata hai, rawangi par nahi. Rawangi
+              ke waqt ye khud bhar jayega -- aur wahan badla bhi ja
+              sakega, kyunke kisi din koi doosra bhi le jata hai. */}
+          <Input name="driver_name" placeholder={t("mc_driver_name_optional", lang)} />
+          <Input name="driver_phone" placeholder={t("mc_driver_phone_optional", lang)} />
           <Textarea name="notes" rows={2} placeholder={t("mc_notes_optional", lang)} />
           <SubmitButton label={t("mc_add_machine", lang)} />
         </form>

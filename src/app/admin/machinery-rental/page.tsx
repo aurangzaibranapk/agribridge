@@ -81,6 +81,8 @@ export default async function MachineryRentalPage({
       model: m.model,
       rate_type: m.rate_type,
       rate_amount: Number(m.rate_amount),
+      driver_name: m.driver_name ?? null,
+      driver_phone: m.driver_phone ?? null,
     };
   });
 
