@@ -142,9 +142,15 @@ export default async function VendorPortalPage() {
       area: r.actual_area === null ? null : Number(r.actual_area),
       rate: r.rate_amount === null ? null : Number(r.rate_amount),
       gross: r.gross_amount === null ? null : Number(r.gross_amount),
-      commissionPct: r.commission_percentage === null ? null : Number(r.commission_percentage),
+      // Commission ka FISAD yahan se aage nahi jata (malik ka faisla).
+      // Raqam upar "ART Commission" ke card mein alag dikhti hai; booking
+      // ke card par commission ki koi lakeer nahi.
       commission: r.commission_amount === null ? null : Number(r.commission_amount),
       payable: r.vendor_payable === null ? null : Number(r.vendor_payable),
+      // Kisan ka diesel pehle hi hisse se kat chuka hai; ART ka diesel
+      // adaigi ke waqt kat-ta hai. Dono alag alag dikhte hain (170).
+      farmerDiesel: Number(r.kisan_ka_diesel ?? 0),
+      artDiesel: Number(r.art_ka_diesel ?? 0),
       paid: Number(r.vendor_ko_mila ?? 0),
       outstanding: Number(r.vendor_ka_baqi ?? 0),
       claimed: work.filter((w) => w.verification_status === "claimed").length,
@@ -164,7 +170,16 @@ export default async function VendorPortalPage() {
   // hamare paas jama hai, jo abhi kisan ke paas hai, aur jo mil chuka.
   // In ko jor kar ek adad dikhana wohi ghalti hai jis se jhagRa shuru
   // hota hai (172).
-  const [{ data: settlement }, { data: work }, { data: diesel }, { data: week }] = await Promise.all([
+  const [
+    { data: settlement },
+    { data: work },
+    { data: diesel },
+    { data: week },
+    { data: machines },
+    { data: locations },
+    { data: payments },
+    { data: commissionRows },
+  ] = await Promise.all([
     supabase.from("v_machinery_vendor_settlement").select("*").eq("vendor_id", vendor.id).maybeSingle(),
     supabase.from("v_machinery_vendor_work").select("*").eq("vendor_id", vendor.id).maybeSingle(),
     supabase.from("v_machinery_vendor_diesel").select("*").eq("vendor_id", vendor.id).maybeSingle(),
@@ -173,6 +188,11 @@ export default async function VendorPortalPage() {
       .select("*")
       .eq("vendor_id", vendor.id)
       .order("preferred_date"),
+    supabase.from("v_machinery_machines").select("*").eq("vendor_id", vendor.id).order("machine_code"),
+    supabase.from("v_machinery_vendor_location").select("*").eq("vendor_id", vendor.id).order("pehli_tareekh", { nullsFirst: false }),
+    supabase.from("v_machinery_vendor_payments").select("*").eq("vendor_id", vendor.id).order("tareekh", { ascending: false }),
+    // Commission ki tafseel -- is view mein fisad ka khana hai hi nahi (179).
+    supabase.from("v_machinery_vendor_commission").select("*").eq("vendor_id", vendor.id).order("tareekh", { ascending: false }),
   ]);
 
   const n = (v: unknown) => Number(v ?? 0);
@@ -206,6 +226,49 @@ export default async function VendorPortalPage() {
         byFarmer: n(diesel?.kisan_ne_diya),
         byArt: n(diesel?.art_ne_diya),
       }}
+      machines={(machines ?? []).map((m) => ({
+        id: m.machine_id as string,
+        code: (m.machine_code as string | null) ?? "-",
+        type: (m.machine_type as string | null) ?? "-",
+        model: (m.model as string | null) ?? null,
+        status: (m.status as string | null) ?? "available",
+        driverName: (m.driver_name as string | null) ?? null,
+        seasonAcres: n(m.season_ke_acre),
+        dieselLitres: n(m.diesel_litre),
+        dieselAmount: n(m.diesel_raqam),
+        runningBooking: (m.chal_rahi_booking as string | null) ?? null,
+        runningFarmer: (m.chal_raha_kisan as string | null) ?? null,
+        lastLat: m.last_location_lat === null ? null : Number(m.last_location_lat),
+        lastLng: m.last_location_lng === null ? null : Number(m.last_location_lng),
+      }))}
+      locations={(locations ?? []).map((l) => ({
+        jagah: (l.jagah as string) ?? "-",
+        farmers: n(l.kitne_kisan),
+        bookings: n(l.kitni_bookings),
+        acres: n(l.kul_acre),
+        firstDate: (l.pehli_tareekh as string | null) ?? null,
+        lat: l.lat === null ? null : Number(l.lat),
+        lng: l.lng === null ? null : Number(l.lng),
+      }))}
+      payments={(payments ?? []).map((p) => ({
+        id: p.entry_id as string,
+        settlementId: (p.settlement_id as string) ?? "-",
+        date: (p.tareekh as string) ?? "-",
+        bookingNumber: (p.booking_number as string | null) ?? null,
+        farmerName: (p.farmer_name as string | null) ?? null,
+        amount: n(p.raqam),
+        dieselBack: n(p.diesel_wapas),
+        cash: n(p.cash_mila),
+        isReversal: Boolean(p.is_reversal),
+      }))}
+      commissionRows={(commissionRows ?? []).map((c) => ({
+        bookingId: c.booking_id as string,
+        bookingNumber: (c.booking_number as string) ?? "-",
+        date: (c.tareekh as string | null) ?? (c.booking_date as string | null) ?? null,
+        farmerName: (c.farmer_name as string | null) ?? "-",
+        verifiedWork: n(c.tasdeeq_shuda_kaam),
+        commission: n(c.art_commission),
+      }))}
       week={(week ?? []).map((w) => ({
         bookingId: w.booking_id as string,
         bookingNumber: (w.booking_number as string) ?? "-",
