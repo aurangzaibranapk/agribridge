@@ -13,6 +13,7 @@ const STAFF_ROLES = [
   "hr",
   "procurement",
   "milk_collection",
+  "machinery",
 ];
 
 async function insertForUsers(userIds: string[], title: string, message: string, linkUrl?: string) {

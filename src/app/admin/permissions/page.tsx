@@ -10,7 +10,7 @@ export default async function AdminPermissionsPage() {
     .from("profiles")
     .select("id, full_name, role, allowed_pages")
     .eq("is_active", true)
-    .in("role", ["manager", "sales_staff", "finance", "warehouse", "hr", "admin_assistant", "procurement", "milk_collection"])
+    .in("role", ["manager", "sales_staff", "finance", "warehouse", "hr", "admin_assistant", "procurement", "milk_collection", "machinery"])
     .order("role")
     .order("full_name");
   return (

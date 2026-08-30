@@ -10,7 +10,7 @@ const initialState: ActionState = {};
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Admin", admin: "Admin", owner: "Owner", admin_assistant: "Admin Assistant",
   manager: "Manager", sales_staff: "Sales", finance: "Finance", warehouse: "Warehouse",
-  hr: "HR", procurement: "Procurement", milk_collection: "Milk Collection", ai_assistant: "AI Assistant",
+  hr: "HR", procurement: "Procurement", milk_collection: "Milk Collection", machinery: "Machinery", ai_assistant: "AI Assistant",
 };
 
 interface Contact {

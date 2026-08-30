@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "admin_assistant", "manager",
-  "sales_staff", "finance", "warehouse", "hr", "procurement", "milk_collection",
+  "sales_staff", "finance", "warehouse", "hr", "procurement", "milk_collection", "machinery",
 ];
 
 function statusTone(status: string) {

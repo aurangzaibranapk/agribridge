@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "admin_assistant", "manager",
   "sales_staff", "finance", "warehouse", "hr", "procurement", "milk_collection",
+  "machinery",
 ];
 
 const ADMIN_ROLES = ["owner", "super_admin", "admin"];

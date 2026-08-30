@@ -17,6 +17,10 @@ export const STAFF_ROLES: UserRole[] = [
   "hr",
   "procurement",
   "milk_collection",
+  // Machinery department ka banda bhi mulazim hai. Ye yahan se reh gaya
+  // tha, aur us ki saza chup thi: aisa banda login kar ke /admin ke
+  // bajaye website par phenk diya jata (getRoleRedirectPath).
+  "machinery",
 ];
 
 export function getRoleRedirectPath(role: UserRole): string {

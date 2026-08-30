@@ -5,21 +5,34 @@ import { BranchSelector } from "@/app/admin/users/branch-selector";
 import { ShopSelector } from "@/app/admin/users/shop-selector";
 import { StaffStatusManager } from "@/app/admin/users/staff-status-manager";
 import { formatDate } from "@/lib/utils/format";
+import { STAFF_ROLES } from "@/lib/utils/roles";
 export const dynamic = "force-dynamic";
+
+/**
+ * Safha har MULAZIM dikhata hai -- sirf chaar role wale nahi.
+ *
+ * Pehle yahan chaar role haath se likhe hue the. Nateeja: jis banday ko
+ * ek dafa Finance ya HR laga diya, wo is fehrist se ghayab ho jata --
+ * na us ka role badla ja sakta, na branch, na status. Aur naya
+ * department (Machinery) to yahan kabhi aa hi nahi sakta tha.
+ *
+ * Ab fehrist STAFF_ROLES se banti hai -- wohi jagah jo tay karti hai ke
+ * mulazim kaun hai.
+ */
 export default async function UsersPage() {
   const supabase = createClient();
   const [{ data: profiles }, { data: branches }, { data: shops }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
-      .in("role", ["super_admin", "admin", "manager", "sales_staff"])
+      .in("role", STAFF_ROLES)
       .order("created_at", { ascending: false }),
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     supabase.from("shops").select("id, name, branch_id, business_type").eq("is_active", true).order("name"),
   ]);
   return (
     <div>
-      <PageHeader title="Users & Roles" description="Super Admin, Admin, Manager, and Sales Staff - role-based access control" />
+      <PageHeader title="Users & Roles" description="Har mulazim ka department, branch aur darja — ek hi jagah se" />
       <Card>
         <table className="w-full text-sm">
           <thead>

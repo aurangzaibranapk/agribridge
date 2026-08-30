@@ -26,6 +26,7 @@ const ROLE_HOME_GROUP: Record<string, string | null> = {
   admin_assistant: "Administration",
   procurement: "Purchases",
   milk_collection: "Dairy",
+  machinery: "Agriculture",
   manager: null, // Manager sees everything open — broad oversight role.
 };
 

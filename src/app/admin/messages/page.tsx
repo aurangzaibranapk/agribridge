@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "manager", "sales_staff", "finance",
-  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "ai_assistant",
+  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "machinery", "ai_assistant",
 ];
 
 export default async function MessagesPage() {
