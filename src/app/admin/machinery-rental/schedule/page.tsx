@@ -1,4 +1,4 @@
-import { MachineryQueue } from "../queue-view";
+import { MachineryQueue, type ScheduleView } from "../queue-view";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,11 @@ export const dynamic = "force-dynamic";
  * nahi -- aur wo booking bhi shamil hai jis par machine ja chuki hai
  * magar kaam abhi jari hai.
  */
-export default async function Page() {
-  return <MachineryQueue queues={["machine_bhejna", "kaam_darj_karna"]} title="mq_title_schedule" byDate />;
+const VIEWS: ScheduleView[] = ["today", "tomorrow", "week", "calendar", "all"];
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const params = await searchParams;
+  // Anjaan khirki chupke se khali fehrist na de -- hafte par wapas.
+  const view = VIEWS.includes(params.view as ScheduleView) ? (params.view as ScheduleView) : "week";
+  return <MachineryQueue queues={["machine_bhejna", "kaam_darj_karna"]} title="mq_title_schedule" byDate view={view} />;
 }

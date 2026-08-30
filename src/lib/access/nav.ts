@@ -24,6 +24,11 @@ export interface NavEntry {
   label: string;
   /** Icon ka naam -- component client ki taraf banta hai. */
   icon: string | null;
+  /**
+   * Group ke andar chhoti sarkhi (174). Khali ho to item sidha group ke
+   * neeche aata hai -- purane group waise ke waise chalte hain.
+   */
+  section?: string | null;
 }
 
 export interface NavGroupData {
@@ -71,11 +76,19 @@ function groupsFromRegistry(registry: Registry, visible: Set<string> | null): Na
       label: d.label,
       icon: d.icon,
       description: d.description,
+      // Sarkhi ki tarteeb pehle, phir usi sarkhi ke andar wohi purani
+      // tarteeb. Koi safha hata nahi -- sirf saath waalon ke paas aa
+      // gaya hai.
       items: (registry.byDashboard.get(d.key) ?? [])
         .filter((key) => visible == null || visible.has(key))
-        .map((key) => registry.features.get(key))
-        .filter((f): f is NonNullable<typeof f> => !!f)
-        .map((f) => ({ href: f.route, label: f.label, icon: f.icon })),
+        .map((key, index) => {
+          const f = registry.features.get(key);
+          const sec = registry.sectionByLink.get(`${d.key}::${key}`);
+          return f ? { f, index, section: sec?.section ?? null, sectionOrder: sec?.order ?? 0 } : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => !!x)
+        .sort((a, b) => a.sectionOrder - b.sectionOrder || a.index - b.index)
+        .map((x) => ({ href: x.f.route, label: x.f.label, icon: x.f.icon, section: x.section })),
     }))
     .filter((g) => g.items.length > 0);
 }

@@ -48,15 +48,34 @@ const HINT: Record<QueueKey, TranslationKey> = {
   paisa_lena: "mq_payment_hint",
 };
 
+/**
+ * Schedule ke nazariye (spec L).
+ *
+ * Ek hi fehrist, chaar khirkiyan. Naqsha alag safha hai -- wo yahan
+ * dobara nahi banaya, sirf us tak raasta diya gaya hai.
+ */
+export type ScheduleView = "today" | "tomorrow" | "week" | "calendar" | "all";
+
+const SCHEDULE_TABS: { key: ScheduleView; label: TranslationKey }[] = [
+  { key: "today", label: "ms_view_today" },
+  { key: "tomorrow", label: "ms_view_tomorrow" },
+  { key: "week", label: "ms_view_week" },
+  { key: "calendar", label: "ms_view_calendar" },
+  { key: "all", label: "ms_view_all" },
+];
+
 export async function MachineryQueue({
   queues,
   title,
   byDate = false,
+  view = "week",
 }: {
   queues: QueueKey[];
   title: TranslationKey;
   /** Schedule wala roop: tarteeb tareekh ki, qatar ki nahi. */
   byDate?: boolean;
+  /** Kaunsi khirki khuli hai -- sirf schedule wale roop par. */
+  view?: ScheduleView;
 }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
@@ -75,7 +94,33 @@ export async function MachineryQueue({
     })
     .order("din_purani", { ascending: false });
 
-  const rows = data ?? [];
+  const allRows = data ?? [];
+
+  // Khirki ke hisaab se chhantai. Guzri hui tareekh "Aaj" mein rehti hai:
+  // wo kaam aaj bhi karna hai, aur usi khirki mein na dikhe to bhool
+  // jata hai.
+  const dayKey = (offset: number) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().slice(0, 10);
+  };
+  const todayKey = dayKey(0);
+  const tomorrowKey = dayKey(1);
+  const weekEndKey = dayKey(6);
+
+  const rows = !byDate
+    ? allRows
+    : view === "today"
+      ? allRows.filter((r) => r.preferred_date === todayKey || r.tareekh_guzar_gayi)
+      : view === "tomorrow"
+        ? allRows.filter((r) => r.preferred_date === tomorrowKey)
+        : view === "week"
+          ? allRows.filter(
+              (r) => r.tareekh_guzar_gayi || (!!r.preferred_date && r.preferred_date >= todayKey && r.preferred_date <= weekEndKey)
+            )
+          : allRows;
+
   const byQueue = new Map<string, typeof rows>();
   for (const r of rows) {
     const k = r.queue ?? "";
@@ -91,12 +136,12 @@ export async function MachineryQueue({
   // booking rakhi ja sakti hai.
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const week = byDate
+  const week = byDate && view !== "calendar"
     ? Array.from({ length: 7 }, (_, i) => {
         const d = new Date(today);
         d.setDate(d.getDate() + i);
         const key = d.toISOString().slice(0, 10);
-        const dayRows = rows.filter((r) => r.preferred_date === key);
+        const dayRows = allRows.filter((r) => r.preferred_date === key);
         return {
           key,
           date: d,
@@ -108,13 +153,100 @@ export async function MachineryQueue({
 
   // Jo tareekh guzar chuki aur kaam abhi baqi hai -- ye saat dinon mein
   // nahi aati, aur yehi wo bookings hain jo bhool jati hain.
-  const overdue = byDate ? rows.filter((r) => r.tareekh_guzar_gayi) : [];
+  const overdue = byDate ? allRows.filter((r) => r.tareekh_guzar_gayi) : [];
+
+  // Calendar: is maheene ka poora naqsha -- kis din kitni kattai.
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const leading = monthStart.getDay();
+  const monthDays =
+    byDate && view === "calendar"
+      ? Array.from({ length: daysInMonth }, (_, i) => {
+          const d = new Date(today.getFullYear(), today.getMonth(), i + 1);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const dayRows = allRows.filter((r) => r.preferred_date === key);
+          return {
+            key,
+            day: i + 1,
+            count: dayRows.length,
+            acres: dayRows.reduce((sum, r) => sum + Number(r.harvest_area ?? 0), 0),
+            isToday: key === todayKey,
+          };
+        })
+      : [];
 
   return (
     <div>
       <PageHeader title={t(title, lang)} description={t("mq_subtitle", lang)} />
 
       {byDate && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {SCHEDULE_TABS.map((tab) => (
+            <Link
+              key={tab.key}
+              href={`/admin/machinery-rental/schedule?view=${tab.key}`}
+              className={
+                tab.key === view
+                  ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                  : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+              }
+            >
+              {t(tab.label, lang)}
+            </Link>
+          ))}
+          {/* Naqsha alag safha hai -- yahan dobara nahi banaya. */}
+          <Link
+            href="/admin/machinery-rental/farm-map"
+            className="rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+          >
+            {t("ms_view_map", lang)}
+          </Link>
+        </div>
+      )}
+
+      {byDate && view === "calendar" && (
+        <Card className="mb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              {today.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            </h2>
+            {overdue.length > 0 && (
+              <Badge tone="red">
+                {overdue.length} {t("mq_week_overdue", lang)}
+              </Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {Array.from({ length: leading }, (_, i) => (
+              <div key={`pad-${i}`} />
+            ))}
+            {monthDays.map((d) => (
+              <div
+                key={d.key}
+                className={`rounded-lg border p-1.5 text-left ${
+                  d.isToday
+                    ? "border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-950/30"
+                    : d.count > 0
+                      ? "border-brand-200 bg-brand-50/50 dark:border-brand-900/40 dark:bg-brand-950/10"
+                      : "border-surface-200 dark:border-surface-700"
+                }`}
+              >
+                <p className="text-xs font-medium text-surface-700 dark:text-surface-300">{d.day}</p>
+                {d.count > 0 ? (
+                  <>
+                    <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">{d.count}</p>
+                    <p className="text-[10px] text-surface-500">{d.acres} acre</p>
+                  </>
+                ) : (
+                  <p className="text-[10px] text-surface-300 dark:text-surface-600">-</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {byDate && view !== "calendar" && (
         <Card className="mb-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
@@ -169,7 +301,7 @@ export async function MachineryQueue({
 
       {rows.length === 0 ? (
         <Card>
-          <p className="py-6 text-center text-sm text-surface-500">{t("mq_empty", lang)}</p>
+          <p className="py-6 text-center text-sm text-surface-500">{byDate ? t("ms_empty", lang) : t("mq_empty", lang)}</p>
         </Card>
       ) : (
         <div className="space-y-4">

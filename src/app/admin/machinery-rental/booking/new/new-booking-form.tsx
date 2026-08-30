@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { t } from "@/lib/i18n/translations";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/f
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import { MapPin, Loader2, UserPlus, X } from "lucide-react";
+import { addCrop } from "@/actions/crops";
 
 const initialState: ActionState = {};
 
@@ -23,6 +24,7 @@ interface Farmer {
   full_name: string;
   farmer_code: string;
   phone_number: string;
+  cnic: string;
   district: string;
   village: string;
   previous_bookings: number;
@@ -76,6 +78,7 @@ interface DraftPayload {
 export function NewBookingForm({
   farmers,
   accounts,
+  crops,
   staffName,
   defaultFarmerId,
   defaultRequestId,
@@ -85,6 +88,8 @@ export function NewBookingForm({
 }: {
   farmers: Farmer[];
   accounts: Account[];
+  /** Fasl ki fehrist database se (174). */
+  crops: { key: string; label: string }[];
   staffName?: string | null;
   defaultFarmerId?: string;
   defaultRequestId?: string;
@@ -142,6 +147,9 @@ export function NewBookingForm({
         full_name: res.farmerName ?? quickName,
         farmer_code: res.farmerCode ?? "",
         phone_number: quickPhone,
+        // Naye kisan ka CNIC yahan nahi liya jata -- wo Farmers ke safhe
+        // par bharta hai. Khali chhoRna sach hai; jhoota adad daalna nahi.
+        cnic: "",
         district: quickDistrict,
         village: "",
         previous_bookings: 0,
@@ -332,9 +340,9 @@ export function NewBookingForm({
     (el as HTMLElement | null)?.focus?.();
   }
 
-  // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam ya phone,
-  // teenon se. Staff ko yaad sirf ek cheez hoti hai, aur wo har baar
-  // wahi nahi hoti.
+  // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam, phone ya
+  // CNIC, chaaron se. Staff ko yaad sirf ek cheez hoti hai, aur wo har
+  // baar wahi nahi hoti. Khet par aksar sirf shanakhti card hota hai.
   function lookup(value: string) {
     setCode(value);
     const needle = value.trim().toLowerCase();
@@ -342,10 +350,14 @@ export function NewBookingForm({
       setFarmerId("");
       return;
     }
+    // CNIC dono tarah likha jata hai -- dashon ke sath aur baghair. Adad
+    // hi asal cheez hai, is liye dono taraf se dash hata kar milate hain.
+    const digits = needle.replace(/\D/g, "");
     const found = allFarmers.find(
       (f) =>
         f.farmer_code.toLowerCase() === needle ||
-        f.phone_number.replace(/\D/g, "") === needle.replace(/\D/g, "") ||
+        f.phone_number.replace(/\D/g, "") === digits ||
+        (digits.length >= 13 && (f.cnic ?? "").replace(/\D/g, "") === digits) ||
         f.full_name.toLowerCase().includes(needle)
     );
     setFarmerId(found?.id ?? "");
@@ -562,12 +574,7 @@ export function NewBookingForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>{t("mc_crop", lang)}</Label>
-            <Select name="crop_type" defaultValue="wheat">
-              <option value="wheat">{t("mc_crop_wheat", lang)}</option>
-              <option value="rice">{t("mc_crop_rice", lang)}</option>
-              <option value="maize">{t("mc_crop_maize", lang)}</option>
-              <option value="other">{t("mc_other", lang)}</option>
-            </Select>
+            <CropPicker crops={crops} lang={lang} />
           </div>
           <div>
             <Label>{t("mc_when_needed", lang)}</Label>
@@ -797,6 +804,95 @@ function YesNo({
         ))}
       </div>
       {hint && <p className="mt-1 text-xs text-surface-500">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Fasl chunne ka khana -- fehrist database se (174).
+ *
+ * "+ Nayi fasal" yahin par hai. Pehle staff ko fasal ka naam "other"
+ * mein daalna paRta tha, aur report mein wo sab ek dher ban jate the.
+ *
+ * Ye nested form nahi hai: booking ka form pehle se khula hua hai, aur
+ * form ke andar form HTML mein chalta hi nahi. Is liye action seedha
+ * bulaya jata hai.
+ */
+function CropPicker({ crops, lang }: { crops: { key: string; label: string }[]; lang: Lang }) {
+  const [list, setList] = useState(crops);
+  const [value, setValue] = useState(crops[0]?.key ?? "other");
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function save() {
+    const label = name.trim();
+    if (!label) return;
+    const fd = new FormData();
+    fd.set("label", label);
+    startTransition(async () => {
+      const res = await addCrop({}, fd);
+      if (res.error) {
+        setMsg(res.error);
+        return;
+      }
+      if (res.key && res.label) {
+        // Pehle se maujood ho to dobara na chipke -- wohi chun li jati hai.
+        setList((prev) => (prev.some((c) => c.key === res.key) ? prev : [...prev, { key: res.key!, label: res.label! }]));
+        setValue(res.key);
+      }
+      setName("");
+      setAdding(false);
+      setMsg(null);
+    });
+  }
+
+  return (
+    <div>
+      <Select name="crop_type" value={value} onChange={(e) => setValue(e.target.value)}>
+        {list.map((c) => (
+          <option key={c.key} value={c.key}>
+            {c.label}
+          </option>
+        ))}
+        <option value="other">{t("mc_other", lang)}</option>
+      </Select>
+
+      {adding ? (
+        <div className="mt-1.5 flex gap-1.5">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("mcrop_new_name", lang)}
+            className="text-sm"
+          />
+          <Button type="button" onClick={save} disabled={pending || !name.trim()} className="shrink-0">
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("mcrop_save", lang)}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setAdding(false);
+              setName("");
+              setMsg(null);
+            }}
+            className="shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="mt-1 text-xs font-medium text-brand-600 hover:underline"
+        >
+          {t("mcrop_add_new", lang)}
+        </button>
+      )}
+      {msg && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{msg}</p>}
     </div>
   );
 }

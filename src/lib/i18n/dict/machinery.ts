@@ -1195,4 +1195,73 @@ export const machineryDict = {
     rm: "Registration / chassis number (marzi se)",
     ur: "\u0631\u062c\u0633\u0679\u0631\u06cc\u0634\u0646 \u0646\u0645\u0628\u0631 (\u0645\u0631\u0636\u06cc \u0633\u06d2)",
   },
+  // ---- Command Dashboard (spec A) ----
+  md_kpi_bookings: { en: "Total bookings", rm: "Kul bookings", ur: "\u06a9\u0644 \u0628\u06a9\u0646\u06af" },
+  md_kpi_booked_acres: { en: "Booked acres", rm: "Booked acre", ur: "\u0628\u06a9 \u0634\u062f\u06c1 \u0627\u06cc\u06a9\u0691" },
+  md_kpi_done_acres: { en: "Completed acres", rm: "Mukammal acre", ur: "\u0645\u06a9\u0645\u0644 \u0627\u06cc\u06a9\u0691" },
+  md_kpi_running_acres: { en: "In-progress acres", rm: "Chal rahe acre", ur: "\u0686\u0644 \u0631\u06c1\u06d2 \u0627\u06cc\u06a9\u0691" },
+  md_kpi_pending_acres: { en: "Pending acres", rm: "Baqi acre", ur: "\u0628\u0627\u0642\u06cc \u0627\u06cc\u06a9\u0691" },
+  md_kpi_next7_acres: { en: "Next 7 days acres", rm: "Agle 7 din ke acre", ur: "\u0627\u06af\u0644\u06d2 \u06f7 \u062f\u0646 \u06a9\u06d2 \u0627\u06cc\u06a9\u0691" },
+  md_kpi_machines_active: { en: "Machines on work", rm: "Kaam par machinein", ur: "\u06a9\u0627\u0645 \u067e\u0631 \u0645\u0634\u06cc\u0646\u06cc\u06ba" },
+  md_kpi_machines_free: { en: "Free machines", rm: "Khali machinein", ur: "\u062e\u0627\u0644\u06cc \u0645\u0634\u06cc\u0646\u06cc\u06ba" },
+  md_kpi_rate_pending: { en: "Rate not confirmed", rm: "Rate tay nahi hua", ur: "\u0631\u06cc\u0679 \u0637\u06d2 \u0646\u06c1\u06cc\u06ba \u06c1\u0648\u0627" },
+  md_kpi_claims_pending: { en: "Waiting for verification", rm: "Tasdeeq ka intezar", ur: "\u062a\u0635\u062f\u06cc\u0642 \u06a9\u0627 \u0627\u0646\u062a\u0638\u0627\u0631" },
+  md_kpi_farmer_due: { en: "Farmers owe us", rm: "Kisan se lena", ur: "\u06a9\u0633\u0627\u0646 \u0633\u06d2 \u0644\u06cc\u0646\u0627" },
+  md_kpi_farmer_refund: { en: "To refund farmers", rm: "Kisan ko wapas karna", ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0648 \u0648\u0627\u067e\u0633 \u06a9\u0631\u0646\u0627" },
+  md_kpi_vendor_due: { en: "We owe vendors", rm: "Vendor ko dena", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0646\u0627" },
+  md_kpi_diesel_litres: { en: "Diesel litres", rm: "Diesel litre", ur: "\u0688\u06cc\u0632\u0644 \u0644\u0679\u0631" },
+  md_kpi_diesel_cost: { en: "Diesel cost", rm: "Diesel ka kharcha", ur: "\u0688\u06cc\u0632\u0644 \u06a9\u0627 \u062e\u0631\u0686\u06c1" },
+  md_kpi_income: { en: "Our income", rm: "Hamari aamdani", ur: "\u06c1\u0645\u0627\u0631\u06cc \u0622\u0645\u062f\u0646\u06cc" },
+  md_kpi_profit: { en: "Machinery profit", rm: "Machinery ka munafa", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u06a9\u0627 \u0645\u0646\u0627\u0641\u0639" },
+  md_today: { en: "Today's operations", rm: "Aaj ka kaam", ur: "\u0622\u062c \u06a9\u0627 \u06a9\u0627\u0645" },
+  md_today_none: { en: "Nothing scheduled for today", rm: "Aaj ke liye kuch nahi", ur: "\u0622\u062c \u06a9\u06d2 \u0644\u06cc\u06d2 \u06a9\u0686\u06be \u0646\u06c1\u06cc\u06ba" },
+  md_attention: { en: "Attention required", rm: "Tawajjo chahiye", ur: "\u062a\u0648\u062c\u06c1 \u0686\u0627\u06c1\u06cc\u06d2" },
+  md_attention_none: { en: "Nothing pending -- everything is clear", rm: "Kuch baqi nahi -- sab saaf hai", ur: "\u06a9\u0686\u06be \u0628\u0627\u0642\u06cc \u0646\u06c1\u06cc\u06ba" },
+  md_att_date_passed: { en: "Harvest date passed, work not done", rm: "Kattai ki tareekh guzar gayi, kaam nahi hua", ur: "\u06a9\u0679\u0627\u0626\u06cc \u06a9\u06cc \u062a\u0627\u0631\u06cc\u062e \u06af\u0632\u0631 \u06af\u0626\u06cc" },
+  md_att_promise_today: { en: "Payment promised today or earlier", rm: "Payment ka wada aaj ya pehle ka", ur: "\u067e\u06cc\u0645\u0646\u0679 \u06a9\u0627 \u0648\u0639\u062f\u06c1 \u0622\u062c \u06cc\u0627 \u067e\u06c1\u0644\u06d2 \u06a9\u0627" },
+  md_att_refund: { en: "Farmer paid extra -- refund due", rm: "Kisan ne zyada diya -- wapas karna hai", ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0632\u06cc\u0627\u062f\u06c1 \u062f\u06cc\u0627" },
+  md_att_rate: { en: "Rate still not confirmed", rm: "Rate abhi tak tay nahi", ur: "\u0631\u06cc\u0679 \u0627\u0628\u06be\u06cc \u062a\u06a9 \u0637\u06d2 \u0646\u06c1\u06cc\u06ba" },
+  md_next_work: { en: "Next step", rm: "Agla kaam", ur: "\u0627\u06af\u0644\u0627 \u06a9\u0627\u0645" },
+  md_open_page: { en: "Open", rm: "Kholein", ur: "\u06a9\u06be\u0648\u0644\u06cc\u06ba" },
+  md_acres_short: { en: "acre", rm: "acre", ur: "\u0627\u06cc\u06a9\u0691" },
+
+  // ---- Schedule ke nazariye (spec L) ----
+  ms_view_today: { en: "Today", rm: "Aaj", ur: "\u0622\u062c" },
+  ms_view_tomorrow: { en: "Tomorrow", rm: "Kal", ur: "\u06a9\u0644" },
+  ms_view_week: { en: "Next 7 days", rm: "Agle 7 din", ur: "\u0627\u06af\u0644\u06d2 \u06f7 \u062f\u0646" },
+  ms_view_calendar: { en: "Calendar", rm: "Calendar", ur: "\u06a9\u06cc\u0644\u0646\u0688\u0631" },
+  ms_view_map: { en: "Map", rm: "Naqsha", ur: "\u0646\u0642\u0634\u06c1" },
+  ms_view_all: { en: "All", rm: "Sab", ur: "\u0633\u0628" },
+  ms_empty: { en: "Nothing in this window", rm: "Is arse mein kuch nahi", ur: "\u0627\u0633 \u0639\u0631\u0635\u06d2 \u0645\u06cc\u06ba \u06a9\u0686\u06be \u0646\u06c1\u06cc\u06ba" },
+
+  // ---- Fasl ka master (spec E) ----
+  mcrop_add_new: { en: "+ Add new crop", rm: "+ Nayi fasal daalein", ur: "+ \u0646\u0626\u06cc \u0641\u0635\u0644" },
+  mcrop_new_name: { en: "New crop name", rm: "Nayi fasal ka naam", ur: "\u0646\u0626\u06cc \u0641\u0635\u0644 \u06a9\u0627 \u0646\u0627\u0645" },
+  mcrop_save: { en: "Save", rm: "Mehfooz karein", ur: "\u0645\u062d\u0641\u0648\u0638 \u06a9\u0631\u06cc\u06ba" },
+  mcrop_saved: { en: "Crop added", rm: "Fasal daal di gayi", ur: "\u0641\u0635\u0644 \u0688\u0627\u0644 \u062f\u06cc \u06af\u0626\u06cc" },
+  mcrop_exists: { en: "This crop is already in the list", rm: "Ye fasal pehle se fehrist mein hai", ur: "\u06cc\u06c1 \u0641\u0635\u0644 \u067e\u06c1\u0644\u06d2 \u0633\u06d2 \u06c1\u06d2" },
+
+  // ---- Grain leads (spec G) ----
+  mgl_title: { en: "Grain leads from machinery", rm: "Machinery se grain ki leads", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0633\u06d2 \u06af\u0631\u06cc\u0646 \u0644\u06cc\u0688\u0632" },
+  mgl_subtitle: {
+    en: "Farmers who said they will sell the crop to us. This is interest, not a deal.",
+    rm: "Jin kisanon ne kaha fasal hamein bechenge. Ye dilchaspi hai, sauda nahi.",
+    ur: "\u062c\u0646\u06c1\u0648\u06ba \u0646\u06d2 \u06a9\u06c1\u0627 \u0641\u0635\u0644 \u06c1\u0645\u06cc\u06ba \u0628\u06cc\u0686\u06cc\u06ba \u06af\u06d2",
+  },
+  mgl_not_a_deal: {
+    en: "Nothing here is a purchase. Talk to the farmer and record the real deal in Grain.",
+    rm: "Yahan koi khareed nahi hui. Kisan se baat kar ke asal sauda Grain mein likhein.",
+    ur: "\u06cc\u06c1\u0627\u06ba \u06a9\u0648\u0626\u06cc \u062e\u0631\u06cc\u062f \u0646\u06c1\u06cc\u06ba \u06c1\u0648\u0626\u06cc",
+  },
+  mgl_harvest_done: { en: "Harvest done", rm: "Kattai mukammal", ur: "\u06a9\u0679\u0627\u0626\u06cc \u0645\u06a9\u0645\u0644" },
+  mgl_harvest_running: { en: "Harvest running", rm: "Kattai jari", ur: "\u06a9\u0679\u0627\u0626\u06cc \u062c\u0627\u0631\u06cc" },
+  mgl_empty: { en: "No leads yet", rm: "Abhi koi lead nahi", ur: "\u0627\u0628\u06be\u06cc \u06a9\u0648\u0626\u06cc \u0644\u06cc\u0688 \u0646\u06c1\u06cc\u06ba" },
+  mgl_call: { en: "Call", rm: "Call karein", ur: "\u06a9\u0627\u0644 \u06a9\u0631\u06cc\u06ba" },
+
+  // ---- CNIC se talash (spec B) ----
+  mc_search_hint_cnic: {
+    en: "Search by name, code, mobile or CNIC",
+    rm: "Naam, code, mobile ya CNIC se dhoondein",
+    ur: "\u0646\u0627\u0645\u060c \u06a9\u0648\u0688\u060c \u0645\u0648\u0628\u0627\u0626\u0644 \u06cc\u0627 \u0634\u0646\u0627\u062e\u062a\u06cc \u06a9\u0627\u0631\u0688",
+  },
 } as const;

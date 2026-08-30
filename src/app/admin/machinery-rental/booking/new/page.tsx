@@ -20,13 +20,21 @@ export default async function NewMachineryBookingPage({
     await Promise.all([
       supabase
         .from("farmers")
-        .select("id, full_name, farmer_code, phone_number, district, village")
+        .select("id, full_name, farmer_code, phone_number, cnic, district, village")
         .eq("is_deleted", false)
         .order("full_name"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
       supabase.from("machinery_bills").select("booking_id, balance_payable"),
       supabase.from("machinery_payments").select("booking_id, amount, kind"),
     ]);
+
+  // Fasl ki fehrist ab database se (174) -- code mein teen jagah likhi
+  // hui fehrist ek jagah badal kar baqi do jagah purani reh jati thi.
+  const { data: crops } = await supabase
+    .from("crops")
+    .select("key, label, label_en, label_ur")
+    .eq("is_active", true)
+    .order("sort_order");
 
   // Kisan ka pichla machinery hisaab. Ye jaan boojh kar "machinery ka
   // baqi" hai, kisan ka poora khata nahi -- yahan staff ko wohi cheez
@@ -87,12 +95,17 @@ export default async function NewMachineryBookingPage({
           full_name: f.full_name ?? "",
           farmer_code: f.farmer_code ?? "",
           phone_number: f.phone_number ?? "",
+          cnic: f.cnic ?? "",
           district: f.district ?? "",
           village: f.village ?? "",
           previous_bookings: history.get(f.id)?.bookings ?? 0,
           outstanding: history.get(f.id)?.outstanding ?? 0,
         }))}
         accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
+        crops={(crops ?? []).map((c) => ({
+          key: c.key,
+          label: lang === "en" ? c.label_en || c.label : lang === "ur" ? c.label_ur || c.label : c.label,
+        }))}
         staffName={me?.full_name ?? null}
         defaultFarmerId={params.convert_farmer}
         defaultRequestId={params.convert_request}

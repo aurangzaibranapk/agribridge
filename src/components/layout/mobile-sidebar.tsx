@@ -95,21 +95,30 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                     </button>
                     {isOpen && (
                       <div className="space-y-0.5 pb-1">
-                        {group.items.map((item) => {
+                        {group.items.map((item, index) => {
                           const active = isActive(item.href);
                           const Icon = iconByName(item.icon);
+                          // Sarkhi wahin chhapti hai jahan wo badalti hai (174).
+                          const prevSection = index > 0 ? (group.items[index - 1].section ?? null) : null;
+                          const section = item.section ?? null;
                           return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className={cn(
-                                "flex items-center gap-2.5 rounded-lg px-3 py-2.5 pl-6 text-sm font-medium transition-colors",
-                                active ? "bg-brand-600 text-white" : "text-surface-300 hover:bg-white/5 hover:text-white"
+                            <div key={item.href}>
+                              {!!section && section !== prevSection && (
+                                <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                                  {section}
+                                </p>
                               )}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {item.label}
-                            </Link>
+                              <Link
+                                href={item.href}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 pl-6 text-sm font-medium transition-colors",
+                                  active ? "bg-brand-600 text-white" : "text-surface-300 hover:bg-white/5 hover:text-white"
+                                )}
+                              >
+                                <Icon className="h-4 w-4" />
+                                {item.label}
+                              </Link>
+                            </div>
                           );
                         })}
                       </div>

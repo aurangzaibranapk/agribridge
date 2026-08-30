@@ -41,6 +41,14 @@ export interface Registry {
   dashboardsOf: Map<string, string[]>;
   /** route → feature key (rok lagane ke liye ulta raasta). */
   byRoute: Map<string, string>;
+  /**
+   * Group ke andar chhoti sarkhi -- key `dashboard::feature` (174).
+   *
+   * Machinery ke atharah safhe ek hi lambi fehrist mein dhoondhe nahi
+   * jate the. Sarkhi database mein rehti hai, code mein nahi: nayi
+   * tarteeb ke liye deploy ka chakkar nahi chalta.
+   */
+  sectionByLink: Map<string, { section: string | null; order: number }>;
 }
 
 /**
@@ -73,7 +81,7 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
   const [{ data: dashboards }, { data: features }, { data: links }] = await Promise.all([
     service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, description, description_en, description_ur, sort_order").eq("is_active", true).order("sort_order"),
     service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive").eq("is_active", true).order("label"),
-    service.from("dashboard_features").select("dashboard_key, feature_key, sort_order").order("sort_order"),
+    service.from("dashboard_features").select("dashboard_key, feature_key, sort_order, section, section_order").order("sort_order"),
   ]);
 
   const featureMap = new Map<string, FeatureRow>();
@@ -91,11 +99,16 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
 
   const byDashboard = new Map<string, string[]>();
   const dashboardsOf = new Map<string, string[]>();
+  const sectionByLink = new Map<string, { section: string | null; order: number }>();
   for (const link of links ?? []) {
     // Band ya mita hua feature raasta na rok de.
     if (!featureMap.has(link.feature_key)) continue;
     byDashboard.set(link.dashboard_key, [...(byDashboard.get(link.dashboard_key) ?? []), link.feature_key]);
     dashboardsOf.set(link.feature_key, [...(dashboardsOf.get(link.feature_key) ?? []), link.dashboard_key]);
+    sectionByLink.set(`${link.dashboard_key}::${link.feature_key}`, {
+      section: (link as { section?: string | null }).section ?? null,
+      order: Number((link as { section_order?: number | null }).section_order ?? 0),
+    });
   }
 
   return {
@@ -111,6 +124,7 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
     byDashboard,
     dashboardsOf,
     byRoute,
+    sectionByLink,
   };
 }
 

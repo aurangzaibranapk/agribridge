@@ -17,7 +17,7 @@ export type { NavItem } from "@/components/layout/nav-items";
 export interface SidebarGroup {
   key: string;
   label: string;
-  items: { href: string; label: string; icon: string | null }[];
+  items: { href: string; label: string; icon: string | null; section?: string | null }[];
 }
 
 export function Sidebar({
@@ -97,12 +97,23 @@ export function Sidebar({
               </button>
               {isOpen && (
                 <div className="space-y-0.5 pb-1">
-                  {group.items.map((item) => {
+                  {group.items.map((item, index) => {
                     const active = isActive(item.href);
+                    // Sarkhi sirf wahan chhapti hai jahan wo badalti hai --
+                    // har item par dohrana fehrist ko lamba karta hai, saaf
+                    // nahi.
+                    const prevSection = index > 0 ? (group.items[index - 1].section ?? null) : null;
+                    const section = item.section ?? null;
+                    const showSection = !!section && section !== prevSection;
                     const Icon = iconByName(item.icon);
                     return (
+                      <div key={item.href}>
+                        {showSection && (
+                          <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                            {section}
+                          </p>
+                        )}
                       <Link
-                        key={item.href}
                         href={item.href}
                         className={cn(
                           "group flex items-center justify-between rounded-lg px-3 py-2 pl-6 text-sm font-medium transition-colors",
@@ -115,6 +126,7 @@ export function Sidebar({
                         </span>
                         {active && <ChevronRight className="h-3.5 w-3.5 text-white/70" />}
                       </Link>
+                      </div>
                     );
                   })}
                 </div>
