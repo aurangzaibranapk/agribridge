@@ -63,6 +63,17 @@ export default async function NewMachineryBookingPage({
     ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
     : { data: null };
 
+  // Adhoora kaghaz (163). Ye khud nahi bhara jata -- form pehle
+  // poochhta hai. Naya banane aaye bande par purani booking chup chaap
+  // bhar dena us se ghalat booking banwa deta hai.
+  //
+  // Kisan ki farmaish se aayi hui booking par draft nahi poochha
+  // jata: wo booking pehle se apna kisan aur raqba le kar aati hai,
+  // aur us par purana kaghaz rakhna sirf ghalat fehmi hai.
+  const { data: draftRow } = user && !params.convert_request
+    ? await supabase.from("machinery_booking_drafts").select("payload").eq("user_id", user.id).maybeSingle()
+    : { data: null };
+
   return (
     <div>
       <BackButton fallback="/admin/machinery-rental" label={t("mc_back", lang)} />
@@ -87,6 +98,7 @@ export default async function NewMachineryBookingPage({
         defaultRequestId={params.convert_request}
         defaultAcres={params.convert_acres}
         defaultLocation={params.convert_location ? decodeURIComponent(params.convert_location) : undefined}
+        draft={(draftRow?.payload as never) ?? null}
       />
     </div>
   );

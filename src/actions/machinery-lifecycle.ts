@@ -336,6 +336,13 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
     await supabase.from("machinery_requests").update({ status: "fulfilled" }).eq("id", requestId);
   }
 
+  // Booking ban gayi -- ab adhoora kaghaz rakhne ki koi wajah nahi.
+  // Wo para reh jaye to agli dafa form purane kisan ke naam se khulta
+  // hai, aur wohi ek booking do dafa banwa deta hai.
+  if (actorId) {
+    await supabase.from("machinery_booking_drafts").delete().eq("user_id", actorId);
+  }
+
   await logEvent({
     bookingId: booking.id,
     eventType: "booking_created",
@@ -1952,6 +1959,39 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
  * kyunke kisan ko phone karne wale ko ye maloom hona chahiye ke
  * tareekh khud se nahi khisak gayi.
  */
+/**
+ * Adhoori booking mehfooz rakhna.
+ *
+ * Ye booking nahi banata. Booking tab banti hai jab banda "banayein"
+ * kehta hai -- ye sirf wo adhoora kaghaz hai jo mez par para reh gaya,
+ * taake phone band ho jane par sab kuch dobara na likhna pare.
+ *
+ * Khamoshi se chalta hai: nakaam ho to bande ko kuch nahi kehta.
+ * Draft ki nakami par surkh paighaam dikhana us kaam mein rukawat
+ * daalta hai jo banda kar raha hai, jab ke wo kaam theek chal raha
+ * hota hai. Wo booking bana kar bhej sakta hai chahe draft na bacha ho.
+ */
+export async function saveBookingDraft(payload: unknown): Promise<void> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  if (!actorId) return;
+
+  await supabase
+    .from("machinery_booking_drafts")
+    .upsert(
+      { user_id: actorId, payload: payload as never, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+}
+
+/** Adhoora kaghaz phaar dena -- banda naya shuru karna chahta hai. */
+export async function discardBookingDraft(): Promise<void> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  if (!actorId) return;
+  await supabase.from("machinery_booking_drafts").delete().eq("user_id", actorId);
+}
+
 export async function rescheduleBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);

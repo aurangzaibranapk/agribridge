@@ -767,4 +767,24 @@ export const machineryDict = {
     rm: "Driver ka phone (marzi se)",
     ur: "\u0688\u0631\u0627\u0626\u06cc\u0648\u0631 \u06a9\u0627 \u0641\u0648\u0646 (\u0645\u0631\u0636\u06cc \u0633\u06d2)",
   },
+  mc_draft_found: {
+    en: "An unfinished booking was found. Carry on from where you stopped?",
+    rm: "Ek adhoori booking mili. Wahin se aage chalein?",
+    ur: "\u0627\u06cc\u06a9 \u0627\u062f\u06be\u0648\u0631\u06cc \u0628\u06a9\u0646\u06af \u0645\u0644\u06cc\u06d4 \u0648\u06c1\u06cc\u06ba \u0633\u06d2 \u0622\u06af\u06d2 \u0686\u0644\u06cc\u06ba\u061f",
+  },
+  mc_draft_resume: {
+    en: "Carry on from there",
+    rm: "Wahin se aage chalein",
+    ur: "\u0648\u06c1\u06cc\u06ba \u0633\u06d2 \u0622\u06af\u06d2 \u0686\u0644\u06cc\u06ba",
+  },
+  mc_draft_discard: {
+    en: "Start fresh",
+    rm: "Naya shuru karein",
+    ur: "\u0646\u06cc\u0627 \u0634\u0631\u0648\u0639 \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_draft_saved: {
+    en: "Saved \u2014 if the phone shuts down, nothing here is lost.",
+    rm: "Mehfooz hai \u2014 phone band ho jaye to bhi kuch nahi jayega.",
+    ur: "\u0645\u062d\u0641\u0648\u0638 \u06c1\u06d2 \u2014 \u0641\u0648\u0646 \u0628\u0646\u062f \u06c1\u0648 \u062c\u0627\u0626\u06d2 \u062a\u0648 \u0628\u06be\u06cc \u06a9\u0686\u06be \u0646\u06c1\u06cc\u06ba \u062c\u0627\u0626\u06d2 \u06af\u0627\u06d4",
+  },
 } as const;

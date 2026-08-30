@@ -1,10 +1,16 @@
 "use client";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { createBooking, quickRegisterFarmer, type ActionState } from "@/actions/machinery-lifecycle";
+import {
+  createBooking,
+  quickRegisterFarmer,
+  saveBookingDraft,
+  discardBookingDraft,
+  type ActionState,
+} from "@/actions/machinery-lifecycle";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
@@ -29,6 +35,31 @@ interface Account {
 }
 
 /**
+ * Adhoore kaghaz ki shakl.
+ *
+ * Do hisse jaan boojh kar alag hain: `fields` wo khane hain jo form
+ * khud sambhalta hai (unhein wapas likh dena kaafi hai), aur `ui` wo
+ * jawab hain jo React ki yaad mein rehte hain -- unhein wapas rakhna
+ * parta hai warna khana bhara hua dikhta hai magar system ke liye
+ * khali hota hai.
+ */
+interface DraftPayload {
+  fields?: Record<string, string>;
+  ui?: {
+    code?: string;
+    farmerId?: string;
+    advance?: boolean;
+    advanceMethod?: string;
+    advanceEvidence?: string;
+    fieldReady?: string;
+    harvestReady?: string;
+    willSell?: string;
+    coords?: { lat: number; lng: number } | null;
+  };
+  savedAt?: string;
+}
+
+/**
  * Staff ka booking form.
  *
  * Sections mein is liye hai ke ye form khet par, mobile par bhara jata
@@ -50,6 +81,7 @@ export function NewBookingForm({
   defaultRequestId,
   defaultAcres,
   defaultLocation,
+  draft,
 }: {
   farmers: Farmer[];
   accounts: Account[];
@@ -58,6 +90,7 @@ export function NewBookingForm({
   defaultRequestId?: string;
   defaultAcres?: string;
   defaultLocation?: string;
+  draft?: DraftPayload | null;
 }) {
   const lang = useLang();
   const router = useRouter();
@@ -126,6 +159,128 @@ export function NewBookingForm({
 
   const formRef = useRef<HTMLFormElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // --- Adhoora kaghaz ---
+  //
+  // Ye form khet par, mobile par bhara jata hai. Battery khatam ho
+  // jaye ya koi phone aa jaye aur browser band ho jaye -- pehle sab
+  // kuch chala jata tha.
+  //
+  // Wo sirf waqt ka nuqsan nahi tha. Jise dobara bharna pare wo aksar
+  // dobara bharta hi nahi: wo kaghaz par likh leta hai aur "baad mein
+  // daal doonga" kehta hai, aur wo baad kabhi nahi aata. Jo booking
+  // system mein nahi aayi, us ka bill bhi kabhi nahi banta.
+  const [draftOffer, setDraftOffer] = useState<DraftPayload | null>(draft ?? null);
+  const [restore, setRestore] = useState<Record<string, string> | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+
+  /** Is waqt form mein jo kuch hai, wo. */
+  function snapshot(): DraftPayload | null {
+    const form = formRef.current;
+    if (!form) return null;
+    const fields: Record<string, string> = {};
+    new FormData(form).forEach((v, k) => {
+      if (typeof v === "string") fields[k] = v;
+    });
+    return {
+      fields,
+      ui: { code, farmerId, advance, advanceMethod, advanceEvidence, fieldReady, harvestReady, willSell, coords },
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Likhte hi nahi -- rukte hi.
+   *
+   * Har harf par server ko bhejna phone ka data aur battery dono kha
+   * jata hai, aur khet ka signal waise bhi kamzor hota hai. Do second
+   * ki khamoshi ka intezar kaafi hai: jo cheez do second se nahi
+   * badli, wo shayad likhi ja chuki hai.
+   */
+  useEffect(() => {
+    if (state.success || draftOffer) return;
+    const form = formRef.current;
+    if (!form) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const bump = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const snap = snapshot();
+        if (!snap) return;
+        // Bilkul khali form mehfooz karne ki koi wajah nahi -- warna
+        // safha kholte hi ek khali draft ban jata hai aur agli dafa
+        // "adhoori booking mili" ka jhoota paigham aata hai.
+        const kuchHai =
+          Boolean(snap.ui?.farmerId) ||
+          Object.entries(snap.fields ?? {}).some(
+            ([k, v]) => v.trim() !== "" && k !== "request_id" && k !== "advance_received" && k !== "crop_type"
+          );
+        if (!kuchHai) return;
+        void saveBookingDraft(snap);
+        setDraftSavedAt(snap.savedAt ?? null);
+      }, 2000);
+    };
+
+    form.addEventListener("input", bump);
+    form.addEventListener("change", bump);
+    return () => {
+      if (timer) clearTimeout(timer);
+      form.removeEventListener("input", bump);
+      form.removeEventListener("change", bump);
+    };
+  }, [state.success, draftOffer, code, farmerId, advance, advanceMethod, advanceEvidence, fieldReady, harvestReady, willSell, coords]);
+
+  /**
+   * Wapas likhna.
+   *
+   * UI wale jawab pehle rakhe ja chuke hote hain (React ne dobara
+   * banaya hota hai), aur phir wo khane bhare jate hain jo form khud
+   * sambhalta hai. Tarteeb ulti ho to React apni dobara banayi hui
+   * shakl in ki likhi hui qeemat mita deta hai.
+   */
+  useEffect(() => {
+    if (!restore) return;
+    const form = formRef.current;
+    if (!form) return;
+    for (const [name, value] of Object.entries(restore)) {
+      const el = form.elements.namedItem(name);
+      if (!el) continue;
+      const target = el instanceof RadioNodeList ? el.item(0) : el;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+      ) {
+        if (target instanceof HTMLInputElement && (target.type === "radio" || target.type === "checkbox")) continue;
+        if (target.type === "hidden") continue;
+        target.value = value;
+      }
+    }
+    setRestore(null);
+  }, [restore]);
+
+  function resumeDraft() {
+    const d = draftOffer;
+    if (!d) return;
+    const u = d.ui ?? {};
+    setCode(u.code ?? "");
+    setFarmerId(u.farmerId ?? "");
+    setAdvance(Boolean(u.advance));
+    setAdvanceMethod(u.advanceMethod ?? "cash");
+    setAdvanceEvidence(u.advanceEvidence ?? "");
+    setFieldReady(u.fieldReady ?? "");
+    setHarvestReady(u.harvestReady ?? "");
+    setWillSell(u.willSell ?? "");
+    setCoords(u.coords ?? null);
+    setDraftOffer(null);
+    setRestore(d.fields ?? {});
+  }
+
+  function dropDraft() {
+    setDraftOffer(null);
+    void discardBookingDraft();
+  }
 
   /**
    * Bharne se pehle jaanch -- yahin, safha bheje baghair.
@@ -242,6 +397,39 @@ export function NewBookingForm({
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
           {state.error}
         </p>
+      )}
+
+      {/* Adhoora kaghaz mila -- magar khud nahi khulta.
+          Chup chaap bhar dena us bande ko dhoka de sakta hai jo waqai
+          nayi booking banane aaya hai: wo purane kisan ke naam par
+          nayi booking bana dega. Is liye pehle poochha jata hai. */}
+      {draftOffer && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+            {t("mc_draft_found", lang)}
+          </p>
+          {draftOffer.savedAt && (
+            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+              {new Date(draftOffer.savedAt).toLocaleString()}
+              {draftOffer.ui?.code ? ` · ${draftOffer.ui.code}` : ""}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" size="sm" onClick={resumeDraft}>
+              {t("mc_draft_resume", lang)}
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={dropDraft}>
+              {t("mc_draft_discard", lang)}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Khamoshi se mehfooz hota rehta hai. Ye line sirf itna kehti
+          hai ke phone band ho jaye to kuch nahi jayega -- taake banda
+          bina fikar ke bharta rahe. */}
+      {!draftOffer && draftSavedAt && (
+        <p className="text-xs text-surface-400">{t("mc_draft_saved", lang)}</p>
       )}
 
       {/* 1 — Kisan */}

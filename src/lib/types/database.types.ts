@@ -8007,6 +8007,24 @@ export type Database = {
         }
         Relationships: []
       }
+      machinery_booking_drafts: {
+        Row: {
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          payload: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       machinery_booking_events: {
         Row: {
           actor_id: string | null
