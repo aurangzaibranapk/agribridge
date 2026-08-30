@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>queue test</title>
+<body><div id="out">ready</div>
+<script type="module">
+  import * as Q from "./queue.bundle.js";
+  window.Q = Q;
+  document.getElementById("out").textContent = "loaded";
+</script>
