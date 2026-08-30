@@ -81,15 +81,17 @@ export default async function VendorPortalPage() {
   const { data: progressRows } = bookingIds.length
     ? await supabase
         .from("machinery_bookings")
-        .select("id, reached_farm_at, work_started_at")
+        .select("id, reached_farm_at, work_started_at, harvest_type")
         .in("id", bookingIds)
     : { data: [] };
 
-  const progressBy = new Map<string, { reached: string | null; started: string | null }>();
+  const progressBy = new Map<string, { reached: string | null; started: string | null; harvestType: string | null }>();
   (progressRows ?? []).forEach((p) =>
     progressBy.set(p.id as string, {
       reached: (p.reached_farm_at as string | null) ?? null,
       started: (p.work_started_at as string | null) ?? null,
+      // Do qism ki booking par vendor bhi batwara likhta hai (176).
+      harvestType: (p.harvest_type as string | null) ?? null,
     })
   );
 
@@ -105,6 +107,7 @@ export default async function VendorPortalPage() {
       farmerName: (r.farmer_name as string | null) ?? "-",
       farmerPhone: (r.farmer_phone as string | null) ?? null,
       reachedAt: (progressBy.get(r.booking_id as string)?.reached ?? null) as string | null,
+      harvestType: (progressBy.get(r.booking_id as string)?.harvestType ?? null) as string | null,
       startedAt: (progressBy.get(r.booking_id as string)?.started ?? null) as string | null,
 
       // Kaam se pehle ki tafseel -- yahi wo cheez hai jis ke liye

@@ -69,11 +69,28 @@ export async function submitVendorWork(
   // yahan se saaf jawab milta hai -- wahan se sirf "policy" ka error.
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number, vendor_id, status")
+    .select("id, booking_number, vendor_id, status, harvest_type")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking || booking.vendor_id !== vendor.id) {
     return { error: "Ye booking aap ki machine ki nahi hai." };
+  }
+
+  // Do qism ki booking par vendor bhi batwara likhta hai (176). Wo dawa
+  // hai, hisaab nahi -- tasdeeq ke baghair ye kahin nahi ginta. Magar
+  // batwara wahin puchhna zaroori hai: baad mein daftar ke bande ko
+  // yaad nahi hoga ke us din kitna sabit tha aur kitna kutra.
+  let sabitArea: number | null = null;
+  let kutraArea: number | null = null;
+  if (booking.harvest_type === "dono") {
+    sabitArea = num(formData, "sabit_area") ?? 0;
+    kutraArea = num(formData, "kutra_area") ?? 0;
+    if (sabitArea < 0 || kutraArea < 0) return { error: "Raqba manfi nahi ho sakta." };
+    if (Math.round((sabitArea + kutraArea) * 10000) !== Math.round(area * 10000)) {
+      return {
+        error: `Sabit (${sabitArea}) aur Kutra (${kutraArea}) ka jor ${sabitArea + kutraArea} banta hai, kul ${area} acre likha hai. Dono barabar hone chahiye.`,
+      };
+    }
   }
 
   const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
@@ -84,6 +101,8 @@ export async function submitVendorWork(
     is_final: formData.get("is_final") === "on",
     actual_area_acres: acres,
     actual_area_kanal: kanal,
+    sabit_area: sabitArea,
+    kutra_area: kutraArea,
     started_at: str(formData, "started_at"),
     finished_at: str(formData, "finished_at"),
     meter_reading: num(formData, "meter_reading"),

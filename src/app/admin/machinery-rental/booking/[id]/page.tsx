@@ -107,6 +107,13 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         estimated_rate: booking.estimated_rate === null ? null : Number(booking.estimated_rate),
         final_rate: booking.final_rate === null ? null : Number(booking.final_rate),
         rate_status: booking.rate_status,
+        // Kattai ki qism (176). Purani booking par ye null hai -- wahan
+        // screen bilkul waise chalti hai jaise pehle chalti thi.
+        harvest_type: booking.harvest_type ?? null,
+        sabit_area: booking.sabit_area === null ? null : Number(booking.sabit_area),
+        kutra_area: booking.kutra_area === null ? null : Number(booking.kutra_area),
+        sabit_rate: booking.sabit_rate === null ? null : Number(booking.sabit_rate),
+        kutra_rate: booking.kutra_rate === null ? null : Number(booking.kutra_rate),
         expected_harvest_date: booking.expected_harvest_date,
         rate_confirmation_sent_at: booking.rate_confirmation_sent_at,
         farmer_confirmed_at: booking.farmer_confirmed_at,
@@ -185,6 +192,14 @@ export default async function MachineryBookingPage({ params }: { params: Promise
               commission_amount: Number(bill.commission_amount),
               vendor_payable: Number(bill.vendor_payable),
               diesel_deducted: Number(bill.diesel_deducted ?? 0),
+              // Qism ka batwara (176). Purane bill par ye khali hain --
+              // wahan bill ek hi lakeer mein dikhta hai, jaise pehle.
+              sabit_area: bill.sabit_area === null ? null : Number(bill.sabit_area),
+              kutra_area: bill.kutra_area === null ? null : Number(bill.kutra_area),
+              sabit_rate: bill.sabit_rate === null ? null : Number(bill.sabit_rate),
+              kutra_rate: bill.kutra_rate === null ? null : Number(bill.kutra_rate),
+              sabit_amount: bill.sabit_amount === null ? null : Number(bill.sabit_amount),
+              kutra_amount: bill.kutra_amount === null ? null : Number(bill.kutra_amount),
             }
           : null
       }

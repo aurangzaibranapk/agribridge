@@ -340,6 +340,9 @@ export function NewBookingForm({
     (el as HTMLElement | null)?.focus?.();
   }
 
+  // Kattai ka kul raqba -- qism ka batwara isi se parkha jata hai (176).
+  const [harvestTotal, setHarvestTotal] = useState<number>(Number(defaultAcres ?? 0) || 0);
+
   // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam, phone ya
   // CNIC, chaaron se. Staff ko yaad sirf ek cheez hoti hai, aur wo har
   // baar wahi nahi hoti. Khet par aksar sirf shanakhti card hota hai.
@@ -590,7 +593,10 @@ export function NewBookingForm({
           defaultAcres={defaultAcres}
           fieldId="fld-harvest_area"
           error={errors.harvest_area}
+          onTotal={setHarvestTotal}
         />
+
+        <HarvestTypePicker total={harvestTotal} lang={lang} />
 
         <div>
           <Label>{t("mc_field_address", lang)}</Label>
@@ -818,6 +824,138 @@ function YesNo({
  * form ke andar form HTML mein chalta hi nahi. Is liye action seedha
  * bulaya jata hai.
  */
+/**
+ * Kattai ki qism aur us ka batwara (176).
+ *
+ * Ek khet mein dono kaam ho sakte hain: kuch acre ki parali sabit
+ * chhoRni hai, kuch ka kutra karna hai -- aur dono ka rate alag hai.
+ *
+ * Jor ki jaanch yahan bhi hai aur database mein bhi. Dono jaan boojh
+ * kar hain: yahan wali staff ko wahin bata deti hai ke 8 + 3 dus nahi
+ * hote; database wali us soorat ke liye hai jab koi doosra raasta
+ * (portal, purani screen) yahi ghalti le kar aaye.
+ */
+function HarvestTypePicker({ total, lang }: { total: number; lang: Lang }) {
+  const [type, setType] = useState<"sabit" | "kutra" | "dono">("sabit");
+  const [sabit, setSabit] = useState("");
+  const [kutra, setKutra] = useState("");
+  const [sabitRate, setSabitRate] = useState("");
+  const [kutraRate, setKutraRate] = useState("");
+
+  const sabitNum = Number(sabit) || 0;
+  const kutraNum = Number(kutra) || 0;
+  const sum = Math.round((sabitNum + kutraNum) * 10000) / 10000;
+  const matches = total > 0 && Math.round(sum * 10000) === Math.round(total * 10000);
+  const estimate =
+    Math.round((sabitNum * (Number(sabitRate) || 0) + kutraNum * (Number(kutraRate) || 0)) * 100) / 100;
+
+  const OPTIONS: { key: "sabit" | "kutra" | "dono"; label: string }[] = [
+    { key: "sabit", label: t("mh_sabit", lang) },
+    { key: "kutra", label: t("mh_kutra", lang) },
+    { key: "dono", label: t("mh_dono", lang) },
+  ];
+
+  return (
+    <div>
+      <Label>{t("mh_type_label", lang)}</Label>
+      <input type="hidden" name="harvest_type" value={type} />
+      <div className="flex flex-wrap gap-1.5">
+        {OPTIONS.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => setType(o.key)}
+            className={
+              o.key === type
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+            }
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {type === "dono" && (
+        <div className="mt-3 space-y-3 rounded-card border border-surface-200 p-3 dark:border-surface-700">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t("mh_sabit_acres", lang)}</Label>
+              <Input
+                type="number"
+                name="sabit_area"
+                step="0.01"
+                value={sabit}
+                onChange={(e) => setSabit(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label>{t("mh_kutra_acres", lang)}</Label>
+              <Input
+                type="number"
+                name="kutra_area"
+                step="0.01"
+                value={kutra}
+                onChange={(e) => setKutra(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {/* Jor foran saamne -- taake ghalti bhare hue form ke baad na khule. */}
+          <p className={matches ? "text-xs text-green-700 dark:text-green-400" : "text-xs text-amber-700 dark:text-amber-400"}>
+            {t("mh_total_check", lang)}: {sum} / {total} {t("md_acres_short", lang)} —{" "}
+            {matches ? t("mh_sum_ok", lang) : t("mh_sum_bad", lang)}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t("mh_sabit_rate", lang)}</Label>
+              <Input
+                type="number"
+                name="sabit_rate"
+                step="0.01"
+                value={sabitRate}
+                onChange={(e) => setSabitRate(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label>{t("mh_kutra_rate", lang)}</Label>
+              <Input
+                type="number"
+                name="kutra_rate"
+                step="0.01"
+                value={kutraRate}
+                onChange={(e) => setKutraRate(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {estimate > 0 && (
+            <div className="rounded-lg bg-surface-50 p-2 text-xs dark:bg-surface-800">
+              <p className="text-surface-700 dark:text-surface-300">
+                {t("mh_sabit", lang)}: {sabitNum} × Rs {(Number(sabitRate) || 0).toLocaleString()} = Rs{" "}
+                {Math.round(sabitNum * (Number(sabitRate) || 0)).toLocaleString()}
+              </p>
+              <p className="text-surface-700 dark:text-surface-300">
+                {t("mh_kutra", lang)}: {kutraNum} × Rs {(Number(kutraRate) || 0).toLocaleString()} = Rs{" "}
+                {Math.round(kutraNum * (Number(kutraRate) || 0)).toLocaleString()}
+              </p>
+              <p className="mt-1 font-semibold text-surface-900 dark:text-white">
+                {t("mh_estimate", lang)}: Rs {estimate.toLocaleString()}
+              </p>
+              <p className="mt-0.5 text-surface-500">{t("mh_estimate_note", lang)}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CropPicker({ crops, lang }: { crops: { key: string; label: string }[]; lang: Lang }) {
   const [list, setList] = useState(crops);
   const [value, setValue] = useState(crops[0]?.key ?? "other");
@@ -922,6 +1060,7 @@ function AreaPair({
   defaultAcres,
   fieldId,
   error,
+  onTotal,
 }: {
   label: string;
   acresName: string;
@@ -930,7 +1069,17 @@ function AreaPair({
   defaultAcres?: string;
   fieldId?: string;
   error?: string;
+  /** Kul raqba badle to bahar khabar -- khana khud apna hi rehta hai. */
+  onTotal?: (total: number) => void;
 }) {
+  const acresRef = useRef<HTMLInputElement>(null);
+  const kanalRef = useRef<HTMLInputElement>(null);
+  function report() {
+    if (!onTotal) return;
+    const a = Number(acresRef.current?.value ?? 0) || 0;
+    const k = Number(kanalRef.current?.value ?? 0) || 0;
+    onTotal(Math.round((a + k / 8) * 10000) / 10000);
+  }
   return (
     <div>
       <Label>
@@ -939,12 +1088,14 @@ function AreaPair({
       <div className="grid grid-cols-2 gap-3">
         <div className="relative">
           <Input
+            ref={acresRef}
             id={fieldId}
             type="number"
             name={acresName}
             step="0.01"
             placeholder="0"
             defaultValue={defaultAcres ?? ""}
+            onChange={report}
             className={error ? "border-red-500 focus:ring-red-500" : undefined}
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">
@@ -953,10 +1104,12 @@ function AreaPair({
         </div>
         <div className="relative">
           <Input
+            ref={kanalRef}
             type="number"
             name={kanalName}
             step="0.01"
             placeholder="0"
+            onChange={report}
             className={error ? "border-red-500 focus:ring-red-500" : undefined}
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">

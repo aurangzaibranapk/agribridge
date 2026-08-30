@@ -78,6 +78,12 @@ interface Booking {
   estimated_rate: number | null;
   final_rate: number | null;
   rate_status: string;
+  /** Kattai ki qism (176). Null = purani booking, jis par qism darj hi nahi hui. */
+  harvest_type: string | null;
+  sabit_area: number | null;
+  kutra_area: number | null;
+  sabit_rate: number | null;
+  kutra_rate: number | null;
   expected_harvest_date: string | null;
   rate_confirmation_sent_at: string | null;
   farmer_confirmed_at: string | null;
@@ -151,7 +157,7 @@ export function BookingDetail({
     completion_photo_url: string | null;
     farmer_confirmed: boolean;
   }>;
-  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number } | null;
+  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number; sabit_area: number | null; kutra_area: number | null; sabit_rate: number | null; kutra_rate: number | null; sabit_amount: number | null; kutra_amount: number | null } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
   reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
@@ -352,7 +358,15 @@ export function BookingDetail({
               </div>
             ) : (
               <div className="space-y-4">
-                <RateConfirmationForm bookingId={booking.id} defaultRate={booking.final_rate ?? booking.estimated_rate} />
+                <RateConfirmationForm
+                  bookingId={booking.id}
+                  defaultRate={booking.final_rate ?? booking.estimated_rate}
+                  harvestType={booking.harvest_type}
+                  sabitArea={booking.sabit_area}
+                  kutraArea={booking.kutra_area}
+                  defaultSabitRate={booking.sabit_rate}
+                  defaultKutraRate={booking.kutra_rate}
+                />
                 {booking.rate_confirmation_sent_at && (
                   <>
                     <p className="text-xs text-surface-500">
@@ -500,7 +514,12 @@ export function BookingDetail({
               </div>
             )}
             {confirmed && !workFinished && (
-              <WorkForm bookingId={booking.id} estimated={booking.harvest_area} done={workDone} />
+              <WorkForm
+                bookingId={booking.id}
+                estimated={booking.harvest_area}
+                done={workDone}
+                harvestType={booking.harvest_type}
+              />
             )}
 
             {/* Kaam mukammal ho gaya magar booking ka poora raqba nahi
@@ -521,7 +540,27 @@ export function BookingDetail({
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
-                <Row label={`Machinery charges (${bill.actual_area} acre × Rs ${bill.rate_amount.toLocaleString()})`} value={bill.gross_amount} />
+                {/* Do qism ka bill do lakeeron mein (176). Ek hi lakeer
+                    mein aausat rate likh dena wo adad dikhata hai jis
+                    par kabhi koi raazi hi nahi hua tha. */}
+                {bill.sabit_rate !== null || bill.kutra_rate !== null ? (
+                  <>
+                    {Number(bill.sabit_area ?? 0) > 0 && (
+                      <Row
+                        label={`${t("mh_sabit", lang)} (${bill.sabit_area} acre × Rs ${Number(bill.sabit_rate ?? 0).toLocaleString()})`}
+                        value={Number(bill.sabit_amount ?? 0)}
+                      />
+                    )}
+                    {Number(bill.kutra_area ?? 0) > 0 && (
+                      <Row
+                        label={`${t("mh_kutra", lang)} (${bill.kutra_area} acre × Rs ${Number(bill.kutra_rate ?? 0).toLocaleString()})`}
+                        value={Number(bill.kutra_amount ?? 0)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <Row label={`Machinery charges (${bill.actual_area} acre × Rs ${bill.rate_amount.toLocaleString()})`} value={bill.gross_amount} />
+                )}
                 {/* Kisan ka apna diesel. Ye us ke bill se katta hai --
                     aur us ka naam saaf likha jata hai, warna kisan
                     poochhta hai ke "ye kam kyun hai" aur jawab kisi ke
@@ -909,17 +948,78 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
   );
 }
 
-function RateConfirmationForm({ bookingId, defaultRate }: { bookingId: string; defaultRate: number | null }) {
+function RateConfirmationForm({
+  bookingId,
+  defaultRate,
+  harvestType,
+  sabitArea,
+  kutraArea,
+  defaultSabitRate,
+  defaultKutraRate,
+}: {
+  bookingId: string;
+  defaultRate: number | null;
+  harvestType: string | null;
+  sabitArea: number | null;
+  kutraArea: number | null;
+  defaultSabitRate: number | null;
+  defaultKutraRate: number | null;
+}) {
   const lang = useLang();
   const [state, action] = useFormState(sendRateConfirmation, initialState);
+
+  // Do qism ki booking par do rate (176). Staff dono apni marzi se
+  // likhta hai -- wohi purana raasta, bas do khane.
+  const isDono = harvestType === "dono";
+  const [sRate, setSRate] = useState(String(defaultSabitRate ?? ""));
+  const [kRate, setKRate] = useState(String(defaultKutraRate ?? ""));
+  const sA = Number(sabitArea ?? 0);
+  const kA = Number(kutraArea ?? 0);
+  const estimate = Math.round((sA * (Number(sRate) || 0) + kA * (Number(kRate) || 0)) * 100) / 100;
+
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
-      <div>
-        <Label>{t("mc_final_rate_per_acre", lang)}</Label>
-        <Input type="number" name="final_rate" step="0.01" defaultValue={defaultRate ?? ""} />
-      </div>
+      {isDono ? (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>
+                {t("mh_sabit_rate", lang)} — {sA} {t("md_acres_short", lang)}
+              </Label>
+              <Input type="number" name="sabit_rate" step="0.01" value={sRate} onChange={(e) => setSRate(e.target.value)} />
+            </div>
+            <div>
+              <Label>
+                {t("mh_kutra_rate", lang)} — {kA} {t("md_acres_short", lang)}
+              </Label>
+              <Input type="number" name="kutra_rate" step="0.01" value={kRate} onChange={(e) => setKRate(e.target.value)} />
+            </div>
+          </div>
+          {estimate > 0 && (
+            <div className="rounded-lg bg-surface-50 p-2 text-xs dark:bg-surface-800">
+              <p>
+                {t("mh_sabit", lang)}: {sA} × Rs {(Number(sRate) || 0).toLocaleString()} = Rs{" "}
+                {Math.round(sA * (Number(sRate) || 0)).toLocaleString()}
+              </p>
+              <p>
+                {t("mh_kutra", lang)}: {kA} × Rs {(Number(kRate) || 0).toLocaleString()} = Rs{" "}
+                {Math.round(kA * (Number(kRate) || 0)).toLocaleString()}
+              </p>
+              <p className="mt-1 font-semibold text-surface-900 dark:text-white">
+                {t("mh_estimate", lang)}: Rs {estimate.toLocaleString()}
+              </p>
+              <p className="mt-0.5 text-surface-500">{t("mh_estimate_note", lang)}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div>
+          <Label>{t("mc_final_rate_per_acre", lang)}</Label>
+          <Input type="number" name="final_rate" step="0.01" defaultValue={defaultRate ?? ""} />
+        </div>
+      )}
       <p className="text-xs text-surface-500">
         Bhejte hi purani tasdeeq (agar thi) khatam ho jayegi — warna kisan ne kisi aur rate par haan ki hoti aur record
         naye rate par &ldquo;tasdeeq shuda&rdquo; dikhata rehta.
@@ -1282,7 +1382,17 @@ function FuelForm({
   );
 }
 
-function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated: number; done: number }) {
+function WorkForm({
+  bookingId,
+  estimated,
+  done,
+  harvestType,
+}: {
+  bookingId: string;
+  estimated: number;
+  done: number;
+  harvestType: string | null;
+}) {
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
   const [photo, setPhoto] = useState("");
@@ -1290,6 +1400,17 @@ function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated
   const [reminder, setReminder] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
+
+  // Do qism ki booking par ASAL kaam bhi do hisson mein likha jata hai
+  // (176). Bill isi par banta hai -- booking par likhe andaze par nahi.
+  const isDono = harvestType === "dono";
+  const [acres, setAcres] = useState("");
+  const [kanal, setKanal] = useState("");
+  const [sabit, setSabit] = useState("");
+  const [kutra, setKutra] = useState("");
+  const total = Math.round(((Number(acres) || 0) + (Number(kanal) || 0) / 8) * 10000) / 10000;
+  const splitSum = Math.round(((Number(sabit) || 0) + (Number(kutra) || 0)) * 10000) / 10000;
+  const splitOk = total > 0 && Math.round(splitSum * 10000) === Math.round(total * 10000);
 
   // Ghante haath se nahi likhe jate: shuru aur khatam ka waqt upar
   // likha ja chuka hai, aur do jagah likha hua ek hi adad kisi din
@@ -1317,11 +1438,23 @@ function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated
         <div />
         <div>
           <Label>{t("mc_actual_area", lang)}</Label>
-          <Input type="number" name="actual_area_acres" step="0.01" />
+          <Input
+            type="number"
+            name="actual_area_acres"
+            step="0.01"
+            value={acres}
+            onChange={(e) => setAcres(e.target.value)}
+          />
         </div>
         <div>
           <Label>{t("mc_kanal", lang)}</Label>
-          <Input type="number" name="actual_area_kanal" step="0.01" />
+          <Input
+            type="number"
+            name="actual_area_kanal"
+            step="0.01"
+            value={kanal}
+            onChange={(e) => setKanal(e.target.value)}
+          />
         </div>
         <div>
           <Label>{t("mc_start", lang)}</Label>
@@ -1346,6 +1479,27 @@ function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated
           </p>
         </div>
       </div>
+
+      {isDono && (
+        <div className="space-y-2 rounded-card border border-surface-200 p-3 dark:border-surface-700">
+          <p className="text-xs text-surface-500">{t("mh_split_hint", lang)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t("mh_actual_sabit", lang)}</Label>
+              <Input type="number" name="sabit_area" step="0.01" value={sabit} onChange={(e) => setSabit(e.target.value)} />
+            </div>
+            <div>
+              <Label>{t("mh_actual_kutra", lang)}</Label>
+              <Input type="number" name="kutra_area" step="0.01" value={kutra} onChange={(e) => setKutra(e.target.value)} />
+            </div>
+          </div>
+          <p className={splitOk ? "text-xs text-green-700 dark:text-green-400" : "text-xs text-amber-700 dark:text-amber-400"}>
+            {t("mh_total_check", lang)}: {splitSum} / {total} {t("md_acres_short", lang)} —{" "}
+            {splitOk ? t("mh_sum_ok", lang) : t("mh_sum_bad", lang)}
+          </p>
+        </div>
+      )}
+
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
         <input type="checkbox" name="farmer_confirmed" className="h-4 w-4" />
         {t("mc_farmer_verified_onsite", lang)}

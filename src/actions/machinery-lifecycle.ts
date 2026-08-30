@@ -233,6 +233,33 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
   const machineType = str(formData, "machine_type_requested");
   if (!machineType) return { error: "Machine ki qism likhein." };
 
+  // Kattai ki qism (176). Ek khet mein dono kaam ho sakte hain: kuch
+  // acre ki parali sabit chhoRni hai, kuch ka kutra karna hai -- aur
+  // dono ka rate alag hota hai.
+  //
+  // Jor ki jaanch database mein bhi lagi hui hai. Yahan dobara isliye
+  // hai ke staff ko wahin, form par, saaf jawab mile -- na ke bhare
+  // hue form ke baad ek database ka paigham.
+  const harvestType = str(formData, "harvest_type") ?? "sabit";
+  if (!["sabit", "kutra", "dono"].includes(harvestType)) {
+    return { error: "Kattai ki qism theek chunein." };
+  }
+  const totalArea = toAcres(harvestAcres, harvestKanal);
+  let sabitArea: number | null = null;
+  let kutraArea: number | null = null;
+  if (harvestType === "dono") {
+    sabitArea = num(formData, "sabit_area");
+    kutraArea = num(formData, "kutra_area");
+    if (!sabitArea || sabitArea <= 0 || !kutraArea || kutraArea <= 0) {
+      return { error: "Dono qism chuni hai to Sabit aur Kutra, dono ka raqba likhein." };
+    }
+    if (Math.round((sabitArea + kutraArea) * 10000) !== Math.round(totalArea * 10000)) {
+      return {
+        error: `Sabit (${sabitArea}) aur Kutra (${kutraArea}) ka jor ${sabitArea + kutraArea} banta hai, kul raqba ${totalArea} acre hai. Dono barabar hone chahiye.`,
+      };
+    }
+  }
+
   // Do sawal jo kisan ke apne form par poochhe jate hain: fasal hamein
   // bechega? aur agli fasal par yaad dilayein? Kisan ki farmaish se
   // booking bane to jawab wahin se aata hai -- dobara nahi poochha
@@ -311,6 +338,16 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
 
       estimated_rate: num(formData, "estimated_rate"),
       rate_status: "estimated",
+
+      // Qism aur us ka raqba. Ek qism ho to database khud sabit/kutra
+      // ke khane bhar deta hai -- yahan sirf "dono" ka batwara jata hai.
+      harvest_type: harvestType,
+      sabit_area: sabitArea,
+      kutra_area: kutraArea,
+      // Andaze ke rate. Ye final nahi hain -- rate wale qadam par staff
+      // apni marzi se badal kar kisan se confirm karwata hai.
+      sabit_rate: harvestType === "dono" ? num(formData, "sabit_rate") : null,
+      kutra_rate: harvestType === "dono" ? num(formData, "kutra_rate") : null,
 
       will_sell_to_us: willSell,
       wants_next_season_reminder: wantsReminder,
@@ -711,18 +748,40 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
-  const finalRate = num(formData, "final_rate");
   if (!bookingId) return { error: "Booking nahi mili." };
-  if (!finalRate || finalRate <= 0) return { error: "Final rate sahi likhein." };
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
     .select(
-      "id, booking_number, status, farmer_id, crop_type, harvest_area, expected_harvest_date, farmer_confirmed_at, machine_id, farmers(full_name, phone_number), machinery_vendor_machines(machine_type, model)"
+      "id, booking_number, status, farmer_id, crop_type, harvest_area, expected_harvest_date, farmer_confirmed_at, machine_id, harvest_type, sabit_area, kutra_area, farmers(full_name, phone_number), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
+
+  // Do qism ki booking par rate bhi do hote hain (176). Wahan final_rate
+  // KHUD banta hai (dono ka aausat) -- staff wo likhta hi nahi, warna
+  // wohi purani kharabi wapas aa jati: ek adad do jagah likha hua.
+  const isDono = booking.harvest_type === "dono";
+  const sabitRate = num(formData, "sabit_rate");
+  const kutraRate = num(formData, "kutra_rate");
+  const finalRate = isDono ? null : num(formData, "final_rate");
+
+  if (isDono) {
+    if (!sabitRate || sabitRate <= 0) return { error: "Sabit Parali ka rate sahi likhein." };
+    if (!kutraRate || kutraRate <= 0) return { error: "Kutra ka rate sahi likhein." };
+  } else if (!finalRate || finalRate <= 0) {
+    return { error: "Final rate sahi likhein." };
+  }
+
+  const sabitBook = Number(booking.sabit_area ?? 0);
+  const kutraBook = Number(booking.kutra_area ?? 0);
+  // Kisan ko jo raqam bhejni hai wo booking ke raqbe par andaza hai.
+  // Asal bill baad mein tasdeeq shuda kaam par banta hai -- ye farq
+  // paighaam mein bhi saaf likha jata hai.
+  const shownRate = isDono
+    ? Math.round(((sabitBook * (sabitRate ?? 0) + kutraBook * (kutraRate ?? 0)) / Math.max(Number(booking.harvest_area ?? 0), 0.0001)) * 100) / 100
+    : (finalRate ?? 0);
 
   const farmer = Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers;
   const machine = Array.isArray(booking.machinery_vendor_machines)
@@ -742,9 +801,11 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   const { error } = await supabase
     .from("machinery_bookings")
     .update({
-      final_rate: finalRate,
+      // "dono" par final_rate database khud banata hai -- yahan bhejna
+      // us par hath ka likha adad rakhna hota.
+      ...(isDono ? { sabit_rate: sabitRate, kutra_rate: kutraRate } : { final_rate: finalRate }),
       rate_status: "agreed",
-      rate_confirmation_rate: finalRate,
+      rate_confirmation_rate: shownRate,
       rate_confirmation_sent_at: new Date().toISOString(),
       rate_confirmation_sent_by: actorId,
       farmer_confirmed_at: null,
@@ -758,7 +819,13 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   const message = [
     `Assalam-o-Alaikum ${farmer?.full_name ?? ""} Sahib,`,
     ``,
-    `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka final rate Rs ${finalRate.toLocaleString()} per acre hai.`,
+    isDono
+      ? `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka rate qism ke hisaab se hai:`
+      : `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka final rate Rs ${(finalRate ?? 0).toLocaleString()} per acre hai.`,
+    isDono ? `Sabit Parali: ${sabitBook} acre x Rs ${(sabitRate ?? 0).toLocaleString()} = Rs ${Math.round(sabitBook * (sabitRate ?? 0)).toLocaleString()}` : null,
+    isDono ? `Kutra: ${kutraBook} acre x Rs ${(kutraRate ?? 0).toLocaleString()} = Rs ${Math.round(kutraBook * (kutraRate ?? 0)).toLocaleString()}` : null,
+    isDono ? `Andaza kul: Rs ${Math.round(sabitBook * (sabitRate ?? 0) + kutraBook * (kutraRate ?? 0)).toLocaleString()}` : null,
+    isDono ? `(Asal bill kaam ke baad, waqai kaate gaye acre par banega.)` : null,
     machine ? `Machine: ${machine.machine_type}${machine.model ? ` (${machine.model})` : ""}` : null,
     `Estimated Area: ${area} Acres`,
     advanceTotal > 0 ? `Advance Received: Rs ${advanceTotal.toLocaleString()}` : null,
@@ -786,7 +853,9 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   await logEvent({
     bookingId,
     eventType: "rate_confirmation_sent",
-    note: `Rs ${finalRate.toLocaleString()}/acre — ${delivery}`,
+    note: isDono
+      ? `Sabit Rs ${(sabitRate ?? 0).toLocaleString()}/acre, Kutra Rs ${(kutraRate ?? 0).toLocaleString()}/acre — ${delivery}`
+      : `Rs ${(finalRate ?? 0).toLocaleString()}/acre — ${delivery}`,
     actorId,
   });
 
@@ -1396,10 +1465,28 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, status, harvest_area, rate_status, final_rate")
+    .select("id, status, harvest_area, rate_status, final_rate, harvest_type")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
+
+  // Do qism ki booking par ASAL kaam bhi do hisson mein darj hota hai
+  // (176). Bill isi batware par banta hai -- booking par likhe 8+2 par
+  // nahi, jo waqai kata us par: 7.5 sabit + 2 kutra.
+  const isDono = booking.harvest_type === "dono";
+  let sabitArea: number | null = null;
+  let kutraArea: number | null = null;
+  if (isDono) {
+    sabitArea = num(formData, "sabit_area") ?? 0;
+    kutraArea = num(formData, "kutra_area") ?? 0;
+    const total = toAcres(acres, kanal);
+    if (sabitArea < 0 || kutraArea < 0) return { error: "Raqba manfi nahi ho sakta." };
+    if (Math.round((sabitArea + kutraArea) * 10000) !== Math.round(total * 10000)) {
+      return {
+        error: `Sabit (${sabitArea}) aur Kutra (${kutraArea}) ka jor ${sabitArea + kutraArea} banta hai, asal raqba ${total} acre hai. Dono barabar hone chahiye.`,
+      };
+    }
+  }
 
   // Kaam poora ho chuka ho to us ke baad ka koi indraj nahi. Warna
   // bill ban jane ke baad bhi raqba barhta rehta aur bill us se alag
@@ -1431,6 +1518,10 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
     verified_by: actorId,
     actual_area_acres: acres,
     actual_area_kanal: kanal,
+    // Ek qism ki booking par database khud bhar deta hai -- yahan sirf
+    // "dono" ka batwara jata hai.
+    sabit_area: sabitArea,
+    kutra_area: kutraArea,
     started_at: str(formData, "started_at"),
     finished_at: str(formData, "finished_at"),
     meter_reading: num(formData, "meter_reading"),
@@ -2613,7 +2704,7 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
   const { data: parent } = await supabase
     .from("machinery_bookings")
     .select(
-      "id, booking_number, farmer_id, farm_id, crop_type, machine_type_requested, harvest_area, final_rate, rate_status, farmer_confirmed_at, location_address, village, will_sell_to_us"
+      "id, booking_number, farmer_id, farm_id, crop_type, machine_type_requested, harvest_area, final_rate, rate_status, farmer_confirmed_at, location_address, village, will_sell_to_us, harvest_type, sabit_area, kutra_area, sabit_rate, kutra_rate"
     )
     .eq("id", parentId)
     .maybeSingle();
@@ -2621,7 +2712,7 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
 
   const { data: workRows } = await supabase
     .from("machinery_work_records")
-    .select("actual_area")
+    .select("actual_area, sabit_area, kutra_area")
     .eq("booking_id", parentId)
     .eq("verification_status", "verified");
 
@@ -2632,6 +2723,47 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
 
   if (remaining <= 0) {
     return { error: "Is booking par koi raqba baqi nahi -- poora kaam ho chuka hai." };
+  }
+
+  // Qism bhi aage jati hai (176). Do qism ki booking par baqi kaam ka
+  // batwara bhi baqi rehta hai: jo sabit reh gaya wo sabit, jo kutra
+  // reh gaya wo kutra.
+  //
+  // Agar ek qism poori ho chuki ho to agli booking ek hi qism ki banti
+  // hai -- "dono" likh dena wahan jhoot hota jahan doosra hissa hai hi
+  // nahi, aur DB ka guard bhi usay theek hi rok deta.
+  const doneSabit = (workRows ?? []).reduce((sum, w) => sum + Number(w.sabit_area ?? 0), 0);
+  const doneKutra = (workRows ?? []).reduce((sum, w) => sum + Number(w.kutra_area ?? 0), 0);
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  let childType = parent.harvest_type ?? null;
+  let childSabit: number | null = null;
+  let childKutra: number | null = null;
+  let childSabitRate: number | null = null;
+  let childKutraRate: number | null = null;
+
+  if (parent.harvest_type === "dono") {
+    const leftSabit = Math.max(round2(Number(parent.sabit_area ?? 0) - doneSabit), 0);
+    const leftKutra = Math.max(round2(Number(parent.kutra_area ?? 0) - doneKutra), 0);
+    // Staff ne apna raqba likha ho to batwara usi tanasub par -- warna
+    // do hisson ka jor kul raqbe se mel nahi khata aur booking banti hi
+    // nahi.
+    const leftTotal = round2(leftSabit + leftKutra);
+    if (leftSabit > 0 && leftKutra > 0 && leftTotal > 0) {
+      childSabit = round2((leftSabit / leftTotal) * remaining);
+      childKutra = round2(remaining - childSabit);
+      childSabitRate = parent.sabit_rate == null ? null : Number(parent.sabit_rate);
+      childKutraRate = parent.kutra_rate == null ? null : Number(parent.kutra_rate);
+      if (childSabit <= 0 || childKutra <= 0) {
+        childType = childSabit > 0 ? "sabit" : "kutra";
+        childSabit = null;
+        childKutra = null;
+        childSabitRate = null;
+        childKutraRate = null;
+      }
+    } else {
+      childType = leftSabit > 0 ? "sabit" : "kutra";
+    }
   }
 
   const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
@@ -2654,6 +2786,11 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
       will_sell_to_us: parent.will_sell_to_us,
       estimated_rate: parent.final_rate,
       rate_status: "estimated",
+      harvest_type: childType,
+      sabit_area: childSabit,
+      kutra_area: childKutra,
+      sabit_rate: childSabitRate,
+      kutra_rate: childKutraRate,
       created_by: actorId,
     })
     .select("id, booking_number")
@@ -2667,7 +2804,11 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
     await supabase
       .from("machinery_bookings")
       .update({
-        final_rate: parent.final_rate,
+        // "dono" par final_rate database khud banata hai (176) -- yahan
+        // sirf dono rate aage jate hain.
+        ...(childType === "dono"
+          ? { sabit_rate: childSabitRate, kutra_rate: childKutraRate }
+          : { final_rate: parent.final_rate }),
         rate_status: "final",
         farmer_confirmed_at: parent.farmer_confirmed_at,
         farmer_confirmation_channel: "carried_forward",

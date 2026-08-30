@@ -26,6 +26,8 @@ interface Booking {
   cropType: string | null;
   bookedArea: number | null;
   finalRate: number | null;
+  /** Kattai ki qism (176). "dono" ho to kaam ka batwara alag likha jata hai. */
+  harvestType: string | null;
   rateFinal: boolean;
   locationAddress: string | null;
   village: string | null;
@@ -551,7 +553,7 @@ function BookingCard({ booking }: { booking: Booking }) {
               </button>
             </div>
           ) : open === "work" ? (
-            <WorkForm bookingId={booking.id} onClose={() => setOpen(null)} />
+            <WorkForm bookingId={booking.id} harvestType={booking.harvestType} onClose={() => setOpen(null)} />
           ) : open === "fuel" ? (
             <FuelForm bookingId={booking.id} onClose={() => setOpen(null)} />
           ) : (
@@ -754,8 +756,28 @@ function Row({ label, value }: { label: string; value: number }) {
   );
 }
 
-function WorkForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+function WorkForm({
+  bookingId,
+  harvestType,
+  onClose,
+}: {
+  bookingId: string;
+  harvestType: string | null;
+  onClose: () => void;
+}) {
   const [state, action] = useFormState(submitVendorWork, initialState);
+
+  // Do qism ki booking par batwara wahin poochha jata hai (176). Baad
+  // mein daftar ke bande ko yaad nahi hoga ke us din kitna sabit tha
+  // aur kitna kutra -- aur yehi wo adad hai jis par bill banta hai.
+  const isDono = harvestType === "dono";
+  const [acres, setAcres] = useState("");
+  const [kanal, setKanal] = useState("");
+  const [sabit, setSabit] = useState("");
+  const [kutra, setKutra] = useState("");
+  const total = Math.round(((Number(acres) || 0) + (Number(kanal) || 0) / 8) * 10000) / 10000;
+  const splitSum = Math.round(((Number(sabit) || 0) + (Number(kutra) || 0)) * 10000) / 10000;
+  const splitOk = total > 0 && Math.round(splitSum * 10000) === Math.round(total * 10000);
 
   if (state.success) {
     return (
@@ -787,13 +809,62 @@ function WorkForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
         </div>
         <div>
           <label className="text-xs font-medium text-surface-600">Kitne acre</label>
-          <input type="number" step="0.01" name="actual_area_acres" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input
+            type="number"
+            step="0.01"
+            name="actual_area_acres"
+            value={acres}
+            onChange={(e) => setAcres(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          />
         </div>
         <div>
           <label className="text-xs font-medium text-surface-600">Kanal</label>
-          <input type="number" step="0.01" name="actual_area_kanal" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input
+            type="number"
+            step="0.01"
+            name="actual_area_kanal"
+            value={kanal}
+            onChange={(e) => setKanal(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          />
         </div>
       </div>
+
+      {isDono && (
+        <div className="space-y-2 rounded-lg border border-surface-200 p-3">
+          <p className="text-xs text-surface-500">
+            Is booking mein dono qism hain — Sabit Parali aur Kutra alag alag likhein.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-medium text-surface-600">Sabit Parali ke acre</label>
+              <input
+                type="number"
+                step="0.01"
+                name="sabit_area"
+                value={sabit}
+                onChange={(e) => setSabit(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-surface-600">Kutra ke acre</label>
+              <input
+                type="number"
+                step="0.01"
+                name="kutra_area"
+                value={kutra}
+                onChange={(e) => setKutra(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              />
+            </div>
+          </div>
+          <p className={splitOk ? "text-xs text-green-700" : "text-xs text-amber-700"}>
+            Jor: {splitSum} / {total} acre — {splitOk ? "theek hai" : "kul acre ke barabar hona chahiye"}
+          </p>
+        </div>
+      )}
       <div>
         <label className="text-xs font-medium text-surface-600">Kuch aur batana ho</label>
         <input name="notes" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
