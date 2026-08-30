@@ -223,7 +223,12 @@ export default async function VendorPortalPage() {
       .select("*")
       .eq("vendor_id", vendor.id)
       .order("preferred_date"),
-    supabase.from("v_machinery_machines").select("*").eq("vendor_id", vendor.id).order("machine_code"),
+    // Vendor ka apna view (191). Pehle yahan v_machinery_machines tha,
+    // magar us ka aakhri lafz `where fn_is_any_staff()` hai -- vendor ke
+    // haath mein wo sifar qatarein laata tha aur safha us "kuch nahi
+    // mila" ko "koi machine nahi" samajh leta tha. Naye view mein ART ki
+    // billing aur commission hai hi nahi.
+    supabase.from("v_machinery_vendor_machines").select("*").eq("vendor_id", vendor.id).order("machine_code"),
     supabase.from("v_machinery_vendor_location").select("*").eq("vendor_id", vendor.id).order("pehli_tareekh", { nullsFirst: false }),
     supabase.from("v_machinery_vendor_payments").select("*").eq("vendor_id", vendor.id).order("tareekh", { ascending: false }),
     // Commission ki tafseel -- is view mein fisad ka khana hai hi nahi (179).

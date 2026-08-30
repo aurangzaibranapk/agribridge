@@ -9828,6 +9828,13 @@ export type Database = {
             referencedColumns: ["machine_id"]
           },
           {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["machine_id"]
+          },
+          {
             foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
             columns: ["parent_booking_id"]
             isOneToOne: false
@@ -10035,6 +10042,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["vendor_id"]
           },
           {
@@ -10315,6 +10329,13 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_pnl_machine"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["machine_id"]
           },
         ]
@@ -11097,6 +11118,13 @@ export type Database = {
             foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
             columns: ["collected_by_vendor_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_vendor_payments"
             referencedColumns: ["vendor_id"]
           },
@@ -11580,6 +11608,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["vendor_id"]
           },
           {
@@ -18136,6 +18171,13 @@ export type Database = {
             referencedRelation: "v_machinery_pnl_machine"
             referencedColumns: ["machine_id"]
           },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["machine_id"]
+          },
         ]
       }
       v_machinery_advance_claims: {
@@ -18375,6 +18417,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["vendor_id"]
           },
           {
@@ -19054,6 +19103,13 @@ export type Database = {
             referencedColumns: ["machine_id"]
           },
           {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["machine_id"]
+          },
+          {
             foreignKeyName: "machinery_bookings_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
@@ -19135,6 +19191,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["vendor_id"]
           },
           {
@@ -19258,6 +19321,13 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_pnl_machine"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
             referencedColumns: ["machine_id"]
           },
           {
@@ -20260,6 +20330,28 @@ export type Database = {
           lat: number | null
           lng: number | null
           pehli_tareekh: string | null
+          user_id: string | null
+          vendor_id: string | null
+        }
+        Relationships: []
+      }
+      v_machinery_vendor_machines: {
+        Row: {
+          chal_raha_kisan: string | null
+          chal_rahi_booking: string | null
+          diesel_litre: number | null
+          diesel_raqam: number | null
+          driver_name: string | null
+          driver_phone: string | null
+          last_location_at: string | null
+          last_location_lat: number | null
+          last_location_lng: number | null
+          machine_code: string | null
+          machine_id: string | null
+          machine_type: string | null
+          model: string | null
+          season_ke_acre: number | null
+          status: string | null
           user_id: string | null
           vendor_id: string | null
         }
