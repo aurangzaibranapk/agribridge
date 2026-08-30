@@ -21,7 +21,7 @@ export default async function MachineryRentalPage({
     { data: farmers },
     { data: rawBookings },
   ] = await Promise.all([
-    supabase.from("machinery_vendors").select("id, vendor_name, contact_person, phone").eq("is_active", true).order("vendor_name"),
+    supabase.from("machinery_vendors").select("id, vendor_name, contact_person, phone, user_id").eq("is_active", true).order("vendor_name"),
     supabase.from("machinery_vendor_machines").select("*, machinery_vendors(vendor_name)").eq("is_available", true).order("machine_type"),
     supabase.from("farmers").select("id, full_name, farmer_code, booking_link_token").eq("is_deleted", false).order("full_name"),
     supabase

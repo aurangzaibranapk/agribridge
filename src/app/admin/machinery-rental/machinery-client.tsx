@@ -10,6 +10,9 @@ import {
   type ActionState,
 } from "@/actions/machinery-rental";
 import { setMachineryCommissionRate } from "@/actions/machinery-lifecycle";
+import { createVendorLogin, resetVendorPassword, type VendorActionState } from "@/actions/vendor-portal";
+
+type VendorLoginState = VendorActionState & { loginId?: string; password?: string };
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { LiveBoard } from "./live-board";
 import Link from "next/link";
@@ -17,7 +20,7 @@ import { Plus, X, Share2 } from "lucide-react";
 
 const initialState: ActionState = {};
 
-interface Vendor { id: string; vendor_name: string; contact_person: string | null; phone: string | null; }
+interface Vendor { id: string; vendor_name: string; contact_person: string | null; phone: string | null; user_id?: string | null; }
 interface Machine {
   id: string;
   vendor_id: string;
@@ -127,6 +130,23 @@ export function MachineryClient({
               <Plus className="h-4 w-4" /> {t("mc_new_machine", lang)}
             </button>
           </div>
+          {/* Har vendor ka apna login. Portal bana hua tha magar us tak
+              pohanchne ka koi rasta nahi tha -- ye wahi kari hai. */}
+          <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+            <div className="border-b border-surface-200 bg-surface-50 px-3 py-2 dark:border-surface-800 dark:bg-surface-800">
+              <p className="font-medium text-surface-700 dark:text-surface-300">{t("mc_vendor_logins", lang)}</p>
+              <p className="text-xs text-surface-500">{t("mc_vendor_logins_hint", lang)}</p>
+            </div>
+            <div className="divide-y divide-surface-100 dark:divide-surface-800">
+              {vendors.map((v) => (
+                <VendorLoginRow key={v.id} vendor={v} />
+              ))}
+              {vendors.length === 0 && (
+                <p className="px-3 py-6 text-center text-surface-400">{t("mc_no_vendors", lang)}</p>
+              )}
+            </div>
+          </div>
+
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
@@ -490,4 +510,84 @@ function SubmitButton({ label }: { label: string }) {
 function SubmitButtonUrdu({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={pending || disabled} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : "محفوظ کریں"}</button>;
+}
+
+/**
+ * Ek vendor, ek login.
+ *
+ * Password sirf banate waqt ek dafa nazar aata hai aur kahin mehfooz
+ * nahi hota. Mehfooz rakhne ka matlab hota ke jo bhi ye safha khole wo
+ * har vendor ke khate mein daakhil ho sake -- is liye bhool jane par
+ * naya banaya jata hai, purana dhoondha nahi jata.
+ */
+function VendorLoginRow({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [createState, createAction] = useFormState(createVendorLogin, {} as VendorLoginState);
+  const [resetState, resetAction] = useFormState(resetVendorPassword, {} as VendorLoginState);
+  const [showEmail, setShowEmail] = useState(false);
+  const state = createState.password ? createState : resetState;
+
+  return (
+    <div className="px-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-medium text-surface-800 dark:text-surface-200">{vendor.vendor_name}</p>
+          <p className="text-xs text-surface-500">{vendor.phone ?? t("mc_no_phone", lang)}</p>
+        </div>
+
+        {vendor.user_id ? (
+          <form action={resetAction} className="flex items-center gap-2">
+            <input type="hidden" name="vendor_id" value={vendor.id} />
+            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+              {t("mc_login_exists", lang)}
+            </span>
+            <button type="submit" className="text-xs font-medium text-brand-600 hover:underline">
+              {t("mc_new_password", lang)}
+            </button>
+          </form>
+        ) : (
+          <form action={createAction} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="vendor_id" value={vendor.id} />
+            {showEmail && (
+              <input
+                type="email"
+                name="email"
+                placeholder={t("mc_vendor_email", lang)}
+                className="rounded-lg border border-surface-200 p-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEmail((e) => !e)}
+              className="text-xs text-surface-500 hover:text-brand-700"
+            >
+              {showEmail ? t("mc_use_phone", lang) : t("mc_use_email", lang)}
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+            >
+              {t("mc_make_login", lang)}
+            </button>
+          </form>
+        )}
+      </div>
+
+      {(createState.error || resetState.error) && (
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          {createState.error ?? resetState.error}
+        </p>
+      )}
+
+      {/* Password ek hi dafa. Safha refresh hote hi chala jayega -- ye
+          jaan boojh kar hai, is liye saaf likh diya jata hai. */}
+      {state.password && (
+        <div className="mt-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="text-xs font-medium text-amber-800 dark:text-amber-300">{state.notice}</p>
+          <p className="mt-1 font-mono text-surface-900 dark:text-surface-100">{state.loginId}</p>
+          <p className="font-mono text-lg font-semibold text-surface-900 dark:text-surface-100">{state.password}</p>
+        </div>
+      )}
+    </div>
+  );
 }

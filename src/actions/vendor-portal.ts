@@ -2,6 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { notifyRoles } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
+import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Vendor ka apna raasta.
@@ -176,4 +178,185 @@ export async function submitVendorFuel(
     success: true,
     notice: "Diesel ka indraj pohanch gaya. Hamari team dekh kar tasdeeq karegi.",
   };
+}
+
+/**
+ * Vendor ka login banana.
+ *
+ * Do baatein jaan boojh kar aisi hain.
+ *
+ * Pehli: email lazmi nahi. Machine walon ke paas aksar email hota hi
+ * nahi, magar phone hamesha hota hai. Email na ho to us ke phone se ek
+ * bana diya jata hai -- wo sirf login ka naam hai, koi us par khat nahi
+ * bhejta. Us ke baghair bohat se vendors kabhi login na kar pate.
+ *
+ * Doosri: password yahan ek dafa dikhaya jata hai aur kahin mehfooz
+ * nahi hota. Mehfooz rakhne ka matlab hota ke jo bhi ye safha khole wo
+ * har vendor ke khate mein daakhil ho sake. Vendor bhool jaye to naya
+ * banaya jata hai -- purana dhoondhne ka koi rasta nahi hona chahiye.
+ */
+export async function createVendorLogin(
+  _prev: VendorActionState & { loginId?: string; password?: string },
+  formData: FormData
+): Promise<VendorActionState & { loginId?: string; password?: string }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile?.is_active || !["admin", "owner", "super_admin", "manager"].includes(String(profile.role))) {
+    return { error: "Vendor ka login sirf admin ya manager bana sakta hai." };
+  }
+
+  const vendorId = str(formData, "vendor_id");
+  if (!vendorId) return { error: "Vendor nahi mila." };
+
+  const service = createServiceClient();
+  const { data: vendor } = await service
+    .from("machinery_vendors")
+    .select("id, vendor_name, phone, user_id")
+    .eq("id", vendorId)
+    .maybeSingle();
+  if (!vendor) return { error: "Vendor nahi mila." };
+  if (vendor.user_id) {
+    return { error: "Is vendor ka login pehle se maujood hai. Password bhool gaye ho to naya password banayein." };
+  }
+
+  const typedEmail = str(formData, "email");
+  const phoneDigits = (vendor.phone ?? "").replace(/\D/g, "");
+  if (!typedEmail && !phoneDigits) {
+    return { error: "Vendor ka phone ya email chahiye — donon mein se ek zaroori hai." };
+  }
+  const loginId = typedEmail ?? `vendor${phoneDigits}@alranatraders.pk`;
+
+  // Password aisa jo phone par bola ja sake: gine chune huroof, koi
+  // aisa jora nahi jo sun kar galat likha jaye (0/O, 1/l).
+  const password = makeSpokenPassword();
+
+  const { data: created, error: authError } = await service.auth.admin.createUser({
+    email: loginId,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: vendor.vendor_name, vendor_id: vendor.id },
+  });
+  if (authError || !created?.user) {
+    return { error: authError?.message ?? "Login nahi ban saka." };
+  }
+
+  // Profile chahiye: login ke baad safha darje se hi tay hota hai ke
+  // aadmi kahan jayega. Darja machinery_vendor hai, staff wala nahi --
+  // staff ke darje /admin ka darwaza kholte hain.
+  const { error: profileError } = await service.from("profiles").upsert(
+    {
+      id: created.user.id,
+      full_name: vendor.vendor_name,
+      role: "machinery_vendor",
+      is_active: true,
+    },
+    { onConflict: "id" }
+  );
+  if (profileError) {
+    await service.auth.admin.deleteUser(created.user.id);
+    return { error: profileError.message };
+  }
+
+  const { error: linkError } = await service
+    .from("machinery_vendors")
+    .update({ user_id: created.user.id })
+    .eq("id", vendorId);
+  if (linkError) {
+    await service.auth.admin.deleteUser(created.user.id);
+    return { error: linkError.message };
+  }
+
+  await logAudit({
+    actionType: "create",
+    module: "machinery_vendors",
+    recordId: vendorId,
+    recordLabel: vendor.vendor_name,
+    description: `Vendor ka login banaya gaya: ${loginId}`,
+  });
+
+  revalidatePath("/admin/machinery-rental");
+  return {
+    success: true,
+    loginId,
+    password,
+    notice:
+      "Login ban gaya. Ye password sirf ABHI nazar aa raha hai -- ise vendor tak pohancha dein. Kahin mehfooz nahi kiya gaya.",
+  };
+}
+
+/**
+ * Naya password -- purana bhool jane par.
+ *
+ * Purana password kahin rakha hi nahi jata, is liye "yaad dilana"
+ * mumkin nahi. Naya banana hi wahid rasta hai, aur wohi theek hai.
+ */
+export async function resetVendorPassword(
+  _prev: VendorActionState & { loginId?: string; password?: string },
+  formData: FormData
+): Promise<VendorActionState & { loginId?: string; password?: string }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile?.is_active || !["admin", "owner", "super_admin", "manager"].includes(String(profile.role))) {
+    return { error: "Vendor ka password sirf admin ya manager badal sakta hai." };
+  }
+
+  const vendorId = str(formData, "vendor_id");
+  if (!vendorId) return { error: "Vendor nahi mila." };
+
+  const service = createServiceClient();
+  const { data: vendor } = await service
+    .from("machinery_vendors")
+    .select("id, vendor_name, user_id")
+    .eq("id", vendorId)
+    .maybeSingle();
+  if (!vendor?.user_id) return { error: "Is vendor ka abhi koi login nahi hai." };
+
+  const password = makeSpokenPassword();
+  const { error } = await service.auth.admin.updateUserById(vendor.user_id, { password });
+  if (error) return { error: error.message };
+
+  const { data: authUser } = await service.auth.admin.getUserById(vendor.user_id);
+
+  await logAudit({
+    actionType: "update",
+    module: "machinery_vendors",
+    recordId: vendorId,
+    recordLabel: vendor.vendor_name,
+    description: "Vendor ka password naya banaya gaya",
+  });
+
+  return {
+    success: true,
+    loginId: authUser?.user?.email ?? undefined,
+    password,
+    notice: "Naya password ban gaya. Ye sirf ABHI nazar aa raha hai.",
+  };
+}
+
+// Aisa password jo phone par bola ja sake. 0/O aur 1/l jaise jore
+// nikal diye gaye hain -- wo sun kar hamesha galat likhe jate hain.
+function makeSpokenPassword(): string {
+  const letters = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const pick = (set: string, n: number) =>
+    Array.from({ length: n }, () => set[Math.floor(Math.random() * set.length)]).join("");
+  return `${pick(letters, 4)}${pick(digits, 4)}`;
 }

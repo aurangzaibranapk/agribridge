@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateUserRole } from "@/actions/users";
 import { Select } from "@/components/ui/form";
-import type { UserRole } from "@/lib/types/database.types";
+import type { UserRole } from "@/lib/utils/roles";
 export function RoleSelector({ userId, currentRole }: { userId: string; currentRole: UserRole }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -9,6 +10,7 @@ import {
   recordFarmerConfirmation,
   recordPaymentPromise,
   recordFuelEntry,
+  createFollowUpBooking,
   overrideConfirmation,
   dispatchMachine,
   recordWorkCompletion,
@@ -79,6 +81,7 @@ interface Booking {
   rate_confirmation_sent_at: string | null;
   farmer_confirmed_at: string | null;
   payment_promise_date: string | null;
+  follow_up_number: string | null;
   payment_promise_note: string | null;
   will_sell_to_us: boolean | null;
   farmer_confirmation_response: string | null;
@@ -466,6 +469,18 @@ export function BookingDetail({
             )}
             {confirmed && !workFinished && (
               <WorkForm bookingId={booking.id} estimated={booking.harvest_area} done={workDone} />
+            )}
+
+            {/* Kaam mukammal ho gaya magar booking ka poora raqba nahi
+                kata. Ye maamool hai -- fasal kachi thi, ya machine kisi
+                aur khet chali gayi. Baqi ek NAYA kaam hai: nayi
+                tareekh, naya bill. Kisan aur khet wohi rehte hain. */}
+            {workFinished && workRemaining > 0 && (
+              <FollowUpForm
+                bookingId={booking.id}
+                remaining={workRemaining}
+                alreadyMade={booking.follow_up_number}
+              />
             )}
           </StepCard>
 
@@ -948,11 +963,13 @@ function DispatchForm({
           <Label>{t("mc_driver_phone", lang)}</Label>
           <Input name="driver_phone" />
         </div>
-        <div>
-          <Label>{t("mc_opening_meter", lang)}</Label>
-          <Input type="number" name="opening_meter" step="0.01" />
-        </div>
       </div>
+      {/* Shuru ka meter yahan se hata diya gaya.
+          Kisi ne bhi wo kabhi nahi bhara -- machine nikalte waqt koi
+          meter dekhne nahi jata. Aur us ki zaroorat bhi nahi: ghante
+          kaam ke waqt se khud nikalte hain, aur machine ka meter kaam
+          darj karte waqt likha jata hai. Jo khana hamesha khali rehta
+          hai wo form ko lamba karta hai aur kuch nahi. */}
       <p className="text-xs text-surface-500">{t("mc_dispatch_no_diesel", lang)}</p>
       <Submit label={t("mc_record_dispatch", lang)} />
     </form>
@@ -1291,6 +1308,96 @@ function PaymentForm({
       </div>
       <Submit label={t("mc_record_payment", lang)} />
     </form>
+  );
+}
+
+/**
+ * Baqi kaam ki agli booking.
+ *
+ * Sirf tareekh maangi jati hai. Raqba, rate, kisan, khet -- sab pichli
+ * booking se aate hain, kyunke wo badle nahi. Un ko dobara poochhna
+ * staff ko wo cheez likhwana hai jo system pehle se jaanta hai, aur
+ * wahin se galtiyan aati hain.
+ */
+function FollowUpForm({
+  bookingId,
+  remaining,
+  alreadyMade,
+}: {
+  bookingId: string;
+  remaining: number;
+  alreadyMade: string | null;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(createFollowUpBooking, initialState);
+  const [open, setOpen] = useState(false);
+
+  if (alreadyMade && !state.success) {
+    return (
+      <p className="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20">
+        {t("mc_followup_done", lang)}: {alreadyMade}
+      </p>
+    );
+  }
+
+  if (state.success) {
+    return (
+      <div className="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20">
+        <p>{state.notice}</p>
+        {state.bookingId && (
+          <Link href={`/admin/machinery-rental/booking/${state.bookingId}`} className="font-medium underline">
+            {state.bookingNumber}
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+        {t("mc_followup_q", lang)} — {remaining} acre
+      </p>
+      <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">{t("mc_followup_hint", lang)}</p>
+
+      {!open ? (
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            {t("mc_followup_yes", lang)}
+          </button>
+          <span className="self-center text-xs text-surface-500">{t("mc_followup_no", lang)}</span>
+        </div>
+      ) : (
+        <form action={action} className="mt-2 space-y-2">
+          <Err state={state} />
+          <input type="hidden" name="booking_id" value={bookingId} />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>{t("mc_followup_date", lang)}</Label>
+              <Input type="date" name="preferred_date" min={new Date().toISOString().slice(0, 10)} />
+            </div>
+            <div>
+              <Label>{t("mc_followup_area", lang)}</Label>
+              <Input type="number" name="remaining_acres" step="0.01" defaultValue={remaining} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Submit label={t("mc_followup_make", lang)} />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+            >
+              {t("ac_cancel", lang)}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 

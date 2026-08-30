@@ -14950,6 +14950,7 @@ export type Database = {
         | "ai_assistant"
         | "agronomist"
         | "machinery"
+        | "machinery_vendor"
       wallet_owner_type:
         | "farmer"
         | "dealer"
@@ -15223,6 +15224,7 @@ export const Constants = {
         "ai_assistant",
         "agronomist",
         "machinery",
+        "machinery_vendor",
       ],
       wallet_owner_type: [
         "farmer",

@@ -18,12 +18,13 @@ export default async function MachineryBookingPage({ params }: { params: Promise
 
   if (!booking) notFound();
 
-  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
+  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
       supabase.from("machinery_fuel_logs").select("*").eq("booking_id", id).order("log_date"),
       supabase.from("v_machinery_work_efficiency").select("*").eq("booking_id", id).maybeSingle(),
+      supabase.from("machinery_bookings").select("booking_number").eq("parent_booking_id", id).maybeSingle(),
       supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
       supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
@@ -103,6 +104,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         rate_confirmation_sent_at: booking.rate_confirmation_sent_at,
         farmer_confirmed_at: booking.farmer_confirmed_at,
         payment_promise_date: booking.payment_promise_date,
+        follow_up_number: followUp?.booking_number ?? null,
         payment_promise_note: booking.payment_promise_note,
         will_sell_to_us: booking.will_sell_to_us,
         farmer_confirmation_response: booking.farmer_confirmation_response,

@@ -1092,7 +1092,6 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
       operator_name: str(formData, "operator_name"),
       driver_phone: str(formData, "driver_phone"),
       departure_at: str(formData, "departure_at") ?? new Date().toISOString(),
-      opening_meter: num(formData, "opening_meter"),
       // Diesel yahan se nikal gaya (149): us ki apni qatar hai, kyunke
       // diesel ek dafa nahi dala jata. Rawangi sirf rawangi rahi.
       destination_address: str(formData, "destination_address") ?? booking.location_address,
@@ -2067,6 +2066,124 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
     notice: `Rs ${amount.toLocaleString()} khate mein aa gaya.${
       left > 0.01 ? ` Rs ${left.toLocaleString()} abhi bhi vendor ke paas darj hai.` : ""
     }`,
+  };
+}
+
+/**
+ * Baqi kaam ki agli booking.
+ *
+ * 15 acre ki booking thi, 7 kat gaye, 8 rah gaye. Bill 7 ka ban chuka
+ * hai -- wo kaam ho chuka aur us ka paisa banta hai. Baqi 8 ek NAYA
+ * kaam hai: nayi tareekh, nayi machine, naya bill.
+ *
+ * Kisan wohi, khet wohi, rate wohi. Ye "duplicate" nahi -- duplicate wo
+ * hota jab ek hi kaam do jagah likha jaye. Yahan do alag kaam hain.
+ *
+ * Rate aur kisan ki tasdeeq pichli booking se aage le jayi jati hai:
+ * kisan usi rate par raazi ho chuka hai aur ye usi kaam ka baqi hissa
+ * hai. Magar ye baat chhupayi nahi jati -- nayi booking ke timeline
+ * par saaf likha jata hai ke tasdeeq kahan se aayi.
+ */
+export async function createFollowUpBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const parentId = str(formData, "booking_id");
+  if (!parentId) return { error: "Booking nahi mili." };
+
+  const preferredDate = str(formData, "preferred_date");
+  if (!preferredDate) return { error: "Baqi kaam kab karwana hai, wo tareekh likhein." };
+
+  const { data: parent } = await supabase
+    .from("machinery_bookings")
+    .select(
+      "id, booking_number, farmer_id, farm_id, crop_type, machine_type_requested, harvest_area, final_rate, rate_status, farmer_confirmed_at, location_address, village, will_sell_to_us"
+    )
+    .eq("id", parentId)
+    .maybeSingle();
+  if (!parent) return { error: "Booking nahi mili." };
+
+  const { data: workRows } = await supabase
+    .from("machinery_work_records")
+    .select("actual_area")
+    .eq("booking_id", parentId)
+    .eq("verification_status", "verified");
+
+  const done = (workRows ?? []).reduce((sum, w) => sum + Number(w.actual_area), 0);
+  const auto = Math.round((Number(parent.harvest_area ?? 0) - done) * 100) / 100;
+  const asked = num(formData, "remaining_acres");
+  const remaining = asked && asked > 0 ? asked : auto;
+
+  if (remaining <= 0) {
+    return { error: "Is booking par koi raqba baqi nahi -- poora kaam ho chuka hai." };
+  }
+
+  const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
+
+  const { data: booking, error } = await supabase
+    .from("machinery_bookings")
+    .insert({
+      booking_number: bookingNumber,
+      farmer_id: parent.farmer_id,
+      farm_id: parent.farm_id,
+      parent_booking_id: parent.id,
+      booking_date: new Date().toISOString().slice(0, 10),
+      status: "new",
+      crop_type: parent.crop_type,
+      machine_type_requested: parent.machine_type_requested,
+      harvest_area_acres: remaining,
+      preferred_date: preferredDate,
+      location_address: parent.location_address,
+      village: parent.village,
+      will_sell_to_us: parent.will_sell_to_us,
+      estimated_rate: parent.final_rate,
+      rate_status: "estimated",
+      created_by: actorId,
+    })
+    .select("id, booking_number")
+    .single();
+  if (error || !booking) return { error: error?.message ?? "Agli booking nahi bani." };
+
+  // Rate aur tasdeeq aage le jate hain -- magar alag qadam mein, taake
+  // DB ka apna guard (jo tasdeeq ke baghair rate final nahi hone deta)
+  // apni jagah lagta rahe.
+  if (parent.rate_status === "final" && parent.final_rate && parent.farmer_confirmed_at) {
+    await supabase
+      .from("machinery_bookings")
+      .update({
+        final_rate: parent.final_rate,
+        rate_status: "final",
+        farmer_confirmed_at: parent.farmer_confirmed_at,
+        farmer_confirmation_channel: "carried_forward",
+        farmer_confirmation_response: `Rate Rs ${Number(parent.final_rate).toLocaleString()}/acre — tasdeeq booking ${parent.booking_number} se aayi`,
+        status: "ready_for_harvest",
+      })
+      .eq("id", booking.id);
+  }
+
+  await logEvent({
+    bookingId: booking.id,
+    eventType: "booking_created",
+    toStatus: "new",
+    note: `Booking ${parent.booking_number} ka baqi kaam — ${remaining} acre${
+      parent.final_rate ? `, rate Rs ${Number(parent.final_rate).toLocaleString()}/acre (pichli booking se)` : ""
+    }`,
+    actorId,
+  });
+
+  await logEvent({
+    bookingId: parent.id,
+    eventType: "follow_up_created",
+    note: `Baqi ${remaining} acre ke liye nayi booking ${booking.booking_number} bani (${preferredDate})`,
+    actorId,
+  });
+
+  revalidateAll(parentId);
+  revalidateAll(booking.id);
+  return {
+    success: true,
+    bookingId: booking.id,
+    bookingNumber: booking.booking_number,
+    notice: `Baqi ${remaining} acre ke liye booking ${booking.booking_number} ban gayi — ${preferredDate}. Kisan aur khet wohi hain.`,
   };
 }
 

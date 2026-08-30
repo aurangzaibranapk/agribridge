@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { UserRole } from "@/lib/types/database.types";
+import type { UserRole } from "@/lib/utils/roles";
 
 export async function updateUserRole(userId: string, role: UserRole): Promise<{ error?: string }> {
   const supabase = createClient();
