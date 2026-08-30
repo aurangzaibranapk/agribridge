@@ -393,7 +393,7 @@ export function BookingDetail({
                 )}
               </div>
             )}
-            {confirmed && <FuelForm bookingId={booking.id} accounts={accounts} />}
+            {confirmed && <FuelForm bookingId={booking.id} accounts={accounts} already={fuelLogs.length > 0} />}
           </StepCard>
 
           {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
@@ -924,13 +924,46 @@ function DispatchForm({
 function FuelForm({
   bookingId,
   accounts,
+  already,
 }: {
   bookingId: string;
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  already: boolean;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFuelEntry, initialState);
   const [paidBy, setPaidBy] = useState("");
+  const [more, setMore] = useState(false);
+
+  // Ek dafa darj hone ke baad form band. Khula hua form wohi ghalti
+  // dobara karwata hai jo rawangi par hui thi: aadmi samajhta hai ke
+  // shayad pichhla gaya hi nahi, aur wohi diesel do dafa kharche mein
+  // chala jata hai. Mazeed diesel dala ho to jaan boojh kar maangna
+  // parta hai.
+  const closed = (already || state.success) && !more;
+
+  if (closed) {
+    return (
+      <div className="space-y-2">
+        {state.notice && (
+          <p className="rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
+            {state.notice}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setMore(true);
+            setPaidBy("");
+          }}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          + {t("mc_fuel_add_more", lang)}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -973,7 +1006,18 @@ function FuelForm({
       {paidBy && paidBy !== "company" && (
         <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
       )}
-      <Submit label={t("mc_fuel_save", lang)} />
+      <div className="flex gap-2">
+        <Submit label={t("mc_fuel_save", lang)} />
+        {already && (
+          <button
+            type="button"
+            onClick={() => setMore(false)}
+            className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+          >
+            {t("ac_cancel", lang)}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

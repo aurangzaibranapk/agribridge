@@ -110,6 +110,11 @@ export const machineryDict = {
     ur: "کیا یہ کسان فصل ہمیں بیچے گا؟",
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
+  mc_fuel_add_more: {
+    en: "More diesel was put in — add it",
+    rm: "Mazeed diesel dala hai — yahan add karein",
+    ur: "مزید ڈیزل ڈالا ہے — یہاں شامل کریں",
+  },
   wc_section_work: { en: "Work", rm: "Kaam", ur: "کام" },
   wc_section_fuel: { en: "Diesel", rm: "Diesel", ur: "ڈیزل" },
   wc_fuel_accept: { en: "Accept this diesel", rm: "Ye diesel maan lein", ur: "یہ ڈیزل مان لیں" },
