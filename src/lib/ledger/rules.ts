@@ -903,6 +903,100 @@ export async function postMachineryBill(args: {
  *
  * Bulane wale ka kaam: khata ke liye ye poster bulao hi mat.
  */
+/**
+ * Kisan ne paisa VENDOR ko de diya.
+ *
+ * Cash yahan kahin nahi hila -- hamare kisi khate mein wo paisa aaya hi
+ * nahi. Jo hua wo ye hai: kisan ka zimma khatam, aur wo raqam ab kisi
+ * aur ke paas hai. "Kisi aur" do mein se ek hai:
+ *
+ *   kept         -- vendor ne apne hisse mein se rakh liya. Hamare zimme
+ *                   jo us ka paisa tha wo utna kam ho gaya (2000).
+ *   handed_over  -- vendor ne rakha hai magar hamein dena hai. Ye hamara
+ *                   paisa hai jo ek bande ke haath mein hai (1030) --
+ *                   isi khate ka poora maqsad yehi hai.
+ *
+ * Ise "cash aa gaya" likh dena sab se aasan aur sab se ghalat raasta
+ * hota: cash book us din se ghalat ho jati aur mahine ke aakhir mein
+ * milan nahi hota.
+ */
+export async function postMachineryVendorCollected(args: {
+  bookingId: string;
+  farmerId: string;
+  vendorId: string;
+  amount: number;
+  settlement: "kept" | "handed_over";
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const debit =
+    args.settlement === "kept"
+      ? { account: ACC.supplierPayable, partyType: "machinery_vendor", partyId: args.vendorId }
+      : { account: ACC.cashWithPerson, partyType: "machinery_vendor", partyId: args.vendorId };
+
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_payment",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      {
+        account: debit.account,
+        debit: args.amount,
+        partyType: debit.partyType,
+        partyId: debit.partyId,
+        memo: args.description,
+      },
+      {
+        account: ACC.farmerDue,
+        credit: args.amount,
+        partyType: "farmer",
+        partyId: args.farmerId,
+        memo: args.description,
+      },
+    ],
+  });
+}
+
+/**
+ * Vendor ne wo paisa hamein de diya.
+ *
+ * Ye upar wale ka doosra qadam hai aur aksar doosre din hota hai: paisa
+ * us ke haath se nikal kar hamare khate mein aata hai. Kisan ka is se
+ * koi taalluq nahi -- us ka hisaab pehle qadam par hi barabar ho chuka
+ * tha.
+ */
+export async function postVendorCashHandover(args: {
+  vendorId: string;
+  accountId: string;
+  amount: number;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const gl = await glForFinanceAccount(args.accountId);
+  return postJournal({
+    description: args.description,
+    sourceModule: "machinery_payment",
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      { account: gl, debit: args.amount, memo: args.description },
+      {
+        account: ACC.cashWithPerson,
+        credit: args.amount,
+        partyType: "machinery_vendor",
+        partyId: args.vendorId,
+        memo: args.description,
+      },
+    ],
+  });
+}
+
 export async function postMachineryPayment(args: {
   bookingId: string;
   farmerId: string;

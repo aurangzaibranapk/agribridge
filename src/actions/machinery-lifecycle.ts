@@ -10,6 +10,8 @@ import {
   postMachineryAdvance,
   postMachineryBill,
   postMachineryPayment,
+  postMachineryVendorCollected,
+  postVendorCashHandover,
   postCashOut,
   ACC,
   failed,
@@ -996,6 +998,12 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
       paid_by: paidBy,
       finance_account_id: paidBy === "company" ? accountId : null,
       notes: str(formData, "notes"),
+      // Staff ka indraj seedha tasdeeq shuda: dekhne wala aur likhne
+      // wala ek hi hai. Vendor ka raasta alag hai (152).
+      source: "staff",
+      verification_status: "verified",
+      submitted_by: actorId,
+      verified_by: actorId,
       created_by: actorId,
     })
     .select("id")
@@ -1155,8 +1163,9 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   // ho jata.
   const { data: existing } = await supabase
     .from("machinery_work_records")
-    .select("id, work_date, actual_area, is_final")
-    .eq("booking_id", bookingId);
+    .select("id, work_date, actual_area, is_final, verification_status")
+    .eq("booking_id", bookingId)
+    .eq("verification_status", "verified");
 
   if ((existing ?? []).some((w) => w.is_final)) {
     return { error: "Is booking ka kaam mukammal ho chuka hai -- ab naya indraj nahi ho sakta." };
@@ -1171,6 +1180,12 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
     booking_id: bookingId,
     work_date: workDate,
     is_final: isFinal,
+    // Staff ka likha hua kaam seedha tasdeeq shuda hai: wahan dekhne
+    // wala aur likhne wala ek hi hai. Vendor ka raasta alag hai (150).
+    source: "staff",
+    verification_status: "verified",
+    submitted_by: actorId,
+    verified_by: actorId,
     actual_area_acres: acres,
     actual_area_kanal: kanal,
     started_at: str(formData, "started_at"),
@@ -1375,10 +1390,14 @@ async function buildFinalBill(
 
   // Bill kai din ke kaam ke JOR se banta hai, kisi ek din se nahi
   // (migration 143). Kattai aksar ek din mein poori nahi hoti.
+  // Sirf tasdeeq shuda kaam. Vendor ka dawa jab tak dekha na jaye,
+  // bill ka hissa nahi banta -- wo apne hi paise ka adad likh raha
+  // hota hai (150).
   const { data: workRows } = await supabase
     .from("machinery_work_records")
     .select("actual_area, is_final")
-    .eq("booking_id", bookingId);
+    .eq("booking_id", bookingId)
+    .eq("verification_status", "verified");
 
   if (!workRows || workRows.length === 0) {
     return { error: "Pehle asal kaam darj karein (kitne acre waqai kaate gaye)." };
@@ -1532,7 +1551,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number, status, farmer_id")
+    .select("id, booking_number, status, farmer_id, vendor_id")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
@@ -1544,7 +1563,13 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
     .maybeSingle();
   if (!bill) return { error: "Pehle bill banayein." };
 
-  const lines: Array<{ method: string; amount: number; accountId: string | null; reference: string | null }> = [];
+  const lines: Array<{
+    method: string;
+    amount: number;
+    accountId: string | null;
+    reference: string | null;
+    settlement: string | null;
+  }> = [];
   for (let i = 0; i < 5; i += 1) {
     const amount = num(formData, `line_${i}_amount`);
     const method = str(formData, `line_${i}_method`);
@@ -1554,11 +1579,24 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
       amount,
       accountId: str(formData, `line_${i}_account_id`),
       reference: str(formData, `line_${i}_reference`),
+      settlement: str(formData, `line_${i}_settlement`),
     });
   }
   if (lines.length === 0) return { error: "Kam az kam ek payment likhein." };
 
   for (const line of lines) {
+    // Vendor ke haath gaya hua paisa kisi khate mein nahi aata -- wahan
+    // khata maangna hi ghalat hai. Us ke bajaye ye poochha jata hai ke
+    // vendor ne rakha ya hamein diya.
+    if (line.method === "vendor_collected") {
+      if (!booking.vendor_id) {
+        return { error: "Is booking par koi vendor darj nahi -- pehle machine ki rawangi darj karein." };
+      }
+      if (line.settlement !== "kept" && line.settlement !== "handed_over") {
+        return { error: "Batayein ke vendor ne wo paisa apne hisse mein rakha ya hamein de diya." };
+      }
+      continue;
+    }
     if (line.method !== "khata" && !line.accountId) {
       return { error: `"${line.method}" ke liye khata select karein — warna paisa aaya to hai magar pahuncha kahin nahi.` };
     }
@@ -1587,7 +1625,9 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
         kind: "final",
         amount: line.amount,
         method: line.method,
-        finance_account_id: line.accountId,
+        finance_account_id: line.method === "vendor_collected" ? null : line.accountId,
+        collected_by_vendor_id: line.method === "vendor_collected" ? booking.vendor_id : null,
+        vendor_settlement: line.method === "vendor_collected" ? line.settlement : null,
         payment_date: paymentDate,
         reference: line.reference,
         evidence_url: str(formData, "evidence_url"),
@@ -1602,6 +1642,39 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
         bookingId,
         eventType: "payment_to_khata",
         note: `Rs ${line.amount.toLocaleString()} kisan ke khate par chhora gaya`,
+        actorId,
+      });
+      continue;
+    }
+
+    if (line.method === "vendor_collected") {
+      const posted = await postMachineryVendorCollected({
+        bookingId,
+        farmerId: booking.farmer_id,
+        vendorId: booking.vendor_id!,
+        amount: line.amount,
+        settlement: line.settlement as "kept" | "handed_over",
+        description:
+          line.settlement === "kept"
+            ? `Machinery ${booking.booking_number} — kisan ne vendor ko diya, vendor ne apne hisse mein rakha`
+            : `Machinery ${booking.booking_number} — kisan ne vendor ko diya, vendor ne hamein dena hai`,
+        ctx: {
+          createdBy: actorId,
+          entryDate: paymentDate,
+          claims: [{ table: "machinery_payments", rowId: payment.id }],
+        },
+      });
+      if (failed(posted)) {
+        await createServiceClient().from("machinery_payments").delete().eq("id", payment.id);
+        return { error: `Ledger mein nahi gaya, is liye payment darj nahi ki: ${posted.error}` };
+      }
+      await logEvent({
+        bookingId,
+        eventType: "payment_via_vendor",
+        note:
+          line.settlement === "kept"
+            ? `Rs ${line.amount.toLocaleString()} kisan ne vendor ko diya — vendor ne apne hisse mein rakh liya`
+            : `Rs ${line.amount.toLocaleString()} kisan ne vendor ko diya — vendor ne hamein dena hai`,
         actorId,
       });
       continue;
@@ -1728,6 +1801,272 @@ export async function recordPaymentPromise(_prev: ActionState, formData: FormDat
   return {
     success: true,
     notice: `Wada darj ho gaya. Baqi raqam waise hi khari hai — ${promiseDate} par ye booking "paisa lena" ki qatar mein saamne aa jayegi.`,
+  };
+}
+
+/**
+ * Vendor ka bheja hua kaam: dekho, phir maano.
+ *
+ * Vendor apne portal se kattai ki tafseel bhejta hai. Wo qatar 'claimed'
+ * halat mein aati hai -- bill use nahi ginta. Yahan hamari team ya to
+ * usay maan leti hai (aur tabhi wo bill ka hissa banta hai) ya wajah ke
+ * sath rad kar deti hai.
+ *
+ * Raqba yahan badla ja sakta hai: aksar farq neeyat ka nahi, naap ka
+ * hota hai. Jo adad hamari team ne dekha wohi bill mein jata hai.
+ */
+export async function verifyWorkClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const workId = str(formData, "work_id");
+  const decision = str(formData, "decision");
+  if (!workId) return { error: "Indraj nahi mila." };
+  if (decision !== "accept" && decision !== "reject") return { error: "Faisla batayein." };
+
+  const { data: work } = await supabase
+    .from("machinery_work_records")
+    .select("id, booking_id, actual_area, verification_status")
+    .eq("id", workId)
+    .maybeSingle();
+  if (!work) return { error: "Indraj nahi mila." };
+  if (work.verification_status !== "claimed") {
+    return { error: "Is indraj ka faisla pehle ho chuka hai." };
+  }
+
+  if (decision === "reject") {
+    const reason = str(formData, "rejection_reason");
+    if (!reason) return { error: "Rad karne ki wajah likhein." };
+    const { error } = await supabase
+      .from("machinery_work_records")
+      .update({
+        verification_status: "rejected",
+        rejection_reason: reason,
+        verified_by: actorId,
+        verified_at: new Date().toISOString(),
+      })
+      .eq("id", workId);
+    if (error) return { error: error.message };
+
+    await logEvent({
+      bookingId: work.booking_id,
+      eventType: "work_claim_rejected",
+      note: `Vendor ka indraj rad: ${reason}`,
+      actorId,
+    });
+    revalidateAll(work.booking_id);
+    return { success: true };
+  }
+
+  // Naap ka farq theek karna yahin ka kaam hai.
+  const acres = num(formData, "actual_area_acres");
+  const kanal = num(formData, "actual_area_kanal");
+  const corrected = toAcres(acres, kanal) > 0;
+
+  const { error } = await supabase
+    .from("machinery_work_records")
+    .update({
+      verification_status: "verified",
+      verified_by: actorId,
+      verified_at: new Date().toISOString(),
+      ...(corrected ? { actual_area_acres: acres, actual_area_kanal: kanal } : {}),
+    })
+    .eq("id", workId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId: work.booking_id,
+    eventType: "work_claim_verified",
+    note: corrected
+      ? `Vendor ka indraj tasdeeq shuda — raqba ${Number(work.actual_area)} se ${toAcres(acres, kanal)} acre kiya gaya`
+      : `Vendor ka indraj tasdeeq shuda — ${Number(work.actual_area)} acre`,
+    actorId,
+  });
+
+  revalidateAll(work.booking_id);
+  return { success: true };
+}
+
+/**
+ * Vendor ka bheja hua diesel: dekho, phir maano.
+ *
+ * Khata yahan poochha jata hai, dawe ke waqt nahi -- vendor ko ye pata
+ * hi nahi hota ke ART ne kis khate se paisa nikala. Ledger bhi yahin
+ * banta hai, is tasdeeq ke sath.
+ */
+export async function verifyFuelClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const fuelId = str(formData, "fuel_id");
+  const decision = str(formData, "decision");
+  if (!fuelId) return { error: "Indraj nahi mila." };
+  if (decision !== "accept" && decision !== "reject") return { error: "Faisla batayein." };
+
+  const { data: log } = await supabase
+    .from("machinery_fuel_logs")
+    .select("id, booking_id, amount, litres, paid_by, verification_status")
+    .eq("id", fuelId)
+    .maybeSingle();
+  if (!log) return { error: "Indraj nahi mila." };
+  if (log.verification_status !== "claimed") {
+    return { error: "Is indraj ka faisla pehle ho chuka hai." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number")
+    .eq("id", log.booking_id)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  if (decision === "reject") {
+    const reason = str(formData, "rejection_reason");
+    if (!reason) return { error: "Rad karne ki wajah likhein." };
+    const { error } = await supabase
+      .from("machinery_fuel_logs")
+      .update({
+        verification_status: "rejected",
+        rejection_reason: reason,
+        verified_by: actorId,
+        verified_at: new Date().toISOString(),
+      })
+      .eq("id", fuelId);
+    if (error) return { error: error.message };
+
+    await logEvent({
+      bookingId: log.booking_id,
+      eventType: "fuel_claim_rejected",
+      note: `Vendor ka diesel rad: ${reason}`,
+      actorId,
+    });
+    revalidateAll(log.booking_id);
+    return { success: true };
+  }
+
+  const accountId = str(formData, "finance_account_id");
+  if (log.paid_by === "company" && !accountId) {
+    return { error: "ART ka diesel hai to khata select karein ke kis khate se nikla." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_fuel_logs")
+    .update({
+      verification_status: "verified",
+      finance_account_id: log.paid_by === "company" ? accountId : null,
+      verified_by: actorId,
+      verified_at: new Date().toISOString(),
+    })
+    .eq("id", fuelId);
+  if (error) return { error: error.message };
+
+  if (log.paid_by === "company" && accountId) {
+    const fuelError = await saveDieselExpense({
+      supabase,
+      fuelLogId: fuelId,
+      bookingNumber: booking.booking_number,
+      amount: Number(log.amount),
+      accountId,
+      litres: log.litres === null ? null : Number(log.litres),
+      actorId,
+    });
+    // Ledger mein na ja saka to tasdeeq bhi wapas -- warna diesel
+    // "tasdeeq shuda" likha rehta aur kharcha kahin nahi hota.
+    if (fuelError) {
+      await createServiceClient()
+        .from("machinery_fuel_logs")
+        .update({ verification_status: "claimed", finance_account_id: null, verified_by: null, verified_at: null })
+        .eq("id", fuelId);
+      return { error: fuelError };
+    }
+  }
+
+  await logEvent({
+    bookingId: log.booking_id,
+    eventType: "fuel_claim_verified",
+    note: `Vendor ka diesel tasdeeq shuda — Rs ${Number(log.amount).toLocaleString()} (${
+      log.paid_by === "company" ? "ART" : log.paid_by === "vendor" ? "vendor" : "kisan"
+    })`,
+    actorId,
+  });
+
+  revalidateAll(log.booking_id);
+  return { success: true };
+}
+
+/**
+ * Vendor ne wasool shuda paisa hamein de diya.
+ *
+ * Ye us payment ka doosra qadam hai jo kisan ne vendor ke haath mein
+ * di thi aur vendor ne "hamein de dunga" kaha tha. Pehle qadam par
+ * kisan ka hisaab barabar ho chuka tha; ab wo paisa ek bande ke haath
+ * se nikal kar hamare khate mein aata hai.
+ *
+ * Kisan ka is se koi taalluq nahi -- is liye ye kisi ek booking ka
+ * safha nahi, vendor ka safha hai. Ek vendor teen bookings ka paisa
+ * ek sath laata hai.
+ */
+export async function recordVendorCashHandover(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const vendorId = str(formData, "vendor_id");
+  const accountId = str(formData, "finance_account_id");
+  const amount = num(formData, "amount") ?? 0;
+
+  if (!vendorId) return { error: "Vendor nahi mila." };
+  if (amount <= 0) return { error: "Raqam sahi likhein." };
+  if (!accountId) return { error: "Paisa kis khate mein aaya, wo select karein." };
+
+  const { data: vendor } = await supabase
+    .from("machinery_vendors")
+    .select("id, vendor_name")
+    .eq("id", vendorId)
+    .maybeSingle();
+  if (!vendor) return { error: "Vendor nahi mila." };
+
+  // Vendor ke paas hamara kitna paisa hai -- wohi hadd hai. Is se
+  // zyada lena us ka apna paisa lena hai, aur wo alag maamla hai.
+  const { data: pending } = await supabase
+    .from("machinery_payments")
+    .select("id, amount")
+    .eq("collected_by_vendor_id", vendorId)
+    .eq("method", "vendor_collected")
+    .eq("vendor_settlement", "handed_over")
+    .is("finance_account_id", null);
+
+  const holding = (pending ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
+  if (holding <= 0) return { error: "Is vendor ke paas hamara koi paisa darj nahi hai." };
+  if (amount > holding + 0.01) {
+    return { error: `Vendor ke paas hamara Rs ${holding.toLocaleString()} hai, us se zyada nahi liya ja sakta.` };
+  }
+
+  const posted = await postVendorCashHandover({
+    vendorId,
+    accountId,
+    amount,
+    description: `${vendor.vendor_name} ne kisan se wasool shuda paisa hamein diya`,
+    ctx: { createdBy: actorId, entryDate: str(formData, "received_date") ?? undefined },
+  });
+  if (failed(posted)) return { error: `Ledger mein nahi gaya: ${posted.error}` };
+
+  // Jo qatarein poori tarah aa gayin un par khata likh diya jata hai --
+  // isi se wo "vendor ke paas para hua" ki fehrist se nikalti hain.
+  // Aadhi qatar par nishaan nahi lagta: adhoori adaigi ka matlab wo
+  // qatar abhi puri nahi hui.
+  let left = amount;
+  const service = createServiceClient();
+  for (const row of pending ?? []) {
+    const rowAmount = Number(row.amount);
+    if (rowAmount > left + 0.01) break;
+    await service.from("machinery_payments").update({ finance_account_id: accountId }).eq("id", row.id);
+    left = Math.round((left - rowAmount) * 100) / 100;
+  }
+
+  revalidatePath("/admin/machinery-rental/vendor-cash");
+  revalidatePath("/admin/finance");
+  return {
+    success: true,
+    notice: `Rs ${amount.toLocaleString()} khate mein aa gaya.${
+      left > 0.01 ? ` Rs ${left.toLocaleString()} abhi bhi vendor ke paas darj hai.` : ""
+    }`,
   };
 }
 

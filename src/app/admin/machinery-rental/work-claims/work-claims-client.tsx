@@ -1,0 +1,364 @@
+"use client";
+import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import Link from "next/link";
+import { verifyWorkClaim, verifyFuelClaim, type ActionState } from "@/actions/machinery-lifecycle";
+import { useLang } from "@/lib/i18n/lang-context";
+import { t } from "@/lib/i18n/translations";
+
+const initialState: ActionState = {};
+
+interface Claim {
+  workId: string;
+  bookingId: string;
+  bookingNumber: string;
+  farmerName: string;
+  vendorName: string;
+  workDate: string;
+  area: number;
+  isFinal: boolean;
+  meterReading: number | null;
+  photoUrl: string | null;
+  notes: string | null;
+  daysOld: number | null;
+}
+
+interface FuelClaim {
+  fuelId: string;
+  bookingId: string;
+  bookingNumber: string;
+  farmerName: string;
+  vendorName: string;
+  logDate: string;
+  litres: number | null;
+  amount: number;
+  paidBy: string;
+  notes: string | null;
+  daysOld: number | null;
+}
+
+export function WorkClaimsClient({
+  claims,
+  fuelClaims,
+  accounts,
+}: {
+  claims: Claim[];
+  fuelClaims: FuelClaim[];
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
+  const lang = useLang();
+
+  if (claims.length === 0 && fuelClaims.length === 0) {
+    return (
+      <p className="rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-surface-400 dark:border-surface-800 dark:bg-surface-900">
+        {t("wc_empty", lang)}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {claims.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-display text-sm font-semibold text-surface-700 dark:text-surface-300">
+            {t("wc_section_work", lang)}
+          </h2>
+          {claims.map((c) => (
+            <ClaimCard key={c.workId} claim={c} />
+          ))}
+        </div>
+      )}
+
+      {fuelClaims.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-display text-sm font-semibold text-surface-700 dark:text-surface-300">
+            {t("wc_section_fuel", lang)}
+          </h2>
+          {fuelClaims.map((c) => (
+            <FuelClaimCard key={c.fuelId} claim={c} accounts={accounts} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FuelClaimCard({
+  claim,
+  accounts,
+}: {
+  claim: FuelClaim;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(verifyFuelClaim, initialState);
+  const [mode, setMode] = useState<"" | "accept" | "reject">("");
+
+  return (
+    <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Link
+            href={`/admin/machinery-rental/booking/${claim.bookingId}`}
+            className="font-mono text-sm text-brand-600 hover:underline"
+          >
+            {claim.bookingNumber}
+          </Link>
+          <p className="font-medium text-surface-900 dark:text-surface-100">{claim.vendorName}</p>
+          <p className="text-xs text-surface-500">
+            {claim.farmerName} · {new Date(claim.logDate).toLocaleDateString()}
+            {claim.litres !== null && ` · ${claim.litres} L`}
+          </p>
+          <p className="mt-1 text-xs font-medium text-surface-700 dark:text-surface-300">
+            {claim.paidBy === "company"
+              ? t("mc_diesel_by_company", lang)
+              : claim.paidBy === "vendor"
+              ? t("mc_diesel_by_vendor", lang)
+              : t("mc_diesel_by_farmer", lang)}
+          </p>
+          {claim.notes && <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">{claim.notes}</p>}
+          {claim.daysOld !== null && claim.daysOld > 2 && (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+              {claim.daysOld} {t("ac_days_waiting", lang)}
+            </p>
+          )}
+        </div>
+        <p className="whitespace-nowrap font-display text-lg font-semibold text-surface-900 dark:text-white">
+          Rs {claim.amount.toLocaleString()}
+        </p>
+      </div>
+
+      {state.error && (
+        <p className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+      {state.success && (
+        <p className="mt-2 rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
+          {t("ac_done", lang)}
+        </p>
+      )}
+
+      {!state.success && (
+        <>
+          {mode === "" && (
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => setMode("accept")}
+                className="flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                {t("wc_fuel_accept", lang)}
+              </button>
+              <button
+                onClick={() => setMode("reject")}
+                className="flex-1 rounded-lg border border-surface-200 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700"
+              >
+                {t("wc_reject", lang)}
+              </button>
+            </div>
+          )}
+
+          {mode === "accept" && (
+            <form action={action} className="mt-3 space-y-2">
+              <input type="hidden" name="fuel_id" value={claim.fuelId} />
+              <input type="hidden" name="decision" value="accept" />
+              {/* Khata sirf ART wale diesel par. Vendor ko ye pata hi
+                  nahi hota ke paisa kis khate se nikla -- wo sawal
+                  yahin ka hai. */}
+              {claim.paidBy === "company" ? (
+                <>
+                  <label className="block text-xs font-medium text-surface-600">{t("mc_diesel_account", lang)}</label>
+                  <select
+                    name="finance_account_id"
+                    required
+                    className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                  >
+                    <option value="">—</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-surface-500">{t("wc_fuel_accept_hint", lang)}</p>
+                </>
+              ) : (
+                <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
+              )}
+              <div className="flex gap-2">
+                <Submit label={t("ac_confirm", lang)} />
+                <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
+                  {t("ac_cancel", lang)}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {mode === "reject" && (
+            <form action={action} className="mt-3 space-y-2">
+              <input type="hidden" name="fuel_id" value={claim.fuelId} />
+              <input type="hidden" name="decision" value="reject" />
+              <input
+                name="rejection_reason"
+                required
+                placeholder={t("wc_reject_reason_hint", lang)}
+                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+              />
+              <div className="flex gap-2">
+                <Submit label={t("ac_confirm_reject", lang)} />
+                <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
+                  {t("ac_cancel", lang)}
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ClaimCard({ claim }: { claim: Claim }) {
+  const lang = useLang();
+  const [state, action] = useFormState(verifyWorkClaim, initialState);
+  const [mode, setMode] = useState<"" | "accept" | "reject">("");
+
+  return (
+    <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Link
+            href={`/admin/machinery-rental/booking/${claim.bookingId}`}
+            className="font-mono text-sm text-brand-600 hover:underline"
+          >
+            {claim.bookingNumber}
+          </Link>
+          <p className="font-medium text-surface-900 dark:text-surface-100">{claim.vendorName}</p>
+          <p className="text-xs text-surface-500">
+            {claim.farmerName} · {new Date(claim.workDate).toLocaleDateString()}
+            {claim.meterReading !== null && ` · meter ${claim.meterReading}`}
+          </p>
+          {claim.isFinal && (
+            <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              {t("wc_marked_final", lang)}
+            </p>
+          )}
+          {claim.notes && <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">{claim.notes}</p>}
+          {claim.daysOld !== null && claim.daysOld > 2 && (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+              {claim.daysOld} {t("ac_days_waiting", lang)}
+            </p>
+          )}
+          {claim.photoUrl && (
+            <a
+              href={claim.photoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-brand-600 hover:underline"
+            >
+              {t("wc_view_photo", lang)}
+            </a>
+          )}
+        </div>
+        <p className="whitespace-nowrap font-display text-lg font-semibold text-surface-900 dark:text-white">
+          {claim.area} acre
+        </p>
+      </div>
+
+      {state.error && (
+        <p className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+      {state.success && (
+        <p className="mt-2 rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
+          {t("ac_done", lang)}
+        </p>
+      )}
+
+      {!state.success && (
+        <>
+          {mode === "" && (
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => setMode("accept")}
+                className="flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                {t("wc_accept", lang)}
+              </button>
+              <button
+                onClick={() => setMode("reject")}
+                className="flex-1 rounded-lg border border-surface-200 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700"
+              >
+                {t("wc_reject", lang)}
+              </button>
+            </div>
+          )}
+
+          {mode === "accept" && (
+            <form action={action} className="mt-3 space-y-2">
+              <input type="hidden" name="work_id" value={claim.workId} />
+              <input type="hidden" name="decision" value="accept" />
+              {/* Naap ka farq theek karna yahin ka kaam hai -- aksar
+                  farq neeyat ka nahi, naap ka hota hai. Khali chhor
+                  dein to vendor ka adad hi chalta hai. */}
+              <p className="text-xs text-surface-500">{t("wc_correct_hint", lang)}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  name="actual_area_acres"
+                  placeholder={`${t("mc_actual_area", lang)} (${claim.area})`}
+                  className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  name="actual_area_kanal"
+                  placeholder={t("mc_kanal", lang)}
+                  className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Submit label={t("ac_confirm", lang)} />
+                <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
+                  {t("ac_cancel", lang)}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {mode === "reject" && (
+            <form action={action} className="mt-3 space-y-2">
+              <input type="hidden" name="work_id" value={claim.workId} />
+              <input type="hidden" name="decision" value="reject" />
+              <input
+                name="rejection_reason"
+                required
+                placeholder={t("wc_reject_reason_hint", lang)}
+                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+              />
+              <div className="flex gap-2">
+                <Submit label={t("ac_confirm_reject", lang)} />
+                <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
+                  {t("ac_cancel", lang)}
+                </button>
+              </div>
+            </form>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Submit({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+    >
+      {pending ? "..." : label}
+    </button>
+  );
+}

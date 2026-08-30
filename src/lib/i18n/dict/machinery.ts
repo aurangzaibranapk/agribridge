@@ -110,6 +110,69 @@ export const machineryDict = {
     ur: "کیا یہ کسان فصل ہمیں بیچے گا؟",
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
+  wc_section_work: { en: "Work", rm: "Kaam", ur: "کام" },
+  wc_section_fuel: { en: "Diesel", rm: "Diesel", ur: "ڈیزل" },
+  wc_fuel_accept: { en: "Accept this diesel", rm: "Ye diesel maan lein", ur: "یہ ڈیزل مان لیں" },
+  wc_fuel_accept_hint: {
+    en: "On confirming, this amount leaves the chosen account and becomes an expense.",
+    rm: "Tasdeeq karte hi ye raqam chune hue khate se nikal kar kharcha ban jayegi.",
+    ur: "تصدیق کرتے ہی یہ رقم چنے ہوئے کھاتے سے نکل کر خرچہ بن جائے گی۔",
+  },
+  mc_paid_to_vendor: {
+    en: "Farmer paid the vendor directly",
+    rm: "Kisan ne paisa vendor ko diya",
+    ur: "کسان نے پیسہ وینڈر کو دیا",
+  },
+  mc_vendor_did_what: { en: "What did the vendor do with it?", rm: "Vendor ne us ka kya kiya?", ur: "وینڈر نے اس کا کیا کیا؟" },
+  mc_vendor_kept: {
+    en: "Kept it against his own share",
+    rm: "Apne hisse mein se rakh liya",
+    ur: "اپنے حصے میں سے رکھ لیا",
+  },
+  mc_vendor_hands_over: {
+    en: "Will hand it over to us",
+    rm: "Hamein de dega",
+    ur: "ہمیں دے گا",
+  },
+
+  // Vendor ke paas para hua hamara paisa
+  vc_title: { en: "Cash sitting with vendors", rm: "Vendor ke paas hamara paisa", ur: "وینڈر کے پاس ہمارا پیسہ" },
+  vc_subtitle: {
+    en: "The farmer paid the machine owner and he owes it to us. The farmer's account is already settled — this is the step after.",
+    rm: "Kisan ne machine wale ko paisa diya aur wo hamein dena hai. Kisan ka hisaab pehle hi barabar ho chuka — ye us se agla qadam hai.",
+    ur: "کسان نے مشین والے کو پیسہ دیا اور وہ ہمیں دینا ہے۔ کسان کا حساب پہلے ہی برابر ہو چکا — یہ اس سے اگلا قدم ہے۔",
+  },
+  vc_empty: { en: "Nothing sitting with any vendor.", rm: "Kisi vendor ke paas hamara paisa nahi.", ur: "کسی وینڈر کے پاس ہمارا پیسہ نہیں۔" },
+  vc_payments: { en: "payments", rm: "payments", ur: "ادائیگیاں" },
+  vc_days_old: { en: "days old", rm: "din purana", ur: "دن پرانا" },
+  vc_received: { en: "Vendor handed the cash over", rm: "Vendor ne paisa de diya", ur: "وینڈر نے پیسہ دے دیا" },
+
+  // Vendor ke bheje hue kaam ki tasdeeq
+  wc_title: { en: "Work sent by vendors", rm: "Vendor ka bheja hua kaam", ur: "وینڈر کا بھیجا ہوا کام" },
+  wc_subtitle: {
+    en: "What the machine owners recorded from the field. Until someone here checks it, none of this counts in a bill.",
+    rm: "Jo machine walon ne maidan se darj kiya. Jab tak koi yahan dekh na le, ye kisi bill mein nahi ginta.",
+    ur: "جو مشین والوں نے میدان سے درج کیا۔ جب تک کوئی یہاں دیکھ نہ لے، یہ کسی بل میں نہیں گنا جاتا۔",
+  },
+  wc_empty: { en: "Nothing waiting.", rm: "Koi indraj intezar mein nahi.", ur: "کوئی اندراج انتظار میں نہیں۔" },
+  wc_marked_final: {
+    en: "Vendor marked the work complete",
+    rm: "Vendor ne kaam mukammal likha hai",
+    ur: "وینڈر نے کام مکمل لکھا ہے",
+  },
+  wc_view_photo: { en: "See the field photo", rm: "Khet ki tasveer dekhein", ur: "کھیت کی تصویر دیکھیں" },
+  wc_accept: { en: "Accept this work", rm: "Ye kaam maan lein", ur: "یہ کام مان لیں" },
+  wc_reject: { en: "Reject", rm: "Rad karein", ur: "رد کریں" },
+  wc_correct_hint: {
+    en: "Leave blank to accept as sent. Fill in only if our measurement differs — the number entered here is the one the bill uses.",
+    rm: "Jaisa bheja hai waisa maanna ho to khali chhor dein. Hamara naap alag ho to yahan likhein — bill wohi adad istemal karega.",
+    ur: "جیسا بھیجا ہے ویسا ماننا ہو تو خالی چھوڑ دیں۔ ہمارا ناپ الگ ہو تو یہاں لکھیں — بل وہی عدد استعمال کرے گا۔",
+  },
+  wc_reject_reason_hint: {
+    en: "e.g. field was measured at 3 acres, not 5",
+    rm: "misal: khet naapne par 3 acre nikla, 5 nahi",
+    ur: "مثال: کھیت ناپنے پر 3 ایکڑ نکلا، 5 نہیں",
+  },
   mc_promise_open: {
     en: "Farmer is not paying today — record what he said",
     rm: "Kisan aaj nahi de raha — us ne jo kaha wo darj karein",

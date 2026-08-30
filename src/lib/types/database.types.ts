@@ -7749,6 +7749,13 @@ export type Database = {
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
         ]
       }
       machinery_booking_counters: {
@@ -7814,6 +7821,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
           },
         ]
       }
@@ -8109,6 +8123,20 @@ export type Database = {
             referencedRelation: "machinery_vendors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       machinery_dispatches: {
@@ -8194,6 +8222,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
             foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
             columns: ["fuel_account_id"]
             isOneToOne: false
@@ -8236,6 +8271,12 @@ export type Database = {
           log_date: string
           notes: string | null
           paid_by: string
+          rejection_reason: string | null
+          source: string
+          submitted_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           amount: number
@@ -8249,6 +8290,12 @@ export type Database = {
           log_date?: string
           notes?: string | null
           paid_by: string
+          rejection_reason?: string | null
+          source?: string
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           amount?: number
@@ -8262,6 +8309,12 @@ export type Database = {
           log_date?: string
           notes?: string | null
           paid_by?: string
+          rejection_reason?: string | null
+          source?: string
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -8277,6 +8330,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_expense_id_fkey"
@@ -8307,6 +8367,7 @@ export type Database = {
           booking_id: string
           claimed_at: string | null
           claimed_by: string | null
+          collected_by_vendor_id: string | null
           created_at: string
           evidence_url: string | null
           finance_account_id: string | null
@@ -8318,6 +8379,7 @@ export type Database = {
           received_by: string | null
           reference: string | null
           rejection_reason: string | null
+          vendor_settlement: string | null
           verification_status: string
           verified_at: string | null
           verified_by: string | null
@@ -8327,6 +8389,7 @@ export type Database = {
           booking_id: string
           claimed_at?: string | null
           claimed_by?: string | null
+          collected_by_vendor_id?: string | null
           created_at?: string
           evidence_url?: string | null
           finance_account_id?: string | null
@@ -8338,6 +8401,7 @@ export type Database = {
           received_by?: string | null
           reference?: string | null
           rejection_reason?: string | null
+          vendor_settlement?: string | null
           verification_status?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -8347,6 +8411,7 @@ export type Database = {
           booking_id?: string
           claimed_at?: string | null
           claimed_by?: string | null
+          collected_by_vendor_id?: string | null
           created_at?: string
           evidence_url?: string | null
           finance_account_id?: string | null
@@ -8358,6 +8423,7 @@ export type Database = {
           received_by?: string | null
           reference?: string | null
           rejection_reason?: string | null
+          vendor_settlement?: string | null
           verification_status?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -8376,6 +8442,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "machinery_payments_finance_account_id_fkey"
@@ -8572,6 +8666,20 @@ export type Database = {
             referencedRelation: "machinery_vendors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       machinery_vendors: {
@@ -8639,7 +8747,13 @@ export type Database = {
           location_lng: number | null
           meter_reading: number | null
           notes: string | null
+          rejection_reason: string | null
+          source: string
           started_at: string | null
+          submitted_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
           work_date: string
         }
         Insert: {
@@ -8659,7 +8773,13 @@ export type Database = {
           location_lng?: number | null
           meter_reading?: number | null
           notes?: string | null
+          rejection_reason?: string | null
+          source?: string
           started_at?: string | null
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
           work_date?: string
         }
         Update: {
@@ -8679,7 +8799,13 @@ export type Database = {
           location_lng?: number | null
           meter_reading?: number | null
           notes?: string | null
+          rejection_reason?: string | null
+          source?: string
           started_at?: string | null
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
           work_date?: string
         }
         Relationships: [
@@ -8696,6 +8822,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
           },
         ]
       }
@@ -14107,6 +14240,13 @@ export type Database = {
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
         ]
       }
       v_machinery_commission_watch: {
@@ -14136,6 +14276,13 @@ export type Database = {
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
         ]
       }
       v_machinery_diesel_check: {
@@ -14161,6 +14308,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
+          },
+        ]
+      }
+      v_machinery_fuel_claims: {
+        Row: {
+          amount: number | null
+          booking_id: string | null
+          booking_number: string | null
+          din_purane: number | null
+          farmer_name: string | null
+          fuel_id: string | null
+          litres: number | null
+          log_date: string | null
+          notes: string | null
+          paid_by: string | null
+          vendor_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
           },
         ]
       }
@@ -14195,6 +14380,28 @@ export type Database = {
         }
         Relationships: []
       }
+      v_machinery_vendor_ledger: {
+        Row: {
+          actual_area: number | null
+          bill_number: string | null
+          booking_date: string | null
+          booking_id: string | null
+          booking_number: string | null
+          commission_amount: number | null
+          commission_percentage: number | null
+          farmer_name: string | null
+          gross_amount: number | null
+          rate_amount: number | null
+          status: string | null
+          user_id: string | null
+          vendor_id: string | null
+          vendor_ka_baqi: number | null
+          vendor_ko_mila: number | null
+          vendor_name: string | null
+          vendor_payable: number | null
+        }
+        Relationships: []
+      }
       v_machinery_watch: {
         Row: {
           amount: number | null
@@ -14204,6 +14411,46 @@ export type Database = {
           issue: string | null
         }
         Relationships: []
+      }
+      v_machinery_work_claims: {
+        Row: {
+          actual_area: number | null
+          booking_id: string | null
+          booking_number: string | null
+          completion_photo_url: string | null
+          created_at: string | null
+          din_purane: number | null
+          farmer_name: string | null
+          is_final: boolean | null
+          meter_reading: number | null
+          notes: string | null
+          vendor_name: string | null
+          work_date: string | null
+          work_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+        ]
       }
       v_milk_dispatch_watch: {
         Row: {
@@ -14317,6 +14564,17 @@ export type Database = {
           is_temporary: boolean | null
           profile_id: string | null
           route: string | null
+        }
+        Relationships: []
+      }
+      v_vendor_holding_our_cash: {
+        Row: {
+          kitni_payments: number | null
+          phone: string | null
+          sab_se_purani: string | null
+          vendor_id: string | null
+          vendor_ke_paas: number | null
+          vendor_name: string | null
         }
         Relationships: []
       }

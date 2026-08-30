@@ -1107,6 +1107,7 @@ function PaymentForm({
   const lang = useLang();
   const [state, action] = useFormState(recordFinalPayment, initialState);
   const [lines, setLines] = useState([0]);
+  const [methods, setMethods] = useState<Record<number, string>>({ 0: "cash" });
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -1117,11 +1118,16 @@ function PaymentForm({
         <div key={i} className="grid grid-cols-3 gap-2 rounded-lg border border-surface-200 p-2 dark:border-surface-700">
           <div>
             <Label>{t("mc_method", lang)}</Label>
-            <Select name={`line_${i}_method`} defaultValue="cash">
+            <Select
+              name={`line_${i}_method`}
+              value={methods[i] ?? "cash"}
+              onChange={(e) => setMethods({ ...methods, [i]: e.target.value })}
+            >
               <option value="cash">{t("mc_cash", lang)}</option>
               <option value="bank">{t("mc_bank", lang)}</option>
               <option value="wallet">{t("mc_wallet", lang)}</option>
               <option value="khata">{t("mc_khata_credit", lang)}</option>
+              <option value="vendor_collected">{t("mc_paid_to_vendor", lang)}</option>
             </Select>
           </div>
           <div>
@@ -1129,15 +1135,32 @@ function PaymentForm({
             <Input type="number" name={`line_${i}_amount`} step="0.01" />
           </div>
           <div>
-            <Label>{t("mc_khata", lang)}</Label>
-            <Select name={`line_${i}_account_id`} defaultValue="">
-              <option value="">—</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </Select>
+            {/* Vendor ke haath gaya hua paisa kisi khate mein nahi aaya
+                -- wahan khata poochhna hi ghalat hai. Us jagah ye
+                poochha jata hai ke vendor ne rakha ya hamein diya, aur
+                hisaab mein dono bilkul alag hain. */}
+            {methods[i] === "vendor_collected" ? (
+              <>
+                <Label>{t("mc_vendor_did_what", lang)}</Label>
+                <Select name={`line_${i}_settlement`} defaultValue="">
+                  <option value="">—</option>
+                  <option value="kept">{t("mc_vendor_kept", lang)}</option>
+                  <option value="handed_over">{t("mc_vendor_hands_over", lang)}</option>
+                </Select>
+              </>
+            ) : (
+              <>
+                <Label>{t("mc_khata", lang)}</Label>
+                <Select name={`line_${i}_account_id`} defaultValue="">
+                  <option value="">—</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            )}
           </div>
         </div>
       ))}
