@@ -21,10 +21,10 @@ export const machineryQueueDict = {
   mq_field_not_ready: { en: "field not ready", rm: "khet tayyar nahi", ur: "کھیت تیار نہیں" },
 
   // --- Safhon ke unwan ---
-  mq_title_assign: { en: "Machine Assignment", rm: "Machine Bhejna", ur: "مشین بھیجنا" },
-  mq_title_schedule: { en: "Harvest Schedule", rm: "Kattai ka Schedule", ur: "کٹائی کا شیڈول" },
-  mq_title_work: { en: "Work Completion", rm: "Kaam Darj Karna", ur: "کام درج کرنا" },
-  mq_title_billing: { en: "Final Bill / Payment", rm: "Bill aur Adaigi", ur: "بل اور ادائیگی" },
+  mq_title_assign: { en: "Machine Dispatch", rm: "Machine Rawangi", ur: "\u0645\u0634\u06cc\u0646 \u0631\u0648\u0627\u0646\u06af\u06cc" },
+  mq_title_schedule: { en: "Work Schedule", rm: "Kattai Schedule", ur: "\u06a9\u0679\u0627\u0626\u06cc \u0634\u06cc\u0688\u0648\u0644" },
+  mq_title_work: { en: "Work Entry", rm: "Kaam ki Entry", ur: "\u06a9\u0627\u0645 \u06a9\u06cc \u0627\u0646\u0679\u0631\u06cc" },
+  mq_title_billing: { en: "Farmer Bills & Payments", rm: "Kisan Bill aur Adaigiyan", ur: "\u06a9\u0633\u0627\u0646 \u0628\u0644 \u0627\u0648\u0631 \u0627\u062f\u0627\u0626\u06cc\u06af\u06cc\u0627\u06ba" },
 
   // --- Qataron ke naam aur wajah ---
   mq_rate_send: { en: "Rate to be sent", rm: "Rate bhejna hai", ur: "ریٹ بھیجنا ہے" },

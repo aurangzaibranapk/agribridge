@@ -35,9 +35,9 @@ export default async function CashCustodyPage() {
           ← {t("ch_title", lang)}
         </Link>
         <h1 className="mt-1 font-display text-xl font-semibold text-surface-900 dark:text-white">
-          {t("cc_title", lang)}
+          {t("mcus_title", lang)}
         </h1>
-        <p className="text-sm text-surface-500">{t("cc_subtitle", lang)}</p>
+        <p className="text-sm text-surface-500">{t("mcus_subtitle", lang)}</p>
       </div>
 
       <div className="rounded-card border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/30">

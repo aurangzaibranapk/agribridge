@@ -59,9 +59,9 @@ export default async function DieselPage() {
           ← {t("mc_back", lang)}
         </Link>
         <h1 className="mt-1 font-display text-xl font-semibold text-surface-900 dark:text-white">
-          {t("md_title", lang)}
+          {t("mdz_title", lang)}
         </h1>
-        <p className="text-sm text-surface-500">{t("md_subtitle", lang)}</p>
+        <p className="text-sm text-surface-500">{t("mdz_subtitle", lang)}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">

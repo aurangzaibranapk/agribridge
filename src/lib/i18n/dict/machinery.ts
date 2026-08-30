@@ -12,13 +12,13 @@
  */
 export const machineryDict = {
   // --- Safhe ke unwan ---
-  mc_title: { en: "Machinery Rental", rm: "Machinery Rental", ur: "مشینری کرایہ" },
+  mc_title: { en: "Machinery Booking", rm: "Machinery Booking", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0628\u06a9\u0646\u06af" },
   mc_subtitle: {
     en: "Vendor machines, booking for the farmer, earning commission",
     rm: "Vendor ki machines, kisan ko book karna, commission",
     ur: "وینڈر کی مشینیں، کسان کو بکنگ، کمیشن",
   },
-  mc_dashboard_title: { en: "Machinery Business Dashboard", rm: "Machinery ka Dashboard", ur: "مشینری ڈیش بورڈ" },
+  mc_dashboard_title: { en: "Machinery Dashboard", rm: "Machinery Dashboard", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0688\u06cc\u0634 \u0628\u0648\u0631\u0688" },
   mc_dashboard_subtitle: {
     en: "Bookings, vendor commission, farmer requests — the whole picture",
     rm: "Bookings, vendor commission, kisan ki farmaishein — poora hisaab",
@@ -244,7 +244,7 @@ export const machineryDict = {
   },
 
   // Vendor ke paas para hua hamara paisa
-  vc_title: { en: "Cash sitting with vendors", rm: "Vendor ke paas hamara paisa", ur: "وینڈر کے پاس ہمارا پیسہ" },
+  vc_title: { en: "Vendor Payments", rm: "Vendor Adaigiyan", ur: "\u0648\u06cc\u0646\u0688\u0631 \u0627\u062f\u0627\u0626\u06cc\u06af\u06cc\u0627\u06ba" },
   vc_subtitle: {
     en: "The farmer paid the machine owner and he owes it to us. The farmer's account is already settled — this is the step after.",
     rm: "Kisan ne machine wale ko paisa diya aur wo hamein dena hai. Kisan ka hisaab pehle hi barabar ho chuka — ye us se agla qadam hai.",
@@ -256,7 +256,7 @@ export const machineryDict = {
   vc_received: { en: "Vendor handed the cash over", rm: "Vendor ne paisa de diya", ur: "وینڈر نے پیسہ دے دیا" },
 
   // Vendor ke bheje hue kaam ki tasdeeq
-  wc_title: { en: "Work sent by vendors", rm: "Vendor ka bheja hua kaam", ur: "وینڈر کا بھیجا ہوا کام" },
+  wc_title: { en: "Vendor Work", rm: "Vendor ka Kaam", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u0627\u0645" },
   wc_subtitle: {
     en: "What the machine owners recorded from the field. Until someone here checks it, none of this counts in a bill.",
     rm: "Jo machine walon ne maidan se darj kiya. Jab tak koi yahan dekh na le, ye kisi bill mein nahi ginta.",
@@ -336,7 +336,7 @@ export const machineryDict = {
 
   // Khaiton ka naqsha
   fm_back: { en: "Back to Machinery", rm: "Machinery par wapas", ur: "مشینری پر واپس" },
-  fm_title: { en: "Farm map", rm: "Khaiton ka naqsha", ur: "کھیتوں کا نقشہ" },
+  fm_title: { en: "Farm Map", rm: "Farm Map", ur: "\u0641\u0627\u0631\u0645 \u0645\u06cc\u067e" },
   fm_subtitle: {
     en: "Every farm the farmers pinned themselves, grouped by area — this is where a machine's route starts.",
     rm: "Har khet jo kisanon ne khud pin kiya, ilaqe ke hisaab se — machine ka rasta yahin se banta hai.",
@@ -364,7 +364,7 @@ export const machineryDict = {
   fm_empty: { en: "No farms yet.", rm: "Abhi koi khet nahi.", ur: "ابھی کوئی کھیت نہیں۔" },
 
   // Advance ke dawe
-  ac_title: { en: "Advance claims", rm: "Advance ke dawe", ur: "ایڈوانس کے دعوے" },
+  ac_title: { en: "Advance Verification", rm: "Advance Tasdeeq", ur: "\u0627\u06cc\u0688\u0648\u0627\u0646\u0633 \u062a\u0635\u062f\u06cc\u0642" },
   ac_subtitle: {
     en: "What farmers say they have paid. Until someone checks it, this money is counted nowhere — not in the cash book, not in the bill.",
     rm: "Jo kisan kehte hain ke de diya. Jab tak koi dekh na le, ye paisa kahin nahi ginta — na cash book mein, na bill mein.",
@@ -819,9 +819,9 @@ export const machineryDict = {
   },
   // --- Payment ki yaad dahani ---
   mr_title: {
-    en: "Payment reminders",
-    rm: "Payment ki yaad dahani",
-    ur: "\u0627\u062f\u0627\u0626\u06cc\u06af\u06cc \u06a9\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc",
+    en: "Payment Recovery",
+    rm: "Raqam Wasooli",
+    ur: "\u0631\u0642\u0645 \u0648\u0635\u0648\u0644\u06cc",
   },
   mr_subtitle: {
     en: "Who is to be reminded, and who already has been \u2014 on one page.",
@@ -987,12 +987,12 @@ export const machineryDict = {
     rm: "Branch ka cash",
     ur: "\u0628\u0631\u0627\u0646\u0686 \u06a9\u0627 \u06a9\u06cc\u0634",
   },
-  cc_title: {
+  mcus_title: {
     en: "Cash with people",
     rm: "Kis ke paas kitna cash",
     ur: "\u06a9\u0633 \u06a9\u06d2 \u067e\u0627\u0633 \u06a9\u062a\u0646\u0627 \u06a9\u06cc\u0634",
   },
-  cc_subtitle: {
+  mcus_subtitle: {
     en: "Cash that has come in but has not yet reached an account. It stands in the receiver's name until handed over.",
     rm: "Jo cash aa to gaya magar abhi kisi khate tak nahi pahuncha. Handover tak wo lene wale ke naam par khara rehta hai.",
     ur: "\u062c\u0648 \u06a9\u06cc\u0634 \u0622 \u062a\u0648 \u06af\u06cc\u0627 \u0645\u06af\u0631 \u0627\u0628\u06be\u06cc \u06a9\u0633\u06cc \u06a9\u06be\u0627\u062a\u06d2 \u062a\u06a9 \u0646\u06c1\u06cc\u06ba \u067e\u06c1\u0646\u0686\u0627\u06d4",
@@ -1040,8 +1040,8 @@ export const machineryDict = {
   mr_receipt_link: { en: "Receipt", rm: "Raseed", ur: "\u0631\u0633\u06cc\u062f" },
   // --- Vendor settlement ---
   vs_title: {
-    en: "Vendor settlement",
-    rm: "Vendor ka settlement",
+    en: "Vendor Settlement",
+    rm: "Vendor Settlement",
     ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u0633\u06cc\u0679\u0644\u0645\u0646\u0679",
   },
   vs_subtitle: {
@@ -1082,7 +1082,7 @@ export const machineryDict = {
     ur: "\"\u0627\u0628 \u062f\u06cc\u0646\u0627 \u0628\u0646\u062a\u0627 \u06c1\u06d2\" \u0648\u06c1 \u0631\u0642\u0645 \u06c1\u06d2 \u062c\u0648 \u0648\u0627\u0642\u0639\u06cc \u0622\u062c \u062f\u06cc \u062c\u0627 \u0633\u06a9\u062a\u06cc \u06c1\u06d2\u06d4",
   },
   // --- Machines master ---
-  mm_title: { en: "Machines", rm: "Machines", ur: "\u0645\u0634\u06cc\u0646\u06cc\u06ba" },
+  mm_title: { en: "Machines", rm: "Machinein", ur: "\u0645\u0634\u06cc\u0646\u06cc\u06ba" },
   mm_subtitle: {
     en: "Every machine's own record: whose it is, where it is, and what it has done this season.",
     rm: "Har machine ka apna record: kis ki hai, kahan hai, aur is season kya kiya.",
@@ -1100,8 +1100,8 @@ export const machineryDict = {
   mm_diesel_total: { en: "Diesel", rm: "Kul diesel", ur: "\u06a9\u0644 \u0688\u06cc\u0632\u0644" },
 
   // --- Diesel ka safha ---
-  md_title: { en: "Diesel", rm: "Diesel ka hisaab", ur: "\u0688\u06cc\u0632\u0644 \u06a9\u0627 \u062d\u0633\u0627\u0628" },
-  md_subtitle: {
+  mdz_title: { en: "Diesel & Fuel", rm: "Diesel aur Fuel", ur: "\u0688\u06cc\u0632\u0644 \u0627\u0648\u0631 \u0641\u06cc\u0648\u0644" },
+  mdz_subtitle: {
     en: "How much, at what rate, who paid \u2014 and litres per acre.",
     rm: "Kitna, kis rate par, kis ne diya \u2014 aur litre per acre.",
     ur: "\u06a9\u062a\u0646\u0627\u060c \u06a9\u0633 \u0631\u06cc\u0679 \u067e\u0631\u060c \u06a9\u0633 \u0646\u06d2 \u062f\u06cc\u0627\u06d4",
@@ -1123,7 +1123,7 @@ export const machineryDict = {
   md_empty: { en: "No diesel entries yet.", rm: "Abhi koi diesel ka indraj nahi.", ur: "\u0627\u0628\u06be\u06cc \u06a9\u0648\u0626\u06cc \u0627\u0646\u062f\u0631\u0627\u062c \u0646\u06c1\u06cc\u06ba\u06d4" },
 
   // --- Machinery P&L ---
-  mp_title: { en: "Machinery P&L", rm: "Machinery ka munafa", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u06a9\u0627 \u0645\u0646\u0627\u0641\u0639" },
+  mp_title: { en: "Machinery P&L", rm: "Machinery P&L", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0645\u0646\u0627\u0641\u0639 \u0648 \u0646\u0642\u0635\u0627\u0646" },
   mp_subtitle: {
     en: "What machinery actually earned \u2014 not what it billed.",
     rm: "Machinery se waqai kitna bana \u2014 kitna bill hua wo alag baat hai.",
@@ -1148,7 +1148,7 @@ export const machineryDict = {
   },
 
   // --- Reports ---
-  mrp_title: { en: "Machinery reports", rm: "Machinery ki reports", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u06a9\u06cc \u0631\u067e\u0648\u0631\u0679\u0633" },
+  mrp_title: { en: "Machinery Reports", rm: "Machinery Reports", ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0631\u067e\u0648\u0631\u0679\u0633" },
   mrp_subtitle: {
     en: "Each one opens a list that already exists \u2014 no report keeps its own separate numbers.",
     rm: "Har report wohi qatar kholti hai jo pehle se hai \u2014 koi report apna alag hisaab nahi rakhti.",
