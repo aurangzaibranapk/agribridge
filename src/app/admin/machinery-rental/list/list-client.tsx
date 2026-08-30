@@ -31,6 +31,7 @@ interface Row {
   received: number;
   advance: number;
   outstanding: number;
+  overpaid: number;
   vendorOutstanding: number;
   commission: number;
   workState: string;
@@ -70,6 +71,7 @@ const ACTION: Record<string, { key: TranslationKey; tone: string; dot: string }>
   kaam_darj_karein: { key: "mca_work", tone: "text-purple-700 dark:text-purple-300", dot: "bg-purple-500" },
   bill_banayein: { key: "mca_bill", tone: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
   paisa_lena: { key: "mca_money", tone: "text-red-700 dark:text-red-300", dot: "bg-red-500" },
+  wapas_karein: { key: "mca_refund", tone: "text-red-700 dark:text-red-300", dot: "bg-red-500" },
   vendor_ko_dena: { key: "mca_vendor", tone: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
   mukammal: { key: "mca_done", tone: "text-brand-700 dark:text-brand-300", dot: "bg-brand-500" },
   cancelled: { key: "mca_cancelled", tone: "text-surface-400", dot: "bg-surface-300" },
@@ -294,8 +296,18 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                       {r.received > 0 ? `Rs ${r.received.toLocaleString()}` : r.advance > 0 ? `Rs ${r.advance.toLocaleString()} adv` : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold">
+                      {/* Zyada di hui raqam bhi laal hai, magar us ka
+                          naam alag hai: wo lena nahi, DENA hai. Dono
+                          ko ek hi khane mein ek hi rang dena wo ghalti
+                          hai jis se koi kisan se wo raqam maang leta
+                          hai jo hum us ki den dar hain. */}
                       {r.outstanding > 0 ? (
                         <span className="text-red-600 dark:text-red-400">Rs {r.outstanding.toLocaleString()}</span>
+                      ) : r.overpaid > 0 ? (
+                        <span className="text-red-600 dark:text-red-400">
+                          Rs {r.overpaid.toLocaleString()}
+                          <span className="block text-[10px] font-normal text-surface-400">{t("mc_refund_due", lang)}</span>
+                        </span>
                       ) : (
                         <span className="text-surface-400">—</span>
                       )}
@@ -305,7 +317,9 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                         <span className={`h-2 w-2 shrink-0 rounded-full ${action.dot}`} />
                         {r.nextAction === "paisa_lena"
                           ? `Rs ${r.outstanding.toLocaleString()} ${t("mca_money_suffix", lang)}`
-                          : t(action.key, lang)}
+                          : r.nextAction === "wapas_karein"
+                            ? `Rs ${r.overpaid.toLocaleString()} ${t("mca_refund", lang)}`
+                            : t(action.key, lang)}
                       </Link>
                       {r.promiseDate && r.nextAction === "paisa_lena" && (
                         <p className="text-surface-400">

@@ -48,6 +48,7 @@ export default async function MachineryBookingsListPage() {
         received: Number(r.ab_tak_mila ?? 0),
         advance: Number(r.advance_mila ?? 0),
         outstanding: Number(r.baqi ?? 0),
+        overpaid: Number(r.zyada_diya ?? 0),
         vendorOutstanding: Number(r.vendor_ka_baqi ?? 0),
         commission: Number(r.hamara_commission ?? 0),
         workState: r.kaam_ki_halat as string,

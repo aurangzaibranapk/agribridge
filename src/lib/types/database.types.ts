@@ -16024,6 +16024,9 @@ export type Database = {
           kaam_ki_halat: string | null
           kaam_mukammal: boolean | null
           kattai_ki_tareekh_guzri: boolean | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
           machine_ja_chuki: boolean | null
           machine_model: string | null
           machine_type: string | null
@@ -16031,12 +16034,14 @@ export type Database = {
           parent_booking_id: string | null
           payment_promise_date: string | null
           preferred_date: string | null
+          preferred_time: string | null
           rate_status: string | null
           raw_status: string | null
           vendor_id: string | null
           vendor_ka_baqi: number | null
           vendor_name: string | null
           village: string | null
+          zyada_diya: number | null
         }
         Relationships: [
           {
@@ -16131,6 +16136,9 @@ export type Database = {
           kaam_ki_halat: string | null
           kaam_mukammal: boolean | null
           kattai_ki_tareekh_guzri: boolean | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
           machine_ja_chuki: boolean | null
           machine_model: string | null
           machine_type: string | null
@@ -16138,12 +16146,14 @@ export type Database = {
           parent_booking_id: string | null
           payment_promise_date: string | null
           preferred_date: string | null
+          preferred_time: string | null
           rate_status: string | null
           raw_status: string | null
           vendor_id: string | null
           vendor_ka_baqi: number | null
           vendor_name: string | null
           village: string | null
+          zyada_diya: number | null
         }
         Relationships: [
           {
@@ -16249,6 +16259,7 @@ export type Database = {
           kul_baqi: number | null
           kul_bill: number | null
           kul_mila: number | null
+          kul_zyada: number | null
           mukammal_bookings: number | null
           village: string | null
         }
@@ -16278,6 +16289,7 @@ export type Database = {
           preferred_date: string | null
           rate_status: string | null
           raw_status: string | null
+          zyada_diya: number | null
         }
         Relationships: []
       }

@@ -4,6 +4,23 @@ import { requireStaff } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Live board ka data.
+ *
+ * Ye pehle booking ke PURANE khanon se parhta tha -- acres, hours,
+ * days, total_amount. Nayi zanjeer un mein se koi nahi likhti (raqba
+ * ab harvest_area mein hai, aur raqam bill par banti hai), is liye
+ * board par "null Days" aur "Rs NaN" nazar aate the.
+ *
+ * Ab wohi qatar jo baqi poora module dekhta hai (v_machinery_control).
+ * Isi mein "agla kaam" bhi pehle se nikla hua hai -- board ko wo khud
+ * sochna nahi parta, aur board ka jawab aur fehrist ka jawab hamesha
+ * ek hi rehta hai.
+ *
+ * Aur ek usool: jo cheez maloom nahi, us ki jagah KHAALI nahi chhorte
+ * -- us ka naam likhte hain. "Tareekh tay nahi" batata hai ke kya
+ * karna hai; "--" sirf ye batata hai ke system ko pata nahi.
+ */
 export async function GET() {
   // Live board admin panel ka andaruni safha hai. Middleware /api ko nahi bachata,
   // is liye rok yahan lagani parti hai.
@@ -12,32 +29,48 @@ export async function GET() {
 
   const supabase = createClient();
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: rows } = await supabase
+    .from("v_machinery_control")
+    .select("*")
+    .neq("raw_status", "cancelled")
+    .order("booking_date", { ascending: false })
+    .limit(60);
 
-  const { data: bookings } = await supabase
-    .from("machinery_bookings")
-    .select(
-      "id, booking_number, booking_date, status, created_at, acres, hours, days, total_amount, farmers(full_name), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
-    )
-    .gte("created_at", sevenDaysAgo)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const cards = (rows ?? []).map((b) => {
+    const area = Number(b.harvest_area ?? 0);
+    const rate = b.final_rate === null ? null : Number(b.final_rate);
+    const gross = b.gross_amount === null ? null : Number(b.gross_amount);
 
-  const cards = (bookings ?? []).map((b: any) => {
-    const farmer = Array.isArray(b.farmers) ? b.farmers[0] : b.farmers;
-    const vendor = Array.isArray(b.machinery_vendors) ? b.machinery_vendors[0] : b.machinery_vendors;
-    const machine = Array.isArray(b.machinery_vendor_machines) ? b.machinery_vendor_machines[0] : b.machinery_vendor_machines;
     return {
-      id: b.id,
-      booking_number: b.booking_number,
-      farmer_name: farmer?.full_name ?? "-",
-      vendor_name: vendor?.vendor_name ?? "-",
-      machine_label: `${machine?.machine_type ?? ""}${machine?.model ? ` (${machine.model})` : ""}`,
-      quantity_label: b.acres ? `${b.acres} Acres` : b.hours ? `${b.hours} Hours` : `${b.days} Days`,
-      total_amount: Number(b.total_amount),
-      status: b.status,
-      booking_date: b.booking_date,
-      created_at: b.created_at,
+      id: b.booking_id as string,
+      booking_number: (b.booking_number as string) ?? "-",
+      farmer_name: (b.farmer_name as string | null) ?? "-",
+      farmer_phone: (b.farmer_phone as string | null) ?? null,
+      village: (b.village as string | null) ?? null,
+      crop_type: (b.crop_type as string | null) ?? null,
+      area,
+      machine_label: b.machine_type
+        ? `${b.machine_type}${b.machine_model ? ` (${b.machine_model})` : ""}`
+        : null,
+      vendor_name: (b.vendor_name as string | null) ?? null,
+      location_address: (b.location_address as string | null) ?? null,
+      harvest_date: (b.preferred_date as string | null) ?? null,
+      booking_date: b.booking_date as string,
+
+      // Bill ban chuka ho to bill; warna rate se andaza, aur wo saaf
+      // "andaza" likha jayega. Andaze ko bill ki tarah dikhana wo
+      // ghalti hai jis se kisan se ghalat raqam maangi jati hai.
+      bill_amount: gross,
+      estimate_amount: gross === null && rate !== null && area > 0 ? rate * area : null,
+      advance: Number(b.advance_mila ?? 0),
+      received: Number(b.ab_tak_mila ?? 0),
+      outstanding: Number(b.baqi ?? 0),
+      overpaid: Number(b.zyada_diya ?? 0),
+
+      work_state: (b.kaam_ki_halat as string) ?? "nayi",
+      pay_state: (b.paise_ki_halat as string) ?? "bill_nahi_bana",
+      next_action: (b.agla_kaam as string) ?? "rate_final_karein",
+      overdue: Boolean(b.kattai_ki_tareekh_guzri),
     };
   });
 

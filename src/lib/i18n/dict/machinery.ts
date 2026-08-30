@@ -914,4 +914,30 @@ export const machineryDict = {
     rm: "Bill par baqi",
     ur: "\u0628\u0644 \u067e\u0631 \u0628\u0627\u0642\u06cc",
   },
+  // --- Live Board ---
+  // Jo cheez maloom nahi, us ki jagah khaali nahi chhorte -- us ka naam
+  // likhte hain. "Tareekh tay nahi" batata hai ke kya karna hai;
+  // "--" sirf ye batata hai ke system ko pata nahi.
+  lb_w_new: { en: "New", rm: "Nayi", ur: "\u0646\u0626\u06cc" },
+  lb_w_schedule: { en: "Rate set", rm: "Rate tay", ur: "\u0631\u06cc\u0679 \u0637\u06d2" },
+  lb_w_sent: { en: "Machine sent", rm: "Machine gayi", ur: "\u0645\u0634\u06cc\u0646 \u06af\u0626\u06cc" },
+  lb_w_running: { en: "Harvesting", rm: "Kattai jari", ur: "\u06a9\u0679\u0627\u0626\u06cc \u062c\u0627\u0631\u06cc" },
+  lb_w_done: { en: "Work done", rm: "Kaam mukammal", ur: "\u06a9\u0627\u0645 \u0645\u06a9\u0645\u0644" },
+  lb_today_harvest: { en: "harvesting today", rm: "aaj ki kattai", ur: "\u0622\u062c \u06a9\u06cc \u06a9\u0679\u0627\u0626\u06cc" },
+  lb_running: { en: "in progress", rm: "chal rahi hain", ur: "\u062c\u0627\u0631\u06cc \u06c1\u06cc\u06ba" },
+  lb_overdue: { en: "date passed", rm: "tareekh guzar gayi", ur: "\u062a\u0627\u0631\u06cc\u062e \u06af\u0632\u0631 \u06af\u0626\u06cc" },
+  lb_updated: { en: "Updated", rm: "Update", ur: "\u0627\u067e \u0688\u06cc\u0679" },
+  lb_loading: { en: "Loading...", rm: "Aa raha hai...", ur: "\u0622 \u0631\u06c1\u0627 \u06c1\u06d2..." },
+  lb_empty: { en: "No bookings yet.", rm: "Abhi koi booking nahi.", ur: "\u0627\u0628\u06be\u06cc \u06a9\u0648\u0626\u06cc \u0628\u06a9\u0646\u06af \u0646\u06c1\u06cc\u06ba\u06d4" },
+  lb_area_missing: { en: "Area not entered", rm: "Raqba darj nahi", ur: "\u0631\u0642\u0628\u06c1 \u062f\u0631\u062c \u0646\u06c1\u06cc\u06ba" },
+  lb_machine_pending: { en: "Machine pending", rm: "Machine tay nahi", ur: "\u0645\u0634\u06cc\u0646 \u0637\u06d2 \u0646\u06c1\u06cc\u06ba" },
+  lb_date_pending: { en: "Schedule pending", rm: "Tareekh tay nahi", ur: "\u062a\u0627\u0631\u06cc\u062e \u0637\u06d2 \u0646\u06c1\u06cc\u06ba" },
+  lb_rate_pending: { en: "Rate pending", rm: "Rate tay nahi", ur: "\u0631\u06cc\u0679 \u0637\u06d2 \u0646\u06c1\u06cc\u06ba" },
+  lb_estimate: { en: "estimate", rm: "andaza", ur: "\u0627\u0646\u062f\u0627\u0632\u06c1" },
+  lb_paid_full: { en: "paid in full", rm: "poora mil gaya", ur: "\u067e\u0648\u0631\u0627 \u0645\u0644 \u06af\u06cc\u0627" },
+
+  // --- Zyada di hui raqam ---
+  mca_refund: { en: "Refund due", rm: "Wapas karna hai", ur: "\u0648\u0627\u067e\u0633 \u06a9\u0631\u0646\u0627 \u06c1\u06d2" },
+  mc_refund_due: { en: "Refund due", rm: "Wapas karna", ur: "\u0648\u0627\u067e\u0633 \u06a9\u0631\u0646\u0627" },
+  mc_overpaid: { en: "Overpaid", rm: "Zyada mil gaya", ur: "\u0632\u06cc\u0627\u062f\u06c1 \u0645\u0644 \u06af\u06cc\u0627" },
 } as const;
