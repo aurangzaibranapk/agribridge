@@ -8089,6 +8089,8 @@ export type Database = {
       machinery_bookings: {
         Row: {
           acres: number | null
+          advance_declined_at: string | null
+          advance_declined_by: string | null
           amount_paid_to_vendor: number
           amount_received_from_farmer: number
           booking_date: string
@@ -8161,6 +8163,8 @@ export type Database = {
         }
         Insert: {
           acres?: number | null
+          advance_declined_at?: string | null
+          advance_declined_by?: string | null
           amount_paid_to_vendor?: number
           amount_received_from_farmer?: number
           booking_date?: string
@@ -8233,6 +8237,8 @@ export type Database = {
         }
         Update: {
           acres?: number | null
+          advance_declined_at?: string | null
+          advance_declined_by?: string | null
           amount_paid_to_vendor?: number
           amount_received_from_farmer?: number
           booking_date?: string

@@ -13,6 +13,7 @@ import {
   createFollowUpBooking,
   overrideConfirmation,
   dispatchMachine,
+  rescheduleBooking,
   recordWorkCompletion,
   generateFinalBill,
   recordFinalPayment,
@@ -81,6 +82,7 @@ interface Booking {
   rate_confirmation_sent_at: string | null;
   farmer_confirmed_at: string | null;
   payment_promise_date: string | null;
+  advance_declined_at: string | null;
   follow_up_number: string | null;
   payment_promise_note: string | null;
   will_sell_to_us: boolean | null;
@@ -254,7 +256,7 @@ export function BookingDetail({
       {!cancelled && (
         <>
           {/* Advance */}
-          <StepCard n={1} title={t("mc_advance", lang)} done={advanceTotal > 0}>
+          <StepCard n={1} title={t("mc_advance", lang)} done={advanceTotal > 0 || Boolean(booking.advance_declined_at)}>
             {payments.filter((p) => p.kind === "advance").length > 0 && (
               <ul className="mb-3 space-y-1 text-sm">
                 {payments
@@ -289,6 +291,12 @@ export function BookingDetail({
               </p>
             ) : bill ? (
               <p className="text-xs text-surface-500">{t("mc_advance_after_bill", lang)}</p>
+            ) : booking.advance_declined_at ? (
+              /* Kisan ne booking par hi mana kar diya tha. Wo jawab
+                 mehfooz hai -- to sawal dobara nahi poochha jata.
+                 Baad mein de de to darwaza khulta hai, magar us ke
+                 kehne par, safhe ke poochhne par nahi. */
+              <AdvanceDeclined bookingId={booking.id} accounts={accounts} />
             ) : (
               <AdvanceForm bookingId={booking.id} accounts={accounts} />
             )}
@@ -744,6 +752,46 @@ function Err({ state }: { state: ActionState }) {
 
 // ---------------------------------------------------------------------
 
+/**
+ * Kisan ne booking par kaha tha: advance nahi.
+ *
+ * Wo jawab aa chuka hai, is liye ye qadam poora hai -- khali nahi.
+ * Safha wohi sawal dobara nahi poochhta: jo baat kisan pehle keh
+ * chuka hai, us ko dobara poochhna staff ko ye shak deta hai ke
+ * shayad pehle wala darj hi nahi hua, aur wohi shak ek hi raqam do
+ * dafa likhwa deta hai.
+ *
+ * Phir bhi paisa aa jaye to raasta band nahi -- magar wo staff ke
+ * kehne par khulta hai, safhe ke poochhne par nahi.
+ */
+function AdvanceDeclined({
+  bookingId,
+  accounts,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
+  const lang = useLang();
+  const [open, setOpen] = useState(false);
+
+  if (open) return <AdvanceForm bookingId={bookingId} accounts={accounts} />;
+
+  return (
+    <div className="space-y-2">
+      <p className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+        {t("mc_advance_declined", lang)}
+      </p>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+      >
+        {t("mc_advance_came_later", lang)}
+      </button>
+    </div>
+  );
+}
+
 function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Array<{ id: string; name: string; account_type: string }> }) {
   const lang = useLang();
   const [state, action] = useFormState(recordAdvance, initialState);
@@ -949,10 +997,19 @@ function DispatchForm({
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <div className="space-y-3">
       <Err state={state} />
-      <input type="hidden" name="booking_id" value={bookingId} />
-      {again && <input type="hidden" name="again" value="on" />}
+
+      {/* Machine us din bhari thi -- to agli khali tareekh sirf batayi
+          nahi jati, wo yahin bhari ja sakti hai. System wo tareekh
+          pehle se jaanta hai; use jumle mein likh kar bande se dobara
+          likhwana wohi kaam do dafa karwana hai, aur ek adad ghalat
+          likh dene ki gunjaish khuli chhorna hai. */}
+      {state.nextFreeDate && <RescheduleForm bookingId={bookingId} nextFree={state.nextFreeDate} />}
+
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="booking_id" value={bookingId} />
+        {again && <input type="hidden" name="again" value="on" />}
       <div>
         <Label>{t("mc_machine", lang)}</Label>
         <Select name="machine_id">
@@ -979,7 +1036,41 @@ function DispatchForm({
           darj karte waqt likha jata hai. Jo khana hamesha khali rehta
           hai wo form ko lamba karta hai aur kuch nahi. */}
       <p className="text-xs text-surface-500">{t("mc_dispatch_no_diesel", lang)}</p>
-      <Submit label={t("mc_record_dispatch", lang)} />
+        <Submit label={t("mc_record_dispatch", lang)} />
+      </form>
+    </div>
+  );
+}
+
+/**
+ * Agli khali tareekh par booking khiskana.
+ *
+ * Tareekh pehle se bhari hui hai -- wohi jo system ne nikali. Phir bhi
+ * khana khula hai, kyunke agli khali tareekh sab se pehli mumkin
+ * tareekh hai, hamesha sab se munasib nahi: kisan ki apni majboori ho
+ * sakti hai. System tajweez deta hai, faisla insaan ka rehta hai.
+ */
+function RescheduleForm({ bookingId, nextFree }: { bookingId: string; nextFree: string }) {
+  const lang = useLang();
+  const [state, action] = useFormState(rescheduleBooking, initialState);
+
+  if (state.success) {
+    return (
+      <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+        {state.notice}
+      </p>
+    );
+  }
+
+  return (
+    <form action={action} className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <Label>{t("mc_move_to_date", lang)}</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input type="date" name="preferred_date" defaultValue={nextFree} className="max-w-[200px]" />
+        <Submit label={t("mc_move_booking", lang)} />
+      </div>
     </form>
   );
 }

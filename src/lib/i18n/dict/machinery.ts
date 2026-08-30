@@ -736,4 +736,24 @@ export const machineryDict = {
     rm: "Bill bante hi ye raqam un ki ho gayi \u2014 hamare paas sirf amanat hai.",
     ur: "\u0628\u0644 \u0628\u0646\u062a\u06d2 \u06c1\u06cc \u06cc\u06c1 \u0631\u0642\u0645 \u0627\u0646 \u06a9\u06cc \u06c1\u0648 \u06af\u0626\u06cc \u2014 \u06c1\u0645\u0627\u0631\u06d2 \u067e\u0627\u0633 \u0635\u0631\u0641 \u0627\u0645\u0627\u0646\u062a \u06c1\u06d2\u06d4",
   },
+  mc_advance_declined: {
+    en: "At booking the farmer said he is not paying an advance. Nothing is pending here.",
+    rm: "Booking ke waqt kisan ne kaha tha: advance nahi de raha. Yahan kuch baqi nahi.",
+    ur: "\u0628\u06a9\u0646\u06af \u06a9\u06d2 \u0648\u0642\u062a \u06a9\u0633\u0627\u0646 \u0646\u06d2 \u06a9\u06c1\u0627 \u062a\u06be\u0627: \u0627\u06cc\u0688\u0648\u0627\u0646\u0633 \u0646\u06c1\u06cc\u06ba \u062f\u06d2 \u0631\u06c1\u0627\u06d4 \u06cc\u06c1\u0627\u06ba \u06a9\u0686\u06be \u0628\u0627\u0642\u06cc \u0646\u06c1\u06cc\u06ba\u06d4",
+  },
+  mc_advance_came_later: {
+    en: "He paid an advance after all? Record it",
+    rm: "Phir bhi advance de diya? Darj karein",
+    ur: "\u067e\u06be\u0631 \u0628\u06be\u06cc \u0627\u06cc\u0688\u0648\u0627\u0646\u0633 \u062f\u06d2 \u062f\u06cc\u0627\u061f \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_move_to_date: {
+    en: "Move the harvest to this date",
+    rm: "Kattai is tareekh par kar dein",
+    ur: "\u06a9\u0679\u0627\u0626\u06cc \u0627\u0633 \u062a\u0627\u0631\u06cc\u062e \u067e\u0631 \u06a9\u0631 \u062f\u06cc\u06ba",
+  },
+  mc_move_booking: {
+    en: "Change the date",
+    rm: "Tareekh badal dein",
+    ur: "\u062a\u0627\u0631\u06cc\u062e \u0628\u062f\u0644 \u062f\u06cc\u06ba",
+  },
 } as const;

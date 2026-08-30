@@ -43,6 +43,9 @@ export interface ActionState {
   farmerId?: string;
   farmerCode?: string;
   farmerName?: string;
+  /** Machine us din bhari ho to agli khali tareekh -- taake safha wo
+      tareekh khud bhar sake, bande ko haath se likhna na pare. */
+  nextFreeDate?: string;
 }
 
 type Client = ReturnType<typeof createClient>;
@@ -345,6 +348,18 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
   // advance darj na ho saka to booking bani rehti hai (wo theek bani
   // thi) magar bulane wale ko wajah milti hai, taake wo dobara koshish
   // kare -- na ke ye samajh le ke paisa darj ho gaya.
+  // Kisan ne booking par hi keh diya ke advance nahi de raha -- to wo
+  // "nahi" bhi likh lete hain. Ye raqam nahi, jawab hai: ledger mein
+  // kuch nahi jata. Is se booking khulne par safha wohi sawal dobara
+  // nahi poochhta -- aur dobara poochhna wohi shak paida karta hai jis
+  // se ek hi raqam do dafa darj ho jati hai.
+  if (formData.get("advance_received") !== "yes" && !claim) {
+    await supabase
+      .from("machinery_bookings")
+      .update({ advance_declined_at: new Date().toISOString(), advance_declined_by: actorId })
+      .eq("id", booking.id);
+  }
+
   if (formData.get("advance_received") === "yes") {
     const advanceResult = await saveAdvance({
       supabase,
@@ -500,6 +515,15 @@ async function saveAdvance(args: {
     await createServiceClient().from("machinery_payments").delete().eq("id", payment.id);
     return `Ledger mein nahi gaya, is liye advance darj nahi kiya: ${posted.error}`;
   }
+
+  // Booking par kisan ne kaha tha "advance nahi de raha", magar de
+  // diya. Ab wo purana jawab ghalat ho chuka hai -- use hata dete
+  // hain. Nishan aur raqam ek sath khare rahen to safha wo baat
+  // kehta rahega jo ab sach nahi.
+  await args.supabase
+    .from("machinery_bookings")
+    .update({ advance_declined_at: null, advance_declined_by: null })
+    .eq("id", args.bookingId);
 
   await logEvent({
     bookingId: args.bookingId,
@@ -1136,8 +1160,9 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
 /**
  * Us machine par us din kitni jagah hai.
  *
- * Wapsi null matlab jagah hai. Koi string matlab wajah -- aur us ke
- * sath agli khali tareekh, taake staff ko dobara dhoondhna na pare.
+ * Wapsi null matlab jagah hai. Warna wajah, aur us ke sath agli khali
+ * tareekh ALAG se -- jumle ke andar likhi hui tareekh bande ko phir
+ * bhi haath se likhni parti hai. Alag mile to safha khud bhar deta hai.
  */
 async function machineDayCapacity(
   supabase: Client,
@@ -1145,7 +1170,7 @@ async function machineDayCapacity(
   day: string,
   acres: number,
   exceptBookingId: string
-): Promise<string | null> {
+): Promise<{ message: string; nextFree: string | null } | null> {
   const { data: setting } = await supabase
     .from("platform_settings")
     .select("value")
@@ -1179,11 +1204,14 @@ async function machineDayCapacity(
     })
     .join(", ");
 
-  return [
-    `Is machine par ${day} ko pehle se ${used} acre bandhe hain${who ? `: ${who}` : ""}.`,
-    `Ek din ki hadd ${cap} acre hai, is liye ${acres} acre aur nahi aa sakte.`,
-    nextFree ? `Agli khali tareekh: ${nextFree}. Booking us din par kar dein, ya doosri machine chunein.` : `Doosri machine chunein.`,
-  ].join(" ");
+  return {
+    message: [
+      `Is machine par ${day} ko pehle se ${used} acre bandhe hain${who ? `: ${who}` : ""}.`,
+      `Ek din ki hadd ${cap} acre hai, is liye ${acres} acre aur nahi aa sakte.`,
+      nextFree ? `Agli khali tareekh: ${nextFree}.` : `Doosri machine chunein.`,
+    ].join(" "),
+    nextFree: (nextFree as string | null) ?? null,
+  };
 }
 
 export async function dispatchMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -1215,7 +1243,7 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
       Number(booking.harvest_area ?? 0),
       bookingId
     );
-    if (capacity) return { error: capacity };
+    if (capacity) return { error: capacity.message, nextFreeDate: capacity.nextFree ?? undefined };
   }
 
   const { data: machine } = await supabase
@@ -1911,6 +1939,54 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
  * booking se nikal kar kisan ke chalte khate mein chala gaya. Wada us
  * se pehle ka qadam hai -- udhaar abhi is booking ka hai.
  */
+/**
+ * Kattai ki tareekh badalna -- machine us din bhari ho to.
+ *
+ * Rok ke sath system agli khali tareekh pehle se jaanta hai. Wo
+ * tareekh sirf jumle mein likh dena bande par wohi kaam daal deta
+ * hai jo system kar chuka hai: wo tareekh parhta hai, yaad rakhta
+ * hai, doosre safhe par ja kar haath se likhta hai -- aur ek adad
+ * ghalat likh dene ki poori gunjaish rehti hai.
+ *
+ * Is liye tareekh yahin badal jati hai. Wajah bhi likhi jati hai,
+ * kyunke kisan ko phone karne wale ko ye maloom hona chahiye ke
+ * tareekh khud se nahi khisak gayi.
+ */
+export async function rescheduleBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  const newDate = str(formData, "preferred_date");
+  if (!bookingId) return { error: "Booking nahi mili." };
+  if (!newDate) return { error: "Nayi tareekh chunein." };
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, status, preferred_date")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+  if (booking.status === "cancelled" || booking.status === "closed") {
+    return { error: "Band booking ki tareekh nahi badalti." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ preferred_date: newDate })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "date_changed",
+    note: `Kattai ki tareekh ${booking.preferred_date ?? "-"} se ${newDate} — machine us din bhari thi`,
+    actorId,
+  });
+
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
+  return { success: true, notice: `Kattai ki tareekh ab ${newDate} hai. Ab rawangi darj karein.` };
+}
+
 export async function recordPaymentPromise(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
