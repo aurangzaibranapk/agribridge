@@ -6,6 +6,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Kya kya mita -- ginti ke sath, taake bharosa ho ke waqai gaya. */
+  notice?: string;
 }
 
 // Every table that gets wiped by "Reset Test Data". Products, Categories,
@@ -14,10 +16,10 @@ export interface ActionState {
 // NOT in this list — they survive every reset.
 const TABLES_TO_CLEAR = [
   // AgriBridge Ordering
-  "agri_complaint_counters", "agri_complaints", "agri_deliveries", "agri_dispatch_counters",
-  "agri_dispatch_items", "agri_dispatches", "agri_feedback", "agri_grn_counters", "agri_grn_items",
-  "agri_grns", "agri_order_counters", "agri_order_items", "agri_order_payments", "agri_order_timeline",
-  "agri_orders", "agri_payment_counters", "bridge_order_items", "bridge_orders",
+  "agri_complaints", "agri_deliveries",
+  "agri_dispatch_items", "agri_dispatches", "agri_feedback", "agri_grn_items",
+  "agri_grns", "agri_order_items", "agri_order_payments", "agri_order_timeline",
+  "agri_orders", "bridge_order_items", "bridge_orders",
   // AI
   "ai_crop_reports", "ai_purchase_suggestions", "bridge_ai_action_requests", "bridge_ai_activity_log",
   // Logs
@@ -26,7 +28,7 @@ const TABLES_TO_CLEAR = [
   "attendance_records", "interview_scores", "job_applications", "job_offers", "job_vacancies",
   "salary_payments", "staff_credit_ledger", "staff_details", "staff_messages", "staff_product_permissions",
   // Finance
-  "branch_credit_accounts", "branch_credit_transactions", "capital_injections", "company_expense_counters",
+  "branch_credit_accounts", "branch_credit_transactions", "capital_injections",
   "company_expense_requests", "credit_requests", "finance_accounts", "finance_transactions",
   "khata_accounts", "khata_transactions", "payments", "wallet_transactions", "wallets",
   "escrow_transactions", "replacement_fund_withdrawals",
@@ -35,7 +37,7 @@ const TABLES_TO_CLEAR = [
   "dealer_inventory", "dealer_payments", "dealer_payouts", "dealer_service_areas", "dealer_users",
   "investors", "investor_inquiries", "investor_investments", "investor_returns", "investment_deals",
   "investment_ledger", "suppliers", "supplier_payments", "supplier_payment_requests",
-  "supplier_payment_request_counters", "company_reps",
+  "company_reps",
   // Farmers/Farm
   "farmers", "farms", "farm_visits", "farmer_credit_balances", "farmer_credit_ledger",
   "farmer_produce_payouts", "crop_diagnoses", "crop_expenses", "crop_history",
@@ -61,6 +63,22 @@ const TABLES_TO_CLEAR = [
   "password_reset_tokens",
 ];
 
+/**
+ * Ginti ke khane -- in mein `id` ka khana hai hi nahi.
+ *
+ * Ye tables `year` par khare hain. Neeche wala delete `id` par chalta
+ * hai, is liye ye har dafa nakaam hoti thin aur screen par
+ * "column ... .id does not exist" likha aata tha. Nateeja: data mit
+ * jata magar agli booking phir bhi purani ginti se aage barhti --
+ * MB-2026-00003, jabke koi booking maujood hi nahi.
+ */
+const COUNTER_TABLES = [
+  "agri_complaint_counters", "agri_dispatch_counters", "agri_grn_counters", "agri_order_counters",
+  "agri_payment_counters", "agri_return_counters", "company_expense_counters", "grain_sale_counters",
+  "milk_collection_counters", "stock_loss_counters", "supplier_payment_request_counters",
+  "vehicle_log_counters", "whatsapp_submission_counters",
+];
+
 async function isLive(): Promise<boolean> {
   const supabase = createClient();
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "is_live").maybeSingle();
@@ -80,17 +98,47 @@ export async function resetTestData(_prev: ActionState, formData: FormData): Pro
   const serviceClient = createServiceClient();
   const errors: string[] = [];
 
-  for (const table of TABLES_TO_CLEAR) {
-    const { error } = await serviceClient.from(table).delete().not("id", "is", null);
+  // Table ka naam chalte waqt tay hota hai, is liye types yahan mel
+  // nahi kha sakteen -- fehrist ek hi jagah likhi hui hai aur wohi
+  // sach hai.
+  const clear = async (table: string, keyColumn: "id" | "year") => {
+    const { error } = await (serviceClient.from(table as never) as never as {
+      delete: () => { not: (c: string, o: string, v: null) => Promise<{ error: { message: string } | null }> };
+    })
+      .delete()
+      .not(keyColumn, "is", null);
     if (error) errors.push(`${table}: ${error.message}`);
-  }
+  };
+
+  for (const table of TABLES_TO_CLEAR) await clear(table, "id");
+
+  // Ginti ke khane `year` par khare hain, `id` par nahi.
+  for (const table of COUNTER_TABLES) await clear(table, "year");
+
+  // MACHINERY AUR LEDGER -- ye yahan se nahi mit sakte.
+  //
+  // In par mitane ki rok lagi hui hai (journal_entries, machinery_bills,
+  // machinery_payments, booking ki timeline, cash closing). Rok theek
+  // hai: kitabein badalne ke liye reversal hoti hai, delete nahi.
+  //
+  // Magar "live hone se pehle test ka data mitana" us rok ka jaiz
+  // istisna hai -- aur rok sirf ek transaction ke andar khulti hai.
+  // Har delete yahan se alag request hoti hai, yani alag transaction,
+  // is liye ye kaam database ke andar ek hi function mein hota hai.
+  //
+  // Pehle ye tables fehrist mein thin hi nahi. Nateeja us se bhi bura
+  // tha: baqi sab mit jata aur LEDGER wahin reh jata -- kitabein aisi
+  // booking ka udhaar aur aamdani dikhati rehtin jo ab maujood hi nahi.
+  const { data: financialSummary, error: financialError } =
+    await serviceClient.rpc("fn_reset_test_financials");
+  if (financialError) errors.push(`machinery aur ledger: ${financialError.message}`);
 
   if (errors.length > 0) {
     return { error: `Kuch tables clear nahi ho sakin: ${errors.slice(0, 5).join(" | ")}${errors.length > 5 ? "..." : ""}` };
   }
 
   revalidatePath("/admin/reset-test-data");
-  return { success: true };
+  return { success: true, notice: typeof financialSummary === "string" ? financialSummary : undefined };
 }
 
 export async function lockLiveMode(_prev: ActionState, formData: FormData): Promise<ActionState> {

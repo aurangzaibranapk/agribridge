@@ -76,8 +76,14 @@ function ResetForm({ onCancel }: { onCancel: () => void }) {
 
   if (state.success) {
     return (
-      <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-100 px-3 py-2 text-sm text-green-800">
-        <AlertTriangle className="h-4 w-4" /> Test data delete ho gaya. Page refresh karein.
+      <div className="mt-4 rounded-lg bg-green-100 px-3 py-2 text-sm text-green-800">
+        <p className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" /> Test data delete ho gaya. Page refresh karein.
+        </p>
+        {/* Ginti sath likhi jati hai. "Ho gaya" par bharosa karne ke
+            bajaye banda khud dekh leta hai ke waqai kya gaya -- pehle
+            machinery aur ledger chup chaap reh jate the. */}
+        {state.notice && <p className="mt-1 text-xs text-green-700">{state.notice}</p>}
       </div>
     );
   }

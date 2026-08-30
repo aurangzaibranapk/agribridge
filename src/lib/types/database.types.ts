@@ -20757,6 +20757,7 @@ export type Database = {
         Args: { p_manager_code: string; p_reason: string; p_sale_id: string }
         Returns: string
       }
+      fn_reset_test_financials: { Args: never; Returns: string }
       fn_set_staff_auth_code: {
         Args: { p_code: string; p_profile_id: string }
         Returns: undefined
