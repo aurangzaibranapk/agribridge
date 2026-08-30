@@ -54,3 +54,18 @@ Us "kuch nahi mila" ko "qeemat sifar hai" samajh lena is project mein
 teen dafa ghalat adad de chuka hai. Aise sawal ka jawab
 `SECURITY DEFINER` function se lein, aur "mila nahi" ke liye NULL rakhen,
 sifar nahi.
+
+## Aage ka naqsha (malik ka)
+
+Phase 16 Delivery & Logistics ke baad **Phase 17 se 20 tak malik ki apni
+development hai**: 17 Mobile/PWA, 18 SaaS (multi-tenant), 19 Security aur
+Audit hardening, 20 Scale / national marketplace.
+
+Do baatein aaj ke faislon par asar daalti hain, is liye yahan likhi hain:
+
+- **18 (multi-tenant)** — aaj ka har naya table aur view ek hi karobar
+  maan kar likha ja raha hai. Jahan aasani se ho sake, wahan tenant ka
+  khana rakhna baad ki takleef bachata hai.
+- **19 (security)** — RLS aur `SECURITY DEFINER` ke faisle abhi se soch
+  kar karein. `fn_reset_test_financials` jaisa har raasta `is_live` ke
+  taale ke peeche hona chahiye.
