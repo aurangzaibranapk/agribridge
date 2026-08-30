@@ -1038,4 +1038,47 @@ export const machineryDict = {
     ur: "\u06cc\u06c1 \u0627\u06cc\u06af\u0631\u06cc \u0628\u0631\u062c \u0633\u06d2 \u062e\u0648\u062f \u0628\u0646\u06cc \u06c1\u0648\u0626\u06cc \u0631\u0633\u06cc\u062f \u06c1\u06d2\u06d4",
   },
   mr_receipt_link: { en: "Receipt", rm: "Raseed", ur: "\u0631\u0633\u06cc\u062f" },
+  // --- Vendor settlement ---
+  vs_title: {
+    en: "Vendor settlement",
+    rm: "Vendor ka settlement",
+    ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u0633\u06cc\u0679\u0644\u0645\u0646\u0679",
+  },
+  vs_subtitle: {
+    en: "Every amount by its own name \u2014 what is held with us, what is still with the farmer, and what has already gone.",
+    rm: "Har raqam apne naam se \u2014 jo hamare paas jama hai, jo abhi kisan ke paas hai, aur jo ja chuki hai.",
+    ur: "\u06c1\u0631 \u0631\u0642\u0645 \u0627\u067e\u0646\u06d2 \u0646\u0627\u0645 \u0633\u06d2 \u2014 \u062c\u0648 \u06c1\u0645\u0627\u0631\u06d2 \u067e\u0627\u0633 \u062c\u0645\u0639 \u06c1\u06d2\u060c \u062c\u0648 \u0627\u0628\u06be\u06cc \u06a9\u0633\u0627\u0646 \u06a9\u06d2 \u067e\u0627\u0633 \u06c1\u06d2\u06d4",
+  },
+  vs_earned: { en: "Their share", rm: "Un ka hissa", ur: "\u0627\u0646 \u06a9\u0627 \u062d\u0635\u06c1" },
+  vs_paid: { en: "Already paid", rm: "Mil chuka", ur: "\u0645\u0644 \u0686\u06a9\u0627" },
+  vs_with_art: {
+    en: "Held with us",
+    rm: "Hamare paas jama",
+    ur: "\u06c1\u0645\u0627\u0631\u06d2 \u067e\u0627\u0633 \u062c\u0645\u0639",
+  },
+  vs_with_farmer: {
+    en: "Still with the farmer",
+    rm: "Abhi kisan ke paas",
+    ur: "\u0627\u0628\u06be\u06cc \u06a9\u0633\u0627\u0646 \u06a9\u06d2 \u067e\u0627\u0633",
+  },
+  vs_diesel_advance: {
+    en: "ART diesel (recoverable)",
+    rm: "ART ka diesel (wapas aana hai)",
+    ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0688\u06cc\u0632\u0644 (\u0648\u0627\u067e\u0633)",
+  },
+  vs_net_now: {
+    en: "Payable now",
+    rm: "Ab dena banta hai",
+    ur: "\u0627\u0628 \u062f\u06cc\u0646\u0627 \u0628\u0646\u062a\u0627 \u06c1\u06d2",
+  },
+  vs_empty: {
+    en: "No vendor settlement yet.",
+    rm: "Abhi kisi vendor ka hisaab nahi bana.",
+    ur: "\u0627\u0628\u06be\u06cc \u06a9\u0633\u06cc \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u062d\u0633\u0627\u0628 \u0646\u06c1\u06cc\u06ba \u0628\u0646\u0627\u06d4",
+  },
+  vs_note: {
+    en: "\"Payable now\" is what can genuinely be paid today: held with us, minus ART diesel. What is still with the farmer is not in it \u2014 that money has not reached us.",
+    rm: "\"Ab dena banta hai\" wo raqam hai jo waqai aaj di ja sakti hai: hamare paas jama, mainus ART ka diesel. Kisan ke paas wali raqam us mein nahi \u2014 wo hamare paas aayi hi nahi.",
+    ur: "\"\u0627\u0628 \u062f\u06cc\u0646\u0627 \u0628\u0646\u062a\u0627 \u06c1\u06d2\" \u0648\u06c1 \u0631\u0642\u0645 \u06c1\u06d2 \u062c\u0648 \u0648\u0627\u0642\u0639\u06cc \u0622\u062c \u062f\u06cc \u062c\u0627 \u0633\u06a9\u062a\u06cc \u06c1\u06d2\u06d4",
+  },
 } as const;

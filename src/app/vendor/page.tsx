@@ -75,6 +75,24 @@ export default async function VendorPortalPage() {
       ])
     : [{ data: [] }, { data: [] }];
 
+  // "Khet pahunch gaya" aur "kaam shuru" -- ye sirf khabar hain, paise
+  // se koi taalluq nahi. Is liye ye khaate wali qatar mein nahi, seedha
+  // booking se aate hain.
+  const { data: progressRows } = bookingIds.length
+    ? await supabase
+        .from("machinery_bookings")
+        .select("id, reached_farm_at, work_started_at")
+        .in("id", bookingIds)
+    : { data: [] };
+
+  const progressBy = new Map<string, { reached: string | null; started: string | null }>();
+  (progressRows ?? []).forEach((p) =>
+    progressBy.set(p.id as string, {
+      reached: (p.reached_farm_at as string | null) ?? null,
+      started: (p.work_started_at as string | null) ?? null,
+    })
+  );
+
   const bookings = rows.map((r) => {
     const work = (myWork ?? []).filter((w) => w.booking_id === r.booking_id);
     const fuel = (myFuel ?? []).filter((x) => x.booking_id === r.booking_id);
@@ -86,6 +104,8 @@ export default async function VendorPortalPage() {
       bookingDate: r.booking_date as string,
       farmerName: (r.farmer_name as string | null) ?? "-",
       farmerPhone: (r.farmer_phone as string | null) ?? null,
+      reachedAt: (progressBy.get(r.booking_id as string)?.reached ?? null) as string | null,
+      startedAt: (progressBy.get(r.booking_id as string)?.started ?? null) as string | null,
 
       // Kaam se pehle ki tafseel -- yahi wo cheez hai jis ke liye
       // vendor subah safha kholta hai.
@@ -133,16 +153,74 @@ export default async function VendorPortalPage() {
     };
   });
 
-  const totalOutstanding = bookings.reduce((s, b) => s + b.outstanding, 0);
-  const totalEarned = bookings.reduce((s, b) => s + (b.payable ?? 0), 0);
   const awaitingCheck = bookings.reduce((s, b) => s + b.claimed, 0);
+
+  // Teen alag hisaab, ek hi jagah se -- wohi jo staff bhi dekhte hain.
+  //
+  // Vendor ke liye "baqi" ek adad nahi, teen alag baatein hain: jo
+  // hamare paas jama hai, jo abhi kisan ke paas hai, aur jo mil chuka.
+  // In ko jor kar ek adad dikhana wohi ghalti hai jis se jhagRa shuru
+  // hota hai (172).
+  const [{ data: settlement }, { data: work }, { data: diesel }, { data: week }] = await Promise.all([
+    supabase.from("v_machinery_vendor_settlement").select("*").eq("vendor_id", vendor.id).maybeSingle(),
+    supabase.from("v_machinery_vendor_work").select("*").eq("vendor_id", vendor.id).maybeSingle(),
+    supabase.from("v_machinery_vendor_diesel").select("*").eq("vendor_id", vendor.id).maybeSingle(),
+    supabase
+      .from("v_machinery_vendor_week")
+      .select("*")
+      .eq("vendor_id", vendor.id)
+      .order("preferred_date"),
+  ]);
+
+  const n = (v: unknown) => Number(v ?? 0);
 
   return (
     <VendorDashboardClient
       vendorName={vendor.vendor_name}
-      totalOutstanding={totalOutstanding}
-      totalEarned={totalEarned}
       awaitingCheck={awaitingCheck}
+      money={{
+        earned: n(settlement?.kul_hissa),
+        received: n(settlement?.kul_mila),
+        withArt: n(settlement?.art_ke_paas_jama),
+        withFarmer: n(settlement?.kisan_ke_paas),
+        dieselAdvance: n(settlement?.art_diesel_advance),
+        netNow: n(settlement?.net_abhi_dena),
+        commission: n(settlement?.kul_commission),
+        farmerDiesel: n(settlement?.kul_kisan_diesel),
+      }}
+      work={{
+        bookings: n(work?.kitni_bookings),
+        booked: n(work?.book_hue_acre),
+        done: n(work?.mukammal_acre),
+        running: n(work?.chal_rahe_acre),
+        pending: n(work?.baqi_acre),
+        next7: n(work?.agle_7_din_acre),
+      }}
+      diesel={{
+        litres: n(diesel?.kul_litre),
+        amount: n(diesel?.kul_raqam),
+        byVendor: n(diesel?.vendor_ne_diya),
+        byFarmer: n(diesel?.kisan_ne_diya),
+        byArt: n(diesel?.art_ne_diya),
+      }}
+      week={(week ?? []).map((w) => ({
+        bookingId: w.booking_id as string,
+        bookingNumber: (w.booking_number as string) ?? "-",
+        date: (w.preferred_date as string | null) ?? null,
+        time: (w.preferred_time as string | null) ?? null,
+        farmerName: (w.farmer_name as string | null) ?? "-",
+        farmerPhone: (w.farmer_phone as string | null) ?? null,
+        area: n(w.harvest_area),
+        done: n(w.ho_chuka),
+        cropType: (w.crop_type as string | null) ?? null,
+        village: (w.village as string | null) ?? null,
+        address: (w.location_address as string | null) ?? null,
+        lat: w.location_lat === null ? null : Number(w.location_lat),
+        lng: w.location_lng === null ? null : Number(w.location_lng),
+        machineLabel: w.machine_type
+          ? `${w.machine_type}${w.machine_model ? ` (${w.machine_model})` : ""}`
+          : null,
+      }))}
       bookings={bookings}
     />
   );

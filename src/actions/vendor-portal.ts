@@ -292,6 +292,83 @@ export async function submitVendorCollection(
 }
 
 /**
+ * "Khet pahunch gaya" aur "kaam shuru ho gaya".
+ *
+ * Ye do khabrein kahin darj nahi hoti thin. Kisan phone karta hai ke
+ * "machine abhi tak nahi aayi" aur hamare paas jawab nahi hota --
+ * sirf itna pata hota hai ke machine bheji ja chuki hai.
+ *
+ * Ye PAISE ki baat nahi, is liye tasdeeq bhi nahi: kisi hisaab par
+ * is ka koi asar nahi. Sirf khabar hai -- aur khabar ka der se aana
+ * hi us ka sab se bara masla hai.
+ *
+ * Waqt bhi vendor se nahi maanga jata, wo khud lag jata hai. "Kab
+ * pahunche the" poochhne par jawab hamesha thora sa behtar hota hai
+ * asal se.
+ */
+export async function markVendorProgress(
+  _prev: VendorActionState,
+  formData: FormData
+): Promise<VendorActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: vendor } = await supabase
+    .from("machinery_vendors")
+    .select("id, vendor_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!vendor) return { error: "Ye login kisi vendor se juda hua nahi hai." };
+
+  const bookingId = str(formData, "booking_id");
+  const step = str(formData, "step");
+  if (!bookingId) return { error: "Booking chunein." };
+  if (step !== "reached" && step !== "started") return { error: "Kya hua, wo batayein." };
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, vendor_id, reached_farm_at, work_started_at")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking || booking.vendor_id !== vendor.id) {
+    return { error: "Ye booking aap ki machine ki nahi hai." };
+  }
+
+  // Ek dafa lagi hui khabar dobara nahi lagti. Dobara lagne se waqt
+  // badal jata, aur "kab pahunche the" ka jawab har dafa naya hota.
+  if (step === "reached" && booking.reached_farm_at) {
+    return { error: "Ye pehle hi darj ho chuka hai." };
+  }
+  if (step === "started" && booking.work_started_at) {
+    return { error: "Ye pehle hi darj ho chuka hai." };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update(step === "reached" ? { reached_farm_at: now } : { work_started_at: now })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await notifyRoles(
+    ["manager", "super_admin", "admin", "owner"],
+    step === "reached" ? "Machine khet pahunch gayi" : "Kattai shuru ho gayi",
+    `${vendor.vendor_name} — booking ${booking.booking_number}`,
+    `/admin/machinery-rental/booking/${bookingId}`
+  );
+
+  revalidatePath("/vendor");
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
+  return {
+    success: true,
+    notice: step === "reached" ? "Darj ho gaya: machine khet pahunch gayi." : "Darj ho gaya: kaam shuru.",
+  };
+}
+
+/**
  * Naam se login ka pata banana.
  *
  * "Noman Shah" se "nomanshah@alranatraders.pk". Phone number wala

@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Tractor, Wallet, Clock, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar } from "lucide-react";
+import { Tractor, Wallet, Clock, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays } from "lucide-react";
 import {
   submitVendorWork,
   submitVendorFuel,
   submitVendorCollection,
+  markVendorProgress,
   type VendorActionState,
 } from "@/actions/vendor-portal";
 
@@ -18,6 +19,8 @@ interface Booking {
   bookingDate: string;
   farmerName: string;
   farmerPhone: string | null;
+  reachedAt: string | null;
+  startedAt: string | null;
   harvestDate: string | null;
   harvestTime: string | null;
   cropType: string | null;
@@ -59,19 +62,67 @@ const STATUS: Record<string, { label: string; color: string }> = {
   cancelled: { label: "Cancel", color: "bg-red-50 text-red-700" },
 };
 
+interface Money {
+  earned: number;
+  received: number;
+  withArt: number;
+  withFarmer: number;
+  dieselAdvance: number;
+  netNow: number;
+  commission: number;
+  farmerDiesel: number;
+}
+interface Work {
+  bookings: number;
+  booked: number;
+  done: number;
+  running: number;
+  pending: number;
+  next7: number;
+}
+interface Diesel {
+  litres: number;
+  amount: number;
+  byVendor: number;
+  byFarmer: number;
+  byArt: number;
+}
+interface WeekRow {
+  bookingId: string;
+  bookingNumber: string;
+  date: string | null;
+  time: string | null;
+  farmerName: string;
+  farmerPhone: string | null;
+  area: number;
+  done: number;
+  cropType: string | null;
+  village: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  machineLabel: string | null;
+}
+
 export function VendorDashboardClient({
   vendorName,
-  totalOutstanding,
-  totalEarned,
   awaitingCheck,
+  money,
+  work,
+  diesel,
+  week,
   bookings,
 }: {
   vendorName: string;
-  totalOutstanding: number;
-  totalEarned: number;
   awaitingCheck: number;
+  money: Money;
+  work: Work;
+  diesel: Diesel;
+  week: WeekRow[];
   bookings: Booking[];
 }) {
+  const [tab, setTab] = useState<"paisa" | "hafta" | "kaam">("paisa");
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center gap-3">
@@ -84,11 +135,81 @@ export function VendorDashboardClient({
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <Stat icon={<Wallet className="h-5 w-5 text-green-600" />} value={`Rs ${totalOutstanding.toLocaleString()}`} label="Aap ka baqi" />
-        <Stat icon={<CheckCircle2 className="h-5 w-5 text-brand-600" />} value={`Rs ${totalEarned.toLocaleString()}`} label="Kul bana" />
-        <Stat icon={<Clock className="h-5 w-5 text-amber-500" />} value={String(awaitingCheck)} label="Tasdeeq ke intezar mein" />
+      {/* Sab se ahem adad sab se upar, aur akela.
+          "Net abhi milna hai" wo raqam hai jo waqai abhi di ja sakti
+          hai. Baqi sab us ki wajah batate hain. */}
+      <div className="mb-4 rounded-card border-2 border-brand-300 bg-brand-50 p-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Net abhi milna hai</p>
+        <p className="mt-1 font-display text-3xl font-bold text-brand-800">
+          Rs {money.netNow.toLocaleString()}
+        </p>
+        <p className="mt-1 text-xs text-brand-700">
+          Jo ART ke paas jama hai, us mein se ART ka diesel kaat kar.
+        </p>
       </div>
+
+      <div className="mb-4 flex gap-1 rounded-lg bg-surface-100 p-1">
+        <Tab active={tab === "paisa"} onClick={() => setTab("paisa")}>Paisa</Tab>
+        <Tab active={tab === "hafta"} onClick={() => setTab("hafta")}>Agle 7 din</Tab>
+        <Tab active={tab === "kaam"} onClick={() => setTab("kaam")}>Kaam</Tab>
+      </div>
+
+      {tab === "paisa" && (
+        <div className="mb-6 space-y-3">
+          {/* Teen alag baatein, teen alag qatarein. In ko jor kar ek
+              adad dikhana vendor ko ye samjhata hai ke hum us ka paisa
+              roke baithe hain, jabke aadha paisa hamare paas aaya hi
+              nahi. */}
+          <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
+            <Row3 label="Kul bana (mera hissa)" value={money.earned} strong />
+            <Row3 label="Mil chuka" value={-money.received} />
+            <div className="my-2 border-t border-surface-100" />
+            <Row3 label="ART ke paas mera jama" value={money.withArt} tone="text-brand-700" />
+            <Row3 label="Abhi kisan ke paas hai" value={money.withFarmer} tone="text-amber-700" />
+            {money.dieselAdvance > 0 && (
+              <Row3 label="ART ka diesel (katega)" value={-money.dieselAdvance} tone="text-red-600" />
+            )}
+            <div className="mt-2 flex justify-between border-t border-surface-100 pt-2 font-display font-semibold">
+              <span>Net abhi milna hai</span>
+              <span className="text-brand-700">Rs {money.netNow.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {money.withFarmer > 0 && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Rs {money.withFarmer.toLocaleString()} abhi kisan ke paas hai — jaise hi wo hamein deta
+              hai, wo aap ke jama mein aa jayega.
+            </p>
+          )}
+
+          <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">Diesel</p>
+            <Row3 label={`Kul (${diesel.litres} litre)`} value={diesel.amount} />
+            <Row3 label="Main ne diya" value={diesel.byVendor} />
+            <Row3 label="Kisan ne diya" value={diesel.byFarmer} />
+            <Row3 label="ART ne diya" value={diesel.byArt} />
+            {money.farmerDiesel > 0 && (
+              <p className="mt-2 text-xs text-surface-500">
+                Kisan ka Rs {money.farmerDiesel.toLocaleString()} ka diesel mere hisse se kata hai —
+                rate mein diesel shamil tha.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "hafta" && <WeekView rows={week} />}
+
+      {tab === "kaam" && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Stat icon={<Tractor className="h-5 w-5 text-surface-500" />} value={`${work.booked}`} label="Book hue acre" />
+          <Stat icon={<CheckCircle2 className="h-5 w-5 text-brand-600" />} value={`${work.done}`} label="Mukammal acre" />
+          <Stat icon={<Clock className="h-5 w-5 text-purple-500" />} value={`${work.running}`} label="Chal rahe acre" />
+          <Stat icon={<Clock className="h-5 w-5 text-amber-500" />} value={`${work.pending}`} label="Baqi acre" />
+          <Stat icon={<CalendarDays className="h-5 w-5 text-blue-500" />} value={`${work.next7}`} label="Agle 7 din ke acre" />
+          <Stat icon={<Clock className="h-5 w-5 text-amber-500" />} value={String(awaitingCheck)} label="Tasdeeq ke intezar mein" />
+        </div>
+      )}
 
       <div className="space-y-3">
         {bookings.map((b) => (
@@ -100,6 +221,125 @@ export function VendorDashboardClient({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-md px-2 py-2 text-xs font-medium ${
+        active ? "bg-white text-surface-900 shadow-sm" : "text-surface-500"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Row3({ label, value, strong, tone }: { label: string; value: number; strong?: boolean; tone?: string }) {
+  return (
+    <div className={`flex justify-between text-sm ${strong ? "font-medium" : ""}`}>
+      <span className="text-surface-600">{label}</span>
+      <span className={tone ?? "text-surface-800"}>
+        {value < 0 ? `- Rs ${Math.abs(value).toLocaleString()}` : `Rs ${value.toLocaleString()}`}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Aane wale saat din.
+ *
+ * Do tarteebein ek sath, kyunke vendor ke do sawal hain: "kis din
+ * kya hai" aur "ek hi taraf kitna kaam hai". Doosra sawal machine ka
+ * raasta banata hai -- ek gaon mein chaar khet hon to machine ek
+ * dafa jati hai, chaar dafa nahi.
+ */
+function WeekView({ rows }: { rows: WeekRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="mb-6 rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-sm text-surface-400">
+        Agle saat din koi kaam nahi.
+      </div>
+    );
+  }
+
+  const byVillage = new Map<string, { farmers: Set<string>; acres: number }>();
+  for (const r of rows) {
+    const key = r.village || r.address || "Jagah darj nahi";
+    const e = byVillage.get(key) ?? { farmers: new Set<string>(), acres: 0 };
+    e.farmers.add(r.farmerName);
+    e.acres += r.area;
+    byVillage.set(key, e);
+  }
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">
+          Jagah ke hisaab se
+        </p>
+        <ul className="space-y-1 text-sm">
+          {[...byVillage.entries()]
+            .sort((a, b) => b[1].acres - a[1].acres)
+            .map(([place, e]) => (
+              <li key={place} className="flex justify-between">
+                <span className="text-surface-700">{place}</span>
+                <span className="text-surface-500">
+                  {e.farmers.size} kisan · {e.acres} acre
+                </span>
+              </li>
+            ))}
+        </ul>
+      </div>
+
+      {rows.map((r) => (
+        <div key={r.bookingId} className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-medium text-surface-900">{r.farmerName}</p>
+              <p className="text-xs text-surface-500">
+                {r.bookingNumber} · {r.area} acre
+                {r.done > 0 ? ` (${r.done} ho chuka)` : ""}
+                {r.cropType ? ` · ${r.cropType}` : ""}
+              </p>
+            </div>
+            <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {r.date ? new Date(r.date).toLocaleDateString() : "Tareekh tay nahi"}
+              {r.time ? ` · ${r.time}` : ""}
+            </span>
+          </div>
+
+          <p className="mt-1 text-xs text-surface-500">
+            {[r.address, r.village].filter(Boolean).join(", ") || "Jagah darj nahi"}
+            {r.machineLabel ? ` · ${r.machineLabel}` : ""}
+          </p>
+
+          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+            {r.lat !== null && r.lng !== null && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
+              >
+                <MapPin className="h-3.5 w-3.5" /> Location kholein
+              </a>
+            )}
+            {r.farmerPhone && (
+              <a
+                href={`tel:${r.farmerPhone}`}
+                className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
+              >
+                <Phone className="h-3.5 w-3.5" /> {r.farmerPhone}
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -229,6 +469,14 @@ function BookingCard({ booking }: { booking: Booking }) {
         </p>
       ))}
 
+      {(booking.reachedAt || booking.startedAt) && (
+        <p className="mt-2 text-xs text-surface-500">
+          {booking.reachedAt && `Pahuncha: ${new Date(booking.reachedAt).toLocaleString()}`}
+          {booking.reachedAt && booking.startedAt && " · "}
+          {booking.startedAt && `Kaam shuru: ${new Date(booking.startedAt).toLocaleString()}`}
+        </p>
+      )}
+
       {booking.fuelClaimed > 0 && (
         <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
           Diesel ka {booking.fuelClaimed} indraj tasdeeq ke intezar mein hai.
@@ -269,6 +517,18 @@ function BookingCard({ booking }: { booking: Booking }) {
         <div className="mt-3">
           {open === null ? (
             <div className="flex flex-wrap gap-2">
+              {/* Do khabrein jo kisi hisaab par asar nahi daalteen,
+                  magar jin ke bina kisan ke phone ka jawab nahi hota:
+                  "machine pahunchi ya nahi". Ek dafa lag jane ke baad
+                  button hat jata hai -- dobara lagne se waqt badal
+                  jata aur "kab pahunche the" ka jawab har dafa naya
+                  hota. */}
+              {!booking.reachedAt && (
+                <ProgressButton bookingId={booking.id} step="reached" label="Khet pahunch gaya" />
+              )}
+              {booking.reachedAt && !booking.startedAt && (
+                <ProgressButton bookingId={booking.id} step="started" label="Kaam shuru" />
+              )}
               {canSubmitWork && (
                 <button
                   onClick={() => setOpen("work")}
@@ -441,6 +701,37 @@ function CollectionForm({ bookingId, onClose }: { bookingId: string; onClose: ()
           Rehne dein
         </button>
       </div>
+    </form>
+  );
+}
+
+/**
+ * Ek khabar, ek button.
+ *
+ * Koi form nahi, koi tareekh nahi, koi tafseel nahi -- kyunke ye
+ * khabar khet par khare ho kar, ek haath se, dhoop mein di jati hai.
+ * Waqt khud lag jata hai.
+ */
+function ProgressButton({ bookingId, step, label }: { bookingId: string; step: "reached" | "started"; label: string }) {
+  const [state, action] = useFormState(markVendorProgress, initialState);
+  const { pending } = useFormStatus();
+
+  if (state.success) {
+    return <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-800">{state.notice}</p>;
+  }
+
+  return (
+    <form action={action}>
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="step" value={step} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 disabled:opacity-60"
+      >
+        <MapPin className="h-4 w-4" /> {label}
+      </button>
+      {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </form>
   );
 }
