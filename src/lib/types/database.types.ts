@@ -1458,6 +1458,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "ai_crop_reports_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "ai_crop_reports_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       ai_purchase_suggestions: {
@@ -1623,6 +1637,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "announcement_dismissals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -2526,6 +2554,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "bridge_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "bridge_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "bridge_orders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3337,6 +3379,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "credit_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "credit_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "credit_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -3425,6 +3481,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "crop_diagnoses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "crop_diagnoses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -4560,6 +4630,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_ai_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "farmer_ai_requests_responded_by_fkey"
             columns: ["responded_by"]
             isOneToOne: false
@@ -4659,6 +4743,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "farmer_credit_ledger_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_credit_ledger_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       farmer_loans: {
@@ -4738,6 +4836,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       farmer_produce_payouts: {
@@ -4802,6 +4914,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_produce_payouts_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_produce_payouts_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -4891,6 +5017,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farmer_subscriptions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -5257,6 +5397,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "farms_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "farms_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       features: {
@@ -5410,6 +5564,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "fertilizer_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "fertilizer_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -6066,6 +6234,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "grain_procurement_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "grain_procurement_entries_party_id_fkey"
             columns: ["party_id"]
             isOneToOne: false
@@ -6185,6 +6367,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -7622,6 +7818,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       loss_verifiers: {
@@ -7749,6 +7959,13 @@ export type Database = {
             foreignKeyName: "machinery_bills_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
@@ -7831,6 +8048,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_booking_events_booking_id_fkey"
@@ -8137,6 +8361,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "machinery_bookings_machine_id_fkey"
             columns: ["machine_id"]
             isOneToOne: false
@@ -8149,6 +8387,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
@@ -8191,6 +8436,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_vendors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "machinery_bookings_vendor_id_fkey"
@@ -8282,6 +8534,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_dispatches_booking_id_fkey"
@@ -8406,6 +8665,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
@@ -8537,6 +8803,13 @@ export type Database = {
             foreignKeyName: "machinery_payments_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
@@ -8567,6 +8840,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_vendors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
@@ -8733,6 +9013,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       machinery_vendor_machines: {
@@ -8776,6 +9070,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_vendors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
@@ -8929,6 +9230,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_work_records_booking_id_fkey"
@@ -9431,6 +9739,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "milk_entries_fat_by_profile_id_fkey"
             columns: ["fat_by_profile_id"]
             isOneToOne: false
@@ -9532,6 +9854,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -9705,6 +10041,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -10454,6 +10804,20 @@ export type Database = {
             referencedColumns: ["farmer_id"]
           },
           {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
             foreignKeyName: "produce_listings_harvest_id_fkey"
             columns: ["harvest_id"]
             isOneToOne: false
@@ -10568,6 +10932,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
           {
@@ -11636,6 +12014,20 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "service_categories_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "service_categories_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
             referencedColumns: ["farmer_id"]
           },
         ]
@@ -13015,6 +13407,20 @@ export type Database = {
             referencedRelation: "v_farm_map"
             referencedColumns: ["farmer_id"]
           },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "subscription_votes_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: true
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
         ]
       }
       supplier_payable_repairs: {
@@ -14382,6 +14788,13 @@ export type Database = {
             foreignKeyName: "machinery_payments_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
@@ -14432,6 +14845,13 @@ export type Database = {
             foreignKeyName: "machinery_bills_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "v_machinery_queue"
             referencedColumns: ["id"]
           },
@@ -14452,6 +14872,92 @@ export type Database = {
           {
             foreignKeyName: "machinery_bills_booking_id_fkey"
             columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
+      v_machinery_control: {
+        Row: {
+          aakhri_payment: string | null
+          ab_tak_mila: number | null
+          advance_adjusted: number | null
+          advance_mila: number | null
+          agla_kaam: string | null
+          baqi: number | null
+          bill_ka_baqi: number | null
+          bill_number: string | null
+          booking_date: string | null
+          booking_id: string | null
+          booking_number: string | null
+          crop_type: string | null
+          farmer_code: string | null
+          farmer_confirmed_at: string | null
+          farmer_id: string | null
+          farmer_name: string | null
+          farmer_phone: string | null
+          final_rate: number | null
+          gross_amount: number | null
+          hamara_commission: number | null
+          harvest_area: number | null
+          kaam_hua: number | null
+          kaam_ki_halat: string | null
+          kaam_mukammal: boolean | null
+          kattai_ki_tareekh_guzri: boolean | null
+          machine_ja_chuki: boolean | null
+          machine_model: string | null
+          machine_type: string | null
+          paise_ki_halat: string | null
+          parent_booking_id: string | null
+          payment_promise_date: string | null
+          preferred_date: string | null
+          rate_status: string | null
+          raw_status: string | null
+          vendor_id: string | null
+          vendor_ka_baqi: number | null
+          vendor_name: string | null
+          village: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
             isOneToOne: false
             referencedRelation: "v_machinery_work_efficiency"
             referencedColumns: ["booking_id"]
@@ -14484,6 +14990,23 @@ export type Database = {
           },
         ]
       }
+      v_machinery_farmer_statement: {
+        Row: {
+          aakhri_payment: string | null
+          farmer_code: string | null
+          farmer_id: string | null
+          farmer_name: string | null
+          farmer_phone: string | null
+          kitni_bookings: number | null
+          kul_advance: number | null
+          kul_baqi: number | null
+          kul_bill: number | null
+          kul_mila: number | null
+          mukammal_bookings: number | null
+          village: string | null
+        }
+        Relationships: []
+      }
       v_machinery_fuel_claims: {
         Row: {
           amount: number | null
@@ -14505,6 +15028,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
@@ -14636,6 +15166,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "machinery_work_records_booking_id_fkey"

@@ -597,7 +597,6 @@ export const machineryDict = {
   mc_no_booking_filter: { en: "No bookings in this filter.", rm: "Is filter mein koi booking nahi.", ur: "اس فلٹر میں کوئی بکنگ نہیں۔" },
   mc_print: { en: "Print", rm: "Print", ur: "پرنٹ" },
   mc_download: { en: "Download", rm: "Download", ur: "ڈاؤن لوڈ" },
-  mc_back: { en: "Back", rm: "Wapas", ur: "واپس" },
   mc_slip: { en: "Slip", rm: "Slip", ur: "سلپ" },
   mc_payments: { en: "Payments", rm: "Adaigiyan", ur: "ادائیگیاں" },
 
@@ -667,4 +666,44 @@ export const machineryDict = {
     rm: "Ye AgriBridge se khud bani hui booking slip hai.",
     ur: "یہ ایگری برج سے خود بنی ہوئی بکنگ سلپ ہے۔",
   },
+
+  // --- Control Center (fehrist ka safha) ---
+  // "Agla kaam" ke naam: ye system khud nikalta hai, staff ko sochna
+  // nahi parta. Naam chhote rakhe gaye hain taake qatar mein aa jayein.
+  mc_control_title: {
+    en: "Machinery Booking Control Center",
+    rm: "Machinery Booking Control Center",
+    ur: "\u0645\u0634\u06cc\u0646\u0631\u06cc \u0628\u06a9\u0646\u06af \u06a9\u0646\u0679\u0631\u0648\u0644 \u0633\u06cc\u0646\u0679\u0631",
+  },
+  mc_search_hint: {
+    en: "Search by farmer, phone, village or booking number",
+    rm: "Kisan, phone, gaon ya booking number se dhoondein",
+    ur: "\u06a9\u0633\u0627\u0646\u060c \u0641\u0648\u0646\u060c \u06af\u0627\u0624\u06ba \u06cc\u0627 \u0628\u06a9\u0646\u06af \u0646\u0645\u0628\u0631 \u0633\u06d2 \u062a\u0644\u0627\u0634 \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_area: { en: "Area", rm: "Rakba", ur: "\u0631\u0642\u0628\u06c1" },
+  mc_village: { en: "Village", rm: "Gaon", ur: "\u06af\u0627\u0624\u06ba" },
+  mc_bill_label: { en: "Bill", rm: "Bill", ur: "\u0628\u0644" },
+  mc_outstanding: { en: "Outstanding", rm: "Baqi", ur: "\u0628\u0627\u0642\u06cc" },
+  mc_next_action: { en: "Next action", rm: "Agla kaam", ur: "\u0627\u06af\u0644\u0627 \u06a9\u0627\u0645" },
+  mc_total: { en: "Total", rm: "Kul", ur: "\u06a9\u0644" },
+  mc_vendor_payable: { en: "Vendor payable", rm: "Vendor ko dena", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0646\u0627" },
+  mc_bookings: { en: "Bookings", rm: "Bookings", ur: "\u0628\u06a9\u0646\u06af" },
+  mc_last_payment: { en: "Last payment", rm: "Aakhri adaigi", ur: "\u0622\u062e\u0631\u06cc \u0627\u062f\u0627\u0626\u06cc\u06af\u06cc" },
+  mc_farmer_statement: { en: "Farmer-wise statement", rm: "Kisan ke hisaab se gosharah", ur: "\u06a9\u0633\u0627\u0646 \u06a9\u06d2 \u062d\u0633\u0627\u0628 \u0633\u06d2 \u06af\u0648\u0634\u0648\u0627\u0631\u06c1" },
+  mc_farmer_statement_hint: {
+    en: "Counts come from the booking rows above \u2014 nothing is counted twice.",
+    rm: "Adad ooper wali qataron se aate hain \u2014 dobara nahi ginte.",
+    ur: "\u0627\u0639\u062f\u0627\u062f \u0627\u0648\u067e\u0631 \u0648\u0627\u0644\u06cc \u0642\u0637\u0627\u0631\u0648\u06ba \u0633\u06d2 \u0622\u062a\u06d2 \u06c1\u06cc\u06ba \u2014 \u062f\u0648\u0628\u0627\u0631\u06c1 \u0646\u06c1\u06cc\u06ba \u06af\u0646\u062a\u06d2\u06d4",
+  },
+  mc_only_due: { en: "Only those with dues", rm: "Sirf jin par baqi hai", ur: "\u0635\u0631\u0641 \u062c\u0646 \u067e\u0631 \u0628\u0627\u0642\u06cc \u06c1\u06d2" },
+
+  mca_rate: { en: "Finalise the rate", rm: "Rate final karein", ur: "\u0631\u06cc\u0679 \u0641\u0627\u0626\u0646\u0644 \u06a9\u0631\u06cc\u06ba" },
+  mca_machine: { en: "Send the machine", rm: "Machine bhejein", ur: "\u0645\u0634\u06cc\u0646 \u0628\u06be\u06cc\u062c\u06cc\u06ba" },
+  mca_work: { en: "Record the work", rm: "Kaam darj karein", ur: "\u06a9\u0627\u0645 \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba" },
+  mca_bill: { en: "Make the bill", rm: "Bill banayein", ur: "\u0628\u0644 \u0628\u0646\u0627\u0626\u06cc\u06ba" },
+  mca_money: { en: "Collect", rm: "Paisa lena hai", ur: "\u067e\u06cc\u0633\u06c1 \u0644\u06cc\u0646\u0627 \u06c1\u06d2" },
+  mca_money_suffix: { en: "to collect", rm: "lena hai", ur: "\u0644\u06cc\u0646\u0627 \u06c1\u06d2" },
+  mca_vendor: { en: "Pay the vendor", rm: "Vendor ko dena hai", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0646\u0627 \u06c1\u06d2" },
+  mca_done: { en: "Done", rm: "Mukammal", ur: "\u0645\u06a9\u0645\u0644" },
+  mca_cancelled: { en: "Cancelled", rm: "Mansookh", ur: "\u0645\u0646\u0633\u0648\u062e" },
 } as const;
