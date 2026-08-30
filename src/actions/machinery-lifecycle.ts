@@ -788,7 +788,7 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   const { data: booking } = await supabase
     .from("machinery_bookings")
     .select(
-      "id, booking_number, status, farmer_id, crop_type, harvest_area, expected_harvest_date, farmer_confirmed_at, machine_id, harvest_type, sabit_area, kutra_area, farmers(full_name, phone_number), machinery_vendor_machines(machine_type, model)"
+      "id, booking_number, status, farmer_id, crop_type, harvest_area, expected_harvest_date, farmer_confirmed_at, machine_id, harvest_type, sabit_area, kutra_area, sabit_rate, kutra_rate, farmers(full_name, phone_number), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -798,8 +798,16 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   // KHUD banta hai (dono ka aausat) -- staff wo likhta hi nahi, warna
   // wohi purani kharabi wapas aa jati: ek adad do jagah likha hua.
   const isDono = booking.harvest_type === "dono";
-  const sabitRate = num(formData, "sabit_rate");
-  const kutraRate = num(formData, "kutra_rate");
+
+  // Rate aksar booking BANATE WAQT hi tay ho chuka hota hai. Us soorat
+  // mein ye qadam use dobara nahi poochhta -- form khali aaye to wahi
+  // rate uthaya jata hai jo booking par pehle se likha hai.
+  //
+  // Ye rok us baat par hai ke rate MAUJOOD hai ya nahi, is par nahi ke
+  // wo kis khane se aaya. Purani screen se aaya form bhi isi liye
+  // chalta rehta hai.
+  const sabitRate = num(formData, "sabit_rate") ?? (booking.sabit_rate === null ? null : Number(booking.sabit_rate));
+  const kutraRate = num(formData, "kutra_rate") ?? (booking.kutra_rate === null ? null : Number(booking.kutra_rate));
   const finalRate = isDono ? null : num(formData, "final_rate");
 
   if (isDono) {
@@ -811,12 +819,23 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
 
   const sabitBook = Number(booking.sabit_area ?? 0);
   const kutraBook = Number(booking.kutra_area ?? 0);
+  const totalArea = Number(booking.harvest_area ?? 0);
+
   // Kisan ko jo raqam bhejni hai wo booking ke raqbe par andaza hai.
   // Asal bill baad mein tasdeeq shuda kaam par banta hai -- ye farq
   // paighaam mein bhi saaf likha jata hai.
+  const sabitRaqam = Math.round(sabitBook * (sabitRate ?? 0));
+  const kutraRaqam = Math.round(kutraBook * (kutraRate ?? 0));
+  const kulRaqam = isDono ? sabitRaqam + kutraRaqam : Math.round(totalArea * (finalRate ?? 0));
+
   const shownRate = isDono
-    ? Math.round(((sabitBook * (sabitRate ?? 0) + kutraBook * (kutraRate ?? 0)) / Math.max(Number(booking.harvest_area ?? 0), 0.0001)) * 100) / 100
+    ? Math.round(((sabitBook * (sabitRate ?? 0) + kutraBook * (kutraRate ?? 0)) / Math.max(totalArea, 0.0001)) * 100) / 100
     : (finalRate ?? 0);
+
+  // Kisan ko kya bhejna hai -- per acre rate ya kul raqam. Kuch kisan
+  // rate se samajhte hain, kuch sirf kul raqam se. Dono adad paighaam
+  // mein jate hain; sirf pehli lakeer badalti hai.
+  const sendAs = str(formData, "send_as") === "total" ? "total" : "rate";
 
   const farmer = Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers;
   const machine = Array.isArray(booking.machinery_vendor_machines)
@@ -854,13 +873,19 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   const message = [
     `Assalam-o-Alaikum ${farmer?.full_name ?? ""} Sahib,`,
     ``,
-    isDono
-      ? `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka rate qism ke hisaab se hai:`
-      : `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka final rate Rs ${(finalRate ?? 0).toLocaleString()} per acre hai.`,
-    isDono ? `Sabit Parali: ${sabitBook} acre x Rs ${(sabitRate ?? 0).toLocaleString()} = Rs ${Math.round(sabitBook * (sabitRate ?? 0)).toLocaleString()}` : null,
-    isDono ? `Kutra: ${kutraBook} acre x Rs ${(kutraRate ?? 0).toLocaleString()} = Rs ${Math.round(kutraBook * (kutraRate ?? 0)).toLocaleString()}` : null,
-    isDono ? `Andaza kul: Rs ${Math.round(sabitBook * (sabitRate ?? 0) + kutraBook * (kutraRate ?? 0)).toLocaleString()}` : null,
-    isDono ? `(Asal bill kaam ke baad, waqai kaate gaye acre par banega.)` : null,
+    // Pehli lakeer wohi jo kisan samajhta hai -- rate ya kul raqam.
+    // Baqi tafseel dono soorton mein neeche jati hai.
+    sendAs === "total"
+      ? `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka andaza kul kharcha Rs ${kulRaqam.toLocaleString()} hai.`
+      : isDono
+        ? `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka rate qism ke hisaab se hai:`
+        : `aapki Machinery Booking ${booking.booking_number} ke liye kattai ka final rate Rs ${(finalRate ?? 0).toLocaleString()} per acre hai.`,
+    isDono ? `Sabit Parali: ${sabitBook} acre x Rs ${(sabitRate ?? 0).toLocaleString()} = Rs ${sabitRaqam.toLocaleString()}` : null,
+    isDono ? `Kutra: ${kutraBook} acre x Rs ${(kutraRate ?? 0).toLocaleString()} = Rs ${kutraRaqam.toLocaleString()}` : null,
+    isDono && sendAs === "rate" ? `Aausat: Rs ${shownRate.toLocaleString()} per acre` : null,
+    sendAs === "rate" ? `Andaza kul: Rs ${kulRaqam.toLocaleString()}` : null,
+    sendAs === "total" && !isDono ? `Rate: Rs ${(finalRate ?? 0).toLocaleString()} per acre` : null,
+    `(Asal bill kaam ke baad, waqai kaate gaye acre par banega.)`,
     machine ? `Machine: ${machine.machine_type}${machine.model ? ` (${machine.model})` : ""}` : null,
     `Estimated Area: ${area} Acres`,
     advanceTotal > 0 ? `Advance Received: Rs ${advanceTotal.toLocaleString()}` : null,
@@ -888,9 +913,11 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
   await logEvent({
     bookingId,
     eventType: "rate_confirmation_sent",
-    note: isDono
-      ? `Sabit Rs ${(sabitRate ?? 0).toLocaleString()}/acre, Kutra Rs ${(kutraRate ?? 0).toLocaleString()}/acre — ${delivery}`
-      : `Rs ${(finalRate ?? 0).toLocaleString()}/acre — ${delivery}`,
+    note: `${
+      isDono
+        ? `Sabit Rs ${(sabitRate ?? 0).toLocaleString()}/acre, Kutra Rs ${(kutraRate ?? 0).toLocaleString()}/acre`
+        : `Rs ${(finalRate ?? 0).toLocaleString()}/acre`
+    } · andaza kul Rs ${kulRaqam.toLocaleString()} · bheja ${sendAs === "total" ? "kul raqam" : "per acre rate"} ke tor par — ${delivery}`,
     actorId,
   });
 

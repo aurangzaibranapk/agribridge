@@ -364,6 +364,7 @@ export function BookingDetail({
                   harvestType={booking.harvest_type}
                   sabitArea={booking.sabit_area}
                   kutraArea={booking.kutra_area}
+                  totalArea={booking.harvest_area}
                   defaultSabitRate={booking.sabit_rate}
                   defaultKutraRate={booking.kutra_rate}
                 />
@@ -954,6 +955,7 @@ function RateConfirmationForm({
   harvestType,
   sabitArea,
   kutraArea,
+  totalArea,
   defaultSabitRate,
   defaultKutraRate,
 }: {
@@ -962,64 +964,131 @@ function RateConfirmationForm({
   harvestType: string | null;
   sabitArea: number | null;
   kutraArea: number | null;
+  totalArea: number | null;
   defaultSabitRate: number | null;
   defaultKutraRate: number | null;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(sendRateConfirmation, initialState);
 
-  // Do qism ki booking par do rate (176). Staff dono apni marzi se
-  // likhta hai -- wohi purana raasta, bas do khane.
+  // Rate aksar booking BANATE WAQT hi tay ho chuka hota hai (177 ka
+  // rate card, ya staff ka apna likha hua). Ye qadam use dobara nahi
+  // poochhta -- wahi rate saamne rakhta hai, badalne ki gunjaish ke
+  // sath, aur us se banne wala kul kharcha bhi.
   const isDono = harvestType === "dono";
   const [sRate, setSRate] = useState(String(defaultSabitRate ?? ""));
   const [kRate, setKRate] = useState(String(defaultKutraRate ?? ""));
+  const [oneRate, setOneRate] = useState(String(defaultRate ?? ""));
+  const [sendAs, setSendAs] = useState<"rate" | "total">("rate");
+
   const sA = Number(sabitArea ?? 0);
   const kA = Number(kutraArea ?? 0);
-  const estimate = Math.round((sA * (Number(sRate) || 0) + kA * (Number(kRate) || 0)) * 100) / 100;
+  const area = isDono ? sA + kA : Number(totalArea ?? 0);
+
+  const sabitRaqam = Math.round(sA * (Number(sRate) || 0));
+  const kutraRaqam = Math.round(kA * (Number(kRate) || 0));
+  const total = isDono ? sabitRaqam + kutraRaqam : Math.round(area * (Number(oneRate) || 0));
+  const avg = area > 0 ? Math.round((total / area) * 100) / 100 : 0;
 
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="send_as" value={sendAs} />
+
       {isDono ? (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>
-                {t("mh_sabit_rate", lang)} — {sA} {t("md_acres_short", lang)}
-              </Label>
-              <Input type="number" name="sabit_rate" step="0.01" value={sRate} onChange={(e) => setSRate(e.target.value)} />
-            </div>
-            <div>
-              <Label>
-                {t("mh_kutra_rate", lang)} — {kA} {t("md_acres_short", lang)}
-              </Label>
-              <Input type="number" name="kutra_rate" step="0.01" value={kRate} onChange={(e) => setKRate(e.target.value)} />
-            </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>
+              {t("mh_sabit", lang)} — {sA} {t("md_acres_short", lang)}
+            </Label>
+            <Input type="number" name="sabit_rate" step="0.01" value={sRate} onChange={(e) => setSRate(e.target.value)} />
+            <p className="mt-1 text-xs text-surface-500">Rs / {t("md_acres_short", lang)}</p>
           </div>
-          {estimate > 0 && (
-            <div className="rounded-lg bg-surface-50 p-2 text-xs dark:bg-surface-800">
-              <p>
-                {t("mh_sabit", lang)}: {sA} × Rs {(Number(sRate) || 0).toLocaleString()} = Rs{" "}
-                {Math.round(sA * (Number(sRate) || 0)).toLocaleString()}
-              </p>
-              <p>
-                {t("mh_kutra", lang)}: {kA} × Rs {(Number(kRate) || 0).toLocaleString()} = Rs{" "}
-                {Math.round(kA * (Number(kRate) || 0)).toLocaleString()}
-              </p>
-              <p className="mt-1 font-semibold text-surface-900 dark:text-white">
-                {t("mh_estimate", lang)}: Rs {estimate.toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-surface-500">{t("mh_estimate_note", lang)}</p>
-            </div>
-          )}
+          <div>
+            <Label>
+              {t("mh_kutra", lang)} — {kA} {t("md_acres_short", lang)}
+            </Label>
+            <Input type="number" name="kutra_rate" step="0.01" value={kRate} onChange={(e) => setKRate(e.target.value)} />
+            <p className="mt-1 text-xs text-surface-500">Rs / {t("md_acres_short", lang)}</p>
+          </div>
         </div>
       ) : (
         <div>
           <Label>{t("mc_final_rate_per_acre", lang)}</Label>
-          <Input type="number" name="final_rate" step="0.01" defaultValue={defaultRate ?? ""} />
+          <Input type="number" name="final_rate" step="0.01" value={oneRate} onChange={(e) => setOneRate(e.target.value)} />
         </div>
       )}
+
+      {(defaultSabitRate !== null || defaultRate !== null) && (
+        <p className="text-xs text-surface-500">{t("mrx_from_booking", lang)}</p>
+      )}
+
+      {/* Kul kharcha saamne. Pehle sirf per acre rate dikhta tha, aur
+          kisan ka pehla sawal hamesha "kitne paise banenge" hota hai. */}
+      {total > 0 && (
+        <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
+          {isDono && (
+            <>
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>
+                  {t("mh_sabit", lang)}: {sA} × Rs {(Number(sRate) || 0).toLocaleString()}
+                </span>
+                <span>Rs {sabitRaqam.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>
+                  {t("mh_kutra", lang)}: {kA} × Rs {(Number(kRate) || 0).toLocaleString()}
+                </span>
+                <span>Rs {kutraRaqam.toLocaleString()}</span>
+              </div>
+              <div className="my-1 border-t border-surface-200 dark:border-surface-700" />
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>{t("mrx_avg", lang)}</span>
+                <span>Rs {avg.toLocaleString()}</span>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between font-display font-semibold text-surface-900 dark:text-white">
+            <span>{t("mrx_total", lang)}</span>
+            <span>Rs {total.toLocaleString()}</span>
+          </div>
+          <p className="mt-1 text-xs text-surface-500">{t("mrx_on_booked", lang)}</p>
+        </div>
+      )}
+
+      {/* Kuch kisan rate se samajhte hain, kuch sirf kul raqam se.
+          Dono adad paighaam mein jate hain -- sirf pehli lakeer badalti
+          hai, taake wo cheez upar ho jo us kisan ko samajh aati hai. */}
+      <div>
+        <Label>{t("mrx_send_as", lang)}</Label>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSendAs("rate")}
+            className={
+              sendAs === "rate"
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+            }
+          >
+            {t("mrx_send_rate", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSendAs("total")}
+            className={
+              sendAs === "total"
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+            }
+          >
+            {t("mrx_send_total", lang)}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-surface-500">{t("mrx_both_go", lang)}</p>
+      </div>
+
       <p className="text-xs text-surface-500">
         Bhejte hi purani tasdeeq (agar thi) khatam ho jayegi — warna kisan ne kisi aur rate par haan ki hoti aur record
         naye rate par &ldquo;tasdeeq shuda&rdquo; dikhata rehta.

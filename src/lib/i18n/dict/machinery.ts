@@ -1309,4 +1309,14 @@ export const machineryDict = {
   mrc_future: { en: "Starts later", rm: "Aage se lagega", ur: "\u0622\u06af\u06d2 \u0633\u06d2 \u0644\u06af\u06d2 \u06af\u0627" },
   mrc_from_card: { en: "From rate card", rm: "Rate card se", ur: "\u0631\u06cc\u0679 \u06a9\u0627\u0631\u0688 \u0633\u06d2" },
   mrc_changed: { en: "Changed by hand", rm: "Hath se badla gaya", ur: "\u06c1\u0627\u062a\u06be \u0633\u06d2 \u0628\u062f\u0644\u0627 \u06af\u06cc\u0627" },
+
+  // ---- Rate bhejne ka qadam (176/177) ----
+  mrx_from_booking: { en: "Rate already set on the booking. Change it here if needed.", rm: "Rate booking par pehle se tay hai. Zaroorat ho to yahin badal lein.", ur: "\u0631\u06cc\u0679 \u0628\u06a9\u0646\u06af \u067e\u0631 \u067e\u06c1\u0644\u06d2 \u0633\u06d2 \u0637\u06d2 \u06c1\u06d2" },
+  mrx_avg: { en: "Average per acre", rm: "Aausat per acre", ur: "\u0627\u0648\u0633\u0637 \u0641\u06cc \u0627\u06cc\u06a9\u0691" },
+  mrx_total: { en: "Estimated total", rm: "Andaza kul kharcha", ur: "\u0627\u0646\u062f\u0627\u0632\u06c1 \u06a9\u0644 \u062e\u0631\u0686\u06c1" },
+  mrx_send_as: { en: "What should the farmer see first?", rm: "Kisan ko pehle kya dikhe?", ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0648 \u067e\u06c1\u0644\u06d2 \u06a9\u06cc\u0627 \u062f\u06a9\u06be\u06d2" },
+  mrx_send_rate: { en: "Per acre rate", rm: "Per acre rate", ur: "\u0641\u06cc \u0627\u06cc\u06a9\u0691 \u0631\u06cc\u0679" },
+  mrx_send_total: { en: "Total amount", rm: "Kul raqam", ur: "\u06a9\u0644 \u0631\u0642\u0645" },
+  mrx_both_go: { en: "Both numbers go in the message either way — only the first line changes.", rm: "Dono adad paighaam mein jate hain — sirf pehli lakeer badalti hai.", ur: "\u062f\u0648\u0646\u0648\u06ba \u0639\u062f\u062f \u067e\u06cc\u063a\u0627\u0645 \u0645\u06cc\u06ba \u062c\u0627\u062a\u06d2 \u06c1\u06cc\u06ba" },
+  mrx_on_booked: { en: "On the booked area. The real bill is built on verified work.", rm: "Booking ke raqbe par. Asal bill tasdeeq shuda kaam par banta hai.", ur: "\u0628\u06a9\u0646\u06af \u06a9\u06d2 \u0631\u0642\u0628\u06d2 \u067e\u0631" },
 } as const;
