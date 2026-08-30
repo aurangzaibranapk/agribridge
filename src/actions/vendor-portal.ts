@@ -196,6 +196,94 @@ export async function submitVendorFuel(
  * banaya jata hai -- purana dhoondhne ka koi rasta nahi hona chahiye.
  */
 /**
+ * Kisan ne mujhe paisa diya -- vendor apne haath se.
+ *
+ * Ye roz hota hai: kisan machine wale ke haath mein paisa pakraata
+ * hai. Ab tak wo baat sirf tab likhi jati thi jab vendor hamare bande
+ * ko batata aur wo darj karta -- yani us ke aur record ke darmiyan ek
+ * insaan aur do din khare rehte the. Beech mein kisan phone karta
+ * ke "maine to de diya hai", aur hamari qatar mein wo raqam kahin
+ * nahi hoti.
+ *
+ * Magar KEHNA hisaab nahi hai. Ye indraj 'claimed' rehta hai: kisi
+ * khate mein nahi jata, kisan ka baqi kam nahi karta, cash book mein
+ * nazar nahi aata. Sirf hamari fehrist mein khara ho jata hai ke ise
+ * dekho -- aur tasdeeq ke baad hi wo hisaab banta hai.
+ *
+ * Ek sawal aur poochha jata hai jo baad mein sab se zyada ulajhta
+ * hai: wo paisa vendor ne APNE hisse mein rakh liya, ya wo hamein
+ * de raha hai? Hisaab mein ye do bilkul alag baatein hain, aur baad
+ * mein poochho to kisi ko theek yaad nahi rehta.
+ */
+export async function submitVendorCollection(
+  _prev: VendorActionState,
+  formData: FormData
+): Promise<VendorActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: vendor } = await supabase
+    .from("machinery_vendors")
+    .select("id, vendor_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!vendor) return { error: "Ye login kisi vendor se juda hua nahi hai." };
+
+  const bookingId = str(formData, "booking_id");
+  const amount = num(formData, "amount") ?? 0;
+  const settlement = str(formData, "settlement");
+  if (!bookingId) return { error: "Booking chunein." };
+  if (amount <= 0) return { error: "Raqam likhein." };
+  if (settlement !== "kept" && settlement !== "handed_over") {
+    return { error: "Batayein ke wo paisa aap ne rakha ya hamein de rahe hain." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, vendor_id, farmer_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking || booking.vendor_id !== vendor.id) {
+    return { error: "Ye booking aap ki machine ki nahi hai." };
+  }
+
+  // Shart DB par bhi lagi hui hai (167). Yahan wohi qeematein bheji
+  // ja rahi hain -- agar kabhi yahan koi ghalti ho jaye to indraj
+  // wahan ruk jayega, aur wohi theek hai.
+  const { error } = await supabase.from("machinery_payments").insert({
+    booking_id: bookingId,
+    kind: "final",
+    amount,
+    method: "vendor_collected",
+    payment_date: str(formData, "payment_date") ?? new Date().toISOString().slice(0, 10),
+    reference: str(formData, "reference"),
+    collected_by_vendor_id: vendor.id,
+    vendor_settlement: settlement,
+    verification_status: "claimed",
+    claimed_by: user.id,
+    claimed_at: new Date().toISOString(),
+  });
+  if (error) return { error: error.message };
+
+  await notifyRoles(
+    ["manager", "super_admin", "admin", "owner"],
+    "Vendor ne kisan se li hui raqam darj ki — tasdeeq baqi",
+    `${vendor.vendor_name} kehte hain ke booking ${booking.booking_number} par kisan ne Rs ${amount.toLocaleString()} unhein diye` +
+      (settlement === "kept" ? " aur wo unhon ne apne hisse mein rakh liye." : " aur wo hamein de rahe hain."),
+    "/admin/machinery-rental/work-claims"
+  );
+
+  revalidatePath("/vendor");
+  return {
+    success: true,
+    notice: "Aap ka indraj pohanch gaya. Hamari team dekh kar tasdeeq karegi — us ke baad hi ye hisaab mein aayega.",
+  };
+}
+
+/**
  * Naam se login ka pata banana.
  *
  * "Noman Shah" se "nomanshah@alranatraders.pk". Phone number wala

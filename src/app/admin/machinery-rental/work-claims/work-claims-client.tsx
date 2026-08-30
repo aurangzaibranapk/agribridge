@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { verifyWorkClaim, verifyFuelClaim, type ActionState } from "@/actions/machinery-lifecycle";
+import { verifyWorkClaim, verifyFuelClaim, verifyVendorCollection, type ActionState } from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
 
@@ -37,18 +37,33 @@ interface FuelClaim {
   daysOld: number | null;
 }
 
+interface CashClaim {
+  paymentId: string;
+  bookingId: string;
+  bookingNumber: string;
+  farmerName: string;
+  vendorName: string;
+  amount: number;
+  paymentDate: string;
+  settlement: string | null;
+  reference: string | null;
+  billBalance: number;
+}
+
 export function WorkClaimsClient({
   claims,
   fuelClaims,
+  cashClaims,
   accounts,
 }: {
   claims: Claim[];
   fuelClaims: FuelClaim[];
+  cashClaims: CashClaim[];
   accounts: Array<{ id: string; name: string; account_type: string }>;
 }) {
   const lang = useLang();
 
-  if (claims.length === 0 && fuelClaims.length === 0) {
+  if (claims.length === 0 && fuelClaims.length === 0 && cashClaims.length === 0) {
     return (
       <p className="rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-surface-400 dark:border-surface-800 dark:bg-surface-900">
         {t("wc_empty", lang)}
@@ -79,6 +94,114 @@ export function WorkClaimsClient({
           ))}
         </div>
       )}
+
+      {cashClaims.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-display text-sm font-semibold text-surface-700 dark:text-surface-300">
+            {t("wc_section_cash", lang)}
+          </h2>
+          {cashClaims.map((c) => (
+            <CashClaimCard key={c.paymentId} claim={c} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Vendor ka dawa: "kisan ne mujhe paisa diya."
+ *
+ * Yahan khata nahi poochha jata, aur ye jaan boojh kar hai: wo paisa
+ * hamare kisi khate mein aaya hi nahi. Us ke do hi anjaam hain, aur
+ * dono vendor pehle hi bata chuka hai -- ya wo apne hisse mein rakh
+ * chuka hai (to us ka baqi utna kam ho gaya), ya wo hamein dega (to
+ * wo raqam us ke paas amanat hai).
+ *
+ * Tasdeeq se pehle ye raqam kahin nahi hai: kisan ka baqi waise ka
+ * waisa khara hai. Is liye rad karne ki wajah likhna lazmi hai -- wo
+ * vendor ko us ke apne safhe par nazar aati hai.
+ */
+function CashClaimCard({ claim }: { claim: CashClaim }) {
+  const lang = useLang();
+  const [state, action] = useFormState(verifyVendorCollection, initialState);
+  const [rejecting, setRejecting] = useState(false);
+
+  if (state.success) {
+    return (
+      <p className="rounded-card border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+        {state.notice}
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium text-surface-900 dark:text-white">{claim.farmerName}</p>
+          <p className="text-xs text-surface-500">
+            {claim.bookingNumber} · {claim.vendorName} · {new Date(claim.paymentDate).toLocaleDateString()}
+            {claim.reference ? ` · ${claim.reference}` : ""}
+          </p>
+        </div>
+        <p className="font-display text-lg font-semibold text-surface-900 dark:text-white">
+          Rs {claim.amount.toLocaleString()}
+        </p>
+      </div>
+
+      <p className="mt-2 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
+        {claim.settlement === "kept" ? t("wc_cash_kept", lang) : t("wc_cash_handed", lang)}
+        {claim.billBalance > 0 && ` · ${t("wc_cash_bill_balance", lang)}: Rs ${claim.billBalance.toLocaleString()}`}
+      </p>
+
+      {state.error && (
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+
+      <form action={action} className="mt-3 space-y-2">
+        <input type="hidden" name="payment_id" value={claim.paymentId} />
+        {rejecting ? (
+          <>
+            <input
+              name="rejection_reason"
+              placeholder={t("wc_reject_reason_hint", lang)}
+              className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
+            />
+            <input type="hidden" name="decision" value="reject" />
+            <div className="flex gap-2">
+              <Submit label={t("wc_reject", lang)} />
+              <button
+                type="button"
+                onClick={() => setRejecting(false)}
+                className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+              >
+                {t("ac_cancel", lang)}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              name="decision"
+              value="accept"
+              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              {t("wc_accept", lang)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setRejecting(true)}
+              className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 dark:border-surface-700 dark:text-surface-300"
+            >
+              {t("wc_reject", lang)}
+            </button>
+          </div>
+        )}
+      </form>
     </div>
   );
 }

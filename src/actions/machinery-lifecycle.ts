@@ -2214,6 +2214,128 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
  * hi nahi hota ke ART ne kis khate se paisa nikala. Ledger bhi yahin
  * banta hai, is tasdeeq ke sath.
  */
+/**
+ * Vendor ka dawa: "kisan ne mujhe paisa diya."
+ *
+ * Tasdeeq se pehle wo raqam kahin nahi hoti -- kisan ka baqi kam nahi
+ * hota, cash book mein nazar nahi aati, bill par koi asar nahi. Yahan
+ * tasdeeq hote hi wo hisaab ban jati hai, aur wohi ledger banta hai
+ * jo staff ke apne haath se darj karne par banta -- ek hi jagah se,
+ * warna do raaston ka hisaab kisi din alag ho jata hai.
+ *
+ * Rad karna bhi utna hi zaroori hai. Vendor kabhi ghalat booking par
+ * daal deta hai, aur kabhi kisan kehta hai ke us ne diya hi nahi. Us
+ * soorat mein wajah likhna lazmi hai -- wo wajah vendor ko us ke
+ * apne safhe par nazar aati hai, aur wohi agli dafa ghalti rokti hai.
+ */
+export async function verifyVendorCollection(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const paymentId = str(formData, "payment_id");
+  const decision = str(formData, "decision");
+  if (!paymentId) return { error: "Indraj nahi mila." };
+  if (decision !== "accept" && decision !== "reject") return { error: "Faisla batayein." };
+
+  const { data: payment } = await supabase
+    .from("machinery_payments")
+    .select("id, booking_id, amount, method, verification_status, payment_date, vendor_settlement, collected_by_vendor_id")
+    .eq("id", paymentId)
+    .maybeSingle();
+  if (!payment) return { error: "Indraj nahi mila." };
+  if (payment.method !== "vendor_collected") return { error: "Ye vendor ka indraj nahi hai." };
+  if (payment.verification_status !== "claimed") {
+    return { error: "Is dawe ka faisla pehle ho chuka hai." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, farmer_id, vendor_id")
+    .eq("id", payment.booking_id)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  if (decision === "reject") {
+    const reason = str(formData, "rejection_reason");
+    if (!reason) return { error: "Rad karne ki wajah likhein." };
+    const { error } = await supabase
+      .from("machinery_payments")
+      .update({
+        verification_status: "rejected",
+        rejection_reason: reason,
+        verified_by: actorId,
+        verified_at: new Date().toISOString(),
+      })
+      .eq("id", paymentId);
+    if (error) return { error: error.message };
+
+    await logEvent({
+      bookingId: payment.booking_id,
+      eventType: "vendor_collection_rejected",
+      note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa rad: ${reason}`,
+      actorId,
+    });
+    revalidateAll(payment.booking_id);
+    return { success: true, notice: "Dawa rad kar diya gaya." };
+  }
+
+  const settlement = (payment.vendor_settlement as "kept" | "handed_over" | null) ?? null;
+  if (settlement !== "kept" && settlement !== "handed_over") {
+    return { error: "Vendor ne us paise ka kya kiya, wo darj nahi hai." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_payments")
+    .update({
+      verification_status: "verified",
+      verified_by: actorId,
+      verified_at: new Date().toISOString(),
+      received_by: actorId,
+    })
+    .eq("id", paymentId);
+  if (error) return { error: error.message };
+
+  const posted = await postMachineryVendorCollected({
+    bookingId: payment.booking_id,
+    farmerId: booking.farmer_id,
+    vendorId: payment.collected_by_vendor_id ?? booking.vendor_id!,
+    amount: Number(payment.amount),
+    settlement,
+    description:
+      settlement === "kept"
+        ? `Machinery ${booking.booking_number} — kisan ne vendor ko diya, vendor ne apne hisse mein rakha (vendor ka dawa, tasdeeq shuda)`
+        : `Machinery ${booking.booking_number} — kisan ne vendor ko diya, vendor ne hamein dena hai (vendor ka dawa, tasdeeq shuda)`,
+    ctx: {
+      createdBy: actorId,
+      entryDate: payment.payment_date ?? undefined,
+      claims: [{ table: "machinery_payments", rowId: paymentId }],
+    },
+  });
+
+  // Ledger mein na ja sake to tasdeeq bhi wapas -- dawa phir se dawa.
+  // "Verified" likha rehna aur ledger khali hona sab se buri shakal
+  // hai: kisan ka baqi kam ho jata hai aur wo paisa kahin hai hi nahi.
+  if (failed(posted)) {
+    await createServiceClient()
+      .from("machinery_payments")
+      .update({ verification_status: "claimed", verified_by: null, verified_at: null, received_by: null })
+      .eq("id", paymentId);
+    return { error: `Ledger mein nahi gaya, is liye tasdeeq wapas le li: ${posted.error}` };
+  }
+
+  await logEvent({
+    bookingId: payment.booking_id,
+    eventType: "payment_via_vendor",
+    note:
+      settlement === "kept"
+        ? `Rs ${Number(payment.amount).toLocaleString()} kisan ne vendor ko diya — vendor ne apne hisse mein rakh liya (vendor ka dawa, tasdeeq shuda)`
+        : `Rs ${Number(payment.amount).toLocaleString()} kisan ne vendor ko diya — vendor ne hamein dena hai (vendor ka dawa, tasdeeq shuda)`,
+    actorId,
+  });
+
+  revalidateAll(payment.booking_id);
+  return { success: true, notice: "Tasdeeq ho gayi — ab ye raqam hisaab mein hai." };
+}
+
 export async function verifyFuelClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);

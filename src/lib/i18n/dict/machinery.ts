@@ -894,4 +894,24 @@ export const machineryDict = {
     rm: "Bheji hui yaad dahaniyan",
     ur: "\u0628\u06be\u06cc\u062c\u06cc \u06c1\u0648\u0626\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc\u0627\u06ba",
   },
+  wc_section_cash: {
+    en: "Money the farmer gave the vendor",
+    rm: "Kisan ne vendor ko jo paisa diya",
+    ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062c\u0648 \u067e\u06cc\u0633\u06c1 \u062f\u06cc\u0627",
+  },
+  wc_cash_kept: {
+    en: "The vendor kept it against his own share.",
+    rm: "Vendor ne apne hisse mein rakh liya.",
+    ur: "\u0648\u06cc\u0646\u0688\u0631 \u0646\u06d2 \u0627\u067e\u0646\u06d2 \u062d\u0635\u06d2 \u0645\u06cc\u06ba \u0631\u06a9\u06be \u0644\u06cc\u0627\u06d4",
+  },
+  wc_cash_handed: {
+    en: "The vendor is holding it for us \u2014 it is our cash with him.",
+    rm: "Vendor wo hamein de raha hai \u2014 wo raqam us ke paas amanat hai.",
+    ur: "\u0648\u06cc\u0646\u0688\u0631 \u0648\u06c1 \u06c1\u0645\u06cc\u06ba \u062f\u06d2 \u0631\u06c1\u0627 \u06c1\u06d2 \u2014 \u0648\u06c1 \u0631\u0642\u0645 \u0627\u0633 \u06a9\u06d2 \u067e\u0627\u0633 \u0627\u0645\u0627\u0646\u062a \u06c1\u06d2\u06d4",
+  },
+  wc_cash_bill_balance: {
+    en: "Outstanding on the bill",
+    rm: "Bill par baqi",
+    ur: "\u0628\u0644 \u067e\u0631 \u0628\u0627\u0642\u06cc",
+  },
 } as const;

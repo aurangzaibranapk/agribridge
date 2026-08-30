@@ -55,14 +55,66 @@ export default async function VendorPortalPage() {
         .order("work_date", { ascending: false })
     : { data: [] };
 
+  // Diesel aur kisan se li hui raqam bhi wahi haal: vendor ko apna
+  // bheja hua indraj dikhna chahiye. Warna wo samajhta hai ke gaya
+  // hi nahi aur dobara bhejta hai -- aur ek hi cheez do dafa qatar
+  // mein aa jati hai.
+  const [{ data: myFuel }, { data: myCollections }] = bookingIds.length
+    ? await Promise.all([
+        supabase
+          .from("machinery_fuel_logs")
+          .select("id, booking_id, log_date, litres, amount, paid_by, verification_status, rejection_reason")
+          .in("booking_id", bookingIds)
+          .order("log_date", { ascending: false }),
+        supabase
+          .from("machinery_payments")
+          .select("id, booking_id, amount, payment_date, vendor_settlement, verification_status, rejection_reason")
+          .eq("method", "vendor_collected")
+          .in("booking_id", bookingIds)
+          .order("payment_date", { ascending: false }),
+      ])
+    : [{ data: [] }, { data: [] }];
+
   const bookings = rows.map((r) => {
     const work = (myWork ?? []).filter((w) => w.booking_id === r.booking_id);
+    const fuel = (myFuel ?? []).filter((x) => x.booking_id === r.booking_id);
+    const collections = (myCollections ?? []).filter((x) => x.booking_id === r.booking_id);
     return {
       id: r.booking_id as string,
       bookingNumber: r.booking_number as string,
       status: r.status as string,
       bookingDate: r.booking_date as string,
       farmerName: (r.farmer_name as string | null) ?? "-",
+      farmerPhone: (r.farmer_phone as string | null) ?? null,
+
+      // Kaam se pehle ki tafseel -- yahi wo cheez hai jis ke liye
+      // vendor subah safha kholta hai.
+      harvestDate: (r.preferred_date as string | null) ?? null,
+      harvestTime: (r.preferred_time as string | null) ?? null,
+      cropType: (r.crop_type as string | null) ?? null,
+      bookedArea: r.harvest_area === null ? null : Number(r.harvest_area),
+      finalRate: r.final_rate === null ? null : Number(r.final_rate),
+      rateFinal: (r.rate_status as string) === "final",
+      locationAddress: (r.location_address as string | null) ?? null,
+      village: (r.village as string | null) ?? null,
+      lat: r.location_lat === null ? null : Number(r.location_lat),
+      lng: r.location_lng === null ? null : Number(r.location_lng),
+      machineLabel: r.machine_type
+        ? `${r.machine_type}${r.machine_model ? ` (${r.machine_model})` : ""}`
+        : null,
+
+      fuelClaimed: fuel.filter((x) => x.verification_status === "claimed").length,
+      fuelRejected: fuel
+        .filter((x) => x.verification_status === "rejected")
+        .map((x) => ({ id: x.id as string, rejection_reason: (x.rejection_reason as string | null) ?? null })),
+      collections: collections.map((x) => ({
+        id: x.id as string,
+        amount: Number(x.amount ?? 0),
+        date: x.payment_date as string,
+        settlement: (x.vendor_settlement as string | null) ?? null,
+        status: x.verification_status as string,
+        reason: (x.rejection_reason as string | null) ?? null,
+      })),
       billNumber: (r.bill_number as string | null) ?? null,
       area: r.actual_area === null ? null : Number(r.actual_area),
       rate: r.rate_amount === null ? null : Number(r.rate_amount),

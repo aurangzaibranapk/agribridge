@@ -21,9 +21,13 @@ export default async function WorkClaimsPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  const [{ data: claims }, { data: fuelClaims }, { data: accounts }] = await Promise.all([
+  // Vendor ke teenon dawe ek hi safhe par. Alag safha banane se wo
+  // qatar kabhi nahi dekhi jati jo teesre safhe par ho -- aur jo dawa
+  // dekha na jaye wo hamesha "abhi tasdeeq baqi" hi rehta hai.
+  const [{ data: claims }, { data: fuelClaims }, { data: cashClaims }, { data: accounts }] = await Promise.all([
     supabase.from("v_machinery_work_claims").select("*").order("work_date"),
     supabase.from("v_machinery_fuel_claims").select("*").order("log_date"),
+    supabase.from("v_machinery_vendor_collection_claims").select("*").order("payment_date"),
     supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
   ]);
 
@@ -66,6 +70,18 @@ export default async function WorkClaimsPage() {
           paidBy: c.paid_by as string,
           notes: c.notes as string | null,
           daysOld: c.din_purane === null ? null : Number(c.din_purane),
+        }))}
+        cashClaims={(cashClaims ?? []).map((c) => ({
+          paymentId: c.payment_id as string,
+          bookingId: c.booking_id as string,
+          bookingNumber: c.booking_number as string,
+          farmerName: (c.farmer_name as string | null) ?? "—",
+          vendorName: (c.vendor_name as string | null) ?? "—",
+          amount: Number(c.amount ?? 0),
+          paymentDate: c.payment_date as string,
+          settlement: (c.vendor_settlement as string | null) ?? null,
+          reference: (c.reference as string | null) ?? null,
+          billBalance: Number(c.bill_ka_baqi ?? 0),
         }))}
         accounts={accounts ?? []}
       />
