@@ -902,7 +902,7 @@ export async function overrideConfirmation(_prev: ActionState, formData: FormDat
  */
 async function saveDieselExpense(args: {
   supabase: Client;
-  dispatchId: string;
+  fuelLogId: string;
   bookingNumber: string;
   amount: number;
   accountId: string;
@@ -942,11 +942,101 @@ async function saveDieselExpense(args: {
   }
 
   await args.supabase
-    .from("machinery_dispatches")
-    .update({ fuel_expense_id: expense.id })
-    .eq("id", args.dispatchId);
+    .from("machinery_fuel_logs")
+    .update({ expense_id: expense.id })
+    .eq("id", args.fuelLogId);
 
   return null;
+}
+
+/**
+ * Diesel ka indraj -- jitni baar dala jaye, utni baar.
+ *
+ * 20 acre ki kattai teen din chalti hai. Beech mein hum 30 litre
+ * daalte hain, agle din kisan khud 100 litre dalwa deta hai. Pehle
+ * diesel sirf machine ki rawangi par likha ja sakta tha, is liye agla
+ * diesel likhne ka koi raasta hi nahi tha -- aur staff rawangi ka form
+ * dobara bhar deta tha.
+ *
+ * Kisan ya vendor ka diesel bhi likha jata hai (kaam ka record us ke
+ * baghair adhoora hai) magar hamare khate se paisa sirf ART wale par
+ * nikalta hai.
+ */
+export async function recordFuelEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const amount = num(formData, "amount") ?? 0;
+  const paidBy = str(formData, "paid_by");
+  const accountId = str(formData, "finance_account_id");
+  const litres = num(formData, "litres");
+
+  if (amount <= 0) return { error: "Diesel ki raqam likhein." };
+  if (!paidBy) return { error: "Diesel kis ne dala — kisan, vendor ya ART — wo select karein." };
+  if (paidBy === "company" && !accountId) {
+    return { error: "ART ka diesel hai to khata bhi select karein ke kis khate se nikla." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  const { data: log, error } = await supabase
+    .from("machinery_fuel_logs")
+    .insert({
+      booking_id: bookingId,
+      log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
+      litres,
+      amount,
+      paid_by: paidBy,
+      finance_account_id: paidBy === "company" ? accountId : null,
+      notes: str(formData, "notes"),
+      created_by: actorId,
+    })
+    .select("id")
+    .single();
+  if (error || !log) return { error: error?.message ?? "Diesel darj nahi hua." };
+
+  if (paidBy === "company" && accountId) {
+    const fuelError = await saveDieselExpense({
+      supabase,
+      fuelLogId: log.id,
+      bookingNumber: booking.booking_number,
+      amount,
+      accountId,
+      litres,
+      actorId,
+    });
+    // Ledger mein na ja saka to qatar bhi wapas. Diesel likha hua aur
+    // paisa kahin darj nahi -- yehi wo shakal hai jis se bachna hai.
+    if (fuelError) {
+      await createServiceClient().from("machinery_fuel_logs").delete().eq("id", log.id);
+      return { error: fuelError };
+    }
+  }
+
+  await logEvent({
+    bookingId,
+    eventType: "fuel_added",
+    note: `Rs ${amount.toLocaleString()}${litres ? ` — ${litres} litre` : ""} — ${
+      paidBy === "company" ? "ART ne" : paidBy === "vendor" ? "vendor ne" : "kisan ne"
+    }`,
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return {
+    success: true,
+    notice:
+      paidBy === "company"
+        ? `Diesel darj ho gaya aur Rs ${amount.toLocaleString()} kharche mein chala gaya.`
+        : "Diesel darj ho gaya — ye hamara kharcha nahi, sirf kaam ka record hai.",
+  };
 }
 
 export async function dispatchMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -970,23 +1060,21 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
     .eq("id", machineId)
     .maybeSingle();
 
-  // Diesel jo company ne khud dala.
+  // Machine dobara "bhejna" -- ye aksar ghalti hoti hai, iraada nahi.
   //
-  // Ye paisa waqai jata hai, is liye ise ledger mein jana hai -- warna
-  // machine chalti rehti hai aur kharcha kahin nazar nahi aata. Raqam
-  // aur khata dono chahiye: raqam bina khate ke ye nahi batati ke paisa
-  // kahan se gaya (migration 142 mein yehi rok DB par bhi lagi hai).
-  const fuelAmount = num(formData, "fuel_amount") ?? 0;
-  const fuelPaidBy = str(formData, "fuel_paid_by");
-  const fuelAccountId = str(formData, "fuel_account_id");
-  if (fuelAmount < 0) return { error: "Diesel ki raqam manfi nahi ho sakti." };
-  if (fuelAmount > 0 && !fuelPaidBy) {
-    return { error: "Diesel kis ne dala — kisan, vendor ya ART — wo select karein." };
+  // Pehle rawangi darj hone ke baad bhi form khula rehta tha, aur agla
+  // diesel likhne ke liye staff ne wohi form dobara bhar diya. Nateeja:
+  // ek hi machine do dafa bheji hui, aur diesel do dafa kharche mein.
+  // Ab dobara rawangi jaan boojh kar maangni parti hai.
+  const { data: already } = await supabase
+    .from("machinery_dispatches")
+    .select("id")
+    .eq("booking_id", bookingId);
+  if ((already ?? []).length > 0 && formData.get("again") !== "on") {
+    return {
+      error: "Is booking ki rawangi pehle darj ho chuki hai. Machine waqai dobara gayi ho to \"machine dobara bheji gayi\" par nishaan lagayein — aur diesel ke liye neeche Diesel ka indraj istemal karein.",
+    };
   }
-  if (fuelAmount > 0 && fuelPaidBy === "company" && !fuelAccountId) {
-    return { error: "ART ka diesel hai to khata bhi select karein ke kis khate se nikla." };
-  }
-  const companyFuel = fuelAmount > 0 && fuelPaidBy === "company";
 
   const { data: dispatch, error: dispatchError } = await supabase
     .from("machinery_dispatches")
@@ -997,12 +1085,8 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
       driver_phone: str(formData, "driver_phone"),
       departure_at: str(formData, "departure_at") ?? new Date().toISOString(),
       opening_meter: num(formData, "opening_meter"),
-      fuel_litres: num(formData, "fuel_litres"),
-      fuel_amount: fuelAmount > 0 ? fuelAmount : null,
-      fuel_paid_by: fuelAmount > 0 ? fuelPaidBy : null,
-      // Khata sirf ART ke diesel par. Kisan ya vendor ka diesel darj to
-      // hota hai magar hamare paise se us ka koi taalluq nahi.
-      fuel_account_id: companyFuel ? fuelAccountId : null,
+      // Diesel yahan se nikal gaya (149): us ki apni qatar hai, kyunke
+      // diesel ek dafa nahi dala jata. Rawangi sirf rawangi rahi.
       destination_address: str(formData, "destination_address") ?? booking.location_address,
       destination_lat: num(formData, "destination_lat") ?? booking.location_lat,
       destination_lng: num(formData, "destination_lng") ?? booking.location_lng,
@@ -1012,25 +1096,6 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
     .select("id")
     .single();
   if (dispatchError || !dispatch) return { error: dispatchError?.message ?? "Rawangi darj nahi hui." };
-
-  if (companyFuel && fuelAccountId) {
-    const fuelError = await saveDieselExpense({
-      supabase,
-      dispatchId: dispatch.id,
-      bookingNumber: booking.booking_number,
-      amount: fuelAmount,
-      accountId: fuelAccountId,
-      litres: num(formData, "fuel_litres"),
-      actorId,
-    });
-    // Diesel ka kharcha ledger mein na ja saka to rawangi bhi wapas.
-    // Aadhi qatar -- rawangi likhi hui aur paisa kahin darj nahi --
-    // sab se buri shakal hai: machine chali gayi aur hisaab khali.
-    if (fuelError) {
-      await createServiceClient().from("machinery_dispatches").delete().eq("id", dispatch.id);
-      return { error: fuelError };
-    }
-  }
 
   const { error } = await supabase
     .from("machinery_bookings")
@@ -1599,6 +1664,73 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
  * kisan ka hai aur us ka faisla alag se hona chahiye (wapas dena hai ya
  * agli booking par rakhna).
  */
+/**
+ * Kisan ka wada: "abhi nahi, fasal bikne par."
+ *
+ * Ye payment NAHI hai. Na ledger mein kuch jata hai, na baqi raqam kam
+ * hoti hai. Ye sirf ye batata hai ke ye paisa kis tareekh par maanga
+ * jana hai aur kyun ruka hua hai.
+ *
+ * Ise banane ki wajah: pehle yahan sirf do raaste the -- payment darj
+ * karo ya kuch na karo. Payment darj karna jhoot hota (paisa aaya hi
+ * nahi). Kuch na karna us se bura: baqi raqam padi rehti aur kisi ko
+ * nazar nahi aata ke kyun. Do hafte baad phone par kisan kehta "maine
+ * to bata diya tha" -- aur hamare paas jawab nahi hota.
+ *
+ * Khata is se alag cheez hai: khata par daalna faisla hai ke udhaar ab
+ * booking se nikal kar kisan ke chalte khate mein chala gaya. Wada us
+ * se pehle ka qadam hai -- udhaar abhi is booking ka hai.
+ */
+export async function recordPaymentPromise(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const promiseDate = str(formData, "promise_date");
+  const note = str(formData, "promise_note");
+  if (!promiseDate) return { error: "Kisan ne kab dene ka kaha, wo tareekh likhein." };
+  if (!note) return { error: "Kisan ne kya kaha, wo likhein." };
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  const { data: bill } = await supabase
+    .from("machinery_bills")
+    .select("balance_payable")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+  if (!bill) return { error: "Wada bill banne ke baad hi likha ja sakta hai." };
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({
+      payment_promise_date: promiseDate,
+      payment_promise_note: note,
+      payment_promise_at: new Date().toISOString(),
+      payment_promise_by: actorId,
+    })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "payment_promised",
+    note: `${promiseDate} — ${note}`,
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return {
+    success: true,
+    notice: `Wada darj ho gaya. Baqi raqam waise hi khari hai — ${promiseDate} par ye booking "paisa lena" ki qatar mein saamne aa jayegi.`,
+  };
+}
+
 export async function cancelBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);

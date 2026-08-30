@@ -18,10 +18,11 @@ export default async function MachineryBookingPage({ params }: { params: Promise
 
   if (!booking) notFound();
 
-  const [{ data: payments }, { data: dispatches }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
+  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
+      supabase.from("machinery_fuel_logs").select("*").eq("booking_id", id).order("log_date"),
       supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
       supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
@@ -100,6 +101,9 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         expected_harvest_date: booking.expected_harvest_date,
         rate_confirmation_sent_at: booking.rate_confirmation_sent_at,
         farmer_confirmed_at: booking.farmer_confirmed_at,
+        payment_promise_date: booking.payment_promise_date,
+        payment_promise_note: booking.payment_promise_note,
+        will_sell_to_us: booking.will_sell_to_us,
         farmer_confirmation_response: booking.farmer_confirmation_response,
         farmer_confirmation_channel: booking.farmer_confirmation_channel,
         confirmation_override_reason: booking.confirmation_override_reason,
@@ -124,9 +128,13 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         operator_name: d.operator_name,
         departure_at: d.departure_at,
         opening_meter: d.opening_meter === null ? null : Number(d.opening_meter),
-        fuel_litres: d.fuel_litres === null ? null : Number(d.fuel_litres),
-        fuel_amount: d.fuel_amount === null ? null : Number(d.fuel_amount),
-        fuel_paid_by: d.fuel_paid_by,
+      }))}
+      fuelLogs={(fuelLogs ?? []).map((f) => ({
+        id: f.id,
+        log_date: f.log_date,
+        litres: f.litres === null ? null : Number(f.litres),
+        amount: Number(f.amount),
+        paid_by: f.paid_by,
       }))}
       work={(work ?? []).map((w) => ({
         id: w.id,

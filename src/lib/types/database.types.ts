@@ -7863,6 +7863,10 @@ export type Database = {
           machine_type_requested: string | null
           notes: string | null
           other_service: string | null
+          payment_promise_at: string | null
+          payment_promise_by: string | null
+          payment_promise_date: string | null
+          payment_promise_note: string | null
           preferred_date: string | null
           preferred_time: string | null
           rate_amount: number | null
@@ -7930,6 +7934,10 @@ export type Database = {
           machine_type_requested?: string | null
           notes?: string | null
           other_service?: string | null
+          payment_promise_at?: string | null
+          payment_promise_by?: string | null
+          payment_promise_date?: string | null
+          payment_promise_note?: string | null
           preferred_date?: string | null
           preferred_time?: string | null
           rate_amount?: number | null
@@ -7997,6 +8005,10 @@ export type Database = {
           machine_type_requested?: string | null
           notes?: string | null
           other_service?: string | null
+          payment_promise_at?: string | null
+          payment_promise_by?: string | null
+          payment_promise_date?: string | null
+          payment_promise_note?: string | null
           preferred_date?: string | null
           preferred_time?: string | null
           rate_amount?: number | null
@@ -8208,6 +8220,84 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "machinery_vendor_machines"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_fuel_logs: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          created_by: string | null
+          expense_id: string | null
+          finance_account_id: string | null
+          id: string
+          litres: number | null
+          log_date: string
+          notes: string | null
+          paid_by: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          created_by?: string | null
+          expense_id?: string | null
+          finance_account_id?: string | null
+          id?: string
+          litres?: number | null
+          log_date?: string
+          notes?: string | null
+          paid_by: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          created_by?: string | null
+          expense_id?: string | null
+          finance_account_id?: string | null
+          id?: string
+          litres?: number | null
+          log_date?: string
+          notes?: string | null
+          paid_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
         ]
       }
@@ -14050,24 +14140,24 @@ export type Database = {
       }
       v_machinery_diesel_check: {
         Row: {
+          amount: number | null
           booking_number: string | null
-          departure_at: string | null
-          dispatch_id: string | null
-          fuel_account_id: string | null
-          fuel_amount: number | null
-          fuel_paid_by: string | null
+          finance_account_id: string | null
+          fuel_log_id: string | null
+          log_date: string | null
+          paid_by: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
-            columns: ["fuel_account_id"]
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
-            columns: ["fuel_account_id"]
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
             isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
@@ -14094,10 +14184,14 @@ export type Database = {
           kaam_mukammal: boolean | null
           location_address: string | null
           machine_type_requested: string | null
+          payment_promise_date: string | null
+          payment_promise_note: string | null
           preferred_date: string | null
           queue: string | null
           status: string | null
           tareekh_guzar_gayi: boolean | null
+          wada_aa_gaya: boolean | null
+          wade_ka_intezar: boolean | null
         }
         Relationships: []
       }

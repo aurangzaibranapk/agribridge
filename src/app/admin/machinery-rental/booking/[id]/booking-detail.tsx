@@ -7,6 +7,8 @@ import {
   recordAdvance,
   sendRateConfirmation,
   recordFarmerConfirmation,
+  recordPaymentPromise,
+  recordFuelEntry,
   overrideConfirmation,
   dispatchMachine,
   recordWorkCompletion,
@@ -76,6 +78,9 @@ interface Booking {
   expected_harvest_date: string | null;
   rate_confirmation_sent_at: string | null;
   farmer_confirmed_at: string | null;
+  payment_promise_date: string | null;
+  payment_promise_note: string | null;
+  will_sell_to_us: boolean | null;
   farmer_confirmation_response: string | null;
   farmer_confirmation_channel: string | null;
   confirmation_override_reason: string | null;
@@ -93,6 +98,7 @@ export function BookingDetail({
   booking,
   payments,
   dispatches,
+  fuelLogs,
   work,
   bill,
   events,
@@ -111,9 +117,13 @@ export function BookingDetail({
     operator_name: string | null;
     departure_at: string;
     opening_meter: number | null;
-    fuel_litres: number | null;
-    fuel_amount: number | null;
-    fuel_paid_by: string | null;
+  }>;
+  fuelLogs: Array<{
+    id: string;
+    log_date: string;
+    litres: number | null;
+    amount: number;
+    paid_by: string;
   }>;
   work: Array<{
     id: string;
@@ -139,6 +149,11 @@ export function BookingDetail({
   const confirmed = Boolean(booking.farmer_confirmed_at) || Boolean(booking.confirmation_override_reason);
   const balance = bill ? Math.round((bill.balance_payable - finalPaid) * 100) / 100 : null;
   const cancelled = booking.status === "cancelled";
+
+  // Diesel do hisson mein: hamara kharcha, aur wo jo kisan/vendor ne
+  // dala. Dono ek adad mein jorh dena hamare munafe ko jhoota kar deta.
+  const ourFuel = fuelLogs.filter((f) => f.paid_by === "company").reduce((s2, f) => s2 + f.amount, 0);
+  const othersFuel = fuelLogs.filter((f) => f.paid_by !== "company").reduce((s2, f) => s2 + f.amount, 0);
 
   // Kisan ka aakhri aitraaz -- sirf wo jo aakhri rate bhejne ke BAAD
   // aaya ho. Purana aitraaz naye rate par dikhana galat hai: wo bahes
@@ -331,18 +346,58 @@ export function BookingDetail({
               <p key={d.id} className="mb-2 text-sm text-surface-600 dark:text-surface-300">
                 {new Date(d.departure_at).toLocaleString()} · {d.operator_name ?? "operator darj nahi"}
                 {d.opening_meter !== null && ` · meter ${d.opening_meter}`}
-                {d.fuel_litres !== null && ` · ${d.fuel_litres} L`}
-                {d.fuel_amount !== null && d.fuel_amount > 0 &&
-                  ` · diesel Rs ${d.fuel_amount.toLocaleString()} (${
-                    d.fuel_paid_by === "company" ? "ART" : d.fuel_paid_by === "vendor" ? "vendor" : "kisan"
-                  })`}
               </p>
             ))}
-            {confirmed && <DispatchForm bookingId={booking.id} machines={machines} accounts={accounts} />}
+            {/* Rawangi ek dafa. Dobara jaan boojh kar maangni parti hai
+                -- pehle ye form khula rehta tha aur agla diesel likhne
+                ke liye staff ise dobara bhar deta tha, jis se ek hi
+                machine do dafa "bheji gayi". */}
+            {confirmed && <DispatchForm bookingId={booking.id} machines={machines} already={dispatches.length > 0} />}
+          </StepCard>
+
+          {/* Diesel -- jitni baar dala jaye */}
+          <StepCard n={4} title={t("mc_step_fuel", lang)} done={fuelLogs.length > 0} locked={!confirmed}>
+            {fuelLogs.length > 0 && (
+              <div className="mb-3 space-y-1 text-sm">
+                {fuelLogs.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
+                  >
+                    <span className="text-surface-600 dark:text-surface-300">
+                      {new Date(f.log_date).toLocaleDateString()}
+                      {f.litres !== null && ` · ${f.litres} L`}
+                      {" · "}
+                      <span className={f.paid_by === "company" ? "text-surface-900 dark:text-surface-100" : "text-surface-500"}>
+                        {f.paid_by === "company"
+                          ? t("mc_diesel_by_company", lang)
+                          : f.paid_by === "vendor"
+                          ? t("mc_diesel_by_vendor", lang)
+                          : t("mc_diesel_by_farmer", lang)}
+                      </span>
+                    </span>
+                    <span className="font-medium">Rs {f.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
+                  <span className="text-surface-500">{t("mc_fuel_ours", lang)}</span>
+                  <span className="font-medium text-surface-900 dark:text-surface-100">
+                    Rs {ourFuel.toLocaleString()}
+                  </span>
+                </div>
+                {othersFuel > 0 && (
+                  <div className="flex justify-between text-xs text-surface-500">
+                    <span>{t("mc_fuel_others", lang)}</span>
+                    <span>Rs {othersFuel.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {confirmed && <FuelForm bookingId={booking.id} accounts={accounts} />}
           </StepCard>
 
           {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
-          <StepCard n={4} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
+          <StepCard n={5} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
             {work.length > 0 && (
               <div className="mb-3 space-y-1 text-sm">
                 {work.map((w) => (
@@ -379,7 +434,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Bill */}
-          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
+          <StepCard n={6} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
@@ -426,7 +481,7 @@ export function BookingDetail({
 
           {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
           {bill && (
-            <StepCard n={7} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
+            <StepCard n={8} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
               <div className="mb-3 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <Row label={`Gross bill (${bill.actual_area} acre)`} value={bill.gross_amount} />
                 <Row label={`Hamara commission (${bill.commission_percentage}%)`} value={-bill.commission_amount} />
@@ -452,8 +507,17 @@ export function BookingDetail({
 
           {/* Final payment */}
           {bill && (balance ?? 0) > 0 && (
-            <StepCard n={6} title={t("mc_step_final_payment", lang)} done={false}>
+            <StepCard n={7} title={t("mc_step_final_payment", lang)} done={false}>
               <PaymentForm bookingId={booking.id} accounts={accounts} remaining={balance ?? 0} />
+              {/* Kisan abhi nahi de raha. Ye payment ka doosra roop nahi
+                  -- ye wada hai: baqi raqam waise hi khari rehti hai,
+                  bas wajah aur tareekh saamne aa jati hai. */}
+              <PromiseForm
+                bookingId={booking.id}
+                promiseDate={booking.payment_promise_date}
+                promiseNote={booking.payment_promise_note}
+                willSell={booking.will_sell_to_us}
+              />
             </StepCard>
           )}
 
@@ -789,28 +853,44 @@ function OverrideForm({ bookingId }: { bookingId: string }) {
 function DispatchForm({
   bookingId,
   machines,
-  accounts,
+  already,
 }: {
   bookingId: string;
   machines: Array<{ id: string; label: string }>;
-  accounts: Array<{ id: string; name: string; account_type: string }>;
+  already: boolean;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(dispatchMachine, initialState);
-  const [diesel, setDiesel] = useState("");
-  const [paidBy, setPaidBy] = useState("");
+  const [again, setAgain] = useState(false);
+
+  // Rawangi darj ho chuki ho to form band. Diesel ke liye neeche apna
+  // qadam hai -- pehle log yahi form dobara bhar dete the.
+  if (already && !again) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-surface-500">{t("mc_dispatch_done_hint", lang)}</p>
+        <button
+          type="button"
+          onClick={() => setAgain(true)}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          {t("mc_dispatch_again", lang)}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
+      {again && <input type="hidden" name="again" value="on" />}
       <div>
         <Label>{t("mc_machine", lang)}</Label>
-        <Select name="machine_id" defaultValue="">
+        <Select name="machine_id">
           <option value="">—</option>
           {machines.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
+            <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </Select>
       </div>
@@ -827,68 +907,73 @@ function DispatchForm({
           <Label>{t("mc_opening_meter", lang)}</Label>
           <Input type="number" name="opening_meter" step="0.01" />
         </div>
+      </div>
+      <p className="text-xs text-surface-500">{t("mc_dispatch_no_diesel", lang)}</p>
+      <Submit label={t("mc_record_dispatch", lang)} />
+    </form>
+  );
+}
+
+/**
+ * Diesel ka indraj -- jitni baar dala jaye.
+ *
+ * Ye alag qadam is liye hai ke diesel ek dafa nahi dala jata: 20 acre
+ * ki kattai teen din chalti hai, beech mein hum daalte hain, agle din
+ * kisan khud dalwa deta hai.
+ */
+function FuelForm({
+  bookingId,
+  accounts,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(recordFuelEntry, initialState);
+  const [paidBy, setPaidBy] = useState("");
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <p className="text-xs text-surface-500">{t("mc_fuel_hint", lang)}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_date", lang)}</Label>
+          <Input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+        </div>
         <div>
           <Label>{t("mc_diesel_litre", lang)}</Label>
-          <Input type="number" name="fuel_litres" step="0.01" />
+          <Input type="number" name="litres" step="0.01" />
+        </div>
+        <div>
+          <Label>{t("mc_diesel_amount", lang)}</Label>
+          <Input type="number" name="amount" step="0.01" min="0" />
+        </div>
+        <div>
+          <Label>{t("mc_diesel_paid_by", lang)}</Label>
+          <Select name="paid_by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+            <option value="">—</option>
+            <option value="farmer">{t("mc_diesel_by_farmer", lang)}</option>
+            <option value="vendor">{t("mc_diesel_by_vendor", lang)}</option>
+            <option value="company">{t("mc_diesel_by_company", lang)}</option>
+          </Select>
         </div>
       </div>
-
-      {/* Diesel: teenon soortein maidan mein hoti hain -- kisan ne dala,
-          vendor ne dala, ya ART ne. Teenon likhi jati hain, magar hamare
-          khate se paisa sirf ART wale par nikalta hai. */}
-      <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-        <p className="mb-2 text-xs text-surface-500">{t("mc_diesel_section", lang)}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>{t("mc_diesel_amount", lang)}</Label>
-            <Input
-              type="number"
-              name="fuel_amount"
-              step="0.01"
-              min="0"
-              value={diesel}
-              onChange={(e) => setDiesel(e.target.value)}
-            />
-          </div>
-          {Number(diesel) > 0 && (
-            <div>
-              <Label>{t("mc_diesel_paid_by", lang)}</Label>
-              <select
-                name="fuel_paid_by"
-                required
-                value={paidBy}
-                onChange={(e) => setPaidBy(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-              >
-                <option value="">-</option>
-                <option value="farmer">{t("mc_diesel_by_farmer", lang)}</option>
-                <option value="vendor">{t("mc_diesel_by_vendor", lang)}</option>
-                <option value="company">{t("mc_diesel_by_company", lang)}</option>
-              </select>
-            </div>
-          )}
-          {Number(diesel) > 0 && paidBy === "company" && (
-            <div className="col-span-2">
-              <Label>{t("mc_diesel_account", lang)}</Label>
-              <select
-                name="fuel_account_id"
-                required
-                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-              >
-                <option value="">-</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+      {paidBy === "company" && (
+        <div>
+          <Label>{t("mc_diesel_account", lang)}</Label>
+          <Select name="finance_account_id" defaultValue="">
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </Select>
         </div>
-        {Number(diesel) > 0 && paidBy && paidBy !== "company" && (
-          <p className="mt-2 text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
-        )}
-      </div>
-
-      <Submit label={t("mc_record_dispatch", lang)} />
+      )}
+      {paidBy && paidBy !== "company" && (
+        <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
+      )}
+      <Submit label={t("mc_fuel_save", lang)} />
     </form>
   );
 }
@@ -1073,6 +1158,85 @@ function PaymentForm({
       </div>
       <Submit label={t("mc_record_payment", lang)} />
     </form>
+  );
+}
+
+function PromiseForm({
+  bookingId,
+  promiseDate,
+  promiseNote,
+  willSell,
+}: {
+  bookingId: string;
+  promiseDate: string | null;
+  promiseNote: string | null;
+  willSell: boolean | null;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(recordPaymentPromise, initialState);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+      {promiseDate && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="font-medium text-amber-800 dark:text-amber-300">
+            {t("mc_promise_recorded", lang)}: {new Date(promiseDate).toLocaleDateString()}
+          </p>
+          {promiseNote && <p className="text-amber-800 dark:text-amber-300">{promiseNote}</p>}
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{t("mc_promise_still_due", lang)}</p>
+        </div>
+      )}
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          {promiseDate ? t("mc_promise_change", lang) : t("mc_promise_open", lang)}
+        </button>
+      ) : (
+        <form action={action} className="space-y-3">
+          <Err state={state} />
+          <input type="hidden" name="booking_id" value={bookingId} />
+          <p className="text-xs text-surface-500">{t("mc_promise_hint", lang)}</p>
+          {/* Booking ke waqt kisan ne kaha tha ke fasal hamein bechega.
+              Wahi wo raasta hai jis se ye udhaar wapas aata hai, is liye
+              yahan yaad dila dena kaam ka hai. */}
+          {willSell === true && (
+            <p className="rounded-lg bg-brand-50 px-2 py-1 text-xs text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">
+              {t("mc_promise_will_sell", lang)}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t("mc_promise_date", lang)}</Label>
+              <Input
+                type="date"
+                name="promise_date"
+                min={new Date().toISOString().slice(0, 10)}
+                defaultValue={promiseDate ?? ""}
+              />
+            </div>
+          </div>
+          <div>
+            <Label>{t("mc_promise_note", lang)}</Label>
+            <Input name="promise_note" defaultValue={promiseNote ?? ""} placeholder={t("mc_promise_note_hint", lang)} />
+          </div>
+          <div className="flex gap-2">
+            <Submit label={t("mc_promise_save", lang)} />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+            >
+              {t("ac_cancel", lang)}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 
