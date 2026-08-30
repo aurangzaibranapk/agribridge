@@ -328,34 +328,61 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
   if (!bookingId) return { error: "Missing booking id." };
   if (!toEmail) return { error: "Email likhein." };
 
+  // Email wali parchi bhi wohi adad dikhati hai jo screen wali (182).
+  //
+  // Pehle dono booking ke PURANE khanon se banti thin -- acres, hours,
+  // days, rate_amount -- aur nayi zanjeer un mein se kisi ko haath hi
+  // nahi lagati. Nateeja kisan ke haath mein jane wale kaghaz par
+  // chhapta tha: "null Days", "Rate: Rs 0".
   const { data: booking } = await supabase
     .from("machinery_bookings")
     .select(
-      "booking_number, booking_date, acres, hours, days, rate_amount, total_amount, amount_received_from_farmer, location_address, farmers(full_name, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
+      "booking_number, booking_date, harvest_area, final_rate, estimated_rate, location_address, village, farmers(full_name, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", bookingId)
     .single();
   if (!booking) return { error: "Booking nahi mili." };
 
+  const [{ data: bill }, { data: paidRows }] = await Promise.all([
+    supabase
+      .from("machinery_bills")
+      .select("bill_number, actual_area, rate_amount, gross_amount, balance_payable")
+      .eq("booking_id", bookingId)
+      .maybeSingle(),
+    supabase
+      .from("machinery_payments")
+      .select("amount, kind")
+      .eq("booking_id", bookingId)
+      .eq("verification_status", "verified"),
+  ]);
+
   const farmer = Array.isArray((booking as any).farmers) ? (booking as any).farmers[0] : (booking as any).farmers;
   const vendor = Array.isArray((booking as any).machinery_vendors) ? (booking as any).machinery_vendors[0] : (booking as any).machinery_vendors;
   const machine = Array.isArray((booking as any).machinery_vendor_machines) ? (booking as any).machinery_vendor_machines[0] : (booking as any).machinery_vendor_machines;
 
-  const quantityLabel = booking.acres ? `${booking.acres} Acres` : booking.hours ? `${booking.hours} Hours` : `${booking.days} Days`;
+  const num = (v: unknown) => Number(v ?? 0);
+  const paid = (paidRows ?? []).reduce((sum, p) => sum + num(p.amount), 0);
+  const finalPaid = (paidRows ?? []).filter((p) => p.kind === "final").reduce((sum, p) => sum + num(p.amount), 0);
+
+  // Bill ban chuka ho to sach wahi hai; warna booking ka andaza.
+  const slipArea = bill ? num(bill.actual_area) : num(booking.harvest_area);
+  const slipRate = bill ? num(bill.rate_amount) : num(booking.final_rate) || num(booking.estimated_rate);
+  const slipGross = bill ? num(bill.gross_amount) : Math.round(slipArea * slipRate * 100) / 100;
+  const quantityLabel = `${slipArea} Acres${bill ? "" : " (andaza)"}`;
 
   const { generateMachineryBookingSlipPdf } = await import("@/lib/machinery-booking-slip-pdf");
   const pdfBuffer = await generateMachineryBookingSlipPdf({
-    slipNumber: booking.booking_number,
+    slipNumber: bill?.bill_number ?? booking.booking_number,
     farmerName: farmer?.full_name ?? "-",
     farmerPhone: farmer?.phone_number ?? null,
     vendorName: vendor?.vendor_name ?? "-",
     machineLabel: `${machine?.machine_type ?? ""}${machine?.model ? ` (${machine.model})` : ""}`,
     bookingDate: booking.booking_date,
     quantityLabel,
-    rateAmount: Number(booking.rate_amount),
-    totalAmount: Number(booking.total_amount),
-    amountReceived: Number(booking.amount_received_from_farmer),
-    locationAddress: booking.location_address,
+    rateAmount: slipRate,
+    totalAmount: slipGross,
+    amountReceived: paid,
+    locationAddress: booking.location_address ?? booking.village,
   });
 
   try {
@@ -370,7 +397,7 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
       from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
       to: toEmail,
       subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
-      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${Number(booking.total_amount).toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
+      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${slipGross.toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
       attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
     });
   } catch {
