@@ -19881,15 +19881,21 @@ export type Database = {
       v_machinery_pnl_booking: {
         Row: {
           acre: number | null
+          bill_date: string | null
+          bill_number: string | null
           booking_date: string | null
           booking_id: string | null
           booking_number: string | null
           commission: number | null
           crop_type: string | null
           diesel_hamara_kharcha: number | null
+          diesel_kisan_ne_diya: number | null
+          diesel_vendor_ne_diya: number | null
           diesel_wapas_aane_wala: number | null
           gross_billing: number | null
           hamari_aamdani: number | null
+          kaam_ka_maheena: string | null
+          kaam_ki_tareekh: string | null
           kisan_ka_diesel: number | null
           machine_code: string | null
           machine_id: string | null
@@ -19900,6 +19906,7 @@ export type Database = {
           vendor_id: string | null
           vendor_ka_hissa: number | null
           vendor_name: string | null
+          wasooli: number | null
         }
         Relationships: []
       }
