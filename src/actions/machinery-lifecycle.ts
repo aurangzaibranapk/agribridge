@@ -755,6 +755,88 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
  * kaafi nahi: kal agar kisan kahe ke maine haan nahi ki thi, to us ke
  * apne alfaz hi jawab hain.
  */
+/**
+ * Vendor ko ek hi paighaam mein poori khabar.
+ *
+ * Machine wale ko teen alag messages bhejna wohi galti hai jo phone par
+ * hoti hai: teesri baat tak wo pehli bhool chuka hota hai. Us ka sawal
+ * ek hi hai -- "kahan jana hai, kab, kitna kaam, aur kis rate par."
+ * Chaaron ek sath, ek hi paighaam mein.
+ *
+ * Rate is mein jaan boojh kar hai: wo us ke apne hisse ki bunyad hai
+ * (gross mein se commission kaat kar), aur us ke baghair usay har dafa
+ * poochhna parta hai. Commission ka adad yahan NAHI hai -- wo hamare
+ * aur us ke darmiyan ka alag maamla hai aur bill par saaf likha aata
+ * hai.
+ */
+async function notifyVendorOfBooking(
+  supabase: Client,
+  bookingId: string,
+  actorId: string | null,
+  reason: "rate_confirmed" | "machine_assigned"
+) {
+  const { data: b } = await supabase
+    .from("machinery_bookings")
+    .select(
+      "id, booking_number, crop_type, harvest_area, final_rate, preferred_date, preferred_time, location_address, village, vendor_id, machine_id, farmers(full_name, phone_number), machinery_vendors(vendor_name, phone), machinery_vendor_machines(machine_type, model)"
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!b || !b.vendor_id) return;
+
+  const vendor = Array.isArray(b.machinery_vendors) ? b.machinery_vendors[0] : b.machinery_vendors;
+  const farmer = Array.isArray(b.farmers) ? b.farmers[0] : b.farmers;
+  const machine = Array.isArray(b.machinery_vendor_machines)
+    ? b.machinery_vendor_machines[0]
+    : b.machinery_vendor_machines;
+
+  if (!vendor?.phone) {
+    await logEvent({
+      bookingId,
+      eventType: "vendor_notified",
+      note: "Vendor ka phone number nahi hai — khabar nahi ja saki",
+      actorId,
+    });
+    return;
+  }
+
+  const message = [
+    `Al Rana Traders — Machinery Booking ${b.booking_number}`,
+    ``,
+    `Kisan: ${farmer?.full_name ?? "-"}${farmer?.phone_number ? ` (${farmer.phone_number})` : ""}`,
+    `Kaam: ${b.crop_type ?? "kattai"} — ${Number(b.harvest_area ?? 0)} acre`,
+    b.final_rate ? `Rate: Rs ${Number(b.final_rate).toLocaleString()} per acre (final)` : null,
+    `Jagah: ${[b.location_address, b.village].filter(Boolean).join(", ") || "-"}`,
+    b.preferred_date
+      ? `Kab: ${b.preferred_date}${b.preferred_time ? ` — ${b.preferred_time}` : ""}`
+      : null,
+    machine ? `Machine: ${machine.machine_type}${machine.model ? ` (${machine.model})` : ""}` : null,
+    ``,
+    reason === "rate_confirmed"
+      ? `Kisan ne is rate par haan kar di hai.`
+      : `Ye kaam aap ki machine ko diya gaya hai.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    await sendWhatsAppMessage(vendor.phone, message);
+    await logEvent({
+      bookingId,
+      eventType: "vendor_notified",
+      note: `${vendor.vendor_name} ko poori tafseel bheji gayi (rate samet)`,
+      actorId,
+    });
+  } catch {
+    await logEvent({
+      bookingId,
+      eventType: "vendor_notified",
+      note: `${vendor.vendor_name} ko khabar nahi ja saki — khud ittila dein`,
+      actorId,
+    });
+  }
+}
+
 export async function recordFarmerConfirmation(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
@@ -827,6 +909,10 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
     note: response,
     actorId,
   });
+
+  // Machine pehle se tay ho to vendor ko usi waqt khabar. Warna ye
+  // khabar rawangi par jati hai -- us se pehle koi vendor hota hi nahi.
+  await notifyVendorOfBooking(supabase, bookingId, actorId, "rate_confirmed");
 
   revalidateAll(bookingId);
   return { success: true, notice: "Kisan ki tasdeeq darj ho gayi — ab machine bheji ja sakti hai." };
@@ -1047,6 +1133,59 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
   };
 }
 
+/**
+ * Us machine par us din kitni jagah hai.
+ *
+ * Wapsi null matlab jagah hai. Koi string matlab wajah -- aur us ke
+ * sath agli khali tareekh, taake staff ko dobara dhoondhna na pare.
+ */
+async function machineDayCapacity(
+  supabase: Client,
+  machineId: string,
+  day: string,
+  acres: number,
+  exceptBookingId: string
+): Promise<string | null> {
+  const { data: setting } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "machinery_daily_acres_per_machine")
+    .maybeSingle();
+  const cap = setting?.value === undefined || setting?.value === null ? 15 : Number(setting.value);
+
+  const { data: sameDay } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, harvest_area, status, farmers(full_name)")
+    .eq("machine_id", machineId)
+    .eq("preferred_date", day)
+    .not("status", "in", "(closed,cancelled)");
+
+  const others = (sameDay ?? []).filter((b) => b.id !== exceptBookingId);
+  const used = others.reduce((sum, b) => sum + Number(b.harvest_area ?? 0), 0);
+  if (used + acres <= cap + 0.001) return null;
+
+  const { data: nextFree } = await supabase.rpc("fn_next_free_date", {
+    p_machine_id: machineId,
+    p_acres: acres,
+    p_from: day,
+  });
+
+  // Kis ki booking pehle se hai -- naam ke baghair staff ko phone
+  // karne ke liye dobara dhoondhna parta hai.
+  const who = others
+    .map((b) => {
+      const f = Array.isArray(b.farmers) ? b.farmers[0] : b.farmers;
+      return `${f?.full_name ?? "-"} (${Number(b.harvest_area ?? 0)} acre)`;
+    })
+    .join(", ");
+
+  return [
+    `Is machine par ${day} ko pehle se ${used} acre bandhe hain${who ? `: ${who}` : ""}.`,
+    `Ek din ki hadd ${cap} acre hai, is liye ${acres} acre aur nahi aa sakte.`,
+    nextFree ? `Agli khali tareekh: ${nextFree}. Booking us din par kar dein, ya doosri machine chunein.` : `Doosri machine chunein.`,
+  ].join(" ");
+}
+
 export async function dispatchMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
@@ -1057,10 +1196,27 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number, status, location_address, location_lat, location_lng")
+    .select("id, booking_number, status, harvest_area, preferred_date, location_address, location_lat, location_lng")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
+
+  // Ek machine, ek din, hadd bhar kaam.
+  //
+  // Rok DB par lagi hui hai (159) -- yahan sirf ye hai ke bande ko wo
+  // rok samajh mein aane wale lafzon mein mile, aur sath agli khali
+  // tareekh bhi. "Jagah nahi hai, khud dhoondho" kehna wo kaam bande
+  // par daalna hai jo system pehle se jaanta hai.
+  if (booking.preferred_date) {
+    const capacity = await machineDayCapacity(
+      supabase,
+      machineId,
+      booking.preferred_date,
+      Number(booking.harvest_area ?? 0),
+      bookingId
+    );
+    if (capacity) return { error: capacity };
+  }
 
   const { data: machine } = await supabase
     .from("machinery_vendor_machines")
@@ -1113,6 +1269,8 @@ export async function dispatchMachine(_prev: ActionState, formData: FormData): P
     })
     .eq("id", bookingId);
   if (error) return { error: error.message };
+
+  await notifyVendorOfBooking(supabase, bookingId, actorId, "machine_assigned");
 
   await logEvent({
     bookingId,
