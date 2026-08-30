@@ -1347,4 +1347,12 @@ export const machineryDict = {
   mcal_no_machines_hint: { en: "Add a machine first — capacity is counted per machine.", rm: "Pehle machine darj karein — gunjaish machine ke hisaab se ginti hai.", ur: "\u067e\u06c1\u0644\u06d2 \u0645\u0634\u06cc\u0646 \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba" },
   mcal_cap_hint: { en: "Each machine's own daily limit; blank means the system-wide limit.", rm: "Har machine ki apni rozana hadd; khali ho to poore nizam wali hadd.", ur: "\u06c1\u0631 \u0645\u0634\u06cc\u0646 \u06a9\u06cc \u0627\u067e\u0646\u06cc \u0631\u0648\u0632\u0627\u0646\u06c1 \u062d\u062f" },
   mcal_daily_cap: { en: "Daily capacity (acres)", rm: "Rozana hadd (acre)", ur: "\u0631\u0648\u0632\u0627\u0646\u06c1 \u062d\u062f (\u0627\u06cc\u06a9\u0691)" },
+
+  // ---- Ghalti se laga hua nishan wapis ----
+  mc_undo_declined: { en: "Undo \u2014 the farmer did not actually refuse", rm: "Ye nishan wapis hatayein", ur: "\u06cc\u06c1 \u0646\u0634\u0627\u0646 \u0648\u0627\u067e\u0633 \u06c1\u0679\u0627\u0626\u06cc\u06ba" },
+  mc_undo_promise: { en: "Remove this promise", rm: "Ye wada hatayein", ur: "\u06cc\u06c1 \u0648\u0639\u062f\u06c1 \u06c1\u0679\u0627\u0626\u06cc\u06ba" },
+  mc_undo_sure: { en: "Sure?", rm: "Pakka?", ur: "\u067e\u06a9\u0627\u061f" },
+  mc_undo_yes: { en: "Yes, undo", rm: "Haan, hata dein", ur: "\u06c1\u0627\u06ba\u060c \u06c1\u0679\u0627 \u062f\u06cc\u06ba" },
+  mc_undo_no: { en: "No", rm: "Rehne dein", ur: "\u0631\u06c1\u0646\u06d2 \u062f\u06cc\u06ba" },
+  mc_back_to_question: { en: "Back \u2014 change the answer", rm: "Wapis \u2014 jawab badlein", ur: "\u0648\u0627\u067e\u0633 \u2014 \u062c\u0648\u0627\u0628 \u0628\u062f\u0644\u06cc\u06ba" },
 } as const;

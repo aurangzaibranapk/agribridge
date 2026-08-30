@@ -14,6 +14,8 @@ import {
   overrideConfirmation,
   dispatchMachine,
   rescheduleBooking,
+  undoAdvanceDeclined,
+  clearPaymentPromise,
   recordWorkCompletion,
   generateFinalBill,
   recordFinalPayment,
@@ -24,7 +26,7 @@ import { recordVendorPayout } from "@/actions/machinery-rental";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
-import { Check, Circle, Plus, X } from "lucide-react";
+import { Check, Circle, Plus, X, Undo2 } from "lucide-react";
 
 const initialState: ActionState = {};
 
@@ -866,6 +868,63 @@ function Err({ state }: { state: ActionState }) {
  * Phir bhi paisa aa jaye to raasta band nahi -- magar wo staff ke
  * kehne par khulta hai, safhe ke poochhne par nahi.
  */
+/**
+ * "Wapis" ka button.
+ *
+ * Sirf un jagahon par lagta hai jahan ek CLICK ne nishan laga diya tha
+ * aur paisa hila hi nahi. Jahan paisa hil chuka ho wahan ye nahi aata
+ * -- wahan reversal ka apna nizaam hai (156), jahan qatar mitai nahi
+ * jati balke ulti qatar lagti hai.
+ *
+ * Poochh kar hi chalta hai: ye bhi ek hi click hai, aur wohi ghalti
+ * dobara na ho.
+ */
+function UndoButton({
+  bookingId,
+  action,
+  label,
+}: {
+  bookingId: string;
+  action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
+  label: string;
+}) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(action, initialState);
+  const [asking, setAsking] = useState(false);
+
+  if (state.error) {
+    return <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>;
+  }
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="flex items-center gap-1 text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+      >
+        <Undo2 className="h-3 w-3" />
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <span className="text-xs text-surface-600 dark:text-surface-400">{t("mc_undo_sure", lang)}</span>
+      <Submit label={t("mc_undo_yes", lang)} />
+      <button
+        type="button"
+        onClick={() => setAsking(false)}
+        className="text-xs text-surface-500 underline hover:text-surface-700"
+      >
+        {t("mc_undo_no", lang)}
+      </button>
+    </form>
+  );
+}
+
 function AdvanceDeclined({
   bookingId,
   accounts,
@@ -883,6 +942,14 @@ function AdvanceDeclined({
       <p className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
         {t("mc_advance_declined", lang)}
       </p>
+      {/* Ghalti se laga hua nishan wapis. Yahan paisa hila hi nahi --
+          sirf ek jawab likha gaya tha -- is liye wapis lena mehfooz
+          hai. Jahan paisa hil chuka ho wahan ye button nahi aata. */}
+      <UndoButton
+        bookingId={bookingId}
+        action={undoAdvanceDeclined}
+        label={t("mc_undo_declined", lang)}
+      />
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -1923,8 +1990,32 @@ function FinalPaymentStep({
           </div>
           {/* Wada pehle se darj ho to wo yahin dikh jata hai -- us ke
               liye sawal ka jawab dena zaroori nahi. */}
-          {promiseDate && <PromiseNote promiseDate={promiseDate} promiseNote={promiseNote} />}
+          {promiseDate && (
+            <>
+              <PromiseNote promiseDate={promiseDate} promiseNote={promiseNote} />
+              {/* Wada koi raqam nahi -- sirf ek jumla. Us ka hatna
+                  kisi hisaab ko nahi chherta. */}
+              <UndoButton bookingId={bookingId} action={clearPaymentPromise} label={t("mc_undo_promise", lang)} />
+            </>
+          )}
         </div>
+      )}
+
+      {/* Jawab chunne ke baad wapis aane ka raasta.
+          Pehle ye tha hi nahi: staff dekhne ke liye ek jawab chun leta
+          tha aur phir doosre par nahi ja sakta tha -- safha dobara
+          kholne ke ilawa koi chara nahi bachta tha.
+          Paisa darj ho chuka ho to ye nahi aata: us waqt sawal ka
+          jawab badalna bemaani hai, adaigi ho chuki hai. */}
+      {answer !== null && !paid && (
+        <button
+          type="button"
+          onClick={() => setAnswer(null)}
+          className="flex items-center gap-1 text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+        >
+          <Undo2 className="h-3 w-3" />
+          {t("mc_back_to_question", lang)}
+        </button>
       )}
 
       {answer === "haan" && (

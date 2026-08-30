@@ -2351,6 +2351,93 @@ export async function recordPaymentPromise(_prev: ActionState, formData: FormDat
 }
 
 /**
+ * Ghalti se laga hua nishan wapis hatana.
+ *
+ * Do jagah aisi hain jahan EK CLICK raasta band kar deta tha: "kisan ne
+ * advance nahi diya", aur "kisan ne kab dene ka kaha". Staff aksar
+ * dekhne ke liye click kar deta hai aur phir wapis nahi aa sakta.
+ *
+ * DONO JAGAH PAISA HILTA HI NAHI -- wahan sirf ek jawab likha jata hai.
+ * Is liye un ka wapis hona bilkul mehfooz hai, aur wo yahan se hota
+ * hai.
+ *
+ * Jahan PAISA hil chuka ho wahan ye raasta nahi khulta. Us ke liye
+ * reversal ka apna nizaam hai (156): wahan qatar mitai nahi jati, ulti
+ * qatar lagti hai. Farq saaf rehna chahiye -- warna kal koi tasdeeq
+ * shuda adaigi bhi "wapis" ke button se uRa dega.
+ */
+export async function undoAdvanceDeclined(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  // Advance ka koi indraj maujood ho to ye sirf nishan nahi raha --
+  // wahan paisa aa chuka hai. (Waise bhi aisi soorat mein nishan lag hi
+  // nahi sakta tha, magar rok yahan bhi hai: shart adad par honi
+  // chahiye, us baat par nahi ke pehle kya hua tha.)
+  const { data: advances } = await supabase
+    .from("machinery_payments")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .eq("kind", "advance");
+  if ((advances ?? []).length > 0) {
+    return { error: "Is booking par advance ka indraj maujood hai -- nishan hatane ki zaroorat nahi." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ advance_declined_at: null, advance_declined_by: null })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "advance_declined_undone",
+    note: "\"Advance nahi diya\" ka nishan wapis hataya gaya",
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Nishan hat gaya -- advance ka sawal dobara khul gaya hai." };
+}
+
+/**
+ * Payment ka wada wapis lena.
+ *
+ * Wada koi raqam nahi -- wo sirf ye jumla hai ke "kisan ne kaha filan
+ * din dega". Us par koi khata nahi banta, is liye usay hataya ja sakta
+ * hai. Baqi raqam waise ki waisi khari rehti hai.
+ */
+export async function clearPaymentPromise(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({
+      payment_promise_date: null,
+      payment_promise_note: null,
+      payment_promise_at: null,
+      payment_promise_by: null,
+    })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "payment_promise_cleared",
+    note: "Payment ka wada wapis liya gaya",
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Wada hat gaya. Baqi raqam waise hi khari hai." };
+}
+
+/**
  * Vendor ka bheja hua kaam: dekho, phir maano.
  *
  * Vendor apne portal se kattai ki tafseel bhejta hai. Wo qatar 'claimed'
