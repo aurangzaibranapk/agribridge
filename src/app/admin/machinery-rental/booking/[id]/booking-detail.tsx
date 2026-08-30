@@ -530,6 +530,22 @@ export function BookingDetail({
             </Card>
           )}
 
+          {/* Final payment */}
+          {bill && (balance ?? 0) > 0 && (
+            <StepCard n={7} title={t("mc_step_final_payment", lang)} done={false}>
+              <PaymentForm bookingId={booking.id} accounts={accounts} remaining={balance ?? 0} />
+              {/* Kisan abhi nahi de raha. Ye payment ka doosra roop nahi
+                  -- ye wada hai: baqi raqam waise hi khari rehti hai,
+                  bas wajah aur tareekh saamne aa jati hai. */}
+              <PromiseForm
+                bookingId={booking.id}
+                promiseDate={booking.payment_promise_date}
+                promiseNote={booking.payment_promise_note}
+                willSell={booking.will_sell_to_us}
+              />
+            </StepCard>
+          )}
+
           {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
           {bill && (
             <StepCard n={8} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
@@ -552,23 +568,14 @@ export function BookingDetail({
                 Kisan ka poora paisa hamari aamdani nahi. Bill bante hi commission hamara aur baqi vendor ka ho jata
                 hai — wo raqam sirf hamare paas se guzar rahi hoti hai.
               </p>
-              {vendorRemaining > 0 && <VendorPayoutForm bookingId={booking.id} accounts={accounts} remaining={vendorRemaining} />}
-            </StepCard>
-          )}
-
-          {/* Final payment */}
-          {bill && (balance ?? 0) > 0 && (
-            <StepCard n={7} title={t("mc_step_final_payment", lang)} done={false}>
-              <PaymentForm bookingId={booking.id} accounts={accounts} remaining={balance ?? 0} />
-              {/* Kisan abhi nahi de raha. Ye payment ka doosra roop nahi
-                  -- ye wada hai: baqi raqam waise hi khari rehti hai,
-                  bas wajah aur tareekh saamne aa jati hai. */}
-              <PromiseForm
-                bookingId={booking.id}
-                promiseDate={booking.payment_promise_date}
-                promiseNote={booking.payment_promise_note}
-                willSell={booking.will_sell_to_us}
-              />
+              {vendorRemaining > 0 && (
+                <VendorPayoutForm
+                  bookingId={booking.id}
+                  accounts={accounts}
+                  remaining={vendorRemaining}
+                  paidSoFar={paidToVendor}
+                />
+              )}
             </StepCard>
           )}
 
@@ -1484,21 +1491,47 @@ function VendorPayoutForm({
   bookingId,
   accounts,
   remaining,
+  paidSoFar,
 }: {
   bookingId: string;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   remaining: number;
+  paidSoFar: number;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordVendorPayout, initialState);
+  const [open, setOpen] = useState(false);
+
+  // Form band rehta hai jab tak koi ye na kahe ke paisa waqai diya
+  // gaya. Khula hua form "0" ke sath khara rehna ek sawal ban jata
+  // hai jis ka jawab aksar nahi hota -- aur kabhi kabhi ghalti se
+  // jawab de bhi diya jata hai. Vendor ko dena hai ye baat upar
+  // likhi hui hai; ye khana sirf us waqt ka hai jab paisa nikla ho.
+  if (!open && !state.success) {
+    return (
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          {t("mc_vendor_paid_open", lang)}
+        </button>
+        <p className="text-xs text-surface-500">
+          {paidSoFar > 0 ? t("mc_vendor_paid_some", lang) : t("mc_vendor_paid_none", lang)}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Raqam (baqi Rs {remaining.toLocaleString()})</Label>
-          <Input type="number" name="amount" step="0.01" />
+          <Label>{t("mc_amount", lang)} (baqi Rs {remaining.toLocaleString()})</Label>
+          <Input type="number" name="amount" step="0.01" defaultValue={remaining} />
         </div>
         <div>
           <Label>{t("mc_which_account_from", lang)}</Label>
@@ -1512,7 +1545,16 @@ function VendorPayoutForm({
           </Select>
         </div>
       </div>
-      <Submit label={t("mc_record_vendor_payout", lang)} />
+      <div className="flex gap-2">
+        <Submit label={t("mc_record_vendor_payout", lang)} />
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+        >
+          {t("ac_cancel", lang)}
+        </button>
+      </div>
     </form>
   );
 }

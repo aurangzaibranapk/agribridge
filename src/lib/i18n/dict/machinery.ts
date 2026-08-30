@@ -111,6 +111,21 @@ export const machineryDict = {
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
   mc_back: { en: "Back", rm: "Peechhe", ur: "واپس" },
+  mc_vendor_paid_open: {
+    en: "Money was paid to the vendor — record it",
+    rm: "Vendor ko paisa diya hai — darj karein",
+    ur: "وینڈر کو پیسہ دیا ہے — درج کریں",
+  },
+  mc_vendor_paid_none: {
+    en: "Nothing paid yet? Then leave this — the amount above stays owed to him.",
+    rm: "Abhi kuch nahi diya? To rehne dein — upar wali raqam us ke naam khari rahegi.",
+    ur: "ابھی کچھ نہیں دیا؟ تو رہنے دیں — اوپر والی رقم اس کے نام کھڑی رہے گی۔",
+  },
+  mc_vendor_paid_some: {
+    en: "Paid something more? Record it. Otherwise leave this.",
+    rm: "Aur kuch diya hai? Darj karein. Warna rehne dein.",
+    ur: "اور کچھ دیا ہے؟ درج کریں۔ ورنہ رہنے دیں۔",
+  },
   mc_followup_q: {
     en: "The booking still has area left — get it done?",
     rm: "Booking ka raqba abhi baqi hai — wo karwana hai?",
