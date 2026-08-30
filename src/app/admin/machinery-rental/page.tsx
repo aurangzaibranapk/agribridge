@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -88,6 +89,30 @@ export default async function MachineryRentalPage({
     if (b.vendor_id) bookingCount.set(b.vendor_id, (bookingCount.get(b.vendor_id) ?? 0) + 1);
   });
 
+  // Login ka pata -- yehi wo cheez hai jis se do ek jaise vendor alag
+  // pehchane jate hain.
+  //
+  // Gaon mein do bandon ka naam aur number tak ek jaisa ho sakta hai,
+  // aur safhe par dono qatarein bilkul ek jaisi lagti thin. Malik ko
+  // har ek ke andar ja kar dekhna parta tha ke asli kaun sa hai.
+  // Login ka pata kabhi do ka ek nahi hota ("farmanali@" aur
+  // "farmanali2@"), aur wohi vendor apne phone par likhta hai -- so
+  // pehchan ke liye sab se saaf nishani wohi hai.
+  const withLogin = (vendors ?? []).filter((v) => v.user_id);
+  const emailBy = new Map<string, string>();
+  if (withLogin.length > 0) {
+    const service = createServiceClient();
+    const found = await Promise.all(
+      withLogin.map(async (v) => {
+        const { data } = await service.auth.admin.getUserById(v.user_id as string);
+        return [v.id, data?.user?.email ?? null] as const;
+      })
+    );
+    found.forEach(([id, email]) => {
+      if (email) emailBy.set(id, email);
+    });
+  }
+
   const vendorRows = (vendors ?? []).map((v) => ({
     id: v.id,
     vendor_name: v.vendor_name,
@@ -97,6 +122,7 @@ export default async function MachineryRentalPage({
     is_active: v.is_active,
     machine_count: machineCount.get(v.id) ?? 0,
     booking_count: bookingCount.get(v.id) ?? 0,
+    login_email: emailBy.get(v.id) ?? null,
   }));
 
   const machines = (rawMachines ?? []).map((m: any) => {

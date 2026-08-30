@@ -33,6 +33,8 @@ interface Vendor {
   /** Kya is vendor ke sath kuch juda hua hai -- mitane ka faisla isi par hai (181). */
   machine_count?: number;
   booking_count?: number;
+  /** Login ka pata -- do ek jaise vendor isi se alag pehchane jate hain. */
+  login_email?: string | null;
 }
 interface Machine {
   id: string;
@@ -154,7 +156,7 @@ export function MachineryClient({
             </div>
             <div className="divide-y divide-surface-100 dark:divide-surface-800">
               {vendors.map((v) => (
-                <VendorRow key={v.id} vendor={v} />
+                <VendorRow key={v.id} vendor={v} all={vendors} />
               ))}
               {vendors.length === 0 && (
                 <p className="px-3 py-6 text-center text-surface-400">{t("mc_no_vendors", lang)}</p>
@@ -585,7 +587,18 @@ function SubmitButtonUrdu({ disabled }: { disabled: boolean }) {
  *   ek bhi booking ya machine ho, us ka button hi nahi aata; aur agar
  *   kisi doosre raaste se koshish ho to database khud rok deta hai.
  */
-function VendorRow({ vendor }: { vendor: Vendor }) {
+/** Naam aur number ka wohi jora kisi aur qatar mein bhi hai? */
+function hasTwin(vendor: Vendor, all: Vendor[]) {
+  const digits = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "");
+  return all.some(
+    (o) =>
+      o.id !== vendor.id &&
+      o.vendor_name.trim().toLowerCase() === vendor.vendor_name.trim().toLowerCase() &&
+      digits(o.phone) === digits(vendor.phone)
+  );
+}
+
+function VendorRow({ vendor, all }: { vendor: Vendor; all: Vendor[] }) {
   const lang = useLang();
   const [editing, setEditing] = useState(false);
 
@@ -599,6 +612,38 @@ function VendorRow({ vendor }: { vendor: Vendor }) {
   return (
     <div className={vendor.is_active === false ? "bg-surface-50/60 dark:bg-surface-800/30" : ""}>
       <VendorLoginRow vendor={vendor} />
+
+      {/* PEHCHAN.
+          Do vendor ek hi naam aur number ke ho sakte hain -- gaon mein
+          aksar hote hain, aur duplicate bhi isi tarah banta hai. Aisi
+          soorat mein dono qatarein bilkul ek jaisi lagti thin aur malik
+          ko har ek ke andar ja kar dekhna parta tha ke asli kaun sa hai.
+          Ab teen cheezein qatar par hi likhi hain: kitni machinein,
+          kitni bookingein, aur login ka pata -- aur login ka pata kabhi
+          do ka ek nahi hota. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 text-xs">
+        <span className={vendor.machine_count ? "text-surface-600 dark:text-surface-300" : "text-surface-400"}>
+          {vendor.machine_count ? `${vendor.machine_count} machine` : "koi machine nahi"}
+        </span>
+        <span className="text-surface-300">·</span>
+        <span className={vendor.booking_count ? "text-surface-600 dark:text-surface-300" : "text-surface-400"}>
+          {vendor.booking_count ? `${vendor.booking_count} booking` : "koi booking nahi"}
+        </span>
+        {vendor.login_email && (
+          <>
+            <span className="text-surface-300">·</span>
+            <span className="font-mono text-surface-600 dark:text-surface-300">{vendor.login_email}</span>
+          </>
+        )}
+      </div>
+
+      {hasTwin(vendor, all) && (
+        <p className="mx-3 mb-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          Isi naam aur number ka ek aur record bhi maujood hai. Jis par machine aur booking hai wohi asli hai — doosre
+          ko band kar dein, aur vendor ko usi ka login dein jo yahan likha hai.
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3 px-3 pb-3 text-xs">
         <button
           type="button"
