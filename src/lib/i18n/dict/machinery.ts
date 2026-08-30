@@ -940,4 +940,24 @@ export const machineryDict = {
   mca_refund: { en: "Refund due", rm: "Wapas karna hai", ur: "\u0648\u0627\u067e\u0633 \u06a9\u0631\u0646\u0627 \u06c1\u06d2" },
   mc_refund_due: { en: "Refund due", rm: "Wapas karna", ur: "\u0648\u0627\u067e\u0633 \u06a9\u0631\u0646\u0627" },
   mc_overpaid: { en: "Overpaid", rm: "Zyada mil gaya", ur: "\u0632\u06cc\u0627\u062f\u06c1 \u0645\u0644 \u06af\u06cc\u0627" },
+  mc_diesel_rate: {
+    en: "Rate per litre (Rs)",
+    rm: "Rate per litre (Rs)",
+    ur: "\u0641\u06cc \u0644\u0679\u0631 \u0631\u06cc\u0679 (\u0631\u0648\u067e\u06d2)",
+  },
+  mc_diesel_recoverable: {
+    en: "ART paid \u2014 recoverable from the vendor",
+    rm: "ART ne diya \u2014 vendor se wapas aana hai",
+    ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u0646\u06d2 \u062f\u06cc\u0627 \u2014 \u0648\u06cc\u0646\u0688\u0631 \u0633\u06d2 \u0648\u0627\u067e\u0633 \u0622\u0646\u0627 \u06c1\u06d2",
+  },
+  mc_diesel_from_bill: {
+    en: "Farmer's own diesel \u2014 deducted from the bill",
+    rm: "Kisan ka apna diesel \u2014 bill se kata",
+    ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0627 \u0627\u067e\u0646\u0627 \u0688\u06cc\u0632\u0644 \u2014 \u0628\u0644 \u0633\u06d2 \u06a9\u0679\u0627",
+  },
+  mc_vendor_diesel_note: {
+    en: "The farmer's own diesel ({amount}) came out of the vendor's share \u2014 the rate included diesel, so it is his cost that was saved.",
+    rm: "Kisan ka apna diesel ({amount}) vendor ke hisse se kata \u2014 rate mein diesel shamil tha, is liye wo kharcha us ka bacha.",
+    ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0627 \u0627\u067e\u0646\u0627 \u0688\u06cc\u0632\u0644 ({amount}) \u0648\u06cc\u0646\u0688\u0631 \u06a9\u06d2 \u062d\u0635\u06d2 \u0633\u06d2 \u06a9\u0679\u0627\u06d4",
+  },
 } as const;

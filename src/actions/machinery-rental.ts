@@ -111,24 +111,55 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   const remaining = Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor);
   if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} Vendor ko dena baaqi hai.` };
 
+  // ART ne is booking par vendor ke liye jo diesel diya, wo isi
+  // adaigi mein wapas aata hai (170).
+  //
+  // Vendor ke naam par jo raqam khari hai wo poori kam hoti hai,
+  // magar cash sirf farq nikalta hai -- baqi wo pehle hi diesel ki
+  // shakal mein ja chuka hai. Alag se "recovery" darj karwana wo
+  // qadam hai jo koi kabhi nahi karta, aur phir 1120 mein ek jor
+  // hamesha ke liye para reh jata hai.
+  const { data: dieselRows } = await supabase
+    .from("machinery_fuel_logs")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("vendor_recoverable", true)
+    .eq("verification_status", "verified");
+
+  const dieselTotal = (dieselRows ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const alreadyPaid = Number(booking.amount_paid_to_vendor);
+  // Diesel sirf utna hi wapas aata hai jitna abhi tak wapas nahi aaya.
+  const dieselLeft = Math.max(0, Math.round((dieselTotal - alreadyPaid) * 100) / 100);
+  const dieselRecovered = Math.min(dieselLeft, amount);
+  const cashOut = Math.round((amount - dieselRecovered) * 100) / 100;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: txn, error: txnError } = await supabase
-    .from("finance_transactions")
-    .insert({
-      account_id: accountId,
-      transaction_type: "expense",
-      category: "Machinery Rental - Vendor Payout",
-      amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Booking ${booking.booking_number} - Vendor payout`,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (txnError || !txn) return { error: txnError?.message ?? "Payout darj nahi hua." };
+  // Kharche ki qatar sirf us paise ki banti hai jo waqai bahar gaya.
+  // Diesel ka kharcha us din darj ho chuka tha.
+  let txn: { id: string } | null = null;
+  if (cashOut > 0) {
+    const { data: row, error: txnError } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "expense",
+        category: "Machinery Rental - Vendor Payout",
+        amount: cashOut,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        notes:
+          dieselRecovered > 0
+            ? `Booking ${booking.booking_number} - Vendor payout (Rs ${dieselRecovered.toLocaleString()} diesel wapas kata)`
+            : `Booking ${booking.booking_number} - Vendor payout`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (txnError || !row) return { error: txnError?.message ?? "Payout darj nahi hua." };
+    txn = row;
+  }
 
   // Account ka balance yahan haath se KAM NAHI kiya jata.
   //
@@ -141,15 +172,19 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     bookingId,
     vendorId: booking.vendor_id,
     amount,
+    dieselRecovered,
     accountId,
-    description: `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
+    description:
+      dieselRecovered > 0
+        ? `Machinery ${booking.booking_number} — vendor ko us ka hissa (ART ka diesel Rs ${dieselRecovered.toLocaleString()} wapas)`
+        : `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
     ctx: {
       createdBy: user?.id ?? null,
-      claims: [{ table: "finance_transactions", rowId: txn.id }],
+      claims: txn ? [{ table: "finance_transactions", rowId: txn.id }] : [],
     },
   });
   if (failed(posted)) {
-    await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
     return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }
 

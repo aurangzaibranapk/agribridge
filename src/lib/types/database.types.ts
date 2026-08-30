@@ -8327,6 +8327,7 @@ export type Database = {
           commission_percentage: number
           created_at: string
           created_by: string | null
+          diesel_deducted: number
           gross_amount: number
           id: string
           previous_payment: number
@@ -8344,6 +8345,7 @@ export type Database = {
           commission_percentage?: number
           created_at?: string
           created_by?: string | null
+          diesel_deducted?: number
           gross_amount: number
           id?: string
           previous_payment?: number
@@ -8361,6 +8363,7 @@ export type Database = {
           commission_percentage?: number
           created_at?: string
           created_by?: string | null
+          diesel_deducted?: number
           gross_amount?: number
           id?: string
           previous_payment?: number
@@ -9176,6 +9179,7 @@ export type Database = {
           booking_id: string
           created_at: string
           created_by: string | null
+          deducted_in_bill_id: string | null
           expense_id: string | null
           finance_account_id: string | null
           id: string
@@ -9183,9 +9187,11 @@ export type Database = {
           log_date: string
           notes: string | null
           paid_by: string
+          rate_per_litre: number | null
           rejection_reason: string | null
           source: string
           submitted_by: string | null
+          vendor_recoverable: boolean
           verification_status: string
           verified_at: string | null
           verified_by: string | null
@@ -9195,6 +9201,7 @@ export type Database = {
           booking_id: string
           created_at?: string
           created_by?: string | null
+          deducted_in_bill_id?: string | null
           expense_id?: string | null
           finance_account_id?: string | null
           id?: string
@@ -9202,9 +9209,11 @@ export type Database = {
           log_date?: string
           notes?: string | null
           paid_by: string
+          rate_per_litre?: number | null
           rejection_reason?: string | null
           source?: string
           submitted_by?: string | null
+          vendor_recoverable?: boolean
           verification_status?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -9214,6 +9223,7 @@ export type Database = {
           booking_id?: string
           created_at?: string
           created_by?: string | null
+          deducted_in_bill_id?: string | null
           expense_id?: string | null
           finance_account_id?: string | null
           id?: string
@@ -9221,9 +9231,11 @@ export type Database = {
           log_date?: string
           notes?: string | null
           paid_by?: string
+          rate_per_litre?: number | null
           rejection_reason?: string | null
           source?: string
           submitted_by?: string | null
+          vendor_recoverable?: boolean
           verification_status?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -9291,6 +9303,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_work_efficiency"
             referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_deducted_in_bill_id_fkey"
+            columns: ["deducted_in_bill_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bills"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_expense_id_fkey"
@@ -16247,6 +16266,103 @@ export type Database = {
           },
         ]
       }
+      v_machinery_diesel_summary: {
+        Row: {
+          amount: number | null
+          booking_date: string | null
+          booking_id: string | null
+          booking_ke_acre: number | null
+          booking_number: string | null
+          crop_type: string | null
+          farmer_name: string | null
+          fuel_log_id: string | null
+          kharcha_per_acre: number | null
+          litre_per_acre: number | null
+          litres: number | null
+          log_date: string | null
+          machine_id: string | null
+          machine_model: string | null
+          machine_type: string | null
+          paid_by: string | null
+          rate_per_litre: number | null
+          source: string | null
+          vendor_name: string | null
+          vendor_recoverable: boolean | null
+          verification_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendor_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
       v_machinery_farmer_statement: {
         Row: {
           aakhri_payment: string | null
@@ -16521,6 +16637,7 @@ export type Database = {
       v_machinery_vendor_ledger: {
         Row: {
           actual_area: number | null
+          art_ka_diesel: number | null
           bill_number: string | null
           booking_date: string | null
           booking_id: string | null
@@ -16533,6 +16650,7 @@ export type Database = {
           final_rate: number | null
           gross_amount: number | null
           harvest_area: number | null
+          kisan_ka_diesel: number | null
           location_address: string | null
           location_lat: number | null
           location_lng: number | null

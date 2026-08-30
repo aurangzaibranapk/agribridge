@@ -1027,9 +1027,24 @@ async function saveDieselExpense(args: {
   amount: number;
   accountId: string;
   litres: number | null;
+  /** Machine kis vendor ki hai. Ho to ye kharcha nahi, us se wapas aane wali raqam hai. */
+  vendorId: string | null;
   actorId: string | null;
 }): Promise<string | null> {
   const litrePart = args.litres && args.litres > 0 ? ` — ${args.litres} litre` : "";
+
+  // ART ka diesel kis khane mein jaye.
+  //
+  // Ab tak wo seedha kharcha (6010 Fuel) ban jata tha. Magar wo
+  // kharcha hai hi nahi: wo VENDOR ke liye diya gaya paisa hai, aur
+  // us ke hisse se wapas aata hai. Usay permanent kharcha likhna
+  // machinery ka munafa jhooti tarah kam kar ke dikhata hai.
+  //
+  // Vendor maloom ho to ye supplier advance (1120) hai -- us ke naam
+  // par khari hui wapas aane wali raqam. Vendor maloom na ho (ART ki
+  // apni machine) to wo waqai hamara apna kharcha hai.
+  const recoverable = Boolean(args.vendorId);
+  const againstAccount = recoverable ? ACC.supplierAdvance : ACC.fuel;
 
   const { data: expense, error } = await args.supabase
     .from("finance_transactions")
@@ -1039,7 +1054,9 @@ async function saveDieselExpense(args: {
       category: "Machinery - Diesel",
       amount: args.amount,
       transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Diesel — machinery booking ${args.bookingNumber}${litrePart}`,
+      notes: recoverable
+        ? `Diesel — machinery booking ${args.bookingNumber}${litrePart} (vendor se wapas aana hai)`
+        : `Diesel — machinery booking ${args.bookingNumber}${litrePart}`,
       created_by: args.actorId,
     })
     .select("id")
@@ -1049,8 +1066,15 @@ async function saveDieselExpense(args: {
   const posted = await postCashOut({
     accountId: args.accountId,
     amount: args.amount,
-    description: `Diesel — machinery booking ${args.bookingNumber}`,
-    againstAccount: ACC.fuel,
+    description: recoverable
+      ? `Diesel — machinery booking ${args.bookingNumber} (vendor se wapas aana hai)`
+      : `Diesel — machinery booking ${args.bookingNumber}`,
+    againstAccount,
+    // Wapas aane wali raqam kis ke naam par khari hai -- ye likhna
+    // lazmi hai, warna 1120 mein ek jor para rehta hai aur kisi ko
+    // pata nahi hota ke wo kis vendor se lena hai.
+    partyType: recoverable ? "machinery_vendor" : null,
+    partyId: recoverable ? args.vendorId : null,
     ctx: {
       createdBy: args.actorId,
       claims: [{ table: "finance_transactions", rowId: expense.id }],
@@ -1063,7 +1087,7 @@ async function saveDieselExpense(args: {
 
   await args.supabase
     .from("machinery_fuel_logs")
-    .update({ expense_id: expense.id })
+    .update({ expense_id: expense.id, vendor_recoverable: recoverable })
     .eq("id", args.fuelLogId);
 
   return null;
@@ -1088,20 +1112,30 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
   const bookingId = str(formData, "booking_id");
   if (!bookingId) return { error: "Booking nahi mili." };
 
-  const amount = num(formData, "amount") ?? 0;
+  // Raqam ab maangi hi nahi jati -- litre aur us din ka rate maange
+  // jate hain, aur raqam DB khud banata hai (170).
+  //
+  // Haath se likhi hui raqam wo jagah hai jahan ek sifar zyada lag
+  // jata hai aur kisi ko pata nahi chalta. Aur us se do adad kabhi
+  // nahi milte jo asal mein chahiye hote hain: litre per acre, aur
+  // kis din kis rate par liya.
   const paidBy = str(formData, "paid_by");
   const accountId = str(formData, "finance_account_id");
   const litres = num(formData, "litres");
+  const ratePerLitre = num(formData, "rate_per_litre");
 
-  if (amount <= 0) return { error: "Diesel ki raqam likhein." };
+  if (!litres || litres <= 0) return { error: "Kitne litre diesel dala, wo likhein." };
+  if (!ratePerLitre || ratePerLitre <= 0) return { error: "Us din diesel ka rate kya tha, wo likhein." };
   if (!paidBy) return { error: "Diesel kis ne dala — kisan, vendor ya ART — wo select karein." };
   if (paidBy === "company" && !accountId) {
     return { error: "ART ka diesel hai to khata bhi select karein ke kis khate se nikla." };
   }
 
+  const amount = Math.round(litres * ratePerLitre * 100) / 100;
+
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number")
+    .select("id, booking_number, vendor_id")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
@@ -1112,6 +1146,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
       booking_id: bookingId,
       log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
       litres,
+      rate_per_litre: ratePerLitre,
       amount,
       paid_by: paidBy,
       finance_account_id: paidBy === "company" ? accountId : null,
@@ -1136,6 +1171,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
       amount,
       accountId,
       litres,
+      vendorId: booking.vendor_id,
       actorId,
     });
     // Ledger mein na ja saka to qatar bhi wapas. Diesel likha hua aur
@@ -2356,7 +2392,7 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number")
+    .select("id, booking_number, vendor_id")
     .eq("id", log.booking_id)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
@@ -2409,6 +2445,7 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
       amount: Number(log.amount),
       accountId,
       litres: log.litres === null ? null : Number(log.litres),
+      vendorId: booking.vendor_id,
       actorId,
     });
     // Ledger mein na ja saka to tasdeeq bhi wapas -- warna diesel

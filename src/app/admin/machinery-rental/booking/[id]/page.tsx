@@ -155,8 +155,10 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         id: f.id,
         log_date: f.log_date,
         litres: f.litres === null ? null : Number(f.litres),
+        rate_per_litre: f.rate_per_litre === null ? null : Number(f.rate_per_litre),
         amount: Number(f.amount),
         paid_by: f.paid_by,
+        vendor_recoverable: Boolean(f.vendor_recoverable),
       }))}
       work={(work ?? []).map((w) => ({
         id: w.id,
@@ -182,6 +184,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
               commission_percentage: Number(bill.commission_percentage),
               commission_amount: Number(bill.commission_amount),
               vendor_payable: Number(bill.vendor_payable),
+              diesel_deducted: Number(bill.diesel_deducted ?? 0),
             }
           : null
       }

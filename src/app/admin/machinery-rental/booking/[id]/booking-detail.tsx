@@ -129,8 +129,10 @@ export function BookingDetail({
     id: string;
     log_date: string;
     litres: number | null;
+    rate_per_litre: number | null;
     amount: number;
     paid_by: string;
+    vendor_recoverable: boolean;
   }>;
   efficiency: {
     kulGhante: number | null;
@@ -149,7 +151,7 @@ export function BookingDetail({
     completion_photo_url: string | null;
     farmer_confirmed: boolean;
   }>;
-  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
+  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
   reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
@@ -187,6 +189,14 @@ export function BookingDetail({
   const workFinished = work.some((w) => w.is_final);
   const workRemaining = Math.max(Math.round((booking.harvest_area - workDone) * 10000) / 10000, 0);
   const vendorRemaining = bill ? Math.round((bill.vendor_payable - paidToVendor) * 100) / 100 : 0;
+
+  // ART ne is booking par vendor ke liye jo diesel diya. Wo adaigi ke
+  // waqt khud wapas kat jata hai (170) -- yahan sirf dikhaya jata hai,
+  // taake adaigi se pehle dono taraf ko pata ho.
+  const artDiesel = Math.max(
+    0,
+    Math.round((fuelLogs.filter((f) => f.vendor_recoverable).reduce((s2, f) => s2 + f.amount, 0) - paidToVendor) * 100) / 100
+  );
 
   return (
     <div className="space-y-4 pb-24">
@@ -500,6 +510,13 @@ export function BookingDetail({
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
                 <Row label={`Machinery charges (${bill.actual_area} acre × Rs ${bill.rate_amount.toLocaleString()})`} value={bill.gross_amount} />
+                {/* Kisan ka apna diesel. Ye us ke bill se katta hai --
+                    aur us ka naam saaf likha jata hai, warna kisan
+                    poochhta hai ke "ye kam kyun hai" aur jawab kisi ke
+                    paas nahi hota. */}
+                {bill.diesel_deducted > 0 && (
+                  <Row label={t("mc_diesel_from_bill", lang)} value={-bill.diesel_deducted} />
+                )}
                 <Row label={t("mc_advance_paid", lang)} value={-bill.advance_adjusted} />
                 {bill.previous_payment > 0 && <Row label={t("mc_previous_payment", lang)} value={-bill.previous_payment} />}
                 {finalPaid > 0 && <Row label={t("mc_received_so_far", lang)} value={-finalPaid} />}
@@ -565,6 +582,20 @@ export function BookingDetail({
                   <span>{vendorName ?? "Vendor"} ko dena</span>
                   <span>Rs {bill.vendor_payable.toLocaleString()}</span>
                 </div>
+                {/* Kisan ka apna diesel vendor ke hisse se kata --
+                    kyunke rate mein diesel shamil tha aur wo kharcha
+                    vendor ka bacha, hamara nahi. */}
+                {bill.diesel_deducted > 0 && (
+                  <p className="mt-1 text-xs text-surface-500">
+                    {t("mc_vendor_diesel_note", lang).replace(
+                      "{amount}",
+                      `Rs ${bill.diesel_deducted.toLocaleString()}`
+                    )}
+                  </p>
+                )}
+                {artDiesel > 0 && (
+                  <Row label={t("mc_diesel_recoverable", lang)} value={-artDiesel} />
+                )}
                 {paidToVendor > 0 && <Row label={t("mc_paid_so_far", lang)} value={-paidToVendor} />}
                 <div className="mt-1 flex justify-between font-display font-semibold">
                   <span>{t("mc_balance", lang)}</span>
@@ -1108,6 +1139,19 @@ function FuelForm({
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFuelEntry, initialState);
+
+  // Raqam ka khana yahan se hata diya gaya.
+  //
+  // Ab litre aur us din ka rate poochhe jate hain, aur raqam khud
+  // banti hai -- sirf dikhane ke liye yahan, aur asal mein DB par
+  // (170). Haath se likhi hui raqam wo jagah hai jahan ek sifar
+  // zyada lag jata hai aur kisi ko pata nahi chalta.
+  //
+  // Aur us se do adad kabhi nahi milte jo asal mein chahiye hote
+  // hain: litre per acre, aur kis din kis rate par liya.
+  const [litres, setLitres] = useState("");
+  const [rate, setRate] = useState("");
+  const total = Number(litres) > 0 && Number(rate) > 0 ? Number(litres) * Number(rate) : null;
   const [paidBy, setPaidBy] = useState("");
   const [more, setMore] = useState(false);
 
@@ -1145,18 +1189,30 @@ function FuelForm({
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <p className="text-xs text-surface-500">{t("mc_fuel_hint", lang)}</p>
+
+      {/* Raqam saamne dikhti hai magar bhari nahi jati -- wo litre aur
+          rate se khud banti hai. Banda dekh sakta hai ke jo wo likh
+          raha hai us ka natija kya hoga, magar us natije ko haath
+          nahi laga sakta. */}
+      {total !== null && (
+        <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
+          {litres} × Rs {rate} ={" "}
+          <strong className="font-display">Rs {total.toLocaleString()}</strong>
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_date", lang)}</Label>
           <Input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} />
         </div>
         <div>
-          <Label>{t("mc_diesel_litre", lang)}</Label>
-          <Input type="number" name="litres" step="0.01" />
+          <Label>{t("mc_diesel_litre", lang)} *</Label>
+          <Input type="number" name="litres" step="0.01" value={litres} onChange={(e) => setLitres(e.target.value)} />
         </div>
         <div>
-          <Label>{t("mc_diesel_amount", lang)}</Label>
-          <Input type="number" name="amount" step="0.01" min="0" />
+          <Label>{t("mc_diesel_rate", lang)} *</Label>
+          <Input type="number" name="rate_per_litre" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} />
         </div>
         <div>
           <Label>{t("mc_diesel_paid_by", lang)}</Label>

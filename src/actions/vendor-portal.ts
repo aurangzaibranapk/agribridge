@@ -138,10 +138,17 @@ export async function submitVendorFuel(
   const bookingId = str(formData, "booking_id");
   if (!bookingId) return { error: "Booking chunein." };
 
-  const amount = num(formData, "amount") ?? 0;
+  // Raqam maangi nahi jati -- litre aur us din ka rate maange jate
+  // hain, aur raqam DB khud banata hai (170). Haath se likhi hui
+  // raqam wo jagah hai jahan ek sifar zyada lag jata hai.
+  const litres = num(formData, "litres");
+  const ratePerLitre = num(formData, "rate_per_litre");
   const paidBy = str(formData, "paid_by");
-  if (amount <= 0) return { error: "Diesel ki raqam likhein." };
+  if (!litres || litres <= 0) return { error: "Kitne litre diesel dala, wo likhein." };
+  if (!ratePerLitre || ratePerLitre <= 0) return { error: "Us din diesel ka rate kya tha, wo likhein." };
   if (!paidBy) return { error: "Diesel kis ne dala, wo batayein." };
+
+  const amount = Math.round(litres * ratePerLitre * 100) / 100;
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
@@ -155,7 +162,8 @@ export async function submitVendorFuel(
   const { error } = await supabase.from("machinery_fuel_logs").insert({
     booking_id: bookingId,
     log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
-    litres: num(formData, "litres"),
+    litres,
+    rate_per_litre: ratePerLitre,
     amount,
     paid_by: paidBy,
     notes: str(formData, "notes"),

@@ -313,6 +313,9 @@ function BookingCard({ booking }: { booking: Booking }) {
  */
 function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
   const [state, action] = useFormState(submitVendorFuel, initialState);
+  const [litres, setLitres] = useState("");
+  const [rate, setRate] = useState("");
+  const total = Number(litres) > 0 && Number(rate) > 0 ? Number(litres) * Number(rate) : null;
 
   if (state.success) {
     return <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">{state.notice}</p>;
@@ -327,14 +330,38 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
         <Field label="Tareekh">
           <input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
-        <Field label="Kitne litre">
-          <input type="number" step="0.1" name="litres" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <Field label="Kitne litre *">
+          <input
+            type="number"
+            step="0.01"
+            name="litres"
+            required
+            value={litres}
+            onChange={(e) => setLitres(e.target.value)}
+            className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+          />
         </Field>
       </div>
 
-      <Field label="Kitne ka (Rs) *">
-        <input type="number" step="0.01" name="amount" required className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+      <Field label="Us din ka rate per litre (Rs) *">
+        <input
+          type="number"
+          step="0.01"
+          name="rate_per_litre"
+          required
+          value={rate}
+          onChange={(e) => setRate(e.target.value)}
+          className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+        />
       </Field>
+
+      {/* Raqam dikhti hai magar bhari nahi jati -- wo litre aur rate
+          se khud banti hai. */}
+      {total !== null && (
+        <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm">
+          {litres} × Rs {rate} = <strong>Rs {total.toLocaleString()}</strong>
+        </p>
+      )}
 
       <Field label="Kis ne dala? *">
         <select name="paid_by" required defaultValue="" className="w-full rounded-lg border border-surface-200 p-2 text-sm">

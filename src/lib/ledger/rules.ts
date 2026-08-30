@@ -1053,15 +1053,59 @@ export async function postMachineryPayment(args: {
  * soorat mein munafa asal se kam dikhta hai, jo utni hi bari ghalti hai
  * jitni zyada dikhana.
  */
+/**
+ * Vendor ko us ka hissa dena.
+ *
+ * Do lakeeron ka kaam tha, ab teen ho sakti hain: agar ART ne us ke
+ * liye diesel diya tha, to wo raqam isi waqt wapas aati hai.
+ *
+ * `amount` wo POORI raqam hai jo us ke naam par khari thi. Us mein se
+ * `dieselRecovered` haath mein nahi jata -- wo pehle hi diesel ki
+ * shakal mein ja chuka. Cash sirf farq hai.
+ *
+ * Ye ek hi entry mein hona zaroori hai. Alag alag karein to beech ka
+ * lamha aisa hota hai jahan vendor ka payable saaf ho chuka hota hai
+ * magar us ka diesel wala advance abhi khara hota hai -- aur us lamhe
+ * mein jo bhi report chale wo jhoot bolti hai.
+ */
 export async function postMachineryVendorPayout(args: {
   bookingId: string;
   vendorId?: string | null;
   amount: number;
+  /** ART ka diya hua diesel jo isi adaigi mein wapas aa raha hai. */
+  dieselRecovered?: number;
   accountId?: string | null;
   description: string;
   ctx: EventContext;
 }): Promise<PostResult> {
   const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  const diesel = Math.round((args.dieselRecovered ?? 0) * 100) / 100;
+  const cash = Math.round((args.amount - diesel) * 100) / 100;
+
+  const lines: JournalLine[] = [
+    {
+      account: ACC.supplierPayable,
+      debit: args.amount,
+      partyType: "machinery_vendor",
+      partyId: args.vendorId ?? null,
+      memo: args.description,
+    },
+  ];
+
+  if (diesel > 0) {
+    lines.push({
+      account: ACC.supplierAdvance,
+      credit: diesel,
+      partyType: "machinery_vendor",
+      partyId: args.vendorId ?? null,
+      memo: `${args.description} — ART ka diesel wapas`,
+    });
+  }
+
+  if (cash > 0) {
+    lines.push({ account: gl, credit: cash, memo: args.description });
+  }
+
   return postJournal({
     description: args.description,
     sourceModule: "machinery_vendor_payout",
@@ -1070,15 +1114,6 @@ export async function postMachineryVendorPayout(args: {
     entryDate: args.ctx.entryDate,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
-    lines: [
-      {
-        account: ACC.supplierPayable,
-        debit: args.amount,
-        partyType: "machinery_vendor",
-        partyId: args.vendorId ?? null,
-        memo: args.description,
-      },
-      { account: gl, credit: args.amount, memo: args.description },
-    ],
+    lines,
   });
 }
