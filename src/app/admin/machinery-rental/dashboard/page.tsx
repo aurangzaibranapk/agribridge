@@ -217,7 +217,15 @@ export default async function MachineryDashboardPage() {
                     <td className="px-3 py-2">{r.will_sell_to_us === true ? <span className="text-green-600">{t("mc_yes", lang)}</span> : r.will_sell_to_us === false ? <span className="text-surface-400">{t("mc_no", lang)}</span> : "-"}</td>
                     <td className="px-3 py-2">{r.wants_next_season_reminder === true ? <span className="text-brand-600">{t("mc_yes", lang)}</span> : r.wants_next_season_reminder === false ? <span className="text-surface-400">{t("mc_no", lang)}</span> : "-"}</td>
                     <td className="px-3 py-2">
-                      <Link href={`/admin/machinery-rental/booking/new?convert_farmer=${r.farmer_id}&convert_request=${r.id}`} className="text-xs font-medium text-brand-600 hover:underline">
+                      {/* Raqba aur jagah bhi sath jate hain -- kisan wo pehle likh
+                          chuka hai. Staff se dobara likhwana wohi cheez do dafa
+                          karwana hai, aur wahin se do mukhtalif adad paida hote hain. */}
+                      <Link
+                        href={`/admin/machinery-rental/booking/new?convert_farmer=${r.farmer_id}&convert_request=${r.id}${
+                          r.acres ? `&convert_acres=${r.acres}` : ""
+                        }${r.location_address ? `&convert_location=${encodeURIComponent(r.location_address)}` : ""}`}
+                        className="text-xs font-medium text-brand-600 hover:underline"
+                      >
                         {t("mc_make_booking", lang)}
                       </Link>
                     </td>
