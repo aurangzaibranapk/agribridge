@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
@@ -1348,6 +1348,46 @@ function PaymentForm({
   const [state, action] = useFormState(recordFinalPayment, initialState);
   const [lines, setLines] = useState([0]);
   const [methods, setMethods] = useState<Record<number, string>>({ 0: "cash" });
+  const [again, setAgain] = useState(false);
+
+  // Adaigi darj hote hi khana band ho jata hai.
+  //
+  // Bhara hua khana jawab ke baad bhi khula rehna sab se mehnga
+  // masla hai: banda samajhta hai ke shayad gaya nahi, aur dobara
+  // dabata hai -- ek hi Rs 20,000 do dafa. (Yahi diesel ke sath ho
+  // chuka hai.) Aur adaigi aa jaye to khana ye niche wale link se
+  // khulta hai, apne aap nahi.
+  //
+  // Kisan ne paisa VENDOR ko diya ho to us se aage ka hisaab yahan
+  // ka nahi rehta: wo vendor ke khate ki baat hai, aur wahan vendor
+  // khud tasdeeq karta hai. Is liye wahan ka raasta bhi dikha dete
+  // hain.
+  if (state.success && !again) {
+    return (
+      <div className="space-y-2">
+        <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+          {state.notice ?? t("mc_payment_recorded", lang)}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setAgain(true);
+              setLines([0]);
+              setMethods({ 0: "cash" });
+            }}
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            {t("mc_payment_more", lang)}
+          </button>
+          <Link href="/admin/machinery-rental/vendor-cash" className="text-sm text-surface-500 underline hover:text-surface-700">
+            {t("mc_vendor_khata_link", lang)}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -1528,6 +1568,13 @@ function PromiseForm({
   const lang = useLang();
   const [state, action] = useFormState(recordPaymentPromise, initialState);
   const [open, setOpen] = useState(false);
+
+  // Wada darj hote hi khana band. Bhara hua khana jawab dene ke baad
+  // bhi khula rehna ye batata hai ke shayad jawab pahuncha hi nahi --
+  // aur wohi shak ek hi baat do dafa likhwa deta hai.
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
     <div className="mt-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">

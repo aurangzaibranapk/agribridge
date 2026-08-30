@@ -787,4 +787,19 @@ export const machineryDict = {
     rm: "Mehfooz hai \u2014 phone band ho jaye to bhi kuch nahi jayega.",
     ur: "\u0645\u062d\u0641\u0648\u0638 \u06c1\u06d2 \u2014 \u0641\u0648\u0646 \u0628\u0646\u062f \u06c1\u0648 \u062c\u0627\u0626\u06d2 \u062a\u0648 \u0628\u06be\u06cc \u06a9\u0686\u06be \u0646\u06c1\u06cc\u06ba \u062c\u0627\u0626\u06d2 \u06af\u0627\u06d4",
   },
+  mc_payment_recorded: {
+    en: "Payment recorded.",
+    rm: "Adaigi darj ho gayi.",
+    ur: "\u0627\u062f\u0627\u0626\u06cc\u06af\u06cc \u062f\u0631\u062c \u06c1\u0648 \u06af\u0626\u06cc\u06d4",
+  },
+  mc_payment_more: {
+    en: "More money came in? Record it",
+    rm: "Aur paisa aaya hai? Darj karein",
+    ur: "\u0627\u0648\u0631 \u067e\u06cc\u0633\u06c1 \u0622\u06cc\u0627 \u06c1\u06d2\u061f \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_vendor_khata_link: {
+    en: "Money the farmer gave the vendor \u2014 vendor's account",
+    rm: "Kisan ne vendor ko diya \u2014 vendor ka khata",
+    ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0627 \u2014 \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u06be\u0627\u062a\u06c1",
+  },
 } as const;
