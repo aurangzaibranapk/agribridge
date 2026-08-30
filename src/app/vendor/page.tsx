@@ -26,10 +26,32 @@ export default async function VendorPortalPage() {
 
   const { data: vendor } = await supabase
     .from("machinery_vendors")
-    .select("id, vendor_name")
+    .select("id, vendor_name, is_active")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!vendor) redirect("/login");
+
+  // Band vendor ko KHALI portal nahi milna chahiye (181).
+  //
+  // Pehle band vendor ko wohi dashboard milta tha, bas har adad sifar --
+  // aur wo samajhta tha ke us ka kaam aur paisa system se gayab ho gaya.
+  // Us ka record poora khara hai; bas us ka darwaza band hai, aur yehi
+  // baat usay saaf batani chahiye.
+  if (vendor.is_active === false) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <h1 className="font-display text-xl font-bold text-surface-900">{vendor.vendor_name}</h1>
+        <p className="mt-1 text-sm text-surface-500">Machinery Vendor Portal</p>
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-medium text-amber-800">Aap ka account filhaal band hai.</p>
+          <p className="mt-2 text-xs text-amber-700">
+            Aap ka poora record mehfooz hai — purana kaam, hisaab aur adaigiyan sab apni jagah hain. Dobara chalu
+            karwane ke liye AgriBridge ke daftar se raabta karein.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Khata view se -- wahan commission aur baqi ka hisaab ek hi jagah
   // hota hai, aur wohi hisaab staff bhi dekhta hai. Do jagah do hisaab
