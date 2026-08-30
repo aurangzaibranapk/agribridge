@@ -10,7 +10,31 @@ import { createServiceClient } from "@/lib/supabase/service";
  * Meter dhundla ho ya bill ka hisaab na mile, tab bhi record ban jata
  * hai; faisla manager karta hai. Rok dene se staff kaam chhoR kar
  * daftar ke chakkar lagata hai, aur asal saboot kabhi darj hi nahi hota.
+ *
+ * DO DARWAZE, EK HISAAB (178). Ye teenon function WhatsApp se bhi
+ * bulaye jate hain aur app ke safhe se bhi. Hisaab -- mileage, cost per
+ * km, "jitna petrol lagna chahiye tha" ka farq -- sirf yahan hota hai.
+ * Doosri jagah dobara likha hota to kisi din WhatsApp wali mileage aur
+ * app wali mileage alag nikal aatin, aur koi na bata pata ke sach kaun
+ * si hai.
  */
+
+/**
+ * Saboot -- kis darwaze se aaya.
+ *
+ * WhatsApp se aaye to tasveer submission ke andar hoti hai; app se aaye
+ * to alag chaRhai jati hai. Dono mein se ek hona LAZMI hai: bina saboot
+ * ke meter ka adad sirf kisi ka dawa hai. Yehi rok database par bhi
+ * lagi hui hai.
+ */
+export interface Proof {
+  submissionId?: string | null;
+  photoPath?: string | null;
+}
+
+function proofMissing(proof: Proof): boolean {
+  return !proof.submissionId && !proof.photoPath;
+}
 
 /** Kitne fisad ka farq nishan lagane ke qabil hai (fuel.ts wahi 25% istemal karta hai). */
 const MILEAGE_TOLERANCE = 0.25;
@@ -101,9 +125,10 @@ export async function recordOpening(
   staffProfileId: string,
   branchId: string | null,
   km: number,
-  submissionId: string
+  proof: Proof
 ): Promise<OpeningResult | { error: string }> {
   const service = createServiceClient();
+  if (proofMissing(proof)) return { error: "Meter ki tasveer laazmi hai." };
   const existing = await todaysLog(vehicle.id);
 
   if (existing?.opening_km != null) {
@@ -124,7 +149,14 @@ export async function recordOpening(
   if (existing) {
     await service
       .from("vehicle_daily_logs")
-      .update({ opening_km: km, opening_at: now, opening_submission_id: submissionId, flags: [...(existing.flags as string[] ?? []), ...flags] as never, updated_at: now })
+      .update({
+        opening_km: km,
+        opening_at: now,
+        opening_submission_id: proof.submissionId ?? null,
+        opening_photo_path: proof.photoPath ?? null,
+        flags: [...((existing.flags as string[]) ?? []), ...flags] as never,
+        updated_at: now,
+      })
       .eq("id", existing.id);
     return { logNumber: existing.log_number, flags, message: "Subah ka meter darj ho gaya." };
   }
@@ -138,7 +170,8 @@ export async function recordOpening(
     log_date: today(),
     opening_km: km,
     opening_at: now,
-    opening_submission_id: submissionId,
+    opening_submission_id: proof.submissionId ?? null,
+    opening_photo_path: proof.photoPath ?? null,
     flags: flags as never,
     status: "open",
   });
@@ -158,9 +191,11 @@ export async function recordFuel(
   staffProfileId: string,
   branchId: string | null,
   fuel: { liters: number | null; ratePerLiter: number | null; amount: number | null; receiptPath: string | null },
-  submissionId: string
+  proof: Proof
 ): Promise<FuelResult | { error: string }> {
   const service = createServiceClient();
+  // Bill ki tasveer bhi lazmi -- ye paisa hai.
+  if (!proof.submissionId && !fuel.receiptPath) return { error: "Bill ki tasveer laazmi hai." };
   let log = await todaysLog(vehicle.id);
 
   // Subah ka meter na aaya ho to bhi bill darj hota hai — warna saboot
@@ -200,7 +235,7 @@ export async function recordFuel(
 
   const { error } = await service.from("vehicle_fuel_entries").insert({
     daily_log_id: log.id,
-    submission_id: submissionId,
+    submission_id: proof.submissionId ?? null,
     liters: fuel.liters,
     rate_per_liter: fuel.ratePerLiter,
     amount: fuel.amount,
@@ -235,9 +270,10 @@ export interface ClosingResult {
 export async function recordClosing(
   vehicle: VehicleForStaff,
   km: number,
-  submissionId: string
+  proof: Proof
 ): Promise<ClosingResult | { error: string }> {
   const service = createServiceClient();
+  if (proofMissing(proof)) return { error: "Meter ki tasveer laazmi hai." };
   const log = await todaysLog(vehicle.id);
 
   if (!log) return { error: "Aaj ka koi log nahi mila. Pehle subah ka meter bhejein." };
@@ -291,7 +327,8 @@ export async function recordClosing(
     .update({
       closing_km: km,
       closing_at: now,
-      closing_submission_id: submissionId,
+      closing_submission_id: proof.submissionId ?? null,
+      closing_photo_path: proof.photoPath ?? null,
       km_travelled: kmTravelled,
       fuel_liters: fuelLiters,
       fuel_amount: fuelAmount,

@@ -215,7 +215,7 @@ async function handlePhoto(
     }
 
     if (wantsClosing) {
-      const result = await recordClosing(vehicle, km, sub.id);
+      const result = await recordClosing(vehicle, km, { submissionId: sub.id });
       if ("error" in result) return result.error;
 
       const lines = [
@@ -233,7 +233,7 @@ async function handlePhoto(
       return lines.join("\n") + flagLine(result.flags);
     }
 
-    const result = await recordOpening(vehicle, staff.profileId, staff.branchId, km, sub.id);
+    const result = await recordOpening(vehicle, staff.profileId, staff.branchId, km, { submissionId: sub.id });
     if ("error" in result) return result.error;
     return `Subah ka meter darj: ${km.toLocaleString()} km\nGaari: ${vehicle.vehicleName}\n\nShaam ko kaam khatam hone par meter ki photo dobara bhej dein.${flagLine(result.flags)}`;
   }
@@ -257,7 +257,7 @@ async function handlePhoto(
       staff.profileId,
       staff.branchId,
       { liters: reading?.liters ?? null, ratePerLiter: reading?.ratePerLiter ?? null, amount: reading?.amount ?? null, receiptPath: null },
-      sub.id
+      { submissionId: sub.id }
     );
     if ("error" in result) return result.error;
 

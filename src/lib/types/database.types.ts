@@ -16757,6 +16757,7 @@ export type Database = {
           branch_id: string | null
           closing_at: string | null
           closing_km: number | null
+          closing_photo_path: string | null
           closing_submission_id: string | null
           cost_per_km: number | null
           created_at: string
@@ -16772,6 +16773,7 @@ export type Database = {
           log_number: string
           opening_at: string | null
           opening_km: number | null
+          opening_photo_path: string | null
           opening_submission_id: string | null
           posted_at: string | null
           posted_fuel_log_id: string | null
@@ -16784,6 +16786,7 @@ export type Database = {
           branch_id?: string | null
           closing_at?: string | null
           closing_km?: number | null
+          closing_photo_path?: string | null
           closing_submission_id?: string | null
           cost_per_km?: number | null
           created_at?: string
@@ -16799,6 +16802,7 @@ export type Database = {
           log_number: string
           opening_at?: string | null
           opening_km?: number | null
+          opening_photo_path?: string | null
           opening_submission_id?: string | null
           posted_at?: string | null
           posted_fuel_log_id?: string | null
@@ -16811,6 +16815,7 @@ export type Database = {
           branch_id?: string | null
           closing_at?: string | null
           closing_km?: number | null
+          closing_photo_path?: string | null
           closing_submission_id?: string | null
           cost_per_km?: number | null
           created_at?: string
@@ -16826,6 +16831,7 @@ export type Database = {
           log_number?: string
           opening_at?: string | null
           opening_km?: number | null
+          opening_photo_path?: string | null
           opening_submission_id?: string | null
           posted_at?: string | null
           posted_fuel_log_id?: string | null
