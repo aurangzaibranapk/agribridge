@@ -1355,4 +1355,18 @@ export const machineryDict = {
   mc_undo_yes: { en: "Yes, undo", rm: "Haan, hata dein", ur: "\u06c1\u0627\u06ba\u060c \u06c1\u0679\u0627 \u062f\u06cc\u06ba" },
   mc_undo_no: { en: "No", rm: "Rehne dein", ur: "\u0631\u06c1\u0646\u06d2 \u062f\u06cc\u06ba" },
   mc_back_to_question: { en: "Back \u2014 change the answer", rm: "Wapis \u2014 jawab badlein", ur: "\u0648\u0627\u067e\u0633 \u2014 \u062c\u0648\u0627\u0628 \u0628\u062f\u0644\u06cc\u06ba" },
+
+  // ---- Vendor theek karna / band karna / mitana (181) ----
+  mv_edit: { en: "Edit", rm: "Theek karein", ur: "\u062f\u0631\u0633\u062a \u06a9\u0631\u06cc\u06ba" },
+  mv_save: { en: "Save", rm: "Mehfooz karein", ur: "\u0645\u062d\u0641\u0648\u0638 \u06a9\u0631\u06cc\u06ba" },
+  mv_cancel: { en: "Cancel", rm: "Rehne dein", ur: "\u0631\u06c1\u0646\u06d2 \u062f\u06cc\u06ba" },
+  mv_suspend: { en: "Suspend", rm: "Band karein", ur: "\u0628\u0646\u062f \u06a9\u0631\u06cc\u06ba" },
+  mv_activate: { en: "Activate again", rm: "Dobara chalu", ur: "\u062f\u0648\u0628\u0627\u0631\u06c1 \u0686\u0627\u0644\u0648" },
+  mv_delete: { en: "Delete", rm: "Mitayein", ur: "\u0645\u0679\u0627\u0626\u06cc\u06ba" },
+  mv_inactive: { en: "Suspended", rm: "Band hai", ur: "\u0628\u0646\u062f \u06c1\u06d2" },
+  mv_suspend_hint: { en: "The record stays; only new bookings stop.", rm: "Record khara rehta hai, sirf nayi booking rukti hai.", ur: "\u0631\u06cc\u06a9\u0627\u0631\u0688 \u0631\u06c1\u062a\u0627 \u06c1\u06d2\u060c \u0635\u0631\u0641 \u0646\u0626\u06cc \u0628\u06a9\u0646\u06af \u0631\u06a9\u062a\u06cc \u06c1\u06d2" },
+  mv_delete_sure: { en: "Delete for good?", rm: "Pakka mitana hai?", ur: "\u067e\u06a9\u0627 \u0645\u0679\u0627\u0646\u0627 \u06c1\u06d2\u061f" },
+  mv_name: { en: "Vendor name", rm: "Vendor ka naam", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u0646\u0627\u0645" },
+  mv_contact: { en: "Contact person", rm: "Raabta karne wala", ur: "\u0631\u0627\u0628\u0637\u06c1 \u06a9\u0631\u0646\u06d2 \u0648\u0627\u0644\u0627" },
+  mv_phone: { en: "Mobile", rm: "Mobile", ur: "\u0645\u0648\u0628\u0627\u0626\u0644" },
 } as const;

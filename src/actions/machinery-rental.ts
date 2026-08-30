@@ -46,6 +46,95 @@ export async function createMachineryVendor(_prev: ActionState, formData: FormDa
   return { success: true };
 }
 
+/**
+ * Vendor ka naam/phone theek karna.
+ *
+ * Pehle vendor sirf BANAYA ja sakta tha. Naam ghalat likha jaye to us
+ * ka koi ilaaj hi nahi tha, aur staff naya vendor bana leta -- yehi
+ * duplicate ki asal jarh thi.
+ */
+export async function updateMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const vendorName = String(formData.get("vendor_name") ?? "").trim();
+  if (!vendorName) return { error: "Vendor ka naam likhein." };
+
+  const { error } = await supabase
+    .from("machinery_vendors")
+    .update({
+      vendor_name: vendorName,
+      contact_person: (formData.get("contact_person") as string)?.trim() || null,
+      phone: (formData.get("phone") as string)?.trim() || null,
+    })
+    .eq("id", id);
+  // "Ek mobile ek vendor" ki rok database par hai (181). Us ka paighaam
+  // waise ka waisa aage bhejte hain -- wo staff ke liye likha gaya hai.
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
+/**
+ * Vendor band karna ya dobara chalu karna.
+ *
+ * BAND karna mitana NAHI hai: us ka poora record khara rehta hai --
+ * purani bookings, bill, adaigiyan, sab. Bas nayi booking us par nahi
+ * jati.
+ *
+ * Aksar yehi cheez chahiye hoti hai. Mitana sirf us soorat mein banta
+ * hai jab vendor ke sath kuch juda hi na ho.
+ */
+export async function setMachineryVendorActive(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  const makeActive = String(formData.get("active") ?? "") === "on";
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const { error } = await supabase.from("machinery_vendors").update({ is_active: makeActive }).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
+/**
+ * Vendor mitana -- sirf jab us ke sath kuch juda hi na ho.
+ *
+ * Asal rok database par hai (181): booking, machine ya login juda ho to
+ * wahan se hi inkar ho jata hai. Yahan wo shart dobara parkhi jati hai
+ * taake staff ko saaf jawab mile, database ka rukha paighaam nahi.
+ */
+export async function deleteMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const [{ count: machines }, { count: bookings }] = await Promise.all([
+    supabase.from("machinery_vendor_machines").select("id", { count: "exact", head: true }).eq("vendor_id", id),
+    supabase.from("machinery_bookings").select("id", { count: "exact", head: true }).eq("vendor_id", id),
+  ]);
+
+  if ((bookings ?? 0) > 0) {
+    return {
+      error: `Is vendor ki ${bookings} booking maujood hain -- mitaya nahi ja sakta. Us ko BAND kar dein: record khara rahega aur nayi booking us par nahi jayegi.`,
+    };
+  }
+  if ((machines ?? 0) > 0) {
+    return {
+      error: `Is vendor ki ${machines} machine darj hai -- pehle machine kisi aur vendor par le jayein, phir ye vendor mitayein.`,
+    };
+  }
+
+  const { error } = await supabase.from("machinery_vendors").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
 export async function createVendorMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const vendorId = String(formData.get("vendor_id") ?? "");

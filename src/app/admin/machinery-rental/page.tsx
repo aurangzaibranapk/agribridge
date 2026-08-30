@@ -21,7 +21,10 @@ export default async function MachineryRentalPage({
     { data: farmers },
     { data: rawBookings },
   ] = await Promise.all([
-    supabase.from("machinery_vendors").select("id, vendor_name, contact_person, phone, user_id").eq("is_active", true).order("vendor_name"),
+    // Band vendor bhi fehrist mein aata hai (181) -- warna usay dobara
+    // chalu karne ka koi raasta hi nahi bachta. Us ki qatar halki
+    // dikhti hai aur nayi booking us par nahi jati.
+    supabase.from("machinery_vendors").select("id, vendor_name, contact_person, phone, user_id, is_active").order("is_active", { ascending: false }).order("vendor_name"),
     supabase.from("machinery_vendor_machines").select("*, machinery_vendors(vendor_name)").eq("is_available", true).order("machine_type"),
     supabase.from("farmers").select("id, full_name, farmer_code, booking_link_token").eq("is_deleted", false).order("full_name"),
     supabase
@@ -70,6 +73,31 @@ export default async function MachineryRentalPage({
   (allBills ?? []).forEach((b) =>
     billBy.set(b.booking_id, { balance: Number(b.balance_payable), vendor: Number(b.vendor_payable) })
   );
+
+  // Vendor ke sath kya juda hua hai -- mitane ka button isi par hai.
+  const [{ data: vendorMachines }, { data: vendorBookings }] = await Promise.all([
+    supabase.from("machinery_vendor_machines").select("vendor_id"),
+    supabase.from("machinery_bookings").select("vendor_id"),
+  ]);
+  const machineCount = new Map<string, number>();
+  (vendorMachines ?? []).forEach((m) => {
+    if (m.vendor_id) machineCount.set(m.vendor_id, (machineCount.get(m.vendor_id) ?? 0) + 1);
+  });
+  const bookingCount = new Map<string, number>();
+  (vendorBookings ?? []).forEach((b) => {
+    if (b.vendor_id) bookingCount.set(b.vendor_id, (bookingCount.get(b.vendor_id) ?? 0) + 1);
+  });
+
+  const vendorRows = (vendors ?? []).map((v) => ({
+    id: v.id,
+    vendor_name: v.vendor_name,
+    contact_person: v.contact_person,
+    phone: v.phone,
+    user_id: v.user_id,
+    is_active: v.is_active,
+    machine_count: machineCount.get(v.id) ?? 0,
+    booking_count: bookingCount.get(v.id) ?? 0,
+  }));
 
   const machines = (rawMachines ?? []).map((m: any) => {
     const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
@@ -149,7 +177,7 @@ export default async function MachineryRentalPage({
       </div>
 
       <MachineryClient
-        vendors={vendors ?? []}
+        vendors={vendorRows}
         machines={machines}
         farmers={farmers ?? []}
         bookings={bookings}

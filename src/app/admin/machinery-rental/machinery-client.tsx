@@ -7,6 +7,9 @@ import {
   createMachineryVendor,
   createVendorMachine,
   recordVendorPayout,
+  updateMachineryVendor,
+  setMachineryVendorActive,
+  deleteMachineryVendor,
   type ActionState,
 } from "@/actions/machinery-rental";
 import { setMachineryCommissionRate } from "@/actions/machinery-lifecycle";
@@ -16,11 +19,21 @@ type VendorLoginState = VendorActionState & { loginId?: string; password?: strin
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { LiveBoard } from "./live-board";
 import Link from "next/link";
-import { Plus, X, Share2 } from "lucide-react";
+import { Plus, X, Share2, Pencil, Ban, Trash2, RotateCcw } from "lucide-react";
 
 const initialState: ActionState = {};
 
-interface Vendor { id: string; vendor_name: string; contact_person: string | null; phone: string | null; user_id?: string | null; }
+interface Vendor {
+  id: string;
+  vendor_name: string;
+  contact_person: string | null;
+  phone: string | null;
+  user_id?: string | null;
+  is_active?: boolean;
+  /** Kya is vendor ke sath kuch juda hua hai -- mitane ka faisla isi par hai (181). */
+  machine_count?: number;
+  booking_count?: number;
+}
 interface Machine {
   id: string;
   vendor_id: string;
@@ -141,7 +154,7 @@ export function MachineryClient({
             </div>
             <div className="divide-y divide-surface-100 dark:divide-surface-800">
               {vendors.map((v) => (
-                <VendorLoginRow key={v.id} vendor={v} />
+                <VendorRow key={v.id} vendor={v} />
               ))}
               {vendors.length === 0 && (
                 <p className="px-3 py-6 text-center text-surface-400">{t("mc_no_vendors", lang)}</p>
@@ -405,9 +418,15 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
           {owner === "vendor" && (
             <Select name="vendor_id" required>
               <option value="">{t("mc_select_vendor", lang)}</option>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>{v.vendor_name}</option>
-              ))}
+              {/* Band vendor yahan nahi aata -- nayi machine us par
+                  lagana wohi cheez wapis khol dena hai jo band ki gayi
+                  thi. Fehrist mein wo phir bhi dikhta hai, taake dobara
+                  chalu kiya ja sake. */}
+              {vendors
+                .filter((v) => v.is_active !== false)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>{v.vendor_name}</option>
+                ))}
             </Select>
           )}
           <Input name="machine_type" required placeholder={t("mc_machine_type_field", lang)} />
@@ -550,6 +569,149 @@ function SubmitButtonUrdu({ disabled }: { disabled: boolean }) {
  * har vendor ke khate mein daakhil ho sake -- is liye bhool jane par
  * naya banaya jata hai, purana dhoondha nahi jata.
  */
+/**
+ * Vendor ki apni qatar: naam, login, aur us par kiye jane wale kaam.
+ *
+ * Teen alag cheezen, aur unhein alag rakhna zaroori hai:
+ *
+ *   THEEK KARNA -- naam ya number ghalat ho to badal lein. Pehle is ka
+ *   koi raasta nahi tha, aur staff naya vendor bana leta -- yehi
+ *   duplicate ki asal jarh thi.
+ *
+ *   BAND KARNA -- vendor ab kaam nahi karta, magar us ka poora record
+ *   khara rehta hai. Aksar yehi cheez chahiye hoti hai.
+ *
+ *   MITANA -- sirf us vendor par jis ke sath kuch juda hi na ho. Jis ki
+ *   ek bhi booking ya machine ho, us ka button hi nahi aata; aur agar
+ *   kisi doosre raaste se koshish ho to database khud rok deta hai.
+ */
+function VendorRow({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [editing, setEditing] = useState(false);
+
+  const attached = (vendor.machine_count ?? 0) + (vendor.booking_count ?? 0);
+  const canDelete = attached === 0 && !vendor.user_id;
+
+  if (editing) {
+    return <VendorEditForm vendor={vendor} onDone={() => setEditing(false)} />;
+  }
+
+  return (
+    <div className={vendor.is_active === false ? "bg-surface-50/60 dark:bg-surface-800/30" : ""}>
+      <VendorLoginRow vendor={vendor} />
+      <div className="flex flex-wrap items-center gap-3 px-3 pb-3 text-xs">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1 font-medium text-brand-600 hover:underline"
+        >
+          <Pencil className="h-3 w-3" /> {t("mv_edit", lang)}
+        </button>
+
+        <VendorActiveToggle vendor={vendor} />
+
+        {canDelete ? (
+          <VendorDeleteButton vendor={vendor} />
+        ) : (
+          <span className="text-surface-400">
+            {attached > 0
+              ? `${attached} cheez juri hui hai — ${t("mv_delete", lang).toLowerCase()} nahi ho sakta`
+              : "login bana hua hai"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VendorEditForm({ vendor, onDone }: { vendor: Vendor; onDone: () => void }) {
+  const lang = useLang();
+  const [state, action] = useFormState(updateMachineryVendor, initialState);
+
+  useEffect(() => {
+    if (state.success) onDone();
+  }, [state.success, onDone]);
+
+  return (
+    <form action={action} className="space-y-2 border-l-4 border-brand-400 px-3 py-3">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      {state.error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Input name="vendor_name" defaultValue={vendor.vendor_name} placeholder={t("mv_name", lang)} required />
+        <Input name="contact_person" defaultValue={vendor.contact_person ?? ""} placeholder={t("mv_contact", lang)} />
+        <Input name="phone" defaultValue={vendor.phone ?? ""} placeholder={t("mv_phone", lang)} />
+      </div>
+      <div className="flex gap-2">
+        <SubmitButton label={t("mv_save", lang)} />
+        <button type="button" onClick={onDone} className="text-xs text-surface-500 underline hover:text-surface-700">
+          {t("mv_cancel", lang)}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function VendorActiveToggle({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [, action] = useFormState(setMachineryVendorActive, initialState);
+  const active = vendor.is_active !== false;
+
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      {/* Checkbox nahi -- seedha wo halat bheji jati hai jo chahiye. */}
+      <input type="hidden" name="active" value={active ? "" : "on"} />
+      <button type="submit" className="flex items-center gap-1 font-medium text-surface-600 hover:underline dark:text-surface-400">
+        {active ? <Ban className="h-3 w-3" /> : <RotateCcw className="h-3 w-3" />}
+        {active ? t("mv_suspend", lang) : t("mv_activate", lang)}
+      </button>
+      {!active && (
+        <span className="rounded-full bg-surface-200 px-2 py-0.5 text-[11px] text-surface-600 dark:bg-surface-700 dark:text-surface-300">
+          {t("mv_inactive", lang)}
+        </span>
+      )}
+      {active && <span className="text-surface-400">({t("mv_suspend_hint", lang)})</span>}
+    </form>
+  );
+}
+
+function VendorDeleteButton({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [state, action] = useFormState(deleteMachineryVendor, initialState);
+  const [asking, setAsking] = useState(false);
+
+  if (state.error) return <span className="text-red-600 dark:text-red-400">{state.error}</span>;
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="flex items-center gap-1 font-medium text-red-600 hover:underline"
+      >
+        <Trash2 className="h-3 w-3" /> {t("mv_delete", lang)}
+      </button>
+    );
+  }
+
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      <span className="text-surface-600 dark:text-surface-400">{t("mv_delete_sure", lang)}</span>
+      <button type="submit" className="font-medium text-red-600 hover:underline">
+        {t("mv_delete", lang)}
+      </button>
+      <button type="button" onClick={() => setAsking(false)} className="text-surface-500 underline">
+        {t("mv_cancel", lang)}
+      </button>
+    </form>
+  );
+}
+
 function VendorLoginRow({ vendor }: { vendor: Vendor }) {
   const lang = useLang();
   const [createState, createAction] = useFormState(createVendorLogin, {} as VendorLoginState);
