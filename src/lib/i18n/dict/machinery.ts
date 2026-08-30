@@ -110,6 +110,23 @@ export const machineryDict = {
     ur: "کیا یہ کسان فصل ہمیں بیچے گا؟",
   },
   mc_no: { en: "No", rm: "Nahi", ur: "نہیں" },
+  mc_farmer_decision: {
+    en: "What did the farmer decide?",
+    rm: "Kisan ne kya faisla kiya?",
+    ur: "کسان نے کیا فیصلہ کیا؟",
+  },
+  mc_farmer_said_yes: { en: "Agreed to this rate", rm: "Is rate par haan ki", ur: "اس ریٹ پر ہاں کی" },
+  mc_farmer_objected: { en: "Raised an objection", rm: "Aitraaz kiya", ur: "اعتراض کیا" },
+  mc_what_farmer_said_hint: {
+    en: "in his own words",
+    rm: "us ke apne lafzon mein",
+    ur: "اس کے اپنے لفظوں میں",
+  },
+  mc_last_objection: {
+    en: "Last objection from the farmer",
+    rm: "Kisan ka aakhri aitraaz",
+    ur: "کسان کا آخری اعتراض",
+  },
 
   // Khaiton ka naqsha
   fm_back: { en: "Back to Machinery", rm: "Machinery par wapas", ur: "مشینری پر واپس" },

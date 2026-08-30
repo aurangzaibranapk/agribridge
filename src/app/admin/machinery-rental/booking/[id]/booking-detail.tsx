@@ -140,6 +140,18 @@ export function BookingDetail({
   const balance = bill ? Math.round((bill.balance_payable - finalPaid) * 100) / 100 : null;
   const cancelled = booking.status === "cancelled";
 
+  // Kisan ka aakhri aitraaz -- sirf wo jo aakhri rate bhejne ke BAAD
+  // aaya ho. Purana aitraaz naye rate par dikhana galat hai: wo bahes
+  // khatam ho chuki hoti hai.
+  const lastObjection = [...events]
+    .reverse()
+    .find(
+      (e) =>
+        e.event_type === "farmer_raised_issue" &&
+        (!booking.rate_confirmation_sent_at ||
+          new Date(e.created_at) >= new Date(booking.rate_confirmation_sent_at))
+    );
+
   // Kaam ka jor -- bill isi se banta hai, kisi ek din se nahi.
   const workDone = Math.round(work.reduce((sum, w) => sum + w.actual_area, 0) * 10000) / 10000;
   const workFinished = work.some((w) => w.is_final);
@@ -289,6 +301,22 @@ export function BookingDetail({
                       Rs {booking.final_rate?.toLocaleString()}/acre par confirmation bheja ja chuka hai (
                       {new Date(booking.rate_confirmation_sent_at).toLocaleString()}). Kisan ka jawab yahan darj karein:
                     </p>
+                    {/* Aitraaz aaya ho to wo yahan saamne rakha jata hai.
+                        Warna staff ko sirf khula hua form nazar aata hai
+                        aur wajah kahin nahi -- wo samajhta hai ke us ka
+                        indraj gaya hi nahi, aur dobara bhejta rehta hai. */}
+                    {lastObjection && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+                        <p className="font-medium text-amber-800 dark:text-amber-300">
+                          {t("mc_last_objection", lang)}
+                        </p>
+                        <p className="text-amber-800 dark:text-amber-300">{lastObjection.note}</p>
+                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                          {new Date(lastObjection.created_at).toLocaleString()}
+                          {lastObjection.actor_name ? ` · ${lastObjection.actor_name}` : ""}
+                        </p>
+                      </div>
+                    )}
                     <FarmerResponseForm bookingId={booking.id} />
                     {canOverride && <OverrideForm bookingId={booking.id} />}
                   </>
@@ -658,10 +686,45 @@ function RateConfirmationForm({ bookingId, defaultRate }: { bookingId: string; d
 function FarmerResponseForm({ bookingId }: { bookingId: string }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFarmerConfirmation, initialState);
+  const [decision, setDecision] = useState("");
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="decision" value={decision} />
+
+      {/* Faisla pehle, jumla baad mein.
+          Kisan ne haan ki ya aitraaz -- ye us bande ko maloom hai jo
+          phone par tha. Pehle ye jumle se andaza lagaya jata tha, aur
+          "call" jaisa lafz aitraaz ban jata tha. */}
+      <div>
+        <Label>{t("mc_farmer_decision", lang)}</Label>
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDecision("accept")}
+            className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
+              decision === "accept"
+                ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/30"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            {t("mc_farmer_said_yes", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDecision("issue")}
+            className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
+              decision === "issue"
+                ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            {t("mc_farmer_objected", lang)}
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_how_reply_came", lang)}</Label>
@@ -674,7 +737,7 @@ function FarmerResponseForm({ bookingId }: { bookingId: string }) {
       </div>
       <div>
         <Label>{t("mc_what_farmer_said", lang)}</Label>
-        <Textarea name="response" rows={2} placeholder="CONFIRM" />
+        <Textarea name="response" rows={2} placeholder={t("mc_what_farmer_said_hint", lang)} />
       </div>
       <Submit label={t("mc_record_reply", lang)} />
     </form>

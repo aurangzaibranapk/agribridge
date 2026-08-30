@@ -756,9 +756,24 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
   const response = str(formData, "response");
   const channel = str(formData, "channel") ?? "manual";
   if (!bookingId) return { error: "Booking nahi mili." };
-  if (!response) return { error: "Kisan ka jawab likhein." };
+  if (!response) return { error: "Kisan ne jo kaha wo likhein." };
 
-  const accepted = /confirm|haan|ok|theek|manzoor/i.test(response);
+  // Faisla ab SAAF poochha jata hai, matn se andaza nahi lagaya jata.
+  //
+  // Pehle yahan likhe hue jumle mein "haan / ok / confirm" dhoonda jata
+  // tha. Wo do tarah se toota: staff ne "call" likh diya (matlab jawab
+  // phone par aaya) aur system ne usay AITRAAZ samajh liya -- qadam
+  // khula reh gaya aur kisi ko wajah nazar nahi aayi. Doosri taraf
+  // "haan magar itne mein nahi kar sakta" mein bhi "haan" mil jata aur
+  // rate final ho jata.
+  //
+  // Kisan ne haan ki ya nahi -- ye us bande ko maloom hai jo phone par
+  // tha. Usi se poochh lena andaze se hamesha behtar hai.
+  const decision = str(formData, "decision");
+  if (decision !== "accept" && decision !== "issue") {
+    return { error: "Batayein ke kisan ne HAAN ki ya aitraaz kiya." };
+  }
+  const accepted = decision === "accept";
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
@@ -780,7 +795,10 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
       actorId,
     });
     revalidateAll(bookingId);
-    return { success: true };
+    return {
+      success: true,
+      notice: `Kisan ka aitraaz darj ho gaya: "${response}". Rate abhi final nahi hua — naya rate bhej kar dobara poochhein.`,
+    };
   }
 
   const { error } = await supabase
@@ -805,7 +823,7 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
   });
 
   revalidateAll(bookingId);
-  return { success: true };
+  return { success: true, notice: "Kisan ki tasdeeq darj ho gayi — ab machine bheji ja sakti hai." };
 }
 
 /**
