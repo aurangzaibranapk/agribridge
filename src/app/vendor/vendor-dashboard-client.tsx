@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import {
   submitVendorWork,
+  submitVendorClosing,
   submitVendorFuel,
   submitVendorCollection,
   markVendorProgress,
@@ -56,6 +57,7 @@ interface Booking {
   rejected: Array<{ id: string; rejection_reason: string | null }>;
   verifiedArea: number;
   workDone: boolean;
+  closingDone: boolean;
 }
 
 // Vendor ke liye halat us ki apni zabaan mein. Andar ke naam
@@ -1089,9 +1091,16 @@ function Row3({ label, value, strong, tone }: { label: string; value: number; st
  * dafa jati hai, chaar dafa nahi.
  */
 function BookingCard({ booking }: { booking: Booking }) {
-  const [open, setOpen] = useState<null | "work" | "fuel" | "cash">(null);
+  const [open, setOpen] = useState<null | "work" | "closing" | "fuel" | "cash">(null);
   const status = STATUS[booking.status] ?? { label: booking.status, color: "bg-surface-100 text-surface-600" };
   const canSubmitWork = ["ready_for_harvest", "in_progress"].includes(booking.status) && !booking.workDone;
+
+  // Kaam mukammal ho chuka -- magar wo do sawal abhi baqi hain jo sirf
+  // vendor jaanta hai. Ye us waqt bhi hota hai jab daftar ke bande ne
+  // khud "mukammal" darj kiya ho: tab vendor se kabhi poochha hi nahi
+  // jata tha, aur diesel aur kisan ki adaigi us ki yaad mein reh jati
+  // thi (182).
+  const needsClosing = booking.workDone && !booking.closingDone;
 
   // Diesel aur kisan se li hui raqam booking ke poore arse mein darj
   // ho sakti hain -- diesel kai dafa parta hai, aur kisan kabhi kabhi
@@ -1290,6 +1299,14 @@ function BookingCard({ booking }: { booking: Booking }) {
                   Kattai ki tafseel bhejein
                 </button>
               )}
+              {needsClosing && (
+                <button
+                  onClick={() => setOpen("closing")}
+                  className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
+                >
+                  Kattai mukammal — do sawal baqi
+                </button>
+              )}
               <button
                 onClick={() => setOpen("fuel")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700"
@@ -1305,6 +1322,8 @@ function BookingCard({ booking }: { booking: Booking }) {
             </div>
           ) : open === "work" ? (
             <WorkForm bookingId={booking.id} harvestType={booking.harvestType} onClose={() => setOpen(null)} />
+          ) : open === "closing" ? (
+            <ClosingForm bookingId={booking.id} onClose={() => setOpen(null)} />
           ) : open === "fuel" ? (
             <FuelForm bookingId={booking.id} onClose={() => setOpen(null)} />
           ) : (
@@ -1523,14 +1542,10 @@ function WorkForm({
   // aur kitna kutra -- aur yehi wo adad hai jis par bill banta hai.
   const isDono = harvestType === "dono";
   const [acres, setAcres] = useState("");
-  // Kaam khatam hone par poochhe jane wale do sawal (183).
+  // Kaam khatam hone par poochhe jane wale do sawal. Wo sawal ab
+  // EndOfWorkQuestions ke paas hain -- kyunke kaam daftar ka banda darj
+  // kar de tab bhi yehi sawal poochhe jate hain (182).
   const [isFinal, setIsFinal] = useState(false);
-  const [diesel, setDiesel] = useState("");
-  const [dLitres, setDLitres] = useState("");
-  const [dRate, setDRate] = useState("");
-  const [paid, setPaid] = useState("");
-  const [paidAmount, setPaidAmount] = useState("");
-  const dieselAmount = Math.round((Number(dLitres) || 0) * (Number(dRate) || 0));
   const [kanal, setKanal] = useState("");
   const [sabit, setSabit] = useState("");
   const [kutra, setKutra] = useState("");
@@ -1650,87 +1665,144 @@ function WorkForm({
           jata aur diesel ya kisan se li hui raqam kabhi darj hi na
           hoti. Ab wo aakhri lamhe mein poochhe jate hain -- jab vendor
           abhi khet par khaRa hai aur sach us ke saamne hai. */}
-      {isFinal && (
-        <div className="space-y-3 rounded-lg border border-surface-200 bg-surface-50/60 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Jane se pehle do baatein</p>
-
-          <div>
-            <p className="text-sm font-medium text-surface-800">Kisan ne diesel dala?</p>
-            <div className="mt-1.5 flex gap-1.5">
-              <Choice on={diesel === "haan"} onClick={() => setDiesel("haan")}>Haan</Choice>
-              <Choice on={diesel === "nahi"} onClick={() => setDiesel("nahi")}>Nahi</Choice>
-            </div>
-            <input type="hidden" name="farmer_diesel" value={diesel} />
-            {diesel === "haan" && (
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-medium text-surface-600">Kitne litre</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="farmer_diesel_litres"
-                    value={dLitres}
-                    onChange={(e) => setDLitres(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-surface-600">Rate per litre</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="farmer_diesel_rate"
-                    value={dRate}
-                    onChange={(e) => setDRate(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
-                  />
-                </div>
-                {/* Raqam haath se nahi likhi jati -- litre aur rate se
-                    khud banti hai. Wahi jagah hai jahan ek sifar zyada
-                    lag jata hai. */}
-                {dieselAmount > 0 && (
-                  <p className="col-span-2 text-xs text-surface-500">
-                    {dLitres} × {dRate} = <strong>Rs {dieselAmount.toLocaleString()}</strong>
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-surface-200 pt-3">
-            <p className="text-sm font-medium text-surface-800">Kisan ne paisa diya?</p>
-            <div className="mt-1.5 flex gap-1.5">
-              <Choice on={paid === "haan"} onClick={() => setPaid("haan")}>Haan</Choice>
-              <Choice on={paid === "nahi"} onClick={() => setPaid("nahi")}>Nahi — udhaar hai</Choice>
-            </div>
-            <input type="hidden" name="farmer_paid" value={paid} />
-            {paid === "haan" && (
-              <div className="mt-2">
-                <label className="text-xs font-medium text-surface-600">Kitni raqam</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="farmer_paid_amount"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
-                />
-                <p className="mt-1 text-xs text-surface-500">
-                  Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <p className="text-xs text-surface-400">
-            Dono jawab tasdeeq ke liye jate hain — tasdeeq se pehle kisi hisaab mein shamil nahi hote.
-          </p>
-        </div>
-      )}
+      {isFinal && <EndOfWorkQuestions />}
       <div className="flex gap-2">
         <Submit />
         <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
           Rehne dein
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Kaam ke baad ke do sawal.
+ *
+ * Ye alag component is liye hai ke inhen do jagah poochha jata hai:
+ * jab vendor khud kaam mukammal darj karta hai, aur jab kaam pehle hi
+ * mukammal ho chuka ho (aksar daftar ke bande ne darj kiya) magar in
+ * ka jawab kisi ne nahi diya. Dono jagah sawal, alfaz aur khanon ke
+ * naam bilkul aik jaise rehne chahiyen -- warna do form do alag
+ * kahaniyan bataney lagte hain.
+ *
+ * Diesel ki raqam haath se nahi likhi jati -- litre aur rate se khud
+ * banti hai. Wahi jagah hai jahan ek sifar zyada lag jata hai.
+ */
+function EndOfWorkQuestions() {
+  const [diesel, setDiesel] = useState("");
+  const [dLitres, setDLitres] = useState("");
+  const [dRate, setDRate] = useState("");
+  const [paid, setPaid] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
+  const dieselAmount = Math.round((Number(dLitres) || 0) * (Number(dRate) || 0));
+
+  return (
+    <div className="space-y-3 rounded-lg border border-surface-200 bg-surface-50/60 p-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Jane se pehle do baatein</p>
+
+      <div>
+        <p className="text-sm font-medium text-surface-800">Kisan ne diesel dala?</p>
+        <div className="mt-1.5 flex gap-1.5">
+          <Choice on={diesel === "haan"} onClick={() => setDiesel("haan")}>Haan</Choice>
+          <Choice on={diesel === "nahi"} onClick={() => setDiesel("nahi")}>Nahi</Choice>
+        </div>
+        <input type="hidden" name="farmer_diesel" value={diesel} />
+        {diesel === "haan" && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-medium text-surface-600">Kitne litre</label>
+              <input
+                type="number"
+                step="0.01"
+                name="farmer_diesel_litres"
+                value={dLitres}
+                onChange={(e) => setDLitres(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-surface-600">Rate per litre</label>
+              <input
+                type="number"
+                step="0.01"
+                name="farmer_diesel_rate"
+                value={dRate}
+                onChange={(e) => setDRate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              />
+            </div>
+            {dieselAmount > 0 && (
+              <p className="col-span-2 text-xs text-surface-500">
+                {dLitres} × {dRate} = <strong>Rs {dieselAmount.toLocaleString()}</strong>
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-surface-200 pt-3">
+        <p className="text-sm font-medium text-surface-800">Kisan ne paisa diya?</p>
+        <div className="mt-1.5 flex gap-1.5">
+          <Choice on={paid === "haan"} onClick={() => setPaid("haan")}>Haan</Choice>
+          <Choice on={paid === "nahi"} onClick={() => setPaid("nahi")}>Nahi — udhaar hai</Choice>
+        </div>
+        <input type="hidden" name="farmer_paid" value={paid} />
+        {paid === "haan" && (
+          <div className="mt-2">
+            <label className="text-xs font-medium text-surface-600">Kitni raqam</label>
+            <input
+              type="number"
+              step="0.01"
+              name="farmer_paid_amount"
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-surface-400">
+        Dono jawab tasdeeq ke liye jate hain — tasdeeq se pehle kisi hisaab mein shamil nahi hote.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Kaam mukammal ho chuka, magar do sawal baqi hain.
+ *
+ * Kaam ka indraj yahan dobara NAHI khulta -- do final indraj verified
+ * ho jayen to raqba do dafa gina jata aur bill do guna ban jata hai.
+ * Yahan sirf wo do baatein poochhi jati hain jo sirf vendor jaanta hai.
+ *
+ * "Nahi" bhi jawab hai: us ke baghair ye sawal har dafa saamne aate
+ * rehte, aur vendor sawal khatam karne ke liye jhoota "haan" likh deta.
+ */
+function ClosingForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const [state, action] = useFormState(submitVendorClosing, initialState);
+
+  if (state.success) {
+    return <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{state.notice}</p>;
+  }
+
+  return (
+    <form action={action} className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <p className="text-xs text-surface-600">
+        Is booking ka kaam mukammal darj ho chuka hai. Do baatein sirf aap jaante hain — bataye baghair bill adhoora
+        rehta hai.
+      </p>
+      <EndOfWorkQuestions />
+      <div className="flex gap-2">
+        <Submit />
+        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
+          Abhi nahi
         </button>
       </div>
     </form>

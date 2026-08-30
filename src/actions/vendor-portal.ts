@@ -175,6 +175,124 @@ export async function submitVendorWork(
 }
 
 /**
+ * Kaam mukammal ho chuka -- ab sirf do sawal.
+ *
+ * Kaam ka indraj daftar ka banda bhi kar sakta hai, aur live par yehi
+ * hua: MB-2026-00001 par staff ne khud "mukammal" darj kar diya. Us ke
+ * baad vendor ke safhe se kaam wala button hat gaya, aur us ke sath wo
+ * do sawal bhi chale gaye jo sirf VENDOR ko maloom hain -- kisan ne
+ * diesel dala ya nahi, aur kisan ne paisa diya ya nahi. Daftar ke bande
+ * ko in ka jawab pata hi nahi hota.
+ *
+ * Kaam ka indraj dobara kholna ghalat hota: do final indraj verified ho
+ * jayen to raqba do dafa gina jata hai aur bill do guna ban jata hai. Is
+ * liye kaam band hi rehta hai -- aur do sawal alag se poochhe jate hain.
+ *
+ * Hisaab yahan dobara nahi likha: dono jawab wohi purane functionon ko
+ * jate hain jo alag button bhi bulate hain. Ek qanoon, do darwaze.
+ *
+ * "Nahi" bhi jawab hai aur wo bhi darj hota hai. Warna safha vendor se
+ * hamesha poochta rahega, aur vendor poochna band karne ke liye jhoota
+ * "haan" likh dega.
+ */
+export async function submitVendorClosing(
+  _prev: VendorActionState,
+  formData: FormData
+): Promise<VendorActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: vendor } = await supabase
+    .from("machinery_vendors")
+    .select("id, vendor_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!vendor) return { error: "Ye login kisi vendor se juda hua nahi hai." };
+
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking chunein." };
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, vendor_id, vendor_closing_at")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking || booking.vendor_id !== vendor.id) {
+    return { error: "Ye booking aap ki machine ki nahi hai." };
+  }
+  if (booking.vendor_closing_at) {
+    return { error: "In sawalon ka jawab pehle hi darj ho chuka hai." };
+  }
+
+  const dieselAns = str(formData, "farmer_diesel");
+  const paidAns = str(formData, "farmer_paid");
+  if (dieselAns !== "haan" && dieselAns !== "nahi") {
+    return { error: "Batayein: kisan ne diesel dala ya nahi." };
+  }
+  if (paidAns !== "haan" && paidAns !== "nahi") {
+    return { error: "Batayein: kisan ne paisa diya ya nahi." };
+  }
+
+  const onDate = str(formData, "answer_date") ?? new Date().toISOString().slice(0, 10);
+  const extras: string[] = [];
+
+  if (dieselAns === "haan") {
+    const fd = new FormData();
+    fd.set("booking_id", bookingId);
+    fd.set("litres", String(num(formData, "farmer_diesel_litres") ?? 0));
+    fd.set("rate_per_litre", String(num(formData, "farmer_diesel_rate") ?? 0));
+    fd.set("paid_by", "farmer");
+    fd.set("log_date", onDate);
+    const res = await submitVendorFuel({}, fd);
+    if (res.error) return { error: `Diesel darj nahi hua: ${res.error}` };
+    extras.push("diesel");
+  }
+
+  if (paidAns === "haan") {
+    const fd = new FormData();
+    fd.set("booking_id", bookingId);
+    fd.set("amount", String(num(formData, "farmer_paid_amount") ?? 0));
+    // Kisan ne paisa VENDOR ko diya hai -- wo abhi us ke paas hai.
+    fd.set("settlement", "kept");
+    fd.set("payment_date", onDate);
+    const res = await submitVendorCollection({}, fd);
+    if (res.error) return { error: `Raqam darj nahi hui: ${res.error}` };
+    extras.push("kisan se li hui raqam");
+  }
+
+  // Jawab dene ka waqt aakhir mein likha jata hai -- pehle likh dete
+  // aur diesel ya raqam wala qadam nakaam ho jata, to sawal khatam ho
+  // jate aur adad kahin darj hi na hota.
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ vendor_closing_at: new Date().toISOString(), vendor_closing_by: user.id })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  if (extras.length > 0) {
+    await notifyRoles(
+      ["manager", "super_admin", "admin", "owner"],
+      "Vendor ke aakhri jawab aa gaye — tasdeeq baqi",
+      `${vendor.vendor_name} — booking ${booking.booking_number}: ${extras.join(" aur ")}.`,
+      `/admin/machinery-rental/booking/${bookingId}`
+    );
+  }
+
+  revalidatePath("/vendor");
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
+  return {
+    success: true,
+    notice:
+      extras.length > 0
+        ? `Shukriya — ${extras.join(" aur ")} darj ho gaya. Hamari team dekh kar tasdeeq karegi.`
+        : "Shukriya — darj ho gaya ke kisan ne na diesel dala na paisa diya.",
+  };
+}
+
+/**
  * Vendor ka diesel.
  *
  * Khata yahan NAHI poochha jata: vendor ko pata hi nahi hota ke ART ne

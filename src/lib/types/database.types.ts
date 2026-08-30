@@ -4155,22 +4155,7 @@ export type Database = {
           label_ur?: string | null
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "crops_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crops_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_cash_custody"
-            referencedColumns: ["profile_id"]
-          },
-        ]
+        Relationships: []
       }
       customer_ledger: {
         Row: {
@@ -9491,6 +9476,8 @@ export type Database = {
           total_area_acres: number | null
           total_area_kanal: number | null
           trolley_required: boolean
+          vendor_closing_at: string | null
+          vendor_closing_by: string | null
           vendor_id: string | null
           vendor_payable: number
           village: string | null
@@ -9574,6 +9561,8 @@ export type Database = {
           total_area_acres?: number | null
           total_area_kanal?: number | null
           trolley_required?: boolean
+          vendor_closing_at?: string | null
+          vendor_closing_by?: string | null
           vendor_id?: string | null
           vendor_payable?: number
           village?: string | null
@@ -9657,6 +9646,8 @@ export type Database = {
           total_area_acres?: number | null
           total_area_kanal?: number | null
           trolley_required?: boolean
+          vendor_closing_at?: string | null
+          vendor_closing_by?: string | null
           vendor_id?: string | null
           vendor_payable?: number
           village?: string | null

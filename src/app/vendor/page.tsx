@@ -103,17 +103,22 @@ export default async function VendorPortalPage() {
   const { data: progressRows } = bookingIds.length
     ? await supabase
         .from("machinery_bookings")
-        .select("id, reached_farm_at, work_started_at, harvest_type")
+        .select("id, reached_farm_at, work_started_at, harvest_type, vendor_closing_at")
         .in("id", bookingIds)
     : { data: [] };
 
-  const progressBy = new Map<string, { reached: string | null; started: string | null; harvestType: string | null }>();
+  const progressBy = new Map<
+    string,
+    { reached: string | null; started: string | null; harvestType: string | null; closingAt: string | null }
+  >();
   (progressRows ?? []).forEach((p) =>
     progressBy.set(p.id as string, {
       reached: (p.reached_farm_at as string | null) ?? null,
       started: (p.work_started_at as string | null) ?? null,
       // Do qism ki booking par vendor bhi batwara likhta hai (176).
       harvestType: (p.harvest_type as string | null) ?? null,
+      // Kaam ke baad ke do sawalon ka jawab de diya ya nahi (182).
+      closingAt: (p.vendor_closing_at as string | null) ?? null,
     })
   );
 
@@ -180,7 +185,15 @@ export default async function VendorPortalPage() {
       verifiedArea: work
         .filter((w) => w.verification_status === "verified")
         .reduce((s, w) => s + Number(w.actual_area), 0),
-      workDone: work.some((w) => w.verification_status === "verified" && w.is_final),
+      // Kaam KHATAM ho chuka -- chahe vendor ne darj kiya ho ya daftar
+      // ne. Dobara final indraj nahi khulta: do final indraj verified ho
+      // jayen to raqba do dafa gina jata aur bill do guna ban jata hai.
+      workDone: work.some(
+        (w) => w.is_final && (w.verification_status === "verified" || w.verification_status === "claimed")
+      ),
+      // Magar kaam band hone se wo do sawal khatam nahi hote jo sirf
+      // vendor jaanta hai. Wo alag darwaze se poochhe jate hain (182).
+      closingDone: (progressBy.get(r.booking_id as string)?.closingAt ?? null) !== null,
     };
   });
 
