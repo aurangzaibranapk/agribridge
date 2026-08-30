@@ -10,10 +10,30 @@ export interface ActionState {
   notice?: string;
 }
 
-// Every table that gets wiped by "Reset Test Data". Products, Categories,
-// Brands, Companies, Staff (profiles), Organizations, Branches, Shops,
-// Warehouses, Website CMS, and Settings/Config tables are intentionally
-// NOT in this list — they survive every reset.
+/**
+ * Jo cheezen is fehrist mein JAAN BOOJH KAR nahi hain:
+ *
+ *   audit_logs -- is par mitane ki rok lagi hui hai, aur wo rok theek
+ *     hai. Audit ka poora maqsad yehi hai ke jo hua us ka nishan rahe.
+ *     Reset us ka data nahi, sirf kaam ka data mitata hai.
+ *
+ *   finance_accounts -- ye setup hain (cash box, bank ka khata), test
+ *     data nahi. In par payment_method_account_map khara hai. Aur in ka
+ *     balance khud theek ho jata hai: finance_transactions ki har qatar
+ *     mitte waqt trigger balance ulta kar deta hai, is liye sab khate
+ *     apne opening_balance par wapas chale jate hain -- haath se likhne
+ *     ki zaroorat hi nahi (aur us par apni rok bhi lagi hui hai).
+ *
+ *   farmer_credit_balances, milk_farmer_balances, grain_farmer_balances
+ *     -- ye TABLE hain hi nahi, VIEW hain. In ki apni koi qatar nahi
+ *     hoti; jab in ki bunyaad wali tables saaf ho jati hain to ye khud
+ *     khali ho jate hain.
+ *
+ * Every table that gets wiped by "Reset Test Data". Products, Categories,
+ * Brands, Companies, Staff (profiles), Organizations, Branches, Shops,
+ * Warehouses, Website CMS, and Settings/Config tables are intentionally
+ * NOT in this list — they survive every reset.
+ */
 const TABLES_TO_CLEAR = [
   // AgriBridge Ordering
   "agri_complaints", "agri_deliveries",
@@ -23,13 +43,13 @@ const TABLES_TO_CLEAR = [
   // AI
   "ai_crop_reports", "ai_purchase_suggestions", "bridge_ai_action_requests", "bridge_ai_activity_log",
   // Logs
-  "activity_logs", "application_activity_log", "audit_logs", "notifications",
+  "activity_logs", "application_activity_log", "notifications",
   // HR
   "attendance_records", "interview_scores", "job_applications", "job_offers", "job_vacancies",
   "salary_payments", "staff_credit_ledger", "staff_details", "staff_messages", "staff_product_permissions",
   // Finance
   "branch_credit_accounts", "branch_credit_transactions", "capital_injections",
-  "company_expense_requests", "credit_requests", "finance_accounts", "finance_transactions",
+  "company_expense_requests", "credit_requests", "finance_transactions",
   "khata_accounts", "khata_transactions", "payments", "wallet_transactions", "wallets",
   "escrow_transactions", "replacement_fund_withdrawals",
   // CRM
@@ -39,17 +59,17 @@ const TABLES_TO_CLEAR = [
   "investment_ledger", "suppliers", "supplier_payments", "supplier_payment_requests",
   "company_reps",
   // Farmers/Farm
-  "farmers", "farms", "farm_visits", "farmer_credit_balances", "farmer_credit_ledger",
+  "farmers", "farms", "farm_visits", "farmer_credit_ledger",
   "farmer_produce_payouts", "crop_diagnoses", "crop_expenses", "crop_history",
   "crop_product_recommendations", "harvest_records", "soil_test_records", "water_test_records",
   "produce_listings", "produce_orders",
   // Agri Inputs
   "fertilizer_items", "fertilizer_requests", "livestock_loans", "machinery_requests",
   // Dairy
-  "milk_entries", "milk_farmer_balances", "milk_payments", "milk_route_collections",
+  "milk_entries", "milk_payments", "milk_route_collections",
   "milk_type_migrations", "generator_logs", "fuel_logs", "maintenance_logs", "monthly_expenses",
   // Grain
-  "grain_farmer_balances", "grain_procurement_entries", "grain_procurement_payments",
+  "grain_procurement_entries", "grain_procurement_payments",
   // Fleet
   "dispatch_vehicles", "driver_payments", "drivers", "vehicle_maintenance_records", "vehicles",
   // Inventory/Stock
@@ -110,11 +130,6 @@ export async function resetTestData(_prev: ActionState, formData: FormData): Pro
     if (error) errors.push(`${table}: ${error.message}`);
   };
 
-  for (const table of TABLES_TO_CLEAR) await clear(table, "id");
-
-  // Ginti ke khane `year` par khare hain, `id` par nahi.
-  for (const table of COUNTER_TABLES) await clear(table, "year");
-
   // MACHINERY AUR LEDGER -- ye yahan se nahi mit sakte.
   //
   // In par mitane ki rok lagi hui hai (journal_entries, machinery_bills,
@@ -132,6 +147,12 @@ export async function resetTestData(_prev: ActionState, formData: FormData): Pro
   const { data: financialSummary, error: financialError } =
     await serviceClient.rpc("fn_reset_test_financials");
   if (financialError) errors.push(`machinery aur ledger: ${financialError.message}`);
+
+  for (const table of TABLES_TO_CLEAR) await clear(table, "id");
+
+  // Ginti ke khane `year` par khare hain, `id` par nahi.
+  for (const table of COUNTER_TABLES) await clear(table, "year");
+
 
   if (errors.length > 0) {
     return { error: `Kuch tables clear nahi ho sakin: ${errors.slice(0, 5).join(" | ")}${errors.length > 5 ? "..." : ""}` };
