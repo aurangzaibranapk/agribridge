@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Tractor, Wallet, Clock, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays } from "lucide-react";
+import {
+  Tractor, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays,
+  Layers, Loader2, CircleDashed, ShieldCheck, Droplets, Banknote, Inbox, ArrowRight, Navigation,
+} from "lucide-react";
 import {
   submitVendorWork,
   submitVendorFuel,
@@ -206,6 +209,9 @@ export function VendorDashboardClient({
   const today = new Date().toISOString().slice(0, 10);
   const todays = bookings.filter((b) => b.harvestDate === today && !b.workDone);
   const pendingVerify = bookings.filter((b) => b.claimed > 0);
+  const activeMachines = machines.filter((m) => !!m.runningBooking).length;
+
+  const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
   // Har card ki apni fehrist. Ye wohi bookings hain jin se card ka adad
   // bana -- koi alag hisaab nahi, sirf chhantai.
@@ -223,29 +229,30 @@ export function VendorDashboardClient({
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      {/* 1 — Vendor ka apna parcha */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-700">
-          <Tractor className="h-6 w-6" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="font-display text-xl font-bold text-surface-900">{vendorName}</h1>
-          <p className="text-sm text-surface-500">Machinery Vendor Portal</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-surface-50">
+      <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">
+        {/* ---------------------------------------------- Header */}
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-white">
+              <Tractor className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-display text-2xl font-bold leading-tight text-surface-900">{vendorName}</h1>
+              <p className="text-sm text-surface-500">Machinery Vendor Portal</p>
+              <p className="mt-0.5 text-xs text-surface-400">
+                {machines.length} machine{machines.length === 1 ? "" : "ein"}
+                {activeMachines > 0 ? ` · ${activeMachines} kaam par` : ""} · Aaj {today}
+              </p>
+            </div>
+          </div>
 
-      {machines.length > 0 && (
-        <div className="mb-4 rounded-card border border-surface-200 bg-white p-3 shadow-card">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-surface-500">
-              Meri machinein ({machines.length})
-            </p>
+          <div className="flex flex-wrap items-center gap-2">
             {machines.length > 1 && (
               <select
                 value={machineId}
                 onChange={(e) => setMachineId(e.target.value)}
-                className="rounded-lg border border-surface-200 px-2 py-1 text-xs"
+                className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm"
               >
                 <option value="all">Sab machinein</option>
                 {machines.map((m) => (
@@ -255,306 +262,592 @@ export function VendorDashboardClient({
                 ))}
               </select>
             )}
+            <a
+              href="#gosharah"
+              className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm font-medium text-surface-700 shadow-sm hover:bg-surface-50"
+            >
+              Gosharah
+            </a>
           </div>
-          <div className="mt-2 space-y-1.5">
-            {machines.map((m) => (
-              <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="text-surface-800">
-                  {machineLabel(m)}
-                  {m.driverName && <span className="block text-xs text-surface-400">Driver: {m.driverName}</span>}
-                </span>
-                <span className="flex items-center gap-2 text-xs">
-                  {m.runningBooking ? (
-                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-purple-700">
-                      Kaam par — {m.runningFarmer ?? m.runningBooking}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-surface-100 px-2 py-0.5 text-surface-600">Khali</span>
-                  )}
-                  {m.lastLat !== null && m.lastLng !== null && (
-                    <a
-                      href={`https://www.google.com/maps?q=${m.lastLat},${m.lastLng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-brand-600 hover:underline"
+        </header>
+
+        {/* ---------------------------------------------- Hero
+            Sab se ahem adad sab se upar aur akela: "net abhi milna
+            hai" wo raqam hai jo waqai abhi di ja sakti hai. Baqi chaar
+            adad us ki wajah batate hain -- is liye wo chhote hain, aur
+            poora card hara nahi kiya gaya. */}
+        <section className="mb-8 overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-sm">
+          <div className="grid gap-px bg-surface-200 lg:grid-cols-[1.4fr_2.6fr]">
+            <div className="bg-brand-50 p-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Net abhi milna hai</p>
+              <p className="mt-2 font-display text-4xl font-bold leading-none text-brand-800">
+                Rs {money.netNow.toLocaleString()}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-brand-700">
+                Jo ART ke paas jama hai, us mein se ART ka diesel kaat kar.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-px bg-surface-200 lg:grid-cols-4">
+              <HeroFigure label="ART ke paas jama" value={money.withArt} tone="brand" />
+              <HeroFigure label="Farmer se pending" value={money.withFarmer} tone="amber" />
+              <HeroFigure label="ART diesel katega" value={money.dieselAdvance} tone="plain" />
+              <HeroFigure label="Mil chuka" value={money.received} tone="plain" />
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------- Kaam */}
+        <SectionHead title="Kaam" hint="Card par ungli rakhein — us ki asal bookings neeche khul jayengi." />
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            icon={<Layers className="h-4 w-4" />}
+            value={work.booked}
+            label="Total Booked Acres"
+            sub={`${work.done} mukammal`}
+            barPct={pct(work.done, work.booked)}
+            tone="neutral"
+            onClick={() => toggle("booked")}
+            active={drill === "booked"}
+          />
+          <StatCard
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            value={work.done}
+            label="Completed Acres"
+            sub={`${pct(work.done, work.booked)}% ho chuka`}
+            barPct={pct(work.done, work.booked)}
+            tone="green"
+            onClick={() => toggle("done")}
+            active={drill === "done"}
+          />
+          <StatCard
+            icon={<Loader2 className="h-4 w-4" />}
+            value={work.running}
+            label="In Progress Acres"
+            sub={work.running > 0 ? "abhi chal rahe hain" : "koi kaam chal nahi raha"}
+            barPct={pct(work.running, work.booked)}
+            tone="purple"
+            onClick={() => toggle("running")}
+            active={drill === "running"}
+          />
+          <StatCard
+            icon={<CircleDashed className="h-4 w-4" />}
+            value={work.pending}
+            label="Pending Acres"
+            sub={`${pct(work.pending, work.booked)}% baqi`}
+            barPct={pct(work.pending, work.booked)}
+            tone="amber"
+            onClick={() => toggle("pending")}
+            active={drill === "pending"}
+          />
+          <StatCard
+            icon={<CalendarDays className="h-4 w-4" />}
+            value={work.next7}
+            label="Next 7 Days Acres"
+            sub={`${week.length} booking`}
+            barPct={pct(work.next7, work.booked)}
+            tone="blue"
+            onClick={() => toggle("next7")}
+            active={drill === "next7"}
+          />
+          <StatCard
+            icon={<ShieldCheck className="h-4 w-4" />}
+            value={awaitingCheck}
+            label="Verification Pending"
+            sub={awaitingCheck > 0 ? "ART ki tasdeeq ka intezar" : "kuch baqi nahi"}
+            barPct={0}
+            tone={awaitingCheck > 0 ? "amber" : "neutral"}
+            onClick={() => toggle("verify")}
+            active={drill === "verify"}
+          />
+        </div>
+
+        {drill === "next7" && <DrillWeek rows={week} />}
+        {drill !== null && drill !== "next7" && listFor[drill] && (
+          <DrillBookings rows={listFor[drill]} kind={drill} />
+        )}
+        {drill === "commission" && <DrillCommission rows={commissionRows} />}
+        {(drill === "dieselAll" || drill === "dieselVendor" || drill === "dieselFarmer" || drill === "dieselArt") && (
+          <DrillDiesel rows={bookings} kind={drill} />
+        )}
+
+        {/* ---------------------------------------------- Paisa
+            Chhe alag baatein, chhe alag card. In ko jor kar ek "baqi"
+            dikhana wohi ghalti hai jis se jhagRa shuru hota hai: aadha
+            paisa hamare paas aaya hi nahi hota. */}
+        <SectionHead title="Paisa" hint="Har raqam apne naam se — koi mila-jula adad nahi." />
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <MoneyCard label="Total Verified Earning" value={money.earned} emphasis tone="neutral" onClick={() => toggle("earned")} active={drill === "earned"} />
+          <MoneyCard label="Vendor ko Mil Chuka" value={money.received} tone="neutral" onClick={() => toggle("received")} active={drill === "received"} />
+          <MoneyCard label="ART ke Paas Jama" value={money.withArt} emphasis tone="green" onClick={() => toggle("withArt")} active={drill === "withArt"} />
+          <MoneyCard label="Farmer se Pending" value={money.withFarmer} tone="amber" onClick={() => toggle("withFarmer")} active={drill === "withFarmer"} />
+          <MoneyCard label="ART Diesel Recoverable" value={money.dieselAdvance} tone="neutral" onClick={() => toggle("dieselAdvance")} active={drill === "dieselAdvance"} />
+          {/* Sirf raqam. Fisad kahin nahi -- na yahan, na tafseel mein. */}
+          <MoneyCard label="ART Commission" value={money.commission} tone="neutral" onClick={() => toggle("commission")} active={drill === "commission"} />
+        </div>
+
+        {money.withFarmer > 0 && (
+          <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Rs {money.withFarmer.toLocaleString()} abhi kisan ke paas hai — jaise hi wo hamein deta hai, wo aap ke jama
+            mein aa jayega.
+          </p>
+        )}
+
+        {/* ---------------------------------------------- Diesel */}
+        <SectionHead title="Diesel" hint="Kis ne diya, kitna laga." />
+        <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <DieselCard label="Total Litres" value={`${diesel.litres}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
+          <DieselCard label="Total Value" value={`Rs ${diesel.amount.toLocaleString()}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
+          <DieselCard label="Vendor Paid" value={`Rs ${diesel.byVendor.toLocaleString()}`} onClick={() => toggle("dieselVendor")} active={drill === "dieselVendor"} />
+          <DieselCard label="Farmer Paid" value={`Rs ${diesel.byFarmer.toLocaleString()}`} onClick={() => toggle("dieselFarmer")} active={drill === "dieselFarmer"} />
+          <DieselCard label="ART Paid" value={`Rs ${diesel.byArt.toLocaleString()}`} onClick={() => toggle("dieselArt")} active={drill === "dieselArt"} />
+        </div>
+
+        {/* ---------------------------------------------- Do sutoon
+            Baayen taraf aaj ka kaam (jis ke liye vendor subah safha
+            kholta hai), daayen taraf aane wala kaam aur jagah. */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <div>
+              <SectionHead title="Aaj ka Kaam" hint={today} />
+              {todays.length === 0 ? (
+                <EmptyCard icon={<Calendar className="h-5 w-5" />} title="Aaj ke liye koi kaam nahi" text="Agle dinon ka schedule daayen taraf hai." />
+              ) : (
+                <div className="space-y-3">
+                  {todays.map((b) => (
+                    <BookingCard key={b.id} booking={b} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {pendingVerify.length > 0 && (
+              <div>
+                <SectionHead
+                  title="Pending Verification"
+                  hint={`${pendingVerify.length} job ART ki tasdeeq ke intezar mein`}
+                />
+                <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Ye kaam abhi kisi hisaab mein shamil NAHI hai — na mukammal acre mein, na kamai mein. ART ki tasdeeq
+                  ke baad hi shamil hoga.
+                </p>
+                <div className="space-y-3">
+                  {pendingVerify.map((b) => (
+                    <BookingCard key={b.id} booking={b} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <SectionHead
+                title={selected ? `${machineLabel(selected)} ki bookings` : "Meri sab bookings"}
+                hint={`${shown.length} booking`}
+              />
+              {shown.length === 0 ? (
+                <EmptyCard icon={<Inbox className="h-5 w-5" />} title="Abhi koi booking nahi" text="Nayi booking aate hi yahan nazar aayegi." />
+              ) : (
+                <div className="space-y-3">
+                  {shown.map((b) => (
+                    <BookingCard key={b.id} booking={b} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Agle 7 din -- chhoti si timeline */}
+            <div>
+              <SectionHead title="Next 7 Days" hint={`${work.next7} acre`} />
+              {week.length === 0 ? (
+                <EmptyCard icon={<CalendarDays className="h-5 w-5" />} title="Agle 7 din khali hain" text="Nayi booking aate hi yahan aa jayegi." />
+              ) : (
+                <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm">
+                  <ol className="space-y-3">
+                    {week.map((w) => (
+                      <li key={w.bookingId} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
+                          <span className="mt-1 w-px flex-1 bg-surface-200" />
+                        </div>
+                        <div className="min-w-0 flex-1 pb-1">
+                          <p className="text-sm font-medium text-surface-900">
+                            {w.date ?? "-"} — {w.area} acre
+                          </p>
+                          <p className="truncate text-xs text-surface-500">
+                            {w.farmerName}
+                            {w.village ? ` · ${w.village}` : ""}
+                          </p>
+                          <div className="mt-1 flex gap-2 text-xs">
+                            {w.lat !== null && w.lng !== null && (
+                              <a
+                                href={`https://www.google.com/maps?q=${w.lat},${w.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-brand-600 hover:underline"
+                              >
+                                Jagah
+                              </a>
+                            )}
+                            {w.farmerPhone && (
+                              <a href={`tel:${w.farmerPhone}`} className="font-medium text-brand-600 hover:underline">
+                                Call
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            {/* Jagah ke hisaab se -- vendor ek din mein ek hi taraf jata hai */}
+            <div>
+              <SectionHead title="Location-wise Work" hint="Baqi kaam, jagah ke hisaab se" />
+              {locations.length === 0 ? (
+                <EmptyCard icon={<MapPin className="h-5 w-5" />} title="Koi baqi kaam nahi" text="Sab jagah ka kaam mukammal hai." />
+              ) : (
+                <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">
+                  {locations.map((l, i) => (
+                    <div
+                      key={l.jagah}
+                      className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                        i > 0 ? "border-t border-surface-100" : ""
+                      }`}
                     >
-                      Aakhri jagah
-                    </a>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-surface-900">{l.jagah}</p>
+                        <p className="text-xs text-surface-500">
+                          {l.farmers} kisan{l.firstDate ? ` · ${l.firstDate}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="font-display text-sm font-semibold text-surface-900">{l.acres} acre</span>
+                        {l.lat !== null && l.lng !== null && (
+                          <a
+                            href={`https://www.google.com/maps?q=${l.lat},${l.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-surface-400 hover:text-brand-600"
+                            title="Naqshe par"
+                          >
+                            <Navigation className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-      {/* 2 — Sab se ahem adad, akela.
-          "Net abhi milna hai" wo raqam hai jo waqai abhi di ja sakti hai. */}
-      <div className="mb-4 rounded-card border-2 border-brand-300 bg-brand-50 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Net abhi milna hai</p>
-        <p className="mt-1 font-display text-3xl font-bold text-brand-800">
-          Rs {money.netNow.toLocaleString()}
-        </p>
-        <p className="mt-1 text-xs text-brand-700">
-          Jo ART ke paas jama hai, us mein se ART ka diesel kaat kar.
-        </p>
-      </div>
-
-      {/* 3 — Kaam ke card */}
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">Kaam</p>
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <CardBtn label="Book hue acre" value={`${work.booked}`} onClick={() => toggle("booked")} active={drill === "booked"} />
-        <CardBtn label="Mukammal acre" value={`${work.done}`} tone="green" onClick={() => toggle("done")} active={drill === "done"} />
-        <CardBtn label="Chal rahe acre" value={`${work.running}`} onClick={() => toggle("running")} active={drill === "running"} />
-        <CardBtn label="Baqi acre" value={`${work.pending}`} tone="amber" onClick={() => toggle("pending")} active={drill === "pending"} />
-        <CardBtn label="Agle 7 din ke acre" value={`${work.next7}`} onClick={() => toggle("next7")} active={drill === "next7"} />
-        <CardBtn label="Tasdeeq ke intezar" value={String(awaitingCheck)} tone={awaitingCheck > 0 ? "amber" : undefined} onClick={() => toggle("verify")} active={drill === "verify"} />
-      </div>
-
-      {drill === "next7" && <DrillWeek rows={week} />}
-      {drill !== null && drill !== "next7" && listFor[drill] && (
-        <DrillBookings rows={listFor[drill]} kind={drill} />
-      )}
-      {drill === "commission" && <DrillCommission rows={commissionRows} />}
-      {(drill === "dieselAll" || drill === "dieselVendor" || drill === "dieselFarmer" || drill === "dieselArt") && (
-        <DrillDiesel rows={bookings} kind={drill} />
-      )}
-
-      {/* 4 — Paise ke card.
-          Saat alag baatein, saat alag card. In ko jor kar ek "baqi"
-          dikhana wohi ghalti hai jis se jhagRa shuru hota hai: aadha
-          paisa hamare paas aaya hi nahi hota. */}
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">Paisa</p>
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <CardBtn label="Kul verified earning" value={`Rs ${money.earned.toLocaleString()}`} onClick={() => toggle("earned")} active={drill === "earned"} />
-        <CardBtn label="Mil chuka" value={`Rs ${money.received.toLocaleString()}`} onClick={() => toggle("received")} active={drill === "received"} />
-        <CardBtn label="ART ke paas mera jama" value={`Rs ${money.withArt.toLocaleString()}`} tone="green" onClick={() => toggle("withArt")} active={drill === "withArt"} />
-        <CardBtn label="Kisan se pending" value={`Rs ${money.withFarmer.toLocaleString()}`} tone="amber" onClick={() => toggle("withFarmer")} active={drill === "withFarmer"} />
-        <CardBtn label="ART diesel katega" value={`Rs ${money.dieselAdvance.toLocaleString()}`} onClick={() => toggle("dieselAdvance")} active={drill === "dieselAdvance"} />
-        {/* Sirf raqam. Fisad kahin nahi -- na yahan, na tafseel mein. */}
-        <CardBtn label="ART commission" value={`Rs ${money.commission.toLocaleString()}`} onClick={() => toggle("commission")} active={drill === "commission"} />
-      </div>
-
-      {money.withFarmer > 0 && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Rs {money.withFarmer.toLocaleString()} abhi kisan ke paas hai — jaise hi wo hamein deta hai, wo aap ke jama
-          mein aa jayega.
-        </p>
-      )}
-
-      {/* 5 — Diesel ke card */}
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">Diesel</p>
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <CardBtn label="Kul litre" value={`${diesel.litres}`} onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
-        <CardBtn label="Kul raqam" value={`Rs ${diesel.amount.toLocaleString()}`} onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
-        <CardBtn label="Main ne diya" value={`Rs ${diesel.byVendor.toLocaleString()}`} onClick={() => toggle("dieselVendor")} active={drill === "dieselVendor"} />
-        <CardBtn label="Kisan ne diya" value={`Rs ${diesel.byFarmer.toLocaleString()}`} onClick={() => toggle("dieselFarmer")} active={drill === "dieselFarmer"} />
-        <CardBtn label="ART ne diya" value={`Rs ${diesel.byArt.toLocaleString()}`} onClick={() => toggle("dieselArt")} active={drill === "dieselArt"} />
-      </div>
-
-      {/* 6 — Aaj ka kaam */}
-      <Section title="Aaj ka kaam">
-        {todays.length === 0 ? (
-          <Empty text="Aaj ke liye koi kaam nahi." />
-        ) : (
-          todays.map((b) => <BookingCard key={b.id} booking={b} />)
-        )}
-      </Section>
-
-      {/* 7 — Agle 7 din */}
-      <Section title="Agle 7 din">
-        <WeekView rows={week} />
-      </Section>
-
-      {/* 8 — Jagah ke hisaab se.
-          Vendor ek din mein ek hi taraf jata hai; tareekh ki fehrist se
-          ye nahi khulta ke kis gaon mein kitna kaam para hai. */}
-      <Section title="Jagah ke hisaab se">
-        {locations.length === 0 ? (
-          <Empty text="Abhi koi baqi kaam nahi." />
-        ) : (
-          <div className="space-y-1.5">
-            {locations.map((l) => (
-              <div key={l.jagah} className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-surface-200 bg-white px-3 py-2 text-sm shadow-card">
-                <span>
-                  <span className="font-medium text-surface-900">{l.jagah}</span>
-                  <span className="block text-xs text-surface-500">
-                    {l.farmers} kisan · {l.acres} acre{l.firstDate ? ` · pehli tareekh ${l.firstDate}` : ""}
-                  </span>
-                </span>
-                {l.lat !== null && l.lng !== null && (
-                  <a
-                    href={`https://www.google.com/maps?q=${l.lat},${l.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-brand-600 hover:underline"
-                  >
-                    Naqshe par
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* 9 — Tasdeeq ke intezar mein.
-          Ye kaam abhi kisi adad mein nahi gina gaya -- na mukammal
-          mein, na kamai mein. Vendor ko ye saaf dikhna chahiye. */}
-      {pendingVerify.length > 0 && (
-        <Section title="Tasdeeq ke intezar mein">
-          <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Ye kaam abhi kisi hisaab mein shamil NAHI hai — na mukammal acre mein, na kamai mein. ART ki tasdeeq ke
-            baad hi shamil hoga.
-          </p>
-          {pendingVerify.map((b) => (
-            <BookingCard key={b.id} booking={b} />
-          ))}
-        </Section>
-      )}
-
-      {/* 10 — Poori fehrist */}
-      <Section title={selected ? `${machineLabel(selected)} ki bookings` : "Meri sab bookings"}>
-        {shown.length === 0 ? (
-          <Empty text="Abhi koi booking nahi." />
-        ) : (
-          shown.map((b) => <BookingCard key={b.id} booking={b} />)
-        )}
-      </Section>
-
-      {/* 11 — Adaigiyan */}
-      <Section title="Mujhe hui adaigiyan">
-        {payments.length === 0 ? (
-          <Empty text="Abhi koi adaigi nahi hui." />
-        ) : (
-          <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-surface-200 bg-surface-50 text-left">
-                  <th className="px-3 py-2 font-medium text-surface-500">Tareekh</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Settlement</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Raqam</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Cash mila</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((p) => (
-                  <tr key={p.id} className="border-b border-surface-100 last:border-0">
-                    <td className="px-3 py-2 text-surface-600">{p.date}</td>
-                    <td className="px-3 py-2 text-surface-600">
-                      {p.settlementId}
-                      <span className="block text-xs text-surface-400">
-                        {p.bookingNumber ?? "-"}
-                        {p.farmerName ? ` · ${p.farmerName}` : ""}
-                        {p.isReversal ? " · ulta kiya gaya" : ""}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-surface-900">Rs {p.amount.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right">
-                      Rs {p.cash.toLocaleString()}
-                      {p.dieselBack > 0 && (
-                        <span className="block text-xs text-surface-400">
-                          diesel wapas Rs {p.dieselBack.toLocaleString()}
+            {/* Meri machinein */}
+            <div>
+              <SectionHead title="My Machines" hint={`${machines.length} machine`} />
+              {machines.length === 0 ? (
+                <EmptyCard icon={<Tractor className="h-5 w-5" />} title="Koi machine darj nahi" text="ART se kahein ke aap ki machine darj kar de." />
+              ) : (
+                <div className="space-y-2">
+                  {machines.map((m) => (
+                    <div key={m.id} className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-surface-900">{m.code}</p>
+                          <p className="truncate text-xs text-surface-500">
+                            {m.type}
+                            {m.model ? ` (${m.model})` : ""}
+                            {m.driverName ? ` · ${m.driverName}` : ""}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            m.runningBooking ? "bg-purple-50 text-purple-700" : "bg-surface-100 text-surface-600"
+                          }`}
+                        >
+                          {m.runningBooking ? "Kaam par" : "Khali"}
                         </span>
-                      )}
-                    </td>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500">
+                        <span>{m.seasonAcres} acre is season</span>
+                        {m.dieselLitres > 0 && <span>{m.dieselLitres} litre diesel</span>}
+                        {m.runningFarmer && <span className="text-purple-700">{m.runningFarmer}</span>}
+                        {m.lastLat !== null && m.lastLng !== null && (
+                          <a
+                            href={`https://www.google.com/maps?q=${m.lastLat},${m.lastLng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-brand-600 hover:underline"
+                          >
+                            Aakhri jagah
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ---------------------------------------------- Adaigiyan */}
+        <div className="mt-8">
+          <SectionHead title="Recent Payments" hint="Mujhe hui adaigiyan" />
+          {payments.length === 0 ? (
+            <EmptyCard icon={<Banknote className="h-5 w-5" />} title="Abhi koi adaigi nahi hui" text="Pehli adaigi hote hi yahan qatar ban jayegi." />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-surface-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-surface-200 text-left">
+                    <th className="px-4 py-3 font-medium text-surface-500">Tareekh</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">Settlement</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">Booking</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">Raqam</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">Cash mila</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
-
-      {/* 12 — Mera gosharah.
-          Ek hi qatar mein poora hisaab. Har lakeer upar kisi card se
-          milti hai -- yahan koi naya adad nahi banta. */}
-      <Section title="Mera gosharah">
-        <div className="rounded-card border border-surface-200 bg-white p-4 text-sm shadow-card">
-          <Row3 label="Verified kaam se kamai" value={money.earned} strong />
-          {money.dieselAdvance > 0 && <Row3 label="ART ka diesel (katega)" value={-money.dieselAdvance} tone="text-red-600" />}
-          <Row3 label="Mil chuka" value={-money.received} />
-          <div className="my-2 border-t border-surface-100" />
-          <Row3 label="ART ke paas mera jama" value={money.withArt} tone="text-brand-700" />
-          <Row3 label="Abhi kisan ke paas" value={money.withFarmer} tone="text-amber-700" />
-          <div className="mt-2 flex justify-between border-t-2 border-surface-200 pt-2 font-display font-semibold">
-            <span>Net abhi milna hai</span>
-            <span className="text-brand-700">Rs {money.netNow.toLocaleString()}</span>
-          </div>
-          <p className="mt-2 text-xs text-surface-500">
-            Commission verified kamai mein se pehle hi nikal chuka hai — is liye yahan dobara nahi kata.
-          </p>
+                </thead>
+                <tbody>
+                  {payments.map((p) => (
+                    <tr key={p.id} className="border-b border-surface-100 last:border-0">
+                      <td className="px-4 py-3 text-surface-600">{p.date}</td>
+                      <td className="px-4 py-3 text-surface-600">
+                        {p.settlementId}
+                        {p.isReversal && <span className="ml-1 text-xs text-red-600">(ulta kiya gaya)</span>}
+                      </td>
+                      <td className="px-4 py-3 text-surface-600">
+                        {p.bookingNumber ?? "-"}
+                        {p.farmerName && <span className="block text-xs text-surface-400">{p.farmerName}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-surface-900">Rs {p.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-surface-900">
+                        Rs {p.cash.toLocaleString()}
+                        {p.dieselBack > 0 && (
+                          <span className="block text-xs text-surface-400">
+                            diesel wapas Rs {p.dieselBack.toLocaleString()}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      </Section>
 
-      {/* 13 — Mera season */}
-      <Section title="Mera season">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Fact label="Book hue acre" value={`${work.booked}`} />
-          <Fact label="Mukammal acre" value={`${work.done}`} />
-          <Fact label="Baqi acre" value={`${work.pending}`} />
-          <Fact label="Verified kamai" value={`Rs ${money.earned.toLocaleString()}`} />
-          <Fact label="Mil chuka" value={`Rs ${money.received.toLocaleString()}`} />
-          <Fact label="Net abhi milna hai" value={`Rs ${money.netNow.toLocaleString()}`} />
+        {/* ---------------------------------------------- Gosharah + season
+            Ek hi qatar mein poora hisaab. Har lakeer upar kisi card se
+            milti hai -- yahan koi naya adad nahi banta. */}
+        <div id="gosharah" className="mt-8 grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SectionHead title="Mera Gosharah" hint="Upar ke cards ka poora hisaab, ek qatar mein" />
+            <div className="rounded-2xl border border-surface-200 bg-white p-5 text-sm shadow-sm">
+              <Row3 label="Verified kaam se kamai" value={money.earned} strong />
+              {money.dieselAdvance > 0 && (
+                <Row3 label="ART ka diesel (katega)" value={-money.dieselAdvance} tone="text-red-600" />
+              )}
+              <Row3 label="Mil chuka" value={-money.received} />
+              <div className="my-3 border-t border-surface-100" />
+              <Row3 label="ART ke paas mera jama" value={money.withArt} tone="text-brand-700" />
+              <Row3 label="Abhi kisan ke paas" value={money.withFarmer} tone="text-amber-700" />
+              <div className="mt-3 flex items-center justify-between border-t-2 border-surface-200 pt-3">
+                <span className="font-display text-base font-semibold text-surface-900">Net abhi milna hai</span>
+                <span className="font-display text-2xl font-bold text-brand-700">
+                  Rs {money.netNow.toLocaleString()}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-surface-500">
+                Commission verified kamai mein se pehle hi nikal chuka hai — is liye yahan dobara nahi kata.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <SectionHead title="Mera Season" hint="Ab tak ka khulasa" />
+            <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">
+              <SeasonRow label="Booked acres" value={`${work.booked}`} />
+              <SeasonRow label="Completed acres" value={`${work.done}`} />
+              <SeasonRow label="Remaining acres" value={`${work.pending}`} />
+              <SeasonRow label="Verified earning" value={`Rs ${money.earned.toLocaleString()}`} />
+              <SeasonRow label="Vendor received" value={`Rs ${money.received.toLocaleString()}`} />
+              <SeasonRow label="Net outstanding" value={`Rs ${money.netNow.toLocaleString()}`} strong />
+            </div>
+          </div>
         </div>
-      </Section>
+      </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** Section ka sar -- naam aur ek chhota sa jumla. */
+function SectionHead({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="mb-6">
-      <h2 className="mb-2 font-display text-base font-semibold text-surface-900">{title}</h2>
-      <div className="space-y-3">{children}</div>
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+      <h2 className="font-display text-lg font-semibold text-surface-900">{title}</h2>
+      {hint && <p className="text-xs text-surface-500">{hint}</p>}
     </div>
   );
 }
 
-function Empty({ text }: { text: string }) {
+function HeroFigure({ label, value, tone }: { label: string; value: number; tone: "brand" | "amber" | "plain" }) {
+  const color = tone === "brand" ? "text-brand-700" : tone === "amber" ? "text-amber-700" : "text-surface-900";
   return (
-    <p className="rounded-card border border-surface-200 bg-white px-3 py-6 text-center text-sm text-surface-400">
-      {text}
-    </p>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card">
+    <div className="bg-white p-4">
       <p className="text-xs text-surface-500">{label}</p>
-      <p className="mt-1 font-display text-base font-semibold text-surface-900">{value}</p>
+      <p className={`mt-1 font-display text-xl font-semibold ${color}`}>Rs {value.toLocaleString()}</p>
     </div>
   );
 }
 
-/** Card jis par ungli rakhi ja sakti hai -- neeche us ki asal qatarein khulti hain. */
-function CardBtn({
+const TONE_ICON: Record<string, string> = {
+  green: "bg-green-50 text-green-700",
+  amber: "bg-amber-50 text-amber-700",
+  purple: "bg-purple-50 text-purple-700",
+  blue: "bg-blue-50 text-blue-700",
+  neutral: "bg-surface-100 text-surface-600",
+};
+const TONE_BAR: Record<string, string> = {
+  green: "bg-green-500",
+  amber: "bg-amber-500",
+  purple: "bg-purple-500",
+  blue: "bg-blue-500",
+  neutral: "bg-surface-400",
+};
+
+/** Kaam ka card -- nishan, baRa adad, naam, aur ek chhoti si lakeer. */
+function StatCard({
+  icon,
+  value,
+  label,
+  sub,
+  barPct,
+  tone,
+  onClick,
+  active,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  sub: string;
+  barPct: number;
+  tone: "green" | "amber" | "purple" | "blue" | "neutral";
+  onClick: () => void;
+  active: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex h-full flex-col rounded-2xl border bg-white p-5 text-left shadow-sm transition hover:border-brand-300 hover:shadow ${
+        active ? "border-brand-500 ring-1 ring-brand-200" : "border-surface-200"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONE_ICON[tone]}`}>{icon}</span>
+        <ArrowRight className={`h-4 w-4 ${active ? "text-brand-600" : "text-surface-300"}`} />
+      </div>
+      <p className="mt-3 font-display text-3xl font-bold leading-none text-surface-900">{value}</p>
+      <p className="mt-1 text-sm font-medium text-surface-700">{label}</p>
+      <p className="mt-0.5 text-xs text-surface-500">{sub}</p>
+      <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-surface-100">
+        <div className={`h-full rounded-full ${TONE_BAR[tone]}`} style={{ width: `${Math.min(barPct, 100)}%` }} />
+      </div>
+    </button>
+  );
+}
+
+/** Paise ka card. Ahem raqmein thoRi baRi -- baqi barabar. */
+function MoneyCard({
   label,
   value,
+  emphasis,
   tone,
   onClick,
   active,
 }: {
   label: string;
-  value: string;
-  tone?: "green" | "amber";
+  value: number;
+  emphasis?: boolean;
+  tone: "green" | "amber" | "neutral";
   onClick: () => void;
   active: boolean;
 }) {
-  const toneClass =
-    tone === "green" ? "border-green-200 bg-green-50" : tone === "amber" ? "border-amber-200 bg-amber-50" : "border-surface-200 bg-white";
+  const color = tone === "green" ? "text-green-700" : tone === "amber" ? "text-amber-700" : "text-surface-900";
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-card border p-3 text-left shadow-card transition-colors ${
-        active ? "border-brand-500 ring-1 ring-brand-300" : toneClass
+      className={`flex h-full flex-col justify-between rounded-2xl border bg-white p-5 text-left shadow-sm transition hover:border-brand-300 hover:shadow ${
+        active ? "border-brand-500 ring-1 ring-brand-200" : "border-surface-200"
       }`}
     >
-      <p className="text-[11px] font-medium uppercase tracking-wide text-surface-500">{label}</p>
-      <p className="mt-1 font-display text-lg font-semibold text-surface-900">{value}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className={`font-display font-bold leading-none ${color} ${emphasis ? "text-3xl" : "text-2xl"}`}>
+          Rs {value.toLocaleString()}
+        </p>
+        <ArrowRight className={`mt-1 h-4 w-4 shrink-0 ${active ? "text-brand-600" : "text-surface-300"}`} />
+      </div>
+      <p className="mt-2 text-sm font-medium text-surface-600">{label}</p>
     </button>
+  );
+}
+
+function DieselCard({
+  label,
+  value,
+  big,
+  onClick,
+  active,
+}: {
+  label: string;
+  value: string;
+  big?: boolean;
+  onClick: () => void;
+  active: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex h-full flex-col rounded-2xl border p-4 text-left shadow-sm transition hover:border-brand-300 ${
+        active ? "border-brand-500 ring-1 ring-brand-200" : "border-surface-200"
+      } ${big ? "bg-white" : "bg-surface-50/60"}`}
+    >
+      <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${big ? "bg-blue-50 text-blue-700" : "bg-surface-100 text-surface-500"}`}>
+        <Droplets className="h-3.5 w-3.5" />
+      </span>
+      <p className={`mt-2 font-display font-bold leading-none text-surface-900 ${big ? "text-2xl" : "text-lg"}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-surface-500">{label}</p>
+    </button>
+  );
+}
+
+function SeasonRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between px-4 py-3 ${strong ? "border-t-2 border-surface-200" : "border-t border-surface-100 first:border-t-0"}`}>
+      <span className="text-sm text-surface-600">{label}</span>
+      <span className={`font-display font-semibold ${strong ? "text-lg text-brand-700" : "text-sm text-surface-900"}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/** Khali hissa bhi banaya hua ho -- sirf ek sookha jumla nahi. */
+function EmptyCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-dashed border-surface-300 bg-white px-4 py-8 text-center">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-100 text-surface-400">
+        {icon}
+      </span>
+      <p className="mt-3 text-sm font-medium text-surface-700">{title}</p>
+      <p className="mt-1 text-xs text-surface-500">{text}</p>
+    </div>
   );
 }
 
@@ -733,20 +1026,6 @@ function DrillDiesel({ rows, kind }: { rows: Booking[]; kind: string }) {
   );
 }
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 rounded-md px-2 py-2 text-xs font-medium ${
-        active ? "bg-white text-surface-900 shadow-sm" : "text-surface-500"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function Row3({ label, value, strong, tone }: { label: string; value: number; strong?: boolean; tone?: string }) {
   return (
     <div className={`flex justify-between text-sm ${strong ? "font-medium" : ""}`}>
@@ -766,102 +1045,6 @@ function Row3({ label, value, strong, tone }: { label: string; value: number; st
  * raasta banata hai -- ek gaon mein chaar khet hon to machine ek
  * dafa jati hai, chaar dafa nahi.
  */
-function WeekView({ rows }: { rows: WeekRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <div className="mb-6 rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-sm text-surface-400">
-        Agle saat din koi kaam nahi.
-      </div>
-    );
-  }
-
-  const byVillage = new Map<string, { farmers: Set<string>; acres: number }>();
-  for (const r of rows) {
-    const key = r.village || r.address || "Jagah darj nahi";
-    const e = byVillage.get(key) ?? { farmers: new Set<string>(), acres: 0 };
-    e.farmers.add(r.farmerName);
-    e.acres += r.area;
-    byVillage.set(key, e);
-  }
-
-  return (
-    <div className="mb-6 space-y-3">
-      <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-500">
-          Jagah ke hisaab se
-        </p>
-        <ul className="space-y-1 text-sm">
-          {[...byVillage.entries()]
-            .sort((a, b) => b[1].acres - a[1].acres)
-            .map(([place, e]) => (
-              <li key={place} className="flex justify-between">
-                <span className="text-surface-700">{place}</span>
-                <span className="text-surface-500">
-                  {e.farmers.size} kisan · {e.acres} acre
-                </span>
-              </li>
-            ))}
-        </ul>
-      </div>
-
-      {rows.map((r) => (
-        <div key={r.bookingId} className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-medium text-surface-900">{r.farmerName}</p>
-              <p className="text-xs text-surface-500">
-                {r.bookingNumber} · {r.area} acre
-                {r.done > 0 ? ` (${r.done} ho chuka)` : ""}
-                {r.cropType ? ` · ${r.cropType}` : ""}
-              </p>
-            </div>
-            <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {r.date ? new Date(r.date).toLocaleDateString() : "Tareekh tay nahi"}
-              {r.time ? ` · ${r.time}` : ""}
-            </span>
-          </div>
-
-          <p className="mt-1 text-xs text-surface-500">
-            {[r.address, r.village].filter(Boolean).join(", ") || "Jagah darj nahi"}
-            {r.machineLabel ? ` · ${r.machineLabel}` : ""}
-          </p>
-
-          <div className="mt-2 flex flex-wrap gap-3 text-xs">
-            {r.lat !== null && r.lng !== null && (
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
-              >
-                <MapPin className="h-3.5 w-3.5" /> Location kholein
-              </a>
-            )}
-            {r.farmerPhone && (
-              <a
-                href={`tel:${r.farmerPhone}`}
-                className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
-              >
-                <Phone className="h-3.5 w-3.5" /> {r.farmerPhone}
-              </a>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
-  return (
-    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card">
-      {icon}
-      <p className="mt-1 font-display text-lg font-bold text-surface-900">{value}</p>
-      <p className="text-xs text-surface-500">{label}</p>
-    </div>
-  );
-}
-
 function BookingCard({ booking }: { booking: Booking }) {
   const [open, setOpen] = useState<null | "work" | "fuel" | "cash">(null);
   const status = STATUS[booking.status] ?? { label: booking.status, color: "bg-surface-100 text-surface-600" };
