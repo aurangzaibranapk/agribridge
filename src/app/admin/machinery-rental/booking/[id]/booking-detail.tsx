@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
@@ -115,6 +115,7 @@ export function BookingDetail({
   bill,
   events,
   machines,
+  harvestDate,
   reminders,
   accounts,
   advanceTotal,
@@ -159,7 +160,18 @@ export function BookingDetail({
   }>;
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number; sabit_area: number | null; kutra_area: number | null; sabit_rate: number | null; kutra_rate: number | null; sabit_amount: number | null; kutra_amount: number | null } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
-  machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
+  machines: Array<{
+    id: string;
+    label: string;
+    driverName: string;
+    driverPhone: string;
+    /** Us din us machine ka bojh (180). Na maloom ho to null. */
+    capacity: number | null;
+    booked: number | null;
+    free: number | null;
+  }>;
+  /** Booking ki kattai ki tareekh -- capacity isi din ki dikhti hai. */
+  harvestDate: string | null;
   reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   advanceTotal: number;
@@ -410,7 +422,13 @@ export function BookingDetail({
                 -- pehle ye form khula rehta tha aur agla diesel likhne
                 ke liye staff ise dobara bhar deta tha, jis se ek hi
                 machine do dafa "bheji gayi". */}
-            {confirmed && <DispatchForm bookingId={booking.id} machines={machines} already={dispatches.length > 0} />}
+            {confirmed && <DispatchForm
+                bookingId={booking.id}
+                machines={machines}
+                already={dispatches.length > 0}
+                harvestDate={harvestDate}
+                bookingAcres={booking.harvest_area}
+              />}
           </StepCard>
 
           {/* Diesel -- jitni baar dala jaye */}
@@ -795,10 +813,10 @@ function StepCard({
   );
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="sm" disabled={pending}>
+    <Button type="submit" size="sm" disabled={pending || disabled}>
       {pending ? "..." : label}
     </Button>
   );
@@ -1199,14 +1217,33 @@ function DispatchForm({
   bookingId,
   machines,
   already,
+  harvestDate,
+  bookingAcres,
 }: {
   bookingId: string;
-  machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
+  machines: Array<{
+    id: string;
+    label: string;
+    driverName: string;
+    driverPhone: string;
+    /** Us din us machine ka bojh (180). Na maloom ho to null. */
+    capacity: number | null;
+    booked: number | null;
+    free: number | null;
+  }>;
   already: boolean;
+  harvestDate: string | null;
+  bookingAcres: number;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(dispatchMachine, initialState);
   const [again, setAgain] = useState(false);
+
+  // Machine chunte hi us din ka bojh saamne (180). Pehle ye adad sirf
+  // ERROR ki shakl mein milta tha -- yani form bhar chukne ke baad, aur
+  // kisan saamne khaRa hota. Ab pehle se nazar aata hai, aur staff
+  // wahin faisla kar leta hai: is machine par bhejein ya tareekh badlein.
+  const [pickedMachine, setPickedMachine] = useState("");
 
   // Driver machine ke sath likha hua hai (162), is liye machine
   // chunte hi wo khud aa jata hai. Khane phir bhi khule hain: kisi
@@ -1250,7 +1287,9 @@ function DispatchForm({
         <Label>{t("mc_machine", lang)}</Label>
         <Select
           name="machine_id"
+          value={pickedMachine}
           onChange={(e) => {
+            setPickedMachine(e.target.value);
             const m = machines.find((x) => x.id === e.target.value);
             setDriverName(m?.driverName ?? "");
             setDriverPhone(m?.driverPhone ?? "");
@@ -1258,9 +1297,21 @@ function DispatchForm({
         >
           <option value="">—</option>
           {machines.map((m) => (
-            <option key={m.id} value={m.id}>{m.label}</option>
+            <option key={m.id} value={m.id}>
+              {m.label}
+              {/* Har machine ke naam ke sath us din ka bojh -- chunne se
+                  pehle hi pata chal jaye ke kahan jagah hai. */}
+              {m.capacity !== null ? `  ·  ${m.booked}/${m.capacity} acre bandhe` : ""}
+            </option>
           ))}
         </Select>
+        {/* Chuni hui machine ka us din ka poora hisaab -- saaf jumle
+            mein, error se pehle. */}
+        <MachineDayLoad
+          machine={machines.find((m) => m.id === pickedMachine) ?? null}
+          date={harvestDate}
+          acres={bookingAcres}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -1293,6 +1344,119 @@ function DispatchForm({
  * tareekh hai, hamesha sab se munasib nahi: kisan ki apni majboori ho
  * sakti hai. System tajweez deta hai, faisla insaan ka rehta hai.
  */
+/**
+ * Us machine par us din kitna bandha hua hai (180).
+ *
+ * Ye ROKTA nahi -- sirf batata hai. Malik ka faisla hai ke rok na ho;
+ * manager kabhi doosri machine ka bandobast kar leta hai. Magar jo baat
+ * DB error ke baad batayi jati thi, wo ab pehle nazar aa jati hai.
+ */
+/**
+ * Waqt ka khana -- ek "Theek hai" ke sath.
+ *
+ * Browser ka apna calendar/ghari ka dabba hamara nahi hai; us ke andar
+ * koi button daalna mumkin nahi. Magar us ko BAND karne ka saaf raasta
+ * dena mumkin hai: "Theek hai" par khana chhoR diya jata hai aur dabba
+ * apne aap band ho jata hai. Chuna hua waqt neeche saaf likha rehta hai
+ * -- pehle wo sirf usi tang khane mein dikhta tha.
+ */
+function TimeField({
+  name,
+  value,
+  onChange,
+  min,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  min?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="flex gap-2">
+        <Input
+          ref={ref}
+          type="datetime-local"
+          name={name}
+          value={value}
+          min={min}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          className="shrink-0"
+          onClick={() => ref.current?.blur()}
+        >
+          Theek hai
+        </Button>
+      </div>
+      {value && (
+        <p className="mt-1 text-xs text-surface-500">
+          {new Date(value).toLocaleString(undefined, {
+            weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MachineDayLoad({
+  machine,
+  date,
+  acres,
+}: {
+  machine: { label: string; capacity: number | null; booked: number | null; free: number | null } | null;
+  date: string | null;
+  acres: number;
+}) {
+  if (!machine || machine.capacity === null || !date) return null;
+
+  const capacity = machine.capacity;
+  const booked = machine.booked ?? 0;
+  const free = machine.free ?? 0;
+
+  if (capacity === 0) {
+    return (
+      <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+        Ye machine abhi kaam ke qabil nahi (workshop ya band). Doosri machine chunein.
+      </p>
+    );
+  }
+
+  const fits = acres <= free + 0.001;
+  const pct = Math.min(Math.round((booked / capacity) * 100), 100);
+
+  return (
+    <div
+      className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+        fits
+          ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20"
+          : "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20"
+      }`}
+    >
+      <p className={fits ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}>
+        <strong>{date}</strong> ko is machine par <strong>{booked} / {capacity} acre</strong> bandhe hain —{" "}
+        <strong>{free} acre</strong> bachi hai. Ye booking {acres} acre ki hai.
+      </p>
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/70 dark:bg-surface-800">
+        <div
+          className={`h-full rounded-full ${fits ? "bg-green-500" : "bg-amber-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {!fits && (
+        <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+          Jagah kam hai. Doosri machine ya doosri tareekh behtar hai — warna manager ki ijazat aur wajah darj karni
+          hogi.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function RescheduleForm({ bookingId, nextFree }: { bookingId: string; nextFree: string }) {
   const lang = useLang();
   const [state, action] = useFormState(rescheduleBooking, initialState);
@@ -1489,6 +1653,31 @@ function WorkForm({
     startAt && endAt && new Date(endAt) > new Date(startAt)
       ? Math.round(((new Date(endAt).getTime() - new Date(startAt).getTime()) / 3600000) * 100) / 100
       : null;
+
+  // Waqt hamesha AAGE chalta hai. Khatam ka waqt shuru se pehle ho to
+  // wo indraj sach ho hi nahi sakta -- aur DB bhi usay rok deta hai
+  // (chk_machinery_work_time).
+  //
+  // Magar aksar ye ghalti nahi hoti: raat ka kaam adhi raat paar kar
+  // jata hai. Raat 10 baje shuru aur "2 baje" khatam ka matlab AGLE DIN
+  // ka 2 baje hai. Is liye yahan sirf rok nahi lagti -- agle din wala
+  // waqt bana kar saamne rakh diya jata hai, ek click par lag jata hai.
+  const backwards = !!startAt && !!endAt && new Date(endAt) <= new Date(startAt);
+  const nextDayEnd =
+    backwards && endAt
+      ? (() => {
+          const d = new Date(endAt);
+          d.setDate(d.getDate() + 1);
+          const pad = (n: number) => String(n).padStart(2, "0");
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        })()
+      : null;
+  // Agle din ka waqt tabhi tajweez hota hai jab wo waqai maqool ho --
+  // 24 ghante se lamba kaam ek din ka indraj nahi hai.
+  const nextDayFits =
+    nextDayEnd && startAt
+      ? new Date(nextDayEnd).getTime() - new Date(startAt).getTime() <= 24 * 3600000
+      : false;
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -1527,11 +1716,11 @@ function WorkForm({
         </div>
         <div>
           <Label>{t("mc_start", lang)}</Label>
-          <Input type="datetime-local" name="started_at" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+          <TimeField name="started_at" value={startAt} onChange={setStartAt} />
         </div>
         <div>
           <Label>{t("mc_end", lang)}</Label>
-          <Input type="datetime-local" name="finished_at" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+          <TimeField name="finished_at" value={endAt} onChange={setEndAt} min={startAt || undefined} />
         </div>
         <div>
           <Label>{t("mc_meter_only", lang)}</Label>
@@ -1548,6 +1737,25 @@ function WorkForm({
           </p>
         </div>
       </div>
+
+      {/* Ulta waqt. Rok yahan bhi hai aur DB par bhi -- magar yahan us
+          ke sath wo tareekh bhi hai jo staff ka asal matlab thi. */}
+      {backwards && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="text-amber-800 dark:text-amber-300">
+            Khatam ka waqt shuru se pehle ya barabar hai. Waqt aage chalta hai — aisa indraj nahi ho sakta.
+          </p>
+          {nextDayEnd && nextDayFits && (
+            <button
+              type="button"
+              onClick={() => setEndAt(nextDayEnd)}
+              className="mt-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-brand-700 shadow-sm hover:bg-brand-50 dark:bg-surface-800 dark:text-brand-300"
+            >
+              Agle din ka {nextDayEnd.slice(11)} kar dein ({nextDayEnd.slice(0, 10)})
+            </button>
+          )}
+        </div>
+      )}
 
       {isDono && (
         <div className="space-y-2 rounded-card border border-surface-200 p-3 dark:border-surface-700">
@@ -1622,7 +1830,7 @@ function WorkForm({
         </div>
       )}
 
-      <Submit label={t("mc_record_work", lang)} />
+      <Submit label={t("mc_record_work", lang)} disabled={backwards} />
     </form>
   );
 }

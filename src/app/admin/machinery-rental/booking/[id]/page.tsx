@@ -35,6 +35,16 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     effective_from: c.effective_from,
     is_active: c.is_active,
   }));
+  // Us din us machine par kitni jagah hai (180). Rawangi ke waqt sab se
+  // aam sawal yehi hota hai, aur pehle us ka jawab sirf ERROR ki shakl
+  // mein milta tha -- yani form bhar chukne ke baad.
+  const { data: capacityRows } = booking.preferred_date
+    ? await supabase
+        .from("v_machinery_capacity_day")
+        .select("machine_id, hadd, bandha_hua, bacha_hua")
+        .eq("tareekh", booking.preferred_date)
+    : { data: [] };
+
   const cardRate = (type: "sabit" | "kutra") =>
     pickDefaultRate(rateCards, {
       crop: booking.crop_type,
@@ -103,13 +113,28 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     .filter((p) => p.kind === "final")
     .reduce((sum, p) => sum + Number(p.amount), 0);
 
+  const capByMachine = new Map<string, { capacity: number; booked: number; free: number }>();
+  (capacityRows ?? []).forEach((r) =>
+    capByMachine.set(r.machine_id as string, {
+      capacity: Number(r.hadd ?? 0),
+      booked: Number(r.bandha_hua ?? 0),
+      free: Number(r.bacha_hua ?? 0),
+    })
+  );
+
   const machines = (rawMachines ?? []).map((m: any) => {
     const vendor = Array.isArray(m.machinery_vendors) ? m.machinery_vendors[0] : m.machinery_vendors;
+    const cap = capByMachine.get(m.id as string);
     return {
       id: m.id,
       label: `${m.machine_type}${m.model ? ` (${m.model})` : ""} — ${vendor?.vendor_name ?? "-"}`,
       driverName: (m.driver_name as string | null) ?? "",
       driverPhone: (m.driver_phone as string | null) ?? "",
+      // Us din us machine ka bojh. Na maloom ho to null -- "sifar"
+      // likh dena jhoot hota, aur usi par booking le li jati.
+      capacity: cap?.capacity ?? null,
+      booked: cap?.booked ?? null,
+      free: cap?.free ?? null,
     };
   });
 
@@ -238,6 +263,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         actor_name: e.actor_id ? actorName.get(e.actor_id) ?? "—" : null,
       }))}
       machines={machines}
+      harvestDate={booking.preferred_date}
       reminders={(reminders ?? []).map((r) => ({
         id: r.id as string,
         status: r.status as string,
