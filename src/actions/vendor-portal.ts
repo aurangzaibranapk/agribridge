@@ -94,11 +94,12 @@ export async function submitVendorWork(
   }
 
   const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
+  const isFinal = formData.get("is_final") === "on";
 
   const { error } = await supabase.from("machinery_work_records").insert({
     booking_id: bookingId,
     work_date: workDate,
-    is_final: formData.get("is_final") === "on",
+    is_final: isFinal,
     actual_area_acres: acres,
     actual_area_kanal: kanal,
     sabit_area: sabitArea,
@@ -122,11 +123,54 @@ export async function submitVendorWork(
     "/admin/machinery-rental/work-claims"
   );
 
+  // KAAM KHATAM HONE PAR BAQI DO SAWAL.
+  //
+  // Ye dono cheezein pehle bhi darj ho sakti thin, magar ALAG buttonon
+  // se -- aur wahin se bhool paida hoti thi: vendor kaam darj kar ke
+  // chala jata, aur diesel ya kisan se li hui raqam kabhi darj hi na
+  // hoti. Baad mein wo baat sirf us ki yaad mein rehti hai, aur yaad
+  // haftay bhar mein badal jati hai.
+  //
+  // Ab wo aakhri lamhe mein, usi form mein poochhe jate hain -- jab
+  // vendor abhi khet par khaRa hai aur sach us ke saamne hai.
+  //
+  // Hisaab yahan dobara NAHI likha: dono jawab wohi purane functionon
+  // ko bheje jate hain jo alag button bhi bulate hain. Ek hi qanoon,
+  // do darwaze.
+  const extras: string[] = [];
+
+  if (isFinal && str(formData, "farmer_diesel") === "haan") {
+    const fd = new FormData();
+    fd.set("booking_id", bookingId);
+    fd.set("litres", String(num(formData, "farmer_diesel_litres") ?? 0));
+    fd.set("rate_per_litre", String(num(formData, "farmer_diesel_rate") ?? 0));
+    fd.set("paid_by", "farmer");
+    fd.set("log_date", workDate);
+    const res = await submitVendorFuel({}, fd);
+    if (res.error) return { error: `Kaam darj ho gaya, magar diesel nahi: ${res.error}` };
+    extras.push("diesel");
+  }
+
+  if (isFinal && str(formData, "farmer_paid") === "haan") {
+    const fd = new FormData();
+    fd.set("booking_id", bookingId);
+    fd.set("amount", String(num(formData, "farmer_paid_amount") ?? 0));
+    // Kisan ne paisa VENDOR ko diya hai -- wo abhi us ke paas hai.
+    // "Hamein de rahe hain" wala jawab alag qadam par aata hai.
+    fd.set("settlement", "kept");
+    fd.set("payment_date", workDate);
+    const res = await submitVendorCollection({}, fd);
+    if (res.error) return { error: `Kaam darj ho gaya, magar raqam nahi: ${res.error}` };
+    extras.push("kisan se li hui raqam");
+  }
+
   revalidatePath("/vendor");
   return {
     success: true,
     notice:
-      "Aap ka indraj pohanch gaya. Hamari team dekh kar tasdeeq karegi — us ke baad ye bill ka hissa banega.",
+      extras.length > 0
+        ? `Aap ka indraj pohanch gaya (kaam${extras.map((e) => `, ${e}`).join("")}). Hamari team dekh kar tasdeeq karegi — us ke baad ye bill ka hissa banega.`
+        : "Aap ka indraj pohanch gaya. Hamari team dekh kar tasdeeq karegi — us ke baad ye bill ka hissa banega.",
   };
 }
 

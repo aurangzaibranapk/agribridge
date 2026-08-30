@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
+import { LogoutButton } from "@/components/layout/logout-button";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   Tractor, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays,
-  Layers, Loader2, CircleDashed, ShieldCheck, Droplets, Banknote, Inbox, ArrowRight, Navigation,
+  Layers, Loader2, CircleDashed, ShieldCheck, Droplets, Banknote, Inbox, ArrowRight, Navigation, BellDot,
 } from "lucide-react";
 import {
   submitVendorWork,
@@ -165,7 +166,15 @@ type Drill =
   | "earned" | "received" | "withArt" | "withFarmer" | "dieselAdvance" | "commission"
   | "dieselAll" | "dieselVendor" | "dieselFarmer" | "dieselArt";
 
+export interface AlertRow {
+  id: string;
+  title: string;
+  message: string;
+  at: string;
+}
+
 export function VendorDashboardClient({
+  alerts,
   vendorName,
   awaitingCheck,
   money,
@@ -178,6 +187,7 @@ export function VendorDashboardClient({
   payments,
   commissionRows,
 }: {
+  alerts: AlertRow[];
   vendorName: string;
   awaitingCheck: number;
   money: Money;
@@ -268,8 +278,41 @@ export function VendorDashboardClient({
             >
               Gosharah
             </a>
+            {/* Nikalne ka raasta. Ye tha hi nahi -- vendor ko browser
+                band karne ke ilawa koi chara nahi tha, aur sanjhe phone
+                par wo khatarnak hai: agla banda usi ke khate mein
+                andar hota hai. */}
+            <div className="rounded-xl border border-surface-200 bg-white shadow-sm">
+              <LogoutButton />
+            </div>
           </div>
         </header>
+
+        {/* Nayi khabrein -- sab se upar, hero se bhi pehle.
+            Machine rawana hoti hai to khabar yahin milti hai. Pehle wo
+            sirf WhatsApp par jati thi, aur jis din wo chaabi na lagi ho
+            us din vendor ko kuch pata hi nahi chalta tha. */}
+        {alerts.length > 0 && (
+          <section className="mb-6 space-y-2">
+            {alerts.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3"
+              >
+                <BellDot className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-blue-900">{a.title}</p>
+                  {a.message && <p className="text-xs text-blue-800">{a.message}</p>}
+                  {a.at && (
+                    <p className="mt-0.5 text-[11px] text-blue-600">
+                      {new Date(a.at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* ---------------------------------------------- Hero
             Sab se ahem adad sab se upar aur akela: "net abhi milna
@@ -1480,6 +1523,14 @@ function WorkForm({
   // aur kitna kutra -- aur yehi wo adad hai jis par bill banta hai.
   const isDono = harvestType === "dono";
   const [acres, setAcres] = useState("");
+  // Kaam khatam hone par poochhe jane wale do sawal (183).
+  const [isFinal, setIsFinal] = useState(false);
+  const [diesel, setDiesel] = useState("");
+  const [dLitres, setDLitres] = useState("");
+  const [dRate, setDRate] = useState("");
+  const [paid, setPaid] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
+  const dieselAmount = Math.round((Number(dLitres) || 0) * (Number(dRate) || 0));
   const [kanal, setKanal] = useState("");
   const [sabit, setSabit] = useState("");
   const [kutra, setKutra] = useState("");
@@ -1578,7 +1629,13 @@ function WorkForm({
         <input name="notes" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
       </div>
       <label className="flex items-start gap-2 rounded-lg border-2 border-amber-200 bg-amber-50 p-3 text-sm">
-        <input type="checkbox" name="is_final" className="mt-0.5 h-4 w-4" />
+        <input
+          type="checkbox"
+          name="is_final"
+          checked={isFinal}
+          onChange={(e) => setIsFinal(e.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
         <span>
           <span className="font-medium text-surface-900">Kaam poora ho gaya</span>
           <span className="block text-xs text-surface-500">
@@ -1586,6 +1643,90 @@ function WorkForm({
           </span>
         </span>
       </label>
+
+      {/* Kaam khatam hone par baqi do sawal.
+          Ye dono cheezein alag buttonon se bhi darj ho sakti hain, magar
+          wahin se bhool paida hoti thi: vendor kaam darj kar ke chala
+          jata aur diesel ya kisan se li hui raqam kabhi darj hi na
+          hoti. Ab wo aakhri lamhe mein poochhe jate hain -- jab vendor
+          abhi khet par khaRa hai aur sach us ke saamne hai. */}
+      {isFinal && (
+        <div className="space-y-3 rounded-lg border border-surface-200 bg-surface-50/60 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Jane se pehle do baatein</p>
+
+          <div>
+            <p className="text-sm font-medium text-surface-800">Kisan ne diesel dala?</p>
+            <div className="mt-1.5 flex gap-1.5">
+              <Choice on={diesel === "haan"} onClick={() => setDiesel("haan")}>Haan</Choice>
+              <Choice on={diesel === "nahi"} onClick={() => setDiesel("nahi")}>Nahi</Choice>
+            </div>
+            <input type="hidden" name="farmer_diesel" value={diesel} />
+            {diesel === "haan" && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-medium text-surface-600">Kitne litre</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="farmer_diesel_litres"
+                    value={dLitres}
+                    onChange={(e) => setDLitres(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-surface-600">Rate per litre</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="farmer_diesel_rate"
+                    value={dRate}
+                    onChange={(e) => setDRate(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+                  />
+                </div>
+                {/* Raqam haath se nahi likhi jati -- litre aur rate se
+                    khud banti hai. Wahi jagah hai jahan ek sifar zyada
+                    lag jata hai. */}
+                {dieselAmount > 0 && (
+                  <p className="col-span-2 text-xs text-surface-500">
+                    {dLitres} × {dRate} = <strong>Rs {dieselAmount.toLocaleString()}</strong>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-surface-200 pt-3">
+            <p className="text-sm font-medium text-surface-800">Kisan ne paisa diya?</p>
+            <div className="mt-1.5 flex gap-1.5">
+              <Choice on={paid === "haan"} onClick={() => setPaid("haan")}>Haan</Choice>
+              <Choice on={paid === "nahi"} onClick={() => setPaid("nahi")}>Nahi — udhaar hai</Choice>
+            </div>
+            <input type="hidden" name="farmer_paid" value={paid} />
+            {paid === "haan" && (
+              <div className="mt-2">
+                <label className="text-xs font-medium text-surface-600">Kitni raqam</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="farmer_paid_amount"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-surface-500">
+                  Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-surface-400">
+            Dono jawab tasdeeq ke liye jate hain — tasdeeq se pehle kisi hisaab mein shamil nahi hote.
+          </p>
+        </div>
+      )}
       <div className="flex gap-2">
         <Submit />
         <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
@@ -1593,6 +1734,23 @@ function WorkForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/** Haan/Nahi ka chhota sa button -- do jawab, aur koi teesra nahi. */
+function Choice({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        on
+          ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+          : "rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-surface-700 ring-1 ring-surface-200 hover:bg-surface-50"
+      }
+    >
+      {children}
+    </button>
   );
 }
 

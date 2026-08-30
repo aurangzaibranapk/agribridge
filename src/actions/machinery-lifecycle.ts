@@ -4,7 +4,7 @@ import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 import { createClient } from "@/lib/supabase/server";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { createServiceClient } from "@/lib/supabase/service";
-import { notifyRoles } from "@/lib/notifications";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
@@ -955,7 +955,7 @@ async function notifyVendorOfBooking(
   const { data: b } = await supabase
     .from("machinery_bookings")
     .select(
-      "id, booking_number, crop_type, harvest_area, final_rate, preferred_date, preferred_time, location_address, village, vendor_id, machine_id, farmers(full_name, phone_number), machinery_vendors(vendor_name, phone), machinery_vendor_machines(machine_type, model)"
+      "id, booking_number, crop_type, harvest_area, final_rate, preferred_date, preferred_time, location_address, village, vendor_id, machine_id, farmers(full_name, phone_number), machinery_vendors(vendor_name, phone, user_id), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -967,11 +967,29 @@ async function notifyVendorOfBooking(
     ? b.machinery_vendor_machines[0]
     : b.machinery_vendor_machines;
 
+  // Khabar PORTAL par bhi, sirf WhatsApp par nahi.
+  //
+  // Ye function pehle sirf WhatsApp bhejta tha. Jis din WhatsApp ki
+  // chaabi na lagi ho -- aur abhi nahi lagi -- us din vendor ko kuch
+  // milta hi nahi tha: machine us ke naam par rawana ho jati aur usay
+  // khabar tak na hoti.
+  //
+  // Portal wali khabar kisi chaabi ki mohtaj nahi. Wo pehle jati hai;
+  // WhatsApp us ke baad, agar chal raha ho.
+  await notifyUser(
+    (vendor as { user_id?: string | null } | null)?.user_id ?? null,
+    reason === "machine_assigned" ? "Naya kaam aap ki machine ko mila" : "Kisan ne rate par haan kar di",
+    `Booking ${b.booking_number} — ${farmer?.full_name ?? "kisan"} — ${Number(b.harvest_area ?? 0)} acre${
+      b.preferred_date ? `, ${b.preferred_date}` : ""
+    }`,
+    "/vendor"
+  );
+
   if (!vendor?.phone) {
     await logEvent({
       bookingId,
       eventType: "vendor_notified",
-      note: "Vendor ka phone number nahi hai — khabar nahi ja saki",
+      note: "Vendor ka phone number nahi hai — WhatsApp nahi ja saka (portal par khabar chali gayi)",
       actorId,
     });
     return;

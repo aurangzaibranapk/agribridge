@@ -27,6 +27,18 @@ async function insertForUsers(userIds: string[], title: string, message: string,
   await serviceClient.from("notifications").insert(rows);
 }
 
+/**
+ * Ek hi shakhs ko khabar.
+ *
+ * Role wale raaste se alag zaroorat hai: vendor kisi role mein nahi
+ * aata, wo apne login se juda hua hota hai. Machine us ki taraf rawana
+ * ho to khabar usay milni chahiye, poore daftar ko nahi.
+ */
+export async function notifyUser(userId: string | null | undefined, title: string, message: string, linkUrl?: string) {
+  if (!userId) return;
+  await insertForUsers([userId], title, message, linkUrl);
+}
+
 /** Notify everyone with a specific role (e.g. "finance", "warehouse"). */
 export async function notifyRole(role: string, title: string, message: string, linkUrl?: string) {
   const supabase = createClient();

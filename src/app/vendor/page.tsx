@@ -219,8 +219,24 @@ export default async function VendorPortalPage() {
 
   const n = (v: unknown) => Number(v ?? 0);
 
+  // Vendor ki apni khabrein (183). Machine rawana hoti hai to khabar
+  // yahin aati hai -- WhatsApp ki chaabi lagi ho ya na lagi ho.
+  const { data: alerts } = await supabase
+    .from("notifications")
+    .select("id, title, message, created_at, is_read")
+    .eq("recipient_user_id", user.id)
+    .eq("is_read", false)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
   return (
     <VendorDashboardClient
+      alerts={(alerts ?? []).map((a) => ({
+        id: a.id as string,
+        title: (a.title as string) ?? "",
+        message: (a.message as string | null) ?? "",
+        at: (a.created_at as string) ?? "",
+      }))}
       vendorName={vendor.vendor_name}
       awaitingCheck={awaitingCheck}
       money={{
