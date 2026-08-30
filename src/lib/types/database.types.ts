@@ -10886,6 +10886,70 @@ export type Database = {
           },
         ]
       }
+      machinery_rate_cards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          crop_key: string | null
+          effective_from: string
+          harvest_type: string
+          id: string
+          is_active: boolean
+          machine_type: string | null
+          notes: string | null
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          crop_key?: string | null
+          effective_from?: string
+          harvest_type: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string | null
+          notes?: string | null
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          crop_key?: string | null
+          effective_from?: string
+          harvest_type?: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string | null
+          notes?: string | null
+          rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_rate_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_rate_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_rate_cards_crop_key_fkey"
+            columns: ["crop_key"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       machinery_receipt_counters: {
         Row: {
           last_number: number

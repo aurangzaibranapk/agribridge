@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import { MapPin, Loader2, UserPlus, X } from "lucide-react";
 import { addCrop } from "@/actions/crops";
+import { pickDefaultRate, type RateCard } from "@/lib/machinery/rate-card";
 
 const initialState: ActionState = {};
 
@@ -79,6 +80,7 @@ export function NewBookingForm({
   farmers,
   accounts,
   crops,
+  rateCards,
   staffName,
   defaultFarmerId,
   defaultRequestId,
@@ -90,6 +92,8 @@ export function NewBookingForm({
   accounts: Account[];
   /** Fasl ki fehrist database se (174). */
   crops: { key: string; label: string }[];
+  /** Default rate ki fehrist (177) -- sirf khana bharne ke liye. */
+  rateCards: RateCard[];
   staffName?: string | null;
   defaultFarmerId?: string;
   defaultRequestId?: string;
@@ -343,6 +347,12 @@ export function NewBookingForm({
   // Kattai ka kul raqba -- qism ka batwara isi se parkha jata hai (176).
   const [harvestTotal, setHarvestTotal] = useState<number>(Number(defaultAcres ?? 0) || 0);
 
+  // Fasal aur machine se default rate milta hai (177). Dono yahan
+  // rakhe hain kyunke rate ka khana neeche hai aur ye upar -- warna
+  // rate card ko pata hi na chalta ke kis fasal ka rate chahiye.
+  const [cropKey, setCropKey] = useState<string>(crops[0]?.key ?? "other");
+  const [machineTypeReq, setMachineTypeReq] = useState<string>("");
+
   // Farmer ID likhte hi kisan saamne aa jata hai -- code, naam, phone ya
   // CNIC, chaaron se. Staff ko yaad sirf ek cheez hoti hai, aur wo har
   // baar wahi nahi hoti. Khet par aksar sirf shanakhti card hota hai.
@@ -564,6 +574,8 @@ export function NewBookingForm({
             id="fld-machine_type_requested"
             name="machine_type_requested"
             placeholder={t("mc_eg_machine", lang)}
+            value={machineTypeReq}
+            onChange={(e) => setMachineTypeReq(e.target.value)}
             className={errors.machine_type_requested ? "border-red-500 focus:ring-red-500" : undefined}
           />
           {errors.machine_type_requested && (
@@ -577,7 +589,7 @@ export function NewBookingForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>{t("mc_crop", lang)}</Label>
-            <CropPicker crops={crops} lang={lang} />
+            <CropPicker crops={crops} lang={lang} onChange={setCropKey} />
           </div>
           <div>
             <Label>{t("mc_when_needed", lang)}</Label>
@@ -596,7 +608,13 @@ export function NewBookingForm({
           onTotal={setHarvestTotal}
         />
 
-        <HarvestTypePicker total={harvestTotal} lang={lang} />
+        <HarvestTypePicker
+          total={harvestTotal}
+          lang={lang}
+          rateCards={rateCards}
+          crop={cropKey}
+          machineType={machineTypeReq}
+        />
 
         <div>
           <Label>{t("mc_field_address", lang)}</Label>
@@ -835,12 +853,38 @@ function YesNo({
  * hote; database wali us soorat ke liye hai jab koi doosra raasta
  * (portal, purani screen) yahi ghalti le kar aaye.
  */
-function HarvestTypePicker({ total, lang }: { total: number; lang: Lang }) {
+function HarvestTypePicker({
+  total,
+  lang,
+  rateCards,
+  crop,
+  machineType,
+}: {
+  total: number;
+  lang: Lang;
+  rateCards: RateCard[];
+  crop: string;
+  machineType: string;
+}) {
   const [type, setType] = useState<"sabit" | "kutra" | "dono">("sabit");
   const [sabit, setSabit] = useState("");
   const [kutra, setKutra] = useState("");
   const [sabitRate, setSabitRate] = useState("");
   const [kutraRate, setKutraRate] = useState("");
+
+  // Rate card se default (177). Ye sirf KHALI khana bharta hai. Jis
+  // khane par staff ne hath rakh diya, us par ye dobara nahi chaRhta --
+  // warna fasal badalte hi wo rate ur jata jo abhi likha gaya tha.
+  const [sabitTouched, setSabitTouched] = useState(false);
+  const [kutraTouched, setKutraTouched] = useState(false);
+  const cardSabit = pickDefaultRate(rateCards, { crop, machineType, harvestType: "sabit" });
+  const cardKutra = pickDefaultRate(rateCards, { crop, machineType, harvestType: "kutra" });
+
+  useEffect(() => {
+    if (!sabitTouched) setSabitRate(cardSabit ? String(cardSabit.rate) : "");
+    if (!kutraTouched) setKutraRate(cardKutra ? String(cardKutra.rate) : "");
+    // Fasal ya machine badle to default dobara dekha jata hai.
+  }, [cardSabit?.id, cardKutra?.id, sabitTouched, kutraTouched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sabitNum = Number(sabit) || 0;
   const kutraNum = Number(kutra) || 0;
@@ -917,9 +961,16 @@ function HarvestTypePicker({ total, lang }: { total: number; lang: Lang }) {
                 name="sabit_rate"
                 step="0.01"
                 value={sabitRate}
-                onChange={(e) => setSabitRate(e.target.value)}
+                onChange={(e) => {
+                  setSabitTouched(true);
+                  setSabitRate(e.target.value);
+                }}
                 placeholder="0"
               />
+              {cardSabit && !sabitTouched && (
+                <p className="mt-1 text-xs text-surface-500">{t("mrc_from_card", lang)}</p>
+              )}
+              {sabitTouched && <p className="mt-1 text-xs text-brand-600">{t("mrc_changed", lang)}</p>}
             </div>
             <div>
               <Label>{t("mh_kutra_rate", lang)}</Label>
@@ -928,9 +979,16 @@ function HarvestTypePicker({ total, lang }: { total: number; lang: Lang }) {
                 name="kutra_rate"
                 step="0.01"
                 value={kutraRate}
-                onChange={(e) => setKutraRate(e.target.value)}
+                onChange={(e) => {
+                  setKutraTouched(true);
+                  setKutraRate(e.target.value);
+                }}
                 placeholder="0"
               />
+              {cardKutra && !kutraTouched && (
+                <p className="mt-1 text-xs text-surface-500">{t("mrc_from_card", lang)}</p>
+              )}
+              {kutraTouched && <p className="mt-1 text-xs text-brand-600">{t("mrc_changed", lang)}</p>}
             </div>
           </div>
 
@@ -956,7 +1014,15 @@ function HarvestTypePicker({ total, lang }: { total: number; lang: Lang }) {
   );
 }
 
-function CropPicker({ crops, lang }: { crops: { key: string; label: string }[]; lang: Lang }) {
+function CropPicker({
+  crops,
+  lang,
+  onChange,
+}: {
+  crops: { key: string; label: string }[];
+  lang: Lang;
+  onChange?: (key: string) => void;
+}) {
   const [list, setList] = useState(crops);
   const [value, setValue] = useState(crops[0]?.key ?? "other");
   const [adding, setAdding] = useState(false);
@@ -979,6 +1045,7 @@ function CropPicker({ crops, lang }: { crops: { key: string; label: string }[]; 
         // Pehle se maujood ho to dobara na chipke -- wohi chun li jati hai.
         setList((prev) => (prev.some((c) => c.key === res.key) ? prev : [...prev, { key: res.key!, label: res.label! }]));
         setValue(res.key);
+        onChange?.(res.key);
       }
       setName("");
       setAdding(false);
@@ -988,7 +1055,14 @@ function CropPicker({ crops, lang }: { crops: { key: string; label: string }[]; 
 
   return (
     <div>
-      <Select name="crop_type" value={value} onChange={(e) => setValue(e.target.value)}>
+      <Select
+        name="crop_type"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          onChange?.(e.target.value);
+        }}
+      >
         {list.map((c) => (
           <option key={c.key} value={c.key}>
             {c.label}

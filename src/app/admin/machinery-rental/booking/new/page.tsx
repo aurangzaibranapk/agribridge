@@ -36,6 +36,13 @@ export default async function NewMachineryBookingPage({
     .eq("is_active", true)
     .order("sort_order");
 
+  // Default rate ki fehrist (177). Ye sirf khana bharti hai -- rate ka
+  // malik booking hai, aur staff wahan jo marzi likhe.
+  const { data: rateCards } = await supabase
+    .from("machinery_rate_cards")
+    .select("id, crop_key, machine_type, harvest_type, rate, effective_from, is_active")
+    .eq("is_active", true);
+
   // Kisan ka pichla machinery hisaab. Ye jaan boojh kar "machinery ka
   // baqi" hai, kisan ka poora khata nahi -- yahan staff ko wohi cheez
   // chahiye jo isi kaam se juRi hai, aur mila-jula number dikhana in
@@ -102,6 +109,15 @@ export default async function NewMachineryBookingPage({
           outstanding: history.get(f.id)?.outstanding ?? 0,
         }))}
         accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
+        rateCards={(rateCards ?? []).map((c) => ({
+          id: c.id,
+          crop_key: c.crop_key,
+          machine_type: c.machine_type,
+          harvest_type: c.harvest_type as "sabit" | "kutra",
+          rate: Number(c.rate),
+          effective_from: c.effective_from,
+          is_active: c.is_active,
+        }))}
         crops={(crops ?? []).map((c) => ({
           key: c.key,
           label: lang === "en" ? c.label_en || c.label : lang === "ur" ? c.label_ur || c.label : c.label,

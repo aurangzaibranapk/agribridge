@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
+import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import {
   postMachineryAdvance,
   postMachineryBill,
@@ -298,6 +299,40 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
     }
   }
 
+  // Rate card se default (177). Ye sirf ANDAZA bharta hai -- rate ka
+  // malik abhi bhi booking hai, aur staff rate wale qadam par jo marzi
+  // likhe. Card yahan is liye dekha jata hai, bill banate waqt nahi:
+  // agar bill card se rate uthata to card badalne par purana bill bhi
+  // badal jata -- aur wo bill kisan ko de bhi diya gaya hota.
+  const { data: rateCardRows } = await supabase
+    .from("machinery_rate_cards")
+    .select("id, crop_key, machine_type, harvest_type, rate, effective_from, is_active");
+  const cards = (rateCardRows ?? []).map((c) => ({
+    id: c.id,
+    crop_key: c.crop_key,
+    machine_type: c.machine_type,
+    harvest_type: c.harvest_type as "sabit" | "kutra",
+    rate: Number(c.rate),
+    effective_from: c.effective_from,
+    is_active: c.is_active,
+  }));
+  const cropForRate = str(formData, "crop_type");
+  const cardFor = (type: "sabit" | "kutra") =>
+    pickDefaultRate(cards, { crop: cropForRate, machineType: machineType, harvestType: type })?.rate ?? null;
+
+  // Staff ne form par rate likh diya ho to wohi chalta hai -- card
+  // sirf khali khana bharta hai, likhe hue par nahi chaRhta.
+  const sabitRate = harvestType === "dono" ? (num(formData, "sabit_rate") ?? cardFor("sabit")) : null;
+  const kutraRate = harvestType === "dono" ? (num(formData, "kutra_rate") ?? cardFor("kutra")) : null;
+
+  const estimatedRate =
+    num(formData, "estimated_rate") ??
+    (harvestType === "dono"
+      ? sabitRate != null && kutraRate != null && totalArea > 0
+        ? Math.round((((sabitArea ?? 0) * sabitRate + (kutraArea ?? 0) * kutraRate) / totalArea) * 100) / 100
+        : null
+      : cardFor(harvestType === "kutra" ? "kutra" : "sabit"));
+
   const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
 
   const { data: booking, error } = await supabase
@@ -336,7 +371,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       trolley_required: formData.get("trolley_required") === "on",
       other_service: str(formData, "other_service"),
 
-      estimated_rate: num(formData, "estimated_rate"),
+      estimated_rate: estimatedRate,
       rate_status: "estimated",
 
       // Qism aur us ka raqba. Ek qism ho to database khud sabit/kutra
@@ -346,8 +381,8 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       kutra_area: kutraArea,
       // Andaze ke rate. Ye final nahi hain -- rate wale qadam par staff
       // apni marzi se badal kar kisan se confirm karwata hai.
-      sabit_rate: harvestType === "dono" ? num(formData, "sabit_rate") : null,
-      kutra_rate: harvestType === "dono" ? num(formData, "kutra_rate") : null,
+      sabit_rate: sabitRate,
+      kutra_rate: kutraRate,
 
       will_sell_to_us: willSell,
       wants_next_season_reminder: wantsReminder,

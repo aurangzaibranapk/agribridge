@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import { BookingDetail } from "./booking-detail";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,30 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     .maybeSingle();
 
   if (!booking) notFound();
+
+  // Default rate (177) -- SIRF us soorat mein jab booking par abhi koi
+  // rate hai hi nahi. Jo rate ek dafa booking par aa gaya, us par card
+  // dobara nahi chaRhta: wo staff ka tay kiya hua adad hai.
+  const { data: rateCardRows } = await supabase
+    .from("machinery_rate_cards")
+    .select("id, crop_key, machine_type, harvest_type, rate, effective_from, is_active")
+    .eq("is_active", true);
+  const rateCards = (rateCardRows ?? []).map((c) => ({
+    id: c.id,
+    crop_key: c.crop_key,
+    machine_type: c.machine_type,
+    harvest_type: c.harvest_type as "sabit" | "kutra",
+    rate: Number(c.rate),
+    effective_from: c.effective_from,
+    is_active: c.is_active,
+  }));
+  const cardRate = (type: "sabit" | "kutra") =>
+    pickDefaultRate(rateCards, {
+      crop: booking.crop_type,
+      machineType: booking.machine_type_requested,
+      harvestType: type,
+    })?.rate ?? null;
+  const singleCardRate = cardRate(booking.harvest_type === "kutra" ? "kutra" : "sabit");
 
   const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: reminders }, { data: rawMachines }, { data: accounts }, { data: profile }] =
     await Promise.all([
@@ -104,7 +129,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         total_area: Number(booking.total_area ?? 0),
         machine_type_requested: booking.machine_type_requested,
         machine_label: machine ? `${machine.machine_type}${machine.model ? ` (${machine.model})` : ""}` : null,
-        estimated_rate: booking.estimated_rate === null ? null : Number(booking.estimated_rate),
+        estimated_rate:
+          booking.estimated_rate === null ? singleCardRate : Number(booking.estimated_rate),
         final_rate: booking.final_rate === null ? null : Number(booking.final_rate),
         rate_status: booking.rate_status,
         // Kattai ki qism (176). Purani booking par ye null hai -- wahan
@@ -112,8 +138,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         harvest_type: booking.harvest_type ?? null,
         sabit_area: booking.sabit_area === null ? null : Number(booking.sabit_area),
         kutra_area: booking.kutra_area === null ? null : Number(booking.kutra_area),
-        sabit_rate: booking.sabit_rate === null ? null : Number(booking.sabit_rate),
-        kutra_rate: booking.kutra_rate === null ? null : Number(booking.kutra_rate),
+        sabit_rate: booking.sabit_rate === null ? cardRate("sabit") : Number(booking.sabit_rate),
+        kutra_rate: booking.kutra_rate === null ? cardRate("kutra") : Number(booking.kutra_rate),
         expected_harvest_date: booking.expected_harvest_date,
         rate_confirmation_sent_at: booking.rate_confirmation_sent_at,
         farmer_confirmed_at: booking.farmer_confirmed_at,
