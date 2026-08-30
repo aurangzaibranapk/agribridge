@@ -99,6 +99,7 @@ export function BookingDetail({
   payments,
   dispatches,
   fuelLogs,
+  efficiency,
   work,
   bill,
   events,
@@ -125,6 +126,13 @@ export function BookingDetail({
     amount: number;
     paid_by: string;
   }>;
+  efficiency: {
+    kulGhante: number | null;
+    kulLitre: number | null;
+    litrePerGhanta: number | null;
+    acrePerGhanta: number | null;
+    litrePerAcre: number | null;
+  } | null;
   work: Array<{
     id: string;
     work_date: string;
@@ -428,6 +436,34 @@ export function BookingDetail({
                 )}
               </div>
             )}
+            {/* Machine ne kaisa kaam kiya. Ye adad kisi ke bharne se
+                nahi bante -- waqt aur diesel ke indraj se khud nikalte
+                hain. Isi liye in par bharosa kiya ja sakta hai. */}
+            {efficiency && (efficiency.kulGhante || efficiency.kulLitre) && (
+              <div className="mb-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+                <p className="mb-2 text-xs font-medium text-surface-700 dark:text-surface-300">
+                  {t("mc_eff_title", lang)}
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                  {efficiency.kulGhante !== null && (
+                    <Eff label={t("mc_eff_hours", lang)} value={`${efficiency.kulGhante}`} />
+                  )}
+                  {efficiency.kulLitre !== null && (
+                    <Eff label={t("mc_eff_litres", lang)} value={`${efficiency.kulLitre} L`} />
+                  )}
+                  {efficiency.litrePerGhanta !== null && (
+                    <Eff label={t("mc_eff_lph", lang)} value={`${efficiency.litrePerGhanta} L`} />
+                  )}
+                  {efficiency.acrePerGhanta !== null && (
+                    <Eff label={t("mc_eff_aph", lang)} value={`${efficiency.acrePerGhanta}`} />
+                  )}
+                  {efficiency.litrePerAcre !== null && (
+                    <Eff label={t("mc_eff_lpa", lang)} value={`${efficiency.litrePerAcre} L`} />
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-surface-500">{t("mc_eff_note", lang)}</p>
+              </div>
+            )}
             {confirmed && !workFinished && (
               <WorkForm bookingId={booking.id} estimated={booking.harvest_area} done={workDone} />
             )}
@@ -650,6 +686,15 @@ function Submit({ label }: { label: string }) {
     <Button type="submit" size="sm" disabled={pending}>
       {pending ? "..." : label}
     </Button>
+  );
+}
+
+function Eff({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-surface-50 px-2 py-1.5 dark:bg-surface-800">
+      <p className="text-xs text-surface-500">{label}</p>
+      <p className="font-display font-semibold text-surface-900 dark:text-surface-100">{value}</p>
+    </div>
   );
 }
 
@@ -1028,6 +1073,17 @@ function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated
   const [photo, setPhoto] = useState("");
   const [isFinal, setIsFinal] = useState(false);
   const [reminder, setReminder] = useState("");
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
+
+  // Ghante haath se nahi likhe jate: shuru aur khatam ka waqt upar
+  // likha ja chuka hai, aur do jagah likha hua ek hi adad kisi din
+  // alag ho jata hai. Ye wahi hisaab hai jo database bhi karta hai
+  // (155), yahan sirf likhte waqt saamne rakha ja raha hai.
+  const hours =
+    startAt && endAt && new Date(endAt) > new Date(startAt)
+      ? Math.round(((new Date(endAt).getTime() - new Date(startAt).getTime()) / 3600000) * 100) / 100
+      : null;
   return (
     <form action={action} className="space-y-3">
       <Err state={state} />
@@ -1054,15 +1110,25 @@ function WorkForm({ bookingId, estimated, done }: { bookingId: string; estimated
         </div>
         <div>
           <Label>{t("mc_start", lang)}</Label>
-          <Input type="datetime-local" name="started_at" />
+          <Input type="datetime-local" name="started_at" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
         </div>
         <div>
           <Label>{t("mc_end", lang)}</Label>
-          <Input type="datetime-local" name="finished_at" />
+          <Input type="datetime-local" name="finished_at" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
         </div>
         <div>
-          <Label>{t("mc_meter_hours", lang)}</Label>
+          <Label>{t("mc_meter_only", lang)}</Label>
           <Input type="number" name="meter_reading" step="0.01" />
+          <p className="mt-1 text-xs text-surface-500">{t("mc_meter_only_hint", lang)}</p>
+        </div>
+        {/* Ghante haath se nahi likhe jate -- do waqt upar likhe ja
+            chuke hain. Do jagah likha hua ek hi adad kisi din alag ho
+            jata hai, aur phir koi nahi bata sakta ke sach kaun sa hai. */}
+        <div>
+          <Label>{t("mc_hours_worked", lang)}</Label>
+          <p className="mt-1 rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
+            {hours !== null ? `${hours} ${t("mc_hours_unit", lang)}` : t("mc_hours_from_time", lang)}
+          </p>
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">

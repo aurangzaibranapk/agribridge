@@ -18,11 +18,12 @@ export default async function MachineryBookingPage({ params }: { params: Promise
 
   if (!booking) notFound();
 
-  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
+  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
       supabase.from("machinery_fuel_logs").select("*").eq("booking_id", id).order("log_date"),
+      supabase.from("v_machinery_work_efficiency").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
       supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
@@ -129,6 +130,17 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         departure_at: d.departure_at,
         opening_meter: d.opening_meter === null ? null : Number(d.opening_meter),
       }))}
+      efficiency={
+        efficiency
+          ? {
+              kulGhante: efficiency.kul_ghante === null ? null : Number(efficiency.kul_ghante),
+              kulLitre: efficiency.kul_litre === null ? null : Number(efficiency.kul_litre),
+              litrePerGhanta: efficiency.litre_per_ghanta === null ? null : Number(efficiency.litre_per_ghanta),
+              acrePerGhanta: efficiency.acre_per_ghanta === null ? null : Number(efficiency.acre_per_ghanta),
+              litrePerAcre: efficiency.litre_per_acre === null ? null : Number(efficiency.litre_per_acre),
+            }
+          : null
+      }
       fuelLogs={(fuelLogs ?? []).map((f) => ({
         id: f.id,
         log_date: f.log_date,
