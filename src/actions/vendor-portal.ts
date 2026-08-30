@@ -96,8 +96,36 @@ export async function submitVendorWork(
   const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
   const isFinal = formData.get("is_final") === "on";
 
+  // DEVICE PAR BANI CHAABI (189).
+  //
+  // Khet se aayi entry do dafa pahunch sakti hai: phone restart hua,
+  // network beech mein toota, ya bande ne dobara "Bhejein" daba diya.
+  // Do dafa gina hua raqba do dafa bill banata hai -- aur wo ghalti
+  // haftoun baad pakRi jati hai.
+  //
+  // Chaabi device par banti hai, bhejne se PEHLE, aur server par us par
+  // unique index hai. Yahan pehle dekh lete hain taake bande ko rok ka
+  // paighaam na mile balke PEHLI entry ka jawab mile -- wohi jo doodh
+  // mein pehle se hota hai. Index phir bhi apni jagah hai: do request
+  // bilkul ek hi lamhe mein aayen to faisla wahi karta hai.
+  const clientActionId = str(formData, "client_action_id");
+  if (clientActionId) {
+    const { data: already } = await supabase
+      .from("machinery_work_records")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (already) {
+      return {
+        success: true,
+        notice: "Ye indraj pehle hi pohanch chuka tha — dobara nahi bheja gaya.",
+      };
+    }
+  }
+
   const { error } = await supabase.from("machinery_work_records").insert({
     booking_id: bookingId,
+    client_action_id: clientActionId,
     work_date: workDate,
     is_final: isFinal,
     actual_area_acres: acres,

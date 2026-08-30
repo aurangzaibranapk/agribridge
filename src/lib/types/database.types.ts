@@ -2041,6 +2041,7 @@ export type Database = {
           check_out_lat: number | null
           check_out_lng: number | null
           check_out_location_ok: boolean | null
+          client_action_id: string | null
           created_at: string
           id: string
           notes: string | null
@@ -2062,6 +2063,7 @@ export type Database = {
           check_out_lat?: number | null
           check_out_lng?: number | null
           check_out_location_ok?: boolean | null
+          client_action_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -2083,6 +2085,7 @@ export type Database = {
           check_out_lat?: number | null
           check_out_lng?: number | null
           check_out_location_ok?: boolean | null
+          client_action_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -10320,6 +10323,7 @@ export type Database = {
         Row: {
           amount: number
           booking_id: string
+          client_action_id: string | null
           created_at: string
           created_by: string | null
           deducted_in_bill_id: string | null
@@ -10342,6 +10346,7 @@ export type Database = {
         Insert: {
           amount: number
           booking_id: string
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           deducted_in_bill_id?: string | null
@@ -10364,6 +10369,7 @@ export type Database = {
         Update: {
           amount?: number
           booking_id?: string
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           deducted_in_bill_id?: string | null
@@ -10810,6 +10816,7 @@ export type Database = {
           booking_id: string
           claimed_at: string | null
           claimed_by: string | null
+          client_action_id: string | null
           collected_by_vendor_id: string | null
           created_at: string
           custody_profile_id: string | null
@@ -10835,6 +10842,7 @@ export type Database = {
           booking_id: string
           claimed_at?: string | null
           claimed_by?: string | null
+          client_action_id?: string | null
           collected_by_vendor_id?: string | null
           created_at?: string
           custody_profile_id?: string | null
@@ -10860,6 +10868,7 @@ export type Database = {
           booking_id?: string
           claimed_at?: string | null
           claimed_by?: string | null
+          client_action_id?: string | null
           collected_by_vendor_id?: string | null
           created_at?: string
           custody_profile_id?: string | null
@@ -11670,6 +11679,7 @@ export type Database = {
           actual_area_acres: number | null
           actual_area_kanal: number | null
           booking_id: string
+          client_action_id: string | null
           completion_photo_url: string | null
           created_at: string
           created_by: string | null
@@ -11699,6 +11709,7 @@ export type Database = {
           actual_area_acres?: number | null
           actual_area_kanal?: number | null
           booking_id: string
+          client_action_id?: string | null
           completion_photo_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -11728,6 +11739,7 @@ export type Database = {
           actual_area_acres?: number | null
           actual_area_kanal?: number | null
           booking_id?: string
+          client_action_id?: string | null
           completion_photo_url?: string | null
           created_at?: string
           created_by?: string | null
