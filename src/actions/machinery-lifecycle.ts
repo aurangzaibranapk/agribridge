@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 import { createClient } from "@/lib/supabase/server";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -1990,6 +1991,53 @@ export async function discardBookingDraft(): Promise<void> {
   const actorId = await currentUserId(supabase);
   if (!actorId) return;
   await supabase.from("machinery_booking_drafts").delete().eq("user_id", actorId);
+}
+
+/**
+ * Yaad dahani abhi bhejna -- staff ke apne haath se.
+ *
+ * Cron roz wade wali bookings par khud bhejta hai. Ye us ka muqabla
+ * nahi: kabhi kisan se baat ho jati hai aur usi waqt paighaam bhejna
+ * hota hai, aur kabhi cron ka din aane mein do din baqi hote hain.
+ *
+ * Dono ka paighaam aur record ek hi jagah se banta hai, warna kisan ko
+ * do mukhtalif zabanon mein do paighaam jate aur qatar mein sirf ek
+ * nazar aata.
+ */
+export async function sendPaymentReminderNow(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const { data: row } = await supabase
+    .from("v_machinery_payment_due")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (!row) return { error: "Is booking par kuch baqi nahi -- yaad dahani ki zaroorat nahi." };
+
+  const res = await sendPaymentReminder(
+    {
+      bookingId,
+      bookingNumber: (row.booking_number as string) ?? "-",
+      farmerId: (row.farmer_id as string | null) ?? null,
+      farmerName: (row.farmer_name as string | null) ?? null,
+      phone: (row.farmer_phone as string | null) ?? null,
+      amount: Number(row.baqi ?? 0),
+      promiseDate: (row.payment_promise_date as string | null) ?? null,
+    },
+    actorId
+  );
+
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
+  revalidatePath("/admin/machinery-rental/reminders");
+
+  // Nakami bhi qatar mein likhi ja chuki hai -- yahan sirf bande ko
+  // batana hai, taake wo phone utha kar khud baat kar le.
+  if (!res.ok) return { error: `Yaad dahani nahi gayi: ${res.error}` };
+  return { success: true, notice: "Yaad dahani bhej di gayi." };
 }
 
 export async function rescheduleBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {

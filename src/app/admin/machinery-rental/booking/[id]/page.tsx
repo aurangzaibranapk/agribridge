@@ -18,7 +18,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
 
   if (!booking) notFound();
 
-  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: rawMachines }, { data: accounts }, { data: profile }] =
+  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: reminders }, { data: rawMachines }, { data: accounts }, { data: profile }] =
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
@@ -28,6 +28,11 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
       supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
+      supabase
+        .from("machinery_payment_reminders")
+        .select("id, status, error, created_at, sent_by")
+        .eq("booking_id", id)
+        .order("created_at", { ascending: false }),
       supabase
         .from("machinery_vendor_machines")
         .select("id, machine_type, model, rate_type, rate_amount, driver_name, driver_phone, machinery_vendors(vendor_name)")
@@ -106,6 +111,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         rate_confirmation_sent_at: booking.rate_confirmation_sent_at,
         farmer_confirmed_at: booking.farmer_confirmed_at,
         payment_promise_date: booking.payment_promise_date,
+        advance_declined_at: booking.advance_declined_at,
         follow_up_number: followUp?.booking_number ?? null,
         payment_promise_note: booking.payment_promise_note,
         will_sell_to_us: booking.will_sell_to_us,
@@ -188,6 +194,13 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         actor_name: e.actor_id ? actorName.get(e.actor_id) ?? "—" : null,
       }))}
       machines={machines}
+      reminders={(reminders ?? []).map((r) => ({
+        id: r.id as string,
+        status: r.status as string,
+        error: (r.error as string | null) ?? null,
+        sentAt: r.created_at as string,
+        bySystem: r.sent_by === null,
+      }))}
       accounts={(accounts ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }))}
       advanceTotal={advanceTotal}
       finalPaid={finalPaid}

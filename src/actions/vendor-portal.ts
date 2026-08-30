@@ -195,6 +195,28 @@ export async function submitVendorFuel(
  * har vendor ke khate mein daakhil ho sake. Vendor bhool jaye to naya
  * banaya jata hai -- purana dhoondhne ka koi rasta nahi hona chahiye.
  */
+/**
+ * Naam se login ka pata banana.
+ *
+ * "Noman Shah" se "nomanshah@alranatraders.pk". Phone number wala
+ * pata ("vendor03457583294@...") koi yaad nahi rakh sakta, aur phone
+ * par bolna pare to teen dafa dohrana parta hai. Naam wala pata
+ * vendor khud pehchanta hai.
+ *
+ * Number login ke liye theek bhi nahi tha: number badal jata hai, aur
+ * tab login us number se juRa rehta hai jo ab kisi aur ka hai.
+ *
+ * Naam mein huroof hi na hon (sirf adad ya nishan) to phone par gir
+ * jate hain -- koi login na hona us se bura hai.
+ */
+function vendorLoginStem(vendorName: string, phone: string | null): string | null {
+  const base = (vendorName ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]/g, "");
+  return base || (phone ?? "").replace(/\D/g, "") || null;
+}
+
 export async function createVendorLogin(
   _prev: VendorActionState & { loginId?: string; password?: string },
   formData: FormData
@@ -228,23 +250,57 @@ export async function createVendorLogin(
     return { error: "Is vendor ka login pehle se maujood hai. Password bhool gaye ho to naya password banayein." };
   }
 
+  // Login vendor ke NAAM se banta hai, phone number se nahi.
+  //
+  // "vendor03457583294@..." wo cheez hai jo koi yaad nahi rakh sakta,
+  // aur phone par bolni pare to teen dafa dohrani parti hai. Naam se
+  // bana hua login vendor khud pehchanta hai: "nomanshah".
+  //
+  // Phone number login banane ke liye theek bhi nahi tha: number badal
+  // jata hai, aur tab login us number se juRa rehta hai jo ab kisi aur
+  // ka hai.
   const typedEmail = str(formData, "email");
-  const phoneDigits = (vendor.phone ?? "").replace(/\D/g, "");
-  if (!typedEmail && !phoneDigits) {
-    return { error: "Vendor ka phone ya email chahiye — donon mein se ek zaroori hai." };
+  const stem = vendorLoginStem(vendor.vendor_name, vendor.phone);
+  if (!typedEmail && !stem) {
+    return { error: "Vendor ka naam ya phone chahiye — login ka pata inhi mein se banta hai." };
   }
-  const loginId = typedEmail ?? `vendor${phoneDigits}@alranatraders.pk`;
 
   // Password aisa jo phone par bola ja sake: gine chune huroof, koi
   // aisa jora nahi jo sun kar galat likha jaye (0/O, 1/l).
   const password = makeSpokenPassword();
 
-  const { data: created, error: authError } = await service.auth.admin.createUser({
-    email: loginId,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: vendor.vendor_name, vendor_id: vendor.id },
-  });
+  // Do vendor ek hi naam ke ho sakte hain -- gaon mein aadha naam
+  // mushtarak hota hai. Us soorat mein doosre ko "nomanshah2" milta
+  // hai. Ginti tab lagti hai jab waqai takrao ho, pehle se nahi:
+  // "nomanshah1" bila wajah ajeeb lagta hai.
+  //
+  // Takrao pehle se dhoondne ke bajaye banane ki koshish ki jati hai:
+  // dono ke darmiyan koi doosra wohi pata le sakta hai, aur asli jawab
+  // banane wale se hi milta hai.
+  let loginId = typedEmail ?? `${stem}@alranatraders.pk`;
+  let created: Awaited<ReturnType<typeof service.auth.admin.createUser>>["data"] | null = null;
+  let authError: { message: string } | null = null;
+
+  for (let n = 0; n < 20; n += 1) {
+    if (!typedEmail && stem) loginId = `${stem}${n === 0 ? "" : n + 1}@alranatraders.pk`;
+    const res = await service.auth.admin.createUser({
+      email: loginId,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: vendor.vendor_name, vendor_id: vendor.id },
+    });
+    if (res.data?.user) {
+      created = res.data;
+      authError = null;
+      break;
+    }
+    authError = res.error ? { message: res.error.message } : { message: "Login nahi ban saka." };
+    const busy = /already|registered|exists/i.test(authError.message);
+    // Pata pehle se kisi aur ka hai to agla azmate hain. Koi aur
+    // wajah ho to dohrane ka faida nahi -- wahi ghalti dobara aayegi.
+    if (!busy || typedEmail) break;
+  }
+
   if (authError || !created?.user) {
     return { error: authError?.message ?? "Login nahi ban saka." };
   }

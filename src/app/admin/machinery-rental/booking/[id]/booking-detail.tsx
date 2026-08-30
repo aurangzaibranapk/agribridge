@@ -109,6 +109,7 @@ export function BookingDetail({
   bill,
   events,
   machines,
+  reminders,
   accounts,
   advanceTotal,
   finalPaid,
@@ -151,6 +152,7 @@ export function BookingDetail({
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{ id: string; label: string; driverName: string; driverPhone: string }>;
+  reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   advanceTotal: number;
   finalPaid: number;
@@ -541,15 +543,14 @@ export function BookingDetail({
           {/* Final payment */}
           {bill && (balance ?? 0) > 0 && (
             <StepCard n={7} title={t("mc_step_final_payment", lang)} done={false}>
-              <PaymentForm bookingId={booking.id} accounts={accounts} remaining={balance ?? 0} />
-              {/* Kisan abhi nahi de raha. Ye payment ka doosra roop nahi
-                  -- ye wada hai: baqi raqam waise hi khari rehti hai,
-                  bas wajah aur tareekh saamne aa jati hai. */}
-              <PromiseForm
+              <FinalPaymentStep
                 bookingId={booking.id}
+                accounts={accounts}
+                remaining={balance ?? 0}
                 promiseDate={booking.payment_promise_date}
                 promiseNote={booking.payment_promise_note}
                 willSell={booking.will_sell_to_us}
+                reminders={reminders}
               />
             </StepCard>
           )}
@@ -1335,17 +1336,146 @@ function BillForm({ bookingId }: { bookingId: string }) {
   );
 }
 
-function PaymentForm({
+/**
+ * Qadam 7 -- sawal pehle, khana baad mein.
+ *
+ * Pehle dono khane ek sath khule khare rehte the: adaigi ka bhi aur
+ * wade ka bhi. Wo do khane nahi the, ek sawal ka do jawab the -- aur
+ * dono ek sath dikhana bande se ye poochhta hai ke wo khud tay kare
+ * ke us ke saamne kaun sa haal hai.
+ *
+ * Sawal ek hi hai: kisan ne paisa diya ya nahi?
+ *
+ *   Diya   -> kitna diya, wo darj hota hai. Baqi khud nikal aata hai,
+ *             aur agar baqi bacha to sath hi poochha jata hai ke wo
+ *             kab dega.
+ *   Nahi   -> to phir sirf ek baat poochhni hai: kab dega. Wo darj ho
+ *             jati hai. Yahan kuch kata nahi jata -- poori raqam
+ *             kisan ke zimme hi rehti hai.
+ */
+function FinalPaymentStep({
   bookingId,
   accounts,
   remaining,
+  promiseDate,
+  promiseNote,
+  willSell,
+  reminders,
 }: {
   bookingId: string;
   accounts: Array<{ id: string; name: string; account_type: string }>;
   remaining: number;
+  promiseDate: string | null;
+  promiseNote: string | null;
+  willSell: boolean | null;
+  reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
+}) {
+  const lang = useLang();
+  const [answer, setAnswer] = useState<"haan" | "nahi" | null>(null);
+  const [paid, setPaid] = useState(false);
+
+  // Baqi kab aayega -- ye tab poochha jata hai jab jawab aa chuka ho:
+  // ya to paisa darj ho gaya aur kuch bacha hai, ya kisan ne saaf keh
+  // diya ke abhi nahi de raha.
+  const askPromise = answer === "nahi" || paid;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-surface-600 dark:text-surface-300">
+        {t("mc_balance", lang)}: Rs {remaining.toLocaleString()}
+      </p>
+
+      {answer === null && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-surface-800 dark:text-surface-200">
+            {t("mc_payment_q", lang)}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAnswer("haan")}
+              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              {t("mc_payment_yes", lang)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnswer("nahi")}
+              className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 dark:border-surface-700 dark:text-surface-300"
+            >
+              {t("mc_payment_no", lang)}
+            </button>
+          </div>
+          {/* Wada pehle se darj ho to wo yahin dikh jata hai -- us ke
+              liye sawal ka jawab dena zaroori nahi. */}
+          {promiseDate && <PromiseNote promiseDate={promiseDate} promiseNote={promiseNote} />}
+        </div>
+      )}
+
+      {answer === "haan" && (
+        <PaymentForm
+          bookingId={bookingId}
+          accounts={accounts}
+          remaining={remaining}
+          onRecorded={() => setPaid(true)}
+        />
+      )}
+
+      {askPromise && (
+        <PromiseForm
+          bookingId={bookingId}
+          promiseDate={promiseDate}
+          promiseNote={promiseNote}
+          willSell={willSell}
+          openByDefault={remaining > 0 && !promiseDate}
+        />
+      )}
+
+      {/* Kis din, kis ke haath se yaad dilayi gayi. Ye us waqt kaam
+          aata hai jab kisan kehta hai "mujhe kuch nahi aaya" -- aur
+          us waqt yaad par bharosa karna kaam nahi aata. */}
+      {reminders.length > 0 && (
+        <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+          <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-300">
+            {t("mr_reminders_on_booking", lang)}
+          </p>
+          <ul className="space-y-1 text-xs">
+            {reminders.slice(0, 5).map((r) => (
+              <li key={r.id} className="flex flex-wrap gap-2">
+                <span className="text-surface-500">{new Date(r.sentAt).toLocaleString()}</span>
+                <span className={r.status === "sent" ? "text-brand-700 dark:text-brand-300" : "text-red-600 dark:text-red-400"}>
+                  {r.status === "sent" ? t("mr_status_sent", lang) : t("mr_status_failed", lang)}
+                </span>
+                <span className="text-surface-400">
+                  {r.bySystem ? t("mr_by_system", lang) : t("mr_by_staff", lang)}
+                  {r.error ? ` · ${r.error}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaymentForm({
+  bookingId,
+  accounts,
+  remaining,
+  onRecorded,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  remaining: number;
+  onRecorded?: () => void;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFinalPayment, initialState);
+
+  useEffect(() => {
+    if (state.success) onRecorded?.();
+  }, [state.success, onRecorded]);
   const [lines, setLines] = useState([0]);
   const [methods, setMethods] = useState<Record<number, string>>({ 0: "cash" });
   const [again, setAgain] = useState(false);
@@ -1392,7 +1522,6 @@ function PaymentForm({
     <form action={action} className="space-y-3">
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
-      <p className="text-sm text-surface-600 dark:text-surface-300">Baqi: Rs {remaining.toLocaleString()}</p>
 
       {lines.map((i) => (
         <div key={i} className="grid grid-cols-3 gap-2 rounded-lg border border-surface-200 p-2 dark:border-surface-700">
@@ -1554,20 +1683,36 @@ function FollowUpForm({
   );
 }
 
+/** Darj shuda wada -- sirf dikhane ke liye. */
+function PromiseNote({ promiseDate, promiseNote }: { promiseDate: string; promiseNote: string | null }) {
+  const lang = useLang();
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+      <p className="font-medium text-amber-800 dark:text-amber-300">
+        {t("mc_promise_recorded", lang)}: {new Date(promiseDate).toLocaleDateString()}
+      </p>
+      {promiseNote && <p className="text-amber-800 dark:text-amber-300">{promiseNote}</p>}
+      <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{t("mc_promise_still_due", lang)}</p>
+    </div>
+  );
+}
+
 function PromiseForm({
   bookingId,
   promiseDate,
   promiseNote,
   willSell,
+  openByDefault,
 }: {
   bookingId: string;
   promiseDate: string | null;
   promiseNote: string | null;
   willSell: boolean | null;
+  openByDefault?: boolean;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordPaymentPromise, initialState);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(openByDefault));
 
   // Wada darj hote hi khana band. Bhara hua khana jawab dene ke baad
   // bhi khula rehna ye batata hai ke shayad jawab pahuncha hi nahi --
@@ -1579,12 +1724,8 @@ function PromiseForm({
   return (
     <div className="mt-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
       {promiseDate && (
-        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
-          <p className="font-medium text-amber-800 dark:text-amber-300">
-            {t("mc_promise_recorded", lang)}: {new Date(promiseDate).toLocaleDateString()}
-          </p>
-          {promiseNote && <p className="text-amber-800 dark:text-amber-300">{promiseNote}</p>}
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{t("mc_promise_still_due", lang)}</p>
+        <div className="mb-3">
+          <PromiseNote promiseDate={promiseDate} promiseNote={promiseNote} />
         </div>
       )}
 

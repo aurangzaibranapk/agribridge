@@ -802,4 +802,96 @@ export const machineryDict = {
     rm: "Kisan ne vendor ko diya \u2014 vendor ka khata",
     ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0648 \u062f\u06cc\u0627 \u2014 \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u06be\u0627\u062a\u06c1",
   },
+  mc_payment_q: {
+    en: "Has the farmer paid?",
+    rm: "Kisan ne payment di hai?",
+    ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0627\u062f\u0627\u0626\u06cc\u06af\u06cc \u062f\u06cc \u06c1\u06d2\u061f",
+  },
+  mc_payment_yes: {
+    en: "Yes \u2014 record how much",
+    rm: "Haan \u2014 kitni di, darj karein",
+    ur: "\u06c1\u0627\u06ba \u2014 \u06a9\u062a\u0646\u06cc \u062f\u06cc\u060c \u062f\u0631\u062c \u06a9\u0631\u06cc\u06ba",
+  },
+  mc_payment_no: {
+    en: "No \u2014 ask when he will pay",
+    rm: "Nahi di \u2014 poochhein kab dega",
+    ur: "\u0646\u06c1\u06cc\u06ba \u062f\u06cc \u2014 \u067e\u0648\u0686\u06be\u06cc\u06ba \u06a9\u0628 \u062f\u06d2 \u06af\u0627",
+  },
+  // --- Payment ki yaad dahani ---
+  mr_title: {
+    en: "Payment reminders",
+    rm: "Payment ki yaad dahani",
+    ur: "\u0627\u062f\u0627\u0626\u06cc\u06af\u06cc \u06a9\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc",
+  },
+  mr_subtitle: {
+    en: "Who is to be reminded, and who already has been \u2014 on one page.",
+    rm: "Kis ko yaad dilani hai, aur kis ko dilayi ja chuki hai \u2014 ek hi safhe par.",
+    ur: "\u06a9\u0633 \u06a9\u0648 \u06cc\u0627\u062f \u062f\u0644\u0627\u0646\u06cc \u06c1\u06d2\u060c \u0627\u0648\u0631 \u06a9\u0633 \u06a9\u0648 \u062f\u0644\u0627\u0626\u06cc \u062c\u0627 \u0686\u06a9\u06cc \u06c1\u06d2 \u2014 \u0627\u06cc\u06a9 \u06c1\u06cc \u0635\u0641\u062d\u06d2 \u067e\u0631\u06d4",
+  },
+  mr_due_today: {
+    en: "The promised date has come",
+    rm: "Wada aa gaya",
+    ur: "\u0648\u0639\u062f\u06c1 \u0622 \u06af\u06cc\u0627",
+  },
+  mr_due_today_hint: {
+    en: "The farmer said he would pay by this date. The system sends one reminder a day; you can send one right now too.",
+    rm: "Kisan ne is tareekh tak dene ka kaha tha. System roz ek yaad dahani bhejta hai; aap abhi bhi bhej sakte hain.",
+    ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u0627\u0633 \u062a\u0627\u0631\u06cc\u062e \u062a\u06a9 \u062f\u06cc\u0646\u06d2 \u06a9\u0627 \u06a9\u06c1\u0627 \u062a\u06be\u0627\u06d4",
+  },
+  mr_later: {
+    en: "Outstanding, but not due yet",
+    rm: "Baqi hai, magar abhi wada nahi aaya",
+    ur: "\u0628\u0627\u0642\u06cc \u06c1\u06d2\u060c \u0645\u06af\u0631 \u0627\u0628\u06be\u06cc \u0648\u0639\u062f\u06c1 \u0646\u06c1\u06cc\u06ba \u0622\u06cc\u0627",
+  },
+  mr_later_hint: {
+    en: "No reminder goes out on its own for these \u2014 they are here to stay in sight.",
+    rm: "In par khud koi paighaam nahi jata \u2014 ye sirf nazar mein rehne ke liye hain.",
+    ur: "\u0627\u0646 \u067e\u0631 \u062e\u0648\u062f \u06a9\u0648\u0626\u06cc \u067e\u06cc\u063a\u0627\u0645 \u0646\u06c1\u06cc\u06ba \u062c\u0627\u062a\u0627\u06d4",
+  },
+  mr_sent_recent: {
+    en: "Reminders sent",
+    rm: "Bheji hui yaad dahaniyan",
+    ur: "\u0628\u06be\u06cc\u062c\u06cc \u06c1\u0648\u0626\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc\u0627\u06ba",
+  },
+  mr_log_title: {
+    en: "What went, and to whom",
+    rm: "Kya gaya, aur kis ko",
+    ur: "\u06a9\u06cc\u0627 \u06af\u06cc\u0627\u060c \u0627\u0648\u0631 \u06a9\u0633 \u06a9\u0648",
+  },
+  mr_log_hint: {
+    en: "Failed attempts are listed too \u2014 \"sent\" and \"tried to send\" are not the same thing.",
+    rm: "Nakaam koshish bhi likhi hai \u2014 \"bhej diya\" aur \"bhejne ki koshish ki\" ek cheez nahi.",
+    ur: "\u0646\u0627\u06a9\u0627\u0645 \u06a9\u0648\u0634\u0634 \u0628\u06be\u06cc \u0644\u06a9\u06be\u06cc \u06c1\u06d2\u06d4",
+  },
+  mr_log_empty: {
+    en: "No reminder has gone out yet.",
+    rm: "Abhi tak koi yaad dahani nahi gayi.",
+    ur: "\u0627\u0628\u06be\u06cc \u062a\u06a9 \u06a9\u0648\u0626\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc \u0646\u06c1\u06cc\u06ba \u06af\u0626\u06cc\u06d4",
+  },
+  mr_none: { en: "Nothing here.", rm: "Yahan kuch nahi.", ur: "\u06cc\u06c1\u0627\u06ba \u06a9\u0686\u06be \u0646\u06c1\u06cc\u06ba\u06d4" },
+  mr_send_now: { en: "Send now", rm: "Abhi bhejein", ur: "\u0627\u0628\u06be\u06cc \u0628\u06be\u06cc\u062c\u06cc\u06ba" },
+  mr_never_sent: {
+    en: "Never reminded",
+    rm: "Abhi tak nahi bheji",
+    ur: "\u0627\u0628\u06be\u06cc \u062a\u06a9 \u0646\u06c1\u06cc\u06ba \u0628\u06be\u06cc\u062c\u06cc",
+  },
+  mr_sent_times: {
+    en: "{n} sent",
+    rm: "{n} dafa bheji",
+    ur: "{n} \u062f\u0641\u0639\u06c1 \u0628\u06be\u06cc\u062c\u06cc",
+  },
+  mr_status_sent: { en: "Sent", rm: "Bhej di", ur: "\u0628\u06be\u06cc\u062c \u062f\u06cc" },
+  mr_status_failed: { en: "Did not go", rm: "Nahi gayi", ur: "\u0646\u06c1\u06cc\u06ba \u06af\u0626\u06cc" },
+  mr_by_system: { en: "system", rm: "system", ur: "\u0633\u0633\u0679\u0645" },
+  mr_by_staff: { en: "by hand", rm: "haath se", ur: "\u06c1\u0627\u062a\u06be \u0633\u06d2" },
+  mr_no_phone: {
+    en: "no phone number",
+    rm: "phone number nahi",
+    ur: "\u0641\u0648\u0646 \u0646\u0645\u0628\u0631 \u0646\u06c1\u06cc\u06ba",
+  },
+  mr_reminders_on_booking: {
+    en: "Reminders sent",
+    rm: "Bheji hui yaad dahaniyan",
+    ur: "\u0628\u06be\u06cc\u062c\u06cc \u06c1\u0648\u0626\u06cc \u06cc\u0627\u062f \u062f\u06c1\u0627\u0646\u06cc\u0627\u06ba",
+  },
 } as const;
