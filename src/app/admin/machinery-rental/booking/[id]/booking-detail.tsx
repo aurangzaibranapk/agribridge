@@ -189,7 +189,23 @@ export function BookingDetail({
 
   // Diesel do hisson mein: hamara kharcha, aur wo jo kisan/vendor ne
   // dala. Dono ek adad mein jorh dena hamare munafe ko jhoota kar deta.
-  const ourFuel = fuelLogs.filter((f) => f.paid_by === "company").reduce((s2, f) => s2 + f.amount, 0);
+  // ART ka diesel do qism ka hota hai, aur dono ka anjaam alag hai (170):
+  //
+  //   Vendor ki machine par diya hua diesel KHARCHA NAHI -- wo vendor ke
+  //   hisse se wapas aata hai. Usay "kharcha" likhna machinery ka munafa
+  //   jhooti tarah kam kar ke dikhata hai.
+  //
+  //   ART ki apni machine par diya hua diesel waqai hamara kharcha hai.
+  //
+  // Screen par pehle dono ek hi lakeer mein "hamara diesel (kharcha)"
+  // likhe jate the. Adad theek tha, lafz ghalat -- aur usi lafz par
+  // banda faisla karta hai.
+  const ourFuelRecoverable = fuelLogs
+    .filter((f) => f.paid_by === "company" && f.vendor_recoverable)
+    .reduce((s2, f) => s2 + f.amount, 0);
+  const ourFuelExpense = fuelLogs
+    .filter((f) => f.paid_by === "company" && !f.vendor_recoverable)
+    .reduce((s2, f) => s2 + f.amount, 0);
   const othersFuel = fuelLogs.filter((f) => f.paid_by !== "company").reduce((s2, f) => s2 + f.amount, 0);
 
   // Kisan ka aakhri aitraaz -- sirf wo jo aakhri rate bhejne ke BAAD
@@ -457,12 +473,22 @@ export function BookingDetail({
                     <span className="font-medium">Rs {f.amount.toLocaleString()}</span>
                   </div>
                 ))}
-                <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
-                  <span className="text-surface-500">{t("mc_fuel_ours", lang)}</span>
-                  <span className="font-medium text-surface-900 dark:text-surface-100">
-                    Rs {ourFuel.toLocaleString()}
-                  </span>
-                </div>
+                {ourFuelRecoverable > 0 && (
+                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
+                    <span className="text-surface-500">{t("mc_fuel_recoverable", lang)}</span>
+                    <span className="font-medium text-surface-900 dark:text-surface-100">
+                      Rs {ourFuelRecoverable.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {ourFuelExpense > 0 && (
+                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
+                    <span className="text-surface-500">{t("mc_fuel_ours", lang)}</span>
+                    <span className="font-medium text-surface-900 dark:text-surface-100">
+                      Rs {ourFuelExpense.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 {othersFuel > 0 && (
                   <div className="flex justify-between text-xs text-surface-500">
                     <span>{t("mc_fuel_others", lang)}</span>

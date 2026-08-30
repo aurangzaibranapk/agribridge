@@ -449,7 +449,8 @@ export const machineryDict = {
     ur: "ہر بار کا ڈیزل الگ درج کریں — ہمارا، وینڈر کا، اور کسان کا۔ ہمارے کھاتوں میں صرف ہمارا جاتا ہے۔",
   },
   mc_fuel_save: { en: "Record the diesel", rm: "Diesel darj karein", ur: "ڈیزل درج کریں" },
-  mc_fuel_ours: { en: "Our diesel (expense)", rm: "Hamara diesel (kharcha)", ur: "ہمارا ڈیزل (خرچہ)" },
+  mc_fuel_ours: { en: "Our diesel \u2014 our own machine (expense)", rm: "Hamara diesel \u2014 apni machine (kharcha)", ur: "\u06c1\u0645\u0627\u0631\u0627 \u0688\u06cc\u0632\u0644 \u2014 \u0627\u067e\u0646\u06cc \u0645\u0634\u06cc\u0646 (\u062e\u0631\u0686\u06c1)" },
+  mc_fuel_recoverable: { en: "Our diesel \u2014 comes back from the vendor", rm: "Hamara diesel \u2014 vendor se wapas aayega", ur: "\u06c1\u0645\u0627\u0631\u0627 \u0688\u06cc\u0632\u0644 \u2014 \u0648\u06cc\u0646\u0688\u0631 \u0633\u06d2 \u0648\u0627\u067e\u0633 \u0622\u0626\u06d2 \u06af\u0627" },
   mc_fuel_others: {
     en: "Farmer's / vendor's diesel (record only)",
     rm: "Kisan / vendor ka diesel (sirf record)",
