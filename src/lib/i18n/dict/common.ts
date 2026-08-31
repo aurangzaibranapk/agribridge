@@ -119,6 +119,9 @@ export const commonDict = {
   c_joined: { en: "Joined", rm: "Shamil hua", ur: "شامل ہوا" },
 
   // ---- Raabta aur jagah ----
+  c_cnic: { en: "CNIC", rm: "CNIC", ur: "CNIC" },
+  c_cnic_optional: { en: "CNIC (optional)", rm: "CNIC (marzi se)", ur: "CNIC (مرضی سے)" },
+  c_view_details: { en: "View Details", rm: "Tafseel dekhein", ur: "تفصیل دیکھیں" },
   c_phone: { en: "Phone", rm: "Phone", ur: "فون" },
   c_phone_number: { en: "Phone Number", rm: "Phone number", ur: "فون نمبر" },
   c_mobile_number: { en: "Mobile Number", rm: "Mobile number", ur: "موبائل نمبر" },

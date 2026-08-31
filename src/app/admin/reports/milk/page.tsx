@@ -5,6 +5,8 @@ import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { Droplet, Wallet, Users, TrendingUp } from "lucide-react";
 import { ReportActions } from "./report-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function MilkReportPage({
   searchParams,
@@ -15,6 +17,7 @@ export default async function MilkReportPage({
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const { start, end } = getDateRange(range);
   const farmerFilter = params.farmer_id ?? "";
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   let query = supabase
@@ -67,7 +70,7 @@ export default async function MilkReportPage({
 
   return (
     <div>
-      <PageHeader title="Milk Collection Report" description="Milk collection, rates, and farmer balances" />
+      <PageHeader title={t("mr_title", lang)} description="Milk collection, rates, and farmer balances" />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <DateRangeFilter current={range} />
@@ -78,22 +81,22 @@ export default async function MilkReportPage({
               defaultValue={farmerFilter}
               className="rounded-lg border border-surface-200 p-2 text-sm"
             >
-              <option value="">Sab Farmers</option>
+              <option value="">{t("mr_all_farmers", lang)}</option>
               {allFarmers.map((f) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
-            <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">Filter</button>
+            <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_filter", lang)}</button>
           </form>
         </div>
         <ReportActions summary={reportSummary} />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Litres" value={`${totalLiters.toFixed(0)} L`} icon={Droplet} tone="blue" />
-        <StatCard label="Total Amount" value={`Rs. ${totalAmount.toLocaleString()}`} icon={TrendingUp} tone="brand" />
-        <StatCard label="Avg. Rate/Litre" value={`Rs. ${avgRate.toFixed(1)}`} icon={Droplet} tone="purple" />
-        <StatCard label="Avg. Fat %" value={`${avgFat.toFixed(1)}%`} icon={Droplet} tone="orange" />
-        <StatCard label="Owed to Farmers" value={`Rs. ${totalOwed.toLocaleString()}`} icon={Wallet} tone="warn" />
+        <StatCard label={t("mr_total_litres", lang)} value={`${totalLiters.toFixed(0)} L`} icon={Droplet} tone="blue" />
+        <StatCard label={t("c_total_amount", lang)} value={`Rs. ${totalAmount.toLocaleString()}`} icon={TrendingUp} tone="brand" />
+        <StatCard label={t("mr_avg_rate_litre", lang)} value={`Rs. ${avgRate.toFixed(1)}`} icon={Droplet} tone="purple" />
+        <StatCard label={t("mr_avg_fat", lang)} value={`${avgFat.toFixed(1)}%`} icon={Droplet} tone="orange" />
+        <StatCard label={t("c_owed_to_farmers", lang)} value={`Rs. ${totalOwed.toLocaleString()}`} icon={Wallet} tone="warn" />
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -101,14 +104,14 @@ export default async function MilkReportPage({
             <Users className="h-4 w-4" /> Top Suppliers (this period)
           </h2>
           {topSuppliers.length === 0 ? (
-            <p className="text-sm text-surface-400">No milk collection in this period.</p>
+            <p className="text-sm text-surface-400">{t("mr_no_collection", lang)}</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-1.5 pr-2">Farmer</th>
-                  <th className="py-1.5 pr-2 text-right">Litres</th>
-                  <th className="py-1.5 pr-2 text-right">Amount</th>
+                  <th className="py-1.5 pr-2">{t("c_farmer", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("mr_litres", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,15 +127,15 @@ export default async function MilkReportPage({
           )}
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Farmers with Outstanding Balance</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("c_farmers_with_outstanding", lang)}</h2>
           {topOwed.length === 0 ? (
-            <p className="text-sm text-surface-400">No outstanding balances.</p>
+            <p className="text-sm text-surface-400">{t("c_no_outstanding", lang)}</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-1.5 pr-2">Farmer</th>
-                  <th className="py-1.5 pr-2 text-right">Balance Due</th>
+                  <th className="py-1.5 pr-2">{t("c_farmer", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("c_balance_due", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,21 +151,21 @@ export default async function MilkReportPage({
         </div>
       </div>
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Recent Entries</h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("c_recent_entries", lang)}</h2>
         {(entries ?? []).length === 0 ? (
-          <p className="text-sm text-surface-400">No entries in this period.</p>
+          <p className="text-sm text-surface-400">{t("c_no_entries_period", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Farmer</th>
-                  <th className="py-2 pr-3">Shift</th>
-                  <th className="py-2 pr-3 text-right">Litres</th>
-                  <th className="py-2 pr-3 text-right">Fat %</th>
-                  <th className="py-2 pr-3 text-right">Rate</th>
-                  <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2 pr-3">{t("c_date", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_farmer", lang)}</th>
+                  <th className="py-2 pr-3">{t("mr_shift", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("mr_litres", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("mr_fat", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_rate", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>

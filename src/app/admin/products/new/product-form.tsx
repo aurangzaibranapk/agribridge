@@ -9,6 +9,8 @@ import { PRODUCT_UNITS } from "@/lib/data/units";
 import { ProductImageUpload } from "@/app/admin/products/new/product-image-upload";
 import { VoiceDictationButton } from "@/components/admin/voice-dictation-button";
 import { Sparkles, Barcode, Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FormState = {};
 
@@ -44,6 +46,7 @@ export function ProductForm({
 }) {
   const isEditMode = !!product;
   const [state, formAction] = useFormState(isEditMode ? updateProduct : createProduct, initialState);
+  const lang = useLang();
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? "");
   const [barcode, setBarcode] = useState(product?.barcode ?? "");
 
@@ -147,39 +150,39 @@ export function ProductForm({
               </p>
             )}
             {aiError && <p className="mt-2 max-w-md text-xs text-red-600 dark:text-red-400">{aiError}</p>}
-            {aiData && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">Fields filled in below from the photo - please double check them.</p>}
+            {aiData && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">{t("pf_photo_prefilled", lang)}</p>}
           </div>
         </div>
       </div>
 
-      <FieldWithMic label="Product Name *" inputRef={nameRef} name="name" required defaultValue={product?.name} />
+      <FieldWithMic label={t("pf_product_name", lang)} inputRef={nameRef} name="name" required defaultValue={product?.name} />
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="company_id">Company</Label>
+          <Label htmlFor="company_id">{t("c_company", lang)}</Label>
           <Select id="company_id" name="company_id" defaultValue={product?.company_id ?? ""}><option value="">- select -</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
         </div>
         <div>
-          <Label htmlFor="brand_id">Brand</Label>
+          <Label htmlFor="brand_id">{t("c_brand", lang)}</Label>
           <Select id="brand_id" name="brand_id" defaultValue={product?.brand_id ?? ""}><option value="">- select -</option>{brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
         </div>
         <div>
-          <Label htmlFor="category_id">Category</Label>
+          <Label htmlFor="category_id">{t("c_category", lang)}</Label>
           <Select id="category_id" name="category_id" defaultValue={product?.category_id ?? ""}><option value="">- select -</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="unit">Unit</Label>
+          <Label htmlFor="unit">{t("pf_unit", lang)}</Label>
           <Select id="unit" name="unit" defaultValue={product?.unit ?? ""}>
             <option value="">- select -</option>
             {PRODUCT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </Select>
         </div>
-        <FieldWithMic label="Pack Size" inputRef={packSizeRef} name="pack_size" placeholder="e.g. 500ml, 1kg" defaultValue={product?.pack_size ?? undefined} />
+        <FieldWithMic label={t("c_pack_size", lang)} inputRef={packSizeRef} name="pack_size" placeholder={t("pf_pack_size_eg", lang)} defaultValue={product?.pack_size ?? undefined} />
         <div>
-          <Label htmlFor="barcode">Barcode</Label>
+          <Label htmlFor="barcode">{t("pf_barcode", lang)}</Label>
           <div className="flex gap-2">
             <Input id="barcode" name="barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} className="flex-1" />
             <button
@@ -195,11 +198,11 @@ export function ProductForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="manufacture_date">Manufacture Date</Label>
+          <Label htmlFor="manufacture_date">{t("pf_manufacture_date", lang)}</Label>
           <Input ref={manufactureDateRef} id="manufacture_date" name="manufacture_date" type="date" defaultValue={product?.manufacture_date ?? undefined} />
         </div>
         <div>
-          <Label htmlFor="expiry_date">Expiry Date</Label>
+          <Label htmlFor="expiry_date">{t("c_expiry_date", lang)}</Label>
           <Input ref={expiryDateRef} id="expiry_date" name="expiry_date" type="date" defaultValue={product?.expiry_date ?? undefined} />
         </div>
       </div>
@@ -207,10 +210,10 @@ export function ProductForm({
         <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} /> Show Expiry Date to customers on the public product page
       </label>
 
-      <FieldWithMic label="Active Ingredient" inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
+      <FieldWithMic label={t("pf_active_ingredient", lang)} inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
 
       <div>
-        <Label htmlFor="composition">Composition</Label>
+        <Label htmlFor="composition">{t("pf_composition", lang)}</Label>
         <div className="flex gap-2">
           <Textarea ref={compositionRef} id="composition" name="composition" rows={2} defaultValue={product?.composition ?? undefined} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (compositionRef.current) compositionRef.current.value = text; }} />
@@ -218,12 +221,12 @@ export function ProductForm({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FieldWithMic label="Dose" inputRef={doseRef} name="dose" defaultValue={product?.dose ?? undefined} />
-        <FieldWithMic label="Usage Instructions" inputRef={usageRef} name="usage_instructions" defaultValue={product?.usage_instructions ?? undefined} />
+        <FieldWithMic label={t("pf_dose", lang)} inputRef={doseRef} name="dose" defaultValue={product?.dose ?? undefined} />
+        <FieldWithMic label={t("pf_usage_instructions", lang)} inputRef={usageRef} name="usage_instructions" defaultValue={product?.usage_instructions ?? undefined} />
       </div>
 
       <div>
-        <Label htmlFor="safety_information">Safety Information</Label>
+        <Label htmlFor="safety_information">{t("pf_safety_info", lang)}</Label>
         <div className="flex gap-2">
           <Textarea ref={safetyInformationRef} id="safety_information" name="safety_information" rows={2} defaultValue={product?.safety_information ?? undefined} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (safetyInformationRef.current) safetyInformationRef.current.value = text; }} />
@@ -240,12 +243,12 @@ export function ProductForm({
           <Input id="selling_price" name="selling_price" type="number" step="0.01" required defaultValue={product?.selling_price} />
         </div>
         <div>
-          <Label htmlFor="mrp_price">MRP Rate (Credit ke liye) (Rs.)</Label>
+          <Label htmlFor="mrp_price">{t("pf_mrp_rate", lang)}</Label>
           <Input id="mrp_price" name="mrp_price" type="number" step="0.01" defaultValue={product?.mrp_price ?? undefined} />
         </div>
       </div>
       <div>
-        <Label htmlFor="min_stock_threshold">Low Stock Alert Below</Label>
+        <Label htmlFor="min_stock_threshold">{t("pf_low_stock_below", lang)}</Label>
         <Input id="min_stock_threshold" name="min_stock_threshold" type="number" step="0.001" defaultValue={product?.min_stock_threshold ?? undefined} />
       </div>
 

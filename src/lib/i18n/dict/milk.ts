@@ -387,3 +387,85 @@ export const milkFuelDict = {
   mf_odometer_photo: { en: "Odometer Photo (optional)", rm: "Meter ki tasveer (marzi se)", ur: "میٹر کی تصویر (مرضی سے)" },
   mf_save_log: { en: "Save Log", rm: "Indraj mehfooz karein", ur: "اندراج محفوظ کریں" },
 } as const;
+
+/**
+ * Doodh ke chiller ka apna kharcha -- billing, marammat, generator.
+ *
+ * BILLING WALE SAFHE PAR KHARCHE EK EK KAR KE ALAG HAIN: tankhwah,
+ * petrol, diesel, bijli, chiller ki marammat, motorcycle ki marammat,
+ * doodh ki kami. Sab ko "kharcha" likh kar ek adad dikhana aasan tha,
+ * magar phir ye sawal kabhi jawab na paata ke is mahine nafa kyun kam
+ * hua -- aur wohi ek sawal roz poochha jata hai.
+ *
+ * "Milk Shortage Loss" alag rakha gaya hai kyunke wo kharcha nahi,
+ * NUQSAN hai. Kharche irade se hote hain; kami ka matlab hai kahin
+ * kuch theek nahi chal raha.
+ */
+export const milkOpsDict = {
+  mo_all_chillers: { en: "All Chillers (combined)", rm: "Sab chiller (mila kar)", ur: "سب چلر (ملا کر)" },
+  mo_total_milk_handled: { en: "Total Milk Handled", rm: "Kul doodh sanbhala", ur: "کل دودھ سنبھالا" },
+  mo_total_payable_company: { en: "Total Payable (Company)", rm: "Company ko kul dena", ur: "کمپنی کو کل دینا" },
+  mo_operational_expenses: { en: "Operational Expenses (deductions)", rm: "Chalane ke kharche (kattian)", ur: "چلانے کے خرچے (کٹیاں)" },
+  mo_staff_salaries: { en: "Staff Salaries", rm: "Staff ki tankhwahein", ur: "عملے کی تنخواہیں" },
+  mo_diesel_generator: { en: "Diesel / Generator", rm: "Diesel / generator", ur: "ڈیزل / جنریٹر" },
+  mo_chiller_maintenance: { en: "Chiller Maintenance", rm: "Chiller ki marammat", ur: "چلر کی مرمت" },
+  mo_motorcycle_maintenance: { en: "Motorcycle Maintenance", rm: "Motorcycle ki marammat", ur: "موٹر سائیکل کی مرمت" },
+  mo_milk_shortage_loss: { en: "Milk Shortage Loss", rm: "Doodh ki kami ka nuqsan", ur: "دودھ کی کمی کا نقصان" },
+  mo_total_deductions: { en: "Total Deductions", rm: "Kul kattian", ur: "کل کٹیاں" },
+  mo_net_operational_profit: { en: "Net Operational Profit", rm: "Chalane ke baad saaf nafa", ur: "چلانے کے بعد صاف نفع" },
+  mo_billing_settings: { en: "Billing Settings", rm: "Billing ki settings", ur: "بلنگ کی سیٹنگز" },
+  mo_company_name: { en: "Company Name", rm: "Company ka naam", ur: "کمپنی کا نام" },
+  mo_service_rate: {
+    en: "Service Rate (Rs/litre) — your proposal has Rs 8-10",
+    rm: "Service ka rate (Rs fi litre) -- aap ki tajweez mein Rs 8-10 hai",
+    ur: "سروس کا ریٹ (روپے فی لیٹر) — آپ کی تجویز میں 8-10 روپے ہے",
+  },
+  mo_electricity_maintenance: { en: "Electricity / Maintenance", rm: "Bijli / marammat", ur: "بجلی / مرمت" },
+
+  // ---- Marammat ----
+  mo_vehicle_status: { en: "Vehicle Status", rm: "Gaari ki haalat", ur: "گاڑی کی حالت" },
+  mo_service_due: { en: "Service Due", rm: "Service ka waqt aa gaya", ur: "سروس کا وقت آ گیا" },
+  mo_maintenance_history: { en: "Maintenance History", rm: "Marammat ki tafseel", ur: "مرمت کی تفصیل" },
+  mo_no_maintenance: { en: "No maintenance records yet.", rm: "Abhi marammat ka koi indraj nahi.", ur: "ابھی مرمت کا کوئی اندراج نہیں۔" },
+  mo_log_saved: { en: "Log saved.", rm: "Indraj mehfooz ho gaya.", ur: "اندراج محفوظ ہو گیا۔" },
+  mo_service: { en: "Service", rm: "Service", ur: "سروس" },
+  mo_repair: { en: "Repair", rm: "Marammat", ur: "مرمت" },
+  mo_battery: { en: "Battery", rm: "Battery", ur: "بیٹری" },
+  mo_other: { en: "Other", rm: "Deegar", ur: "دیگر" },
+  mo_km_now: { en: "KM Reading (right now)", rm: "KM ka reading (is waqt)", ur: "کلومیٹر کا ریڈنگ (اس وقت)" },
+  mo_what_work: {
+    en: "What work was done (oil change, tyre, etc.)",
+    rm: "Kya kaam hua (oil change, tyre, waghera)",
+    ur: "کیا کام ہوا (آئل چینج، ٹائر، وغیرہ)",
+  },
+  mo_cost_rs: { en: "Cost (Rs)", rm: "Kharcha (Rs)", ur: "خرچہ (روپے)" },
+  mo_withdraw_fund: { en: "Withdraw from Fund", rm: "Fund se nikaalein", ur: "فنڈ سے نکالیں" },
+  mo_withdraw_reason: {
+    en: "Reason (e.g. bought a new motorcycle)",
+    rm: "Wajah (misal: nayi motorcycle khareedi)",
+    ur: "وجہ (مثال: نئی موٹر سائیکل خریدی)",
+  },
+  mo_save_withdrawal: { en: "Save Withdrawal", rm: "Nikasi mehfooz karein", ur: "نکاسی محفوظ کریں" },
+
+  // ---- Generator ----
+  mo_chiller: { en: "Chiller", rm: "Chiller", ur: "چلر" },
+  mo_hours_run: { en: "Hours Run", rm: "Kitne ghante chala", ur: "کتنے گھنٹے چلا" },
+  mo_diesel_l: { en: "Diesel (L)", rm: "Diesel (L)", ur: "ڈیزل (لیٹر)" },
+  mo_no_generator_log: { en: "No generator log yet.", rm: "Abhi generator ka koi indraj nahi.", ur: "ابھی جنریٹر کا کوئی اندراج نہیں۔" },
+  mo_log_saved_cost: {
+    en: "Log saved — the cost was calculated automatically.",
+    rm: "Indraj mehfooz ho gaya -- kharcha khud nikal aaya.",
+    ur: "اندراج محفوظ ہو گیا — خرچہ خود نکل آیا۔",
+  },
+  mo_opening_hours: { en: "Opening Hours (meter)", rm: "Shuru ke ghante (meter)", ur: "شروع کے گھنٹے (میٹر)" },
+  mo_closing_hours: { en: "Closing Hours (meter)", rm: "Aakhri ghante (meter)", ur: "آخری گھنٹے (میٹر)" },
+  mo_diesel_litres: { en: "Diesel Litres", rm: "Kitne litre diesel", ur: "کتنے لیٹر ڈیزل" },
+  mo_diesel_cost_auto: {
+    en: "Diesel cost is calculated from today's rate automatically.",
+    rm: "Diesel ka kharcha aaj ke rate se khud nikal aayega.",
+    ur: "ڈیزل کا خرچہ آج کے ریٹ سے خود نکل آئے گا۔",
+  },
+  mo_electricity_units: { en: "Electricity Units (if mixed)", rm: "Bijli ke units (agar dono chalte hain)", ur: "بجلی کے یونٹ (اگر دونوں چلتے ہیں)" },
+  mo_milk_chilled: { en: "Milk Chilled (L)", rm: "Kitna doodh thanda hua (L)", ur: "کتنا دودھ ٹھنڈا ہوا (لیٹر)" },
+  mo_generator_photo: { en: "Generator Meter Photo (optional)", rm: "Generator ke meter ki tasveer (marzi se)", ur: "جنریٹر کے میٹر کی تصویر (مرضی سے)" },
+} as const;

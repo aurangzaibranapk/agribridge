@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveBillingSettings, saveMonthlyExpense, type ActionState } from "@/actions/billing";
 import { Settings, X, TrendingUp, TrendingDown, Printer, Download, MessageCircle, Mail } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -39,6 +41,7 @@ interface Props {
 
 export function BillingClient(props: Props) {
   const [showSettings, setShowSettings] = useState(false);
+  const lang = useLang();
   const [showExpense, setShowExpense] = useState(false);
 
   return (
@@ -52,12 +55,12 @@ export function BillingClient(props: Props) {
           </select>
           <input type="number" name="year" defaultValue={props.year} className="w-24 rounded-lg border border-surface-200 p-2 text-sm" />
           <select name="branch_id" defaultValue={props.branchFilter} className="rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="">Sab Chillers (Combined)</option>
+            <option value="">{t("mo_all_chillers", lang)}</option>
             {props.branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
-          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">View</button>
+          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_view", lang)}</button>
         </form>
         <div className="flex gap-2">
           <button onClick={() => setShowExpense(true)} className="rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-600 hover:bg-surface-50">
@@ -78,6 +81,7 @@ export function BillingClient(props: Props) {
 }
 
 function InvoiceCard(props: Props) {
+  const lang = useLang();
   const invoiceText = () =>
     `${props.companyName} - Milk Collection Invoice\n${props.selectedBranchName}\n${props.months[props.month - 1]} ${props.year}\n\nTotal Milk Handled: ${props.totalAdjustedVolume.toFixed(1)}L\nService Rate: Rs ${props.serviceRate}/L\nTotal Payable: Rs ${props.grossIncome.toLocaleString()}`;
 
@@ -119,35 +123,35 @@ function InvoiceCard(props: Props) {
         <div className="mb-6 rounded-lg bg-brand-50 p-4 dark:bg-brand-900/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">Total Milk Handled</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">{t("mo_total_milk_handled", lang)}</p>
               <p className="font-display text-2xl font-bold text-brand-900 dark:text-brand-100">{props.totalAdjustedVolume.toFixed(1)} L</p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">Rate</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">{t("c_rate", lang)}</p>
               <p className="font-display text-xl font-bold text-brand-900 dark:text-brand-100">Rs {props.serviceRate}/L</p>
             </div>
           </div>
           <div className="mt-3 border-t border-brand-200 pt-3 dark:border-brand-800">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">Total Payable (Company)</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">{t("mo_total_payable_company", lang)}</p>
             <p className="font-display text-3xl font-bold text-brand-900 dark:text-brand-100">Rs {props.grossIncome.toLocaleString()}</p>
           </div>
         </div>
 
-        <h3 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-white">Operational Expenses (Deductions)</h3>
+        <h3 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-white">{t("mo_operational_expenses", lang)}</h3>
         {!props.branchFilter && props.deductions.staffSalaries > 0 && (
           <p className="mb-2 text-xs text-surface-400">Staff Salaries sirf "Sab Chillers" view mein dikhti hain (per-chiller split abhi nahi hai).</p>
         )}
         <table className="w-full text-sm">
           <tbody>
-            <ExpenseRow label="Staff Salaries" amount={props.deductions.staffSalaries} />
-            <ExpenseRow label="Petrol" amount={props.deductions.petrolCost} />
-            <ExpenseRow label="Diesel/Generator" amount={props.deductions.dieselCost} />
-            <ExpenseRow label="Electricity" amount={props.deductions.electricityCost} />
-            <ExpenseRow label="Chiller Maintenance" amount={props.deductions.chillerMaintenanceCost} />
-            <ExpenseRow label="Motorcycle Maintenance" amount={props.deductions.maintenanceCost} />
-            <ExpenseRow label="Milk Shortage Loss" amount={props.deductions.shortageLoss} />
+            <ExpenseRow label={t("mo_staff_salaries", lang)} amount={props.deductions.staffSalaries} />
+            <ExpenseRow label={t("c_petrol", lang)} amount={props.deductions.petrolCost} />
+            <ExpenseRow label={t("mo_diesel_generator", lang)} amount={props.deductions.dieselCost} />
+            <ExpenseRow label={t("c_electricity", lang)} amount={props.deductions.electricityCost} />
+            <ExpenseRow label={t("mo_chiller_maintenance", lang)} amount={props.deductions.chillerMaintenanceCost} />
+            <ExpenseRow label={t("mo_motorcycle_maintenance", lang)} amount={props.deductions.maintenanceCost} />
+            <ExpenseRow label={t("mo_milk_shortage_loss", lang)} amount={props.deductions.shortageLoss} />
             <tr className="border-t border-surface-200 dark:border-surface-800">
-              <td className="py-2 font-semibold text-surface-900 dark:text-white">Total Deductions</td>
+              <td className="py-2 font-semibold text-surface-900 dark:text-white">{t("mo_total_deductions", lang)}</td>
               <td className="py-2 text-right font-semibold text-red-600">- Rs {props.totalDeductions.toLocaleString()}</td>
             </tr>
           </tbody>
@@ -157,7 +161,7 @@ function InvoiceCard(props: Props) {
       <div className={`rounded-card border p-5 shadow-card ${props.netProfit >= 0 ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30" : "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30"}`}>
         <div className="flex items-center gap-2">
           {props.netProfit >= 0 ? <TrendingUp className="h-5 w-5 text-green-600" /> : <TrendingDown className="h-5 w-5 text-red-600" />}
-          <span className="text-xs font-semibold uppercase tracking-wide text-surface-500">Net Operational Profit</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-surface-500">{t("mo_net_operational_profit", lang)}</span>
         </div>
         <p className={`mt-2 font-display text-3xl font-bold ${props.netProfit >= 0 ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`}>
           Rs {props.netProfit.toLocaleString()}
@@ -182,26 +186,27 @@ function ExpenseRow({ label, amount }: { label: string; amount: number }) {
 
 function SettingsModal({ companyName, serviceRate, onClose }: { companyName: string; serviceRate: number; onClose: () => void }) {
   const [state, formAction] = useFormState(saveBillingSettings, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Billing Settings</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mo_billing_settings", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <div>
-            <label className="text-xs text-surface-500">Company Naam</label>
+            <label className="text-xs text-surface-500">{t("mo_company_name", lang)}</label>
             <input name="company_name" defaultValue={companyName} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs text-surface-500">Service Rate (Rs/Litre) - aapki proposal mein Rs 8-10 hai</label>
+            <label className="text-xs text-surface-500">{t("mo_service_rate", lang)}</label>
             <input type="number" step="0.01" name="service_rate_per_liter" defaultValue={serviceRate} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
-          <SubmitButton label="Save Karein" />
+          <SubmitButton label={t("c_save", lang)} />
         </form>
       </div>
     </div>
@@ -210,13 +215,14 @@ function SettingsModal({ companyName, serviceRate, onClose }: { companyName: str
 
 function ExpenseModal({ month, year, branchId, onClose }: { month: number; year: number; branchId: string; onClose: () => void }) {
   const [state, formAction] = useFormState(saveMonthlyExpense, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Electricity / Maintenance</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mo_electricity_maintenance", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
@@ -225,12 +231,12 @@ function ExpenseModal({ month, year, branchId, onClose }: { month: number; year:
           <input type="hidden" name="expense_year" value={year} />
           {branchId && <input type="hidden" name="branch_id" value={branchId} />}
           <select name="category" required className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="electricity">Electricity</option>
-            <option value="chiller_maintenance">Chiller Maintenance</option>
+            <option value="electricity">{t("c_electricity", lang)}</option>
+            <option value="chiller_maintenance">{t("mo_chiller_maintenance", lang)}</option>
           </select>
-          <input type="number" step="0.01" name="amount" required placeholder="Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <textarea name="notes" rows={2} placeholder="Notes (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="Save Karein" />
+          <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <SubmitButton label={t("c_save", lang)} />
         </form>
       </div>
     </div>

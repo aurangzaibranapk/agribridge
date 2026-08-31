@@ -3,6 +3,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { updateSubscriptionSettings, activateFarmerSubscription, type ActionState } from "@/actions/subscriptions";
 import { createAnnouncement, deactivateAnnouncement } from "@/actions/announcements";
 import { Lock, Unlock, Megaphone, UserPlus, X, Users, TrendingUp, UserCheck, UserX, Image as ImageIcon } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -53,22 +55,23 @@ export function SubscriptionAdminClient({
 }
 
 function StatsGrid({ stats }: { stats: Stats }) {
+  const lang = useLang();
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
         <TrendingUp className="h-5 w-5 text-green-500" />
         <p className="mt-2 text-xl font-bold text-surface-900">Rs {stats.totalRevenue.toLocaleString()}</p>
-        <p className="text-xs text-surface-500">Total Revenue (Ab Tak)</p>
+        <p className="text-xs text-surface-500">{t("sb_total_revenue", lang)}</p>
       </div>
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
         <TrendingUp className="h-5 w-5 text-brand-500" />
         <p className="mt-2 text-xl font-bold text-surface-900">Rs {stats.revenueThisMonth.toLocaleString()}</p>
-        <p className="text-xs text-surface-500">Is Mahine Ka Revenue</p>
+        <p className="text-xs text-surface-500">{t("sb_month_revenue", lang)}</p>
       </div>
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
         <UserCheck className="h-5 w-5 text-green-500" />
         <p className="mt-2 text-xl font-bold text-surface-900">{stats.activeSubscribersCount}</p>
-        <p className="text-xs text-surface-500">Active Subscribers</p>
+        <p className="text-xs text-surface-500">{t("sb_active_subscribers", lang)}</p>
       </div>
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
         <UserX className="h-5 w-5 text-amber-500" />
@@ -81,6 +84,7 @@ function StatsGrid({ stats }: { stats: Stats }) {
 
 function SettingsCard({ settings }: { settings: { is_enforced: boolean; minimum_amount: number } }) {
   const [state, formAction] = useFormState(updateSubscriptionSettings, initialState);
+  const lang = useLang();
   return (
     <div className={`rounded-card border p-5 shadow-card ${settings.is_enforced ? "border-red-200 bg-red-50" : "border-surface-200 bg-white"}`}>
       <div className="mb-3 flex items-center gap-2">
@@ -96,7 +100,7 @@ function SettingsCard({ settings }: { settings: { is_enforced: boolean; minimum_
           Subscription Zaroori Karein (ON karte hi sab Farmers ke liye Feature Lock ho jayenge, sirf Login Free rahega)
         </label>
         <div>
-          <label className="text-xs font-medium text-surface-600">Minimum Amount (Rs)</label>
+          <label className="text-xs font-medium text-surface-600">{t("sb_min_amount", lang)}</label>
           <input type="number" name="minimum_amount" defaultValue={settings.minimum_amount} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <SaveButton />
@@ -107,24 +111,25 @@ function SettingsCard({ settings }: { settings: { is_enforced: boolean; minimum_
 
 function AnnouncementSection({ announcements }: { announcements: Announcement[] }) {
   const [createState, createAction] = useFormState(createAnnouncement, initialState);
+  const lang = useLang();
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
       <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900">
         <Megaphone className="h-5 w-5 text-brand-600" /> Announcement Bhejein (Sab Farmers Ko)
       </h2>
       {createState.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{createState.error}</p>}
-      {createState.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Announcement bhej di gayi.</p>}
+      {createState.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("sb_announcement_sent", lang)}</p>}
       <form action={createAction} className="space-y-2">
-        <input name="title" required placeholder="Title" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-        <textarea name="message" required rows={3} placeholder="Message" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input name="title" required placeholder={t("c_title", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <textarea name="message" required rows={3} placeholder={t("sb_msg", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <select name="cta_type" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="none">Sirf Announcement (X se band ho)</option>
-          <option value="vote">Vote (Haan/Nahi poochna hai)</option>
-          <option value="link">Link/Button Dena Hai</option>
+          <option value="none">{t("sb_type_notice", lang)}</option>
+          <option value="vote">{t("sb_type_vote", lang)}</option>
+          <option value="link">{t("sb_type_link", lang)}</option>
         </select>
         <div className="grid grid-cols-2 gap-2">
-          <input name="cta_label" placeholder="Button Text (agar Link type hai)" className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="cta_url" placeholder="Link URL (agar Link type hai)" className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="cta_label" placeholder={t("sb_button_text", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="cta_url" placeholder={t("sb_link_url", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <SendAnnouncementButton />
       </form>
@@ -157,13 +162,14 @@ function DeactivateButton({ id }: { id: string }) {
 
 function ActivateFarmerCard({ farmers }: { farmers: Farmer[] }) {
   const [state, formAction] = useFormState(activateFarmerSubscription, initialState);
+  const lang = useLang();
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
       <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900">
         <UserPlus className="h-5 w-5 text-brand-600" /> Farmer Ki Subscription Activate Karein
       </h2>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Subscription Activate ho gayi.</p>}
+      {state.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("sb_activated", lang)}</p>}
       <form action={formAction} encType="multipart/form-data" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <select name="farmer_id" required className="rounded-lg border border-surface-200 p-2 text-sm">
           <option value="">- Farmer Select Karein -</option>
@@ -176,18 +182,18 @@ function ActivateFarmerCard({ farmers }: { farmers: Farmer[] }) {
           <option value="3_month">3 Month</option>
           <option value="1_year">1 Saal</option>
           <option value="3_year">3 Saal</option>
-          <option value="lifetime">Lifetime</option>
+          <option value="lifetime">{t("sb_lifetime", lang)}</option>
         </select>
-        <input type="number" name="amount_paid" required placeholder="Amount (Rs)" className="rounded-lg border border-surface-200 p-2 text-sm" />
+        <input type="number" name="amount_paid" required placeholder={t("c_amount_rs", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <select name="payment_method" className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="cash">Cash</option>
-          <option value="bank_transfer">Bank Transfer</option>
+          <option value="cash">{t("c_cash", lang)}</option>
+          <option value="bank_transfer">{t("c_bank_transfer", lang)}</option>
           <option value="jazzcash">JazzCash</option>
           <option value="easypaisa">EasyPaisa</option>
-          <option value="card">Credit/Debit Card</option>
+          <option value="card">{t("sb_card", lang)}</option>
         </select>
         <div className="sm:col-span-2">
-          <label className="text-xs font-medium text-surface-600">Payment Proof/Receipt (Photo)</label>
+          <label className="text-xs font-medium text-surface-600">{t("sb_payment_proof", lang)}</label>
           <input type="file" name="receipt_photo" accept="image/*" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div className="sm:col-span-2">
@@ -199,22 +205,23 @@ function ActivateFarmerCard({ farmers }: { farmers: Farmer[] }) {
 }
 
 function SubscriptionsList({ subscriptions }: { subscriptions: Subscription[] }) {
+  const lang = useLang();
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900">Payment History</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900">{t("sb_payment_history", lang)}</h2>
       {subscriptions.length === 0 ? (
-        <p className="text-sm text-surface-400">Abhi koi Subscription nahi hai.</p>
+        <p className="text-sm text-surface-400">{t("sb_none_yet", lang)}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 text-left text-xs text-surface-500">
-                <th className="pb-2">Farmer</th>
-                <th className="pb-2">Amount</th>
-                <th className="pb-2">Method</th>
-                <th className="pb-2">Kab Aaya</th>
-                <th className="pb-2">Valid Tak</th>
-                <th className="pb-2">Proof</th>
+                <th className="pb-2">{t("c_farmer", lang)}</th>
+                <th className="pb-2">{t("c_amount", lang)}</th>
+                <th className="pb-2">{t("c_method", lang)}</th>
+                <th className="pb-2">{t("sb_when_paid", lang)}</th>
+                <th className="pb-2">{t("sb_valid_till", lang)}</th>
+                <th className="pb-2">{t("sb_proof", lang)}</th>
               </tr>
             </thead>
             <tbody>
