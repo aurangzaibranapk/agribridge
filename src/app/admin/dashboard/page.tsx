@@ -344,9 +344,7 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Business Summary
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_business_summary", lang)}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <Link href="/admin/dealers" className="block">
             <StatCard label={t("db_total_dealers", lang)} value={String(totalDealers ?? 0)} icon={Store} tone="blue" />
@@ -371,9 +369,7 @@ export default async function AdminDashboardPage({
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Orders Overview
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_orders_overview", lang)}</h2>
           <div className="flex gap-3 text-xs">
             <Link href="/admin/bridge-orders" className="text-brand-700 hover:underline">{t("db_bridge_orders", lang)} &rarr;</Link>
             <Link href="/admin/produce-orders" className="text-brand-700 hover:underline">{t("db_produce_orders", lang)} &rarr;</Link>
@@ -392,9 +388,7 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Dealer &amp; Buyer Performance (this period)
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_dealer_buyer_perf", lang)}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard label={t("db_pending_dealer_verification", lang)} value={String(pendingDealerVerification)} icon={AlertTriangle} tone="warn" />
           <StatCard label={t("db_total_dealer_payable", lang)} value={`Rs. ${totalDealerPayable.toLocaleString()}`} icon={Wallet} tone="orange" />
@@ -412,8 +406,8 @@ export default async function AdminDashboardPage({
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-surface-100 text-surface-500">
-                    <th className="py-1.5 pr-2">Dealer</th>
-                    <th className="py-1.5 pr-2">Orders</th>
+                    <th className="py-1.5 pr-2">{t("db_dealer", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_orders", lang)}</th>
                     <th className="py-1.5 pr-2">{t("db_payout", lang)}</th>
                     <th className="py-1.5 pr-2">{t("db_outstanding", lang)}</th>
                   </tr>
@@ -439,8 +433,8 @@ export default async function AdminDashboardPage({
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-surface-100 text-surface-500">
-                    <th className="py-1.5 pr-2">Buyer</th>
-                    <th className="py-1.5 pr-2">Orders</th>
+                    <th className="py-1.5 pr-2">{t("c_buyer", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_orders", lang)}</th>
                     <th className="py-1.5 pr-2">{t("db_purchases", lang)}</th>
                   </tr>
                 </thead>
@@ -461,9 +455,7 @@ export default async function AdminDashboardPage({
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Inventory Overview
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_inventory_overview", lang)}</h2>
           <Link href="/admin/inventory" className="text-xs text-brand-700 hover:underline">{t("db_view_all", lang)} &rarr;</Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -497,9 +489,7 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Recent Orders
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_recent_orders", lang)}</h2>
         {recentOrders.length === 0 ? (
           <p className="text-sm text-surface-400">{t("db_no_orders_yet", lang)}</p>
         ) : (
@@ -534,9 +524,7 @@ export default async function AdminDashboardPage({
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Farmer Credit
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_farmer_credit", lang)}</h2>
           <Link href="/admin/farmer-credit" className="text-xs text-brand-700 hover:underline">{t("db_view_all", lang)} &rarr;</Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -564,9 +552,7 @@ export default async function AdminDashboardPage({
 
         {staleCreditRequests.length > 0 && (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-surface-800 dark:bg-surface-900">
-            <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">
-              Credit Alerts — pending 3+ days
-            </p>
+            <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">{t("db_credit_alerts", lang)}</p>
             <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
               {staleCreditRequests.map((r) => (
                 <li key={r.id}>
@@ -592,9 +578,7 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Website Management - Quick Links
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_website_quick_links", lang)}</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {WEBSITE_LINKS.map((link) => (
             <Link
@@ -612,9 +596,7 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Service Requests Overview
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_service_requests", lang)}</h2>
         <RequestsChart data={overviewData} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">

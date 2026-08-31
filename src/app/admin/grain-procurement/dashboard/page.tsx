@@ -106,27 +106,27 @@ export default async function GrainDashboardPage() {
       <PageHeader title={t("gr_dashboard_title", lang)} description={t("gr_dashboard_subtitle", lang)} />
 
       <div className="mb-4 flex gap-2">
-        <Link href="/admin/grain-procurement" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">Procurement Page</Link>
-        <Link href="/admin/grain-procurement/sell" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">Sell Page</Link>
+        <Link href="/admin/grain-procurement" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">{t("gd_procurement_page", lang)}</Link>
+        <Link href="/admin/grain-procurement/sell" className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">{t("gd_sell_page", lang)}</Link>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Kharida</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("gd_total_bought", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalProcuredKg.toLocaleString()} kg</p>
           <p className="text-xs text-surface-400">Rs {totalProcuredValue.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Becha</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("gd_total_sold", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalSoldKg.toLocaleString()} kg</p>
           <p className="text-xs text-surface-400">Rs {totalSalesRevenue.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Abhi Stock Mein</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("gd_in_stock_now", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{currentStockKg.toLocaleString()} kg</p>
         </Card>
         <Card className={netBusinessProfit >= 0 ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30" : "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30"}>
-          <p className={`text-xs font-medium uppercase tracking-wide ${netBusinessProfit >= 0 ? "text-green-600" : "text-red-600"}`}>Net Business Profit</p>
+          <p className={`text-xs font-medium uppercase tracking-wide ${netBusinessProfit >= 0 ? "text-green-600" : "text-red-600"}`}>{t("gd_net_business_profit", lang)}</p>
           <p className={`mt-2 font-display text-xl font-semibold ${netBusinessProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
             {netBusinessProfit >= 0 ? <TrendingUp className="mr-1 inline h-4 w-4" /> : <TrendingDown className="mr-1 inline h-4 w-4" />}
             Rs {netBusinessProfit.toLocaleString()}
@@ -135,14 +135,14 @@ export default async function GrainDashboardPage() {
       </div>
 
       <div className="mb-6 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Poora Profit Calculation</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("gd_full_profit_calc", lang)}</h3>
         <div className="space-y-1 text-sm">
-          <div className="flex justify-between"><span className="text-surface-500">Sales Revenue (Buyers se)</span><span className="font-medium">Rs {totalSalesRevenue.toLocaleString()}</span></div>
-          <div className="flex justify-between text-red-600"><span>COGS (Grain ki Cost - FIFO)</span><span>- Rs {totalSalesCogs.toLocaleString()}</span></div>
-          <div className="flex justify-between border-t border-surface-100 pt-1 font-medium dark:border-surface-800"><span>Gross Profit (Sale ka farak)</span><span>Rs {totalSalesGrossProfit.toLocaleString()}</span></div>
-          <div className="flex justify-between text-red-600"><span>Operational Expenses (Diesel, Labor, Bardana, Rent)</span><span>- Rs {totalExpenses.toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-surface-500">{t("gd_sales_revenue", lang)}</span><span className="font-medium">Rs {totalSalesRevenue.toLocaleString()}</span></div>
+          <div className="flex justify-between text-red-600"><span>{t("gd_cogs_fifo", lang)}</span><span>- Rs {totalSalesCogs.toLocaleString()}</span></div>
+          <div className="flex justify-between border-t border-surface-100 pt-1 font-medium dark:border-surface-800"><span>{t("gd_gross_profit_sale", lang)}</span><span>Rs {totalSalesGrossProfit.toLocaleString()}</span></div>
+          <div className="flex justify-between text-red-600"><span>{t("gd_operational_expenses", lang)}</span><span>- Rs {totalExpenses.toLocaleString()}</span></div>
           <div className={`flex justify-between border-t border-surface-200 pt-1 text-base font-bold dark:border-surface-700 ${netBusinessProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
-            <span>Net Business Profit</span><span>Rs {netBusinessProfit.toLocaleString()}</span>
+            <span>{t("gd_net_business_profit", lang)}</span><span>Rs {netBusinessProfit.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -152,29 +152,29 @@ export default async function GrainDashboardPage() {
           <div key={g.grain_type} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
             <p className="text-xs font-medium text-surface-500">{GRAIN_LABELS[g.grain_type]}</p>
             <div className="mt-1 space-y-0.5 text-xs">
-              <div className="flex justify-between"><span className="text-surface-400">Kharida</span><span>{g.procured.toLocaleString()} kg</span></div>
-              <div className="flex justify-between"><span className="text-surface-400">Becha</span><span>{g.sold.toLocaleString()} kg</span></div>
-              <div className="flex justify-between font-semibold"><span>Stock Mein</span><span>{g.stock.toLocaleString()} kg</span></div>
+              <div className="flex justify-between"><span className="text-surface-400">{t("gd_bought", lang)}</span><span>{g.procured.toLocaleString()} kg</span></div>
+              <div className="flex justify-between"><span className="text-surface-400">{t("gd_sold", lang)}</span><span>{g.sold.toLocaleString()} kg</span></div>
+              <div className="flex justify-between font-semibold"><span>{t("gd_in_stock", lang)}</span><span>{g.stock.toLocaleString()} kg</span></div>
             </div>
           </div>
         ))}
       </div>
 
       <div className="mb-6">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Har Entry Ki Poori Cost (Grain + Diesel + Mazdoori + Bardana)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("gd_full_cost_each_entry", lang)}</h3>
         <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Farmer/Party</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Grain</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Grain Cost</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Diesel</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Mazdoori</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Bardana</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Rent</th>
-                <th className="px-3 py-2 text-right font-semibold text-surface-700">Total (True Cost)</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gd_farmer_party", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gs_grain", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gd_grain_cost", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gd_diesel", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gd_labour", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gd_sacks", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("gd_rent", lang)}</th>
+                <th className="px-3 py-2 text-right font-semibold text-surface-700">{t("gd_total_true_cost", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -192,7 +192,7 @@ export default async function GrainDashboardPage() {
                 </tr>
               ))}
               {entryCostRows.length === 0 && (
-                <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">Abhi tak kisi Entry se koi Expense link nahi hui.</td></tr>
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">{t("gd_no_linked_expense", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -206,8 +206,7 @@ export default async function GrainDashboardPage() {
 
         <div>
           <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-            <Fuel className="h-4 w-4" /> Expense Breakdown (Sab)
-          </h3>
+            <Fuel className="h-4 w-4" />{t("gd_expense_breakdown", lang)}</h3>
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
             {Object.entries(expensesByCategory).map(([cat, amt]) => (
               <div key={cat} className="flex justify-between border-b border-surface-50 py-1.5 text-sm last:border-0 dark:border-surface-800">
@@ -215,21 +214,21 @@ export default async function GrainDashboardPage() {
                 <span className="font-medium text-surface-900 dark:text-white">Rs {amt.toLocaleString()}</span>
               </div>
             ))}
-            {Object.keys(expensesByCategory).length === 0 && <p className="text-center text-sm text-surface-400">Koi expense abhi tak nahi hai.</p>}
+            {Object.keys(expensesByCategory).length === 0 && <p className="text-center text-sm text-surface-400">{t("gd_no_expense", lang)}</p>}
             <div className="mt-2 flex justify-between border-t border-surface-200 pt-2 font-bold text-surface-900 dark:border-surface-700 dark:text-white">
-              <span>Total</span><span>Rs {totalExpenses.toLocaleString()}</span>
+              <span>{t("c_total", lang)}</span><span>Rs {totalExpenses.toLocaleString()}</span>
             </div>
           </div>
 
-          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">General/Overall Expenses (kisi ek Entry se nahi)</h3>
+          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">{t("gd_general_expenses", lang)}</h3>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Category</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Detail</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Amount</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_category", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_detail", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,7 +241,7 @@ export default async function GrainDashboardPage() {
                   </tr>
                 ))}
                 {generalExpenses.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">Koi general expense nahi hai.</td></tr>
+                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">{t("gd_no_general_expense", lang)}</td></tr>
                 )}
               </tbody>
             </table>

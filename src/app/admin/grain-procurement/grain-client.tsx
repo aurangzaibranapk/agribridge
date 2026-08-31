@@ -113,8 +113,7 @@ export function GrainClient({
       {tab === "entry" && (
         <div className="space-y-4">
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
-            <Plus className="h-3.5 w-3.5" /> Nayi Party Banayein
-          </button>
+            <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
           <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
         </div>
       )}
@@ -145,8 +144,7 @@ export function GrainClient({
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
                       <Link href={`/admin/grain-procurement/statement?seller_type=${b.seller_type}&seller_id=${b.seller_id}`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                        <FileText className="h-3 w-3" /> Statement
-                      </Link>
+                        <FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
                       {b.balance_due > 0 && (
                         <button onClick={() => setPayingBalance(b)} className="text-xs font-medium text-green-600 hover:underline">{t("gr_make_payment", lang)}</button>
                       )}
@@ -358,9 +356,9 @@ function NewEntryForm({
         <div>
           <Label>{t("gr_grain_type_req", lang)}</Label>
           <Select name="grain_type" value={grainType} onChange={(e) => { setGrainType(e.target.value); setSelectedPresetId(""); }}>
-            <option value="wheat">Wheat (Gandum)</option>
-            <option value="rice">Rice (Chawal)</option>
-            <option value="maize">Maize (Makai)</option>
+            <option value="wheat">{t("gs_wheat", lang)}</option>
+            <option value="rice">{t("gs_rice", lang)}</option>
+            <option value="maize">{t("gs_maize", lang)}</option>
           </Select>
         </div>
         <div>
@@ -453,8 +451,7 @@ function NewEntryForm({
           </div>
           {hasExpense === "" && (
             <p className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600">
-              <AlertTriangle className="h-3.5 w-3.5" /> Jab tak confirm nahi karenge, Entry save nahi hogi.
-            </p>
+              <AlertTriangle className="h-3.5 w-3.5" />{t("gd_confirm_note", lang)}</p>
           )}
           {hasExpense === "yes" && (
             <div className="mt-3 space-y-2">
@@ -486,8 +483,7 @@ function NewEntryForm({
                 </div>
               ))}
               <button type="button" onClick={addExpenseRow} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                <Plus className="h-3.5 w-3.5" /> Aur Expense Add Karein
-              </button>
+                <Plus className="h-3.5 w-3.5" />{t("gd_add_more_expense", lang)}</button>
             </div>
           )}
         </div>
@@ -515,8 +511,7 @@ function NewEntryForm({
           </div>
           {makePayment === "" && (
             <p className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600">
-              <AlertTriangle className="h-3.5 w-3.5" /> Jab tak confirm nahi karenge, Entry save nahi hogi.
-            </p>
+              <AlertTriangle className="h-3.5 w-3.5" />{t("gd_confirm_note", lang)}</p>
           )}
           {makePayment === "yes" && (
             <div className="mt-3 space-y-2">
@@ -575,8 +570,7 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
         <p className="mb-3 text-sm text-surface-500">{balance.seller_name} - Baaqi: Rs {balance.balance_due.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && (
-          <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Payment record ho gayi. <Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
+          <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gd_payment_recorded", lang)}<Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
           </p>
         )}
         <form action={formAction} encType="multipart/form-data" className="space-y-3">

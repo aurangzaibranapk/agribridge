@@ -134,7 +134,7 @@ function NewSaleForm({
       {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_sale_done", lang)}</p>}
       <form action={formAction} className="space-y-3">
         <div>
-          <Label>Buyer *</Label>
+          <Label>{t("gd_buyer_req", lang)}</Label>
           <Select name="buyer_id" required>
             <option value="">- select -</option>
             {buyers.map((b) => (
@@ -144,7 +144,7 @@ function NewSaleForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Warehouse *</Label>
+            <Label>{t("gd_warehouse_req", lang)}</Label>
             <Select name="warehouse_id" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} required>
               <option value="">- select -</option>
               {warehouses.map((w) => (
@@ -153,7 +153,7 @@ function NewSaleForm({
             </Select>
           </div>
           <div>
-            <Label>Grain Type *</Label>
+            <Label>{t("gd_grain_type_req", lang)}</Label>
             <Select name="grain_type" value={grainType} onChange={(e) => setGrainType(e.target.value)}>
               <option value="wheat">{t("gs_wheat", lang)}</option>
               <option value="rice">{t("gs_rice", lang)}</option>
@@ -170,11 +170,11 @@ function NewSaleForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Quantity (kg) *</Label>
+            <Label>{t("gd_qty_kg_req", lang)}</Label>
             <Input type="number" step="0.1" name="quantity_kg" value={quantity} onChange={(e) => setQuantity(e.target.value)} max={availableStock} required />
           </div>
           <div>
-            <Label>Rate per kg (Rs.) *</Label>
+            <Label>{t("gd_rate_kg_req", lang)}</Label>
             <Input type="number" step="0.01" name="rate_per_kg" value={rate} onChange={(e) => setRate(e.target.value)} required />
           </div>
         </div>
@@ -198,7 +198,7 @@ function NewSaleForm({
           </div>
           {combinedCost > 0 && (
             <div>
-              <Label>Konsa Account Se Ye Kharcha Gaya *</Label>
+              <Label>{t("gd_which_account_out", lang)}</Label>
               <Select name="cost_account_id" required>
                 <option value="">- select -</option>
                 {financeAccounts.map((a) => (
@@ -244,7 +244,7 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="sale_id" value={sale.id} />
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gd_amount_req", lang)}</Label>
             <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={remaining} required />
           </div>
           <div>
@@ -257,7 +257,7 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
             </Select>
           </div>
           <div>
-            <Label>Konsa Account (jahan paisa aya) *</Label>
+            <Label>{t("gd_which_account_in", lang)}</Label>
             <Select name="account_id" required>
               <option value="">- select -</option>
               {financeAccounts.map((a) => (

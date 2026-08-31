@@ -44,21 +44,17 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
     <div className="mx-auto max-w-xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/grain-procurement" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
-        </Link>
+          <ArrowLeft className="h-4 w-4" />{t("c_back", lang)}</Link>
         <div className="flex gap-2">
           <button onClick={() => setShowEdit(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">
-            <Pencil className="h-3.5 w-3.5" /> Edit
-          </button>
+            <Pencil className="h-3.5 w-3.5" />{t("c_edit", lang)}</button>
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print/Download
-          </button>
+            <Printer className="h-3.5 w-3.5" />{t("gd_print_download", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
           </button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-            <Mail className="h-3.5 w-3.5" /> Email
-          </button>
+            <Mail className="h-3.5 w-3.5" />{t("c_email", lang)}</button>
         </div>
       </div>
 
@@ -103,7 +99,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
         {slip.receipt_photo_url && (
           <div className="mt-4">
             <p className="mb-1 text-xs font-medium text-surface-500">{t("ps_signed_receiving", lang)}</p>
-            <img src={slip.receipt_photo_url} alt="Receiving" className="max-h-64 rounded-lg border border-surface-200 object-contain" />
+            <img src={slip.receipt_photo_url} alt={t("gd_receiving", lang)} className="max-h-64 rounded-lg border border-surface-200 object-contain" />
           </div>
         )}
 

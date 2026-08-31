@@ -100,8 +100,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
           </button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-            <Mail className="h-3.5 w-3.5" /> Email
-          </button>
+            <Mail className="h-3.5 w-3.5" />{t("c_email", lang)}</button>
         </div>
       </div>
 
@@ -188,7 +187,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
               <p className="text-xs text-surface-500">{slip.machineLabel}</p>
             </div>
             <div className="bg-[#F6F8F5] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-500">Kaam</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-500">{t("ms_work", lang)}</p>
               <p className="mt-1 text-sm font-semibold text-surface-900">
                 {slip.cropType ?? "—"}
                 {slip.harvestDate ? ` · ${new Date(slip.harvestDate).toLocaleDateString()}` : ""}
@@ -206,9 +205,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
                 <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
                   {slip.isFinal ? "Asal kaam ka hisaab" : "Booking ka andaza"}
                 </th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.14em]">
-                  Raqam
-                </th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.14em]">{t("sb_amount", lang)}</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -233,7 +230,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
                 />
               )}
 
-              <TableRow label="Kul" value={slip.gross} strong />
+              <TableRow label={t("c_total", lang)} value={slip.gross} strong />
 
               {/* Riayat kisan ko SAAF nazar aani chahiye. Chupa kar sirf
                   kam raqam likh dena us se ye baat chheen leta hai ke us
@@ -246,15 +243,15 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
                     value={-slip.discount}
                     tone="brand"
                   />
-                  <TableRow label="Riayat ke baad bill" value={netBill} strong />
+                  <TableRow label={t("ms_bill_after_discount", lang)} value={netBill} strong />
                 </>
               )}
 
-              {slip.dieselDeducted > 0 && <TableRow label="Aap ka diesel (kata gaya)" value={-slip.dieselDeducted} />}
-              {slip.advanceAdjusted > 0 && <TableRow label="Advance (kata gaya)" value={-slip.advanceAdjusted} />}
-              {slip.previousPayment > 0 && <TableRow label="Pehle di hui raqam" value={-slip.previousPayment} />}
+              {slip.dieselDeducted > 0 && <TableRow label={t("ms_your_diesel_deducted", lang)} value={-slip.dieselDeducted} />}
+              {slip.advanceAdjusted > 0 && <TableRow label={t("ms_advance_deducted", lang)} value={-slip.advanceAdjusted} />}
+              {slip.previousPayment > 0 && <TableRow label={t("ms_paid_earlier", lang)} value={-slip.previousPayment} />}
               {slip.received - slip.advanceAdjusted > 0 && (
-                <TableRow label="Baad mein mili raqam" value={-(slip.received - slip.advanceAdjusted)} />
+                <TableRow label={t("ms_paid_later", lang)} value={-(slip.received - slip.advanceAdjusted)} />
               )}
             </tbody>
           </table>
@@ -292,9 +289,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
                     <th
                       colSpan={2}
                       className="border-x border-surface-200 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-600"
-                    >
-                      Pichla baqi
-                    </th>
+                    >{t("ms_previous_balance", lang)}</th>
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
@@ -305,12 +300,12 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
                       value={r.amount}
                     />
                   ))}
-                  <TableRow label="Pichla kul" value={pichlaKul} strong />
+                  <TableRow label={t("ms_previous_total", lang)} value={pichlaKul} strong />
                 </tbody>
               </table>
 
               <div className="flex items-center justify-between bg-[#0D2818] px-4 py-4">
-                <span className="text-sm font-semibold uppercase tracking-wider text-white/80">Kul dena hai</span>
+                <span className="text-sm font-semibold uppercase tracking-wider text-white/80">{t("ms_total_due", lang)}</span>
                 <span className="font-display text-3xl font-bold tabular-nums text-[#F3D98B]">
                   Rs {kulDena.toLocaleString()}
                 </span>
@@ -323,14 +318,12 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
               yehi wajah se likhi jati hai. */}
           {slip.isFinal && kulDena > 0 && (
             <p className="mt-3 rounded-lg border border-dashed border-[#C9A227]/50 bg-[#FDFBF4] px-3 py-2 text-xs text-surface-600">
-              <span className="font-semibold text-surface-700">Alfaz mein:</span> {rupeesInWords(kulDena)}
+              <span className="font-semibold text-surface-700">{t("ms_in_words", lang)}</span> {rupeesInWords(kulDena)}
             </p>
           )}
 
           {!slip.isFinal && (
-            <p className="mt-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-500">
-              Ye booking ka andaza hai. Asal bill kattai ke baad, waqai kaate gaye acre par banega.
-            </p>
+            <p className="mt-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-500">{t("ms_estimate_note", lang)}</p>
           )}
 
           {/* Dastkhat ki lakeerein sirf CHHAPTE waqt aati hain. Screen
@@ -340,11 +333,11 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             <div className="mt-12 hidden grid-cols-2 gap-12 print:grid">
               <div>
                 <div className="border-t border-surface-400 pt-1.5" />
-                <p className="text-[11px] text-surface-500">Kisan ke dastkhat</p>
+                <p className="text-[11px] text-surface-500">{t("ms_farmer_signature", lang)}</p>
               </div>
               <div>
                 <div className="border-t border-surface-400 pt-1.5" />
-                <p className="text-[11px] text-surface-500">Al Rana Traders ki taraf se</p>
+                <p className="text-[11px] text-surface-500">{t("ms_from_art", lang)}</p>
               </div>
             </div>
           )}
@@ -458,7 +451,7 @@ function EmailModal({ bookingId, onClose }: { bookingId: string; onClose: () => 
           <h3 className="font-display text-base font-semibold text-surface-900">{t("mc_send_by_email", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        <p className="mb-2 text-xs text-surface-400">Professional PDF slip seedha attachment ki tarah email mein chali jayegi.</p>
+        <p className="mb-2 text-xs text-surface-400">{t("ms_pdf_attached", lang)}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("mc_email_sent", lang)}</p>}
         <form action={formAction} className="space-y-2">

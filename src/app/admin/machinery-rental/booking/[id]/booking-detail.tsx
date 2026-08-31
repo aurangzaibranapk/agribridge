@@ -400,9 +400,7 @@ export function BookingDetail({
                   </p>
                 ) : (
                   <details className="mt-3 border-t border-brand-200 pt-2 dark:border-brand-900/40">
-                    <summary className="cursor-pointer text-xs font-medium text-brand-700 hover:underline dark:text-brand-300">
-                      Rate ghalat likha gaya? Theek karein
-                    </summary>
+                    <summary className="cursor-pointer text-xs font-medium text-brand-700 hover:underline dark:text-brand-300">{t("mb_rate_wrong", lang)}</summary>
                     <div className="mt-3 space-y-3">
                       <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                         Naya rate bhejte hi upar wali tasdeeq khatam ho jayegi — kisan se dobara haan leni hogi. Jo
@@ -653,7 +651,7 @@ export function BookingDetail({
                     katti hai, hissa us ke baad bantta hai (194). */}
                 {bill.discount_amount > 0 && (
                   <>
-                    <Row label="Riayat (discount)" value={-bill.discount_amount} />
+                    <Row label={t("mb_discount", lang)} value={-bill.discount_amount} />
                     {bill.discount_reason && (
                       <p className="-mt-1 pl-1 text-xs italic text-surface-500">{bill.discount_reason}</p>
                     )}
@@ -871,6 +869,7 @@ function StepCard({
   locked?: boolean;
   children: React.ReactNode;
 }) {
+  const lang = useLang();
   return (
     <Card className={locked ? "opacity-60" : undefined}>
       <div className="mb-3 flex items-center gap-2 border-b border-surface-100 pb-2 dark:border-surface-800">
@@ -885,9 +884,7 @@ function StepCard({
         <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h2>
       </div>
       {locked ? (
-        <p className="text-sm text-surface-500">
-          Ye qadam kisan ki tasdeeq ke baad khulta hai — rok database mein lagi hui hai, sirf yahan nahi.
-        </p>
+        <p className="text-sm text-surface-500">{t("mb_gate_note", lang)}</p>
       ) : (
         children
       )}
@@ -1518,6 +1515,7 @@ function TimeField({
   onChange: (v: string) => void;
   min?: string;
 }) {
+  const lang = useLang();
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div>
@@ -1535,9 +1533,7 @@ function TimeField({
           variant="secondary"
           className="shrink-0"
           onClick={() => ref.current?.blur()}
-        >
-          Theek hai
-        </Button>
+        >{t("mb_ok", lang)}</Button>
       </div>
       {value && (
         <p className="mt-1 text-xs text-surface-500">
@@ -1559,6 +1555,7 @@ function MachineDayLoad({
   date: string | null;
   acres: number;
 }) {
+  const lang = useLang();
   if (!machine || machine.capacity === null || !date) return null;
 
   const capacity = machine.capacity;
@@ -1567,9 +1564,7 @@ function MachineDayLoad({
 
   if (capacity === 0) {
     return (
-      <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
-        Ye machine abhi kaam ke qabil nahi (workshop ya band). Doosri machine chunein.
-      </p>
+      <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">{t("mb_machine_unfit", lang)}</p>
     );
   }
 
@@ -1585,7 +1580,7 @@ function MachineDayLoad({
       }`}
     >
       <p className={fits ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}>
-        <strong>{date}</strong> ko is machine par <strong>{booked} / {capacity} acre</strong> bandhe hain —{" "}
+        <strong>{date}</strong>{t("mb_on_this_machine", lang)}<strong>{booked} / {capacity} acre</strong> bandhe hain —{" "}
         <strong>{free} acre</strong> bachi hai. Ye booking {acres} acre ki hai.
       </p>
       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/70 dark:bg-surface-800">
@@ -1889,9 +1884,7 @@ function WorkForm({
           ke sath wo tareekh bhi hai jo staff ka asal matlab thi. */}
       {backwards && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
-          <p className="text-amber-800 dark:text-amber-300">
-            Khatam ka waqt shuru se pehle ya barabar hai. Waqt aage chalta hai — aisa indraj nahi ho sakta.
-          </p>
+          <p className="text-amber-800 dark:text-amber-300">{t("mb_time_backwards", lang)}</p>
           {nextDayEnd && nextDayFits && (
             <button
               type="button"
@@ -1999,18 +1992,14 @@ function BillForm({ bookingId }: { bookingId: string }) {
           bulata hai. Kholna ek click ka kaam hai; us ek click se ye
           faisla hosh mein hota hai. */}
       <details className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-        <summary className="cursor-pointer text-xs font-medium text-surface-700 dark:text-surface-300">
-          Kisan ko riayat deni hai? (discount)
-        </summary>
+        <summary className="cursor-pointer text-xs font-medium text-surface-700 dark:text-surface-300">{t("mb_give_discount", lang)}</summary>
         <div className="mt-3 space-y-3">
           <p className="text-xs text-surface-500">
             Riayat sab se pehle katti hai, hissa us ke baad bantta hai — us raqam par hamara commission nahi banta aur wo
             vendor ke khate mein bhi nahi jati.
           </p>
           <div>
-            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
-              Kitni riayat (Rs)
-            </label>
+            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">{t("mb_how_much_discount", lang)}</label>
             <input
               type="number"
               name="discount_amount"
@@ -2021,13 +2010,11 @@ function BillForm({ bookingId }: { bookingId: string }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
-              Wajah (riayat ho to lazmi, kam az kam 5 harf)
-            </label>
+            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">{t("mb_reason_5", lang)}</label>
             <input
               type="text"
               name="discount_reason"
-              placeholder="Misal: kisan se Rs 28,000 tay hue the"
+              placeholder={t("mb_discount_eg", lang)}
               className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
             />
           </div>
@@ -2052,6 +2039,7 @@ function BillForm({ bookingId }: { bookingId: string }) {
  * ye maloom hona chahiye ke Rs 30,000 ka bill kyun ulta gaya.
  */
 function CancelBillForm({ bookingId, billNumber, paid }: { bookingId: string; billNumber: string; paid: number }) {
+  const lang = useLang();
   const [state, action] = useFormState(cancelFinalBill, initialState);
 
   // Paisa aa chuka ho to mansookhi ka sawal hi nahi banta. Rok server
@@ -2067,9 +2055,7 @@ function CancelBillForm({ bookingId, billNumber, paid }: { bookingId: string; bi
 
   return (
     <details className="mt-3 border-t border-surface-200 pt-2 dark:border-surface-700">
-      <summary className="cursor-pointer text-xs font-medium text-red-600 hover:underline dark:text-red-400">
-        Bill ghalat ban gaya? Mansookh karein
-      </summary>
+      <summary className="cursor-pointer text-xs font-medium text-red-600 hover:underline dark:text-red-400">{t("mb_bill_wrong", lang)}</summary>
       <form action={action} className="mt-3 space-y-3">
         <Err state={state} />
         <input type="hidden" name="booking_id" value={bookingId} />
@@ -2079,19 +2065,17 @@ function CancelBillForm({ bookingId, billNumber, paid }: { bookingId: string; bi
           karna hoga.
         </p>
         <div>
-          <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
-            Wajah (kam az kam 10 harf) *
-          </label>
+          <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">{t("mb_reason_10", lang)}</label>
           <textarea
             name="reason"
             required
             minLength={10}
             rows={2}
-            placeholder="Misal: rate Rs 14,000 hona tha, ghalti se Rs 15,000 likha gaya"
+            placeholder={t("mb_rate_eg", lang)}
             className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
           />
         </div>
-        <Submit label="Bill mansookh karein" />
+        <Submit label={t("mb_cancel_bill", lang)} />
       </form>
     </details>
   );

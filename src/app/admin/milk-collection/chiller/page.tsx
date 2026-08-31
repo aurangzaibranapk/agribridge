@@ -27,7 +27,7 @@ export default async function ChillerPage({
     : { data: null };
 
   if (!me?.is_active || !ALLOWED_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf chiller aur manager ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("ch_only_chiller", lang)}</div>;
   }
 
   const date = params.date ?? new Date().toISOString().slice(0, 10);
@@ -117,7 +117,7 @@ export default async function ChillerPage({
       <Card className="p-3">
         <form className="flex flex-wrap items-end gap-3" method="get">
           <div>
-            <label className="text-xs text-surface-500">Tareekh</label>
+            <label className="text-xs text-surface-500">{t("c_date", lang)}</label>
             <input
               name="date"
               type="date"
@@ -126,47 +126,43 @@ export default async function ChillerPage({
             />
           </div>
           <div>
-            <label className="text-xs text-surface-500">Shift</label>
+            <label className="text-xs text-surface-500">{t("ch_shift", lang)}</label>
             <select name="shift" defaultValue={shift} className="mt-1 rounded-lg border border-surface-200 p-2 text-sm">
               <option value="morning">{t("mk_morning", lang)}</option>
               <option value="evening">{t("mk_evening", lang)}</option>
             </select>
           </div>
-          <button type="submit" className="rounded-lg border border-surface-300 px-3 py-2 text-sm">
-            Dikhayein
-          </button>
+          <button type="submit" className="rounded-lg border border-surface-300 px-3 py-2 text-sm">{t("ch_show", lang)}</button>
           <Link
             href="/admin/milk-collection/verify"
             className="ml-auto rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white"
-          >
-            Manager Verify
-          </Link>
+          >{t("ch_manager_verify", lang)}</Link>
         </form>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">MCA ka doodh</p>
+          <p className="text-xs text-surface-500">{t("ch_mca_milk", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round((totalLiters - selfDeliveryLiters) * 10) / 10} L
           </p>
           <p className="text-xs text-surface-400">{list.length} route</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kisan khud laya</p>
+          <p className="text-xs text-surface-500">{t("ch_farmer_brought", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round(selfDeliveryLiters * 10) / 10} L
           </p>
           <p className="text-xs text-surface-400">{selfDeliveryCount} entries</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kul mausool</p>
+          <p className="text-xs text-surface-500">{t("ch_total_received", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-brand-700 dark:text-brand-400">
             {Math.round(totalLiters * 10) / 10} L
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">FAT ka intezar</p>
+          <p className="text-xs text-surface-500">{t("ch_waiting_fat", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-amber-600">{pendingCount}</p>
         </Card>
       </div>

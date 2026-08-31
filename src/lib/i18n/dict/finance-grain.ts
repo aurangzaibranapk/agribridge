@@ -95,3 +95,84 @@ export const financeGrainDict = {
   by_buyers: { en: "Buyers", rm: "Buyer", ur: "بائر" },
   by_none_yet: { en: "No buyers yet", rm: "Abhi koi Buyer nahi", ur: "ابھی کوئی بائر نہیں" },
 } as const;
+
+/**
+ * Anaj ka dashboard aur us ke baqi khane.
+ *
+ * "HAR ENTRY KI POORI COST" jaan boojh kar chaar hisson mein tooti hui
+ * hai: anaj, diesel, mazdoori, bardana. Sirf ek "cost" dikhana aasan
+ * tha, magar mol tol wahin hota hai -- kisi entry par bardana mehnga
+ * paRa, kisi par ladai. Ek adad se ye kabhi pata na chalta.
+ *
+ * "GENERAL EXPENSES (kisi ek entry se nahi)" ka apna khana is liye hai
+ * ke kuch kharche kisi ek sauday ke nahi hote -- kiraya, aam diesel.
+ * Unhen kisi entry par daal dena us entry ka nafa jhoota kar deta.
+ *
+ * COGS aur FIFO angrezi hi rahe -- hisaab ki istilahat hain, aur
+ * accountant unhen isi shakl mein parhta hai.
+ */
+export const grainDashDict = {
+  gd_bought: { en: "Bought", rm: "Kharida", ur: "خریدا" },
+  gd_sold: { en: "Sold", rm: "Becha", ur: "بیچا" },
+  gd_total_bought: { en: "Total Bought", rm: "Kul kharida", ur: "کل خریدا" },
+  gd_total_sold: { en: "Total Sold", rm: "Kul becha", ur: "کل بیچا" },
+  gd_in_stock_now: { en: "In Stock Now", rm: "Abhi stock mein", ur: "ابھی اسٹاک میں" },
+  gd_in_stock: { en: "In Stock", rm: "Stock mein", ur: "اسٹاک میں" },
+  gd_full_profit_calc: { en: "Full Profit Calculation", rm: "Poora nafa ka hisaab", ur: "پورا نفع کا حساب" },
+  gd_sales_revenue: { en: "Sales Revenue (from buyers)", rm: "Bikri ki aamdani (buyer se)", ur: "بکری کی آمدنی (بائر سے)" },
+  gd_cogs_fifo: { en: "COGS (grain cost — FIFO)", rm: "COGS (anaj ki lagat -- FIFO)", ur: "COGS (اناج کی لاگت — FIFO)" },
+  gd_gross_profit_sale: { en: "Gross Profit (the sale's margin)", rm: "Khaam nafa (bikri ka farq)", ur: "خام نفع (بکری کا فرق)" },
+  gd_operational_expenses: {
+    en: "Operational Expenses (diesel, labour, sacks, rent)",
+    rm: "Chalane ke kharche (diesel, mazdoori, bardana, kiraya)",
+    ur: "چلانے کے خرچے (ڈیزل، مزدوری، بردانہ، کرایہ)",
+  },
+  gd_net_business_profit: { en: "Net Business Profit", rm: "Karobar ka saaf nafa", ur: "کاروبار کا صاف نفع" },
+  gd_full_cost_each_entry: {
+    en: "Full Cost of Each Entry (grain + diesel + labour + sacks)",
+    rm: "Har indraj ki poori lagat (anaj + diesel + mazdoori + bardana)",
+    ur: "ہر اندراج کی پوری لاگت (اناج + ڈیزل + مزدوری + بردانہ)",
+  },
+  gd_grain_cost: { en: "Grain Cost", rm: "Anaj ki lagat", ur: "اناج کی لاگت" },
+  gd_diesel: { en: "Diesel", rm: "Diesel", ur: "ڈیزل" },
+  gd_labour: { en: "Labour", rm: "Mazdoori", ur: "مزدوری" },
+  gd_sacks: { en: "Sacks (bardana)", rm: "Bardana", ur: "بردانہ" },
+  gd_rent: { en: "Rent", rm: "Kiraya", ur: "کرایہ" },
+  gd_total_true_cost: { en: "Total (true cost)", rm: "Kul (asal lagat)", ur: "کل (اصل لاگت)" },
+  gd_expense_breakdown: { en: "Expense Breakdown (all)", rm: "Kharchon ki tafseel (sab)", ur: "خرچوں کی تفصیل (سب)" },
+  gd_general_expenses: {
+    en: "General Expenses (not tied to one entry)",
+    rm: "Aam kharche (kisi ek indraj ke nahi)",
+    ur: "عام خرچے (کسی ایک اندراج کے نہیں)",
+  },
+  gd_no_expense: { en: "No expenses yet.", rm: "Abhi koi kharcha nahi.", ur: "ابھی کوئی خرچہ نہیں۔" },
+  gd_no_general_expense: { en: "No general expenses.", rm: "Koi aam kharcha nahi.", ur: "کوئی عام خرچہ نہیں۔" },
+  gd_no_linked_expense: {
+    en: "No expense has been linked to any entry yet.",
+    rm: "Abhi tak kisi indraj se koi kharcha nahi joRa gaya.",
+    ur: "ابھی تک کسی اندراج سے کوئی خرچہ نہیں جوڑا گیا۔",
+  },
+  gd_farmer_party: { en: "Farmer / Party", rm: "Kisan / party", ur: "کسان / پارٹی" },
+  gd_procurement_page: { en: "Procurement Page", rm: "Kharidari ka safha", ur: "خریداری کا صفحہ" },
+  gd_sell_page: { en: "Sell Page", rm: "Bikri ka safha", ur: "بکری کا صفحہ" },
+
+  // ---- Baqi grain safhe ----
+  gd_add_more_expense: { en: "Add Another Expense", rm: "Aur kharcha shamil karein", ur: "اور خرچہ شامل کریں" },
+  gd_confirm_note: {
+    en: "The entry is not saved until you confirm.",
+    rm: "Jab tak tasdeeq nahi karenge, indraj mehfooz nahi hoga.",
+    ur: "جب تک تصدیق نہیں کریں گے، اندراج محفوظ نہیں ہوگا۔",
+  },
+  gd_new_party: { en: "Create a New Party", rm: "Nayi party banayein", ur: "نئی پارٹی بنائیں" },
+  gd_payment_recorded: { en: "Payment recorded.", rm: "Adaigi darj ho gayi.", ur: "ادائیگی درج ہو گئی۔" },
+  gd_buyer_req: { en: "Buyer *", rm: "Buyer *", ur: "بائر *" },
+  gd_grain_type_req: { en: "Grain Type *", rm: "Anaj ki qism *", ur: "اناج کی قسم *" },
+  gd_warehouse_req: { en: "Warehouse *", rm: "Godam *", ur: "گودام *" },
+  gd_qty_kg_req: { en: "Quantity (kg) *", rm: "Tadaad (kg) *", ur: "تعداد (کلو) *" },
+  gd_rate_kg_req: { en: "Rate per kg (Rs.) *", rm: "Fi kg rate (Rs.) *", ur: "فی کلو ریٹ (روپے) *" },
+  gd_amount_req: { en: "Amount (Rs.) *", rm: "Raqam (Rs.) *", ur: "رقم (روپے) *" },
+  gd_which_account_in: { en: "Which account did the money come into? *", rm: "Kaunse khate mein paisa aaya *", ur: "کون سے کھاتے میں پیسہ آیا *" },
+  gd_which_account_out: { en: "Which account did this expense go from? *", rm: "Kaunse khate se ye kharcha gaya *", ur: "کون سے کھاتے سے یہ خرچہ گیا *" },
+  gd_print_download: { en: "Print / Download", rm: "Print / download", ur: "پرنٹ / ڈاؤن لوڈ" },
+  gd_receiving: { en: "Receiving", rm: "Rasidgi", ur: "رسیدگی" },
+} as const;
