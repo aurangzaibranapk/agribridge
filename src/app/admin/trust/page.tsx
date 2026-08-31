@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
-import { AlertTriangle, ShieldAlert, Eye } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Eye, Clock, CheckCircle2 } from "lucide-react";
 import { scoreDb } from "@/lib/score/read";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +61,7 @@ type Row = {
   credit_history_state: string | null;
   risk_flags: string[];
   snapshot_date: string;
+  last_evidence_at: string | null;
 };
 
 export default async function TrustPage({
@@ -87,7 +88,7 @@ export default async function TrustPage({
   const { data: all } = await scoreDb(supabase)
     .from("score_snapshots")
     .select(
-      "subject_type, subject_id, score, band, state, evidence_coverage, credit_history_state, risk_flags, snapshot_date"
+      "subject_type, subject_id, score, band, state, evidence_coverage, credit_history_state, risk_flags, snapshot_date, last_evidence_at"
     )
     .eq("subject_type", kind)
     .order("snapshot_date", { ascending: false })
@@ -119,6 +120,18 @@ export default async function TrustPage({
     .eq("subject_type", kind)
     .eq("state", "open");
 
+  // TAAZGI -- ye safha khud hisaab nahi lagata. Ek hi function se
+  // poochta hai, taake do jagah do jawab na hon.
+  const { data: healthRows } = await scoreDb(supabase).rpc("fn_score_health");
+  const health = (Array.isArray(healthRows) ? healthRows[0] : null) as {
+    last_ok_run: string | null;
+    hours_since_run: number | null;
+    queue_pending: number;
+    queue_failed: number;
+    is_stale: boolean;
+    reason: string;
+  } | null;
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -138,6 +151,82 @@ export default async function TrustPage({
           </div>
         </div>
       </Card>
+
+      {/* ---- TAAZGI ---- */}
+      {health ? (
+        <Card
+          className={
+            "p-4 " +
+            (health.is_stale
+              ? "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20"
+              : "")
+          }
+        >
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+            <div className="flex gap-3">
+              {health.is_stale ? (
+                <Clock className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-400" />
+              ) : (
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
+              )}
+              <div className="text-sm">
+                <p
+                  className={
+                    "font-medium " +
+                    (health.is_stale
+                      ? "text-red-900 dark:text-red-200"
+                      : "text-surface-900 dark:text-surface-100")
+                  }
+                >
+                  {health.is_stale
+                    ? "Ye adad purane ho sakte hain"
+                    : "Adad taaza hain"}
+                </p>
+                <p
+                  className={
+                    "mt-0.5 " +
+                    (health.is_stale
+                      ? "text-red-800 dark:text-red-300"
+                      : "text-surface-500")
+                  }
+                >
+                  {health.reason}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-surface-500">
+              <span>
+                Aakhri kaamyab hisaab:{" "}
+                <b className="font-mono text-surface-900 dark:text-surface-100">
+                  {health.last_ok_run
+                    ? new Date(health.last_ok_run).toLocaleString()
+                    : /* Kabhi chala hi nahi -- ye sifar nahi hai. */ "kabhi nahi"}
+                </b>
+              </span>
+              <span>
+                Muntazir parchiyan:{" "}
+                <b className="font-mono tabular-nums text-surface-900 dark:text-surface-100">
+                  {health.queue_pending}
+                </b>
+              </span>
+              <span>
+                Nakaam:{" "}
+                <b
+                  className={
+                    "font-mono tabular-nums " +
+                    (health.queue_failed > 0
+                      ? "text-red-700 dark:text-red-400"
+                      : "text-surface-900 dark:text-surface-100")
+                  }
+                >
+                  {health.queue_failed}
+                </b>
+              </span>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       {/* ---- Kis kism ke log ---- */}
       <div className="flex flex-wrap gap-2">
@@ -195,7 +284,7 @@ export default async function TrustPage({
                 <th className="px-4 py-3 font-medium">Saboot</th>
                 <th className="px-4 py-3 font-medium">Udhaar ka record</th>
                 <th className="px-4 py-3 font-medium">Nishan</th>
-                <th className="px-4 py-3 font-medium">Aakhri hisaab</th>
+                <th className="px-4 py-3 font-medium">Aakhri saboot</th>
               </tr>
             </thead>
             <tbody>
@@ -251,7 +340,9 @@ export default async function TrustPage({
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-surface-400">
-                        {r.snapshot_date}
+                        {/* Hisaab kab laga ye kaafi nahi -- ye batana zaroori
+                            hai ke us mein SABOOT kahan tak ka tha. */}
+                        {r.last_evidence_at ? r.last_evidence_at.slice(0, 10) : "—"}
                       </td>
                     </tr>
                   );
