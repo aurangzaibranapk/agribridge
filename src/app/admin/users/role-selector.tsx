@@ -5,6 +5,8 @@ import { updateUserRole } from "@/actions/users";
 import { Select } from "@/components/ui/form";
 import { DEPARTMENTS } from "@/lib/departments";
 import type { UserRole } from "@/lib/utils/roles";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 /**
  * Kisi banday ka role -- yani us ka DEPARTMENT.
@@ -32,6 +34,7 @@ export function RoleSelector({ userId, currentRole }: { userId: string; currentR
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const lang = useLang();
   function handleChange(role: UserRole) {
     setError(null);
     startTransition(async () => {
@@ -48,14 +51,14 @@ export function RoleSelector({ userId, currentRole }: { userId: string; currentR
         disabled={pending}
         className="h-8 w-40 text-xs"
       >
-        <optgroup label="Idara">
+        <optgroup label={t("us_organisation", lang)}>
           {ORG_ROLES.map((r) => (
             <option key={r.value} value={r.value}>
               {r.label}
             </option>
           ))}
         </optgroup>
-        <optgroup label="Department">
+        <optgroup label={t("c_department", lang)}>
           {DEPARTMENTS.map((d) => (
             <option key={d.role} value={d.role}>
               {d.label}

@@ -5,6 +5,8 @@ import { AlertTriangle, MessageSquare } from "lucide-react";
 import { ReviewForm } from "./review-form";
 import { signedMediaUrl, KIND_LABEL, STATUS_LABEL, type SubmissionKind, type SubmissionStatus } from "@/lib/whatsapp-submissions";
 import { canDo } from "@/lib/access/guard";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +20,12 @@ function statusTone(status: string) {
 }
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
   const { data: s } = await supabase.from("whatsapp_submissions").select("*").eq("id", id).maybeSingle();
-  if (!s) return <div className="p-8 text-center text-surface-400">Submission nahi mili.</div>;
+  if (!s) return <div className="p-8 text-center text-surface-400">{t("sb_not_found", lang)}</div>;
 
   const { data: staff } = await supabase.from("profiles").select("full_name").eq("id", s.staff_profile_id).maybeSingle();
   const { data: branch } = s.branch_id
@@ -82,7 +85,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
 
       {flags.length > 0 && (
         <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-          <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="h-4 w-4" /> System ne ye baatein pakri hain:</p>
+          <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="h-4 w-4" />{t("sb_system_caught", lang)}</p>
           <ul className="mt-1 list-inside list-disc">
             {flags.map((f, i) => <li key={i}>{f}</li>)}
           </ul>
@@ -93,7 +96,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card className="p-4">
-            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Staff ne kya bheja (asal saboot)</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("sb_what_staff_sent", lang)}</h3>
             {s.raw_text && <p className="mb-3 whitespace-pre-wrap rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">{s.raw_text}</p>}
             {evidenceUrl ? (
               isImage ? (
@@ -107,13 +110,13 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
                 </a>
               )
             ) : (
-              <p className="text-sm text-surface-400">Koi photo nahi bheji gayi.</p>
+              <p className="text-sm text-surface-400">{t("sb_no_photo", lang)}</p>
             )}
           </Card>
 
           {s.ai_summary && (
             <Card className="p-4">
-              <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">AI ne kya samjha</h3>
+              <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("sb_what_ai_understood", lang)}</h3>
               <p className="whitespace-pre-wrap text-sm text-surface-600 dark:text-surface-400">{s.ai_summary}</p>
               <p className="mt-2 text-xs text-surface-500">Ye AI ka andaza hai — asal saboot upar hai. Milaa kar dekh lein.</p>
             </Card>
@@ -153,20 +156,20 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
 
           {!canReview && s.status === "pending" && (
             <Card className="p-4">
-              <p className="text-sm text-surface-500">Is par faisla is branch ka Manager ya Admin hi kar sakta hai.</p>
+              <p className="text-sm text-surface-500">{t("sb_manager_only", lang)}</p>
             </Card>
           )}
         </div>
 
         <div className="space-y-4">
           <Card className="p-4">
-            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Tafseel</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("c_detail", lang)}</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-surface-500">Staff</span><span>{staff?.full_name ?? "-"}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Branch</span><span>{branch?.name ?? "-"}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Number</span><span className="font-mono text-xs">{s.whatsapp_number}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Qism</span><span>{KIND_LABEL[s.kind as SubmissionKind] ?? s.kind}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Aayi</span><span>{new Date(s.created_at).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_staff", lang)}</span><span>{staff?.full_name ?? "-"}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_branch", lang)}</span><span>{branch?.name ?? "-"}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("sb_number", lang)}</span><span className="font-mono text-xs">{s.whatsapp_number}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("sb_kind", lang)}</span><span>{KIND_LABEL[s.kind as SubmissionKind] ?? s.kind}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("sb_arrived", lang)}</span><span>{new Date(s.created_at).toLocaleString()}</span></div>
             </div>
           </Card>
         </div>

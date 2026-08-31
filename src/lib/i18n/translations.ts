@@ -25,6 +25,8 @@ import { miscAdminDict } from "./dict/misc-admin";
 import { statementsDict, opsPagesDict } from "./dict/statements";
 import { partnersDict, peoplePagesDict } from "./dict/partners";
 import { financeGrainDict } from "./dict/finance-grain";
+import { catalogUsersDict } from "./dict/catalog-users";
+import { approvalsDict } from "./dict/approvals";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -100,6 +102,8 @@ const dict = {
   ...partnersDict,
   ...peoplePagesDict,
   ...financeGrainDict,
+  ...catalogUsersDict,
+  ...approvalsDict,
 };
 
 export type TranslationKey = keyof typeof dict;

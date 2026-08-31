@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { CreditRequestActions } from "@/app/admin/credit-requests/credit-request-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCreditRequestsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawRequests } = await supabase
@@ -36,22 +39,22 @@ export default async function AdminCreditRequestsPage() {
 
   return (
     <div>
-      <PageHeader title="Credit Requests" description="Seed/Fertilizer/Pesticide credit requests from farmers, priced at MRP" />
+      <PageHeader title={t("crq_title", lang)} description="Seed/Fertilizer/Pesticide credit requests from farmers, priced at MRP" />
       {requests.length === 0 ? (
-        <EmptyState title="No credit requests yet" />
+        <EmptyState title={t("crq_none_yet", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Farmer</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Category</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Product</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Qty</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Base</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Total</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Action</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_category", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_product", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("crq_base", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>

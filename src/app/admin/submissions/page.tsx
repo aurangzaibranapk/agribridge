@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/form";
 import Link from "next/link";
 import { Inbox, AlertTriangle, Check, X, CornerUpLeft } from "lucide-react";
 import { KIND_LABEL, STATUS_LABEL, type SubmissionKind, type SubmissionStatus } from "@/lib/whatsapp-submissions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ function statusTone(status: string) {
 }
 
 export default async function SubmissionsInboxPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rows } = await supabase
@@ -45,30 +48,30 @@ export default async function SubmissionsInboxPage() {
   return (
     <div>
       <PageHeader
-        title="Approval Inbox"
+        title={t("sb_inbox", lang)}
         description="WhatsApp se aaye bills, meter readings aur cash. Manager ki comment ke baghair koi transaction accounts mein nahi jati."
       />
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Inbox className="h-3.5 w-3.5 text-blue-600" /> Faisle ke intezar mein</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Inbox className="h-3.5 w-3.5 text-blue-600" />{t("sb_awaiting", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{pending.length}</p>
           <p className="text-xs text-surface-500">Rs {pendingValue.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Nishan lage huye</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" />{t("sb_flagged_by_person", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-amber-600">{flagged.length}</p>
-          <p className="text-xs text-surface-500">System ne kuch ajeeb pakra</p>
+          <p className="text-xs text-surface-500">{t("sb_flagged_by_system", lang)}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Check className="h-3.5 w-3.5 text-green-600" /> Faisla ho chuka</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Check className="h-3.5 w-3.5 text-green-600" />{t("sb_decided", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{submissions.length - pending.length}</p>
         </Card>
       </div>
 
       {submissions.length === 0 ? (
         <EmptyState
-          title="Abhi tak koi submission nahi aayi."
+          title={t("sb_none_yet", lang)}
           description="Jab staff WhatsApp par bill ya meter ki photo bhejega, wo yahan nazar aayegi."
         />
       ) : (
@@ -76,12 +79,12 @@ export default async function SubmissionsInboxPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Number</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Qism</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Staff</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Branch</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Raqam</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Haalat</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("sb_number", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("sb_kind", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_staff", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_branch", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("sb_amount", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("sb_state", lang)}</th>
               </tr>
             </thead>
             <tbody>

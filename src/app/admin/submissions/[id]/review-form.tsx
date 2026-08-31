@@ -5,6 +5,8 @@ import { reviewSubmission, type ActionState } from "@/actions/whatsapp-submissio
 import { COMMENT_MAX, COMMENT_MIN } from "@/lib/whatsapp-submissions";
 import { partiesForKind, BILL_CATEGORIES } from "@/lib/bill-cash";
 import { Check, X, CornerUpLeft, Paperclip, Info } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -39,6 +41,7 @@ export function ReviewForm({
   const [partyType, setPartyType] = useState("");
 
   const isCash = kind === "cash_paid" || kind === "cash_received";
+  const lang = useLang();
   const isBill = kind === "expense";
   const parties = partiesForKind(kind);
   const chosenParty = parties.find((p) => p.value === partyType) ?? null;
@@ -53,7 +56,7 @@ export function ReviewForm({
       <input type="hidden" name="submission_id" value={submissionId} />
       <input type="hidden" name="decision" value={decision} />
 
-      <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Aap ka faisla</h3>
+      <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("sb_your_decision", lang)}</h3>
 
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
@@ -86,7 +89,7 @@ export function ReviewForm({
           maxLength={COMMENT_MAX}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Misal: Receipt aur meter reading mila kar dekh li, sab durust hai."
+          placeholder={t("sb_decision_eg", lang)}
           className={`mt-1 w-full rounded-lg border p-2 text-sm ${tooShort ? "border-red-400" : "border-surface-200"}`}
         />
         <div className="mt-1 flex justify-between text-xs">
@@ -109,7 +112,7 @@ export function ReviewForm({
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-surface-400">Ye bill wahi jagah jayega jahan baaqi company ke bill jate hain.</p>
+          <p className="mt-1 text-xs text-surface-400">{t("sb_bill_goes_where", lang)}</p>
         </div>
       )}
 
@@ -143,14 +146,14 @@ export function ReviewForm({
               <input
                 name="party_name"
                 defaultValue={suggestedParty}
-                placeholder="Naam likhein"
+                placeholder={t("c_enter_name", lang)}
                 className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
               />
             </div>
             <div>
               <label className="text-xs font-medium text-surface-700 dark:text-surface-300">Khata *</label>
               <select name="finance_account_id" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-                {accounts.length === 0 && <option value="">Koi khata nahi bana hua</option>}
+                {accounts.length === 0 && <option value="">{t("sb_no_khata", lang)}</option>}
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -162,7 +165,7 @@ export function ReviewForm({
 
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="text-xs font-medium text-surface-600">Raqam theek karni ho to (marzi ki baat)</label>
+          <label className="text-xs font-medium text-surface-600">{t("sb_fix_amount", lang)}</label>
           <input
             name="corrected_amount"
             type="number"
@@ -171,7 +174,7 @@ export function ReviewForm({
             placeholder={originalAmount == null ? "—" : String(originalAmount)}
             className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
           />
-          <p className="mt-1 text-xs text-surface-400">Khali chhoR dein to asal raqam hi rahegi.</p>
+          <p className="mt-1 text-xs text-surface-400">{t("sb_leave_blank", lang)}</p>
         </div>
         <div>
           <label className="flex items-center gap-1 text-xs font-medium text-surface-600">

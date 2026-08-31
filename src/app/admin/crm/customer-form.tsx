@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { saveCustomer, updateCustomer, type ActionState } from "@/actions/customers";
 import { Button, Input, Label, Textarea } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -50,6 +52,7 @@ export function EditCustomerButton({ customer }: { customer: ExistingCustomer })
 
 function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onClose: () => void }) {
   const isEditMode = !!customer;
+  const lang = useLang();
   const [state, formAction] = useFormState(isEditMode ? updateCustomer : saveCustomer, initialState);
 
   if (state.success) {
@@ -84,7 +87,7 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             <Input name="name" defaultValue={customer?.name} required />
           </div>
           <div>
-            <Label>Contact Person</Label>
+            <Label>{t("c_contact_person", lang)}</Label>
             <Input name="contact_person" defaultValue={customer?.contact_person ?? ""} />
           </div>
           <div>
@@ -92,20 +95,20 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             <Input name="phone_number" defaultValue={customer?.phone_number} required />
           </div>
           <div>
-            <Label>Email</Label>
+            <Label>{t("c_email", lang)}</Label>
             <Input name="email" type="email" defaultValue={customer?.email ?? ""} />
           </div>
           <div>
-            <Label>Address</Label>
+            <Label>{t("c_address", lang)}</Label>
             <Textarea name="address" rows={2} defaultValue={customer?.address ?? ""} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Credit Limit (Rs.)</Label>
+              <Label>{t("cr_credit_limit_dot", lang)}</Label>
               <Input name="credit_limit" type="number" step="0.01" defaultValue={customer?.credit_limit} />
             </div>
             <div>
-              <Label>Payment Due (Days)</Label>
+              <Label>{t("cr_payment_due_days", lang)}</Label>
               <Input name="payment_due_days" type="number" defaultValue={customer?.payment_due_days} />
             </div>
           </div>

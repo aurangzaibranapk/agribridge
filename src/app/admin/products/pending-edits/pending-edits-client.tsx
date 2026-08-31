@@ -2,6 +2,8 @@
 import { useFormState } from "react-dom";
 import { approveProductEdit, rejectProductEdit, type ActionState } from "@/actions/product-permissions";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -43,6 +45,7 @@ export function PendingEditsClient({ requests }: { requests: EditRequest[] }) {
 }
 
 function EditRow({ request }: { request: EditRequest }) {
+  const lang = useLang();
   const [approveState, approveAction] = useFormState(approveProductEdit, initialState);
   const [, rejectAction] = useFormState(rejectProductEdit, initialState);
 
@@ -58,7 +61,7 @@ function EditRow({ request }: { request: EditRequest }) {
       </p>
 
       <div className="mt-3 rounded-lg border border-surface-200 bg-white p-3 dark:border-surface-700 dark:bg-surface-900">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Proposed Changes</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("pd_proposed_changes", lang)}</p>
         <div className="space-y-1">
           {changeEntries.map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm">

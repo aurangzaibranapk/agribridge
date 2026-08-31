@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { FarmerCreditClient } from "./farmer-credit-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminFarmerCreditPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const [{ data: farmers }, { data: rawLedger }, { data: financeAccounts }] = await Promise.all([
     supabase.from("farmers").select("id, full_name, farmer_code, credit_limit").eq("is_deleted", false).order("full_name"),
@@ -53,23 +56,23 @@ export default async function AdminFarmerCreditPage() {
 
   return (
     <div>
-      <PageHeader title="Farmer Credit Line" description="Seed/Fertilizer/Pesticide/Machinery/Wanda/Milk credit - poora hisaab" />
+      <PageHeader title={t("fcl_title", lang)} description="Seed/Fertilizer/Pesticide/Machinery/Wanda/Milk credit - poora hisaab" />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Issued</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("c_total_issued", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalIssued.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Total Repaid</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("c_total_repaid", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalRepaid.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Outstanding</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("c_outstanding", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalOutstanding.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Farmers On Credit</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("fcl_farmers_on_credit", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{balances.length}</p>
         </Card>
       </div>

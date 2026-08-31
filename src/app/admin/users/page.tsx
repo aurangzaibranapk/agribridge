@@ -7,6 +7,8 @@ import { ShopSelector } from "@/app/admin/users/shop-selector";
 import { StaffStatusManager } from "@/app/admin/users/staff-status-manager";
 import { formatDate } from "@/lib/utils/format";
 import { STAFF_ROLES } from "@/lib/utils/roles";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 
 /**
@@ -21,6 +23,7 @@ export const dynamic = "force-dynamic";
  * mulazim kaun hai.
  */
 export default async function UsersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const [{ data: profiles }, { data: branches }, { data: shops }] = await Promise.all([
     supabase
@@ -33,19 +36,19 @@ export default async function UsersPage() {
   ]);
   return (
     <div>
-      <PageHeader title="Users & Roles" description="Har mulazim ka department, branch aur darja — ek hi jagah se" />
+      <PageHeader title={t("us_title", lang)} description="Har mulazim ka department, branch aur darja — ek hi jagah se" />
       <Card>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left text-xs text-surface-400">
-              <th className="pb-2">Name</th>
-              <th className="pb-2">Role</th>
-              <th className="pb-2">Aur department</th>
-              <th className="pb-2">Branch</th>
-              <th className="pb-2">Shop</th>
-              <th className="pb-2">Joined</th>
-              <th className="pb-2">Status</th>
-              <th className="pb-2">Action</th>
+              <th className="pb-2">{t("c_name", lang)}</th>
+              <th className="pb-2">{t("c_role", lang)}</th>
+              <th className="pb-2">{t("us_extra_departments", lang)}</th>
+              <th className="pb-2">{t("c_branch", lang)}</th>
+              <th className="pb-2">{t("c_shop", lang)}</th>
+              <th className="pb-2">{t("c_joined", lang)}</th>
+              <th className="pb-2">{t("c_status", lang)}</th>
+              <th className="pb-2">{t("c_action", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -75,9 +78,9 @@ export default async function UsersPage() {
                   <td className="py-3 text-surface-500">{formatDate(p.created_at)}</td>
                   <td className="py-3">
                     {p.status === "suspended" ? (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Suspended</span>
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">{t("c_suspended", lang)}</span>
                     ) : (
-                      <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">Active</span>
+                      <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{t("c_active", lang)}</span>
                     )}
                   </td>
                   <td className="py-3"><StaffStatusManager userId={p.id} status={p.status ?? "active"} /></td>
@@ -85,7 +88,7 @@ export default async function UsersPage() {
                 {p.status_reason && (
                   <tr key={`${p.id}-reason`}>
                     <td colSpan={8} className="pb-2 text-xs text-surface-500">
-                      <strong>Wajah:</strong> {p.status_reason}
+                      <strong>{t("br_reason_label", lang)}</strong> {p.status_reason}
                     </td>
                   </tr>
                 )}
