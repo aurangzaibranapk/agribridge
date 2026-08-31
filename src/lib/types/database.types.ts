@@ -5924,6 +5924,7 @@ export type Database = {
           total_farms_count: number | null
           updated_at: string
           user_id: string | null
+          username: string | null
           village: string | null
           whatsapp_notifications_enabled: boolean
           whatsapp_number: string | null
@@ -6000,6 +6001,7 @@ export type Database = {
           total_farms_count?: number | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
           village?: string | null
           whatsapp_notifications_enabled?: boolean
           whatsapp_number?: string | null
@@ -6076,6 +6078,7 @@ export type Database = {
           total_farms_count?: number | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
           village?: string | null
           whatsapp_notifications_enabled?: boolean
           whatsapp_number?: string | null
@@ -14734,6 +14737,12 @@ export type Database = {
           },
         ]
       }
+      reserved_usernames: {
+        Row: { name: string }
+        Insert: { name: string }
+        Update: { name?: string }
+        Relationships: []
+      }
       role_feature_permissions: {
         Row: {
           actions: string[]
@@ -20843,6 +20852,10 @@ export type Database = {
       }
       fn_create_farmer_otp: {
         Args: { p_code: string; p_minutes: number; p_phone_key: string }
+        Returns: string
+      }
+      fn_set_farmer_username: {
+        Args: { p_username: string }
         Returns: string
       }
       fn_verify_farmer_otp: {

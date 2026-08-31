@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useFormState, useFormStatus } from "react-dom";
-import { requestFarmerOtp, verifyFarmerOtp, type FarmerAuthState } from "@/actions/farmer-auth";
+import { requestFarmerOtp, verifyFarmerOtp, loginWithUsername, type FarmerAuthState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
 
 function GoogleIcon() {
@@ -190,6 +190,11 @@ const emptyState: FarmerAuthState = {};
 function FarmerOtpLogin() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
+  // Kisan ka doosra raasta -- us ke liye jis ne apni User ID bana li hai
+  // (198). Wo pehli cheez NAHI hai jo safha dikhata: naye kisan ke paas
+  // User ID hoti hi nahi, aur usay pehle wo khana dikhana usay wahin
+  // rok deta hai.
+  const [byUsername, setByUsername] = useState(false);
   const [askState, askAction] = useFormState(requestFarmerOtp, emptyState);
   const [checkState, checkAction] = useFormState(verifyFarmerOtp, emptyState);
 
@@ -207,8 +212,13 @@ function FarmerOtpLogin() {
     }
   }, [checkState.success, router]);
 
+  if (byUsername) {
+    return <FarmerUsernameLogin onBack={() => setByUsername(false)} />;
+  }
+
   if (!sent) {
     return (
+      <>
       <form action={askAction} className="space-y-4">
         {askState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error}</p>}
         <div>
@@ -229,6 +239,14 @@ function FarmerOtpLogin() {
         </div>
         <SubmitBtn label="OTP bhejein" busy="Bheja ja raha hai..." />
       </form>
+      <button
+        type="button"
+        onClick={() => setByUsername(true)}
+        className="mt-3 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+      >
+        Apni User ID bana rakhi hai? Us se login karein
+      </button>
+      </>
     );
   }
 
@@ -294,5 +312,50 @@ function SubmitBtn({ label, busy }: { label: string; busy: string }) {
     <Button type="submit" disabled={pending} className="w-full">
       {pending ? busy : label}
     </Button>
+  );
+}
+
+/**
+ * User ID aur password se login.
+ *
+ * Kisan ne ye khud banaya hota hai (portal ki profile par), aur ye us
+ * ke liye hai jo roz aata hai. Ghalat naam aur ghalat password par
+ * jumla EK HI hai -- alag jumla dena kisi ko ye bata deta ke kaunsi
+ * User ID maujood hai aur kaunsi nahi, aur wo fehrist banane ka pehla
+ * qadam hota hai.
+ */
+function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
+  const router = useRouter();
+  const [state, action] = useFormState(loginWithUsername, emptyState);
+
+  useEffect(() => {
+    if (state.success) {
+      router.push("/portal/dashboard");
+      router.refresh();
+    }
+  }, [state.success, router]);
+
+  return (
+    <div>
+      <form action={action} className="space-y-4">
+        {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
+        <div>
+          <Label htmlFor="username">User ID</Label>
+          <Input id="username" name="username" required autoComplete="username" placeholder="misal: aurangzeb" />
+        </div>
+        <div>
+          <Label htmlFor="fpassword">Password</Label>
+          <PasswordInput id="fpassword" name="password" required placeholder="••••••••" />
+        </div>
+        <SubmitBtn label="Andar jayein" busy="Check ho raha hai..." />
+      </form>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-3 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+      >
+        Password yaad nahi? Mobile aur OTP se login karein
+      </button>
+    </div>
   );
 }

@@ -197,3 +197,142 @@ async function farmerUserId(
   const { data } = await service.from("farmers").select("user_id").eq("id", farmerId).maybeSingle();
   return (data?.user_id as string | null) ?? null;
 }
+
+// =====================================================================
+// Kisan ki apni User ID (198)
+// =====================================================================
+//
+// OTP se login ho jata hai, magar har dafa code ka intezar us bande ke
+// liye bojh hai jo roz portal kholta hai. Is liye kisan CHAHE to apni
+// User ID aur password bana le. Na chahe to koi zabardasti nahi -- OTP
+// apni jagah chalta rehta hai.
+
+export interface UsernameState {
+  error?: string;
+  success?: boolean;
+  username?: string;
+}
+
+/**
+ * Ye naam mil sakta hai ya nahi.
+ *
+ * Ye sirf SAFHE ko batane ke liye hai, taake banda naam likhte hi dekh
+ * le. Faisla yahan nahi hota -- asal faisla database mein hota hai
+ * (fn_set_farmer_username), kyunke do log ek hi lamhe mein wohi naam
+ * maang lein to yahan dono ko "mil sakta hai" ka jawab mil chuka hoga.
+ */
+export async function checkFarmerUsername(raw: string): Promise<{ ok: boolean; reason?: string }> {
+  const name = raw.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9._]{3,19}$/.test(name)) {
+    return {
+      ok: false,
+      reason: "Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.",
+    };
+  }
+
+  const service = createServiceClient();
+  const [{ data: reserved }, { data: taken }] = await Promise.all([
+    service.from("reserved_usernames").select("name").eq("name", name).maybeSingle(),
+    service.from("farmers").select("id").eq("username", name).eq("is_deleted", false).maybeSingle(),
+  ]);
+
+  if (reserved) return { ok: false, reason: "Ye naam nahi mil sakta." };
+  if (taken) return { ok: false, reason: "Ye naam pehle se kisi aur ka hai." };
+  return { ok: true };
+}
+
+/**
+ * User ID aur password rakhna.
+ *
+ * Naam database ke us function se rakha jata hai jo teenon baatein ek
+ * hi lamhe mein dekhta hai (shakl, mahfooz naam, duplicate). Password
+ * us ke BAAD lagta hai -- naam na mile to password lagane ka koi matlab
+ * nahi.
+ */
+export async function setFarmerUsername(
+  _prev: UsernameState,
+  formData: FormData
+): Promise<UsernameState> {
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("password_confirm") ?? "");
+
+  if (password.length < 6) return { error: "Password kam az kam chhe harf ka rakhein." };
+  if (password !== confirm) return { error: "Dono password ek jaise nahi hain." };
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: nateeja, error } = await supabase.rpc("fn_set_farmer_username", {
+    p_username: username,
+  });
+  if (error) return { error: "User ID nahi ban saki. Dobara koshish karein." };
+
+  const jumla: Record<string, string> = {
+    koi_kisan_nahi: "Aap ka kisan khata nahi mila.",
+    pehle_se_bana: "Aap ki User ID pehle se bani hui hai. Badalni ho to daftar se raabta karein.",
+    shakl_ghalat: "Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.",
+    mahfooz_naam: "Ye naam nahi mil sakta.",
+    kisi_aur_ka: "Ye naam abhi abhi kisi aur ne le liya. Koi doosra naam rakhein.",
+  };
+  if (nateeja !== "ok") return { error: jumla[nateeja as string] ?? "User ID nahi ban saki." };
+
+  // Password ab lagta hai. Naam pehle mil chuka -- warna banda password
+  // bana leta aur naam kisi aur ka nikalta.
+  const service = createServiceClient();
+  const { error: passError } = await service.auth.admin.updateUserById(user.id, { password });
+  if (passError) {
+    return {
+      error:
+        "User ID ban gayi magar password set nahi hua. Daftar se raabta karein — abhi OTP se login karte rahein.",
+    };
+  }
+
+  return { success: true, username };
+}
+
+/**
+ * User ID aur password se login.
+ *
+ * Ye server par hota hai, browser mein nahi -- aur is ki ek pakki wajah
+ * hai. Andar ka login email kisan ke MOBILE se banta hai
+ * (3001234567@phone.agribridge.local). Agar browser ko ye pata chalne
+ * diya jaye ke kis User ID ka kaunsa email hai, to koi bhi naam ka
+ * andaza laga kar us bande ka mobile number nikal sakta hai. Wo email
+ * yahan se bahar nahi jata.
+ */
+export async function loginWithUsername(
+  _prev: FarmerAuthState,
+  formData: FormData
+): Promise<FarmerAuthState> {
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (!username || !password) return { error: "User ID aur password dono likhein." };
+
+  const service = createServiceClient();
+  const { data: farmer } = await service
+    .from("farmers")
+    .select("user_id")
+    .eq("username", username)
+    .eq("is_deleted", false)
+    .maybeSingle();
+
+  // Naam na mile to bhi wohi jumla jo ghalat password par aata hai.
+  // Alag jumla dena kisi ko ye batata hai ke kaunsi User ID maujood hai
+  // aur kaunsi nahi -- aur wo fehrist banane ka pehla qadam hota hai.
+  const ghalat = { error: "Ghalat User ID ya password." };
+  if (!farmer?.user_id) return ghalat;
+
+  const { data: authUser } = await service.auth.admin.getUserById(farmer.user_id as string);
+  const email = authUser?.user?.email;
+  if (!email) return ghalat;
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return ghalat;
+
+  return { success: true };
+}
