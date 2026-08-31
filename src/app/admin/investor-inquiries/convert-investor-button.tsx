@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { convertInquiryToInvestor, type ActionState } from "@/actions/investors";
 import { Button, Input, Label, Select } from "@/components/ui/form";
 import { UserPlus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -60,6 +62,7 @@ function ConvertModal({
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState(convertInquiryToInvestor, initialState);
+  const lang = useLang();
 
   if (state.success) {
     setTimeout(onClose, 1200);
@@ -69,7 +72,7 @@ function ConvertModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Create Investor Account</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("ii_create_investor", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
@@ -93,15 +96,15 @@ function ConvertModal({
             <Input name="email" type="email" defaultValue={suggestedEmail ?? ""} required />
           </div>
           <div>
-            <Label>Phone</Label>
+            <Label>{t("c_phone", lang)}</Label>
             <Input name="phone" defaultValue={suggestedPhone ?? ""} />
           </div>
           <div>
-            <Label>Deal Type</Label>
+            <Label>{t("ii_deal_type", lang)}</Label>
             <Select name="deal_type" defaultValue={suggestedDealType ?? "product_investment"}>
-              <option value="product_investment">Product Investment</option>
-              <option value="dairy_investment">Dairy & Livestock</option>
-              <option value="franchise">Franchise</option>
+              <option value="product_investment">{t("ii_product_investment", lang)}</option>
+              <option value="dairy_investment">{t("ii_dairy_livestock", lang)}</option>
+              <option value="franchise">{t("ii_franchise", lang)}</option>
             </Select>
           </div>
           <div>
@@ -110,7 +113,7 @@ function ConvertModal({
           </div>
           <div>
             <Label>Profit Share % *</Label>
-            <Input name="profit_share_percentage" type="number" step="0.01" placeholder="e.g. 15" required />
+            <Input name="profit_share_percentage" type="number" step="0.01" placeholder={t("ii_eg_15", lang)} required />
           </div>
           <SubmitButton />
         </form>

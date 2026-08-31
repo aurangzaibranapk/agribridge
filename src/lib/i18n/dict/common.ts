@@ -38,6 +38,8 @@ export const commonDict = {
   c_number: { en: "Number", rm: "Number", ur: "نمبر" },
   c_no_short: { en: "No.", rm: "No.", ur: "نمبر" },
   c_name: { en: "Name", rm: "Naam", ur: "نام" },
+  c_button_text: { en: "Button Text", rm: "Button par kya likha ho", ur: "بٹن پر کیا لکھا ہو" },
+  c_button_link: { en: "Button Link", rm: "Button ka link", ur: "بٹن کا لنک" },
   c_title: { en: "Title", rm: "Unwan", ur: "عنوان" },
   c_value: { en: "Value", rm: "Qeemat", ur: "قیمت" },
   c_method: { en: "Method", rm: "Tareeqa", ur: "طریقہ" },

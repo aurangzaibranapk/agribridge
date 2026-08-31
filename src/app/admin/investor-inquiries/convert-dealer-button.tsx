@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { convertInquiryToDealer, type ActionState } from "@/actions/dealers";
 import { Button, Input, Label } from "@/components/ui/form";
 import { UserPlus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -55,6 +57,7 @@ function ConvertModal({
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState(convertInquiryToDealer, initialState);
+  const lang = useLang();
 
   if (state.success) {
     setTimeout(onClose, 1200);
@@ -64,7 +67,7 @@ function ConvertModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Create Dealer Account</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("ii_create_dealer", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
@@ -92,11 +95,11 @@ function ConvertModal({
             <Input name="phone" defaultValue={suggestedPhone ?? ""} required />
           </div>
           <div>
-            <Label>District</Label>
+            <Label>{t("c_district", lang)}</Label>
             <Input name="district" />
           </div>
           <div>
-            <Label>Tehsil</Label>
+            <Label>{t("c_tehsil", lang)}</Label>
             <Input name="tehsil" />
           </div>
           <SubmitButton />

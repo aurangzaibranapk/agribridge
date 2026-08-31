@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { AlertTriangle, Camera, CheckCircle2 } from "lucide-react";
 import { Button, Input, Label, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import {
   saveOpeningMeter,
@@ -56,6 +58,7 @@ export function MyVehicleClient({
   fuel: FuelView[];
 }) {
   const openingDone = log?.openingKm != null;
+  const lang = useLang();
   const closingDone = log?.closingKm != null;
 
   return (
@@ -79,10 +82,10 @@ export function MyVehicleClient({
       {log && (
         <Card>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Fact label="Subah ka meter" value={log.openingKm !== null ? `${log.openingKm.toLocaleString()} km` : "—"} />
-            <Fact label="Shaam ka meter" value={log.closingKm !== null ? `${log.closingKm.toLocaleString()} km` : "—"} />
-            <Fact label="Aaj chale" value={log.kmTravelled !== null ? `${log.kmTravelled.toLocaleString()} km` : "—"} />
-            <Fact label="Mileage" value={log.kmPerLiter !== null ? `${log.kmPerLiter} km/l` : "—"} />
+            <Fact label={t("mv_morning_meter", lang)} value={log.openingKm !== null ? `${log.openingKm.toLocaleString()} km` : "—"} />
+            <Fact label={t("mv_evening_meter", lang)} value={log.closingKm !== null ? `${log.closingKm.toLocaleString()} km` : "—"} />
+            <Fact label={t("mv_today_run", lang)} value={log.kmTravelled !== null ? `${log.kmTravelled.toLocaleString()} km` : "—"} />
+            <Fact label={t("c_mileage", lang)} value={log.kmPerLiter !== null ? `${log.kmPerLiter} km/l` : "—"} />
           </div>
           {log.costPerKm !== null && (
             <p className="mt-2 text-xs text-surface-500">
@@ -111,10 +114,10 @@ export function MyVehicleClient({
 
       {!openingDone && (
         <MeterForm
-          title="1 — Subah ka meter"
+          title={t("mv_step1_morning", lang)}
           hint="Kaam shuru karne se pehle meter ki tasveer lein."
           action={saveOpeningMeter}
-          label="Subah ka meter darj karein"
+          label={t("mv_step1_enter", lang)}
         />
       )}
 
@@ -122,10 +125,10 @@ export function MyVehicleClient({
         <>
           <FuelForm />
           <MeterForm
-            title="3 — Shaam ka meter"
+            title={t("mv_step3_evening", lang)}
             hint="Kaam khatam hone par. Yahin poore din ka hisaab ban jayega."
             action={saveClosingMeter}
-            label="Shaam ka meter darj karein"
+            label={t("mv_step3_enter", lang)}
           />
         </>
       )}
@@ -141,7 +144,7 @@ export function MyVehicleClient({
 
       {fuel.length > 0 && (
         <Card>
-          <p className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Aaj ke petrol ke bill</p>
+          <p className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("mv_todays_bills", lang)}</p>
           <div className="space-y-1">
             {fuel.map((f) => (
               <div key={f.id} className="flex justify-between text-sm">
@@ -182,6 +185,7 @@ function MeterForm({
   label: string;
 }) {
   const [state, formAction] = useFormState(action, initialState);
+  const lang = useLang();
   const [photo, setPhoto] = useState("");
 
   return (
@@ -194,7 +198,7 @@ function MeterForm({
         <Msg state={state} />
         <input type="hidden" name="photo_path" value={photo} />
         <div>
-          <Label>Meter par kitna likha hai (km)</Label>
+          <Label>{t("mv_meter_reading", lang)}</Label>
           <Input type="number" name="km" step="1" inputMode="numeric" placeholder="0" />
         </div>
         {/* Tasveer laazmi hai -- yahan bhi aur database par bhi. Meter ka
@@ -212,6 +216,7 @@ function MeterForm({
 
 function FuelForm() {
   const [state, formAction] = useFormState(saveVehicleFuel, initialState);
+  const lang = useLang();
   const [photo, setPhoto] = useState("");
   const [liters, setLiters] = useState("");
   const [rate, setRate] = useState("");
@@ -229,21 +234,21 @@ function FuelForm() {
       <form action={formAction} className="space-y-3">
         <div>
           <p className="font-display text-base font-semibold text-surface-900 dark:text-white">2 — Petrol ka bill</p>
-          <p className="text-xs text-surface-500">Din mein jitni baar petrol daalein, utni baar.</p>
+          <p className="text-xs text-surface-500">{t("mv_as_many_times", lang)}</p>
         </div>
         <Msg state={state} />
         <input type="hidden" name="photo_path" value={photo} />
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <Label>Litre</Label>
+            <Label>{t("mv_litre", lang)}</Label>
             <Input type="number" name="liters" step="0.01" value={liters} onChange={(e) => setLiters(e.target.value)} />
           </div>
           <div>
-            <Label>Rate</Label>
+            <Label>{t("c_rate", lang)}</Label>
             <Input type="number" name="rate_per_liter" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} />
           </div>
           <div>
-            <Label>Raqam</Label>
+            <Label>{t("sb_amount", lang)}</Label>
             <Input type="number" name="amount" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
         </div>
@@ -258,7 +263,7 @@ function FuelForm() {
           <Camera className="h-3.5 w-3.5" />
           Bill ki tasveer laazmi hai.
         </p>
-        <Submit label="Bill darj karein" disabled={!photo} />
+        <Submit label={t("mv_enter_bill", lang)} disabled={!photo} />
       </form>
     </Card>
   );

@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { vehicleForStaff, todaysLog } from "@/lib/vehicle-daily-log";
 import { MyVehicleClient } from "./my-vehicle-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export const dynamic = "force-dynamic";
  * src/lib/vehicle-daily-log.ts ko bulate hain.
  */
 export default async function MyVehiclePage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -43,7 +46,7 @@ export default async function MyVehiclePage() {
   return (
     <div>
       <PageHeader
-        title="Meri Gaari"
+        title={t("mv_title", lang)}
         description="Subah ka meter, petrol ka bill, shaam ka meter — teenon yahin se."
       />
 
