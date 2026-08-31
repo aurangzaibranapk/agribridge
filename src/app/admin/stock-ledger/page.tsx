@@ -66,12 +66,12 @@ export default async function StockLedgerPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Product</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Branch</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Type</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Qty</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Balance After</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Date</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_product", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_branch", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_type", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("sl_balance_after", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_date", lang)}</th>
               </tr>
             </thead>
             <tbody>

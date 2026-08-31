@@ -80,8 +80,7 @@ export function ReviewForm({
       </div>
 
       <div className="mb-3">
-        <label className="text-xs font-medium text-surface-600">
-          Comment * <span className="text-surface-400">(lazmi — wajah likhein)</span>
+        <label className="text-xs font-medium text-surface-600">{t("sb_comment_req", lang)}<span className="text-surface-400">(lazmi — wajah likhein)</span>
         </label>
         <textarea
           name="manager_comment"
@@ -102,7 +101,7 @@ export function ReviewForm({
 
       {isBill && approving && (
         <div className="mb-3">
-          <label className="text-xs font-medium text-surface-600">Bill kis qism ka hai? *</label>
+          <label className="text-xs font-medium text-surface-600">{t("sb_which_bill", lang)}</label>
           <select
             name="bill_category"
             defaultValue="utility_bill"
@@ -124,7 +123,7 @@ export function ReviewForm({
             nafa ghalat nazar aayega aur khata kam nahi hoga.
           </p>
 
-          <label className="text-xs font-medium text-surface-700 dark:text-surface-300">Ye kis qism ka len-den hai? *</label>
+          <label className="text-xs font-medium text-surface-700 dark:text-surface-300">{t("sb_which_txn", lang)}</label>
           <select
             name="party_type"
             value={partyType}
@@ -151,7 +150,7 @@ export function ReviewForm({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-700 dark:text-surface-300">Khata *</label>
+              <label className="text-xs font-medium text-surface-700 dark:text-surface-300">{t("sb_khata_req", lang)}</label>
               <select name="finance_account_id" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
                 {accounts.length === 0 && <option value="">{t("sb_no_khata", lang)}</option>}
                 {accounts.map((a) => (
@@ -178,8 +177,7 @@ export function ReviewForm({
         </div>
         <div>
           <label className="flex items-center gap-1 text-xs font-medium text-surface-600">
-            <Paperclip className="h-3 w-3" /> Tasveerein laga sakte hain
-          </label>
+            <Paperclip className="h-3 w-3" />{t("sb_can_attach", lang)}</label>
           <input
             name="manager_media"
             type="file"
@@ -191,9 +189,7 @@ export function ReviewForm({
       </div>
 
       <SubmitButton ready={ready} />
-      <p className="mt-2 text-xs text-surface-500">
-        Faisla hone ke baad badla nahi ja sakta — asal saboot, AI ka andaza aur aap ka comment, sab record mein reh jayenge.
-      </p>
+      <p className="mt-2 text-xs text-surface-500">{t("sb_final_note", lang)}</p>
     </form>
   );
 }

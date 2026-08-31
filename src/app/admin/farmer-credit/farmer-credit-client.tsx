@@ -100,8 +100,7 @@ export function FarmerCreditClient({
                   <td className="px-4 py-3 text-right text-xs text-surface-500">{b.credit_limit ? `Rs ${b.credit_limit.toLocaleString()}` : "-"}{overLimit && <span className="ml-1 text-red-600">(Over)</span>}</td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/farmer-credit/statement?farmer_id=${b.farmer_id}`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                      <FileText className="h-3 w-3" /> Statement
-                    </Link>
+                      <FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
                   </td>
                 </tr>
               );
@@ -174,16 +173,14 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
           <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
             <p>{state.error?.replace("LIMIT_EXCEEDED:", "")}</p>
             <label className="mt-2 flex items-center gap-2 text-xs">
-              <input type="checkbox" checked={confirmOverride} onChange={(e) => setConfirmOverride(e.target.checked)} />
-              Phir bhi issue karna hai (Limit se zyada)
-            </label>
+              <input type="checkbox" checked={confirmOverride} onChange={(e) => setConfirmOverride(e.target.checked)} />{t("fc_issue_anyway", lang)}</label>
           </div>
         )}
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_credit_issued", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="override_limit" value={confirmOverride ? "true" : "false"} />
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -192,7 +189,7 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
             </Select>
           </div>
           <div>
-            <Label>Credit Type *</Label>
+            <Label>{t("fc_credit_type", lang)}</Label>
             <Select name="source_type" required>
               <option value="seed">{t("c_seed", lang)}</option>
               <option value="fertilizer">{t("c_fertilizer", lang)}</option>
@@ -204,7 +201,7 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
             </Select>
           </div>
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gd_amount_req", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required />
           </div>
           <div>
@@ -238,7 +235,7 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_repayment_done", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -247,11 +244,11 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
             </Select>
           </div>
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gd_amount_req", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required />
           </div>
           <div>
-            <Label>Konsa Account Mein Paisa Aya *</Label>
+            <Label>{t("fc_which_account_in", lang)}</Label>
             <Select name="account_id" required>
               <option value="">- select -</option>
               {financeAccounts.map((a) => (
@@ -287,7 +284,7 @@ function MigrateModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => 
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_migrated", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -296,7 +293,7 @@ function MigrateModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => 
             </Select>
           </div>
           <div>
-            <Label>Total Balance (Rs.) - Farmer ka Company pe udhaar to positive, Company Farmer ka de to negative *</Label>
+            <Label>{t("fc_total_balance_note", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required placeholder={t("fc_migrate_amount_eg", lang)} />
           </div>
           <div>
@@ -328,7 +325,7 @@ function LimitModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => vo
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_limit_set", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" value={selectedFarmer} onChange={(e) => setSelectedFarmer(e.target.value)} required>
               <option value="">- select -</option>
               {farmers.map((f) => (

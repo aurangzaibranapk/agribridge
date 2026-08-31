@@ -104,9 +104,7 @@ export function ProductForm({
     return (
       <div className="rounded-card border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
         <Clock className="mx-auto mb-3 h-8 w-8 text-amber-500" />
-        <h2 className="font-display text-base font-semibold text-amber-800 dark:text-amber-300">
-          Admin ki Approval ke liye Bhej Diya Gaya
-        </h2>
+        <h2 className="font-display text-base font-semibold text-amber-800 dark:text-amber-300">{t("pf_sent_for_approval", lang)}</h2>
         <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
           {isEditMode
             ? "Aapke changes save ho gaye hain, lekin abhi live nahi honge jab tak admin verify na kare."
@@ -145,9 +143,7 @@ export function ProductForm({
               </div>
             )}
             {aiNotConfigured && (
-              <p className="mt-2 max-w-md text-xs text-amber-600 dark:text-amber-400">
-                AI photo reading isn&apos;t connected yet - this needs the Gemini API key configured (GEMINI_API_KEY). Manual and Voice both work right now.
-              </p>
+              <p className="mt-2 max-w-md text-xs text-amber-600 dark:text-amber-400">{t("pf_ai_not_connected", lang)}</p>
             )}
             {aiError && <p className="mt-2 max-w-md text-xs text-red-600 dark:text-red-400">{aiError}</p>}
             {aiData && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">{t("pf_photo_prefilled", lang)}</p>}
@@ -190,8 +186,7 @@ export function ProductForm({
               onClick={generateBarcode}
               className="flex shrink-0 items-center gap-1 rounded-lg border border-brand-200 bg-white px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:bg-surface-900 dark:text-brand-400"
             >
-              <Barcode className="h-3.5 w-3.5" /> Generate
-            </button>
+              <Barcode className="h-3.5 w-3.5" />{t("pf_generate", lang)}</button>
           </div>
         </div>
       </div>
@@ -207,8 +202,7 @@ export function ProductForm({
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
-        <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} /> Show Expiry Date to customers on the public product page
-      </label>
+        <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} />{t("pf_show_expiry", lang)}</label>
 
       <FieldWithMic label={t("pf_active_ingredient", lang)} inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
 
@@ -235,11 +229,11 @@ export function ProductForm({
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="purchase_price">Purchase Price (Rs.) *</Label>
+          <Label htmlFor="purchase_price">{t("pf_purchase_price", lang)}</Label>
           <Input id="purchase_price" name="purchase_price" type="number" step="0.01" required defaultValue={product?.purchase_price} />
         </div>
         <div>
-          <Label htmlFor="selling_price">Selling Price (Cash) (Rs.) *</Label>
+          <Label htmlFor="selling_price">{t("pf_selling_cash", lang)}</Label>
           <Input id="selling_price" name="selling_price" type="number" step="0.01" required defaultValue={product?.selling_price} />
         </div>
         <div>

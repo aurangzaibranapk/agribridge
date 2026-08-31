@@ -5,6 +5,8 @@ import { saveDepartmentPermissions, applyDepartmentToAll, type ActionState } fro
 import { ADMIN_NAV_GROUPS } from "@/components/layout/nav-items";
 import { DEPARTMENTS } from "@/lib/departments";
 import { Check, Sparkles, Users, UserCheck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -25,6 +27,7 @@ export interface DeptRow {
  */
 export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
   const [roleKey, setRoleKey] = useState(DEPARTMENTS[0].role);
+  const lang = useLang();
   const dept = DEPARTMENTS.find((d) => d.role === roleKey)!;
   const row = rows.find((r) => r.role === roleKey);
 
@@ -68,7 +71,7 @@ export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
       {/* ---- Department ki fehrist ---- */}
       <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Department</h2>
+        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("c_department", lang)}</h2>
         <div className="space-y-1">
           {DEPARTMENTS.map((d) => {
             const r = rows.find((x) => x.role === d.role);
@@ -115,14 +118,12 @@ export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
               onClick={applySuggested}
               className="flex items-center gap-1.5 rounded-lg border border-brand-600 px-3 py-2 text-sm font-medium text-brand-700"
             >
-              <Sparkles className="h-4 w-4" /> Tajweez lagayein
-            </button>
+              <Sparkles className="h-4 w-4" />{t("dp_apply_suggestion", lang)}</button>
           </div>
 
           {(row?.overrideCount ?? 0) > 0 && (
             <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-              <p className="text-xs text-amber-800 dark:text-amber-300">
-                Is department ke <strong>{row?.overrideCount}</strong> banday apni alag ijazat par chal
+              <p className="text-xs text-amber-800 dark:text-amber-300">{t("dp_of_this_dept", lang)}<strong>{row?.overrideCount}</strong> banday apni alag ijazat par chal
                 rahe hain — un par ye set nahi lagta. Sab ko department par lana ho to neeche wala
                 button dabayein.
               </p>
@@ -132,9 +133,7 @@ export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
 
           {state.error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
           {state.success && (
-            <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-              Mahfooz ho gaya — is department ke har banday par lag gaya.
-            </p>
+            <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("dp_saved_all", lang)}</p>
           )}
         </div>
 
@@ -155,12 +154,8 @@ export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
                     </span>
                   </h3>
                   <div className="flex gap-2 text-xs">
-                    <button type="button" onClick={() => toggleGroup(hrefs, true)} className="text-brand-700 underline">
-                      sab
-                    </button>
-                    <button type="button" onClick={() => toggleGroup(hrefs, false)} className="text-surface-500 underline">
-                      koi nahi
-                    </button>
+                    <button type="button" onClick={() => toggleGroup(hrefs, true)} className="text-brand-700 underline">{t("dp_all", lang)}</button>
+                    <button type="button" onClick={() => toggleGroup(hrefs, false)} className="text-surface-500 underline">{t("dp_none", lang)}</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -195,6 +190,7 @@ export function DepartmentsClient({ rows }: { rows: DeptRow[] }) {
 }
 
 function SaveBar({ count, label }: { count: number; label: string }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -218,13 +214,14 @@ function SaveBar({ count, label }: { count: number; label: string }) {
  * ki ijazat mahfooz karne se bilkul alag hai.
  */
 function ApplyToAll({ role }: { role: string }) {
+  const lang = useLang();
   const [state, action] = useFormState(applyDepartmentToAll, initial);
   return (
     <form action={action} className="mt-2">
       <input type="hidden" name="role" value={role} />
       <ApplyButton />
       {state.error && <p className="mt-1 text-xs text-red-700">{state.error}</p>}
-      {state.success && <p className="mt-1 text-xs text-green-700">Ho gaya — ab sab department ke set par hain.</p>}
+      {state.success && <p className="mt-1 text-xs text-green-700">{t("dp_done_set", lang)}</p>}
     </form>
   );
 }

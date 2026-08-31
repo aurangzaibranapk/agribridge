@@ -96,9 +96,7 @@ function SettingsCard({ settings }: { settings: { is_enforced: boolean; minimum_
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       <form action={formAction} className="space-y-3">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="is_enforced" defaultChecked={settings.is_enforced} className="h-4 w-4" />
-          Subscription Zaroori Karein (ON karte hi sab Farmers ke liye Feature Lock ho jayenge, sirf Login Free rahega)
-        </label>
+          <input type="checkbox" name="is_enforced" defaultChecked={settings.is_enforced} className="h-4 w-4" />{t("sb_enforce", lang)}</label>
         <div>
           <label className="text-xs font-medium text-surface-600">{t("sb_min_amount", lang)}</label>
           <input type="number" name="minimum_amount" defaultValue={settings.minimum_amount} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
@@ -115,8 +113,7 @@ function AnnouncementSection({ announcements }: { announcements: Announcement[] 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
       <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900">
-        <Megaphone className="h-5 w-5 text-brand-600" /> Announcement Bhejein (Sab Farmers Ko)
-      </h2>
+        <Megaphone className="h-5 w-5 text-brand-600" />{t("sb_announce_all", lang)}</h2>
       {createState.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{createState.error}</p>}
       {createState.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("sb_announcement_sent", lang)}</p>}
       <form action={createAction} className="space-y-2">
@@ -150,12 +147,12 @@ function AnnouncementSection({ announcements }: { announcements: Announcement[] 
 
 function DeactivateButton({ id }: { id: string }) {
   const [, formAction] = useFormState(deactivateAnnouncement, initialState);
+  const lang = useLang();
   return (
     <form action={formAction}>
       <input type="hidden" name="id" value={id} />
       <button type="submit" className="flex items-center gap-1 text-xs text-red-600 hover:underline">
-        <X className="h-3 w-3" /> Band Karein
-      </button>
+        <X className="h-3 w-3" />{t("c_close", lang)}</button>
     </form>
   );
 }
@@ -166,8 +163,7 @@ function ActivateFarmerCard({ farmers }: { farmers: Farmer[] }) {
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
       <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900">
-        <UserPlus className="h-5 w-5 text-brand-600" /> Farmer Ki Subscription Activate Karein
-      </h2>
+        <UserPlus className="h-5 w-5 text-brand-600" />{t("sb_activate_farmer", lang)}</h2>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       {state.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("sb_activated", lang)}</p>}
       <form action={formAction} encType="multipart/form-data" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -235,8 +231,7 @@ function SubscriptionsList({ subscriptions }: { subscriptions: Subscription[] })
                   <td className="py-2">
                     {s.receiptPhotoUrl ? (
                       <a href={s.receiptPhotoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-brand-600 hover:underline">
-                        <ImageIcon className="h-3.5 w-3.5" /> Dekhein
-                      </a>
+                        <ImageIcon className="h-3.5 w-3.5" />{t("sb_view", lang)}</a>
                     ) : (
                       <span className="text-xs text-surface-300">-</span>
                     )}

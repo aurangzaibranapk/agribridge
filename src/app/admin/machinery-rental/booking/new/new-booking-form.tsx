@@ -403,9 +403,7 @@ export function NewBookingForm({
       <Card className="mx-auto max-w-lg text-center">
         <p className="text-sm text-surface-500">{t("mc_booking_made", lang)}</p>
         <p className="mt-1 font-display text-2xl font-bold text-brand-700 dark:text-brand-300">{state.bookingNumber}</p>
-        <p className="mt-3 text-sm text-surface-600 dark:text-surface-300">
-          Advance, rate confirmation, machine rawangi, asal kaam, bill aur payment — sab isi Booking ID ke neeche.
-        </p>
+        <p className="mt-3 text-sm text-surface-600 dark:text-surface-300">{t("nb_all_under_id", lang)}</p>
         <div className="mt-4 flex justify-center gap-2">
           <Button onClick={() => router.push(`/admin/machinery-rental/booking/${state.bookingId}`)}>
             {t("mc_open_booking", lang)}
@@ -590,9 +588,7 @@ export function NewBookingForm({
           {errors.machine_type_requested && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.machine_type_requested}</p>
           )}
-          <p className="mt-1 text-xs text-surface-500">
-            Kaun si machine jayegi, ye abhi tay karna zaroori nahi — wo rawangi ke waqt chuni jati hai.
-          </p>
+          <p className="mt-1 text-xs text-surface-500">{t("nb_no_machine_yet", lang)}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -934,7 +930,7 @@ function DayCapacity({
           </p>
           {options.length > 0 && (
             <div className="mt-2">
-              <p className="text-xs font-medium text-surface-700 dark:text-surface-300">In dinon mein poori jagah hai:</p>
+              <p className="text-xs font-medium text-surface-700 dark:text-surface-300">{t("nb_free_days", lang)}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {options.map((o) => (
                   <button
@@ -1248,6 +1244,7 @@ function AreaPair({
   /** Kul raqba badle to bahar khabar -- khana khud apna hi rehta hai. */
   onTotal?: (total: number) => void;
 }) {
+  const lang = useLang();
   const acresRef = useRef<HTMLInputElement>(null);
   const kanalRef = useRef<HTMLInputElement>(null);
   function report() {
@@ -1274,9 +1271,7 @@ function AreaPair({
             onChange={report}
             className={error ? "border-red-500 focus:ring-red-500" : undefined}
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">
-            acre
-          </span>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">{t("nb_acre", lang)}</span>
         </div>
         <div className="relative">
           <Input
@@ -1288,9 +1283,7 @@ function AreaPair({
             onChange={report}
             className={error ? "border-red-500 focus:ring-red-500" : undefined}
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">
-            kanal
-          </span>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-surface-400">{t("nb_kanal", lang)}</span>
         </div>
       </div>
       {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}

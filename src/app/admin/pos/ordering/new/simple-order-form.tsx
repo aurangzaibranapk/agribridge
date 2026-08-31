@@ -5,6 +5,8 @@ import { createBranchAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";
 import { PaymentModeSelect } from "@/app/admin/agri-orders/new/payment-mode-select";
 import { SourcingSelect } from "@/app/admin/agri-orders/new/sourcing-select";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -50,6 +52,7 @@ export function SimpleOrderForm({
   ownBranchId: string;
 }) {
   const [state, formAction] = useFormState(createBranchAgriOrder, initialState);
+  const lang = useLang();
   const [orderType, setOrderType] = useState("FMCG / Other");
   const [rows, setRows] = useState<Record<string, RowState>>({});
 
@@ -91,7 +94,7 @@ export function SimpleOrderForm({
       {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <label className="text-xs font-medium text-surface-600">Order Type</label>
+        <label className="text-xs font-medium text-surface-600">{t("so_order_type", lang)}</label>
         <select value={orderType} onChange={(e) => setOrderType(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
           {ORDER_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -102,32 +105,32 @@ export function SimpleOrderForm({
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Maal Kahan Se Aayega?</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_where_from", lang)}</h2>
         <SourcingSelect branches={branches} excludeBranchId={ownBranchId} />
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Payment Mode</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("c_payment_mode", lang)}</h2>
         <PaymentModeSelect />
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Products Select Karein</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("so_select_products", lang)}</h2>
         <ProductCardGrid products={products} categories={categories} rows={rows} onUpdateRow={updateRow} />
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-surface-500">Total Items</span>
+          <span className="text-surface-500">{t("so_total_items", lang)}</span>
           <span className="font-medium text-surface-900 dark:text-white">{activeItems.length}</span>
         </div>
         <div className="mt-1 flex items-center justify-between border-t border-surface-100 pt-2 text-base font-semibold dark:border-surface-800">
-          <span className="text-surface-900 dark:text-white">Grand Total</span>
+          <span className="text-surface-900 dark:text-white">{t("c_grand_total", lang)}</span>
           <span className="text-brand-600">Rs {grandTotal.toLocaleString()}</span>
         </div>
       </div>
 
-      <textarea name="notes" rows={2} placeholder="Notes (agar koi ho)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+      <textarea name="notes" rows={2} placeholder={t("ar_notes_if_any", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
 
       <SubmitButton />
     </form>

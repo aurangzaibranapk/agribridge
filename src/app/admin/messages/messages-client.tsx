@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { sendMessage, markConversationRead, type ActionState } from "@/actions/messages";
 import { Send, Paperclip, Bot, FileText, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -31,6 +33,7 @@ interface Message {
 }
 
 export function MessagesClient({ currentUserId, contacts, messages }: { currentUserId: string; contacts: Contact[]; messages: Message[] }) {
+  const lang = useLang();
   const [selectedId, setSelectedId] = useState(contacts[0]?.id ?? "");
   const router = useRouter();
 
@@ -67,14 +70,14 @@ export function MessagesClient({ currentUserId, contacts, messages }: { currentU
             {c.unreadCount > 0 && <span className="rounded-full bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{c.unreadCount}</span>}
           </button>
         ))}
-        {contacts.length === 0 && <p className="p-4 text-center text-sm text-surface-400">Koi contact nahi mila.</p>}
+        {contacts.length === 0 && <p className="p-4 text-center text-sm text-surface-400">{t("mg_no_contact", lang)}</p>}
       </div>
 
       <div className="flex flex-col overflow-hidden rounded-card border border-surface-200 bg-white shadow-card lg:col-span-2 dark:border-surface-800 dark:bg-surface-900">
         {selectedContact ? (
           <ChatWindow currentUserId={currentUserId} contact={selectedContact} conversation={conversation} />
         ) : (
-          <div className="flex flex-1 items-center justify-center text-sm text-surface-400">Koi contact select karein.</div>
+          <div className="flex flex-1 items-center justify-center text-sm text-surface-400">{t("mg_pick_contact", lang)}</div>
         )}
       </div>
     </div>
@@ -82,6 +85,7 @@ export function MessagesClient({ currentUserId, contacts, messages }: { currentU
 }
 
 function ChatWindow({ currentUserId, contact, conversation }: { currentUserId: string; contact: Contact; conversation: Message[] }) {
+  const lang = useLang();
   const [, markReadAction] = useFormState(markConversationRead, initialState);
   const [state, formAction] = useFormState(sendMessage, initialState);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -114,7 +118,7 @@ function ChatWindow({ currentUserId, contact, conversation }: { currentUserId: s
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {conversation.length === 0 && <p className="py-6 text-center text-xs text-surface-400">Koi message nahi hai abhi. Baat shuru karein.</p>}
+        {conversation.length === 0 && <p className="py-6 text-center text-xs text-surface-400">{t("mg_no_message", lang)}</p>}
         {conversation.map((m) => {
           const isMine = m.sender_id === currentUserId;
           return (
@@ -128,8 +132,7 @@ function ChatWindow({ currentUserId, contact, conversation }: { currentUserId: s
                 )}
                 {m.attachment_url && m.attachment_type === "file" && (
                   <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs underline">
-                    <FileText className="h-3 w-3" /> File Dekhein
-                  </a>
+                    <FileText className="h-3 w-3" />{t("mg_view_file", lang)}</a>
                 )}
                 <p className={`mt-1 text-[10px] ${isMine ? "text-brand-100" : "text-surface-400"}`}>{new Date(m.created_at).toLocaleTimeString()}</p>
               </div>
@@ -147,7 +150,7 @@ function ChatWindow({ currentUserId, contact, conversation }: { currentUserId: s
           <Paperclip className="h-5 w-5" />
           <input type="file" name="attachment" accept="image/*,application/pdf" className="hidden" />
         </label>
-        <input name="message" placeholder="Message likhein..." className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm" />
+        <input name="message" placeholder={t("mg_write", lang)} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm" />
         <SubmitButton />
       </form>
     </>

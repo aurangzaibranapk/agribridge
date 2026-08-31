@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { grantTeamPermission, type ActionState } from "@/actions/department-head";
 import { ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { Save, ShieldCheck, Clock, Info } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -47,14 +49,15 @@ export function TeamClient({
   grants: ExistingGrant[];
 }) {
   const [memberId, setMemberId] = useState(members[0]?.id ?? "");
+  const lang = useLang();
   const member = members.find((m) => m.id === memberId);
   const mine = grants.filter((g) => g.profileId === memberId);
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Team</h2>
-        {members.length === 0 && <p className="px-1 text-xs text-surface-400">Koi staff nahi mila.</p>}
+        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("td_team", lang)}</h2>
+        {members.length === 0 && <p className="px-1 text-xs text-surface-400">{t("pp_no_staff", lang)}</p>}
         <div className="max-h-[70vh] space-y-1 overflow-y-auto">
           {members.map((m) => {
             const count = grants.filter((g) => g.profileId === m.id).length;
@@ -82,9 +85,7 @@ export function TeamClient({
 
       <div className="space-y-3 lg:col-span-2">
         {!member ? (
-          <div className="rounded-card border border-surface-200 bg-white p-8 text-center text-sm text-surface-400 dark:border-surface-800 dark:bg-surface-900">
-            Team ka koi banda chunein.
-          </div>
+          <div className="rounded-card border border-surface-200 bg-white p-8 text-center text-sm text-surface-400 dark:border-surface-800 dark:bg-surface-900">{t("td_pick_someone", lang)}</div>
         ) : (
           features.map((f) => (
             <FeatureGrantRow
@@ -109,6 +110,7 @@ function FeatureGrantRow({
   feature: GrantableFeature;
   existing: ExistingGrant | null;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(grantTeamPermission, initial);
   const [actions, setActions] = useState<Set<string>>(new Set(existing?.actions ?? []));
   const [scope, setScope] = useState(existing?.scope ?? feature.maxScope);
@@ -171,7 +173,7 @@ function FeatureGrantRow({
 
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div>
-          <label className="text-xs text-surface-500">Kis ka data</label>
+          <label className="text-xs text-surface-500">{t("td_whose_data", lang)}</label>
           <select
             name="data_scope"
             value={scope}
@@ -186,7 +188,7 @@ function FeatureGrantRow({
           </select>
         </div>
         <div>
-          <label className="text-xs text-surface-500">Kab tak (marzi ki baat)</label>
+          <label className="text-xs text-surface-500">{t("td_until_when", lang)}</label>
           <input
             name="expires_at"
             type="date"
@@ -196,10 +198,10 @@ function FeatureGrantRow({
           />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-surface-500">Wajah</label>
+          <label className="text-xs text-surface-500">{t("c_reason", lang)}</label>
           <input
             name="reason"
-            placeholder="Misal: chhutti par gaye Bilal ki jagah"
+            placeholder={t("td_reason_eg", lang)}
             className="mt-1 w-full rounded-lg border border-surface-200 p-1.5 text-xs"
           />
         </div>
@@ -227,6 +229,7 @@ function SmallSave() {
 }
 
 export function HeadLimitNotice({ actions, scope }: { actions: string[]; scope: string }) {
+  const lang = useLang();
   return (
     <div className="rounded-card border border-blue-300 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
       <p className="flex items-start gap-1.5 text-xs text-blue-900 dark:text-blue-300">
@@ -237,8 +240,7 @@ export function HeadLimitNotice({ actions, scope }: { actions: string[]; scope: 
           <strong>{SCOPE_LABEL[scope as keyof typeof SCOPE_LABEL] ?? scope}</strong>.
           <br />
           Jo aap ke paas khud nahi hai, wo aap kisi ko nahi de sakte —{" "}
-          <ShieldCheck className="inline h-3 w-3" /> ye rok database mein bhi lagi hui hai.
-        </span>
+          <ShieldCheck className="inline h-3 w-3" />{t("td_db_lock", lang)}</span>
       </p>
     </div>
   );
