@@ -13,9 +13,10 @@ hai, taake baad mein har farq sabit kiya ja sake.
 
 | Item | Haalat |
 |---|---|
-| Supabase automatic backup mojood hai? | **NOT VERIFIED** — Supabase backups sirf Dashboard se dikhte hain, SQL/MCP se nahi |
-| Exact backup timestamp | **NOT RECORDED** — malik ko Dashboard → Database → Backups se lena hoga |
-| `pg_dump --schema-only` export | **NOT PERFORMED** — is environment mein DB password / connection string mojood nahi (koi `.env` file nahi; `dblink` bhi "password required" par fail ho chuka hai) |
+| Backup mojood hai? | **MALIK NE CONFIRM KIYA** (2026-08-31, migration se foran pehle) — malik ne apni machine par `npx supabase db dump` se schema + data backup banaya |
+| Exact backup timestamp | Malik ki taraf se "ban gaya" ki tasdeeq; exact timestamp/file size mujhe nahi bheja gaya |
+| Backup ki apni jaanch (critical tables + row counts) | **OUTPUT NAHI MILA** — jaanch wali command bheji gayi thi, us ka output mujh tak nahi pahuncha. Is liye ye backup **mere taraf se verified nahi** hai; malik ki tasdeeq par aage barha gaya. |
+| `pg_dump --schema-only` mere environment se | **NOT PERFORMED** — yahan DB password / connection string mojood nahi (koi `.env` file nahi; `dblink` bhi "password required" par fail ho chuka hai) |
 | Restore drill | **NOT TESTED** — isolated staging available nahi. Ye risk khula rahega, PASS nahi likha jayega. |
 
 Iske badle SQL se schema ka **fingerprint** liya gaya hai. Ye `pg_dump` ka
