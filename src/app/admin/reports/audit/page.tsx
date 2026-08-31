@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/form";
 import { AlertTriangle, Clock, TrendingDown, ArrowLeftRight, ClipboardList, Truck } from "lucide-react";
 import { ReportLossForm } from "./report-loss-form";
 import { VerifyLossActions } from "./verify-loss-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ function statusTone(status: string) {
 }
 
 export default async function AuditCenterPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -202,23 +205,23 @@ export default async function AuditCenterPage() {
 
   return (
     <div>
-      <PageHeader title="Audit Center - Poora Loss Ka Hisaab" description="Ek hi jagah se sab kuch: Manual Loss, Expiry, Slow-Moving Stock, GRN/Delivery/Transfer discrepancies" />
+      <PageHeader title={t("ra_title", lang)} description={t("ra_subtitle", lang)} />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-card border-2 border-red-200 bg-red-50 p-4 shadow-card dark:border-red-900/40 dark:bg-red-950/20">
-          <p className="text-xs text-red-600">Total Loss Exposure (Approved + Expired + GRN/Transfer)</p>
+          <p className="text-xs text-red-600">{t("ra_total_exposure", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-red-700">Rs {grandTotalLossExposure.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-amber-200 bg-amber-50 p-4 shadow-card dark:border-amber-900/40 dark:bg-amber-950/20">
-          <p className="text-xs text-amber-600">Pending Loss Reports</p>
+          <p className="text-xs text-amber-600">{t("ra_pending_loss", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-amber-700">{pendingLosses.length}</p>
         </div>
         <div className="rounded-card border border-orange-200 bg-orange-50 p-4 shadow-card dark:border-orange-900/40 dark:bg-orange-950/20">
-          <p className="text-xs text-orange-600">Expiry Warning (30 din mein)</p>
+          <p className="text-xs text-orange-600">{t("ra_expiry_warning", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-orange-700">Rs {totalExpiringValue.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-400">Slow-Moving Stock (90+ din)</p>
+          <p className="text-xs text-surface-400">{t("ra_slow_moving", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-700 dark:text-surface-300">Rs {totalSlowMovingValue.toLocaleString()}</p>
         </div>
       </div>
@@ -234,14 +237,14 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Type</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_no_short", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_type", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_action", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -254,7 +257,7 @@ export default async function AuditCenterPage() {
                   <td className="px-3 py-2 text-surface-700 dark:text-surface-300">
                     {l.product_name}
                     <p className="text-xs text-surface-400">{l.reason}</p>
-                    {l.photo_url && <a href={l.photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">Photo Dekhein</a>}
+                    {l.photo_url && <a href={l.photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">{t("ra_view_photo", lang)}</a>}
                   </td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{LOSS_TYPE_LABELS[l.loss_type] ?? l.loss_type}</td>
                   <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{l.quantity}</td>
@@ -270,7 +273,7 @@ export default async function AuditCenterPage() {
               );
             })}
             {losses.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">Koi loss report nahi hai.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">{t("ra_no_loss", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -283,13 +286,13 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Batch</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Expiry Date</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("ra_batch", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_expiry_date", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -307,7 +310,7 @@ export default async function AuditCenterPage() {
               </tr>
             ))}
             {expiryRows.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">Koi product expire hone wala nahi hai.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">{t("ra_no_expiry", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -320,10 +323,10 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -350,12 +353,12 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">GRN No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Order</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Shortage</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Damage</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("ra_grn_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_order", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_shortage", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_damage", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -370,7 +373,7 @@ export default async function AuditCenterPage() {
               </tr>
             ))}
             {grnRows.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">Koi GRN discrepancy nahi hai.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">{t("ra_no_grn_diff", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -383,12 +386,12 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Order</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Short</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Damaged</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Wajah</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_order", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_short", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_damaged", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_reason", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -403,7 +406,7 @@ export default async function AuditCenterPage() {
               </tr>
             ))}
             {deliveryRows.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">Koi delivery discrepancy nahi hai.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">{t("ra_no_delivery_diff", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -416,11 +419,11 @@ export default async function AuditCenterPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Transfer No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Short Qty</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Notes</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("ra_transfer_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("ra_short_qty", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_notes", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -434,7 +437,7 @@ export default async function AuditCenterPage() {
               </tr>
             ))}
             {transferRows.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">Koi stock transfer discrepancy nahi hai.</td></tr>
+              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">{t("ra_no_transfer_diff", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -442,7 +445,7 @@ export default async function AuditCenterPage() {
 
       {isHQ && (
         <p className="mt-6 text-center text-xs text-surface-400">
-          Verification permissions manage karne ke liye <a href="/admin/reports/audit/verifiers" className="text-brand-600 hover:underline">Verifiers page</a> dekhein.
+          {t("ra_verifiers_note_before", lang)} <a href="/admin/reports/audit/verifiers" className="text-brand-600 hover:underline">{t("ra_verifiers_page", lang)}</a> dekhein.
         </p>
       )}
     </div>

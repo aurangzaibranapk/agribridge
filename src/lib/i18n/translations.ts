@@ -15,6 +15,10 @@ import { purchasesDict } from "./dict/purchases";
 import { grainDict } from "./dict/grain";
 import { purchaseGrainPagesDict } from "./dict/purchase-grain-pages";
 import { dashboardDict } from "./dict/dashboard";
+import { commonDict } from "./dict/common";
+import { shopRentDict } from "./dict/shop-rent";
+import { farmerCreditDict } from "./dict/farmer-credit";
+import { reportsDict } from "./dict/reports";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -68,6 +72,13 @@ const dict = {
   ...grainDict,
   ...purchaseGrainPagesDict,
   ...dashboardDict,
+  // Sanjhe alfaz AAKHIR mein nahi, sab se PEHLE hone chahiye the -- magar
+  // yahan tartib se farq nahi paRta: c_ wale naam kisi aur file mein hain
+  // hi nahi, is liye koi lafz kisi doosre ko dhaanp nahi sakta.
+  ...commonDict,
+  ...shopRentDict,
+  ...farmerCreditDict,
+  ...reportsDict,
 };
 
 export type TranslationKey = keyof typeof dict;

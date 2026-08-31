@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { ArrowLeft, TrendingUp, TrendingDown, Store, Package } from "lucide-react";
 import { PnlCharts } from "./pnl-charts";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,7 @@ export default async function PnlPage({
 }: {
   searchParams: Promise<{ branch_id?: string; shop_id?: string; from?: string; to?: string }>;
 }) {
+  const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const supabase = createClient();
 
@@ -112,11 +115,11 @@ export default async function PnlPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Product</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Qty Sold</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Revenue</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">COGS</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Profit</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_product", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_qty_sold", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_revenue", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_cogs", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_profit", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -130,7 +133,7 @@ export default async function PnlPage({
                 </tr>
               ))}
               {products.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-surface-400">Is date range mein is shop ki koi sale nahi hui.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-surface-400">{t("rp_no_sale_range", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -242,7 +245,7 @@ export default async function PnlPage({
           ].filter((c) => c.value > 0)}
         />
 
-        <h3 className="mb-2 mt-6 text-sm font-semibold text-surface-900 dark:text-white">Har Shop Ka Poora Hisaab</h3>
+        <h3 className="mb-2 mt-6 text-sm font-semibold text-surface-900 dark:text-white">{t("rp_each_shop", lang)}</h3>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {shopRows.map((s) => (
             <div key={s.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -258,16 +261,16 @@ export default async function PnlPage({
               <p className="mb-2 text-xs text-surface-400">{BUSINESS_TYPE_LABELS[s.business_type] ?? s.business_type} - {s.saleCount} sales</p>
 
               <div className="space-y-1 text-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500"><Package className="h-3.5 w-3.5" /> Stock</div>
-                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">Is Period Mein Stock Aya</span><span>Rs {s.stockInValue.toLocaleString()}</span></div>
-                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">Abhi Maujood Stock</span><span>{s.stockUnits} units - Rs {s.stockValue.toLocaleString()}</span></div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-surface-500"><Package className="h-3.5 w-3.5" />{t("c_stock", lang)}</div>
+                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">{t("rp_stock_in_period", lang)}</span><span>Rs {s.stockInValue.toLocaleString()}</span></div>
+                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">{t("rp_stock_now", lang)}</span><span>{s.stockUnits} units - Rs {s.stockValue.toLocaleString()}</span></div>
 
-                <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-surface-500">Sales</div>
-                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">Sale Hui (Revenue)</span><span>Rs {s.revenue.toLocaleString()}</span></div>
-                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">COGS (Sale Ki Cost)</span><span>Rs {s.cogs.toLocaleString()}</span></div>
-                <div className="flex justify-between pl-5 text-xs font-semibold"><span>Gross Profit</span><span className={s.grossProfit >= 0 ? "text-green-600" : "text-red-600"}>Rs {s.grossProfit.toLocaleString()}</span></div>
+                <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-surface-500">{t("rp_sales", lang)}</div>
+                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">{t("rp_sales_revenue", lang)}</span><span>Rs {s.revenue.toLocaleString()}</span></div>
+                <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">{t("rp_cogs_full", lang)}</span><span>Rs {s.cogs.toLocaleString()}</span></div>
+                <div className="flex justify-between pl-5 text-xs font-semibold"><span>{t("rp_gross_profit", lang)}</span><span className={s.grossProfit >= 0 ? "text-green-600" : "text-red-600"}>Rs {s.grossProfit.toLocaleString()}</span></div>
 
-                <div className="mt-2 text-xs font-semibold text-surface-500">Expenses</div>
+                <div className="mt-2 text-xs font-semibold text-surface-500">{t("rp_expenses", lang)}</div>
                 {(Object.keys(CATEGORY_LABELS) as (keyof ExpenseTotals)[]).filter((k) => k !== "total").map((cat) =>
                   s.expenses[cat] > 0 ? (
                     <div key={cat} className="flex justify-between pl-5 text-xs text-red-600">
@@ -275,29 +278,29 @@ export default async function PnlPage({
                     </div>
                   ) : null
                 )}
-                {s.expenses.total === 0 && <p className="pl-5 text-xs text-surface-400">Is shop ka koi expense record nahi hua abhi.</p>}
+                {s.expenses.total === 0 && <p className="pl-5 text-xs text-surface-400">{t("rp_no_expense", lang)}</p>}
 
                 <div className="mt-2 flex justify-between border-t border-surface-100 pt-1 font-bold dark:border-surface-800">
-                  <span>Net Profit</span>
+                  <span>{t("rp_net_profit", lang)}</span>
                   <span className={s.netProfit >= 0 ? "text-green-700" : "text-red-700"}>Rs {s.netProfit.toLocaleString()}</span>
                 </div>
               </div>
             </div>
           ))}
-          {shopRows.length === 0 && <p className="col-span-full py-6 text-center text-sm text-surface-400">Is branch mein koi active shop nahi hai.</p>}
+          {shopRows.length === 0 && <p className="col-span-full py-6 text-center text-sm text-surface-400">{t("rp_no_active_shop", lang)}</p>}
         </div>
 
         <div className="mt-6 rounded-card border-2 border-brand-200 bg-brand-50 p-4 shadow-card dark:border-brand-900/40 dark:bg-brand-950/20">
-          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Poori Branch Ka Combined Total (Sab Shops + Branch-wide)</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("rp_branch_combined", lang)}</h3>
           <div className="space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-surface-500">Total Gross Profit (sab Shops)</span><span className="font-medium">Rs {totalGrossProfit.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-surface-500">Total Current Stock (sab Shops)</span><span className="font-medium">Rs {totalStockValue.toLocaleString()}</span></div>
-            <div className="flex justify-between text-red-600"><span>Shop-wise Expenses</span><span>- Rs {totalShopExpenses.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-surface-500">{t("rp_total_gross_shops", lang)}</span><span className="font-medium">Rs {totalGrossProfit.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-surface-500">{t("rp_total_stock_shops", lang)}</span><span className="font-medium">Rs {totalStockValue.toLocaleString()}</span></div>
+            <div className="flex justify-between text-red-600"><span>{t("rp_shop_expenses", lang)}</span><span>- Rs {totalShopExpenses.toLocaleString()}</span></div>
             {branchWideExpenses.total > 0 && (
-              <div className="flex justify-between text-red-600"><span>Branch-wide Expenses (kisi ek Shop se nahi)</span><span>- Rs {branchWideExpenses.total.toLocaleString()}</span></div>
+              <div className="flex justify-between text-red-600"><span>{t("rp_branchwide_expenses", lang)}</span><span>- Rs {branchWideExpenses.total.toLocaleString()}</span></div>
             )}
             <div className={`flex justify-between border-t border-brand-200 pt-1 text-base font-bold dark:border-brand-800 ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
-              <span>Net Profit (Poori Branch)</span><span>Rs {netProfit.toLocaleString()}</span>
+              <span>{t("rp_net_branch", lang)}</span><span>Rs {netProfit.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -339,20 +342,20 @@ export default async function PnlPage({
 
   return (
     <div>
-      <PageHeader title="Multi-Level Profit & Loss" description="Business -> Branch -> Shop -> Product tak har rupya track karein" />
+      <PageHeader title={t("rp_title", lang)} description={t("rp_subtitle", lang)} />
       <DateRangeForm from={from} to={to} branchOptions={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))} />
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-400">Total Gross Profit (Sab Branches)</p>
+          <p className="text-xs text-surface-400">{t("rp_total_gross_branches", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-green-600">Rs {masterTotalGrossProfit.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-400">Total Expenses (Sab Branches)</p>
+          <p className="text-xs text-surface-400">{t("rp_total_expenses_branches", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-red-600">Rs {masterTotalExpenses.toLocaleString()}</p>
         </div>
         <div className={`rounded-card border-2 p-4 shadow-card ${masterNetProfit >= 0 ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"}`}>
-          <p className="text-xs text-surface-500">Net Profit (Poora Business)</p>
+          <p className="text-xs text-surface-500">{t("rp_net_business", lang)}</p>
           <p className={`mt-1 font-display text-xl font-bold ${masterNetProfit >= 0 ? "text-green-700" : "text-red-700"}`}>Rs {masterNetProfit.toLocaleString()}</p>
         </div>
       </div>
@@ -361,11 +364,11 @@ export default async function PnlPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-4 py-3 font-medium text-surface-500">Branch</th>
-              <th className="px-4 py-3 text-center font-medium text-surface-500">Shops</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Gross Profit</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Expenses</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Net Profit</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("c_branch", lang)}</th>
+              <th className="px-4 py-3 text-center font-medium text-surface-500">{t("c_shops", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_gross_profit", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_expenses", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("rp_net_profit", lang)}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -388,7 +391,7 @@ export default async function PnlPage({
               </tr>
             ))}
             {branchRows.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-surface-400">Koi branch nahi mila.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-surface-400">{t("rp_no_branch", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -415,13 +418,14 @@ function DateRangeForm({
   branchOptions?: { id: string; name: string }[];
   shopOptions?: { id: string; name: string }[];
 }) {
+  const lang = getLanguageFromCookies("rm");
   return (
     <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
       {branchOptions && (
         <div>
-          <label className="text-xs text-surface-500">Branch</label>
+          <label className="text-xs text-surface-500">{t("c_branch", lang)}</label>
           <select name="branch_id" defaultValue={branchId ?? ""} className="mt-1 block rounded-lg border border-surface-200 p-1.5 text-sm">
-            <option value="">Sab Branches</option>
+            <option value="">{t("rp_all_branches", lang)}</option>
             {branchOptions.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -432,9 +436,9 @@ function DateRangeForm({
         <>
           <input type="hidden" name="branch_id" value={branchId} />
           <div>
-            <label className="text-xs text-surface-500">Shop</label>
+            <label className="text-xs text-surface-500">{t("c_shop", lang)}</label>
             <select name="shop_id" defaultValue={shopId ?? ""} className="mt-1 block rounded-lg border border-surface-200 p-1.5 text-sm">
-              <option value="">Puri Branch (sab Shops)</option>
+              <option value="">{t("rp_whole_branch", lang)}</option>
               {shopOptions.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -445,14 +449,14 @@ function DateRangeForm({
       {!branchOptions && !shopOptions && branchId && <input type="hidden" name="branch_id" value={branchId} />}
       {!shopOptions && shopId && <input type="hidden" name="shop_id" value={shopId} />}
       <div>
-        <label className="text-xs text-surface-500">From</label>
+        <label className="text-xs text-surface-500">{t("rp_from", lang)}</label>
         <input type="date" name="from" defaultValue={from} className="mt-1 block rounded-lg border border-surface-200 p-1.5 text-sm" />
       </div>
       <div>
-        <label className="text-xs text-surface-500">To</label>
+        <label className="text-xs text-surface-500">{t("rp_to", lang)}</label>
         <input type="date" name="to" defaultValue={to} className="mt-1 block rounded-lg border border-surface-200 p-1.5 text-sm" />
       </div>
-      <button type="submit" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Filter</button>
+      <button type="submit" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">{t("c_filter", lang)}</button>
     </form>
   );
 }
