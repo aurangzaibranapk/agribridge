@@ -1,5 +1,9 @@
-import { Award } from "lucide-react";
-import type { CreditScoreResult } from "@/lib/utils/credit-score";
+import { Award, Hourglass } from "lucide-react";
+import {
+  MIN_MEANINGFUL_EVENTS,
+  MIN_RELATIONSHIP_DAYS,
+  type CreditScoreResult,
+} from "@/lib/utils/credit-score";
 
 const COLOR_MAP: Record<string, { bg: string; text: string; ring: string }> = {
   green: { bg: "bg-green-50", text: "text-green-700", ring: "border-green-200" },
@@ -8,7 +12,49 @@ const COLOR_MAP: Record<string, { bg: string; text: string; ring: string }> = {
   red: { bg: "bg-red-50", text: "text-red-700", ring: "border-red-200" },
 };
 
+/**
+ * Kisan ka score -- aur jab tak saboot na ho, us ki jagah sach.
+ *
+ * "Score ban raha hai" ko laal nahi rakha gaya. Laal rang ilzam ka rang
+ * hai; yahan kisi ne kuch ghalat nahi kiya, bas abhi record hi nahi
+ * bana. Is liye ye khana neutral rehta hai aur saaf batata hai ke kitna
+ * baqi hai -- taake banda ye na samjhe ke us par koi nishan lag gaya
+ * hai.
+ */
 export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
+  if (result.state === "building") {
+    const daysLeft = Math.max(0, MIN_RELATIONSHIP_DAYS - result.relationshipDays);
+    const eventsLeft = Math.max(0, MIN_MEANINGFUL_EVENTS - result.meaningfulEventCount);
+
+    return (
+      <div className="rounded-card border border-surface-200 bg-surface-50 p-4 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-surface-700">
+            <Hourglass className="h-4 w-4" /> Kisan Credit Score
+          </h3>
+          <p className="text-sm font-semibold text-surface-600">Ban raha hai</p>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-surface-500">
+          Abhi itna record nahi bana ke koi darja diya ja sake. Ye koi kami nahi — hisaab shuru hua hai.
+        </p>
+        <ul className="mt-3 space-y-1.5 text-xs text-surface-600">
+          <li className="flex items-center justify-between gap-2">
+            <span>Hamare saath waqt</span>
+            <span className="font-medium">
+              {daysLeft === 0 ? "poora ho gaya" : `${daysLeft} din aur`}
+            </span>
+          </li>
+          <li className="flex items-center justify-between gap-2">
+            <span>Darj shuda kaam</span>
+            <span className="font-medium">
+              {eventsLeft === 0 ? "poore ho gaye" : `${eventsLeft} aur`}
+            </span>
+          </li>
+        </ul>
+      </div>
+    );
+  }
+
   const colors = COLOR_MAP[result.gradeColor];
 
   return (
