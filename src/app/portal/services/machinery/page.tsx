@@ -118,8 +118,9 @@ export default async function PortalMachineryPage() {
     ? await Promise.all([
         supabase
           .from("machinery_bills")
-          .select("booking_id, bill_number, gross_amount, advance_adjusted, balance_payable")
-          .in("booking_id", bookingIds),
+          .select("booking_id, bill_number, gross_amount, discount_amount, advance_adjusted, balance_payable")
+          .in("booking_id", bookingIds)
+          .is("cancelled_at", null),
         supabase
           .from("machinery_payments")
           .select("booking_id, kind, amount, verification_status")

@@ -24,7 +24,7 @@ export default async function NewMachineryBookingPage({
         .eq("is_deleted", false)
         .order("full_name"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
-      supabase.from("machinery_bills").select("booking_id, balance_payable"),
+      supabase.from("machinery_bills").select("booking_id, balance_payable").is("cancelled_at", null),
       supabase.from("machinery_payments").select("booking_id, amount, kind"),
     ]);
 

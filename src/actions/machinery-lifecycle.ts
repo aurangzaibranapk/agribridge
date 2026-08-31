@@ -2240,6 +2240,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
     .from("machinery_bills")
     .select("balance_payable")
     .eq("booking_id", bookingId)
+    .is("cancelled_at", null)
     .maybeSingle();
   if (!bill) return { error: "Pehle bill banayein." };
 
@@ -2606,6 +2607,7 @@ export async function recordPaymentPromise(_prev: ActionState, formData: FormDat
     .from("machinery_bills")
     .select("balance_payable")
     .eq("booking_id", bookingId)
+    .is("cancelled_at", null)
     .maybeSingle();
   if (!bill) return { error: "Wada bill banne ke baad hi likha ja sakta hai." };
 

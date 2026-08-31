@@ -346,8 +346,9 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
   const [{ data: bill }, { data: paidRows }] = await Promise.all([
     supabase
       .from("machinery_bills")
-      .select("bill_number, actual_area, rate_amount, gross_amount, balance_payable")
+      .select("bill_number, actual_area, rate_amount, gross_amount, discount_amount, balance_payable")
       .eq("booking_id", bookingId)
+      .is("cancelled_at", null)
       .maybeSingle(),
     supabase
       .from("machinery_payments")

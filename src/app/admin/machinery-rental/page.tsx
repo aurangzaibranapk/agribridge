@@ -61,7 +61,7 @@ export default async function MachineryRentalPage({
   // khane par bharosa karte to poori payment ke baad bhi ye fehrist
   // "Farmer Se Lena Rs 95,000" dikhati rehti.
   const [{ data: allBills }, { data: allPayments }] = await Promise.all([
-    supabase.from("machinery_bills").select("booking_id, balance_payable, vendor_payable"),
+    supabase.from("machinery_bills").select("booking_id, balance_payable, vendor_payable").is("cancelled_at", null),
     supabase.from("machinery_payments").select("booking_id, amount, kind"),
   ]);
 

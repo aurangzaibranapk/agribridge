@@ -26,7 +26,7 @@ export async function FarmerMachineryHistory({ farmerId }: { farmerId: string })
 
   const ids = rows.map((b) => b.id);
   const [{ data: bills }, { data: pays }] = await Promise.all([
-    supabase.from("machinery_bills").select("booking_id, bill_number, gross_amount, advance_adjusted, balance_payable").in("booking_id", ids),
+    supabase.from("machinery_bills").select("booking_id, bill_number, gross_amount, discount_amount, advance_adjusted, balance_payable").in("booking_id", ids).is("cancelled_at", null),
     supabase.from("machinery_payments").select("booking_id, kind, amount, verification_status").in("booking_id", ids),
   ]);
 

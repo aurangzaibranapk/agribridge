@@ -47,6 +47,7 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
         "bill_number, bill_date, actual_area, rate_amount, gross_amount, sabit_area, kutra_area, sabit_rate, kutra_rate, sabit_amount, kutra_amount, advance_adjusted, previous_payment, diesel_deducted, balance_payable"
       )
       .eq("booking_id", id)
+      .is("cancelled_at", null)
       .maybeSingle(),
     supabase
       .from("machinery_payments")
