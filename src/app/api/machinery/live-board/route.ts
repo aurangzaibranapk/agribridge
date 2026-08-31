@@ -45,6 +45,12 @@ export async function GET() {
       id: b.booking_id as string,
       booking_number: (b.booking_number as string) ?? "-",
       farmer_name: (b.farmer_name as string | null) ?? "-",
+      // Kisan ka apna code. Board par ek hi kisan ki do bookingein do
+      // card banati hain -- aur card par sirf booking number likha ho to
+      // wo do adad do alag bandon jaise parhe jate hain. Kisan ka code
+      // dono card par ek hi hota hai, is liye wohi ye sawal khatam
+      // karta hai.
+      farmer_code: (b.farmer_code as string | null) ?? null,
       farmer_phone: (b.farmer_phone as string | null) ?? null,
       village: (b.village as string | null) ?? null,
       crop_type: (b.crop_type as string | null) ?? null,

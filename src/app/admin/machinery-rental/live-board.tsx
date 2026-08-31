@@ -9,6 +9,7 @@ interface LiveCard {
   id: string;
   booking_number: string;
   farmer_name: string;
+  farmer_code: string | null;
   farmer_phone: string | null;
   village: string | null;
   crop_type: string | null;
@@ -112,13 +113,24 @@ export function LiveBoard() {
               className={`block rounded-card border-2 bg-white p-4 shadow-card transition-colors hover:border-brand-400 dark:bg-surface-900 ${work.ring}`}
             >
               <div className="mb-2 flex items-start justify-between gap-2">
-                <span className="font-mono text-xs text-surface-400">{c.booking_number}</span>
+                {/* "Booking" ka lafz jaan boojh kar sath likha hai.
+                    Sirf MB-2026-00003 khara ho to wo bande ka number
+                    lagta hai -- aur ek hi kisan ki do bookingein do
+                    alag bande jaise parhi jati hain. */}
+                <span className="font-mono text-xs text-surface-400">
+                  <span className="font-sans">Booking</span> {c.booking_number}
+                </span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${work.chip}`}>
                   {t(work.key, lang)}
                 </span>
               </div>
 
-              <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">{c.farmer_name}</p>
+              <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">
+                {c.farmer_name}
+                {c.farmer_code && (
+                  <span className="ml-2 font-mono text-xs font-normal text-surface-400">{c.farmer_code}</span>
+                )}
+              </p>
 
               {/* Raqba aur fasal. Raqba hamesha maloom hota hai -- wo
                   booking ka pehla khana hai. Fasal na ho to us ka naam
