@@ -104,7 +104,8 @@ Schema (sab izafa, koi kami nahi):
 | Wazan matrix | PASS — 25 factor rows, 43 severity rows |
 | pg_cron dono job chalu | PASS — `agribridge_score_queue` `*/5 * * * *`, `agribridge_score_daily` `0 3 * * *` |
 | Daily runner | PASS — ek dafa chalaya, status `ok`, 3 subjects |
-| Freshness guard | PASS — chalne se pehle khud ko `is_stale` bataya |
+| Queue runner (asal cron tick) | PASS — pg_cron ne 21:15:00 UTC par khud chalaya, `succeeded`, run `drain`/`ok`, queue baqi 0 |
+| Freshness guard | PASS — chalne se pehle khud ko `is_stale` bataya, drain ke baad `is_stale = false` |
 | Kill-switch | Available — `cron.unschedule(...)` / `update cron.job set active=false`, aur `features` ki qatar `is_active=false` |
 | `role_feature_permissions` mein trust ki qatar | **0** — sirf owner/super_admin/admin ko dikhega |
 
@@ -171,13 +172,14 @@ koi nishan nahi laga.
 
 1. **Restore drill NOT TESTED** — isolated staging nahi hai. Ye risk khula rahega.
 2. **Backup meri taraf se verified nahi** — malik ki tasdeeq par chala gaya.
-3. **Queue runner ka pehla asal cron tick** — pg_cron par `*/5` job chalu hai;
-   pehla tick chalne ke baad `fn_score_health()` ko `is_stale = false` dikhana
-   chahiye. Us se pehle wo (durust tor par) `stale` hi kehta hai.
-4. **Backfill sirf machinery se hai**, kyunke Live par baqi kuch hai hi nahi.
+3. ~~Queue runner ka pehla asal cron tick~~ — **BAND. Ho gaya.** pg_cron ne
+   21:15:00 UTC par khud chalaya, `succeeded`; `score_runs` mein `drain` /
+   `ok` / `pg_cron` darj hua aur `fn_score_health()` ab `is_stale = false`,
+   "Sab theek hai" kehta hai.
+5. **Backfill sirf machinery se hai**, kyunke Live par baqi kuch hai hi nahi.
    Milk / grain / orders / credit ka asal imtihaan tab hoga jab Live par un ka
    data aayega.
-5. **222 aur 223 ki tarteeb** (upar §2) — aage ke liye theek karni chahiye.
+6. **222 aur 223 ki tarteeb** (upar §2) — aage ke liye theek karni chahiye.
 
 ---
 
