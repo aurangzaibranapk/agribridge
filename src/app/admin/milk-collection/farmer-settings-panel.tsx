@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { setMilkCollectionType, saveMilkRateSettings, type ActionState } from "@/actions/milk";
 import { Truck, Home, History } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -29,14 +31,15 @@ interface Migration {
 }
 
 export function FarmerSettingsPanel({ farmers, rateSettings, migrations }: { farmers: Farmer[]; rateSettings: RateSettings; migrations: Migration[] }) {
+  const lang = useLang();
   const [tab, setTab] = useState<"farmers" | "rates" | "history">("farmers");
 
   return (
     <div className="mt-8">
       <div className="mb-4 flex gap-2 border-b border-surface-200 dark:border-surface-800">
-        <TabButton active={tab === "farmers"} onClick={() => setTab("farmers")} label="Farmer Type" />
-        <TabButton active={tab === "rates"} onClick={() => setTab("rates")} label="Rate Settings" />
-        <TabButton active={tab === "history"} onClick={() => setTab("history")} label="Migration History" />
+        <TabButton active={tab === "farmers"} onClick={() => setTab("farmers")} label={t("fs_farmer_type", lang)} />
+        <TabButton active={tab === "rates"} onClick={() => setTab("rates")} label={t("fs_rate_settings", lang)} />
+        <TabButton active={tab === "history"} onClick={() => setTab("history")} label={t("fs_migration_history", lang)} />
       </div>
 
       {tab === "farmers" && <FarmerTypeList farmers={farmers} />}
@@ -58,14 +61,15 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
 }
 
 function FarmerTypeList({ farmers }: { farmers: Farmer[] }) {
+  const lang = useLang();
   return (
     <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-            <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-            <th className="px-3 py-2 font-medium text-surface-500">Current Type</th>
-            <th className="px-3 py-2 font-medium text-surface-500">Change Karein</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("fs_current_type", lang)}</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("fs_change", lang)}</th>
           </tr>
         </thead>
         <tbody>
@@ -74,11 +78,11 @@ function FarmerTypeList({ farmers }: { farmers: Farmer[] }) {
               <td className="px-3 py-2 text-surface-700 dark:text-surface-300">{f.full_name} <span className="text-xs text-surface-400">({f.farmer_code})</span></td>
               <td className="px-3 py-2">
                 {f.milk_collection_type === "self_dropoff" ? (
-                  <span className="flex w-fit items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700"><Home className="h-3 w-3" /> Self Drop-off</span>
+                  <span className="flex w-fit items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700"><Home className="h-3 w-3" />{t("fs_self_dropoff", lang)}</span>
                 ) : f.milk_collection_type === "field_collection" ? (
-                  <span className="flex w-fit items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"><Truck className="h-3 w-3" /> Field Collection</span>
+                  <span className="flex w-fit items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"><Truck className="h-3 w-3" />{t("fs_field_collection", lang)}</span>
                 ) : (
-                  <span className="text-xs text-surface-400">Not set</span>
+                  <span className="text-xs text-surface-400">{t("fs_not_set", lang)}</span>
                 )}
               </td>
               <td className="px-3 py-2">
@@ -87,7 +91,7 @@ function FarmerTypeList({ farmers }: { farmers: Farmer[] }) {
             </tr>
           ))}
           {farmers.length === 0 && (
-            <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">Koi farmer nahi mila.</td></tr>
+            <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("fs_no_farmer", lang)}</td></tr>
           )}
         </tbody>
       </table>
@@ -96,6 +100,7 @@ function FarmerTypeList({ farmers }: { farmers: Farmer[] }) {
 }
 
 function TypeChangeForm({ farmerId }: { farmerId: string }) {
+  const lang = useLang();
   const [, fieldAction] = useFormState(setMilkCollectionType, initialState);
   const [, dropoffAction] = useFormState(setMilkCollectionType, initialState);
   return (
@@ -103,38 +108,39 @@ function TypeChangeForm({ farmerId }: { farmerId: string }) {
       <form action={fieldAction}>
         <input type="hidden" name="farmer_id" value={farmerId} />
         <input type="hidden" name="milk_collection_type" value="field_collection" />
-        <button type="submit" className="rounded-lg border border-blue-200 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50">Field Collection</button>
+        <button type="submit" className="rounded-lg border border-blue-200 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50">{t("fs_field_collection", lang)}</button>
       </form>
       <form action={dropoffAction}>
         <input type="hidden" name="farmer_id" value={farmerId} />
         <input type="hidden" name="milk_collection_type" value="self_dropoff" />
-        <button type="submit" className="rounded-lg border border-brand-200 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50">Self Drop-off</button>
+        <button type="submit" className="rounded-lg border border-brand-200 px-2 py-1 text-xs text-brand-700 hover:bg-brand-50">{t("fs_self_dropoff", lang)}</button>
       </form>
     </div>
   );
 }
 
 function RateSettingsForm({ settings }: { settings: RateSettings }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(saveMilkRateSettings, initialState);
   return (
     <div className="max-w-md rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Settings save ho gayin.</p>}
+      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("fs_settings_saved", lang)}</p>}
       <form action={formAction} className="space-y-3">
         <div>
-          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">Standard Rate (Rs/L)</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">{t("fs_standard_rate", lang)}</label>
           <input type="number" step="0.01" name="standard_rate" defaultValue={settings.standard_rate} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">Self Drop-off Incentive (Rs/L)</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">{t("fs_dropoff_incentive", lang)}</label>
           <input type="number" step="0.01" name="self_dropoff_incentive" defaultValue={settings.self_dropoff_incentive} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">SNF Formula Constant</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">{t("fs_snf_constant", lang)}</label>
           <input type="number" step="0.001" name="snf_constant" defaultValue={settings.snf_constant} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">Reference TS %</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-surface-300">{t("fs_reference_ts", lang)}</label>
           <input type="number" step="0.1" name="reference_ts" defaultValue={settings.reference_ts} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <SubmitButton />
@@ -144,14 +150,15 @@ function RateSettingsForm({ settings }: { settings: RateSettings }) {
 }
 
 function MigrationHistory({ migrations }: { migrations: Migration[] }) {
+  const lang = useLang();
   return (
     <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-            <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-            <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-            <th className="px-3 py-2 font-medium text-surface-500">Change</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+            <th className="px-3 py-2 font-medium text-surface-500">{t("fs_change", lang)}</th>
           </tr>
         </thead>
         <tbody>
@@ -165,7 +172,7 @@ function MigrationHistory({ migrations }: { migrations: Migration[] }) {
             </tr>
           ))}
           {migrations.length === 0 && (
-            <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400 flex items-center justify-center gap-1"><History className="h-4 w-4" /> Koi change history nahi hai.</td></tr>
+            <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400 flex items-center justify-center gap-1"><History className="h-4 w-4" />{t("fs_no_change_history", lang)}</td></tr>
           )}
         </tbody>
       </table>

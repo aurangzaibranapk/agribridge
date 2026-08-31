@@ -3,6 +3,8 @@ import { useState, useMemo } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { requestExpense, approveExpense, rejectExpense, type ActionState } from "@/actions/company-expenses";
 import { Plus, X, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 const CATEGORIES = [
   { value: "inventory_purchase", label: "Inventory Purchase" },
@@ -54,24 +56,24 @@ function statusColor(status: string) {
   return "bg-amber-100 text-amber-700";
 }
 export function CompanyExpensesClient({ expenses, suppliers, branches, shops }: { expenses: Expense[]; suppliers: Supplier[]; branches: Branch[]; shops: Shop[] }) {
+  const lang = useLang();
   const [showRequest, setShowRequest] = useState(false);
   return (
     <div>
       <div className="mb-4 flex justify-end">
         <button onClick={() => setShowRequest(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" /> Expense Request Karein
-        </button>
+          <Plus className="h-4 w-4" />{t("ce_request_expense", lang)}</button>
       </div>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Category</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Description</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Amount</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_no_short", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_category", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_description", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_action", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -102,7 +104,7 @@ export function CompanyExpensesClient({ expenses, suppliers, branches, shops }: 
               </tr>
             ))}
             {expenses.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">Koi expense request nahi hai.</td></tr>
+              <tr><td colSpan={6} className="px-3 py-8 text-center text-surface-400">{t("ce_no_request", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -130,26 +132,28 @@ function ApprovalActions({ expenseId }: { expenseId: string }) {
   );
 }
 function RejectModal({ expenseId, onClose }: { expenseId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(rejectExpense, initialState);
   if (state.success) setTimeout(onClose, 800);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Reject Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("c_reject", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="expense_id" value={expenseId} />
-          <textarea name="rejection_reason" required rows={3} placeholder="Wajah likhein" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">Confirm Reject</button>
+          <textarea name="rejection_reason" required rows={3} placeholder={t("ce_write_reason", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("c_confirm_reject", lang)}</button>
         </form>
       </div>
     </div>
   );
 }
 function RequestExpenseModal({ suppliers, branches, shops, onClose }: { suppliers: Supplier[]; branches: Branch[]; shops: Shop[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(requestExpense, initialState);
   const [category, setCategory] = useState("other");
   const [branchId, setBranchId] = useState("");
@@ -162,7 +166,7 @@ function RequestExpenseModal({ suppliers, branches, shops, onClose }: { supplier
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Expense Request Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("ce_request_expense", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
@@ -193,10 +197,10 @@ function RequestExpenseModal({ suppliers, branches, shops, onClose }: { supplier
               <p className="text-[10px] text-surface-400">Shop select karein taake ye kharcha us Shop ki P&L mein sahi jaye. Agar poore Branch ka mushtarka kharcha hai to Shop khaali chhod dein.</p>
             </>
           )}
-          <input type="number" step="0.01" name="amount" required placeholder="Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <textarea name="description" required rows={2} placeholder="Description" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <textarea name="description" required rows={2} placeholder={t("c_description", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div>
-            <label className="text-xs text-surface-500">Document/Receipt Upload (optional)</label>
+            <label className="text-xs text-surface-500">{t("ce_document_upload", lang)}</label>
             <input type="file" name="document" accept="image/*,application/pdf" className="mt-1 w-full text-xs" />
           </div>
           <SubmitButton />

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordStaffKhataDebit, processMonthEndSalary, type ActionState } from "@/actions/staff-khata";
 import { Wallet, X, TrendingUp } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -24,6 +26,7 @@ interface LedgerEntry {
 }
 
 export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[]; ledger: LedgerEntry[] }) {
+  const lang = useLang();
   const [debitTarget, setDebitTarget] = useState<StaffBalance | null>(null);
   const [processTarget, setProcessTarget] = useState<StaffBalance | null>(null);
 
@@ -31,14 +34,14 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
     <div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Staff Khata Balances</h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("sk_balances", lang)}</h2>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Staff</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Balance</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_staff", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_action", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -55,15 +58,14 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
                         </button>
                         {b.balance > 0 && (
                           <button onClick={() => setProcessTarget(b)} className="flex items-center gap-1 rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">
-                            <TrendingUp className="h-3 w-3" /> Month-End Process
-                          </button>
+                            <TrendingUp className="h-3 w-3" />{t("sk_month_end", lang)}</button>
                         )}
                       </div>
                     </td>
                   </tr>
                 ))}
                 {balances.length === 0 && (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">Koi staff balance nahi hai.</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("sk_no_balance", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -71,7 +73,7 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
         </div>
 
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Recent Ledger</h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("sk_recent_ledger", lang)}</h2>
           <div className="max-h-[500px] space-y-1.5 overflow-y-auto rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
             {ledger.map((l) => (
               <div key={l.id} className="flex items-center justify-between rounded-lg bg-surface-50 px-2.5 py-1.5 text-xs dark:bg-surface-800">
@@ -84,7 +86,7 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
                 </span>
               </div>
             ))}
-            {ledger.length === 0 && <p className="p-4 text-center text-xs text-surface-400">Koi entry nahi hai.</p>}
+            {ledger.length === 0 && <p className="p-4 text-center text-xs text-surface-400">{t("sk_no_entry", lang)}</p>}
           </div>
         </div>
       </div>
@@ -96,6 +98,7 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
 }
 
 function DebitModal({ staff, onClose }: { staff: StaffBalance; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(recordStaffKhataDebit, initialState);
   if (state.success) setTimeout(onClose, 800);
 
@@ -113,13 +116,13 @@ function DebitModal({ staff, onClose }: { staff: StaffBalance; onClose: () => vo
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="profile_id" value={staff.profile_id} />
           <select name="source_type" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="grocery">Grocery</option>
-            <option value="advance">Advance</option>
-            <option value="other">Other</option>
+            <option value="grocery">{t("sk_grocery", lang)}</option>
+            <option value="advance">{t("c_advance", lang)}</option>
+            <option value="other">{t("c_other", lang)}</option>
           </select>
-          <input type="number" step="0.01" name="amount" required placeholder="Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="Save Karein" />
+          <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <SubmitButton label={t("c_save", lang)} />
         </form>
       </div>
     </div>
@@ -127,6 +130,7 @@ function DebitModal({ staff, onClose }: { staff: StaffBalance; onClose: () => vo
 }
 
 function ProcessModal({ staff, onClose }: { staff: StaffBalance; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(processMonthEndSalary, initialState);
   if (state.success) setTimeout(onClose, 800);
   const now = new Date();
@@ -135,7 +139,7 @@ function ProcessModal({ staff, onClose }: { staff: StaffBalance; onClose: () => 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Month-End Process</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("sk_month_end", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-3 text-xs text-surface-500">
@@ -150,7 +154,7 @@ function ProcessModal({ staff, onClose }: { staff: StaffBalance; onClose: () => 
             ))}
           </select>
           <input type="number" name="pay_year" defaultValue={now.getFullYear()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="Process Karein" />
+          <SubmitButton label={t("sk_process", lang)} />
         </form>
       </div>
     </div>

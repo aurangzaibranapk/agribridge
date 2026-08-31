@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { addDriverPayment, addMaintenanceRecord, type ActionState } from "@/actions/driver-statement";
 import { Plus, X, MapPin } from "lucide-react";
 import Link from "next/link";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -50,6 +52,7 @@ export function DriverStatementClient({
 }) {
   const [tab, setTab] = useState<"trips" | "payments" | "maintenance">("trips");
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const lang = useLang();
   const [showAddMaintenance, setShowAddMaintenance] = useState(false);
 
   return (
@@ -69,7 +72,7 @@ export function DriverStatementClient({
       {tab === "trips" && (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           {trips.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-surface-400">Koi trip nahi hai.</p>
+            <p className="px-4 py-8 text-center text-sm text-surface-400">{t("st_no_trip", lang)}</p>
           ) : (
             trips.map((t) => (
               <Link
@@ -94,12 +97,11 @@ export function DriverStatementClient({
         <div>
           <div className="mb-2 flex justify-end">
             <button onClick={() => setShowAddPayment(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-              <Plus className="h-3.5 w-3.5" /> Payment Add Karein
-            </button>
+              <Plus className="h-3.5 w-3.5" />{t("st_add_payment", lang)}</button>
           </div>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             {payments.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-surface-400">Koi payment record nahi hai.</p>
+              <p className="px-4 py-8 text-center text-sm text-surface-400">{t("st_no_payment_record", lang)}</p>
             ) : (
               payments.map((p) => (
                 <div key={p.id} className="flex items-center justify-between border-b border-surface-100 px-4 py-3 last:border-0 dark:border-surface-800">
@@ -124,12 +126,12 @@ export function DriverStatementClient({
                 <Plus className="h-3.5 w-3.5" /> Maintenance/Fuel Add Karein
               </button>
             ) : (
-              <p className="text-xs text-surface-400">Is driver ke sath koi vehicle linked nahi hai.</p>
+              <p className="text-xs text-surface-400">{t("st_no_vehicle_linked", lang)}</p>
             )}
           </div>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             {maintenance.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-surface-400">Koi maintenance/fuel record nahi hai.</p>
+              <p className="px-4 py-8 text-center text-sm text-surface-400">{t("st_no_maint_record", lang)}</p>
             ) : (
               maintenance.map((m) => (
                 <div key={m.id} className="flex items-center justify-between border-b border-surface-100 px-4 py-3 last:border-0 dark:border-surface-800">
@@ -154,6 +156,7 @@ export function DriverStatementClient({
 }
 
 function AddPaymentModal({ driverId, onClose }: { driverId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(addDriverPayment, initialState);
   if (state.success) setTimeout(onClose, 800);
 
@@ -161,22 +164,22 @@ function AddPaymentModal({ driverId, onClose }: { driverId: string; onClose: () 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Driver Payment Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("st_add_driver_payment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="driver_id" value={driverId} />
           <select name="payment_type" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="Salary">Salary</option>
-            <option value="Advance">Advance</option>
-            <option value="Bonus">Bonus</option>
-            <option value="Other">Other</option>
+            <option value="Salary">{t("st_salary", lang)}</option>
+            <option value="Advance">{t("c_advance", lang)}</option>
+            <option value="Bonus">{t("st_bonus", lang)}</option>
+            <option value="Other">{t("c_other", lang)}</option>
           </select>
-          <input type="number" step="0.01" name="amount" required placeholder="Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <textarea name="notes" rows={2} placeholder="Notes (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="Payment Add Karein" />
+          <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <SubmitButton label={t("st_add_payment", lang)} />
         </form>
       </div>
     </div>
@@ -184,6 +187,7 @@ function AddPaymentModal({ driverId, onClose }: { driverId: string; onClose: () 
 }
 
 function AddMaintenanceModal({ driverId, vehicleId, onClose }: { driverId: string; vehicleId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(addMaintenanceRecord, initialState);
   if (state.success) setTimeout(onClose, 800);
 
@@ -191,7 +195,7 @@ function AddMaintenanceModal({ driverId, vehicleId, onClose }: { driverId: strin
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Maintenance/Fuel Record Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("st_add_maint_record", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
@@ -200,18 +204,18 @@ function AddMaintenanceModal({ driverId, vehicleId, onClose }: { driverId: strin
           <input type="hidden" name="vehicle_id" value={vehicleId} />
           <select name="maintenance_type" required className="w-full rounded-lg border border-surface-200 p-2 text-sm">
             <option value="">- Type Select Karein -</option>
-            <option value="Diesel/Fuel">Diesel/Fuel</option>
-            <option value="Oil Change">Oil Change</option>
-            <option value="Tyre">Tyre</option>
-            <option value="Service">General Service</option>
-            <option value="Repair">Repair</option>
-            <option value="Other">Other</option>
+            <option value="Diesel/Fuel">{t("st_diesel_fuel", lang)}</option>
+            <option value="Oil Change">{t("c_oil_change", lang)}</option>
+            <option value="Tyre">{t("c_tyre", lang)}</option>
+            <option value="Service">{t("st_general_service", lang)}</option>
+            <option value="Repair">{t("st_repair", lang)}</option>
+            <option value="Other">{t("c_other", lang)}</option>
           </select>
-          <input type="number" step="0.01" name="amount" placeholder="Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" name="odometer_km" placeholder="Odometer (Km) - optional" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.01" name="amount" placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" name="odometer_km" placeholder={t("st_odometer_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="date" name="maintenance_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <textarea name="notes" rows={2} placeholder="Notes (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="Record Add Karein" />
+          <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <SubmitButton label={t("st_add_record", lang)} />
         </form>
       </div>
     </div>
