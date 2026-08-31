@@ -1808,6 +1808,28 @@ async function sendFarmerBillReceipt(
     .eq("id", p.farmerId)
     .maybeSingle();
 
+  // Isi kisan ki pichli bookingon ka baqi.
+  //
+  // Kisan ke liye ye do alag kaghaz nahi hain -- wo ek hi banda hai jis
+  // ne pehle bhi kattai karwai thi. Usay sirf is dafa ka adad bhejna wo
+  // sawal chhupa deta hai jo wo waise bhi poochhega: "phir kul kitne
+  // dene hain?"
+  //
+  // Adad yahan dobara hisaab nahi hota -- har booking ka baqi pehle se
+  // v_machinery_control_all ka likha hua hai.
+  // "Pichla" ka matlab waqai pichla: bill number tarteeb se banta hai,
+  // is liye is bill se chhota number hi us se pehle ka bill hai.
+  const { data: pichli } = await supabase
+    .from("v_machinery_control_all")
+    .select("baqi")
+    .eq("farmer_id", p.farmerId)
+    .neq("booking_id", p.bookingId)
+    .neq("raw_status", "cancelled")
+    .not("bill_number", "is", null)
+    .lt("bill_number", p.billNumber)
+    .gt("baqi", 0);
+  const pichlaBaqi = (pichli ?? []).reduce((sum, r) => sum + Number(r.baqi ?? 0), 0);
+
   const message = [
     `Assalam-o-Alaikum ${farmer?.full_name ?? ""} Sahib,`,
     ``,
@@ -1822,6 +1844,8 @@ async function sendFarmerBillReceipt(
     p.discount > 0 ? `Bill: Rs ${(p.gross - p.discount).toLocaleString()}` : null,
     p.advance > 0 ? `Advance mujra: Rs ${p.advance.toLocaleString()}` : null,
     p.balance > 0 ? `Baqi dena: Rs ${p.balance.toLocaleString()}` : `Hisaab poora ho gaya — kuch baqi nahi.`,
+    pichlaBaqi > 0 ? `Pichla baqi: Rs ${pichlaBaqi.toLocaleString()}` : null,
+    pichlaBaqi > 0 ? `KUL DENA: Rs ${(p.balance + pichlaBaqi).toLocaleString()}` : null,
     ``,
     `Shukriya. Al Rana Traders`,
   ]

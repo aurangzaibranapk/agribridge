@@ -43,11 +43,20 @@ interface Slip {
   dieselDeducted: number;
   received: number;
   balance: number;
+  /** Isi kisan ki pichli bookingon ka baqi -- har ek apni qatar mein. */
+  pichlaBaqi: Array<{ bookingNumber: string; billNumber: string | null; date: string | null; amount: number }>;
 }
 
 export function MachinerySlipClient({ slip }: { slip: Slip }) {
   const lang = useLang();
   const [showEmail, setShowEmail] = useState(false);
+
+  // Pichla baqi aur is bill ka baqi -- do alag adad, aur un ka jor
+  // teesra. Teenon saamne rakhne parte hain: kisan ye bhi jaanna chahta
+  // hai ke is dafa ka kitna bana, aur ye bhi ke ab kul kitne dene hain.
+  const pichlaKul = slip.pichlaBaqi.reduce((sum, r) => sum + r.amount, 0);
+  const kulDena = Math.round((pichlaKul + slip.balance) * 100) / 100;
+
   const shareText = [
     `Al Rana Traders — ${slip.isFinal ? "Machinery Bill" : "Machinery Booking Slip"} ${slip.billNumber ?? slip.bookingNumber}`,
     slip.farmerName,
@@ -56,7 +65,9 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
     slip.discount > 0 ? `Riayat: - Rs ${slip.discount.toLocaleString()}` : null,
     slip.discount > 0 ? `Bill: Rs ${(slip.gross - slip.discount).toLocaleString()}` : null,
     slip.received > 0 ? `Mila: Rs ${slip.received.toLocaleString()}` : null,
-    `Baqi: Rs ${slip.balance.toLocaleString()}`,
+    `Is bill ka baqi: Rs ${slip.balance.toLocaleString()}`,
+    pichlaKul > 0 ? `Pichla baqi: Rs ${pichlaKul.toLocaleString()}` : null,
+    pichlaKul > 0 ? `KUL DENA: Rs ${kulDena.toLocaleString()}` : null,
     "",
     `Dekhein: ${typeof window !== "undefined" ? window.location.href : ""}`,
   ]
@@ -71,6 +82,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
   }
 
   const isDono = slip.harvestType === "dono";
+
 
   return (
     <div className="mx-auto max-w-xl p-4">
@@ -234,22 +246,60 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             )}
           </div>
 
+          {/* Pichla baqi ho to is bill ka apna baqi halka rakha jata
+              hai aur bara adad KUL DENA ban jata hai -- kyunke kisan ke
+              liye asal sawal wohi hai. Pichla baqi na ho to ye lakeer
+              aati hi nahi aur parchi waisi hi saada rehti hai. */}
           <div
-            className={`flex items-center justify-between px-4 py-4 ${
-              slip.balance > 0 ? "bg-amber-50" : "bg-green-50"
-            }`}
+            className={`flex items-center justify-between px-4 ${
+              pichlaKul > 0 ? "border-b border-surface-200 bg-surface-50 py-3" : "py-4"
+            } ${pichlaKul > 0 ? "" : slip.balance > 0 ? "bg-amber-50" : "bg-green-50"}`}
           >
             <span className="text-sm font-semibold text-surface-700">
-              {slip.balance > 0 ? "Baqi dena hai" : "Hisaab poora"}
+              {pichlaKul > 0 ? "Is bill ka baqi" : slip.balance > 0 ? "Baqi dena hai" : "Hisaab poora"}
             </span>
             <span
-              className={`font-display text-3xl font-bold tabular-nums ${
-                slip.balance > 0 ? "text-amber-700" : "text-green-700"
+              className={`font-display font-bold tabular-nums ${
+                pichlaKul > 0
+                  ? "text-lg text-surface-800"
+                  : `text-3xl ${slip.balance > 0 ? "text-amber-700" : "text-green-700"}`
               }`}
             >
               Rs {slip.balance.toLocaleString()}
             </span>
           </div>
+
+          {pichlaKul > 0 && (
+            <>
+              <div className="border-b border-surface-100 bg-surface-50 px-4 py-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-surface-500">
+                  Pichla baqi
+                </p>
+              </div>
+              <div className="space-y-1 px-4 py-3 text-sm tabular-nums">
+                {slip.pichlaBaqi.map((r) => (
+                  <div key={r.bookingNumber} className="flex justify-between text-surface-600">
+                    <span>
+                      {r.billNumber ?? r.bookingNumber}
+                      {r.date ? ` · ${new Date(r.date).toLocaleDateString()}` : ""}
+                    </span>
+                    <span>Rs {r.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-surface-100 pt-1.5 font-medium text-surface-900">
+                  <span>Pichla kul</span>
+                  <span>Rs {pichlaKul.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between bg-amber-50 px-4 py-4">
+                <span className="text-sm font-semibold text-surface-700">Kul dena hai</span>
+                <span className="font-display text-3xl font-bold tabular-nums text-amber-700">
+                  Rs {kulDena.toLocaleString()}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Dastkhat ki lakeerein sirf CHHAPTE waqt aati hain.

@@ -31,7 +31,7 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
   const { data: booking } = await supabase
     .from("machinery_bookings")
     .select(
-      "id, booking_number, booking_date, preferred_date, crop_type, harvest_area, harvest_type, sabit_area, kutra_area, sabit_rate, kutra_rate, final_rate, estimated_rate, rate_status, village, location_address, farmers(full_name, farmer_code, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
+      "id, farmer_id, booking_number, booking_date, preferred_date, crop_type, harvest_area, harvest_type, sabit_area, kutra_area, sabit_rate, kutra_rate, final_rate, estimated_rate, rate_status, village, location_address, farmers(full_name, farmer_code, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -55,6 +55,44 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
       .eq("booking_id", id)
       .eq("verification_status", "verified"),
   ]);
+
+  // Isi kisan ki PICHLI bookingon ka baqi.
+  //
+  // Kisan ke liye ye do alag kaghaz nahi hain -- wo ek hi banda hai jis
+  // ne pehle bhi kattai karwai thi aur ab phir karwa raha hai. Us ke
+  // haath mein sirf is dafa ka adad dena us se ye sawal chhupa deta hai
+  // ke "phir kul kitne dene hain?" -- aur wo sawal wo waise bhi
+  // poochhega, bas kaghaz ke baghair.
+  //
+  // Adad yahan dobara hisaab NAHI hota. Har booking ka baqi pehle se
+  // v_machinery_control_all ka likha hua hai (bill ka baqi minus jo
+  // tasdeeq shuda raqam mil chuki). Wahi ek malik hai; yahan sirf usi
+  // ki qatarein jori jati hain.
+  // "Pichla" ka matlab waqai PICHLA hai. Bill number tarteeb se banta
+  // hai (MBL-2026-00001, 00002 ...), is liye is bill se chhota number
+  // hi us se pehle ka bill hai. Sirf "doosri bookingein" likh dete to
+  // ek purana bill dobara chhapte waqt us par naye billon ka baqi
+  // "pichla" ban kar aa jata -- yani wo kaghaz apne se baad ki baatein
+  // bayan karne lagta.
+  const { data: pichliQatarein } = bill?.bill_number
+    ? await supabase
+        .from("v_machinery_control_all")
+        .select("booking_id, booking_number, bill_number, preferred_date, baqi")
+        .eq("farmer_id", booking.farmer_id)
+        .neq("booking_id", id)
+        .neq("raw_status", "cancelled")
+        .not("bill_number", "is", null)
+        .lt("bill_number", bill.bill_number)
+        .gt("baqi", 0)
+        .order("bill_number", { ascending: true })
+    : { data: [] };
+
+  const pichlaBaqi = (pichliQatarein ?? []).map((r) => ({
+    bookingNumber: (r.booking_number as string) ?? "-",
+    billNumber: (r.bill_number as string | null) ?? null,
+    date: (r.preferred_date as string | null) ?? null,
+    amount: Number(r.baqi ?? 0),
+  }));
 
   const farmer = Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers;
   const vendor = Array.isArray(booking.machinery_vendors) ? booking.machinery_vendors[0] : booking.machinery_vendors;
@@ -111,6 +149,10 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
     dieselDeducted: isFinal ? n(bill.diesel_deducted) : 0,
     received,
     balance,
+    // Pichla baqi sirf ASAL bill par likha jata hai. Booking ke andaze
+    // wali parchi par ise daalna ek aisa "kul dena" bana deta jis mein
+    // aadha adad abhi tay hi nahi hua.
+    pichlaBaqi: isFinal ? pichlaBaqi : [],
   };
 
   return <MachinerySlipClient slip={slip} />;
