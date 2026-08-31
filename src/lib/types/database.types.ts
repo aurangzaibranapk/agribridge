@@ -9026,6 +9026,9 @@ export type Database = {
           bill_date: string
           bill_number: string
           booking_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
           commission_amount: number
           commission_percentage: number
           created_at: string
@@ -9050,6 +9053,9 @@ export type Database = {
           bill_date?: string
           bill_number: string
           booking_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           commission_amount?: number
           commission_percentage?: number
           created_at?: string
@@ -9074,6 +9080,9 @@ export type Database = {
           bill_date?: string
           bill_number?: string
           booking_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           commission_amount?: number
           commission_percentage?: number
           created_at?: string
@@ -9466,6 +9475,7 @@ export type Database = {
           rate_confirmation_rate: number | null
           rate_confirmation_sent_at: string | null
           rate_confirmation_sent_by: string | null
+          rate_reopened_at: string | null
           rate_status: string
           reached_farm_at: string | null
           request_id: string | null
@@ -9551,6 +9561,7 @@ export type Database = {
           rate_confirmation_rate?: number | null
           rate_confirmation_sent_at?: string | null
           rate_confirmation_sent_by?: string | null
+          rate_reopened_at?: string | null
           rate_status?: string
           reached_farm_at?: string | null
           request_id?: string | null
@@ -9636,6 +9647,7 @@ export type Database = {
           rate_confirmation_rate?: number | null
           rate_confirmation_sent_at?: string | null
           rate_confirmation_sent_by?: string | null
+          rate_reopened_at?: string | null
           rate_status?: string
           reached_farm_at?: string | null
           request_id?: string | null

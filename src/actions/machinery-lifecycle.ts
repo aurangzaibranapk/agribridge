@@ -8,6 +8,7 @@ import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
+import { reverseJournal } from "@/lib/ledger/post";
 import {
   postMachineryAdvance,
   postMachineryBill,
@@ -794,6 +795,22 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
 
+  // Bill ban chuka ho to rate yahan se nahi badalta. Wo rate us bill
+  // ka, us ke ledger ka aur vendor ke hisse ka bunyadi adad hai -- usay
+  // chupke se badal dena teenon ko jhoota kar deta. Pehle bill mansookh
+  // hota hai (jis se ledger ulta jata hai), phir rate badalta hai (192).
+  const { data: liveBill } = await supabase
+    .from("machinery_bills")
+    .select("bill_number")
+    .eq("booking_id", bookingId)
+    .is("cancelled_at", null)
+    .maybeSingle();
+  if (liveBill) {
+    return {
+      error: `Is booking ka bill (${liveBill.bill_number}) ban chuka hai — rate ab yahan se nahi badal sakta. Pehle bill mansookh karein, phir naya rate bhejein.`,
+    };
+  }
+
   // Do qism ki booking par rate bhi do hote hain (176). Wahan final_rate
   // KHUD banta hai (dono ka aausat) -- staff wo likhta hi nahi, warna
   // wohi purani kharabi wapas aa jati: ek adad do jagah likha hua.
@@ -865,6 +882,14 @@ export async function sendRateConfirmation(_prev: ActionState, formData: FormDat
       farmer_confirmed_at: null,
       farmer_confirmation_response: null,
       farmer_confirmation_channel: null,
+      // Booking ka guard kehta hai: tasdeeq ke baghair booking
+      // ready_for_harvest ya us se aage nahi ja sakti. Ye baat theek
+      // hai -- magar us ke liye "kabhi haan hui hi nahi" aur "haan hui
+      // thi, hum ne rate theek karne ke liye khud wapas li" ek jaisi
+      // thin. Doosri soorat mein kaam WAQAI ho chuka hota hai. Ye
+      // nishan guard ko wo farq batata hai (192), aur nayi tasdeeq
+      // aate hi khud hat jata hai.
+      rate_reopened_at: booking.farmer_confirmed_at ? new Date().toISOString() : null,
     })
     .eq("id", bookingId);
   if (error) return { error: error.message };
@@ -1084,6 +1109,17 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
     };
   }
 
+  // Tasdeeq booking ko aage le jati hai -- PEECHE kabhi nahi.
+  //
+  // Aam soorat mein ye pehli tasdeeq hoti hai aur booking wahin se
+  // ready_for_harvest par jati hai. Magar rate theek karte waqt yehi
+  // qadam dobara chalta hai, aur us waqt machine ja chuki hoti hai aur
+  // kaam ho chuka hota hai. Wahan status ko ready_for_harvest par
+  // "wapas" likh dena kaghaz par wo kaam mita deta jo waqai hua tha.
+  const AAGE = ["new", "confirmed", "scheduled", "machine_assigned", "ready_for_harvest"];
+  const pehleHi = !AAGE.includes(booking.status);
+  const nayaStatus = pehleHi ? booking.status : "ready_for_harvest";
+
   const { error } = await supabase
     .from("machinery_bookings")
     .update({
@@ -1091,7 +1127,9 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
       farmer_confirmation_channel: channel,
       farmer_confirmation_response: response,
       rate_status: "final",
-      status: "ready_for_harvest",
+      status: nayaStatus,
+      // Nayi tasdeeq aa gayi -- rate dobara poochhne wali haalat khatam.
+      rate_reopened_at: null,
     })
     .eq("id", bookingId);
   if (error) return { error: error.message };
@@ -1100,7 +1138,7 @@ export async function recordFarmerConfirmation(_prev: ActionState, formData: For
     bookingId,
     eventType: "farmer_confirmed",
     fromStatus: booking.status,
-    toStatus: "ready_for_harvest",
+    toStatus: nayaStatus,
     note: response,
     actorId,
   });
@@ -1148,6 +1186,9 @@ export async function overrideConfirmation(_prev: ActionState, formData: FormDat
       confirmation_override_evidence_url: evidenceUrl,
       rate_status: "final",
       status: "ready_for_harvest",
+      // Manager ne jawab ki jagah khud faisla kar diya -- rate dobara
+      // poochhne wali haalat ab baqi nahi (192).
+      rate_reopened_at: null,
     })
     .eq("id", bookingId);
   if (error) return { error: error.message };
@@ -1822,10 +1863,13 @@ async function buildFinalBill(
     };
   }
 
+  // Mansookh bill ginti mein nahi aata (192) -- warna ek dafa ghalat
+  // bill ban jane ke baad doosra kabhi ban hi nahi sakta tha.
   const { data: existingBill } = await supabase
     .from("machinery_bills")
     .select("bill_number")
     .eq("booking_id", bookingId)
+    .is("cancelled_at", null)
     .maybeSingle();
   if (existingBill) return { error: `Is booking ka bill pehle hi ban chuka hai (${existingBill.bill_number}).` };
 
@@ -1940,6 +1984,179 @@ async function buildFinalBill(
 
   revalidateAll(bookingId);
   return { success: true, billNumber };
+}
+
+/**
+ * Ghalat bana hua bill mansookh karna.
+ *
+ * Ye qadam is liye hai ke rate ek dafa kisan ki tasdeeq mein aa kar
+ * bill ban jaye to poori zanjeer patthar ki ho jati thi. Staff ne Rs
+ * 14,000 ki jagah 15,000 likh diya -- aur safhe par us ko theek karne
+ * ka koi raasta nahi tha. Aisa nizam logon ko database tak le jata hai,
+ * yani theek us jagah jahan koi rok nahi.
+ *
+ * Bill MITAYA nahi jata. Teen cheezein hoti hain:
+ *
+ *   1. Ledger ulta jata hai -- purani entry apni jagah rehti hai aur us
+ *      ke bilkul ulat ek nayi banti hai. Dono nazar aati hain.
+ *   2. Bill par mansookhi ka nishan lag jata hai, wajah ke sath.
+ *   3. Kisan ka jo diesel us bill mein kata gaya tha, wo azad ho jata
+ *      hai (192 ka trigger) -- taake naye bill mein dobara kat sake.
+ *
+ * Do darwaze jaan boojh kar band hain:
+ *
+ *   PAISA AA CHUKA HO TO NAHIN. Bill ke khilaf adaigi ho chuki ho to
+ *   mansookhi us adaigi ko muallaq chhoR deti -- paisa kis cheez ke
+ *   against aaya, ye sawal bemaani ho jata. Pehle adaigi ka reversal,
+ *   phir bill ka.
+ *
+ *   HAR KOI NAHIN. Ye maali kaam hai, wohi log kar sakte hain jo ledger
+ *   reversal kar sakte hain.
+ */
+export async function cancelFinalBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  const reason = (str(formData, "reason") ?? "").trim();
+
+  if (!bookingId) return { error: "Booking nahi mili." };
+  if (reason.length < 10) {
+    return {
+      error:
+        "Bill mansookh karne ki wajah likhna zaroori hai — kam az kam 10 harf. Ye wajah hamesha ke liye darj rahegi.",
+    };
+  }
+  if (!actorId) return { error: "Login karein." };
+
+  const { data: me } = await service
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", actorId)
+    .maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin", "finance"].includes(me.role)) {
+    return {
+      error:
+        "Bill mansookh karne ka haq sirf Malik, Admin aur Finance ke paas hai — is se ledger ulta jata hai, aur wo maali kaam hai.",
+    };
+  }
+
+  const { data: bill } = await service
+    .from("machinery_bills")
+    .select("id, bill_number, gross_amount, vendor_payable")
+    .eq("booking_id", bookingId)
+    .is("cancelled_at", null)
+    .maybeSingle();
+  if (!bill) return { error: "Is booking par koi zinda bill nahi hai." };
+
+  const { data: booking } = await service
+    .from("machinery_bookings")
+    .select("id, booking_number, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  // Bill ke baad aane wala paisa. Aa chuka ho to bill akela mansookh
+  // karna adaigi ko hawa mein chhoR deta hai.
+  const { data: paid } = await service
+    .from("machinery_payments")
+    .select("id, amount")
+    .eq("booking_id", bookingId)
+    .eq("kind", "final");
+  const paidTotal = (paid ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+  if (paidTotal > 0) {
+    return {
+      error: `Is bill ke against Rs ${paidTotal.toLocaleString()} aa chuke hain — pehle wo adaigi ulti karni hogi (Audit Trail se), phir bill mansookh hoga.`,
+    };
+  }
+
+  // Ledger pehle. Us mein masla ho to bill ko haath nahi lagate --
+  // warna bill mansookh dikhta aur ledger abhi tak Rs 30,000 ka daawa
+  // kiye baitha hota.
+  const { data: entry } = await service
+    .from("journal_entries")
+    .select("id, entry_number")
+    .eq("source_module", "machinery_bill")
+    .eq("source_id", bookingId)
+    .eq("is_reversal", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let reversalNumber: string | null = null;
+  if (entry) {
+    const reversed = await reverseJournal(entry.id, `Bill ${bill.bill_number} mansookh: ${reason}`, actorId);
+    if ("error" in reversed) {
+      return { error: `Ledger nahi ulta ja saka, is liye bill bhi mansookh nahi kiya: ${reversed.error}` };
+    }
+    reversalNumber = reversed.entryNumber;
+  }
+
+  // Bill par nishan. Hisaab ke khane chhoote nahi -- 192 ka guard sirf
+  // usi soorat mein guzarne deta hai jab wo waise ke waise hon.
+  const { error: markError } = await service
+    .from("machinery_bills")
+    .update({
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: actorId,
+      cancelled_reason: reason,
+    })
+    .eq("id", bill.id);
+  if (markError) return { error: `Bill par mansookhi ka nishan nahi laga: ${markError.message}` };
+
+  // Booking wahin wapas jati hai jahan bill se pehle thi.
+  const { data: made } = await service
+    .from("machinery_booking_events")
+    .select("from_status")
+    .eq("booking_id", bookingId)
+    .eq("event_type", "bill_generated")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const backTo = made?.from_status ?? "bill_pending";
+
+  await service
+    .from("machinery_bookings")
+    .update({
+      // total_amount khali (null) hota hai, sifar nahi -- ab koi bill
+      // hai hi nahi. Sifar likhna "bill hai aur wo sifar ka hai" kehta.
+      // commission aur vendor ka hissa khali nahi rakhe ja sakte
+      // (column NOT NULL hai), is liye wo sifar par jate hain -- aur wo
+      // sach bhi hai: mansookh bill par kisi ka kuch nahi banta.
+      total_amount: null,
+      commission_amount: 0,
+      vendor_payable: 0,
+    })
+    .eq("id", bookingId);
+
+  await logEvent({
+    bookingId,
+    eventType: "bill_cancelled",
+    fromStatus: booking.status,
+    toStatus: backTo,
+    note: `${bill.bill_number} mansookh (Rs ${Number(bill.gross_amount).toLocaleString()})${
+      reversalNumber ? ` — ledger ulta: ${reversalNumber}` : ""
+    }: ${reason}`,
+    actorId,
+  });
+
+  await logAudit({
+    actionType: "update",
+    module: "machinery_bill_cancel",
+    recordId: bill.id,
+    recordLabel: bill.bill_number,
+    description: `Bill ${bill.bill_number} (booking ${booking.booking_number}) mansookh${
+      reversalNumber ? `, ledger ulta ${reversalNumber}` : ""
+    }: ${reason}`,
+  });
+
+  revalidateAll(bookingId);
+  return {
+    success: true,
+    notice: `Bill ${bill.bill_number} mansookh ho gaya${
+      reversalNumber ? ` aur ledger ulta ja chuka hai (${reversalNumber})` : ""
+    }. Ab rate theek kar ke kisan se dobara tasdeeq lein, phir naya bill banayein.`,
+  };
 }
 
 // =====================================================================

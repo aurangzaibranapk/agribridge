@@ -18,6 +18,7 @@ import {
   clearPaymentPromise,
   recordWorkCompletion,
   generateFinalBill,
+  cancelFinalBill,
   recordFinalPayment,
   cancelBooking,
   type ActionState,
@@ -385,6 +386,41 @@ export function BookingDetail({
                     Kisan ki tasdeeq ke baghair manager ne aage barhaya. Wajah: {booking.confirmation_override_reason}
                   </p>
                 )}
+                {/* Rate theek karne ka raasta.
+                    Pehle ye khana tasdeeq ke baad bilkul band ho jata
+                    tha. Ghalat rate likha jana koi anokhi baat nahi --
+                    aur jab safhe par raasta na ho to log database tak
+                    jate hain, yani theek us jagah jahan koi rok nahi.
+                    Raasta khula hai magar chupke se nahi: naya rate
+                    bhejte hi purani tasdeeq khatam ho jati hai aur
+                    kisan se dobara haan leni parti hai (192). */}
+                {bill ? (
+                  <p className="mt-3 border-t border-brand-200 pt-2 text-xs text-surface-600 dark:border-brand-900/40 dark:text-surface-300">
+                    Rate theek karna ho to pehle bill {bill.bill_number} mansookh karein — neeche Bill wale khane mein.
+                  </p>
+                ) : (
+                  <details className="mt-3 border-t border-brand-200 pt-2 dark:border-brand-900/40">
+                    <summary className="cursor-pointer text-xs font-medium text-brand-700 hover:underline dark:text-brand-300">
+                      Rate ghalat likha gaya? Theek karein
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                        Naya rate bhejte hi upar wali tasdeeq khatam ho jayegi — kisan se dobara haan leni hogi. Jo
+                        tasdeeq abhi darj hai wo timeline par apni jagah rahegi.
+                      </p>
+                      <RateConfirmationForm
+                        bookingId={booking.id}
+                        defaultRate={booking.final_rate ?? booking.estimated_rate}
+                        harvestType={booking.harvest_type}
+                        sabitArea={booking.sabit_area}
+                        kutraArea={booking.kutra_area}
+                        totalArea={booking.harvest_area}
+                        defaultSabitRate={booking.sabit_rate}
+                        defaultKutraRate={booking.kutra_rate}
+                      />
+                    </div>
+                  </details>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -624,6 +660,7 @@ export function BookingDetail({
                     Rs {(balance ?? 0).toLocaleString()}
                   </span>
                 </div>
+                <CancelBillForm bookingId={booking.id} billNumber={bill.bill_number} paid={finalPaid} />
               </div>
             ) : (
               workFinished && <BillForm bookingId={booking.id} />
@@ -1947,6 +1984,64 @@ function BillForm({ bookingId }: { bookingId: string }) {
       </p>
       <Submit label={t("mc_make_bill", lang)} />
     </form>
+  );
+}
+
+/**
+ * Bill mansookh karna.
+ *
+ * Ye khana jaan boojh kar band (details) rakha gaya hai aur bill ke
+ * hisaab ke NEECHE hai. Wajah ye ke ye roz ka kaam nahi -- roz ka kaam
+ * bill par paisa lena hai. Mansookhi ka button barabar mein khula khara
+ * ho to kisi din wo ghalti se dab jayega.
+ *
+ * Wajah likhna lazmi hai aur wo hamesha ke liye darj rehti hai. Sirf
+ * "theek karna tha" kaafi nahi -- kal jab koi ye qatar dekhega, usay
+ * ye maloom hona chahiye ke Rs 30,000 ka bill kyun ulta gaya.
+ */
+function CancelBillForm({ bookingId, billNumber, paid }: { bookingId: string; billNumber: string; paid: number }) {
+  const [state, action] = useFormState(cancelFinalBill, initialState);
+
+  // Paisa aa chuka ho to mansookhi ka sawal hi nahi banta. Rok server
+  // par bhi hai; yahan darwaza dikhana hi bemaani hai.
+  if (paid > 0) {
+    return (
+      <p className="mt-3 border-t border-surface-200 pt-2 text-xs text-surface-500 dark:border-surface-700">
+        Is bill par Rs {paid.toLocaleString()} aa chuke hain — bill mansookh karne se pehle wo adaigi Audit Trail se ulti
+        karni hogi.
+      </p>
+    );
+  }
+
+  return (
+    <details className="mt-3 border-t border-surface-200 pt-2 dark:border-surface-700">
+      <summary className="cursor-pointer text-xs font-medium text-red-600 hover:underline dark:text-red-400">
+        Bill ghalat ban gaya? Mansookh karein
+      </summary>
+      <form action={action} className="mt-3 space-y-3">
+        <Err state={state} />
+        <input type="hidden" name="booking_id" value={bookingId} />
+        <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          {billNumber} mansookh ho jayega aur us ka ledger ulta ja kar barabar ho jayega. Bill mitta nahi — wo mansookhi
+          ke nishan ke sath apni jagah rahega. Vendor ko is bill par kuch de diya gaya ho to wo hisaab alag se barabar
+          karna hoga.
+        </p>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
+            Wajah (kam az kam 10 harf) *
+          </label>
+          <textarea
+            name="reason"
+            required
+            minLength={10}
+            rows={2}
+            placeholder="Misal: rate Rs 14,000 hona tha, ghalti se Rs 15,000 likha gaya"
+            className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+          />
+        </div>
+        <Submit label="Bill mansookh karein" />
+      </form>
+    </details>
   );
 }
 

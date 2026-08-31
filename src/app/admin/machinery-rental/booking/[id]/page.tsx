@@ -61,7 +61,10 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       supabase.from("v_machinery_work_efficiency").select("*").eq("booking_id", id).maybeSingle(),
       supabase.from("machinery_bookings").select("booking_number").eq("parent_booking_id", id).maybeSingle(),
       supabase.from("machinery_work_records").select("*").eq("booking_id", id).order("work_date"),
-      supabase.from("machinery_bills").select("*").eq("booking_id", id).maybeSingle(),
+      // Mansookh bill safhe par bill ki jagah nahi leta (192) -- warna
+      // ek dafa ghalat bill ban jane ke baad safha hamesha usi ko
+      // dikhata rehta aur naya bill banane ka darwaza khulta hi nahi.
+      supabase.from("machinery_bills").select("*").eq("booking_id", id).is("cancelled_at", null).maybeSingle(),
       supabase.from("machinery_booking_events").select("*").eq("booking_id", id).order("created_at"),
       supabase
         .from("machinery_payment_reminders")
