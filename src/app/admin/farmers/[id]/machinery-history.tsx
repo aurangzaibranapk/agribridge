@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 /**
  * Is kisan ka machinery ka poora hisaab -- ek jagah.
@@ -13,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
  * adad.
  */
 export async function FarmerMachineryHistory({ farmerId }: { farmerId: string }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: bookings } = await supabase
@@ -48,13 +51,13 @@ export async function FarmerMachineryHistory({ farmerId }: { farmerId: string })
 
   return (
     <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Machinery</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("c_machinery", lang)}</h2>
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Kul bookings" value={String(cards.length)} />
-        <Stat label="Mukammal" value={String(done)} />
-        <Stat label="Chal rahi" value={String(open)} />
-        <Stat label="Kisan ke zimme" value={`Rs ${outstanding.toLocaleString()}`} tone={outstanding > 0 ? "red" : "green"} />
+        <Stat label={t("fp_total_bookings", lang)} value={String(cards.length)} />
+        <Stat label={t("db_completed", lang)} value={String(done)} />
+        <Stat label={t("fp_in_progress", lang)} value={String(open)} />
+        <Stat label={t("fp_farmer_owes", lang)} value={`Rs ${outstanding.toLocaleString()}`} tone={outstanding > 0 ? "red" : "green"} />
       </div>
 
       <div className="space-y-2">

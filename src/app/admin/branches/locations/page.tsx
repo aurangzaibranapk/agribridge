@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { BranchLocationForm } from "./branch-location-form";
 import { MapPin } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function BranchLocationsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase
     .from("branches")
@@ -19,7 +22,7 @@ export default async function BranchLocationsPage() {
   return (
     <div>
       <PageHeader
-        title="Branch Locations (Hazri ke liye)"
+        title={t("bl_title", lang)}
         description="Har branch ki jagah darj karein, taake WhatsApp se lagne wali hazri ki tasdeeq ho sake."
       />
 
@@ -33,9 +36,9 @@ export default async function BranchLocationsPage() {
           <MapPin className="h-4 w-4" /> Location kaise nikalein
         </h3>
         <ol className="list-inside list-decimal space-y-1 text-sm text-surface-600 dark:text-surface-400">
-          <li>Google Maps kholein aur apni branch dhoondein</li>
-          <li>Branch ki jagah par ungli daba kar rakhein (ya right-click karein)</li>
-          <li>Do number nazar aayenge, jaise <span className="font-mono text-xs">31.4504, 73.1350</span></li>
+          <li>{t("bl_step_open_maps", lang)}</li>
+          <li>{t("bl_step_long_press", lang)}</li>
+          <li>{t("bl_step_two_numbers", lang)}<span className="font-mono text-xs">31.4504, 73.1350</span></li>
           <li>Pehla number Latitude, doosra Longitude — neeche bhar dein</li>
         </ol>
         <p className="mt-2 text-xs text-surface-500">

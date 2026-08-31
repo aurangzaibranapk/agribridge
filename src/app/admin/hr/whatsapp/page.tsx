@@ -3,6 +3,8 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import Link from "next/link";
 import { Check, AlertTriangle, Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ const STAFF_ROLES = [
 ];
 
 export default async function StaffWhatsAppPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: profiles } = await supabase
@@ -47,40 +50,39 @@ export default async function StaffWhatsAppPage() {
   return (
     <div>
       <PageHeader
-        title="Staff WhatsApp Pehchan"
+        title={t("sw_title", lang)}
         description="WhatsApp se hazri lagane ke liye har staff ka phone aur CNIC darj hona zaroori hai."
       />
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Check className="h-3.5 w-3.5 text-green-600" /> Tasdeeq ho chuki</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Check className="h-3.5 w-3.5 text-green-600" />{t("sw_verified", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{verifiedCount}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5 text-amber-600" /> Tayyar, intezar mein</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5 text-amber-600" />{t("sw_ready_waiting", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{readyCount}</p>
-          <p className="text-xs text-surface-500">Staff ko sirf WhatsApp par message karna hai</p>
+          <p className="text-xs text-surface-500">{t("sw_just_message", lang)}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-red-500" /> Data adhoora</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-red-500" />{t("sw_data_missing", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{missingCount}</p>
-          <p className="text-xs text-surface-500">Phone ya CNIC bharna baqi</p>
+          <p className="text-xs text-surface-500">{t("sw_phone_cnic_pending", lang)}</p>
         </Card>
       </div>
 
       <div className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
-        Tareeqa: HR page par staff ka <strong>phone</strong> aur <strong>CNIC</strong> bharein. Phir wo staff apne usi number se WhatsApp par
-        koi bhi message bhejay — system CNIC ke aakhri 6 hindse poochhega, aur sahi jawab par number hamesha ke liye jur jayega.
+        {t("sw_how_it_works", lang)}
       </div>
 
       <Card className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Naam</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Role</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Phone</th>
-              <th className="px-3 py-2 font-medium text-surface-500">CNIC</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_name", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_role", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_phone", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_cnic", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">WhatsApp</th>
             </tr>
           </thead>
@@ -89,15 +91,15 @@ export default async function StaffWhatsAppPage() {
               <tr key={r.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                 <td className="px-3 py-2 text-surface-900 dark:text-white">{r.full_name}</td>
                 <td className="px-3 py-2 text-surface-500">{r.role.replace(/_/g, " ")}</td>
-                <td className="px-3 py-2 font-mono text-xs text-surface-600 dark:text-surface-400">{r.phone ?? <span className="text-red-500">nahi hai</span>}</td>
-                <td className="px-3 py-2">{r.hasCnic ? <span className="text-green-600">✓</span> : <span className="text-red-500">nahi hai</span>}</td>
+                <td className="px-3 py-2 font-mono text-xs text-surface-600 dark:text-surface-400">{r.phone ?? <span className="text-red-500">{t("sw_not_set", lang)}</span>}</td>
+                <td className="px-3 py-2">{r.hasCnic ? <span className="text-green-600">✓</span> : <span className="text-red-500">{t("sw_not_set", lang)}</span>}</td>
                 <td className="px-3 py-2">
                   {r.verified ? (
-                    <Badge tone="green">Jur gaya</Badge>
+                    <Badge tone="green">{t("sw_linked", lang)}</Badge>
                   ) : r.ready ? (
-                    <Badge tone="amber">Intezar mein</Badge>
+                    <Badge tone="amber">{t("sw_waiting", lang)}</Badge>
                   ) : (
-                    <Badge tone="red">Data adhoora</Badge>
+                    <Badge tone="red">{t("sw_data_missing", lang)}</Badge>
                   )}
                 </td>
               </tr>
@@ -107,8 +109,8 @@ export default async function StaffWhatsAppPage() {
       </Card>
 
       <p className="mt-3 text-sm text-surface-500">
-        Phone ya CNIC bharne ke liye <Link href="/admin/hr" className="text-brand-600 hover:underline">HR page</Link> par jayein.
-        Branch ki jagah <Link href="/admin/branches/locations" className="text-brand-600 hover:underline">yahan</Link> darj karein.
+        Phone ya CNIC bharne ke liye <Link href="/admin/hr" className="text-brand-600 hover:underline">{t("sw_hr_page", lang)}</Link> par jayein.
+        Branch ki jagah <Link href="/admin/branches/locations" className="text-brand-600 hover:underline">{t("sw_here", lang)}</Link> darj karein.
       </p>
     </div>
   );

@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { saveBranchLocation, type ActionState } from "@/actions/branches";
 import { MapPin, Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -16,6 +18,7 @@ interface Branch {
 
 export function BranchLocationForm({ branch }: { branch: Branch }) {
   const [state, formAction] = useFormState(saveBranchLocation, initialState);
+  const lang = useLang();
   const isSet = branch.latitude != null && branch.longitude != null;
 
   return (
@@ -41,11 +44,11 @@ export function BranchLocationForm({ branch }: { branch: Branch }) {
       </div>
 
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Mahfooz ho gaya.</p>}
+      {state.success && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("bl_saved", lang)}</p>}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div>
-          <label className="text-xs font-medium text-surface-600">Latitude</label>
+          <label className="text-xs font-medium text-surface-600">{t("bl_latitude", lang)}</label>
           <input
             name="latitude"
             defaultValue={branch.latitude ?? ""}
@@ -54,7 +57,7 @@ export function BranchLocationForm({ branch }: { branch: Branch }) {
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">Longitude</label>
+          <label className="text-xs font-medium text-surface-600">{t("bl_longitude", lang)}</label>
           <input
             name="longitude"
             defaultValue={branch.longitude ?? ""}
@@ -63,7 +66,7 @@ export function BranchLocationForm({ branch }: { branch: Branch }) {
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">Daira (meter)</label>
+          <label className="text-xs font-medium text-surface-600">{t("bl_radius", lang)}</label>
           <input
             name="attendance_radius_meters"
             type="number"
@@ -78,7 +81,7 @@ export function BranchLocationForm({ branch }: { branch: Branch }) {
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-surface-500">Dono khane khali chhoR kar mahfooz karein to jagah hat jayegi.</p>
+      <p className="mt-2 text-xs text-surface-500">{t("bl_clear_note", lang)}</p>
     </form>
   );
 }

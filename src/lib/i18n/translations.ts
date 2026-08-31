@@ -23,6 +23,7 @@ import { agriOrdersDict, agriOrdersMoreDict } from "./dict/agri-orders";
 import { hrJobsDict, adminFarmerDict, subscriptionDict } from "./dict/hr-jobs";
 import { miscAdminDict } from "./dict/misc-admin";
 import { statementsDict, opsPagesDict } from "./dict/statements";
+import { partnersDict, peoplePagesDict } from "./dict/partners";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -95,6 +96,8 @@ const dict = {
   ...opsPagesDict,
   ...reportsMoreDict,
   ...agriOrdersMoreDict,
+  ...partnersDict,
+  ...peoplePagesDict,
 };
 
 export type TranslationKey = keyof typeof dict;

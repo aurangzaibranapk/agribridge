@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { BranchForm } from "@/app/admin/branches/branch-form";
 import { BranchesListClient } from "@/app/admin/branches/branches-list-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBranchesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase
     .from("branches")
@@ -29,11 +32,11 @@ export default async function AdminBranchesPage() {
 
   return (
     <div>
-      <PageHeader title="Shops / Branches" description="Your physical shop locations" />
+      <PageHeader title={t("br_shops_branches", lang)} description="Your physical shop locations" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!branches || branches.length === 0 ? (
-            <EmptyState title="No shops yet" />
+            <EmptyState title={t("br_no_shops", lang)} />
           ) : (
             <BranchesListClient branches={branches} staffByBranch={staffByBranch} />
           )}
