@@ -32,6 +32,7 @@ import { siteAdminDict } from "./dict/site-admin";
 import { opsExtraDict } from "./dict/ops-extra";
 import { ownerToolsDict } from "./dict/owner-tools";
 import { machinerySlipDict } from "./dict/machinery-slip";
+import { branchOpsDict } from "./dict/branch-ops";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -115,6 +116,7 @@ const dict = {
   ...ownerToolsDict,
   ...grainDashDict,
   ...machinerySlipDict,
+  ...branchOpsDict,
 };
 
 export type TranslationKey = keyof typeof dict;

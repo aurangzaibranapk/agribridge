@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { ProduceOrderActions } from "@/app/admin/produce-orders/produce-order-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminProduceOrdersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawOrders } = await supabase
@@ -42,22 +45,22 @@ export default async function AdminProduceOrdersPage() {
 
   return (
     <div>
-      <PageHeader title="Produce Orders" description="Farmer produce sold to buyers - identity-masked on both sides" />
+      <PageHeader title={t("po_title", lang)} description="Farmer produce sold to buyers - identity-masked on both sides" />
       {orders.length === 0 ? (
-        <EmptyState title="No produce orders yet" />
+        <EmptyState title={t("po_none", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Order #</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Buyer</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Crop</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Qty</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Subtotal</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Commission</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Action</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("po_order_hash", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_buyer", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_crop", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_subtotal", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_commission", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>

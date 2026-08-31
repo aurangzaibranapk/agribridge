@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createDriver, updateDriverStatus, type ActionState } from "@/actions/drivers";
 import { Plus, X, Phone, Truck, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -25,13 +27,13 @@ interface Driver {
 
 export function DriversClient({ drivers }: { drivers: Driver[] }) {
   const [showAdd, setShowAdd] = useState(false);
+  const lang = useLang();
 
   return (
     <div>
       <div className="mb-4 flex justify-end">
         <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" /> Naya Driver Add Karein
-        </button>
+          <Plus className="h-4 w-4" />{t("dr_add_new", lang)}</button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,11 +59,10 @@ export function DriversClient({ drivers }: { drivers: Driver[] }) {
               </div>
             )}
             <Link href={`/admin/drivers/${d.id}/statement`} className="mt-2 flex items-center gap-1 text-xs text-brand-600 hover:underline">
-              <LinkIcon className="h-3 w-3" /> Statement Dekhein
-            </Link>
+              <LinkIcon className="h-3 w-3" />{t("dr_view_statement", lang)}</Link>
           </div>
         ))}
-        {drivers.length === 0 && <p className="col-span-full py-10 text-center text-sm text-surface-400">Koi driver register nahi hai.</p>}
+        {drivers.length === 0 && <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("dr_none", lang)}</p>}
       </div>
 
       {showAdd && <AddDriverModal onClose={() => setShowAdd(false)} />}
@@ -84,25 +85,26 @@ function StatusToggle({ driverId, isActive }: { driverId: string; isActive: bool
 
 function AddDriverModal({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useFormState(createDriver, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Naya Driver Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("dr_add_new", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <input name="full_name" required placeholder="Driver Naam" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="mobile_number" placeholder="Mobile Number" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="cnic_number" placeholder="CNIC (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="license_number" placeholder="License Number (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="full_name" required placeholder={t("dr_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="mobile_number" placeholder={t("c_mobile_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="cnic_number" placeholder={t("c_cnic_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="license_number" placeholder={t("dr_license", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div className="border-t border-surface-100 pt-2">
-            <p className="mb-1 text-xs font-medium text-surface-500">Vehicle (optional, abhi ya baad mein add kar sakte hain)</p>
-            <input name="vehicle_number" placeholder="Vehicle No" className="mb-2 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-            <input name="vehicle_type" placeholder="Vehicle Type (Truck/Van/etc)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <p className="mb-1 text-xs font-medium text-surface-500">{t("dr_vehicle_optional", lang)}</p>
+            <input name="vehicle_number" placeholder={t("dr_vehicle_no", lang)} className="mb-2 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="vehicle_type" placeholder={t("dr_vehicle_type", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <SubmitButton />
         </form>

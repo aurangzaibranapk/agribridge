@@ -3,6 +3,8 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { ImportForm, BookLineForm } from "./bank-client";
 import { bankComparison, unmatchedBankLines } from "@/lib/ledger/handover";
 import { AlertTriangle, CheckCircle2, Landmark } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ function rs(value: number): string {
 }
 
 export default async function BankReconcilePage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -24,9 +27,7 @@ export default async function BankReconcilePage() {
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
     return (
-      <div className="p-8 text-center text-surface-400">
-        Ye safha sirf Finance aur Admin ke liye hai — bank statement wohi dekhte hain.
-      </div>
+      <div className="p-8 text-center text-surface-400">{t("br_only_finance", lang)}</div>
     );
   }
 
@@ -42,7 +43,7 @@ export default async function BankReconcilePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Bank se Milaan"
+        title={t("br_title", lang)}
         description="Bank kabhi ghalat nahi hota — wo paisa asal mein rakhta hai. Farq hamesha hamari taraf hota hai."
       />
 
@@ -74,19 +75,19 @@ export default async function BankReconcilePage() {
             </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg border border-surface-200 px-3 py-2 dark:border-surface-800">
-                <p className="text-xs text-surface-500">Bank ke mutabiq</p>
+                <p className="text-xs text-surface-500">{t("br_per_bank", lang)}</p>
                 <p className="mt-0.5 font-medium tabular-nums text-surface-900 dark:text-white">
                   {rs(compare.perBank)}
                 </p>
               </div>
               <div className="rounded-lg border border-surface-200 px-3 py-2 dark:border-surface-800">
-                <p className="text-xs text-surface-500">Hamare khate ke mutabiq</p>
+                <p className="text-xs text-surface-500">{t("br_per_our_books", lang)}</p>
                 <p className="mt-0.5 font-medium tabular-nums text-surface-900 dark:text-white">
                   {rs(compare.perBooks)}
                 </p>
               </div>
               <div className="rounded-lg border border-surface-200 px-3 py-2 dark:border-surface-800">
-                <p className="text-xs text-surface-500">Farq</p>
+                <p className="text-xs text-surface-500">{t("br_difference", lang)}</p>
                 <p
                   className={`mt-0.5 font-medium tabular-nums ${
                     compare.difference === 0
@@ -110,8 +111,7 @@ export default async function BankReconcilePage() {
 
       {compare.accounts.length > 1 && (
         <Card className="p-4">
-          <p className="text-xs text-surface-600 dark:text-surface-400">
-            Milaan sab banks ka <strong>mila kar</strong> hai, har bank ka alag nahi — kyunki ledger mein
+          <p className="text-xs text-surface-600 dark:text-surface-400">{t("br_all_banks", lang)}<strong>{t("br_matched_with", lang)}</strong> hai, har bank ka alag nahi — kyunki ledger mein
             teenon banks ek hi khate (1010) mein jate hain. Har bank ka apna adad chahiye to har account
             ko apna GL khata dena parega.
           </p>
@@ -134,16 +134,13 @@ export default async function BankReconcilePage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_1fr]">
         <Card className="p-4">
           <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-            <Landmark className="h-4 w-4" /> Statement daalein
-          </h2>
+            <Landmark className="h-4 w-4" />{t("br_paste_statement", lang)}</h2>
           <ImportForm accounts={accounts} />
         </Card>
 
         <Card className="overflow-hidden">
           <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-            <h2 className="text-sm font-semibold text-surface-900 dark:text-white">
-              Bank ke paas hain, hamare khate mein nahi
-            </h2>
+            <h2 className="text-sm font-semibold text-surface-900 dark:text-white">{t("br_bank_only", lang)}</h2>
             <p className="mt-0.5 text-xs text-surface-500">
               Bank charges, munafa, ya koi adaigi jo kisi ne likhi hi nahi. In ko &quot;chhota sa hai&quot;
               keh kar chhorna hi wo tareeqa hai jis se bank aur khata dheere dheere alag hote chale jate
@@ -151,9 +148,7 @@ export default async function BankReconcilePage() {
             </p>
           </div>
           {unmatched.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-green-700 dark:text-green-400">
-              Bank ki har qatar hamare khate mein maujood hai.
-            </p>
+            <p className="px-4 py-6 text-center text-sm text-green-700 dark:text-green-400">{t("br_all_matched", lang)}</p>
           ) : (
             <ul className="divide-y divide-surface-100 dark:divide-surface-800">
               {unmatched.map((l) => (

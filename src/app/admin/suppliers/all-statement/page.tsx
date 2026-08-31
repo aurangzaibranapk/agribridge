@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import Link from "next/link";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,7 @@ export default async function AllSuppliersStatementPage({
   searchParams: Promise<{ start?: string; end?: string }>;
 }) {
   const sp = await searchParams;
+  const lang = getLanguageFromCookies("rm");
   const now = new Date();
   const defaultStart = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10);
   const startDate = sp.start ?? defaultStart;
@@ -55,25 +58,25 @@ export default async function AllSuppliersStatementPage({
 
   return (
     <div>
-      <PageHeader title="Sab Suppliers - Statement" description="Ek sath sab suppliers ka purchases/payments overview" />
+      <PageHeader title={t("sa_title", lang)} description="Ek sath sab suppliers ka purchases/payments overview" />
 
       <form className="mb-4 flex items-center gap-2 print:hidden">
         <input type="date" name="start" defaultValue={startDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <input type="date" name="end" defaultValue={endDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
-        <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">View</button>
+        <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_view", lang)}</button>
       </form>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-400">Total Purchases</p>
+          <p className="text-xs text-surface-400">{t("c_total_purchases", lang)}</p>
           <p className="font-display text-xl font-bold text-red-600">Rs {totalPurchases.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="text-xs text-surface-400">Total Payments</p>
+          <p className="text-xs text-surface-400">{t("c_total_payments", lang)}</p>
           <p className="font-display text-xl font-bold text-green-600">Rs {totalPayments.toLocaleString()}</p>
         </div>
         <div className="rounded-card border border-amber-200 bg-amber-50 p-4 text-center">
-          <p className="text-xs text-amber-500">Net Payable</p>
+          <p className="text-xs text-amber-500">{t("sa_net_payable", lang)}</p>
           <p className="font-display text-xl font-bold text-amber-700">Rs {(totalPurchases - totalPayments).toLocaleString()}</p>
         </div>
       </div>
@@ -82,10 +85,10 @@ export default async function AllSuppliersStatementPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Supplier</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Purchases</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Payments</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Balance</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_supplier", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("sa_purchases", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("sa_payments", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500"></th>
             </tr>
           </thead>
@@ -97,14 +100,12 @@ export default async function AllSuppliersStatementPage({
                 <td className="px-3 py-2 text-right text-green-600">Rs {r.payments.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {(r.purchases - r.payments).toLocaleString()}</td>
                 <td className="px-3 py-2">
-                  <Link href={`/admin/suppliers/${r.id}/statement?start=${startDate}&end=${endDate}`} className="text-xs font-medium text-brand-600 hover:underline">
-                    Detail Dekhein
-                  </Link>
+                  <Link href={`/admin/suppliers/${r.id}/statement?start=${startDate}&end=${endDate}`} className="text-xs font-medium text-brand-600 hover:underline">{t("sa_view_detail", lang)}</Link>
                 </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">Is period mein koi transaction nahi hai.</td></tr>
+              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">{t("c_no_tx_period", lang)}</td></tr>
             )}
           </tbody>
         </table>
