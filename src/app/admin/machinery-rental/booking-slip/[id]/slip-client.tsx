@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { emailMachineryBookingSlip, type ActionState } from "@/actions/machinery-rental";
 import { Printer, MessageCircle, Mail, ArrowLeft, X } from "lucide-react";
+import { ArtLogo } from "@/components/brand/art-logo";
 
 const initialState: ActionState = {};
 
@@ -104,11 +105,19 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             banda poori parchi parh kar neeche pahunchta hai. */}
         <div className="mb-6 border-b-2 border-brand-600 pb-4">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-bold tracking-tight text-surface-900">Al Rana Traders</h1>
-              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-brand-700">
-                {slip.isFinal ? "Machinery — Final Bill" : t("mc_slip_title", lang)}
-              </p>
+            {/* Wohi nishan jo website par lagta hai -- ek hi jagah se
+                aata hai (components/brand/art-logo), naqal nahi. Kisan
+                ke haath mein jane wale kaghaz par idare ka nishan pehli
+                cheez hai jo usay batati hai ke ye kaghaz kis ka hai. */}
+            <div className="flex items-center gap-3">
+              <ArtLogo width={48} />
+              <div>
+                <h1 className="font-display text-2xl font-bold tracking-tight text-surface-900">Al Rana Traders</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#A9791A]">ART AgriBridge</p>
+                <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brand-700">
+                  {slip.isFinal ? "Machinery — Final Bill" : t("mc_slip_title", lang)}
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <p className="font-mono text-base font-semibold tabular-nums text-surface-900">
