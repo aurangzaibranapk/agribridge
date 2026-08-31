@@ -5,10 +5,13 @@ import Link from "next/link";
 import { ApplicationDetailButton } from "./application-detail";
 import { DeleteApplicationButton } from "./delete-application-button";
 import { IdCard } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminJobApplicationsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
   const { data: rawApplications } = await supabase
@@ -52,7 +55,7 @@ export default async function AdminJobApplicationsPage() {
   return (
     <div>
       <PageHeader
-        title="Job Applications"
+        title={t("ja_title", lang)}
         description="Documents check -> Interview -> Score -> Offer"
         actions={
           <Link href="/admin/hr-dashboard" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
@@ -61,17 +64,17 @@ export default async function AdminJobApplicationsPage() {
         }
       />
       {applications.length === 0 ? (
-        <EmptyState title="No applications yet" />
+        <EmptyState title={t("ja_none_yet", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Name</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Vacancy</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Contact</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Status</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("ja_vacancy", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("fp_contact", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -85,7 +88,7 @@ export default async function AdminJobApplicationsPage() {
                     <div className="flex items-center gap-1">
                       <ApplicationDetailButton application={a} branches={branches ?? []} />
                       {a.status === "joined" && a.created_profile_id && (
-                        <Link href={`/admin/hr/id-card/${a.created_profile_id}`} title="ID Card" className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-50">
+                        <Link href={`/admin/hr/id-card/${a.created_profile_id}`} title={t("ja_id_card", lang)} className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-50">
                           <IdCard className="h-3.5 w-3.5" />
                         </Link>
                       )}

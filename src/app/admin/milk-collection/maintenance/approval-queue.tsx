@@ -8,6 +8,8 @@ import {
 } from "@/actions/maintenance";
 import { MAINT_COMMENT_MAX } from "@/lib/maintenance-rules";
 import { CheckCircle2, ShieldCheck, X, Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -51,11 +53,11 @@ export function ApprovalQueue({
   canVerify: boolean;
   canApprove: boolean;
 }) {
+  const lang = useLang();
+
   if (rows.length === 0) {
     return (
-      <div className="rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400 dark:border-surface-800 dark:bg-surface-900">
-        Koi maintenance faisle ke intezar mein nahi.
-      </div>
+      <div className="rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400 dark:border-surface-800 dark:bg-surface-900">{t("mc_no_pending_maintenance", lang)}</div>
     );
   }
 
@@ -100,10 +102,10 @@ export function ApprovalQueue({
           {row.status === "branch_verified" && canApprove && <StepForm id={row.id} step="final" />}
 
           {row.status === "pending" && !canVerify && (
-            <p className="mt-2 text-xs text-surface-400">Branch manager ke faisle ka intezar hai.</p>
+            <p className="mt-2 text-xs text-surface-400">{t("mc_waiting_branch_manager", lang)}</p>
           )}
           {row.status === "branch_verified" && !canApprove && (
-            <p className="mt-2 text-xs text-surface-400">Milk manager ki aakhri manzoori ka intezar hai.</p>
+            <p className="mt-2 text-xs text-surface-400">{t("mc_waiting_milk_manager", lang)}</p>
           )}
         </div>
       ))}
@@ -112,6 +114,7 @@ export function ApprovalQueue({
 }
 
 function StepForm({ id, step }: { id: string; step: "branch" | "final" }) {
+  const lang = useLang();
   const [state, action] = useFormState(
     step === "branch" ? branchVerifyMaintenance : approveMaintenance,
     initial
@@ -142,7 +145,7 @@ function StepForm({ id, step }: { id: string; step: "branch" | "final" }) {
         <input type="hidden" name="maintenance_id" value={id} />
         <input
           name="rejection_reason"
-          placeholder="Rad karne ki wajah"
+          placeholder={t("c_reject_reason", lang)}
           className="flex-1 rounded-lg border border-surface-200 p-1.5 text-xs"
         />
         <RejectButton />

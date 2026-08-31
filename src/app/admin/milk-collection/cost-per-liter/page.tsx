@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
 import { AlertTriangle, Droplet } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,7 @@ export default async function CostPerLiterPage({
   searchParams: Promise<{ month?: string; year?: string; branch_id?: string }>;
 }) {
   const params = await searchParams;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -29,7 +32,7 @@ export default async function CostPerLiterPage({
     : { data: null };
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha aap ke liye nahi hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("mc_not_for_you", lang)}</div>;
   }
 
   const now = new Date();
@@ -48,14 +51,14 @@ export default async function CostPerLiterPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Fi Litre Kharcha"
+        title={t("mc_cost_per_litre", lang)}
         description="Ek litre doodh chiller tak lane aur thanda rakhne mein kitna lagta hai."
       />
 
       <Card className="p-3">
         <form className="flex flex-wrap items-end gap-3" method="get">
           <div>
-            <label className="text-xs text-surface-500">Mahina</label>
+            <label className="text-xs text-surface-500">{t("mc_month", lang)}</label>
             <select name="month" defaultValue={month} className="mt-1 rounded-lg border border-surface-200 p-2 text-sm">
               {MONTHS.map((m, i) => (
                 <option key={m} value={i + 1}>
@@ -65,7 +68,7 @@ export default async function CostPerLiterPage({
             </select>
           </div>
           <div>
-            <label className="text-xs text-surface-500">Saal</label>
+            <label className="text-xs text-surface-500">{t("mc_year", lang)}</label>
             <input
               name="year"
               type="number"
@@ -74,13 +77,13 @@ export default async function CostPerLiterPage({
             />
           </div>
           <div>
-            <label className="text-xs text-surface-500">Branch</label>
+            <label className="text-xs text-surface-500">{t("c_branch", lang)}</label>
             <select
               name="branch_id"
               defaultValue={branchId ?? ""}
               className="mt-1 rounded-lg border border-surface-200 p-2 text-sm"
             >
-              <option value="">Sab</option>
+              <option value="">{t("pd_all_categories", lang)}</option>
               {(branches ?? []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -104,16 +107,16 @@ export default async function CostPerLiterPage({
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kisanon ko diya</p>
+          <p className="text-xs text-surface-500">{t("mc_paid_to_farmers", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{rs(sheet.milkPurchase)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Chalane ka kharcha</p>
+          <p className="text-xs text-surface-500">{t("mc_running_cost", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-amber-600">{rs(sheet.runningCost)}</p>
-          <p className="text-xs text-surface-400">doodh ke daam ke ilawa</p>
+          <p className="text-xs text-surface-400">{t("mc_besides_milk_price", lang)}</p>
         </Card>
         <Card className="p-4 ring-2 ring-brand-500">
-          <p className="text-xs text-surface-500">Fi litre chalane ka kharcha</p>
+          <p className="text-xs text-surface-500">{t("mc_running_per_litre", lang)}</p>
           <p className="mt-1 text-2xl font-bold text-brand-700 dark:text-brand-400">
             {sheet.perLiterRunning == null ? "—" : `Rs ${(Math.round(sheet.perLiterRunning * 100) / 100).toFixed(2)}`}
           </p>
@@ -141,10 +144,10 @@ export default async function CostPerLiterPage({
         <table className="w-full min-w-[560px] text-sm">
           <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
             <tr>
-              <th className="px-4 py-2 font-medium">Kharcha</th>
-              <th className="px-4 py-2 font-medium">Kahan se</th>
-              <th className="px-4 py-2 text-right font-medium">Raqam</th>
-              <th className="px-4 py-2 text-right font-medium">Fi litre</th>
+              <th className="px-4 py-2 font-medium">{t("mc_expense", lang)}</th>
+              <th className="px-4 py-2 font-medium">{t("mc_from_where", lang)}</th>
+              <th className="px-4 py-2 text-right font-medium">{t("sb_amount", lang)}</th>
+              <th className="px-4 py-2 text-right font-medium">{t("mc_per_litre", lang)}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">

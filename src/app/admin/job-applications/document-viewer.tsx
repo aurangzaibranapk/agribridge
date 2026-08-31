@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Eye, EyeOff, Download, Layers } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface DocItem {
   label: string;
@@ -9,6 +11,7 @@ interface DocItem {
 
 export function DocumentViewer({ documents }: { documents: DocItem[] }) {
   const [openLabel, setOpenLabel] = useState<string | null>(null);
+  const lang = useLang();
   const [viewAll, setViewAll] = useState(false);
 
   if (documents.length === 0) return null;
@@ -40,7 +43,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-surface-400">Documents</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-surface-400">{t("c_documents", lang)}</p>
         <div className="flex gap-1.5">
           <button
             onClick={() => { setViewAll(!viewAll); setOpenLabel(null); }}
@@ -63,7 +66,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
             >
               {openLabel === doc.label ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />} {doc.label}
             </button>
-            <a href={doc.url} download={doc.label} className="rounded-lg border border-surface-200 p-1 text-surface-500 hover:bg-surface-50" title="Download">
+            <a href={doc.url} download={doc.label} className="rounded-lg border border-surface-200 p-1 text-surface-500 hover:bg-surface-50" title={t("c_download", lang)}>
               <Download className="h-3 w-3" />
             </a>
           </div>

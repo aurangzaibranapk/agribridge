@@ -3,10 +3,13 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { MaintenanceClient } from "./maintenance-client";
 import { ApprovalQueue, type PendingMaintenance } from "./approval-queue";
 import { Card } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaintenancePage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawVehicles } = await supabase
@@ -105,7 +108,7 @@ export default async function MaintenancePage() {
   return (
     <div>
       <PageHeader
-        title="Fleet & Maintenance"
+        title={t("mc_fleet_title", lang)}
         description="Oil ki yaad dihani, do qadam ki manzoori, aur gaari badalne ka fund."
       />
 

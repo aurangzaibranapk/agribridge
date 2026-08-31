@@ -27,6 +27,7 @@ import { partnersDict, peoplePagesDict } from "./dict/partners";
 import { financeGrainDict } from "./dict/finance-grain";
 import { catalogUsersDict } from "./dict/catalog-users";
 import { approvalsDict } from "./dict/approvals";
+import { aiMasterDict } from "./dict/ai-master";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -104,6 +105,7 @@ const dict = {
   ...financeGrainDict,
   ...catalogUsersDict,
   ...approvalsDict,
+  ...aiMasterDict,
 };
 
 export type TranslationKey = keyof typeof dict;

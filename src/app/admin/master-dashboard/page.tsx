@@ -3,12 +3,15 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
 import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-context";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MasterDashboardPage() {
   const supabase = createClient();
   const businessContext = await getBusinessContext();
+  const lang = getLanguageFromCookies("rm");
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
@@ -160,7 +163,7 @@ export default async function MasterDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Master Dashboard"
+        title={t("md_title", lang)}
         description={
           businessContext === "master"
             ? "Poora business ek nazar mein - box par click karein, neeche graph khulega"
@@ -203,7 +206,7 @@ export default async function MasterDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Revenue</p>
+              <p className="text-xs text-surface-400">{t("md_total_revenue", lang)}</p>
               <p className="font-display text-lg font-semibold text-green-600">Rs {totalRevenue.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `AgriBridge: Rs ${agriRevenue.toLocaleString()}`}
@@ -212,7 +215,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Expenses</p>
+              <p className="text-xs text-surface-400">{t("md_total_expenses", lang)}</p>
               <p className="font-display text-lg font-semibold text-red-600">Rs {totalAllExpenses.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `Company: Rs ${totalExpenses.toLocaleString()}`}
@@ -221,7 +224,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className={`rounded-lg p-3 text-center ${netProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-              <p className="text-xs text-surface-400">Net Profit/Loss</p>
+              <p className="text-xs text-surface-400">{t("md_net_pl", lang)}</p>
               <p className={`font-display text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>Rs {netProfit.toLocaleString()}</p>
             </div>
           </div>
