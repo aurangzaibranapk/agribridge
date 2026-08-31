@@ -1339,10 +1339,34 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
-    .select("id, booking_number, vendor_id")
+    .select("id, booking_number, vendor_id, machine_id")
     .eq("id", bookingId)
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
+
+  // ART ka diesel: wapas aayega ya nahi -- ye sawal CHUP CHAAP tay nahi
+  // hota.
+  //
+  // Pehle yahan sirf itna likha tha: vendor maloom hai to wapas aayega,
+  // warna nahi. Us ka nateeja ye nikla ke ek hi sekind ka farq Rs 11,370
+  // ka faisla kar gaya -- MB-2026-00002 par diesel machine bhejne se
+  // PANDRA SEKIND pehle darj hua, us waqt booking par vendor likha hi
+  // nahi tha, is liye us raqam par hamesha ke liye "hamara apna kharcha"
+  // ka nishan lag gaya. Machine agle sekind bheji gayi, vendor aa gaya,
+  // magar us raqam ko koi dobara nahi dekhta.
+  //
+  // Malik ka usool saaf hai: "ART jo diesel dega wo wapas milega hi
+  // milega -- usay udhaar samjhein." To jab tak ye maloom na ho ke wo
+  // udhaar KIS PAR hai, raqam darj hi nahi honi chahiye. Khali jagah
+  // ko "hamara kharcha" maan lena wohi purani ghalti hai: jis cheez ka
+  // faisla hua hi nahi, us ke saamne adad likh dena.
+  if (paidBy === "company" && !booking.vendor_id) {
+    return {
+      error: !booking.machine_id
+        ? "Pehle machine tay karein. Us ke baghair ye maloom nahi hota ke ART ka ye diesel kis vendor se wapas lena hai — aur bina us ke ye raqam ghalti se hamara apna kharcha ban jati hai."
+        : "Is booking par vendor darj nahi hai. ART ka diesel kis se wapas lena hai, ye tay kiye baghair darj nahi hota.",
+    };
+  }
 
   const { data: log, error } = await supabase
     .from("machinery_fuel_logs")
