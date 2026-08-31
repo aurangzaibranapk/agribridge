@@ -330,3 +330,60 @@ export const milkPageDict = {
   mk_today: { en: "Today", rm: "Aaj", ur: "آج" },
   mk_todays_entries: { en: "Today's entries", rm: "Aaj ki entries", ur: "آج کی انٹریاں" },
 } as const;
+
+/**
+ * Doodh wali motorcycle ka petrol.
+ *
+ * "Expected KM/Liter" is liye poochha jata hai ke asal khapat us se
+ * mila kar dekhi ja sake. Wo adad na ho to har entry theek lagti hai --
+ * aur wohi cheez pakarni thi jab gaari se ziyada tel nikalne lage.
+ *
+ * "Margin" ka khana jaan boojh kar alag hai. Official rate wo hai jo
+ * pump par likha hai; margin hamara apna hai. Dono ko ek hi khane mein
+ * mila dena us din pakRa nahi jata jab pump ka rate badalta hai aur
+ * hamara nahi.
+ */
+export const milkFuelDict = {
+  mf_no_vehicle: { en: "No vehicle added yet.", rm: "Abhi koi gaari shamil nahi hui.", ur: "ابھی کوئی گاڑی شامل نہیں ہوئی۔" },
+  mf_km: { en: "KM", rm: "KM", ur: "کلومیٹر" },
+  mf_km_per_l: { en: "KM/L", rm: "KM/L", ur: "کلومیٹر فی لیٹر" },
+  mf_ok: { en: "OK", rm: "Theek", ur: "ٹھیک" },
+  mf_no_entry: { en: "No fuel entries yet.", rm: "Abhi koi tel ka indraj nahi.", ur: "ابھی کوئی تیل کا اندراج نہیں۔" },
+  mf_add_motorcycle: { en: "Add Motorcycle", rm: "Motorcycle shamil karein", ur: "موٹر سائیکل شامل کریں" },
+  mf_vehicle_name: { en: "Vehicle Name (e.g. Honda 70 — Red)", rm: "Gaari ka naam (misal: Honda 70 - laal)", ur: "گاڑی کا نام (مثال: ہونڈا 70 — لال)" },
+  mf_reg_no: { en: "Registration No. (optional)", rm: "Registration number (marzi se)", ur: "رجسٹریشن نمبر (مرضی سے)" },
+  mf_rider_name: { en: "Rider Name", rm: "Chalane wale ka naam", ur: "چلانے والے کا نام" },
+  mf_expected_kmpl: {
+    en: "Expected KM/Litre (what it normally does)",
+    rm: "Tawaqqo KM/litre (ye aam tor par kitna chalti hai)",
+    ur: "توقع KM/لیٹر (یہ عام طور پر کتنا چلتی ہے)",
+  },
+  mf_add_vehicle: { en: "Add Vehicle", rm: "Gaari shamil karein", ur: "گاڑی شامل کریں" },
+  mf_todays_rate: { en: "Today's Fuel Rate", rm: "Aaj ka tel ka rate", ur: "آج کا تیل کا ریٹ" },
+  mf_rate_note: {
+    en: "Enter the official rate only — the system adds the margin itself.",
+    rm: "Sirf official rate likhein -- margin nizam khud laga deta hai.",
+    ur: "صرف آفیشل ریٹ لکھیں — مارجن نظام خود لگا دیتا ہے۔",
+  },
+  mf_petrol_rate: { en: "Petrol Rate (Rs)", rm: "Petrol ka rate (Rs)", ur: "پٹرول کا ریٹ (روپے)" },
+  mf_diesel_rate: { en: "Diesel Rate (Rs)", rm: "Diesel ka rate (Rs)", ur: "ڈیزل کا ریٹ (روپے)" },
+  mf_margin: { en: "Margin (Rs) — added automatically", rm: "Margin (Rs) -- khud lag jayega", ur: "مارجن (روپے) — خود لگ جائے گا" },
+  mf_daily_log: { en: "Daily Fuel Log", rm: "Rozana tel ka indraj", ur: "روزانہ تیل کا اندراج" },
+  mf_log_saved: {
+    en: "Log saved — the amount was calculated automatically.",
+    rm: "Indraj mehfooz ho gaya -- raqam khud nikal aayi.",
+    ur: "اندراج محفوظ ہو گیا — رقم خود نکل آئی۔",
+  },
+  mf_opening_km: { en: "Opening KM", rm: "Shuru ka KM", ur: "شروع کا کلومیٹر" },
+  mf_closing_km: { en: "Closing KM", rm: "Aakhri KM", ur: "آخری کلومیٹر" },
+  mf_litres: { en: "Fuel Litres Purchased", rm: "Kitne litre tel liya", ur: "کتنے لیٹر تیل لیا" },
+  mf_cost_auto: {
+    en: "Cost is calculated from today's rate automatically.",
+    rm: "Kharcha aaj ke rate se khud nikal aayega.",
+    ur: "خرچہ آج کے ریٹ سے خود نکل آئے گا۔",
+  },
+  mf_route_name: { en: "Route Name (optional)", rm: "Route ka naam (marzi se)", ur: "روٹ کا نام (مرضی سے)" },
+  mf_milk_that_day: { en: "Milk Collected That Day (L)", rm: "Us din jama hua doodh (L)", ur: "اس دن جمع ہوا دودھ (لیٹر)" },
+  mf_odometer_photo: { en: "Odometer Photo (optional)", rm: "Meter ki tasveer (marzi se)", ur: "میٹر کی تصویر (مرضی سے)" },
+  mf_save_log: { en: "Save Log", rm: "Indraj mehfooz karein", ur: "اندراج محفوظ کریں" },
+} as const;

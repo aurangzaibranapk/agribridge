@@ -159,3 +159,41 @@ export const grainDict = {
   gr_record_payment: { en: "Record the Payment", rm: "Adaigi Record Karein", ur: "ادائیگی ریکارڈ کریں" },
   gr_rs_amount: { en: "Rs amount", rm: "Rs raqam", ur: "روپے رقم" },
 } as const;
+
+/**
+ * Anaj bechna -- alag fehrist, kyunke ye grain.ts ke asal kaam
+ * (kisan se anaj lena) ka ulta rukh hai.
+ *
+ * BARDANA AUR MAZDOORI JAAN BOOJH KAR ALAG RAKHE GAYE. Dono seedha
+ * nafe se katte hain, aur agar inhen ek hi khane mein mila diya jata to
+ * report se ye pata na chalta ke kis sale par bori mehngi paRi aur kis
+ * par ladai. Wohi do adad hain jin par mol tol hota hai.
+ */
+export const grainSaleDict = {
+  gs_sales_history: { en: "Sales History", rm: "Bikri ki tafseel", ur: "بکری کی تفصیل" },
+  gs_grain: { en: "Grain", rm: "Anaj", ur: "اناج" },
+  gs_no_sale: { en: "No sales yet.", rm: "Abhi koi bikri nahi hui.", ur: "ابھی کوئی بکری نہیں ہوئی۔" },
+  gs_new_sale: { en: "New Sale", rm: "Nayi bikri", ur: "نئی بکری" },
+  gs_sale_done: { en: "Sale recorded, stock released.", rm: "Bikri ho gayi, stock nikal gaya.", ur: "بکری ہو گئی، اسٹاک نکل گیا۔" },
+  gs_wheat: { en: "Wheat", rm: "Gandum", ur: "گندم" },
+  gs_rice: { en: "Rice", rm: "Chawal", ur: "چاول" },
+  gs_maize: { en: "Maize", rm: "Makai", ur: "مکئی" },
+  gs_available_stock: { en: "Available Stock:", rm: "Maujood stock:", ur: "موجود اسٹاک:" },
+  gs_delivery_term: { en: "Delivery Term (how it is handed over)", rm: "Delivery ki shart (kaise dena hai)", ur: "ڈیلیوری کی شرط (کیسے دینا ہے)" },
+  gs_loaded: { en: "Loaded for the buyer", rm: "Load karwa ke dena", ur: "لوڈ کروا کے دینا" },
+  gs_unloaded: { en: "Unloaded", rm: "Unload dena", ur: "ان لوڈ دینا" },
+  gs_buyer_pickup: { en: "Buyer picks up", rm: "Buyer khud uthaye", ur: "بائر خود اٹھائے" },
+  gs_we_deliver: { en: "We deliver", rm: "Hum pahunchayein", ur: "ہم پہنچائیں" },
+  gs_bardana_cost: { en: "Sack (bardana) Cost (Rs)", rm: "Bardane ka kharcha (Rs)", ur: "بردانے کا خرچہ (روپے)" },
+  gs_labour_cost: { en: "Labour / Loading Cost (Rs)", rm: "Mazdoori / ladai ka kharcha (Rs)", ur: "مزدوری / لدائی کا خرچہ (روپے)" },
+  gs_both_minus_profit: {
+    en: "Both amounts are subtracted straight from profit (enter as much or as little as you like).",
+    rm: "Ye dono raqmein seedha nafe se minus hongi (jitni marzi likhein, kam ya ziyada).",
+    ur: "یہ دونوں رقمیں سیدھا نفع سے منفی ہوں گی (جتنی مرضی لکھیں، کم یا زیادہ)۔",
+  },
+  gs_total_from_buyer: { en: "Total (from buyer)", rm: "Kul (buyer se)", ur: "کل (بائر سے)" },
+  gs_bardana_labour: { en: "Sack + Labour", rm: "Bardana + mazdoori", ur: "بردانہ + مزدوری" },
+  gs_record_sale: { en: "Record Sale", rm: "Bikri darj karein", ur: "بکری درج کریں" },
+  gs_receive_payment: { en: "Receive Payment", rm: "Adaigi lein", ur: "ادائیگی لیں" },
+  gs_payment_recorded: { en: "Payment recorded.", rm: "Adaigi darj ho gayi.", ur: "ادائیگی درج ہو گئی۔" },
+} as const;

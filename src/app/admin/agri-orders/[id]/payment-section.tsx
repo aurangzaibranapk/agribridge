@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { submitOrderPayment, verifyOrderPayment, rejectOrderPayment, type ActionState } from "@/actions/agri-orders";
 import { CreditCard, X, CheckCircle2, XCircle, FileText } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -31,6 +33,7 @@ const METHODS_NEEDING_BANK = ["Bank Transfer", "Online Payment"];
 
 export function PaymentSection({ orderId, payments, permissions }: { orderId: string; payments: Payment[]; permissions: OrderPermissions }) {
   const [showSubmit, setShowSubmit] = useState(false);
+  const lang = useLang();
 
   // "Payment Submit Karein" should only be offered while there's no
   // active/settled payment on this order yet - once a payment is
@@ -48,9 +51,7 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
           <CreditCard className="h-4 w-4" /> Payment Verification
         </h3>
         {canShowSubmitButton && (
-          <button onClick={() => setShowSubmit(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            Payment Submit Karein
-          </button>
+          <button onClick={() => setShowSubmit(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("ao_submit_payment", lang)}</button>
         )}
       </div>
 
@@ -77,7 +78,7 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
             {p.status === "pending_verification" && permissions.canVerifyPayment && <PaymentVerifyActions orderId={orderId} paymentId={p.id} />}
           </div>
         ))}
-        {payments.length === 0 && <p className="text-center text-xs text-surface-400">Koi payment submit nahi hui abhi.</p>}
+        {payments.length === 0 && <p className="text-center text-xs text-surface-400">{t("ao_no_payment_yet", lang)}</p>}
       </div>
       {showSubmit && <SubmitPaymentModal orderId={orderId} onClose={() => setShowSubmit(false)} />}
     </div>
@@ -107,20 +108,21 @@ function PaymentVerifyActions({ orderId, paymentId }: { orderId: string; payment
 
 function RejectPaymentModal({ orderId, paymentId, onClose }: { orderId: string; paymentId: string; onClose: () => void }) {
   const [state, formAction] = useFormState(rejectOrderPayment, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Payment Reject Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("ao_reject_payment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="order_id" value={orderId} />
           <input type="hidden" name="payment_id" value={paymentId} />
-          <textarea name="rejection_reason" required rows={3} placeholder="Reject karne ki wajah" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">Confirm Reject</button>
+          <textarea name="rejection_reason" required rows={3} placeholder={t("c_reject_reason", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("c_confirm_reject", lang)}</button>
         </form>
       </div>
     </div>
@@ -129,36 +131,37 @@ function RejectPaymentModal({ orderId, paymentId, onClose }: { orderId: string; 
 
 function SubmitPaymentModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const [state, formAction] = useFormState(submitOrderPayment, initialState);
+  const lang = useLang();
   const [method, setMethod] = useState("Bank Transfer");
   if (state.success) setTimeout(onClose, 800);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Payment Submit Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("ao_submit_payment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Payment submit ho gayi.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("ao_payment_submitted", lang)}</p>}
         <form action={formAction} encType="multipart/form-data" className="space-y-2">
           <input type="hidden" name="order_id" value={orderId} />
           <select name="payment_method" value={method} onChange={(e) => setMethod(e.target.value)} className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cash">Cash</option>
-            <option value="Online Payment">Online Payment</option>
-            <option value="Cheque">Cheque</option>
-            <option value="Credit">Credit</option>
+            <option value="Bank Transfer">{t("c_bank_transfer", lang)}</option>
+            <option value="Cash">{t("c_cash", lang)}</option>
+            <option value="Online Payment">{t("ao_online_payment", lang)}</option>
+            <option value="Cheque">{t("c_cheque", lang)}</option>
+            <option value="Credit">{t("c_credit", lang)}</option>
           </select>
           {METHODS_NEEDING_BANK.includes(method) && (
             <>
-              <input name="bank_name" required placeholder="Bank Naam (jis bank se payment hui)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-              <input name="transaction_id" placeholder="Transaction ID" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input name="bank_name" required placeholder={t("ao_bank_of_payment", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input name="transaction_id" placeholder={t("ao_transaction_id", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
             </>
           )}
           <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" step="0.01" name="paid_amount" required placeholder="Paid Amount (Rs)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.01" name="paid_amount" required placeholder={t("ao_paid_amount", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div>
-            <label className="text-xs text-surface-500">Receipt Upload (optional)</label>
+            <label className="text-xs text-surface-500">{t("ao_receipt_upload", lang)}</label>
             <input type="file" name="receipt" accept="image/*,application/pdf" className="mt-1 w-full text-xs" />
           </div>
           <SubmitButton />

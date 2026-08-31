@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createGrainSale, recordGrainSalePayment, type ActionState } from "@/actions/grain-sales";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -41,25 +43,26 @@ export function SellGrainClient({
   stockByWarehouseAndType: Record<string, Record<string, number>>;
 }) {
   const [payingSale, setPayingSale] = useState<Sale | null>(null);
+  const lang = useLang();
 
   return (
     <div className="space-y-6">
       <NewSaleForm buyers={buyers} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Sales History</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("gs_sales_history", lang)}</h3>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">No.</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Buyer</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Grain</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Profit</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Received</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Action</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_no_short", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_buyer", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("gs_grain", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_profit", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_received", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -76,14 +79,14 @@ export function SellGrainClient({
                     <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {s.amount_received.toLocaleString()}</td>
                     <td className="px-3 py-2">
                       {remaining > 0 && (
-                        <button onClick={() => setPayingSale(s)} className="text-xs font-medium text-brand-600 hover:underline">Payment</button>
+                        <button onClick={() => setPayingSale(s)} className="text-xs font-medium text-brand-600 hover:underline">{t("c_payment_word", lang)}</button>
                       )}
                     </td>
                   </tr>
                 );
               })}
               {sales.length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">Koi sale nahi hui abhi.</td></tr>
+                <tr><td colSpan={8} className="px-3 py-8 text-center text-surface-400">{t("gs_no_sale", lang)}</td></tr>
               )}
             </tbody>
           </table>
@@ -109,6 +112,7 @@ function NewSaleForm({
   stockByWarehouseAndType: Record<string, Record<string, number>>;
 }) {
   const [state, formAction] = useFormState(createGrainSale, initialState);
+  const lang = useLang();
   const [warehouseId, setWarehouseId] = useState("");
   const [grainType, setGrainType] = useState("wheat");
   const [quantity, setQuantity] = useState("");
@@ -125,9 +129,9 @@ function NewSaleForm({
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Sale Karein</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gs_new_sale", lang)}</h2>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Sale ho gayi, stock nikal gaya.</p>}
+      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_sale_done", lang)}</p>}
       <form action={formAction} className="space-y-3">
         <div>
           <Label>Buyer *</Label>
@@ -151,17 +155,17 @@ function NewSaleForm({
           <div>
             <Label>Grain Type *</Label>
             <Select name="grain_type" value={grainType} onChange={(e) => setGrainType(e.target.value)}>
-              <option value="wheat">Wheat (Gandum)</option>
-              <option value="rice">Rice (Chawal)</option>
-              <option value="maize">Maize (Makai)</option>
+              <option value="wheat">{t("gs_wheat", lang)}</option>
+              <option value="rice">{t("gs_rice", lang)}</option>
+              <option value="maize">{t("gs_maize", lang)}</option>
             </Select>
           </div>
         </div>
         {warehouseId && (
-          <p className="text-xs text-surface-400">Available Stock: <span className="font-medium text-surface-600">{availableStock.toLocaleString()} kg</span></p>
+          <p className="text-xs text-surface-400">{t("gs_available_stock", lang)}<span className="font-medium text-surface-600">{availableStock.toLocaleString()} kg</span></p>
         )}
         <div>
-          <Label>Date</Label>
+          <Label>{t("c_date", lang)}</Label>
           <Input type="date" name="sale_date" defaultValue={new Date().toISOString().slice(0, 10)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -175,20 +179,20 @@ function NewSaleForm({
           </div>
         </div>
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-          <Label>Delivery Term (kaise dena hy)</Label>
+          <Label>{t("gs_delivery_term", lang)}</Label>
           <select name="delivery_term" value={deliveryTerm} onChange={(e) => setDeliveryTerm(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="load_deliver">Load Karwa Ke Dena</option>
-            <option value="unload_deliver">Unload Dena</option>
-            <option value="buyer_pickup">Buyer Khud Uthaye</option>
-            <option value="we_deliver">Hum Pohchayein</option>
+            <option value="load_deliver">{t("gs_loaded", lang)}</option>
+            <option value="unload_deliver">{t("gs_unloaded", lang)}</option>
+            <option value="buyer_pickup">{t("gs_buyer_pickup", lang)}</option>
+            <option value="we_deliver">{t("gs_we_deliver", lang)}</option>
           </select>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <div>
-              <Label>Bardana Cost (Rs)</Label>
+              <Label>{t("gs_bardana_cost", lang)}</Label>
               <Input type="number" step="0.01" name="bardana_cost" value={bardanaCost} onChange={(e) => setBardanaCost(e.target.value)} placeholder="0" />
             </div>
             <div>
-              <Label>Mazdoori/Loading Cost (Rs)</Label>
+              <Label>{t("gs_labour_cost", lang)}</Label>
               <Input type="number" step="0.01" name="mazdoori_cost" value={mazdooriCost} onChange={(e) => setMazdooriCost(e.target.value)} placeholder="0" />
             </div>
           </div>
@@ -203,19 +207,19 @@ function NewSaleForm({
               </Select>
             </div>
           )}
-          <p className="mt-1 text-[11px] text-surface-400">Ye dono amounts seedha Profit se minus honge (kam ya zyada, jitna marzi likhein).</p>
+          <p className="mt-1 text-[11px] text-surface-400">{t("gs_both_minus_profit", lang)}</p>
         </div>
         <div>
-          <Label>Notes</Label>
+          <Label>{t("c_notes", lang)}</Label>
           <Textarea name="notes" rows={2} />
         </div>
         <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-          <div className="flex justify-between text-sm"><span className="text-surface-500">Total (Buyer Se)</span><span className="font-medium">Rs {total.toLocaleString()}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-surface-500">{t("gs_total_from_buyer", lang)}</span><span className="font-medium">Rs {total.toLocaleString()}</span></div>
           {combinedCost > 0 && (
-            <div className="flex justify-between text-xs text-red-600"><span>Bardana + Mazdoori</span><span>- Rs {combinedCost.toLocaleString()}</span></div>
+            <div className="flex justify-between text-xs text-red-600"><span>{t("gs_bardana_labour", lang)}</span><span>- Rs {combinedCost.toLocaleString()}</span></div>
           )}
         </div>
-        <SubmitButton label="Sale Record Karein" />
+        <SubmitButton label={t("gs_record_sale", lang)} />
       </form>
     </div>
   );
@@ -223,6 +227,7 @@ function NewSaleForm({
 
 function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; financeAccounts: FinanceAccount[]; onClose: () => void }) {
   const [state, formAction] = useFormState(recordGrainSalePayment, initialState);
+  const lang = useLang();
   const remaining = sale.total_amount - sale.amount_received;
   if (state.success) setTimeout(onClose, 900);
 
@@ -230,12 +235,12 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Payment Receive Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("gs_receive_payment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-3 text-sm text-surface-500">{sale.buyer_name} - Baaqi: Rs {remaining.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Payment record ho gayi.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_payment_recorded", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="sale_id" value={sale.id} />
           <div>
@@ -243,10 +248,10 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
             <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={remaining} required />
           </div>
           <div>
-            <Label>Payment Method</Label>
+            <Label>{t("c_payment_method", lang)}</Label>
             <Select name="payment_method">
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cash">{t("c_cash", lang)}</option>
+              <option value="bank_transfer">{t("c_bank_transfer", lang)}</option>
               <option value="easypaisa">EasyPaisa</option>
               <option value="jazzcash">JazzCash</option>
             </Select>
@@ -261,10 +266,10 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
             </Select>
           </div>
           <div>
-            <Label>Notes</Label>
+            <Label>{t("c_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
           </div>
-          <SubmitButton label="Payment Record Karein" />
+          <SubmitButton label={t("c_record_payment", lang)} />
         </form>
       </div>
     </div>

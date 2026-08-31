@@ -210,6 +210,7 @@ export const commonDict = {
   c_statement: { en: "Statement", rm: "Gosharah", ur: "گوشوارہ" },
   c_documents: { en: "Documents", rm: "Kaghazat", ur: "کاغذات" },
   c_photo: { en: "Photo", rm: "Tasveer", ur: "تصویر" },
+  c_payment_word: { en: "Payment", rm: "Adaigi", ur: "ادائیگی" },
   c_order: { en: "Order", rm: "Order", ur: "آرڈر" },
   c_order_summary: { en: "Order Summary", rm: "Order ka khulasa", ur: "آرڈر کا خلاصہ" },
   c_order_charges: { en: "Order Charges", rm: "Order ke kharche", ur: "آرڈر کے خرچے" },

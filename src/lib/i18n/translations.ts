@@ -5,20 +5,21 @@ import { myWorkDict } from "./dict/my-work";
 import { machineryQueueDict } from "./dict/machinery-queue";
 import { leaveDict } from "./dict/leave";
 import { milkDispatchDict } from "./dict/milk-dispatch";
-import { milkDict, milkPageDict } from "./dict/milk";
+import { milkDict, milkPageDict, milkFuelDict } from "./dict/milk";
 import { financeDict } from "./dict/finance";
 import { cashCloseDict } from "./dict/cash-close";
 import { cashHandoverDict } from "./dict/cash-handover";
 import { hrDict, attendanceLogDict } from "./dict/hr";
 import { inventoryDict, stockCountDict, stockTransferDict } from "./dict/inventory";
 import { purchasesDict } from "./dict/purchases";
-import { grainDict } from "./dict/grain";
+import { grainDict, grainSaleDict } from "./dict/grain";
 import { purchaseGrainPagesDict } from "./dict/purchase-grain-pages";
 import { dashboardDict } from "./dict/dashboard";
 import { commonDict } from "./dict/common";
 import { shopRentDict } from "./dict/shop-rent";
 import { farmerCreditDict } from "./dict/farmer-credit";
 import { reportsDict } from "./dict/reports";
+import { agriOrdersDict } from "./dict/agri-orders";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -79,6 +80,9 @@ const dict = {
   ...shopRentDict,
   ...farmerCreditDict,
   ...reportsDict,
+  ...agriOrdersDict,
+  ...grainSaleDict,
+  ...milkFuelDict,
 };
 
 export type TranslationKey = keyof typeof dict;
