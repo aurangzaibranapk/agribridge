@@ -128,6 +128,8 @@ export default async function TrustPage({
     hours_since_run: number | null;
     queue_pending: number;
     queue_failed: number;
+    queue_dead: number;
+    last_drain: string | null;
     is_stale: boolean;
     reason: string;
   } | null;
@@ -211,6 +213,12 @@ export default async function TrustPage({
                 </b>
               </span>
               <span>
+                Qatar ka aakhri chakkar:{" "}
+                <b className="font-mono text-surface-900 dark:text-surface-100">
+                  {health.last_drain ? new Date(health.last_drain).toLocaleTimeString() : "kabhi nahi"}
+                </b>
+              </span>
+              <span>
                 Nakaam:{" "}
                 <b
                   className={
@@ -221,6 +229,21 @@ export default async function TrustPage({
                   }
                 >
                   {health.queue_failed}
+                </b>
+              </span>
+              <span>
+                {/* 'dead' alag se -- ye wo parchiyan hain jo khud theek
+                    nahi hongi. Inhen insaan ka dekhna zaroori hai. */}
+                Insaan ke intezar mein:{" "}
+                <b
+                  className={
+                    "font-mono tabular-nums " +
+                    (health.queue_dead > 0
+                      ? "text-red-700 dark:text-red-400"
+                      : "text-surface-900 dark:text-surface-100")
+                  }
+                >
+                  {health.queue_dead}
                 </b>
               </span>
             </div>
