@@ -125,3 +125,108 @@ export const agriOrdersDict = {
   ao_paid_amount: { en: "Paid Amount (Rs)", rm: "Di hui raqam (Rs)", ur: "دی ہوئی رقم (روپے)" },
   ao_receipt_upload: { en: "Receipt Upload (optional)", rm: "Raseed lagayein (marzi se)", ur: "رسید لگائیں (مرضی سے)" },
 } as const;
+
+/**
+ * Order ka safha, cheez chunne ka grid, shikayat, aur wapsi.
+ *
+ * FEEDBACK KE PANCH KHANE ALAG HAIN (pahunchana, maal ki qism, packing,
+ * service, aur mila jula). Ek "rating" rakhna aasan tha, magar phir
+ * shikayat ka ilaj kabhi na milta: teen sitare ka matlab ye ho sakta hai
+ * ke maal theek tha aur gaari late thi, ya ulta. Do bilkul alag ilaj.
+ *
+ * WAPSI KI WAJAH bhi alag rakhi gayi hai -- "kharab" aur "bika nahi"
+ * ek jaise nahi. Pehla supplier ka masla hai, doosra hamare andaze ka.
+ * Ek hi lafz likhne par ye pata na chalta ke kis se baat karni hai.
+ *
+ * "HQ maal receive karega to itni raqam khate se kam hogi" wala jumla
+ * qasdan wahin likha hai jahan raqam dikhti hai: wapsi banate waqt kuch
+ * nahi hilta, sab tab hota hai jab maal waqai pahunchta hai -- aur ye
+ * baat pehle se saamne honi chahiye.
+ */
+export const agriOrdersMoreDict = {
+  // ---- Shikayat aur raaye ----
+  ac_no_complaint: { en: "No complaints.", rm: "Koi shikayat nahi.", ur: "کوئی شکایت نہیں۔" },
+  ac_resolution_notes: { en: "Resolution notes", rm: "Hal ka note", ur: "حل کا نوٹ" },
+  ac_write_full_detail: { en: "Write the full detail", rm: "Poori tafseel likhein", ur: "پوری تفصیل لکھیں" },
+  ac_submit: { en: "Submit", rm: "Bhejein", ur: "بھیجیں" },
+  ac_give_feedback: { en: "Give Feedback", rm: "Raaye dein", ur: "رائے دیں" },
+  ac_delivery_experience: { en: "Delivery Experience", rm: "Pahunchane ka tajurba", ur: "پہنچانے کا تجربہ" },
+  ac_product_quality: { en: "Product Quality", rm: "Maal ki qism", ur: "مال کی قسم" },
+  ac_packaging: { en: "Packaging", rm: "Packing", ur: "پیکنگ" },
+  ac_overall_rating: { en: "Overall Rating *", rm: "Mila jula darja *", ur: "ملا جلا درجہ *" },
+  ac_comments: { en: "Comments", rm: "Baat", ur: "بات" },
+  ac_submit_feedback: { en: "Submit Feedback", rm: "Raaye bhejein", ur: "رائے بھیجیں" },
+  ac_comment_optional: { en: "Comment (optional)", rm: "Baat (marzi se)", ur: "بات (مرضی سے)" },
+  ac_reject_order: { en: "Reject Order", rm: "Order rad karein", ur: "آرڈر رد کریں" },
+
+  // ---- Order ka safha ----
+  ao_order_not_found: { en: "Order not found.", rm: "Order nahi mila.", ur: "آرڈر نہیں ملا۔" },
+  ao_freight: { en: "Freight", rm: "Kiraya", ur: "کرایہ" },
+  ao_order_progress: { en: "Order Progress", rm: "Order kahan tak pahuncha", ur: "آرڈر کہاں تک پہنچا" },
+  ao_detailed_log: { en: "Detailed Log", rm: "Poori tafseel", ur: "پوری تفصیل" },
+  ao_new_order: { en: "New Agri Order", rm: "Naya Agri Order", ur: "نیا ایگری آرڈر" },
+  ao_ordering_title: { en: "AgriBridge Ordering", rm: "AgriBridge ka order nizam", ur: "ایگری برج کا آرڈر نظام" },
+  ao_total_order_value: { en: "Total Order Value", rm: "Order ki kul qeemat", ur: "آرڈر کی کل قیمت" },
+  ao_pending_payment: { en: "Pending Payment", rm: "Adaigi baqi", ur: "ادائیگی باقی" },
+  ao_month_sales: { en: "This Month's Sales", rm: "Is mahine ki bikri", ur: "اس مہینے کی بکری" },
+  ao_order_no: { en: "Order No.", rm: "Order number", ur: "آرڈر نمبر" },
+  ao_to: { en: "To", rm: "Kis ko", ur: "کس کو" },
+  ao_no_order_yet: { en: "No orders yet.", rm: "Abhi koi order nahi.", ur: "ابھی کوئی آرڈر نہیں۔" },
+
+  // ---- Cheez chunne ka grid ----
+  ao_sort_stock_first: { en: "Available Stock First", rm: "Jo maujood hai wo pehle", ur: "جو موجود ہے وہ پہلے" },
+  ao_sort_az: { en: "Name A-Z", rm: "Naam A-Z", ur: "نام A-Z" },
+  ao_sort_za: { en: "Name Z-A", rm: "Naam Z-A", ur: "نام Z-A" },
+  ao_sort_price_low: { en: "Price Low-High", rm: "Qeemat kam se ziyada", ur: "قیمت کم سے زیادہ" },
+  ao_sort_price_high: { en: "Price High-Low", rm: "Qeemat ziyada se kam", ur: "قیمت زیادہ سے کم" },
+  ao_sort_stock_low: { en: "Stock Low-High", rm: "Stock kam se ziyada", ur: "اسٹاک کم سے زیادہ" },
+  ao_rate_label: { en: "Rate:", rm: "Rate:", ur: "ریٹ:" },
+  ao_purchase_label: { en: "Purchase:", rm: "Kharid:", ur: "خرید:" },
+  ao_warehouse_label: { en: "Warehouse:", rm: "Godam:", ur: "گودام:" },
+  ao_all_stock_selected: { en: "All available stock is selected", rm: "Poora maujood stock chun liya gaya", ur: "پورا موجود اسٹاک چن لیا گیا" },
+  ao_from_company_src: { en: "From Company", rm: "Company se", ur: "کمپنی سے" },
+  ao_from_other_shop: { en: "From Another Shop", rm: "Doosri dukan se", ur: "دوسری دکان سے" },
+  ao_from_other_shop_note: {
+    en: "It will come from another shop's stock. That shop will dispatch it.",
+    rm: "Kisi aur dukan ke stock se aayega. Wohi dukan bhejegi.",
+    ur: "کسی اور دکان کے اسٹاک سے آئے گا۔ وہی دکان بھیجے گی۔",
+  },
+
+  // ---- Wapsi ----
+  ar_not_found: { en: "Return not found.", rm: "Wapsi nahi mili.", ur: "واپسی نہیں ملی۔" },
+  ar_created: { en: "Created", rm: "Banaya", ur: "بنایا" },
+  ar_received: { en: "Received", rm: "Mil gaya", ur: "مل گیا" },
+  ar_reject_reason_ph: { en: "Write the reason for rejection...", rm: "Rad karne ki wajah likhein...", ur: "رد کرنے کی وجہ لکھیں..." },
+  ar_no_stock: {
+    en: "There is no stock in your warehouse, so a return cannot be created.",
+    rm: "Aap ke godam mein abhi koi stock nahi hai, is liye wapsi nahi ban sakti.",
+    ur: "آپ کے گودام میں ابھی کوئی اسٹاک نہیں ہے، اس لیے واپسی نہیں بن سکتی۔",
+  },
+  ar_made: { en: "Return created. HQ has been notified.", rm: "Wapsi ban gayi. HQ ko ittila bhej di gayi hai.", ur: "واپسی بن گئی۔ HQ کو اطلاع بھیج دی گئی ہے۔" },
+  ar_reason_heading: { en: "Reason for Return", rm: "Wapsi ki wajah", ur: "واپسی کی وجہ" },
+  ar_which_order: { en: "Which order is this from? (optional)", rm: "Kis order ka maal hai? (marzi ki baat)", ur: "کس آرڈر کا مال ہے؟ (مرضی کی بات)" },
+  ar_pick_goods: { en: "Pick the Goods", rm: "Maal chunein", ur: "مال چنیں" },
+  ar_my_stock: { en: "My Stock", rm: "Mera stock", ur: "میرا اسٹاک" },
+  ar_return_qty: { en: "Return Qty", rm: "Kitna wapas", ur: "کتنا واپس" },
+  ar_damaged: { en: "Damaged", rm: "Kharab", ur: "خراب" },
+  ar_not_sold: { en: "Did not sell", rm: "Bika nahi", ur: "بکا نہیں" },
+  ar_total_items: { en: "Total Items", rm: "Kul cheezein", ur: "کل چیزیں" },
+  ar_return_value: { en: "Return Value", rm: "Wapsi ki qeemat", ur: "واپسی کی قیمت" },
+  ar_deduct_note: {
+    en: "When HQ receives the goods, this amount will be deducted from your account.",
+    rm: "HQ maal wusool karega to itni raqam aap ke khate se kam ho jayegi.",
+    ur: "HQ مال وصول کرے گا تو اتنی رقم آپ کے کھاتے سے کم ہو جائے گی۔",
+  },
+  ar_notes_if_any: { en: "Notes (if any)", rm: "Note (agar koi ho)", ur: "نوٹ (اگر کوئی ہو)" },
+  ar_no_branch_linked: {
+    en: "This account is not linked to any branch. Contact the admin.",
+    rm: "Ye khata kisi shakh se nahi juRa. Admin se raabta karein.",
+    ur: "یہ کھاتہ کسی شاخ سے نہیں جڑا۔ ایڈمن سے رابطہ کریں۔",
+  },
+  ar_title: { en: "Returns (branch to HQ)", rm: "Wapsi (shakh se HQ)", ur: "واپسی (شاخ سے HQ)" },
+  ar_waiting_hq: { en: "Waiting for HQ", rm: "HQ ke intezar mein", ur: "HQ کے انتظار میں" },
+  ar_received_done: { en: "Received", rm: "Mil chuke", ur: "مل چکے" },
+  ar_rejected_done: { en: "Rejected", rm: "Rad huye", ur: "رد ہوئے" },
+  ar_none_yet: { en: "No returns yet.", rm: "Abhi tak koi wapsi nahi.", ur: "ابھی تک کوئی واپسی نہیں۔" },
+  ar_return_no: { en: "Return No.", rm: "Wapsi number", ur: "واپسی نمبر" },
+} as const;

@@ -2,15 +2,18 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewReturnForm } from "./new-return-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewReturnPage() {
+  const lang = getLanguageFromCookies("rm");
   const seller = await getCurrentSeller();
   if (!seller || seller.kind !== "branch") {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">Ye account kisi branch se linked nahi hai. Admin se rabta karein.</p>
+        <p className="text-surface-600">{t("ar_no_branch_linked", lang)}</p>
       </div>
     );
   }
@@ -60,7 +63,7 @@ export default async function NewReturnPage() {
 
   return (
     <div>
-      <PageHeader title="Naya Return" description={`${seller.name} — maal HQ ko wapas bhejein`} />
+      <PageHeader title={t("c_new_return", lang)} description={`${seller.name} — maal HQ ko wapas bhejein`} />
       <NewReturnForm products={products} orders={orders ?? []} warehouseMissing={!warehouse} />
     </div>
   );

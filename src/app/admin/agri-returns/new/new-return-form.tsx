@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createReturn, type ActionState } from "@/actions/agri-returns";
 import { PackageX, PackageMinus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -34,6 +36,7 @@ const REASONS = [
 
 export function NewReturnForm({ products, orders, warehouseMissing }: { products: Product[]; orders: Order[]; warehouseMissing: boolean }) {
   const [state, formAction] = useFormState(createReturn, initialState);
+  const lang = useLang();
   const [reason, setReason] = useState<string>("damaged");
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [search, setSearch] = useState("");
@@ -68,7 +71,7 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
   }
 
   if (products.length === 0) {
-    return <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm text-surface-600">Aapke godown mein abhi koi stock nahi hai, is liye return nahi ban sakta.</p>;
+    return <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm text-surface-600">{t("ar_no_stock", lang)}</p>;
   }
 
   return (
@@ -77,10 +80,10 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
       <input type="hidden" name="reason" value={reason} />
 
       {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Return ban gaya. HQ ko itla bhej di gayi hai.</p>}
+      {state.success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("ar_made", lang)}</p>}
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Return Ki Wajah</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ar_reason_heading", lang)}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {REASONS.map(({ value, title, Icon }) => {
             const selected = reason === value;
@@ -102,7 +105,7 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
         </div>
 
         <div className="mt-3">
-          <label className="text-xs font-medium text-surface-600">Kis order ka maal hai? (marzi ki baat)</label>
+          <label className="text-xs font-medium text-surface-600">{t("ar_which_order", lang)}</label>
           <select name="order_id" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
             <option value="">- Kisi order se nahi jorna -</option>
             {orders.map((o) => (
@@ -114,11 +117,11 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Maal Chunein</h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("ar_pick_goods", lang)}</h2>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Product dhoondein..."
+            placeholder={t("c_search_product", lang)}
             className="w-48 rounded-lg border border-surface-200 p-2 text-sm"
           />
         </div>
@@ -127,11 +130,11 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 text-left dark:border-surface-800">
-                <th className="px-2 py-2 font-medium text-surface-500">Product</th>
-                <th className="px-2 py-2 text-right font-medium text-surface-500">Mera Stock</th>
-                <th className="px-2 py-2 text-right font-medium text-surface-500">Wapas Qty</th>
-                <th className="px-2 py-2 text-right font-medium text-surface-500">Rate</th>
-                <th className="px-2 py-2 font-medium text-surface-500">Wajah</th>
+                <th className="px-2 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+                <th className="px-2 py-2 text-right font-medium text-surface-500">{t("ar_my_stock", lang)}</th>
+                <th className="px-2 py-2 text-right font-medium text-surface-500">{t("ar_return_qty", lang)}</th>
+                <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_rate", lang)}</th>
+                <th className="px-2 py-2 font-medium text-surface-500">{t("c_reason", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -169,8 +172,8 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
                         onChange={(e) => updateRow(p.id, "reason", e.target.value, p.price)}
                         className="rounded-lg border border-surface-200 p-1.5 text-sm"
                       >
-                        <option value="damaged">Kharab</option>
-                        <option value="unsold">Bika nahi</option>
+                        <option value="damaged">{t("ar_damaged", lang)}</option>
+                        <option value="unsold">{t("ar_not_sold", lang)}</option>
                       </select>
                     </td>
                   </tr>
@@ -183,17 +186,17 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-surface-500">Kul Items</span>
+          <span className="text-surface-500">{t("ar_total_items", lang)}</span>
           <span className="font-medium text-surface-900 dark:text-white">{activeItems.length}</span>
         </div>
         <div className="mt-1 flex items-center justify-between border-t border-surface-100 pt-2 text-base font-semibold dark:border-surface-800">
-          <span className="text-surface-900 dark:text-white">Return Ki Value</span>
+          <span className="text-surface-900 dark:text-white">{t("ar_return_value", lang)}</span>
           <span className="text-brand-600">Rs {total.toLocaleString()}</span>
         </div>
-        <p className="mt-2 text-xs text-surface-500">HQ maal receive karega to itni raqam aapke khate se kam ho jayegi.</p>
+        <p className="mt-2 text-xs text-surface-500">{t("ar_deduct_note", lang)}</p>
       </div>
 
-      <textarea name="notes" rows={2} placeholder="Notes (agar koi ho)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+      <textarea name="notes" rows={2} placeholder={t("ar_notes_if_any", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
 
       <SubmitButton disabled={activeItems.length === 0} />
     </form>

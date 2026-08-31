@@ -4,6 +4,8 @@ import { ReportsClient } from "@/components/reports/reports-client";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import Link from "next/link";
 import { TrendingUp, ShoppingCart, Boxes, Landmark, CreditCard, Droplet, Wheat, ArrowRight } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ const REPORT_LINKS = [
 ];
 
 export default async function ReportsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -48,7 +51,7 @@ export default async function ReportsPage() {
 
   return (
     <div>
-      <PageHeader title="Reports" description="Business-wide reports across every module" />
+      <PageHeader title={t("rr_reports", lang)} description="Business-wide reports across every module" />
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {REPORT_LINKS.map((r) => (
           <Link

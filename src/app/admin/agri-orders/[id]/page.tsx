@@ -9,6 +9,8 @@ import { DispatchSection } from "./dispatch-section";
 import { GrnSection } from "./grn-section";
 import { ComplaintFeedbackSection } from "./complaint-feedback-section";
 import { Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +67,13 @@ const STEPPER_STAGES = [
 
 export default async function AgriOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: order } = await supabase.from("agri_orders").select("*, branches!agri_orders_order_to_branch_id_fkey(name)").eq("id", id).single();
 
   if (!order) {
-    return <div className="p-8 text-center text-surface-400">Order nahi mila.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("ao_order_not_found", lang)}</div>;
   }
 
   const permissions = await getOrderPermissions(order.order_to_branch_id ?? null, order.order_from_branch_id ?? null);
@@ -294,10 +297,10 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Price</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_price", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,13 +320,13 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
           </div>
 
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Order Summary</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("c_order_summary", lang)}</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-surface-500">Subtotal</span><span>Rs {Number(order.subtotal).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Discount</span><span>- Rs {Number(order.discount).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Tax</span><span>+ Rs {Number(order.tax).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Freight</span><span>+ Rs {Number(order.freight_charges).toLocaleString()}</span></div>
-              <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800"><span>Grand Total</span><span>Rs {Number(order.grand_total).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_subtotal", lang)}</span><span>Rs {Number(order.subtotal).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_discount", lang)}</span><span>- Rs {Number(order.discount).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_tax", lang)}</span><span>+ Rs {Number(order.tax).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("ao_freight", lang)}</span><span>+ Rs {Number(order.freight_charges).toLocaleString()}</span></div>
+              <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800"><span>{t("c_grand_total", lang)}</span><span>Rs {Number(order.grand_total).toLocaleString()}</span></div>
             </div>
             <p className="mt-2 text-xs text-surface-500">Payment Mode: {advance.isAdvance ? "Advance Order (pehle payment)" : `Base Order / Khata (${order.payment_terms})`}</p>
             <p className="mt-1 text-xs text-surface-500">
@@ -352,7 +355,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Order Progress</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("ao_order_progress", lang)}</h3>
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
             {!isRejected ? (
               <div className="space-y-0">
@@ -383,7 +386,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
             )}
           </div>
 
-          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">Detailed Log</h3>
+          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">{t("ao_detailed_log", lang)}</h3>
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
             <div className="space-y-2.5">
               {(timeline ?? []).map((t) => {

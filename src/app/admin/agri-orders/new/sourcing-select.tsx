@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Building2, Store, Landmark, Handshake } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 /**
  * Maal kahan se aayega, aur agar doosri shop se aa raha hai to paisa
@@ -35,6 +37,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
   const [fromKind, setFromKind] = useState<"company" | "branch">("company");
   const [branchId, setBranchId] = useState("");
   const [settlement, setSettlement] = useState("company_ledger");
+  const lang = useLang();
 
   const options = branches.filter((b) => b.id !== excludeBranchId);
   const isBranch = fromKind === "branch";
@@ -57,7 +60,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
         >
           <span className="flex items-center gap-2">
             <Building2 className={`h-4 w-4 ${!isBranch ? "text-brand-600" : "text-surface-400"}`} />
-            <span className="text-sm font-semibold text-surface-900 dark:text-white">Company Se</span>
+            <span className="text-sm font-semibold text-surface-900 dark:text-white">{t("ao_from_company_src", lang)}</span>
           </span>
           <span className="mt-1 block text-xs text-surface-500">Maal HQ ke Central Warehouse se aayega — jaisa hamesha hota hai.</span>
         </button>
@@ -72,9 +75,9 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
         >
           <span className="flex items-center gap-2">
             <Store className={`h-4 w-4 ${isBranch ? "text-brand-600" : "text-surface-400"}`} />
-            <span className="text-sm font-semibold text-surface-900 dark:text-white">Doosri Shop Se</span>
+            <span className="text-sm font-semibold text-surface-900 dark:text-white">{t("ao_from_other_shop", lang)}</span>
           </span>
-          <span className="mt-1 block text-xs text-surface-500">Kisi aur shop ke stock se aayega. Wahi shop dispatch karegi.</span>
+          <span className="mt-1 block text-xs text-surface-500">{t("ao_from_other_shop_note", lang)}</span>
         </button>
       </div>
 

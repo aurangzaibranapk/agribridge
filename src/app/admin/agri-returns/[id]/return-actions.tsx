@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { receiveReturn, rejectReturn, type ActionState } from "@/actions/agri-returns";
 import { Check, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -10,6 +12,7 @@ export function ReturnActions({ returnId }: { returnId: string }) {
   const [receiveState, receiveAction] = useFormState(receiveReturn, initialState);
   const [rejectState, rejectAction] = useFormState(rejectReturn, initialState);
   const [showReject, setShowReject] = useState(false);
+  const lang = useLang();
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -37,7 +40,7 @@ export function ReturnActions({ returnId }: { returnId: string }) {
             name="rejection_reason"
             rows={2}
             required
-            placeholder="Reject karne ki wajah likhein..."
+            placeholder={t("ar_reject_reason_ph", lang)}
             className="w-full rounded-lg border border-surface-200 p-2 text-sm"
           />
           <RejectButton />

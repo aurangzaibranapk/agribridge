@@ -18,8 +18,8 @@ import { dashboardDict } from "./dict/dashboard";
 import { commonDict } from "./dict/common";
 import { shopRentDict } from "./dict/shop-rent";
 import { farmerCreditDict } from "./dict/farmer-credit";
-import { reportsDict } from "./dict/reports";
-import { agriOrdersDict } from "./dict/agri-orders";
+import { reportsDict, reportsMoreDict } from "./dict/reports";
+import { agriOrdersDict, agriOrdersMoreDict } from "./dict/agri-orders";
 import { hrJobsDict, adminFarmerDict, subscriptionDict } from "./dict/hr-jobs";
 import { miscAdminDict } from "./dict/misc-admin";
 import { statementsDict, opsPagesDict } from "./dict/statements";
@@ -93,6 +93,8 @@ const dict = {
   ...miscAdminDict,
   ...statementsDict,
   ...opsPagesDict,
+  ...reportsMoreDict,
+  ...agriOrdersMoreDict,
 };
 
 export type TranslationKey = keyof typeof dict;

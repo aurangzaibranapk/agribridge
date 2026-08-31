@@ -5,6 +5,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { salesVerifyOrder, financeVerifyOrder, approveOrder, rejectOrder, type ActionState } from "@/actions/agri-orders";
 import { CheckSquare, DollarSign, CheckCircle2, XCircle, X } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -62,6 +64,7 @@ export function OrderDetailActions({ orderId, status, permissions }: { orderId: 
 }
 
 function ActionCommentModal({ orderId, action, label, onClose }: { orderId: string; action: any; label: string; onClose: () => void }) {
+  const lang = useLang();
   const router = useRouter();
   const [state, formAction] = useFormState(action, initialState);
 
@@ -83,7 +86,7 @@ function ActionCommentModal({ orderId, action, label, onClose }: { orderId: stri
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="order_id" value={orderId} />
-          <textarea name="comment" rows={3} placeholder="Comment (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <textarea name="comment" rows={3} placeholder={t("ac_comment_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <ConfirmButton label={label} />
         </form>
       </div>
@@ -92,6 +95,7 @@ function ActionCommentModal({ orderId, action, label, onClose }: { orderId: stri
 }
 
 function RejectModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const lang = useLang();
   const router = useRouter();
   const [state, formAction] = useFormState(rejectOrder, initialState);
 
@@ -107,14 +111,14 @@ function RejectModal({ orderId, onClose }: { orderId: string; onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Order Reject Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("ac_reject_order", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="order_id" value={orderId} />
-          <textarea name="rejection_reason" required rows={3} placeholder="Reject karne ki wajah" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">Confirm Reject</button>
+          <textarea name="rejection_reason" required rows={3} placeholder={t("c_reject_reason", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("c_confirm_reject", lang)}</button>
         </form>
       </div>
     </div>

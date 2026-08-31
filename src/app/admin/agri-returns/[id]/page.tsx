@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { ReturnActions } from "./return-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,7 @@ function statusTone(status: string) {
 
 export default async function ReturnDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: ret } = await supabase
@@ -35,7 +38,7 @@ export default async function ReturnDetailPage({ params }: { params: Promise<{ i
     .eq("id", id)
     .maybeSingle();
 
-  if (!ret) return <div className="p-8 text-center text-surface-400">Return nahi mila.</div>;
+  if (!ret) return <div className="p-8 text-center text-surface-400">{t("ar_not_found", lang)}</div>;
 
   const { data: items } = await supabase
     .from("agri_order_return_items")
@@ -86,11 +89,11 @@ export default async function ReturnDetailPage({ params }: { params: Promise<{ i
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Wajah</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Rate</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_reason", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_rate", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,14 +113,14 @@ export default async function ReturnDetailPage({ params }: { params: Promise<{ i
 
         <div className="space-y-4">
           <Card className="p-4">
-            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Tafseel</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("c_detail", lang)}</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-surface-500">Shop</span><span>{branchName ?? "-"}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Wajah</span><span>{REASON_LABEL[ret.reason] ?? ret.reason}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Order</span><span>{orderNumber ?? "-"}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Banaya</span><span>{new Date(ret.created_at).toLocaleDateString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_shop", lang)}</span><span>{branchName ?? "-"}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_reason", lang)}</span><span>{REASON_LABEL[ret.reason] ?? ret.reason}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_order", lang)}</span><span>{orderNumber ?? "-"}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("ar_created", lang)}</span><span>{new Date(ret.created_at).toLocaleDateString()}</span></div>
               {ret.received_at && (
-                <div className="flex justify-between"><span className="text-surface-500">Receive hua</span><span>{new Date(ret.received_at).toLocaleDateString()}</span></div>
+                <div className="flex justify-between"><span className="text-surface-500">{t("ar_received", lang)}</span><span>{new Date(ret.received_at).toLocaleDateString()}</span></div>
               )}
             </div>
             {ret.notes && <p className="mt-2 rounded-lg bg-surface-50 p-2 text-xs text-surface-600 dark:bg-surface-800">{ret.notes}</p>}

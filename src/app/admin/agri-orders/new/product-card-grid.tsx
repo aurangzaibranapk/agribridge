@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
 import { Search, Minus, Plus, Package, ShoppingCart } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Product {
   id: string;
@@ -35,6 +37,7 @@ export function ProductCardGrid({
   onUpdateRow: (productId: string, field: keyof RowState, value: number, defaultPrice: number) => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const lang = useLang();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("stock_desc");
 
@@ -76,17 +79,17 @@ export function ProductCardGrid({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Product dhoondein..."
+            placeholder={t("c_search_product", lang)}
             className="w-full rounded-lg border border-surface-200 p-2 pr-9 text-sm"
           />
         </div>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="stock_desc">Available Stock Pehle</option>
-          <option value="name_asc">Name A-Z</option>
-          <option value="name_desc">Name Z-A</option>
-          <option value="price_asc">Price Low-High</option>
-          <option value="price_desc">Price High-Low</option>
-          <option value="stock_asc">Stock Low-High</option>
+          <option value="stock_desc">{t("ao_sort_stock_first", lang)}</option>
+          <option value="name_asc">{t("ao_sort_az", lang)}</option>
+          <option value="name_desc">{t("ao_sort_za", lang)}</option>
+          <option value="price_asc">{t("ao_sort_price_low", lang)}</option>
+          <option value="price_desc">{t("ao_sort_price_high", lang)}</option>
+          <option value="stock_asc">{t("ao_sort_stock_low", lang)}</option>
         </select>
         {activeCount > 0 && (
           <span className="flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1.5 text-xs font-medium text-brand-700">
@@ -142,11 +145,11 @@ export function ProductCardGrid({
               <p className="line-clamp-2 text-sm font-semibold text-surface-900 dark:text-white">{p.name}</p>
               <p className="text-xs text-surface-400">{p.pack_size ?? ""} {p.brand ? `- ${p.brand}` : ""}</p>
               <div className="mt-1.5 space-y-0.5 text-xs">
-                <p className="flex justify-between"><span className="text-surface-400">Rate:</span> <span className="font-semibold text-brand-600">Rs {p.selling_price.toLocaleString()}</span></p>
-                <p className="flex justify-between"><span className="text-surface-400">Purchase:</span> <span className="text-surface-500">Rs {p.purchase_price.toLocaleString()}</span></p>
+                <p className="flex justify-between"><span className="text-surface-400">{t("ao_rate_label", lang)}</span> <span className="font-semibold text-brand-600">Rs {p.selling_price.toLocaleString()}</span></p>
+                <p className="flex justify-between"><span className="text-surface-400">{t("ao_purchase_label", lang)}</span> <span className="text-surface-500">Rs {p.purchase_price.toLocaleString()}</span></p>
               </div>
               <div className="mt-1.5 flex items-center justify-between text-xs">
-                <span className="text-surface-400">Warehouse:</span>
+                <span className="text-surface-400">{t("ao_warehouse_label", lang)}</span>
                 <span className={`font-medium ${stockStatus === "out" ? "text-red-600" : stockStatus === "low" ? "text-amber-600" : "text-green-600"}`}>
                   {p.warehouse_stock} {stockStatus === "out" ? "(Khatam)" : stockStatus === "low" ? "(Kam)" : ""}
                 </span>
@@ -182,7 +185,7 @@ export function ProductCardGrid({
                     </button>
                   </div>
                   {qty >= p.warehouse_stock && qty > 0 && (
-                    <p className="mt-1 text-center text-[10px] text-amber-600">Poora available stock select ho gaya</p>
+                    <p className="mt-1 text-center text-[10px] text-amber-600">{t("ao_all_stock_selected", lang)}</p>
                   )}
                   {isActive && (
                     <button
@@ -199,7 +202,7 @@ export function ProductCardGrid({
           );
         })}
         {filtered.length === 0 && (
-          <p className="col-span-full py-8 text-center text-sm text-surface-400">Koi product nahi mila.</p>
+          <p className="col-span-full py-8 text-center text-sm text-surface-400">{t("c_no_products", lang)}</p>
         )}
       </div>
     </div>

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { grantLossVerifier, type ActionState } from "@/actions/stock-loss";
 import { UserPlus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -18,6 +20,7 @@ interface Shop {
 
 export function GrantVerifierForm({ staff, shops }: { staff: Staff[]; shops: Shop[] }) {
   const [state, formAction] = useFormState(grantLossVerifier, initialState);
+  const lang = useLang();
   const [profileId, setProfileId] = useState("");
   const [shopId, setShopId] = useState("");
 
@@ -27,7 +30,7 @@ export function GrantVerifierForm({ staff, shops }: { staff: Staff[]; shops: Sho
         <UserPlus className="h-4 w-4" /> Kisi Ko Verification Permission Dein
       </h3>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">Permission de di gayi.</p>}
+      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{t("rv_permission_granted", lang)}</p>}
       <form action={formAction} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <select name="profile_id" value={profileId} onChange={(e) => setProfileId(e.target.value)} required className="rounded-lg border border-surface-200 p-2 text-sm">
           <option value="">- Staff Select Karein -</option>
@@ -36,7 +39,7 @@ export function GrantVerifierForm({ staff, shops }: { staff: Staff[]; shops: Sho
           ))}
         </select>
         <select name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="">Sab Shops (koi bhi shop verify kar sake)</option>
+          <option value="">{t("rv_all_shops", lang)}</option>
           {shops.map((s) => (
             <option key={s.id} value={s.id}>{s.name} (sirf ye Shop)</option>
           ))}

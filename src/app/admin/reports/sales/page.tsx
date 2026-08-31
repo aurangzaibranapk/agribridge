@@ -5,6 +5,8 @@ import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { Wallet, CreditCard, Landmark, ShoppingCart, ClipboardList, TrendingUp } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export default async function SalesReportPage({
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const branchId = params.branch || "";
+  const lang = getLanguageFromCookies("rm");
   const { start, end } = getDateRange(range);
   const supabase = createClient();
 
@@ -61,7 +64,7 @@ export default async function SalesReportPage({
 
   return (
     <div>
-      <PageHeader title="Sales Report" description="Sales across all branches and dealers" />
+      <PageHeader title={t("rs_title", lang)} description="Sales across all branches and dealers" />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <DateRangeFilter current={range} />
@@ -69,28 +72,28 @@ export default async function SalesReportPage({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Total Sales" value={`Rs. ${totalSales.toLocaleString()}`} icon={TrendingUp} tone="brand" />
-        <StatCard label="Transactions" value={String(totalCount)} icon={ClipboardList} tone="blue" />
-        <StatCard label="Avg. Sale" value={`Rs. ${avgSale.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={ShoppingCart} tone="purple" />
-        <StatCard label="Cash" value={`Rs. ${byMode.cash.toLocaleString()}`} icon={Wallet} tone="brand" />
-        <StatCard label="Khata / Split" value={`Rs. ${(byMode.khata + byMode.split).toLocaleString()}`} icon={CreditCard} tone="warn" />
-        <StatCard label="Bank / Kisan Card" value={`Rs. ${(byMode.bank + byMode.kisan_card).toLocaleString()}`} icon={Landmark} tone="orange" />
+        <StatCard label={t("rs_total_sales", lang)} value={`Rs. ${totalSales.toLocaleString()}`} icon={TrendingUp} tone="brand" />
+        <StatCard label={t("rs_transactions", lang)} value={String(totalCount)} icon={ClipboardList} tone="blue" />
+        <StatCard label={t("rs_avg_sale", lang)} value={`Rs. ${avgSale.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={ShoppingCart} tone="purple" />
+        <StatCard label={t("c_cash", lang)} value={`Rs. ${byMode.cash.toLocaleString()}`} icon={Wallet} tone="brand" />
+        <StatCard label={t("rs_khata_split", lang)} value={`Rs. ${(byMode.khata + byMode.split).toLocaleString()}`} icon={CreditCard} tone="warn" />
+        <StatCard label={t("rs_bank_kisan_card", lang)} value={`Rs. ${(byMode.bank + byMode.kisan_card).toLocaleString()}`} icon={Landmark} tone="orange" />
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Recent Sales</h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("rs_recent_sales", lang)}</h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">No sales in this period.</p>
+          <p className="text-sm text-surface-400">{t("rs_no_sales_period", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Location</th>
-                  <th className="py-2 pr-3">Cashier</th>
-                  <th className="py-2 pr-3">Payment Mode</th>
-                  <th className="py-2 pr-3">Amount</th>
+                  <th className="py-2 pr-3">{t("c_date", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_location", lang)}</th>
+                  <th className="py-2 pr-3">{t("rs_cashier", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_payment_mode", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>

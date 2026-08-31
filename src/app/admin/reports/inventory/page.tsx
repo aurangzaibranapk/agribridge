@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { Package, PackageX, Boxes, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export default async function InventoryReportPage({
 }) {
   const params = await searchParams;
   const branchId = params.branch || "";
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
@@ -69,17 +72,17 @@ export default async function InventoryReportPage({
 
   return (
     <div>
-      <PageHeader title="Inventory Report" description="Stock levels and value across all branches" />
+      <PageHeader title={t("ri_title", lang)} description="Stock levels and value across all branches" />
 
       <div className="mt-4">
         <BranchFilter branches={branches ?? []} current={branchId} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Products" value={String(totalProducts)} icon={Package} tone="brand" />
-        <StatCard label="Active Products" value={String(activeProducts)} icon={Package} tone="blue" />
-        <StatCard label="Out of Stock" value={String(outOfStockProducts)} icon={PackageX} tone="warn" />
-        <StatCard label="Total Stock Value" value={`Rs. ${totalStockValue.toLocaleString()}`} icon={Boxes} tone="purple" />
+        <StatCard label={t("db_total_products", lang)} value={String(totalProducts)} icon={Package} tone="brand" />
+        <StatCard label={t("db_active_products", lang)} value={String(activeProducts)} icon={Package} tone="blue" />
+        <StatCard label={t("db_out_of_stock", lang)} value={String(outOfStockProducts)} icon={PackageX} tone="warn" />
+        <StatCard label={t("c_total_stock_value", lang)} value={`Rs. ${totalStockValue.toLocaleString()}`} icon={Boxes} tone="purple" />
       </div>
 
       {lowStockProducts.length > 0 && (
@@ -98,18 +101,18 @@ export default async function InventoryReportPage({
       )}
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Stock by Product (Top 50 by Value)</h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("ri_by_product", lang)}</h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">No products found.</p>
+          <p className="text-sm text-surface-400">{t("ri_no_products", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Product</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 pr-3 text-right">Stock</th>
-                  <th className="py-2 pr-3 text-right">Value</th>
+                  <th className="py-2 pr-3">{t("c_product", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_category", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_stock", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_value", lang)}</th>
                 </tr>
               </thead>
               <tbody>

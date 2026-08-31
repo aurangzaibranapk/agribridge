@@ -3,6 +3,8 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { Badge } from "@/components/ui/form";
 import Link from "next/link";
 import { Undo2, Clock, CheckCircle2, XCircle, Plus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ const REASON_LABEL: Record<string, string> = {
 };
 
 export default async function AgriReturnsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: returns } = await supabase
@@ -42,7 +45,7 @@ export default async function AgriReturnsPage() {
   return (
     <div>
       <PageHeader
-        title="Returns (Branch se HQ)"
+        title={t("ar_title", lang)}
         description="Shop maal wapas bhejti hai, HQ receive kar ke khate se kam karta hai."
         actions={
           <Link href="/admin/agri-returns/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
@@ -53,33 +56,33 @@ export default async function AgriReturnsPage() {
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5 text-amber-600" /> HQ ke intezar mein</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5 text-amber-600" />{t("ar_waiting_hq", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{pending.length}</p>
           <p className="text-xs text-surface-500">Rs {pendingValue.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Receive ho chuke</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" />{t("ar_received_done", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{received.length}</p>
           <p className="text-xs text-surface-500">Rs {receivedValue.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><XCircle className="h-3.5 w-3.5 text-red-500" /> Reject huye</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><XCircle className="h-3.5 w-3.5 text-red-500" />{t("ar_rejected_done", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{rows.filter((r) => r.status === "rejected").length}</p>
         </Card>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title="Abhi tak koi return nahi hai." description="Shop jab maal wapas bhejegi to yahan nazar aayega." />
+        <EmptyState title={t("ar_none_yet", lang)} description="Shop jab maal wapas bhejegi to yahan nazar aayega." />
       ) : (
         <Card className="overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-3 py-2 font-medium text-surface-500">Return No.</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Shop</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Wajah</th>
-                <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
-                <th className="px-3 py-2 font-medium text-surface-500">Haalat</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("ar_return_no", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_shop", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_reason", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
               </tr>
             </thead>
             <tbody>
