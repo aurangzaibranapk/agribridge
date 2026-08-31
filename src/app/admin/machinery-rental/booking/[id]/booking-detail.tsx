@@ -161,7 +161,7 @@ export function BookingDetail({
     completion_photo_url: string | null;
     farmer_confirmed: boolean;
   }>;
-  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number; sabit_area: number | null; kutra_area: number | null; sabit_rate: number | null; kutra_rate: number | null; sabit_amount: number | null; kutra_amount: number | null } | null;
+  bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; discount_amount: number; discount_reason: string | null; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number; sabit_area: number | null; kutra_area: number | null; sabit_rate: number | null; kutra_rate: number | null; sabit_amount: number | null; kutra_amount: number | null } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
   machines: Array<{
     id: string;
@@ -648,6 +648,17 @@ export function BookingDetail({
                     aur us ka naam saaf likha jata hai, warna kisan
                     poochhta hai ke "ye kam kyun hai" aur jawab kisi ke
                     paas nahi hota. */}
+                {/* Riayat. Ye lakeer commission aur vendor ke hisse se
+                    UPAR hai, kyunke wohi us ka matlab hai: riayat pehle
+                    katti hai, hissa us ke baad bantta hai (194). */}
+                {bill.discount_amount > 0 && (
+                  <>
+                    <Row label="Riayat (discount)" value={-bill.discount_amount} />
+                    {bill.discount_reason && (
+                      <p className="-mt-1 pl-1 text-xs italic text-surface-500">{bill.discount_reason}</p>
+                    )}
+                  </>
+                )}
                 {bill.diesel_deducted > 0 && (
                   <Row label={t("mc_diesel_from_bill", lang)} value={-bill.diesel_deducted} />
                 )}
@@ -1982,6 +1993,47 @@ function BillForm({ bookingId }: { bookingId: string }) {
         Bill system khud banayega: asal raqba × wo rate jis par kisan raazi hua, minus poora advance. Koi raqam haath se
         nahi bhari jati.
       </p>
+
+      {/* Riayat jaan boojh kar band (details) mein hai. Roz ka kaam bill
+          banana hai, riayat dena nahi -- aur khula khana bharne ke liye
+          bulata hai. Kholna ek click ka kaam hai; us ek click se ye
+          faisla hosh mein hota hai. */}
+      <details className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+        <summary className="cursor-pointer text-xs font-medium text-surface-700 dark:text-surface-300">
+          Kisan ko riayat deni hai? (discount)
+        </summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-surface-500">
+            Riayat sab se pehle katti hai, hissa us ke baad bantta hai — us raqam par hamara commission nahi banta aur wo
+            vendor ke khate mein bhi nahi jati.
+          </p>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
+              Kitni riayat (Rs)
+            </label>
+            <input
+              type="number"
+              name="discount_amount"
+              min={0}
+              step="0.01"
+              defaultValue={0}
+              className="w-40 rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-surface-700 dark:text-surface-300">
+              Wajah (riayat ho to lazmi, kam az kam 5 harf)
+            </label>
+            <input
+              type="text"
+              name="discount_reason"
+              placeholder="Misal: kisan se Rs 28,000 tay hue the"
+              className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            />
+          </div>
+        </div>
+      </details>
+
       <Submit label={t("mc_make_bill", lang)} />
     </form>
   );

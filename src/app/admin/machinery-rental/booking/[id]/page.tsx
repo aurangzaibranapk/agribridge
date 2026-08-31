@@ -239,6 +239,11 @@ export default async function MachineryBookingPage({ params }: { params: Promise
               actual_area: Number(bill.actual_area),
               rate_amount: Number(bill.rate_amount),
               gross_amount: Number(bill.gross_amount),
+              // Riayat (194). Purane bill par ye khana hai hi nahi --
+              // wahan sifar theek hai, kyunke wahan waqai koi riayat
+              // nahi di gayi thi.
+              discount_amount: Number(bill.discount_amount ?? 0),
+              discount_reason: (bill.discount_reason as string | null) ?? null,
               advance_adjusted: Number(bill.advance_adjusted),
               previous_payment: Number(bill.previous_payment),
               balance_payable: Number(bill.balance_payable),

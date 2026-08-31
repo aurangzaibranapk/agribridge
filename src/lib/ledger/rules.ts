@@ -842,7 +842,22 @@ export async function postMachineryBill(args: {
   bookingId: string;
   farmerId: string;
   vendorId?: string | null;
-  grossAmount: number;
+  /**
+   * Kisan ke zimme kitna khara hota hai -- yani bill mein se riayat aur
+   * us ka apna diesel nikal kar.
+   *
+   * Pehle yahan poora gross jata tha, aur wo sirf us soorat mein theek
+   * tha jab kisan ne diesel na daala ho. Diesel daala ho to entry
+   * barabar hi nahi hoti thi: debit gross, aur credit (commission +
+   * vendor ka hissa) = gross - diesel. Farq diesel ke barabar. Aisi
+   * entry post hi nahi hoti, is liye bill banta hi nahi tha -- aur
+   * safha "Ledger mein nahi gaya" keh kar chup ho jata.
+   *
+   * Diesel kisan ne apne haath se vendor ko diya tha. Wo paisa ART se
+   * hokar guzra hi nahi, is liye us ka koi khana nahi banta -- bas
+   * kisan ka qarza utna kam hota hai.
+   */
+  farmerDue: number;
   commissionAmount: number;
   vendorPayable: number;
   advanceAdjusted: number;
@@ -852,7 +867,7 @@ export async function postMachineryBill(args: {
   const lines: JournalLine[] = [
     {
       account: ACC.farmerDue,
-      debit: args.grossAmount,
+      debit: args.farmerDue,
       partyType: "farmer",
       partyId: args.farmerId,
       memo: args.description,

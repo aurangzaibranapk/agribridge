@@ -9034,6 +9034,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           diesel_deducted: number
+          discount_amount: number
+          discount_reason: string | null
           gross_amount: number
           id: string
           kutra_amount: number | null
@@ -9061,6 +9063,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diesel_deducted?: number
+          discount_amount?: number
+          discount_reason?: string | null
           gross_amount: number
           id?: string
           kutra_amount?: number | null
@@ -9088,6 +9092,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           diesel_deducted?: number
+          discount_amount?: number
+          discount_reason?: string | null
           gross_amount?: number
           id?: string
           kutra_amount?: number | null
@@ -19987,6 +19993,8 @@ export type Database = {
           diesel_vendor_ne_diya: number | null
           diesel_wapas_aane_wala: number | null
           gross_billing: number | null
+          gross_before_discount: number | null
+          riayat: number | null
           hamari_aamdani: number | null
           kaam_ka_maheena: string | null
           kaam_ki_tareekh: string | null

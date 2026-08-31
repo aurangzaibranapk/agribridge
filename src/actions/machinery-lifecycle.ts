@@ -1772,6 +1772,7 @@ async function sendFarmerBillReceipt(
     area: number;
     rate: number;
     gross: number;
+    discount: number;
     advance: number;
     balance: number;
     actorId: string | null;
@@ -1790,6 +1791,11 @@ async function sendFarmerBillReceipt(
     ``,
     `Kaam: ${p.area} Acre x Rs ${p.rate.toLocaleString()} per acre`,
     `Kul: Rs ${p.gross.toLocaleString()}`,
+    // Riayat kisan ko SAAF nazar aani chahiye. Chupa kar sirf kam raqam
+    // likh dena us se ye baat chheen leta hai ke us par ehsaan hua --
+    // aur agli dafa wo usi kam raqam ko apna haq samajh kar aata hai.
+    p.discount > 0 ? `Riayat: -Rs ${p.discount.toLocaleString()}` : null,
+    p.discount > 0 ? `Bill: Rs ${(p.gross - p.discount).toLocaleString()}` : null,
     p.advance > 0 ? `Advance mujra: Rs ${p.advance.toLocaleString()}` : null,
     p.balance > 0 ? `Baqi dena: Rs ${p.balance.toLocaleString()}` : `Hisaab poora ho gaya — kuch baqi nahi.`,
     ``,
@@ -1816,7 +1822,14 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
   if (!bookingId) return { error: "Booking nahi mili." };
-  return buildFinalBill(supabase, bookingId, actorId);
+  // Riayat sirf yahan se aa sakti hai -- bill banate waqt. Baad mein
+  // bill badalta nahi; ghalat ho jaye to mansookh kar ke naya banta hai
+  // (192). Us se riayat ka har adad apni wajah ke sath ek hi qatar mein
+  // rehta hai.
+  return buildFinalBill(supabase, bookingId, actorId, {
+    amount: num(formData, "discount_amount") ?? 0,
+    reason: str(formData, "discount_reason") ?? "",
+  });
 }
 
 /**
@@ -1830,7 +1843,8 @@ export async function generateFinalBill(_prev: ActionState, formData: FormData):
 async function buildFinalBill(
   supabase: Client,
   bookingId: string,
-  actorId: string | null
+  actorId: string | null,
+  discount?: { amount: number; reason: string }
 ): Promise<ActionState> {
 
   const { data: booking } = await supabase
@@ -1875,11 +1889,15 @@ async function buildFinalBill(
 
   const { data: payments } = await supabase
     .from("machinery_payments")
-    .select("amount, kind")
+    .select("amount, kind, verification_status")
     .eq("booking_id", bookingId);
 
+  // Sirf TASDEEQ SHUDA advance. Guard bhi yehi ginta hai (116); yahan
+  // dawe wala advance bhi gin lete to insert us se takra kar ruk jata
+  // aur wajah "advance ka adjustment ghalat hai" jaisi kuch aisi aati
+  // jis se koi ye na samajh pata ke masla tasdeeq ka hai.
   const advanceTotal = (payments ?? [])
-    .filter((p) => p.kind === "advance")
+    .filter((p) => p.kind === "advance" && p.verification_status === "verified")
     .reduce((sum, p) => sum + Number(p.amount), 0);
   const previousPayment = (payments ?? [])
     .filter((p) => p.kind === "final")
@@ -1889,8 +1907,21 @@ async function buildFinalBill(
     Math.round(workRows.reduce((sum, w) => sum + Number(w.actual_area), 0) * 10000) / 10000;
   const rate = Number(booking.final_rate);
   const gross = Math.round(area * rate * 100) / 100;
-  const advanceAdjusted = Math.min(advanceTotal, gross);
-  const balance = Math.round((gross - advanceAdjusted - previousPayment) * 100) / 100;
+
+  // Riayat sab se pehle katti hai, hissa us ke BAAD bantta hai (194).
+  // Yani us raqam par na hamara commission banta hai aur na wo vendor
+  // ke khate mein jati hai.
+  const discountAmount = Math.round(Math.max(0, discount?.amount ?? 0) * 100) / 100;
+  const discountReason = (discount?.reason ?? "").trim();
+  if (discountAmount > gross) {
+    return { error: `Discount (Rs ${discountAmount.toLocaleString()}) bill (Rs ${gross.toLocaleString()}) se bara nahi ho sakta.` };
+  }
+  if (discountAmount > 0 && discountReason.length < 5) {
+    return { error: "Discount ki wajah likhna zaroori hai — kam az kam paanch harf. Ye wajah hamesha darj rahegi." };
+  }
+  const net = Math.round((gross - discountAmount) * 100) / 100;
+  const advanceAdjusted = Math.min(advanceTotal, net);
+  const balance = Math.round((net - advanceAdjusted - previousPayment) * 100) / 100;
 
   // Commission yahan hisaab NAHI hota.
   //
@@ -1913,12 +1944,14 @@ async function buildFinalBill(
       actual_area: area,
       rate_amount: rate,
       gross_amount: gross,
+      discount_amount: discountAmount,
+      discount_reason: discountAmount > 0 ? discountReason : null,
       advance_adjusted: advanceAdjusted,
       previous_payment: previousPayment,
       balance_payable: balance,
       created_by: actorId,
     })
-    .select("id, gross_amount, commission_percentage, commission_amount, vendor_payable, advance_adjusted, balance_payable")
+    .select("id, gross_amount, discount_amount, diesel_deducted, commission_percentage, commission_amount, vendor_payable, advance_adjusted, balance_payable")
     .single();
   if (error || !bill) return { error: error?.message ?? "Bill nahi bana." };
 
@@ -1926,6 +1959,9 @@ async function buildFinalBill(
   const commissionAmount = Number(bill.commission_amount);
   const vendorPayable = Number(bill.vendor_payable);
   const finalGross = Number(bill.gross_amount);
+  const finalDiscount = Number(bill.discount_amount ?? 0);
+  const finalDiesel = Number(bill.diesel_deducted ?? 0);
+  const finalNet = Math.round((finalGross - finalDiscount) * 100) / 100;
   const finalAdvance = Number(bill.advance_adjusted);
   const finalBalance = Number(bill.balance_payable);
 
@@ -1933,11 +1969,16 @@ async function buildFinalBill(
     bookingId,
     farmerId: booking.farmer_id,
     vendorId: booking.vendor_id,
-    grossAmount: finalGross,
+    // Kisan ke zimme jitna khara hota hai: bill mein se riayat aur us ka
+    // apna diesel nikal kar. Yehi adad commission aur vendor ke hisse ke
+    // jor ke barabar hai, is liye entry barabar rehti hai.
+    farmerDue: Math.round((finalNet - finalDiesel) * 100) / 100,
     commissionAmount,
     vendorPayable,
     advanceAdjusted: finalAdvance,
-    description: `Machinery ${booking.booking_number} — bill ${billNumber} (${area} acre x Rs ${rate})`,
+    description: `Machinery ${booking.booking_number} — bill ${billNumber} (${area} acre x Rs ${rate}${
+      finalDiscount > 0 ? `, riayat Rs ${finalDiscount.toLocaleString()}` : ""
+    })`,
     ctx: {
       createdBy: actorId,
       claims: [{ table: "machinery_bills", rowId: bill.id }],
@@ -1953,7 +1994,10 @@ async function buildFinalBill(
     .from("machinery_bookings")
     .update({
       status: finalBalance > 0 ? "payment_pending" : "closed",
-      total_amount: finalGross,
+      // Booking par wo adad likha jata hai jo kisan se WAQAI maanga
+      // gaya -- riayat ke baad wala. Gross apni jagah bill par rehta
+      // hai, wahin us ka matlab bhi hai.
+      total_amount: finalNet,
       commission_percentage: commissionPct,
       commission_amount: commissionAmount,
       vendor_payable: vendorPayable,
@@ -1965,7 +2009,11 @@ async function buildFinalBill(
     eventType: "bill_generated",
     fromStatus: booking.status,
     toStatus: finalBalance > 0 ? "payment_pending" : "closed",
-    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${finalGross.toLocaleString()} (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${finalAdvance.toLocaleString()}, baqi Rs ${finalBalance.toLocaleString()}`,
+    note: `${billNumber}: ${area} acre x Rs ${rate} = Rs ${finalGross.toLocaleString()}${
+      finalDiscount > 0
+        ? ` — riayat Rs ${finalDiscount.toLocaleString()} (${discountReason}) — net Rs ${finalNet.toLocaleString()}`
+        : ""
+    } (commission ${commissionPct}% = Rs ${commissionAmount.toLocaleString()}, vendor ka Rs ${vendorPayable.toLocaleString()}), advance Rs ${finalAdvance.toLocaleString()}, baqi Rs ${finalBalance.toLocaleString()}`,
     actorId,
   });
 
@@ -1977,6 +2025,7 @@ async function buildFinalBill(
     area,
     rate,
     gross: finalGross,
+    discount: finalDiscount,
     advance: finalAdvance,
     balance: finalBalance,
     actorId,
