@@ -5399,6 +5399,42 @@ export type Database = {
           },
         ]
       }
+      farmer_login_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          phone_key: string
+          send_error: string | null
+          sent_via: string | null
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone_key: string
+          send_error?: string | null
+          sent_via?: string | null
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone_key?: string
+          send_error?: string | null
+          sent_via?: string | null
+        }
+        Relationships: []
+      }
       farmer_loans: {
         Row: {
           created_at: string
@@ -20804,6 +20840,14 @@ export type Database = {
       fn_bump_farmer_code_counter: {
         Args: { p_number: number }
         Returns: undefined
+      }
+      fn_create_farmer_otp: {
+        Args: { p_code: string; p_minutes: number; p_phone_key: string }
+        Returns: string
+      }
+      fn_verify_farmer_otp: {
+        Args: { p_code: string; p_phone_key: string }
+        Returns: string
       }
       fn_can_machinery: { Args: { p_action: string }; Returns: boolean }
       fn_crop_profit_benchmarks: {

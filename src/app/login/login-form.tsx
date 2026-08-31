@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
+import { useFormState, useFormStatus } from "react-dom";
+import { requestFarmerOtp, verifyFarmerOtp, type FarmerAuthState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
 
 function GoogleIcon() {
@@ -87,51 +89,210 @@ export function LoginForm() {
     });
   }
 
+  const [mode, setMode] = useState<"farmer" | "staff">("farmer");
+
   return (
     <div className="space-y-4">
-      <div className="space-y-2.5">
+      {/* Do bilkul alag log, do bilkul alag darwaze.
+          Pehle ek hi form dono ko dikhta tha: "Mobile Number ya Email"
+          aur neeche Password. Kisan ke paas na email hota hai na
+          password -- wo us form ko dekh kar wahin ruk jata tha. Ab
+          pehla darwaza usi ka hai, aur staff wala saath mein khara hai
+          magar chhota. */}
+      <div className="flex rounded-lg bg-surface-100 p-1">
         <button
           type="button"
-          onClick={() => handleOAuth("google")}
-          className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50"
+          onClick={() => setMode("farmer")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "farmer" ? "bg-white text-surface-900 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
         >
-          <GoogleIcon /> Google se jaari rakhein
+          Kisan
         </button>
         <button
           type="button"
-          onClick={() => handleOAuth("facebook")}
-          className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#1877F2] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#166FE5]"
+          onClick={() => setMode("staff")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "staff" ? "bg-white text-surface-900 shadow-sm" : "text-surface-500 hover:text-surface-700"
+          }`}
         >
-          <FacebookIcon /> Facebook se jaari rakhein
+          Staff / Admin / Vendor
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-surface-200" />
-        <span className="text-xs font-medium text-surface-400">ya mobile / email se</span>
-        <div className="h-px flex-1 bg-surface-200" />
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-        <div>
-          <Label htmlFor="identifier">Mobile Number ya Email</Label>
-          <Input id="identifier" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="03001234567 ya you@example.com" />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
+      {mode === "farmer" ? (
+        <FarmerOtpLogin />
+      ) : (
+        <>
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={() => handleOAuth("google")}
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50"
+            >
+              <GoogleIcon /> Google se jaari rakhein
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOAuth("facebook")}
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#1877F2] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#166FE5]"
+            >
+              <FacebookIcon /> Facebook se jaari rakhein
+            </button>
           </div>
-          <PasswordInput id="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-        </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Sign in ho raha hai..." : "Sign in"}
-        </Button>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-surface-200" />
+            <span className="text-xs font-medium text-surface-400">ya email se</span>
+            <div className="h-px flex-1 bg-surface-200" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+            <div>
+              <Label htmlFor="identifier">Email ya Mobile</Label>
+              <Input id="identifier" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@example.com" />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {/* "Password bhool gaye?" ab sirf yahan hai. Kisan ko wo
+                    link dikhana usay email wale safhe par le jata tha --
+                    ek aisi cheez maangne jo us ke paas hai hi nahi. */}
+                <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
+              </div>
+              <PasswordInput id="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Sign in ho raha hai..." : "Sign in"}
+            </Button>
+          </form>
+        </>
+      )}
+    </div>
+  );
+}
+
+const emptyState: FarmerAuthState = {};
+
+/**
+ * Kisan ka darwaza -- mobile, phir OTP.
+ *
+ * Naya kisan aur purana kisan ke liye ALAG safha nahi hai. Number
+ * daalte hi maloom ho jata hai ke ye number kis ka hai: purana hai to
+ * us ka naam saamne aa jata hai, naya hai to sirf naam aur gaon poochh
+ * liya jata hai. Kisan ke liye dono soorton mein kaam ek hi hai --
+ * number likho, code likho, andar.
+ */
+function FarmerOtpLogin() {
+  const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [askState, askAction] = useFormState(requestFarmerOtp, emptyState);
+  const [checkState, checkAction] = useFormState(verifyFarmerOtp, emptyState);
+
+  const sent = askState.otpSent || checkState.otpSent;
+  const needsProfile = checkState.needsProfile ?? askState.needsProfile ?? false;
+  const knownName = askState.knownName;
+
+  // Redirect ko render ke andar rakhna React ke usool ke khilaf hai --
+  // render sirf shakl banata hai, kaam nahi karta. Us jagah ye chalta
+  // to har dobara banne par phir chalta.
+  useEffect(() => {
+    if (checkState.success) {
+      router.push("/portal/dashboard");
+      router.refresh();
+    }
+  }, [checkState.success, router]);
+
+  if (!sent) {
+    return (
+      <form action={askAction} className="space-y-4">
+        {askState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error}</p>}
+        <div>
+          <Label htmlFor="phone">Mobile Number</Label>
+          <Input
+            id="phone"
+            name="phone"
+            required
+            inputMode="numeric"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="0300 1234567"
+          />
+          <p className="mt-1 text-xs text-surface-400">
+            Code aap ke WhatsApp par jayega. WhatsApp na ho to SMS par.
+          </p>
+        </div>
+        <SubmitBtn label="OTP bhejein" busy="Bheja ja raha hai..." />
+      </form>
+    );
+  }
+
+  return (
+    <div>
+      <form action={checkAction} className="space-y-4">
+        {(checkState.error || askState.error) && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{checkState.error ?? askState.error}</p>
+      )}
+      {askState.sentVia && !checkState.error && (
+        <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          Code {askState.sentVia === "whatsapp" ? "WhatsApp" : "SMS"} par bhej diya gaya
+          {knownName ? ` — ${knownName}` : ""}.
+        </p>
+      )}
+
+      <input type="hidden" name="phone" value={phone} />
+
+      <div>
+        <Label htmlFor="code">Chhe hindse wala code</Label>
+        <Input id="code" name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="------" />
+      </div>
+
+      {needsProfile && (
+        <>
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Ye number pehli dafa aaya hai. Apna naam aur gaon likh dein — aap ka khata usi waqt ban jayega.
+          </p>
+          <div>
+            <Label htmlFor="full_name">Aap ka naam</Label>
+            <Input id="full_name" name="full_name" required placeholder="Misal: Amir Sultan" />
+          </div>
+          <div>
+            <Label htmlFor="village">Gaon</Label>
+            <Input id="village" name="village" placeholder="Misal: Chak Maha Bali" />
+          </div>
+        </>
+      )}
+
+        <SubmitBtn label="Andar jayein" busy="Check ho raha hai..." />
+      </form>
+
+      {/* Kisan ke liye "Password bhool gaye?" bemaani hai -- us ka koi
+          password hai hi nahi. Us ki jagah wohi cheez jo us ke kaam ki
+          hai.
+
+          Ye apna alag form hai, us ke andar nahi: HTML mein form ke
+          andar form hota hi nahi, aur browser wahan andar wala chup
+          chaap gira deta hai. */}
+      <form action={askAction} className="mt-3">
+        <input type="hidden" name="phone" value={phone} />
+        <button type="submit" className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline">
+          Code nahi mila? Dobara bhejein
+        </button>
       </form>
     </div>
+  );
+}
+
+function SubmitBtn({ label, busy }: { label: string; busy: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="w-full">
+      {pending ? busy : label}
+    </Button>
   );
 }
