@@ -231,8 +231,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <AlertTriangle className="h-4 w-4 text-red-500" /> Manual Loss Reports (Damage / Theft / Shrinkage / Other)
-      </h3>
+        <AlertTriangle className="h-4 w-4 text-red-500" />{t("ra_manual_loss", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -280,8 +279,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <Clock className="h-4 w-4 text-orange-500" /> Expiry Tracking (30 din pehle Warning, phir Loss)
-      </h3>
+        <Clock className="h-4 w-4 text-orange-500" />{t("ra_expiry_tracking", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -317,8 +315,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <TrendingDown className="h-4 w-4 text-surface-500" /> Slow-Moving Stock (90+ din se bikaa nahi)
-      </h3>
+        <TrendingDown className="h-4 w-4 text-surface-500" />{t("ra_slow_moving_full", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -339,7 +336,7 @@ export default async function AuditCenterPage() {
               </tr>
             ))}
             {slowMovingRows.length === 0 && (
-              <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">Koi slow-moving stock nahi hai — sab acha bik raha hai.</td></tr>
+              <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">{t("ra_no_slow_moving", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -347,8 +344,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <ClipboardList className="h-4 w-4 text-blue-500" /> GRN Discrepancies (AgriBridge Orders)
-      </h3>
+        <ClipboardList className="h-4 w-4 text-blue-500" />{t("ra_grn_disc", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -380,8 +376,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <Truck className="h-4 w-4 text-purple-500" /> Delivery Discrepancies (Short/Damaged mila tha)
-      </h3>
+        <Truck className="h-4 w-4 text-purple-500" />{t("ra_delivery_disc", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -413,8 +408,7 @@ export default async function AuditCenterPage() {
       </div>
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <ArrowLeftRight className="h-4 w-4 text-cyan-500" /> Stock Transfer Discrepancies
-      </h3>
+        <ArrowLeftRight className="h-4 w-4 text-cyan-500" />{t("ra_transfer_disc", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -445,8 +439,7 @@ export default async function AuditCenterPage() {
 
       {isHQ && (
         <p className="mt-6 text-center text-xs text-surface-400">
-          {t("ra_verifiers_note_before", lang)} <a href="/admin/reports/audit/verifiers" className="text-brand-600 hover:underline">{t("ra_verifiers_page", lang)}</a> dekhein.
-        </p>
+          {t("ra_verifiers_note_before", lang)} <a href="/admin/reports/audit/verifiers" className="text-brand-600 hover:underline">{t("ra_verifiers_page", lang)}</a>{t("ra_see", lang)}</p>
       )}
     </div>
   );

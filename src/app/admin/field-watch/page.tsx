@@ -4,6 +4,8 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { Badge } from "@/components/ui/form";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { collectWatchItems, countBySeverity, WATCH_KIND_LABEL, type WatchItem, type WatchKind } from "@/lib/field-watch";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ const ADMIN_LEVEL = ["owner", "super_admin", "admin"];
 const MANAGER_ROLES = [...ADMIN_LEVEL, "manager"];
 
 export default async function FieldWatchPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -20,7 +23,7 @@ export default async function FieldWatchPage() {
     : { data: null };
 
   if (!me?.is_active || !MANAGER_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("fw_only_manager", lang)}</div>;
   }
 
   // Branch manager sirf apni branch dekhta hai — jo cheez us ke ikhtiyar
@@ -39,21 +42,21 @@ export default async function FieldWatchPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Maidan ki Nigrani"
+        title={t("fw_title", lang)}
         description="Sab adhoori aur mashkook cheezein ek jagah — sab se purani sab se upar."
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Fauri tawajjah</p>
+          <p className="text-xs text-surface-500">{t("fw_urgent", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-red-600">{alerts}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Dekh lein</p>
+          <p className="text-xs text-surface-500">{t("fw_have_a_look", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-amber-600">{warnings}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kul</p>
+          <p className="text-xs text-surface-500">{t("c_total", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{items.length}</p>
         </Card>
       </div>
@@ -61,7 +64,7 @@ export default async function FieldWatchPage() {
       {items.length === 0 && (
         <Card className="p-8">
           <EmptyState
-            title="Filhal koi cheez tawajjah nahi mangti"
+            title={t("fw_none", lang)}
             description="Pichhle do hafton mein koi adhoori entry, ghair haazir meter ya door se lagi hazri nahi mili."
           />
         </Card>

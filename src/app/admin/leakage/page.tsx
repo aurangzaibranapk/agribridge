@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { leakageReport } from "@/lib/ledger/leakage";
 import { AlertTriangle, CheckCircle2, EyeOff, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default async function LeakagePage({
   searchParams: Promise<{ m?: string; y?: string }>;
 }) {
   const params = await searchParams;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -34,9 +37,7 @@ export default async function LeakagePage({
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
     return (
-      <div className="p-8 text-center text-surface-400">
-        Ye safha sirf Malik, Admin aur Finance ke liye hai — is mein naam le kar baat hoti hai.
-      </div>
+      <div className="p-8 text-center text-surface-400">{t("lk_named_page", lang)}</div>
     );
   }
 
@@ -56,7 +57,7 @@ export default async function LeakagePage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Paisa Kahan Se Nikal Raha Hai"
+        title={t("lk_title", lang)}
         description="Ye safha koi naya adad nahi banata — wo sab jorta hai jo pehle se darj hai."
       />
 
@@ -86,9 +87,7 @@ export default async function LeakagePage({
             : "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20"
         }`}
       >
-        <p className="text-xs font-semibold uppercase tracking-wide text-surface-500">
-          Jahan hum ne dekha, wahan se nikla
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-surface-500">{t("lk_found_where_looked", lang)}</p>
         <p className="mt-1 font-display text-3xl font-bold text-surface-900 dark:text-white">
           {rs(report.totalMeasured)}
         </p>
@@ -151,9 +150,7 @@ export default async function LeakagePage({
                       <Link
                         href={b.href}
                         className="shrink-0 text-xs font-medium text-brand-700 underline dark:text-brand-400"
-                      >
-                        theek karein →
-                      </Link>
+                      >{t("lk_fix", lang)}</Link>
                     </div>
                   </li>
                 ))}
@@ -165,9 +162,7 @@ export default async function LeakagePage({
 
       {/* ---- Har sooraakh ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">
-          Sooraakh — bare se chhote tak
-        </h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("lk_holes", lang)}</h2>
         {activeLeaks.length === 0 ? (
           <Card className="p-4">
             <p className="text-sm text-surface-500">
@@ -220,9 +215,7 @@ export default async function LeakagePage({
                   <Link
                     href={leak.href}
                     className="mt-2 inline-block text-xs font-medium text-brand-700 underline dark:text-brand-400"
-                  >
-                    tafseel dekhein →
-                  </Link>
+                  >{t("lk_see_detail", lang)}</Link>
                 </Card>
               );
             })}
@@ -251,9 +244,7 @@ export default async function LeakagePage({
                 <Link
                   href={s.href}
                   className="mt-2 inline-block text-xs font-medium text-brand-700 underline dark:text-brand-400"
-                >
-                  dekhein →
-                </Link>
+                >{t("lk_see", lang)}</Link>
               </Card>
             ))}
           </div>
@@ -269,9 +260,7 @@ export default async function LeakagePage({
         <div className="grid gap-4 md:grid-cols-2">
           {report.byBranch.length > 0 && (
             <Card className="overflow-hidden">
-              <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-                Cash ka farq — kis branch mein
-              </div>
+              <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">{t("lk_cash_gap_branch", lang)}</div>
               <ul className="divide-y divide-surface-100 dark:divide-surface-800">
                 {report.byBranch.map((b) => (
                   <li key={b.label} className="flex items-center justify-between px-4 py-2.5 text-sm">
@@ -291,9 +280,7 @@ export default async function LeakagePage({
           {report.byPerson.length > 0 && (
             <Card className="overflow-hidden">
               <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-                <p className="text-sm font-semibold text-surface-900 dark:text-white">
-                  Kam pahuncha cash — kis ke haath se
-                </p>
+                <p className="text-sm font-semibold text-surface-900 dark:text-white">{t("lk_short_cash_who", lang)}</p>
                 <p className="mt-0.5 text-xs text-surface-500">
                   Ye ilzam nahi. Ek dafa kam pahunchna har kisi ke sath ho sakta hai — magar wohi naam
                   har mahine aaye to wo khud sawal ban jata hai.

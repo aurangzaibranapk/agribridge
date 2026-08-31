@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { RunNowButton, ResolveForm } from "./recon-client";
 import { AlertTriangle, CheckCircle2, HelpCircle, ClipboardCheck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ function rs(value: number): string {
 }
 
 export default async function ReconciliationPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const service = createServiceClient();
 
@@ -25,7 +28,7 @@ export default async function ReconciliationPage() {
     : { data: null };
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("c_only_finance_admin", lang)}</div>;
   }
 
   const canResolve = ["owner", "super_admin", "admin", "finance"].includes(me.role);
@@ -58,7 +61,7 @@ export default async function ReconciliationPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Roz ka Milaan"
+        title={t("rc_title", lang)}
         description="System roz khud dekhta hai. Har jaanch ke teen nateeje hain — theek, masla, ya “check nahi ho saka”. Teesra kabhi pehle jaisa nahi ginaya jata."
         actions={<RunNowButton />}
       />
@@ -67,7 +70,7 @@ export default async function ReconciliationPage() {
       {!latest ? (
         <Card className="p-6 text-center">
           <ClipboardCheck className="mx-auto h-8 w-8 text-surface-300" />
-          <p className="mt-2 text-sm font-medium text-surface-900 dark:text-white">Abhi koi jaanch nahi hui</p>
+          <p className="mt-2 text-sm font-medium text-surface-900 dark:text-white">{t("rc_none_yet", lang)}</p>
           <p className="mt-1 text-xs text-surface-500">
             Cron Job set karein ya ooper se abhi chala lein. Jab tak jaanch nahi hoti, ye safha khali
             rahega — aur khali safha &quot;sab theek hai&quot; nahi hota.
@@ -155,9 +158,7 @@ export default async function ReconciliationPage() {
 
                   <div className="mt-2 flex flex-wrap items-center gap-3">
                     {f.href && (
-                      <Link href={f.href} className="text-xs font-medium text-brand-700 underline dark:text-brand-400">
-                        dekhein →
-                      </Link>
+                      <Link href={f.href} className="text-xs font-medium text-brand-700 underline dark:text-brand-400">{t("lk_see", lang)}</Link>
                     )}
                     {Number(f.din_purani ?? 0) > 0 && (
                       <span
@@ -182,17 +183,14 @@ export default async function ReconciliationPage() {
       {latest && findings.length === 0 && (
         <Card className="border-l-4 border-l-green-500 p-4">
           <p className="flex items-center gap-2 text-sm text-green-800 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4" /> Koi baat khuli nahi — har jaanch guzar gayi.
-          </p>
+            <CheckCircle2 className="h-4 w-4" />{t("rc_all_passed", lang)}</p>
         </Card>
       )}
 
       {/* ---- Pichhle din ---- */}
       {(history ?? []).length > 0 && (
         <Card className="overflow-hidden">
-          <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-            Pichhle din
-          </div>
+          <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">{t("rc_previous_days", lang)}</div>
           <div className="flex flex-wrap gap-1.5 p-4">
             {(history ?? []).map((h) => (
               <span

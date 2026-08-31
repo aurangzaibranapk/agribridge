@@ -4,10 +4,13 @@ import { DEPARTMENTS } from "@/lib/departments";
 import { DepartmentsClient, type DeptRow } from "./departments-client";
 import { HeadForm, type StaffOption, type HeadInfo } from "./head-form";
 import { TemporaryList } from "./temporary-list";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function DepartmentsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -17,7 +20,7 @@ export default async function DepartmentsPage() {
     : { data: null };
 
   if (!me?.is_active || !["owner", "super_admin", "admin"].includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Owner aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
 
   const [{ data: perms }, { data: staff }, { data: heads }, { data: allStaff }] = await Promise.all([
@@ -73,13 +76,13 @@ export default async function DepartmentsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Department aur Ijazat"
+        title={t("dp_title", lang)}
         description="Ek dafa department ki ijazat tay karein — us ke har banday par lag jati hai."
       />
       <DepartmentsClient rows={rows} />
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Waqti Ijazat</h2>
+        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("dp_temp_permission", lang)}</h2>
         <p className="mb-3 text-xs text-surface-500">
           Chhutti par gaye kisi ki jagah di hui ijazat. Waqt guzarte hi khud khatam ho jati hai — kisi
           ko yaad rakhne ki zarurat nahi.
@@ -88,7 +91,7 @@ export default async function DepartmentsPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Department Head</h2>
+        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("dp_head", lang)}</h2>
         <p className="mb-3 text-xs text-surface-500">
           Head apni team ko khud ijazat de sakta hai — magar sirf wahi jo aap ne use di ho, aur sirf us
           feature par jo us ke apne paas ho.
