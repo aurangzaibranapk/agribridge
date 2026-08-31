@@ -10,6 +10,8 @@ import {
   tableLabel,
 } from "@/lib/ledger/money-trail";
 import { AlertTriangle, CheckCircle2, Wallet, Link2Off } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ export default async function MoneyTrailPage({
   searchParams: Promise<{ account?: string }>;
 }) {
   const params = await searchParams;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -35,7 +38,7 @@ export default async function MoneyTrailPage({
     : { data: null };
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("c_only_finance_admin", lang)}</div>;
   }
 
   const [trail, tb, coverage, pending] = await Promise.all([
@@ -71,7 +74,7 @@ export default async function MoneyTrailPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Money Trail — Paisa Kahan Hai"
+        title={t("mt_title", lang)}
         description="Har adad seedha journal ki qataron se ginta hai. Koi alag rakha hua balance nahi."
       />
 
@@ -113,9 +116,7 @@ export default async function MoneyTrailPage({
 
       {/* ---- Paisa kahan hai ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">
-          Paisa is waqt kahan hai
-        </h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("mt_where_now", lang)}</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {where.map((item) => (
             <Link key={item.code} href={`/admin/money-trail?account=${item.code}`}>
@@ -130,7 +131,7 @@ export default async function MoneyTrailPage({
 
       {/* ---- Kis ka dena hai ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Hum ne dena hai</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("mt_we_owe", lang)}</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {owed.map((item) => (
             <Link key={item.code} href={`/admin/money-trail?account=${item.code}`}>
@@ -189,10 +190,10 @@ export default async function MoneyTrailPage({
                   <table className="w-full min-w-[520px] text-xs">
                     <thead className="text-left text-surface-500">
                       <tr>
-                        <th className="py-1 pr-3 font-medium">Kahan se</th>
-                        <th className="py-1 pr-3 font-medium">Qism</th>
-                        <th className="py-1 pr-3 font-medium">Tafseel</th>
-                        <th className="py-1 text-right font-medium">Raqam</th>
+                        <th className="py-1 pr-3 font-medium">{t("mt_from_where", lang)}</th>
+                        <th className="py-1 pr-3 font-medium">{t("sb_kind", lang)}</th>
+                        <th className="py-1 pr-3 font-medium">{t("c_detail", lang)}</th>
+                        <th className="py-1 text-right font-medium">{t("sb_amount", lang)}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
@@ -229,10 +230,7 @@ export default async function MoneyTrailPage({
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <strong>{rs(trail.suspense)}</strong> aisi raqam hai jis ki wajah abhi maloom nahi (Suspense).
-              <br />
-              Ye kahin chhupayi nahi jati — jab tak wajah nahi milti, yahin nazar aati rahegi.
-            </span>
+              <strong>{rs(trail.suspense)}</strong>{t("mt_suspense_note", lang)}<br />{t("mt_never_hidden", lang)}</span>
           </p>
         </Card>
       )}
@@ -245,22 +243,20 @@ export default async function MoneyTrailPage({
               <Wallet className="h-4 w-4" />
               {tb.rows.find((r) => r.code === openAccount)?.name ?? openAccount} — poora silsila
             </h3>
-            <Link href="/admin/money-trail" className="text-xs text-surface-500 underline">
-              band karein
-            </Link>
+            <Link href="/admin/money-trail" className="text-xs text-surface-500 underline">{t("mt_close", lang)}</Link>
           </div>
           {ledger.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-surface-400">Is khate mein abhi koi qatar nahi.</p>
+            <p className="px-4 py-6 text-center text-sm text-surface-400">{t("mt_empty_account", lang)}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Number</th>
-                    <th className="px-4 py-2 font-medium">Tareekh</th>
-                    <th className="px-4 py-2 font-medium">Tafseel</th>
-                    <th className="px-4 py-2 text-right font-medium">Aaya</th>
-                    <th className="px-4 py-2 text-right font-medium">Gaya</th>
+                    <th className="px-4 py-2 font-medium">{t("sb_number", lang)}</th>
+                    <th className="px-4 py-2 font-medium">{t("c_date", lang)}</th>
+                    <th className="px-4 py-2 font-medium">{t("c_detail", lang)}</th>
+                    <th className="px-4 py-2 text-right font-medium">{t("mt_in", lang)}</th>
+                    <th className="px-4 py-2 text-right font-medium">{t("mt_out", lang)}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 dark:divide-surface-800">

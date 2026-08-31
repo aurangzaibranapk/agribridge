@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/form";
 import { Bike, AlertTriangle, Fuel } from "lucide-react";
 import { VehicleAssignForm } from "./vehicle-assign-form";
 import { PostLogForm } from "./post-log-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function VehiclesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: vehicles } = await supabase
@@ -59,30 +62,30 @@ export default async function VehiclesPage() {
   return (
     <div>
       <PageHeader
-        title="Gaariyan aur Rozana Hisaab"
+        title={t("vh_title", lang)}
         description="Har gaari kis staff ke naam par hai, aur WhatsApp se aaye meter/petrol ka rozana hisaab."
       />
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Bike className="h-3.5 w-3.5" /> Manager ke intezar mein</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Bike className="h-3.5 w-3.5" />{t("vh_waiting_manager", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{waiting.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Nishan lage huye</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" />{t("c_marked", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-amber-600">{flagged.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Gaari kisi ke naam nahi</p>
+          <p className="text-xs text-surface-500">{t("vh_unassigned", lang)}</p>
           <p className="mt-1 font-display text-xl font-bold text-surface-900 dark:text-white">{unassigned.length}</p>
-          <p className="text-xs text-surface-500">In ka WhatsApp hisaab nahi banega</p>
+          <p className="text-xs text-surface-500">{t("vh_no_whatsapp_log", lang)}</p>
         </Card>
       </div>
 
       <Card className="mb-6 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Kaun si gaari kis ke paas</h3>
+        <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("vh_who_has_which", lang)}</h3>
         {(vehicles ?? []).length === 0 ? (
-          <p className="text-sm text-surface-500">Koi gaari darj nahi hai.</p>
+          <p className="text-sm text-surface-500">{t("vh_none", lang)}</p>
         ) : (
           <div className="space-y-2">
             {(vehicles ?? []).map((v) => (
@@ -101,16 +104,14 @@ export default async function VehiclesPage() {
             ))}
           </div>
         )}
-        <p className="mt-3 text-xs text-surface-500">
-          Gaari assign kiye baghair us staff ki bheji hui meter photo kis gaari ki hai — ye system pehchan nahi payega.
-        </p>
+        <p className="mt-3 text-xs text-surface-500">{t("vh_unassigned_note", lang)}</p>
       </Card>
 
-      <h3 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-white">Rozana Hisaab</h3>
+      <h3 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-white">{t("vh_daily_log", lang)}</h3>
 
       {rows.length === 0 ? (
         <EmptyState
-          title="Abhi tak koi rozana hisaab nahi bana."
+          title={t("vh_no_daily_log", lang)}
           description="Jab staff WhatsApp par subah ka meter bhejega, wo yahan aayega."
         />
       ) : (
@@ -132,24 +133,24 @@ export default async function VehiclesPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                   <div>
-                    <p className="text-xs text-surface-500">Subah / Shaam</p>
+                    <p className="text-xs text-surface-500">{t("vh_morning_evening", lang)}</p>
                     <p className="text-surface-900 dark:text-white">
                       {l.opening_km == null ? "-" : Number(l.opening_km).toLocaleString()} / {l.closing_km == null ? "-" : Number(l.closing_km).toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-surface-500">Chale</p>
+                    <p className="text-xs text-surface-500">{t("vh_ran", lang)}</p>
                     <p className="text-surface-900 dark:text-white">{l.km_travelled == null ? "-" : `${Math.round(Number(l.km_travelled)).toLocaleString()} km`}</p>
                   </div>
                   <div>
-                    <p className="flex items-center gap-1 text-xs text-surface-500"><Fuel className="h-3 w-3" /> Petrol</p>
+                    <p className="flex items-center gap-1 text-xs text-surface-500"><Fuel className="h-3 w-3" />{t("c_petrol", lang)}</p>
                     <p className="text-surface-900 dark:text-white">
                       {l.fuel_liters == null ? "-" : `${l.fuel_liters} L`}
                       {l.fuel_amount != null && <span className="text-xs text-surface-500"> — Rs {Number(l.fuel_amount).toLocaleString()}</span>}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-surface-500">Mileage</p>
+                    <p className="text-xs text-surface-500">{t("c_mileage", lang)}</p>
                     <p className="text-surface-900 dark:text-white">
                       {l.km_per_liter == null ? "-" : `${l.km_per_liter} km/L`}
                       {l.liters_difference != null && (
@@ -163,7 +164,7 @@ export default async function VehiclesPage() {
 
                 {flags.length > 0 && (
                   <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                    <p className="flex items-center gap-1 font-medium"><AlertTriangle className="h-3.5 w-3.5" /> System ne ye pakra:</p>
+                    <p className="flex items-center gap-1 font-medium"><AlertTriangle className="h-3.5 w-3.5" />{t("vh_system_caught", lang)}</p>
                     <ul className="mt-1 list-inside list-disc">
                       {flags.map((f, i) => <li key={i}>{f}</li>)}
                     </ul>

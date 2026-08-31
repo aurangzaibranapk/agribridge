@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude } from "@/lib/command-center";
 import { AlertTriangle, CheckCircle2, ArrowRight, TrendingUp } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,7 @@ function withBold(text: string) {
 }
 
 export default async function CommandCenterPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -36,7 +39,7 @@ export default async function CommandCenterPage() {
     : { data: null };
 
   if (!me?.is_active || !OWNER_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Owner aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
 
   const [money, depts, alerts] = await Promise.all([loadMoneyToday(), loadDeptKpis(), loadAlerts()]);
@@ -53,13 +56,13 @@ export default async function CommandCenterPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Owner Command Center"
+        title={t("cc_title", lang)}
         description="Aaj ka paisa, har department ka moqabla, aur wo cheezein jo tawajjah mangti hain."
       />
 
       {/* ---- Aaj ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Aaj</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_today", lang)}</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {moneyTiles.map((tile) => (
             <Link key={tile.label} href={tile.href}>
@@ -84,19 +87,17 @@ export default async function CommandCenterPage() {
 
       {/* ---- Departments ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">
-          Department — is mahine
-        </h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_dept_this_month", lang)}</h2>
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
               <tr>
-                <th className="px-4 py-2 font-medium">Department</th>
-                <th className="px-4 py-2 font-medium">Kaam</th>
-                <th className="px-4 py-2 text-right font-medium">Aamdani</th>
-                <th className="px-4 py-2 text-right font-medium">Lagat / Kharcha</th>
-                <th className="px-4 py-2 text-right font-medium">Nafa</th>
-                <th className="px-4 py-2 text-right font-medium">Pending</th>
+                <th className="px-4 py-2 font-medium">{t("c_department", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("cc_work", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_income", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_cost", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_profit", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("c_pending", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -147,7 +148,7 @@ export default async function CommandCenterPage() {
 
       {/* ---- Nateeja ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Nateeja</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_result", lang)}</h2>
         <Card className="p-4">
           <ul className="space-y-2">
             {lines.map((line, i) => (
@@ -166,7 +167,7 @@ export default async function CommandCenterPage() {
 
       {/* ---- Alerts ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Tawajjah</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_attention", lang)}</h2>
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {alerts.map((alert, i) => (
             <Link key={i} href={alert.href}>
@@ -199,13 +200,9 @@ export default async function CommandCenterPage() {
 
       <p className="px-1 text-xs text-surface-400">
         Tafseel ke liye:{" "}
-        <Link href="/admin/master-dashboard" className="underline">
-          Master Dashboard
-        </Link>{" "}
+        <Link href="/admin/master-dashboard" className="underline">{t("md_title", lang)}</Link>{" "}
         (bank, inventory aur receivables ka poora hisaab) •{" "}
-        <Link href="/admin/reports/pnl" className="underline">
-          Shop-wise P&amp;L
-        </Link>
+        <Link href="/admin/reports/pnl" className="underline">{t("cc_shop_pl", lang)}</Link>
       </p>
     </div>
   );

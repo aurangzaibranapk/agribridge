@@ -3,6 +3,8 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { ReverseForm } from "./reverse-form";
 import { ledgerWatch, recentEntries, auditLog } from "@/lib/ledger/audit-trail";
 import { AlertTriangle, Eye, History, Undo2, CalendarClock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ function rs(value: number): string {
 }
 
 export default async function AuditTrailPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -24,7 +27,7 @@ export default async function AuditTrailPage() {
     : { data: null };
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("c_only_finance_admin", lang)}</div>;
   }
 
   const canReverse = CAN_REVERSE.includes(me.role);
@@ -36,7 +39,7 @@ export default async function AuditTrailPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Kis Ne Kya Kiya"
+        title={t("at_title", lang)}
         description="Purani tareekh ki entry aur reversal — dono jaiz kaam hain. Inhen roka nahi jata, nazar mein rakha jata hai."
       />
 
@@ -65,11 +68,11 @@ export default async function AuditTrailPage() {
           <table className="w-full min-w-[680px] text-sm">
             <thead className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-900">
               <tr>
-                <th className="px-4 py-2 font-medium">Kism</th>
-                <th className="px-4 py-2 font-medium">Entry</th>
-                <th className="px-4 py-2 text-right font-medium">Raqam</th>
-                <th className="px-4 py-2 font-medium">Kis ne</th>
-                <th className="px-4 py-2 font-medium">Wajah</th>
+                <th className="px-4 py-2 font-medium">{t("at_kind", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("at_entry", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("sb_amount", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("at_who", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("c_reason", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -85,12 +88,10 @@ export default async function AuditTrailPage() {
                     >
                       {w.kind === "reversal" ? (
                         <>
-                          <Undo2 className="h-3 w-3" /> ulti gayi
-                        </>
+                          <Undo2 className="h-3 w-3" />{t("at_reversed", lang)}</>
                       ) : (
                         <>
-                          <CalendarClock className="h-3 w-3" /> purani tareekh
-                        </>
+                          <CalendarClock className="h-3 w-3" />{t("at_backdated", lang)}</>
                       )}
                     </span>
                     {w.kind === "backdated" && w.dayGap > 0 && (
@@ -132,7 +133,7 @@ export default async function AuditTrailPage() {
       {/* ---- Haal ki entriyan + reversal ---- */}
       <Card className="overflow-hidden">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h2 className="text-sm font-semibold text-surface-900 dark:text-white">Haal ki entriyan</h2>
+          <h2 className="text-sm font-semibold text-surface-900 dark:text-white">{t("at_recent", lang)}</h2>
           <p className="mt-0.5 text-xs text-surface-500">
             {canReverse
               ? "Ghalti ho to yahan se ulti karein — yehi wahid raasta hai. Mitane ka koi tareeqa nahi, aur ye jaan boojh kar hai."
@@ -140,7 +141,7 @@ export default async function AuditTrailPage() {
           </p>
         </div>
         {entries.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-surface-400">Abhi koi entry nahi.</p>
+          <p className="px-4 py-6 text-center text-sm text-surface-400">{t("at_no_entry", lang)}</p>
         ) : (
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {entries.map((e) => (
@@ -164,9 +165,7 @@ export default async function AuditTrailPage() {
                     Ye entry pehle hi ulti ja chuki hai ({e.reversedBy}).
                   </p>
                 ) : e.isReversal ? (
-                  <p className="mt-1.5 text-xs text-surface-400">
-                    Ye khud ek reversal hai — reversal ka reversal nahi hota.
-                  </p>
+                  <p className="mt-1.5 text-xs text-surface-400">{t("at_is_reversal", lang)}</p>
                 ) : canReverse ? (
                   <ReverseForm entryId={e.id} entryNumber={e.entryNumber} amount={e.amount} />
                 ) : null}
@@ -179,10 +178,9 @@ export default async function AuditTrailPage() {
       {/* ---- Aam kaamon ka record ---- */}
       <Card className="overflow-hidden">
         <div className="flex items-center gap-1.5 border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-          <History className="h-4 w-4" /> Baqi kaamon ka record
-        </div>
+          <History className="h-4 w-4" />{t("at_other_actions", lang)}</div>
         {logs.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-surface-400">Abhi koi record nahi.</p>
+          <p className="px-4 py-6 text-center text-sm text-surface-400">{t("at_no_record", lang)}</p>
         ) : (
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {logs.map((l) => (
