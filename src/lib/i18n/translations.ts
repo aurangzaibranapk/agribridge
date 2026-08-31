@@ -14,6 +14,7 @@ import { inventoryDict, stockCountDict, stockTransferDict } from "./dict/invento
 import { purchasesDict } from "./dict/purchases";
 import { grainDict } from "./dict/grain";
 import { purchaseGrainPagesDict } from "./dict/purchase-grain-pages";
+import { dashboardDict } from "./dict/dashboard";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -66,6 +67,7 @@ const dict = {
   ...purchasesDict,
   ...grainDict,
   ...purchaseGrainPagesDict,
+  ...dashboardDict,
 };
 
 export type TranslationKey = keyof typeof dict;

@@ -29,7 +29,79 @@ function FacebookIcon() {
   );
 }
 
+
+/**
+ * Login ke khanon aur button ki shakl -- ek hi jagah.
+ *
+ * Teen alag form hain (kisan ka OTP, kisan ki User ID, aur staff ka
+ * email) aur teenon ek hi darwaze par khare hain. Har ek ki apni shakl
+ * likhte to wo teen alag safhe lagte -- aur banda tab par tab badalte
+ * waqt yehi mehsoos karta ke wo kisi aur nizam mein aa gaya.
+ */
+const FIELD =
+  "h-12 rounded-xl border-surface-200 bg-white px-4 text-[15px] shadow-sm placeholder:text-surface-400";
+const BIG_BTN =
+  "h-12 w-full rounded-xl text-[15px] font-semibold tracking-wide shadow-sm";
+const SOCIAL_BTN =
+  "flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-surface-200 bg-white text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50";
+
 export function LoginForm() {
+  // Do side, aur taqseem KAAM ki nahi, BANDE ki hai.
+  //
+  // Baayen taraf wo log jo bahar se aate hain -- kisan aur gahak.
+  // Daayen taraf idare ke apne log -- admin, staff aur vendor. Pehle
+  // taqseem "kisan" banam "baqi sab" thi, aur us mein gahak ka koi
+  // ghar nahi tha: wo "Staff" likhi hui patti par haath rakhne se
+  // jhijakta tha.
+  const [mode, setMode] = useState<"public" | "team">("public");
+
+  return (
+    <div className="space-y-4">
+      {/* Naam bare harfon mein aur harf harf ke faasle ke sath do
+          lakeeron mein toot jate the -- patti aadhi chauRai deti hai,
+          takreeban 160px. Naam kaatne ke bajaye harf chhote kiye gaye:
+          teenon ka zikr bhi rehta hai aur ek hi lakeer mein aa jate
+          hain. */}
+      <div className="flex rounded-xl bg-surface-100 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("public")}
+          className={`flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all ${
+            mode === "public"
+              ? "bg-brand-600 text-white shadow"
+              : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          Kisan / Customer
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("team")}
+          className={`flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all ${
+            mode === "team"
+              ? "bg-brand-600 text-white shadow"
+              : "text-surface-500 hover:text-surface-700"
+          }`}
+        >
+          Admin / Staff / Vendor
+        </button>
+      </div>
+
+      {mode === "public" ? <PublicLogin /> : <PasswordLogin />}
+    </div>
+  );
+}
+
+/**
+ * Email/User ID aur password wala darwaza.
+ *
+ * Ye EK hi jagah likha hai aur donon taraf istemal hota hai -- idare ke
+ * apne log daayen taraf isi se aate hain, aur gahak baayen taraf isi
+ * se. Do nakalein rakhte to ek din ek nakal theek hoti aur doosri
+ * purani reh jati, aur us farq ka pata tab chalta jab koi andar na aa
+ * pata.
+ */
+function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -89,91 +161,107 @@ export function LoginForm() {
     });
   }
 
-  const [mode, setMode] = useState<"farmer" | "staff">("farmer");
-
   return (
-    <div className="space-y-4">
-      {/* Do bilkul alag log, do bilkul alag darwaze.
-          Pehle ek hi form dono ko dikhta tha: "Mobile Number ya Email"
-          aur neeche Password. Kisan ke paas na email hota hai na
-          password -- wo us form ko dekh kar wahin ruk jata tha. Ab
-          pehla darwaza usi ka hai, aur staff wala saath mein khara hai
-          magar chhota. */}
-      <div className="flex rounded-lg bg-surface-100 p-1">
-        <button
-          type="button"
-          onClick={() => setMode("farmer")}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            mode === "farmer" ? "bg-white text-surface-900 shadow-sm" : "text-surface-500 hover:text-surface-700"
-          }`}
-        >
-          Kisan
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
+
+        <div>
+          <Label htmlFor="identifier">Email ya Mobile</Label>
+          <Input
+            id="identifier"
+            required
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="you@example.com"
+            className={FIELD}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <PasswordInput
+            id="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className={FIELD}
+          />
+          {/* Ye link ab khane ke NEECHE aur daayen taraf hai.
+              Pehle wo "Password" ke naam ke barabar mein khara tha
+              aur dono ek doosre se tang lagte the. */}
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">
+              Password bhool gaye?
+            </Link>
+          </div>
+        </div>
+
+        <Button type="submit" disabled={loading} className={BIG_BTN}>
+          {loading ? "Sign in ho raha hai..." : "Sign in"}
+        </Button>
+      </form>
+
+      {/* Google aur Facebook NEECHE hain, upar nahi.
+          Yahan aane wale ke paas aksar apna email hota hai -- wohi asal
+          raasta hai. Us ke upar do bare rangeen button rakhna asal
+          raaste ko chhota kar deta tha. */}
+      <div className="mt-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-surface-200" />
+        <span className="text-xs font-medium text-surface-400">ya</span>
+        <div className="h-px flex-1 bg-surface-200" />
+      </div>
+
+      <div className="mt-4 space-y-2.5">
+        <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
+          <GoogleIcon /> Google se jaari rakhein
         </button>
-        <button
-          type="button"
-          onClick={() => setMode("staff")}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            mode === "staff" ? "bg-white text-surface-900 shadow-sm" : "text-surface-500 hover:text-surface-700"
-          }`}
-        >
-          Staff / Admin / Vendor
+        <button type="button" onClick={() => handleOAuth("facebook")} className={SOCIAL_BTN}>
+          <FacebookIcon /> Facebook se jaari rakhein
         </button>
       </div>
 
-      {mode === "farmer" ? (
-        <FarmerOtpLogin />
-      ) : (
-        <>
-          <div className="space-y-2.5">
-            <button
-              type="button"
-              onClick={() => handleOAuth("google")}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50"
-            >
-              <GoogleIcon /> Google se jaari rakhein
-            </button>
-            <button
-              type="button"
-              onClick={() => handleOAuth("facebook")}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#1877F2] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#166FE5]"
-            >
-              <FacebookIcon /> Facebook se jaari rakhein
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-surface-200" />
-            <span className="text-xs font-medium text-surface-400">ya email se</span>
-            <div className="h-px flex-1 bg-surface-200" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-            <div>
-              <Label htmlFor="identifier">Email ya Mobile</Label>
-              <Input id="identifier" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@example.com" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                {/* "Password bhool gaye?" ab sirf yahan hai. Kisan ko wo
-                    link dikhana usay email wale safhe par le jata tha --
-                    ek aisi cheez maangne jo us ke paas hai hi nahi. */}
-                <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
-              </div>
-              <PasswordInput id="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Sign in ho raha hai..." : "Sign in"}
-            </Button>
-          </form>
-        </>
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-4 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+        >
+          {backLabel ?? "Wapas"}
+        </button>
       )}
-    </div>
+    </>
   );
+}
+
+/**
+ * Bahar se aane walon ka darwaza -- kisan aur gahak.
+ *
+ * PEHLI cheez kisan ka raasta hai: mobile aur OTP. Ye jaan boojh kar
+ * hai -- kisan sab se ziyada aata hai aur us ke paas na email hai na
+ * password.
+ *
+ * Gahak ka raasta yahin neeche khula hai magar chhota. Us ka khata
+ * email aur password se banta hai (customer, dealer, investor), aur
+ * usay OTP wale khane mein bhejna ek nayi ghalti paida karta: wo
+ * raasta sirf `farmers` mein dekhta hai, to gahak ka number wahan ek
+ * naya KISAN bana deta -- ek hi bande ke do record, do alag hisaab.
+ */
+function PublicLogin() {
+  const [route, setRoute] = useState<"otp" | "username" | "password">("otp");
+
+  if (route === "username") return <FarmerUsernameLogin onBack={() => setRoute("otp")} />;
+  if (route === "password") {
+    return (
+      <PasswordLogin
+        backLabel="Kisan hain? Mobile aur OTP se login karein"
+        onBack={() => setRoute("otp")}
+      />
+    );
+  }
+
+  return <FarmerOtpLogin onUsername={() => setRoute("username")} onPassword={() => setRoute("password")} />;
 }
 
 const emptyState: FarmerAuthState = {};
@@ -187,14 +275,9 @@ const emptyState: FarmerAuthState = {};
  * liya jata hai. Kisan ke liye dono soorton mein kaam ek hi hai --
  * number likho, code likho, andar.
  */
-function FarmerOtpLogin() {
+function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
-  // Kisan ka doosra raasta -- us ke liye jis ne apni User ID bana li hai
-  // (198). Wo pehli cheez NAHI hai jo safha dikhata: naye kisan ke paas
-  // User ID hoti hi nahi, aur usay pehle wo khana dikhana usay wahin
-  // rok deta hai.
-  const [byUsername, setByUsername] = useState(false);
   const [askState, askAction] = useFormState(requestFarmerOtp, emptyState);
   const [checkState, checkAction] = useFormState(verifyFarmerOtp, emptyState);
 
@@ -212,10 +295,6 @@ function FarmerOtpLogin() {
     }
   }, [checkState.success, router]);
 
-  if (byUsername) {
-    return <FarmerUsernameLogin onBack={() => setByUsername(false)} />;
-  }
-
   if (!sent) {
     return (
       <>
@@ -232,6 +311,7 @@ function FarmerOtpLogin() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0300 1234567"
+            className={FIELD}
           />
           <p className="mt-1 text-xs text-surface-400">
             Code aap ke WhatsApp par jayega. WhatsApp na ho to SMS par.
@@ -239,13 +319,28 @@ function FarmerOtpLogin() {
         </div>
         <SubmitBtn label="OTP bhejein" busy="Bheja ja raha hai..." />
       </form>
-      <button
-        type="button"
-        onClick={() => setByUsername(true)}
-        className="mt-3 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-      >
-        Apni User ID bana rakhi hai? Us se login karein
-      </button>
+      {/* Do chhote raaste, dono jaan boojh kar OTP ke NEECHE.
+          User ID kisan ka apna banaya hua naam hai (198) -- naye kisan
+          ke paas hota hi nahi, is liye usay pehle dikhana usay wahin
+          rok deta.
+          Gahak ka khata email aur password se banta hai; usay upar wale
+          khane mein bhejna ek naya KISAN bana deta. */}
+      <div className="mt-3 space-y-2">
+        <button
+          type="button"
+          onClick={onUsername}
+          className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+        >
+          Apni User ID bana rakhi hai? Us se login karein
+        </button>
+        <button
+          type="button"
+          onClick={onPassword}
+          className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+        >
+          Customer hain? Email aur password se aayein
+        </button>
+      </div>
       </>
     );
   }
@@ -267,7 +362,16 @@ function FarmerOtpLogin() {
 
       <div>
         <Label htmlFor="code">Chhe hindse wala code</Label>
-        <Input id="code" name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="------" />
+        <Input
+          id="code"
+          name="code"
+          required
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="- - - - - -"
+          className={`${FIELD} text-center font-mono text-xl tracking-[0.4em]`}
+        />
       </div>
 
       {needsProfile && (
@@ -277,11 +381,11 @@ function FarmerOtpLogin() {
           </p>
           <div>
             <Label htmlFor="full_name">Aap ka naam</Label>
-            <Input id="full_name" name="full_name" required placeholder="Misal: Amir Sultan" />
+            <Input id="full_name" name="full_name" required placeholder="Misal: Amir Sultan" className={FIELD} />
           </div>
           <div>
             <Label htmlFor="village">Gaon</Label>
-            <Input id="village" name="village" placeholder="Misal: Chak Maha Bali" />
+            <Input id="village" name="village" placeholder="Misal: Chak Maha Bali" className={FIELD} />
           </div>
         </>
       )}
@@ -309,7 +413,7 @@ function FarmerOtpLogin() {
 function SubmitBtn({ label, busy }: { label: string; busy: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full">
+    <Button type="submit" disabled={pending} className={BIG_BTN}>
       {pending ? busy : label}
     </Button>
   );
@@ -341,11 +445,11 @@ function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
         {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
         <div>
           <Label htmlFor="username">User ID</Label>
-          <Input id="username" name="username" required autoComplete="username" placeholder="misal: aurangzeb" />
+          <Input id="username" name="username" required autoComplete="username" placeholder="misal: aurangzeb" className={FIELD} />
         </div>
         <div>
           <Label htmlFor="fpassword">Password</Label>
-          <PasswordInput id="fpassword" name="password" required placeholder="••••••••" />
+          <PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} />
         </div>
         <SubmitBtn label="Andar jayein" busy="Check ho raha hai..." />
       </form>

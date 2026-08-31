@@ -93,18 +93,39 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-[#9FB8A4]">Apne account mein sign in karein</p>
         </div>
 
-        <div className="rounded-2xl border border-white/5 bg-[#FCFAF5] p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-7">
+        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-7">
+          {/* Band karne ka nishan.
+              Login ho jaye to ye khud hat jata hai -- kyunke tab safha
+              hi badal jata hai. Aur agar banda login nahi karna chahta
+              to usay yahan phansa nahi rehna chahiye: ek nishan par
+              haath rakhe aur website par wapas. Pehle ye kaam neeche
+              likhe ek chhote jumle se hota tha jise koi dekhta hi
+              nahi tha. */}
+          <Link
+            href="/"
+            aria-label="Band karein — website par wapas jayein"
+            title="Band karein"
+            className="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white text-[#4A5A4D] shadow-lg transition-colors hover:bg-[#0D2818] hover:text-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M6 6 L18 18 M18 6 L6 18" />
+            </svg>
+          </Link>
+
           <Suspense fallback={null}>
             <LoginForm />
           </Suspense>
-          <p className="mt-5 text-center text-sm text-[#6B7B6E]">
-            Naye farmer hain? <Link href="/register/farmer" className="font-medium text-[#1E4A2E] hover:underline">Yahan register karein</Link>
+          {/* Purana link "Naye farmer hain? Yahan register karein"
+              hata diya gaya. Wo email aur password wale safhe par le
+              jata tha -- ek aisi cheez maangne jo kisan ke paas hai hi
+              nahi. Ab naye kisan ka raasta wohi hai jo purane ka hai:
+              Kisan wale khane mein apna number likhein, OTP aaye, aur
+              khata usi waqt ban jaye (197). */}
+          <p className="mt-5 text-center text-xs leading-relaxed text-[#6B7B6E]">
+            Naye kisan hain? Upar <span className="font-medium text-[#1E4A2E]">Kisan / Customer</span> chun kar apna
+            mobile number likhein — khata khud ban jayega.
           </p>
         </div>
-
-        <p className="mt-6 text-center text-sm text-[#9FB8A4]">
-          <Link href="/" className="hover:text-white hover:underline">&larr; Website par wapas jayein</Link>
-        </p>
       </div>
     </div>
   );
