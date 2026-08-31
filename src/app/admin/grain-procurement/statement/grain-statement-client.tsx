@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { Printer, MessageCircle, Mail, ArrowLeft } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface LedgerRow {
   id: string;
@@ -46,6 +48,8 @@ export function GrainStatementClient({
 }) {
   const shareText = `AgriBridge Grain Statement\n${sellerName}\nTotal Supply: Rs ${totalSupplied.toLocaleString()}\nTotal Paid: Rs ${totalPaid.toLocaleString()}\nBaaqi: Rs ${balanceDue.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
+  const lang = useLang();
+
   function handlePrint() {
     window.print();
   }
@@ -78,7 +82,7 @@ export function GrainStatementClient({
       <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
         <div className="mb-6 border-b border-surface-200 pb-4">
           <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders - AgriBridge</h1>
-          <p className="text-sm text-surface-500">Grain Procurement Statement</p>
+          <p className="text-sm text-surface-500">{t("gst_title", lang)}</p>
         </div>
 
         <div className="mb-6 flex items-center justify-between">
@@ -106,11 +110,11 @@ export function GrainStatementClient({
         <table className="mb-6 w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left">
-              <th className="pb-2 font-medium text-surface-500">Date</th>
-              <th className="pb-2 font-medium text-surface-500">Tafseel</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Supply (+)</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Payment (-)</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Balance</th>
+              <th className="pb-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="pb-2 font-medium text-surface-500">{t("c_detail", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("gst_supply_plus", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("gst_payment_minus", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -130,15 +134,15 @@ export function GrainStatementClient({
               </tr>
             ))}
             {ledger.length === 0 && (
-              <tr><td colSpan={5} className="py-8 text-center text-surface-400">Koi record nahi hai.</td></tr>
+              <tr><td colSpan={5} className="py-8 text-center text-surface-400">{t("c_no_records", lang)}</td></tr>
             )}
           </tbody>
         </table>
 
         <div className="flex justify-end border-t border-surface-200 pt-4">
           <div className="w-64 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-surface-500">Total Supply Value</span><span>Rs {totalSupplied.toLocaleString()}</span></div>
-            <div className="flex justify-between text-green-600"><span>Total Paid</span><span>- Rs {totalPaid.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-surface-500">{t("gst_total_supply_value", lang)}</span><span>Rs {totalSupplied.toLocaleString()}</span></div>
+            <div className="flex justify-between text-green-600"><span>{t("c_total_paid", lang)}</span><span>- Rs {totalPaid.toLocaleString()}</span></div>
             <div className="flex justify-between border-t border-surface-200 pt-1 font-bold text-surface-900">
               <span>{balanceDue >= 0 ? "Baaqi (Payable)" : "Zyada Diya Gaya"}</span>
               <span>Rs {Math.abs(balanceDue).toLocaleString()}</span>
@@ -146,7 +150,7 @@ export function GrainStatementClient({
           </div>
         </div>
 
-        <p className="mt-8 text-center text-[10px] text-surface-300">Ye computer-generated statement hai - AgriBridge system se bana hai.</p>
+        <p className="mt-8 text-center text-[10px] text-surface-300">{t("gst_computer_statement", lang)}</p>
       </div>
     </div>
   );

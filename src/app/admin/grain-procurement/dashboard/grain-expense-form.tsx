@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createGrainExpense, type ActionState } from "@/actions/grain-expenses";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Fuel } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -28,6 +30,7 @@ const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat", rice: "Rice", mai
 
 export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts: FinanceAccount[]; entries: Entry[] }) {
   const [state, formAction] = useFormState(createGrainExpense, initialState);
+  const lang = useLang();
   const [linkToEntry, setLinkToEntry] = useState(false);
 
   if (state.success) setTimeout(() => window.location.reload(), 900);
@@ -38,7 +41,7 @@ export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts
         <Fuel className="h-4 w-4" /> Grain Operation Expense Add Karein
       </h3>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Expense record ho gaya.</p>}
+      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("ge_recorded", lang)}</p>}
       <form action={formAction} className="space-y-3">
         <div>
           <Label>Category *</Label>
@@ -50,13 +53,13 @@ export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts
         </div>
         <div>
           <Label>Description *</Label>
-          <Input name="description" required placeholder="Jaise: Aaj itna Diesel dalwaya, Fasal utharwane ki mazdoori, wagera" />
+          <Input name="description" required placeholder={t("ge_example", lang)} />
         </div>
 
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={linkToEntry} onChange={(e) => setLinkToEntry(e.target.checked)} className="h-4 w-4" />
-            <span className="text-surface-700 dark:text-surface-300">Kisi specific Farmer/Party ki Entry se link karein</span>
+            <span className="text-surface-700 dark:text-surface-300">{t("ge_link_entry", lang)}</span>
           </label>
           {linkToEntry ? (
             <select name="entry_id" required className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm">
@@ -78,7 +81,7 @@ export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts
             <Input type="number" step="0.01" name="amount" required />
           </div>
           <div>
-            <Label>Date</Label>
+            <Label>{t("c_date", lang)}</Label>
             <Input type="date" name="expense_date" defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
         </div>
@@ -92,7 +95,7 @@ export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts
           </Select>
         </div>
         <div>
-          <Label>Notes (optional)</Label>
+          <Label>{t("c_notes_optional", lang)}</Label>
           <Textarea name="notes" rows={2} />
         </div>
         <SubmitButton />

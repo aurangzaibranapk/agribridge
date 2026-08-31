@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { WalletAdjustButton } from "@/app/admin/wallets/wallet-adjustment-modal";
 import Link from "next/link";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWalletsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: wallets } = await supabase
     .from("wallets")
@@ -30,19 +33,19 @@ export default async function AdminWalletsPage() {
 
   return (
     <div>
-      <PageHeader title="Wallets" description="Digital wallet balances for Farmers, Dealers, Investors, and Customers" />
+      <PageHeader title={t("wl_wallets", lang)} description="Digital wallet balances for Farmers, Dealers, Investors, and Customers" />
       {!wallets || wallets.length === 0 ? (
-        <EmptyState title="No wallets found" />
+        <EmptyState title={t("wl_none_found", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Owner</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Type</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Balance</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Held</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Action</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("wl_owner", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_type", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("wl_held", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -62,7 +65,7 @@ export default async function AdminWalletsPage() {
                       <div className="flex items-center gap-2">
                         <WalletAdjustButton walletId={w.id} ownerName={name} />
                         {w.owner_type === "farmer" && (
-                          <Link href={`/admin/wallets/${w.owner_id}`} className="text-xs font-medium text-brand-600 hover:underline">Statement</Link>
+                          <Link href={`/admin/wallets/${w.owner_id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("c_statement", lang)}</Link>
                         )}
                       </div>
                     </td>

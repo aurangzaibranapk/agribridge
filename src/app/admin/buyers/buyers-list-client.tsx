@@ -5,6 +5,8 @@ import { updateBuyerStatus, deleteBuyer, type ActionState } from "@/actions/buye
 import { DeleteButton } from "@/components/admin/delete-button";
 import { EmptyState } from "@/components/ui/layout-primitives";
 import { formatDateTime } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -19,7 +21,8 @@ interface Buyer {
 }
 
 export function BuyersListClient({ buyers }: { buyers: Buyer[] }) {
-  if (buyers.length === 0) return <EmptyState title="No buyers yet" />;
+  const lang = useLang();
+  if (buyers.length === 0) return <EmptyState title={t("by_none_yet", lang)} />;
 
   return (
     <div className="space-y-2">
@@ -53,6 +56,7 @@ export function BuyersListClient({ buyers }: { buyers: Buyer[] }) {
 }
 
 function StatusSelect({ buyerId, currentStatus }: { buyerId: string; currentStatus: string }) {
+  const lang = useLang();
   const [, formAction] = useFormState(updateBuyerStatus, initialState);
   return (
     <form action={formAction}>
@@ -63,9 +67,9 @@ function StatusSelect({ buyerId, currentStatus }: { buyerId: string; currentStat
         onChange={(e) => e.target.form?.requestSubmit()}
         className="rounded-lg border border-surface-200 px-2 py-1 text-xs"
       >
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="suspended">Suspended</option>
+        <option value="active">{t("c_active", lang)}</option>
+        <option value="inactive">{t("c_inactive", lang)}</option>
+        <option value="suspended">{t("c_suspended", lang)}</option>
       </select>
     </form>
   );
