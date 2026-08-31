@@ -139,19 +139,21 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
   if (visible.size === 0) {
     const { data: profile } = await service
       .from("profiles")
-      .select("allowed_pages")
+      .select("allowed_pages, extra_roles")
       .eq("id", profileId)
       .maybeSingle();
     const own = (profile?.allowed_pages as string[] | null) ?? [];
 
     let pages = own;
     if (pages.length === 0) {
+      // Apna department AUR jo doosre diye gaye hon (193). Menu aur rok
+      // ek hi hisaab par chalte hain -- warna banda menu mein cheez
+      // dekhta aur khol nahi pata, ya us se ulta.
       const { data: rolePerm } = await service
         .from("role_page_permissions")
         .select("allowed_pages")
-        .eq("role", role)
-        .maybeSingle();
-      pages = (rolePerm?.allowed_pages as string[] | null) ?? [];
+        .in("role", [role, ...((profile?.extra_roles as string[] | null) ?? [])]);
+      pages = [...new Set((rolePerm ?? []).flatMap((r) => (r.allowed_pages as string[] | null) ?? []))];
     }
 
     const allowed = new Set([...ALWAYS, ...pages]);

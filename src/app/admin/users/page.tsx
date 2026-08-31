@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { RoleSelector } from "@/app/admin/users/role-selector";
+import { ExtraDepartments } from "@/app/admin/users/extra-departments";
 import { BranchSelector } from "@/app/admin/users/branch-selector";
 import { ShopSelector } from "@/app/admin/users/shop-selector";
 import { StaffStatusManager } from "@/app/admin/users/staff-status-manager";
@@ -39,6 +40,7 @@ export default async function UsersPage() {
             <tr className="border-b border-surface-100 text-left text-xs text-surface-400">
               <th className="pb-2">Name</th>
               <th className="pb-2">Role</th>
+              <th className="pb-2">Aur department</th>
               <th className="pb-2">Branch</th>
               <th className="pb-2">Shop</th>
               <th className="pb-2">Joined</th>
@@ -55,6 +57,15 @@ export default async function UsersPage() {
                     {p.phone_number && <p className="text-xs text-surface-400">{p.phone_number}</p>}
                   </td>
                   <td className="py-3"><RoleSelector userId={p.id} currentRole={p.role} /></td>
+                  {/* Asli department us ke saath wale khane mein hai --
+                      wohi us ka ghar hai. Ye khana us ke ILAWA hai. */}
+                  <td className="py-3">
+                    <ExtraDepartments
+                      userId={p.id}
+                      mainRole={p.role}
+                      current={(p.extra_roles as string[] | null) ?? []}
+                    />
+                  </td>
                   <td className="py-3">
                     <BranchSelector userId={p.id} currentBranchId={p.branch_id} branches={branches ?? []} />
                   </td>
@@ -73,7 +84,7 @@ export default async function UsersPage() {
                 </tr>
                 {p.status_reason && (
                   <tr key={`${p.id}-reason`}>
-                    <td colSpan={7} className="pb-2 text-xs text-surface-500">
+                    <td colSpan={8} className="pb-2 text-xs text-surface-500">
                       <strong>Wajah:</strong> {p.status_reason}
                     </td>
                   </tr>

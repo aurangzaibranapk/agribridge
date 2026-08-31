@@ -22,7 +22,7 @@ export default async function DepartmentsPage() {
 
   const [{ data: perms }, { data: staff }, { data: heads }, { data: allStaff }] = await Promise.all([
     supabase.from("role_page_permissions").select("role, allowed_pages"),
-    supabase.from("profiles").select("role, allowed_pages").eq("is_active", true),
+    supabase.from("profiles").select("role, allowed_pages, extra_roles").eq("is_active", true),
     supabase
       .from("department_head_grants")
       .select("department_key, profile_id, max_actions, max_data_scope, expires_at"),
@@ -52,7 +52,13 @@ export default async function DepartmentsPage() {
   }
 
   const rows: DeptRow[] = DEPARTMENTS.map((d) => {
-    const mine = (staff ?? []).filter((s) => s.role === d.role);
+    // Department ke banday: jin ka asli department yehi hai, AUR jinhen
+    // ye department us ke ilawa diya gaya hai (193). Doosron ko na
+    // ginna wohi purani khamoshi wapas laata -- safha "0 banday" kehta
+    // aur admin samajhta ke abhi kisi ko lagaya hi nahi.
+    const mine = (staff ?? []).filter(
+      (s) => s.role === d.role || ((s.extra_roles as string[] | null) ?? []).includes(d.role)
+    );
     return {
       role: d.role,
       pages: ((perms ?? []).find((p) => p.role === d.role)?.allowed_pages as string[] | null) ?? [],

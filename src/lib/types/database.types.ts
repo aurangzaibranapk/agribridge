@@ -14165,6 +14165,7 @@ export type Database = {
           allowed_pages: Json | null
           branch_id: string | null
           created_at: string
+          extra_roles: string[]
           full_name: string
           id: string
           is_active: boolean
@@ -14180,6 +14181,7 @@ export type Database = {
           allowed_pages?: Json | null
           branch_id?: string | null
           created_at?: string
+          extra_roles?: string[]
           full_name: string
           id: string
           is_active?: boolean
@@ -14195,6 +14197,7 @@ export type Database = {
           allowed_pages?: Json | null
           branch_id?: string | null
           created_at?: string
+          extra_roles?: string[]
           full_name?: string
           id?: string
           is_active?: boolean

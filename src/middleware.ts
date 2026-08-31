@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(url);
   }
-  const { data: profile } = await supabase.from("profiles").select("role, is_active, allowed_pages").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role, is_active, allowed_pages, extra_roles").eq("id", user.id).single();
   if (!profile || !profile.is_active) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -85,12 +85,16 @@ export async function middleware(request: NextRequest) {
         const ownPages = (profile.allowed_pages as string[] | null) ?? null;
         let rolePages: string[] = [];
         if (!ownPages || ownPages.length === 0) {
+          // Apna department AUR jo doosre diye gaye hon (193) -- sab ke
+          // safhe jore jate hain. Sirf apna dekhna doosre department ko
+          // bemaani kar deta.
           const { data: rolePerm } = await supabase
             .from("role_page_permissions")
             .select("allowed_pages")
-            .eq("role", profile.role)
-            .maybeSingle();
-          rolePages = (rolePerm?.allowed_pages as string[] | null) ?? [];
+            .in("role", [profile.role, ...((profile.extra_roles as string[] | null) ?? [])]);
+          rolePages = [
+            ...new Set((rolePerm ?? []).flatMap((r) => (r.allowed_pages as string[] | null) ?? [])),
+          ];
         }
         allowed.push(...(ownPages && ownPages.length > 0 ? ownPages : rolePages));
       }

@@ -38,8 +38,18 @@ export function accessFrom(role: string, ownPages: string[] | null, rolePages: s
   return { unrestricted: false, pages: [...ALWAYS_ALLOWED, homePageForRole(role), ...chosen] };
 }
 
-/** Server component ke liye -- department ka set khud le aata hai. */
-export async function effectiveAccess(role: string, ownPages: string[] | null): Promise<EffectiveAccess> {
+/**
+ * Server component ke liye -- department ka set khud le aata hai.
+ *
+ * Ek bande ke ek se ziyada department ho sakte hain (193). Un sab ke
+ * safhe JORE jate hain, kisi ek ko chuna nahi jata: doosra department
+ * dene ka poora maqsad hi ye hai ke pehla band na ho.
+ */
+export async function effectiveAccess(
+  role: string,
+  ownPages: string[] | null,
+  extraRoles: string[] = []
+): Promise<EffectiveAccess> {
   if (UNRESTRICTED_ROLES.includes(role)) return { unrestricted: true, pages: [] };
   if (ownPages && ownPages.length > 0) return accessFrom(role, ownPages, null);
 
@@ -47,10 +57,10 @@ export async function effectiveAccess(role: string, ownPages: string[] | null): 
   const { data } = await service
     .from("role_page_permissions")
     .select("allowed_pages")
-    .eq("role", role)
-    .maybeSingle();
+    .in("role", [role, ...extraRoles]);
 
-  return accessFrom(role, null, (data?.allowed_pages as string[] | null) ?? []);
+  const pages = (data ?? []).flatMap((r) => (r.allowed_pages as string[] | null) ?? []);
+  return accessFrom(role, null, [...new Set(pages)]);
 }
 
 /** Safha khulta hai ya nahi. Neeche ke safhe bhi khulte hain (/a → /a/b). */
