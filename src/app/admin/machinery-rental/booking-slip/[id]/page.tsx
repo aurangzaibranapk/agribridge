@@ -44,7 +44,7 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
     supabase
       .from("machinery_bills")
       .select(
-        "bill_number, bill_date, actual_area, rate_amount, gross_amount, sabit_area, kutra_area, sabit_rate, kutra_rate, sabit_amount, kutra_amount, advance_adjusted, previous_payment, diesel_deducted, balance_payable"
+        "bill_number, bill_date, actual_area, rate_amount, gross_amount, discount_amount, discount_reason, sabit_area, kutra_area, sabit_rate, kutra_rate, sabit_amount, kutra_amount, advance_adjusted, previous_payment, diesel_deducted, balance_payable"
       )
       .eq("booking_id", id)
       .is("cancelled_at", null)
@@ -101,6 +101,11 @@ export default async function MachineryBookingSlipPage({ params }: { params: Pro
     kutraRate: isFinal ? (bill.kutra_rate === null ? null : n(bill.kutra_rate)) : (booking.kutra_rate === null ? null : n(booking.kutra_rate)),
     sabitAmount: isFinal ? (bill.sabit_amount === null ? null : n(bill.sabit_amount)) : null,
     kutraAmount: isFinal ? (bill.kutra_amount === null ? null : n(bill.kutra_amount)) : null,
+    // Riayat (194). Kisan ki parchi par ye lakeer chhupani nahi --
+    // warna wo Rs 30,000 parhta hai aur neeche Rs 28,000, aur beech ka
+    // farq us ke liye ek an-kaha sawal ban jata hai.
+    discount: isFinal ? n(bill.discount_amount) : 0,
+    discountReason: isFinal ? ((bill.discount_reason as string | null) ?? null) : null,
     advanceAdjusted: isFinal ? n(bill.advance_adjusted) : advancePaid,
     previousPayment: isFinal ? n(bill.previous_payment) : 0,
     dieselDeducted: isFinal ? n(bill.diesel_deducted) : 0,

@@ -35,6 +35,8 @@ interface Slip {
   kutraRate: number | null;
   sabitAmount: number | null;
   kutraAmount: number | null;
+  discount: number;
+  discountReason: string | null;
   advanceAdjusted: number;
   previousPayment: number;
   dieselDeducted: number;
@@ -50,6 +52,8 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
     slip.farmerName,
     `${slip.vendorName} — ${slip.machineLabel}`,
     `${slip.area} acre × Rs ${slip.rate.toLocaleString()} = Rs ${slip.gross.toLocaleString()}`,
+    slip.discount > 0 ? `Riayat: - Rs ${slip.discount.toLocaleString()}` : null,
+    slip.discount > 0 ? `Bill: Rs ${(slip.gross - slip.discount).toLocaleString()}` : null,
     slip.received > 0 ? `Mila: Rs ${slip.received.toLocaleString()}` : null,
     `Baqi: Rs ${slip.balance.toLocaleString()}`,
     "",
@@ -86,49 +90,72 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
         </div>
       </div>
 
-      <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
-        <div className="mb-6 flex items-center justify-between border-b border-surface-200 pb-4">
-          <div>
-            <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders</h1>
-            {/* Parchi khud kehti hai ke wo kya hai: bill ban chuka ho to
-                BILL, warna sirf booking ka andaza. Ek hi kaghaz ko dono
-                naam se chalana wohi cheez hai jis se kisan samajhta hai
-                ke hisaab poora ho chuka. */}
-            <p className="text-sm text-surface-500">
-              {slip.isFinal ? "Machinery — Final Bill" : t("mc_slip_title", lang)}
-            </p>
+      {/* Browser default se rang nahi chhapta -- aur is parchi par rang
+          sirf sajawat nahi hai: usi se maloom hota hai ke raqam baqi hai
+          ya hisaab poora. Is liye chhapte waqt rang rakhne ko kaha jata
+          hai. */}
+      <style>{`@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } @page { margin: 14mm; } }`}</style>
+
+      <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:p-0 print:shadow-none">
+        {/* Sar-e-warq. Kisan ke haath mein jane wala kaghaz hai, is liye
+            teen sawal pehli nazar mein khatam hone chahiyen: kis ka
+            kaghaz hai, kis cheez ka hai, aur maamla khatam hua ya baqi
+            hai. Aakhri baat ka nishan upar hi lag jata hai -- warna
+            banda poori parchi parh kar neeche pahunchta hai. */}
+        <div className="mb-6 border-b-2 border-brand-600 pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="font-display text-2xl font-bold tracking-tight text-surface-900">Al Rana Traders</h1>
+              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-brand-700">
+                {slip.isFinal ? "Machinery — Final Bill" : t("mc_slip_title", lang)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-base font-semibold tabular-nums text-surface-900">
+                {slip.billNumber ?? slip.bookingNumber}
+              </p>
+              <p className="text-xs text-surface-500">
+                {new Date(slip.billDate ?? slip.bookingDate).toLocaleDateString()}
+              </p>
+              {slip.billNumber && (
+                <p className="font-mono text-[10px] text-surface-400">{slip.bookingNumber}</p>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="font-mono text-sm font-semibold text-surface-700">
-              {slip.billNumber ?? slip.bookingNumber}
-            </p>
-            <p className="text-xs text-surface-400">
-              {new Date(slip.billDate ?? slip.bookingDate).toLocaleDateString()}
-            </p>
-            {slip.billNumber && (
-              <p className="font-mono text-[10px] text-surface-400">{slip.bookingNumber}</p>
-            )}
-          </div>
+          {slip.isFinal && (
+            <span
+              className={`mt-3 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                slip.balance > 0
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-green-100 text-green-800"
+              }`}
+            >
+              {slip.balance > 0 ? "Adaigi baqi hai" : "Hisaab poora ho chuka"}
+            </span>
+          )}
         </div>
 
-        <div className="mb-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-400">{t("mc_farmer", lang)}</p>
-          <p className="font-display text-lg font-semibold text-surface-900">{slip.farmerName}</p>
-          {slip.farmerCode && <p className="text-xs text-surface-500">Code: {slip.farmerCode}</p>}
-          {slip.farmerPhone && <p className="text-xs text-surface-500">Phone: {slip.farmerPhone}</p>}
+        <div className="mb-5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-surface-400">{t("mc_farmer", lang)}</p>
+          <p className="font-display text-xl font-semibold text-surface-900">{slip.farmerName}</p>
+          <p className="text-xs text-surface-500">
+            {[slip.farmerCode && `Code: ${slip.farmerCode}`, slip.farmerPhone && `Phone: ${slip.farmerPhone}`]
+              .filter(Boolean)
+              .join("  ·  ")}
+          </p>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-surface-400">
+        <div className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-surface-200 bg-surface-200">
+          <div className="bg-white px-4 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-surface-400">
               {t("mc_vendor_machine", lang)}
             </p>
-            <p className="text-sm font-semibold text-surface-800">{slip.vendorName}</p>
+            <p className="mt-0.5 text-sm font-semibold text-surface-800">{slip.vendorName}</p>
             <p className="text-xs text-surface-500">{slip.machineLabel}</p>
           </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-surface-400">Kaam</p>
-            <p className="text-sm font-semibold text-surface-800">
+          <div className="bg-white px-4 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-surface-400">Kaam</p>
+            <p className="mt-0.5 text-sm font-semibold text-surface-800">
               {slip.cropType ?? "—"}
               {slip.harvestDate ? ` · ${new Date(slip.harvestDate).toLocaleDateString()}` : ""}
             </p>
@@ -145,7 +172,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
               {slip.isFinal ? "Asal kaam ka hisaab" : "Booking ka andaza"}
             </p>
           </div>
-          <div className="space-y-1 px-4 py-3 text-sm">
+          <div className="space-y-1 px-4 py-3 text-sm tabular-nums">
             {isDono ? (
               <>
                 {/* Do qism ki booking par do lakeerein -- aausat rate
@@ -172,6 +199,24 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
               <span>Rs {slip.gross.toLocaleString()}</span>
             </div>
 
+            {/* Riayat kisan ko SAAF nazar aani chahiye.
+                Chupa kar sirf kam raqam likh dena us se ye baat chheen
+                leta hai ke us par ehsaan hua -- aur agli dafa wo usi kam
+                raqam ko apna haq samajh kar aata hai. Us se pehle wo ye
+                bhi dekhta hai ke Rs 30,000 se Rs 28,000 kaise hue. */}
+            {slip.discount > 0 && (
+              <>
+                <div className="flex justify-between text-brand-700">
+                  <span>Riayat{slip.discountReason ? ` — ${slip.discountReason}` : ""}</span>
+                  <span>- Rs {slip.discount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-surface-100 pt-1.5 font-medium text-surface-900">
+                  <span>Riayat ke baad bill</span>
+                  <span>Rs {(slip.gross - slip.discount).toLocaleString()}</span>
+                </div>
+              </>
+            )}
+
             {slip.dieselDeducted > 0 && <SlipRow label="Aap ka diesel (kata gaya)" value={-slip.dieselDeducted} />}
             {slip.advanceAdjusted > 0 && <SlipRow label="Advance (kata gaya)" value={-slip.advanceAdjusted} />}
             {slip.previousPayment > 0 && <SlipRow label="Pehle di hui raqam" value={-slip.previousPayment} />}
@@ -181,15 +226,15 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
           </div>
 
           <div
-            className={`flex items-center justify-between px-4 py-3 ${
+            className={`flex items-center justify-between px-4 py-4 ${
               slip.balance > 0 ? "bg-amber-50" : "bg-green-50"
             }`}
           >
-            <span className="text-sm font-medium text-surface-700">
+            <span className="text-sm font-semibold text-surface-700">
               {slip.balance > 0 ? "Baqi dena hai" : "Hisaab poora"}
             </span>
             <span
-              className={`font-display text-2xl font-bold ${
+              className={`font-display text-3xl font-bold tabular-nums ${
                 slip.balance > 0 ? "text-amber-700" : "text-green-700"
               }`}
             >
@@ -197,6 +242,24 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             </span>
           </div>
         </div>
+
+        {/* Dastkhat ki lakeerein sirf CHHAPTE waqt aati hain.
+            Screen par ye khali jagah bemaani hai, magar kaghaz par yehi
+            wo cheez hai jo parchi ko raseed banati hai -- kisan ke paas
+            iska saboot rehta hai ke us ne ye kaghaz liya aur is par
+            raazi hua. */}
+        {slip.isFinal && (
+          <div className="mt-10 hidden grid-cols-2 gap-10 print:grid">
+            <div>
+              <div className="border-t border-surface-400 pt-1.5" />
+              <p className="text-[11px] text-surface-500">Kisan ke dastkhat</p>
+            </div>
+            <div>
+              <div className="border-t border-surface-400 pt-1.5" />
+              <p className="text-[11px] text-surface-500">Al Rana Traders ki taraf se</p>
+            </div>
+          </div>
+        )}
 
         {!slip.isFinal && (
           <p className="mt-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-500">

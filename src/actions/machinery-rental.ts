@@ -382,6 +382,7 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
     quantityLabel,
     rateAmount: slipRate,
     totalAmount: slipGross,
+    discountAmount: bill ? num(bill.discount_amount) : 0,
     amountReceived: paid,
     locationAddress: booking.location_address ?? booking.village,
   });
@@ -398,7 +399,7 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
       from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
       to: toEmail,
       subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
-      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${slipGross.toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
+      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${(slipGross - (bill ? num(bill.discount_amount) : 0)).toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
       attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
     });
   } catch {

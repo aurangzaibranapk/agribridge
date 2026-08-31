@@ -10,6 +10,14 @@ export interface MachinerySlipData {
   quantityLabel: string;
   rateAmount: number;
   totalAmount: number;
+  /**
+   * Kisan ko di gayi riayat (194).
+   *
+   * Ye lakeer chhupa kar sirf kam raqam likh dena kisan se ye baat
+   * chheen leta hai ke us par ehsaan hua -- aur wo Rs 30,000 parh kar
+   * neeche Rs 28,000 dekhta hai aur farq ka koi jawab nahi paata.
+   */
+  discountAmount?: number;
   amountReceived: number;
   locationAddress: string | null;
 }
@@ -60,8 +68,13 @@ export async function generateMachineryBookingSlipPdf(data: MachinerySlipData): 
   page.drawRectangle({ x: 40, y: y - 90, width: 515, height: 90, color: rgb(0.96, 0.98, 0.97), borderColor: rgb(0.8, 0.88, 0.82), borderWidth: 1 });
   page.drawText(data.quantityLabel, { x: 55, y: y - 20, size: 10, font, color: gray });
   page.drawText(`Rate: Rs ${data.rateAmount.toLocaleString()}`, { x: 300, y: y - 20, size: 10, font, color: gray });
-  page.drawText("Total Amount", { x: 55, y: y - 45, size: 10, font, color: gray });
-  page.drawText(`Rs ${data.totalAmount.toLocaleString()}`, { x: 55, y: y - 68, size: 20, font: boldFont, color: brand });
+  const riayat = data.discountAmount ?? 0;
+  const denaHai = Math.round((data.totalAmount - riayat) * 100) / 100;
+  if (riayat > 0) {
+    page.drawText(`Riayat: - Rs ${riayat.toLocaleString()}`, { x: 300, y: y - 33, size: 9, font, color: gray });
+  }
+  page.drawText(riayat > 0 ? "Bill (riayat ke baad)" : "Total Amount", { x: 55, y: y - 45, size: 10, font, color: gray });
+  page.drawText(`Rs ${denaHai.toLocaleString()}`, { x: 55, y: y - 68, size: 20, font: boldFont, color: brand });
   page.drawText("Received So Far", { x: 300, y: y - 45, size: 10, font, color: gray });
   page.drawText(`Rs ${data.amountReceived.toLocaleString()}`, { x: 300, y: y - 68, size: 14, font: boldFont, color: black });
 
