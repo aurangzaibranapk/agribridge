@@ -147,7 +147,16 @@ export default function LoginPage() {
 
             Chhoti screen par ye form ke NEECHE aata hai, uper nahi:
             mobile par pehli cheez wohi honi chahiye jo bharni hai. */}
-        <aside className="mt-5 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-4 backdrop-blur-sm lg:mt-20 lg:max-w-[17rem]">
+        {/* Bari screen par ye card WhatsApp/SMS ke do khanon ke BILKUL
+            saamne baithta hai. Pehle ye sab se upar tha aur safhe ka
+            daayan hissa upar se bhara aur neeche se khali lagta tha.
+
+            Ye khisakna nap kar hai, apne aap nahi: is ke upar jo kuch
+            hai (sarkhi, tabs, number ka khana) us ki oonchai tay hai,
+            is liye ek muqarrar faasla hi kaafi hai. Chhoti screen par
+            ye faasla lagta hi nahi -- wahan card form ke NEECHE aata
+            hai, jahan us ki jagah hai. */}
+        <aside className="mt-5 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-4 backdrop-blur-sm lg:mt-[19.5rem] lg:max-w-[17rem]">
           <ul className="space-y-3">
             {/* "WhatsApp pehle, SMS baad mein" wali baat yahan se hata
                 di gayi -- ab wo unhi do khanon ke neeche likhi hai jin
