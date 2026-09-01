@@ -63,10 +63,15 @@ export async function requestFarmerOtp(
   const key = phoneKey(phone);
   if (!key) return { error: "Mobile number poora likhein — misal ke tor par 0300 1234567." };
 
+  // Raasta banda khud chunta hai (safhe par do khane hain). Jo bhi aaye,
+  // sirf do hi qeematein manzoor hain -- baqi sab par default chalta
+  // hai. Bahar se aaya hua matn seedha aage nahi bheja jata.
+  const channel = String(formData.get("channel") ?? "") === "sms" ? "sms" : "whatsapp";
+
   const service = createServiceClient();
   const match = await findFarmerByPhone(service, phone);
 
-  const sent = await sendFarmerOtp(phone);
+  const sent = await sendFarmerOtp(phone, channel);
   if (!sent.ok) return { error: sent.error };
 
   return {

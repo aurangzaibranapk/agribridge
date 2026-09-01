@@ -47,8 +47,18 @@ function sixDigits(): string {
  *
  * Jawab mein code kabhi nahi jata -- sirf ye ke gaya ya nahi, aur kis
  * raaste se.
+ *
+ * `prefer` banda khud chunta hai. Default WhatsApp hai (upar wali wajah),
+ * magar jis ke phone par WhatsApp hai hi nahi -- ya jise wahan code aata
+ * hi nahi -- us ke liye SMS pehle chalaya ja sakta hai. Chunav sirf
+ * TARTEEB badalta hai, doosra raasta band nahi karta: agar chuna hua
+ * raasta nakaam ho to doosra phir bhi aazmaya jata hai, warna banda
+ * apne hi chunav ki wajah se bahar reh jata.
  */
-export async function sendFarmerOtp(rawPhone: string): Promise<OtpRequest> {
+export async function sendFarmerOtp(
+  rawPhone: string,
+  prefer: "whatsapp" | "sms" = "whatsapp"
+): Promise<OtpRequest> {
   const key = phoneKey(rawPhone);
   if (!key) return { ok: false, error: "Mobile number poora likhein — gyarah hindse." };
 
@@ -102,25 +112,34 @@ export async function sendFarmerOtp(rawPhone: string): Promise<OtpRequest> {
   }
 
   const text = `${code} — Al Rana Traders ke portal mein daakhil hone ka code. ${VALID_MINUTES} minute tak chalega. Kisi ko na batayein.`;
-  const template = process.env.WHATSAPP_OTP_TEMPLATE;
   let sentVia: "whatsapp" | "sms" | null = null;
   const problems: string[] = [];
 
-  if (template) {
+  const tryWhatsapp = async () => {
+    const template = process.env.WHATSAPP_OTP_TEMPLATE;
+    if (!template) {
+      problems.push("whatsapp: OTP ka template set nahi hai (WHATSAPP_OTP_TEMPLATE)");
+      return;
+    }
     try {
       await sendWhatsAppTemplate(rawPhone, template, process.env.WHATSAPP_OTP_TEMPLATE_LANG ?? "en", [code], code);
       sentVia = "whatsapp";
     } catch (e) {
       problems.push(`whatsapp: ${e instanceof Error ? e.message : String(e)}`);
     }
-  } else {
-    problems.push("whatsapp: OTP ka template set nahi hai (WHATSAPP_OTP_TEMPLATE)");
-  }
+  };
 
-  if (!sentVia) {
+  const trySms = async () => {
     const sms = await sendMilkSms(rawPhone, text);
     if (sms.sent) sentVia = "sms";
     else problems.push(`sms: ${sms.reason ?? "nahi gaya"}`);
+  };
+
+  // Chuna hua raasta pehle, doosra sahare ke tor par.
+  const order = prefer === "sms" ? [trySms, tryWhatsapp] : [tryWhatsapp, trySms];
+  for (const attempt of order) {
+    if (sentVia) break;
+    await attempt();
   }
 
   await service

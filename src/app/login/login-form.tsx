@@ -154,13 +154,6 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
     router.refresh();
   }
 
-  async function handleOAuth(provider: "google" | "facebook") {
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  }
-
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -211,12 +204,7 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
         <div className="h-px flex-1 bg-surface-200" />
       </div>
 
-      <div className="mt-4 space-y-2.5">
-        <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
-          <GoogleIcon />{t("au_with_google", lang)}</button>
-        <button type="button" onClick={() => handleOAuth("facebook")} className={SOCIAL_BTN}>
-          <FacebookIcon />{t("au_with_facebook", lang)}</button>
-      </div>
+      <SocialButtons />
 
       {onBack && (
         <button
@@ -234,57 +222,143 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
 /**
  * Bahar se aane walon ka darwaza -- kisan aur gahak.
  *
- * PEHLI cheez kisan ka raasta hai: mobile aur OTP. Ye jaan boojh kar
- * hai -- kisan sab se ziyada aata hai aur us ke paas na email hai na
- * password.
+ * DONO USER ID EK HI SAFHE PAR. Malik ke manzoor shuda naqshe ka asal
+ * nuqta yehi hai: mobile aur email dono "User ID" hain, aur banda jo
+ * us ke paas hai wohi likh deta hai. Pehle email chhote se link ke
+ * peeche chhupa hua tha -- gahak usay dhoondta hi nahi tha aur apna
+ * number upar likh deta, jis se wo ek naya KISAN ban jata (124 ka
+ * qanoon ulta pad jata: ek hi bande ke do record).
  *
- * Gahak ka raasta yahin neeche khula hai magar chhota. Us ka khata
- * email aur password se banta hai (customer, dealer, investor), aur
- * usay OTP wale khane mein bhejna ek nayi ghalti paida karta: wo
- * raasta sirf `farmers` mein dekhta hai, to gahak ka number wahan ek
- * naya KISAN bana deta -- ek hi bande ke do record, do alag hisaab.
+ * KOI EK -- dono nahi. Email likha ho to email ka raasta chalta hai,
+ * warna mobile ka. Ye faisla safhe par likha bhi hua hai, taake banda
+ * andaza na lagaye.
  */
 function PublicLogin() {
-  const [route, setRoute] = useState<"otp" | "username" | "password">("otp");
+  const [route, setRoute] = useState<"main" | "username" | "password">("main");
 
-  if (route === "username") return <FarmerUsernameLogin onBack={() => setRoute("otp")} />;
+  if (route === "username") return <FarmerUsernameLogin onBack={() => setRoute("main")} />;
   if (route === "password") {
     return (
       <PasswordLogin
         backLabel="Kisan hain? Mobile aur OTP se login karein"
-        onBack={() => setRoute("otp")}
+        onBack={() => setRoute("main")}
       />
     );
   }
 
-  return <FarmerOtpLogin onUsername={() => setRoute("username")} onPassword={() => setRoute("password")} />;
+  return <PublicMainLogin onUsername={() => setRoute("username")} onPassword={() => setRoute("password")} />;
 }
 
 const emptyState: FarmerAuthState = {};
 
+/* ---- Chhote nishan. Bahar se koi library nahi mangwai gayi -- ye
+   chaar shaklein utni hi hain jitni chahiye thin. ---- */
+
+function PhoneIcon() {
+  return (
+    <svg className="h-4 w-4 text-[#1E4A2E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M11 18h2" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg className="h-4 w-4 text-[#1E4A2E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m2 7 10 6 10-6" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function WhatsAppMark() {
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]">
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.5 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.6.1.2.6 1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.7.8c.3.1.4.2.5.3.1.2.1.6-.1 1Z" />
+      </svg>
+    </span>
+  );
+}
+
+function SmsMark() {
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4A7856]">
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.7-5a8.4 8.4 0 0 1-.7-3.4 8.4 8.4 0 0 1 9-8.5 8.4 8.4 0 0 1 8 7.4Z" />
+      </svg>
+    </span>
+  );
+}
+
 /**
- * Kisan ka darwaza -- mobile, phir OTP.
+ * Kisan aur gahak ka pehla safha -- dono User ID, aur raaste ka chunav.
  *
  * Naya kisan aur purana kisan ke liye ALAG safha nahi hai. Number
  * daalte hi maloom ho jata hai ke ye number kis ka hai: purana hai to
  * us ka naam saamne aa jata hai, naya hai to sirf naam aur gaon poochh
- * liya jata hai. Kisan ke liye dono soorton mein kaam ek hi hai --
- * number likho, code likho, andar.
+ * liya jata hai.
+ *
+ * EMAIL WALA RAASTA NAYA KHATA NAHI BANATA (`shouldCreateUser: false`).
+ * Ye malik ka pehle ka tay shuda usool hai: "email lagi hi nahi to
+ * pehle register karo". Agar yahan khata ban jata to us bande ka koi
+ * kisan record hi na hota -- portal khulta magar andar kuch na hota,
+ * aur ERP mein wo kahin nazar hi na aata.
  */
-function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
+function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
   const lang = useLang();
   const router = useRouter();
+  const supabase = createClient();
+
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+
   const [askState, askAction] = useFormState(requestFarmerOtp, emptyState);
   const [checkState, checkAction] = useFormState(verifyFarmerOtp, emptyState);
 
-  const sent = askState.otpSent || checkState.otpSent;
+  // Email ka raasta client par chalta hai (Supabase ka apna OTP), is
+  // liye us ki apni haalat rakhni parti hai.
+  const [emailStage, setEmailStage] = useState<"none" | "sent">("none");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  // Button ka "bheja ja raha hai" apni yaad se chalta hai.
+  //
+  // useFormStatus us waqt tak intezar karta hai jab tak form ka action
+  // ka wada poora na ho. Yahan action ek chhota chunne wala function
+  // hai jo foran laut aata hai (aage ka kaam wo shuru kara deta hai),
+  // is liye wo nishan usi lamhe bujh jata -- aur banda samajhta ke
+  // button dabaya hi nahi gaya, aur dobara daba deta.
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    setAsking(false);
+  }, [askState]);
+
+  const usingEmail = email.trim().length > 0;
+  const phoneSent = askState.otpSent || checkState.otpSent;
   const needsProfile = checkState.needsProfile ?? askState.needsProfile ?? false;
   const knownName = askState.knownName;
 
-  // Redirect ko render ke andar rakhna React ke usool ke khilaf hai --
-  // render sirf shakl banata hai, kaam nahi karta. Us jagah ye chalta
-  // to har dobara banne par phir chalta.
   useEffect(() => {
     if (checkState.success) {
       router.push("/portal/dashboard");
@@ -292,116 +366,386 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
     }
   }, [checkState.success, router]);
 
-  if (!sent) {
+  /* ---------------- Email ka raasta ---------------- */
+
+  async function sendEmailCode(address: string) {
+    setEmailBusy(true);
+    setEmailError(null);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: address,
+      // Naya khata YAHAN SE nahi banta -- upar wali wajah.
+      options: { shouldCreateUser: false },
+    });
+    setEmailBusy(false);
+    if (error) {
+      // Supabase ka apna jumla angrezi mein hota hai aur banda usay
+      // parh kar bhi ye nahi samajhta ke karna kya hai. Sab se aam
+      // soorat -- email registered hi nahi -- ka saaf jawab yahan
+      // likha hai.
+      setEmailError(/signups not allowed|not found|invalid/i.test(error.message) ? t("au_email_not_registered", lang) : error.message);
+      return;
+    }
+    setEmailStage("sent");
+  }
+
+  async function verifyEmailCode(code: string) {
+    setEmailBusy(true);
+    setEmailError(null);
+    const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code, type: "email" });
+    if (error || !data.user) {
+      setEmailBusy(false);
+      setEmailError(error?.message ?? "Code theek nahi.");
+      return;
+    }
+    const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).single();
+    if (!profile || !profile.is_active) {
+      await supabase.auth.signOut();
+      setEmailBusy(false);
+      setEmailError(profile ? "Ye account deactivate ho chuka hai. Admin se rabta karein." : "Account setup adhoora hai. Support se rabta karein.");
+      return;
+    }
+    router.push(getRoleRedirectPath(profile.role));
+    router.refresh();
+  }
+
+  /* ---------------- Code maangne wala safha ---------------- */
+
+  if (emailStage === "sent") {
     return (
-      <>
-      <form action={askAction} className="space-y-4">
-        {askState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error}</p>}
-        <div>
-          <Label htmlFor="phone">{t("c_mobile_number", lang)}</Label>
-          <Input
-            id="phone"
-            name="phone"
-            required
-            inputMode="numeric"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="0300 1234567"
-            className={FIELD}
-          />
-          <p className="mt-1 text-xs text-surface-400">{t("au_otp_channel", lang)}</p>
-        </div>
-        <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." />
-      </form>
-      {/* Do chhote raaste, dono jaan boojh kar OTP ke NEECHE.
-          User ID kisan ka apna banaya hua naam hai (198) -- naye kisan
-          ke paas hota hi nahi, is liye usay pehle dikhana usay wahin
-          rok deta.
-          Gahak ka khata email aur password se banta hai; usay upar wale
-          khane mein bhejna ek naya KISAN bana deta. */}
-      <div className="mt-3 space-y-2">
+      <div>
+        <form
+          action={(fd: FormData) => {
+            void verifyEmailCode(String(fd.get("code") ?? "").trim());
+          }}
+          className="space-y-4"
+        >
+          {emailError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{emailError}</p>}
+          {!emailError && (
+            <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              {t("au_email_code_sent", lang)} — {email.trim()}
+            </p>
+          )}
+          <div>
+            <Label htmlFor="ecode">{t("au_six_digit_code", lang)}</Label>
+            <Input
+              id="ecode"
+              name="code"
+              required
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="- - - - - -"
+              className={`${FIELD} text-center font-mono text-xl tracking-[0.4em]`}
+            />
+          </div>
+          <Button type="submit" disabled={emailBusy} className={BIG_BTN}>
+            {emailBusy ? "Check ho raha hai..." : t("au_go_in", lang)}
+          </Button>
+        </form>
         <button
           type="button"
-          onClick={onUsername}
-          className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-        >{t("au_have_user_id", lang)}</button>
-        <button
-          type="button"
-          onClick={onPassword}
-          className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-        >{t("au_customer_email_login", lang)}</button>
+          onClick={() => {
+            setEmailStage("none");
+            setEmailError(null);
+          }}
+          className="mt-3 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
+        >
+          {t("au_email_back", lang)}
+        </button>
       </div>
-      </>
     );
   }
 
-  return (
-    <div>
-      <form action={checkAction} className="space-y-4">
-        {(checkState.error || askState.error) && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{checkState.error ?? askState.error}</p>
-      )}
-      {askState.sentVia && !checkState.error && (
-        <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
-          Code {askState.sentVia === "whatsapp" ? "WhatsApp" : "SMS"} par bhej diya gaya
-          {knownName ? ` — ${knownName}` : ""}.
-        </p>
-      )}
-
-      <input type="hidden" name="phone" value={phone} />
-
+  if (phoneSent) {
+    return (
       <div>
-        <Label htmlFor="code">{t("au_six_digit_code", lang)}</Label>
-        <Input
-          id="code"
-          name="code"
-          required
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          placeholder="- - - - - -"
-          className={`${FIELD} text-center font-mono text-xl tracking-[0.4em]`}
-        />
+        <form action={checkAction} className="space-y-4">
+          {(checkState.error || askState.error) && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{checkState.error ?? askState.error}</p>
+          )}
+          {askState.sentVia && !checkState.error && (
+            <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              Code {askState.sentVia === "whatsapp" ? "WhatsApp" : "SMS"} par bhej diya gaya
+              {knownName ? ` — ${knownName}` : ""}.
+            </p>
+          )}
+
+          <input type="hidden" name="phone" value={phone} />
+
+          <div>
+            <Label htmlFor="code">{t("au_six_digit_code", lang)}</Label>
+            <Input
+              id="code"
+              name="code"
+              required
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="- - - - - -"
+              className={`${FIELD} text-center font-mono text-xl tracking-[0.4em]`}
+            />
+          </div>
+
+          {needsProfile && (
+            <>
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("au_first_time_number", lang)}</p>
+              <div>
+                <Label htmlFor="full_name">{t("au_your_name", lang)}</Label>
+                <Input id="full_name" name="full_name" required placeholder={t("au_eg_name", lang)} className={FIELD} />
+              </div>
+              <div>
+                <Label htmlFor="village">{t("au_village", lang)}</Label>
+                <Input id="village" name="village" placeholder={t("au_eg_village", lang)} className={FIELD} />
+              </div>
+            </>
+          )}
+
+          <SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." />
+        </form>
+
+        {/* Kisan ke liye "Password bhool gaye?" bemaani hai -- us ka koi
+            password hai hi nahi. Us ki jagah wohi cheez jo us ke kaam ki
+            hai: code dobara.
+
+            Ye apna alag form hai, us ke andar nahi: HTML mein form ke
+            andar form hota hi nahi, aur browser wahan andar wala chup
+            chaap gira deta hai.
+
+            Dobara bhejte waqt raasta BADAL diya jata hai -- pehli dafa
+            WhatsApp gaya to ab SMS. Wohi raasta dobara aazmana us bande
+            ki koi madad nahi karta jis ke phone par WhatsApp chalta hi
+            nahi. */}
+        <form action={askAction} className="mt-3">
+          <input type="hidden" name="phone" value={phone} />
+          <input type="hidden" name="channel" value={askState.sentVia === "whatsapp" ? "sms" : "whatsapp"} />
+          <button type="submit" className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline">
+            {t("au_code_not_received", lang)}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  /* ---------------- Pehla safha ---------------- */
+
+  const channelCard = (value: "whatsapp" | "sms", mark: React.ReactNode, title: string, note: string) => (
+    <button
+      type="button"
+      onClick={() => setChannel(value)}
+      aria-pressed={channel === value}
+      className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+        channel === value
+          ? "border-[#1E4A2E] bg-[#F1F7F2]"
+          : "border-surface-200 bg-white hover:border-surface-300"
+      }`}
+    >
+      {mark}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-semibold text-surface-800">{title}</span>
+        <span className="block truncate text-[11px] text-surface-500">{note}</span>
+      </span>
+      <span
+        className={`h-4 w-4 shrink-0 rounded-full border-2 ${
+          channel === value ? "border-[#1E4A2E] bg-[#1E4A2E] ring-2 ring-inset ring-white" : "border-surface-300"
+        }`}
+      />
+    </button>
+  );
+
+  return (
+    <>
+      <form
+        action={(fd: FormData) => {
+          const typedEmail = String(fd.get("email") ?? "").trim();
+          if (typedEmail) {
+            void sendEmailCode(typedEmail);
+            return;
+          }
+          setAsking(true);
+          askAction(fd);
+        }}
+        className="space-y-4"
+      >
+        {(askState.error || emailError) && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error ?? emailError}</p>
+        )}
+
+        {/* ---- Mobile ---- */}
+        <div>
+          <Label htmlFor="phone">
+            <span className="flex items-center gap-1.5">
+              <PhoneIcon />
+              {t("au_mobile_userid", lang)}
+            </span>
+          </Label>
+          {/* Mulk ka code alag khane mein.
+              Chunav ek hi hai (+92) magar khana phir bhi maujood hai:
+              number aur code alag alag nazar aayen to banda apna number
+              usi andaz mein likhta hai jaise wo phone mein para hai.
+              Hisaab par is ka koi asar nahi -- phoneKey() aakhri das
+              hindse leta hai, is liye 0300..., +92300... aur 300... teenon
+              ek hi banda hain. */}
+          <div className="flex gap-2">
+            <select
+              name="cc"
+              defaultValue="+92"
+              aria-label="Country code"
+              className="h-12 shrink-0 rounded-xl border border-surface-200 bg-white px-3 text-[15px] text-surface-700 shadow-sm"
+            >
+              <option value="+92">+92</option>
+            </select>
+            <Input
+              id="phone"
+              name="phone"
+              inputMode="numeric"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="300 1234567"
+              className={`${FIELD} flex-1`}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-surface-400">{t("au_mobile_userid_help", lang)}</p>
+        </div>
+
+        {/* ---- YA ---- */}
+        <div className="relative py-1">
+          <div className="absolute inset-x-0 top-1/2 h-px bg-surface-200" />
+          <div className="relative mx-auto flex h-7 w-9 items-center justify-center rounded-full border border-surface-200 bg-white text-[11px] font-semibold text-surface-500">
+            {t("au_ya", lang)}
+          </div>
+        </div>
+
+        {/* ---- Email ---- */}
+        <div>
+          <Label htmlFor="email">
+            <span className="flex items-center gap-1.5">
+              <MailIcon />
+              {t("au_email_userid", lang)}
+            </span>
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@email.com"
+            className={FIELD}
+          />
+          <p className="mt-1.5 text-xs text-surface-400">{t("au_email_userid_help", lang)}</p>
+        </div>
+
+        {/* ---- Raaste ka chunav ----
+            Sirf mobile ke liye. Email likha ho to code email par hi
+            jayega -- us waqt WhatsApp/SMS ka sawal hi nahi banta, is
+            liye ye khana wahan dikhta hi nahi. Dikhta rehta to banda
+            chunav karta aur us ka koi asar na hota. */}
+        {!usingEmail && (
+          <div className="rounded-xl border border-surface-200 bg-surface-50/70 p-3">
+            <p className="mb-2 text-[13px] font-medium text-surface-700">{t("au_pick_channel", lang)}</p>
+            <input type="hidden" name="channel" value={channel} />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {channelCard("whatsapp", <WhatsAppMark />, t("au_via_whatsapp", lang), t("au_via_whatsapp_note", lang))}
+              {channelCard("sms", <SmsMark />, t("au_via_sms", lang), t("au_via_sms_note", lang))}
+            </div>
+          </div>
+        )}
+
+        <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." icon={<SendIcon />} pending={emailBusy || asking} />
+
+        <p className="flex items-start gap-1.5 rounded-lg bg-[#F1F7F2] px-3 py-2 text-[11.5px] leading-relaxed text-[#3F5C46]">
+          <ShieldIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1E4A2E]" />
+          {t("au_channel_hint", lang)}
+        </p>
+      </form>
+
+      {/* ---- ya phir: Google / Facebook ---- */}
+      <div className="mt-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-surface-200" />
+        <span className="text-xs font-medium text-surface-400">{t("au_or_then", lang)}</span>
+        <div className="h-px flex-1 bg-surface-200" />
       </div>
 
-      {needsProfile && (
-        <>
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("au_first_time_number", lang)}</p>
-          <div>
-            <Label htmlFor="full_name">{t("au_your_name", lang)}</Label>
-            <Input id="full_name" name="full_name" required placeholder={t("au_eg_name", lang)} className={FIELD} />
-          </div>
-          <div>
-            <Label htmlFor="village">{t("au_village", lang)}</Label>
-            <Input id="village" name="village" placeholder={t("au_eg_village", lang)} className={FIELD} />
-          </div>
-        </>
-      )}
+      <SocialButtons />
 
-        <SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." />
-      </form>
+      <p className="mt-4 text-center text-sm text-surface-600">
+        {t("au_not_member", lang)}{" "}
+        <Link href="/register" className="font-semibold text-[#1E4A2E] hover:underline">
+          {t("au_register_now", lang)}
+        </Link>
+      </p>
 
-      {/* Kisan ke liye "Password bhool gaye?" bemaani hai -- us ka koi
-          password hai hi nahi. Us ki jagah wohi cheez jo us ke kaam ki
-          hai.
+      {/* Do purane raaste, jaan boojh kar sab se neeche aur sab se
+          halke. User ID kisan ka apna banaya hua naam hai (198) --
+          naye kisan ke paas hota hi nahi, is liye usay upar rakhna
+          usay wahin rok deta. Password wala raasta us gahak ke liye
+          hai jis ne khata email aur password se banaya tha. */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-surface-100 pt-3">
+        <button type="button" onClick={onUsername} className="text-[11px] font-medium text-surface-400 hover:text-[#1E4A2E] hover:underline">
+          {t("au_have_user_id", lang)}
+        </button>
+        <button type="button" onClick={onPassword} className="text-[11px] font-medium text-surface-400 hover:text-[#1E4A2E] hover:underline">
+          {t("au_customer_email_login", lang)}
+        </button>
+      </div>
+    </>
+  );
+}
 
-          Ye apna alag form hai, us ke andar nahi: HTML mein form ke
-          andar form hota hi nahi, aur browser wahan andar wala chup
-          chaap gira deta hai. */}
-      <form action={askAction} className="mt-3">
-        <input type="hidden" name="phone" value={phone} />
-        <button type="submit" className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline">{t("au_code_not_received", lang)}</button>
-      </form>
+/**
+ * Google aur Facebook -- EK jagah likhe hue.
+ *
+ * Ye dono taraf chahiye the (kisan/gahak aur admin/staff). Do nakalein
+ * rakhte to ek din ek theek hoti aur doosri purani reh jati, aur us
+ * farq ka pata tab chalta jab koi andar na aa pata.
+ */
+function SocialButtons() {
+  const lang = useLang();
+  const supabase = createClient();
+
+  async function handleOAuth(provider: "google" | "facebook") {
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  }
+
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+      <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
+        <GoogleIcon />
+        {t("au_with_google", lang)}
+      </button>
+      <button type="button" onClick={() => handleOAuth("facebook")} className={SOCIAL_BTN}>
+        <FacebookIcon />
+        {t("au_with_facebook", lang)}
+      </button>
     </div>
   );
 }
 
-function SubmitBtn({ label, busy }: { label: string; busy: string }) {
+function SubmitBtn({
+  label,
+  busy,
+  icon,
+  pending: extraPending = false,
+}: {
+  label: string;
+  busy: string;
+  icon?: React.ReactNode;
+  /** Form ke bahar chalne wala kaam (email ka raasta client par hai). */
+  pending?: boolean;
+}) {
   const { pending } = useFormStatus();
+  const waiting = pending || extraPending;
   return (
-    <Button type="submit" disabled={pending} className={BIG_BTN}>
-      {pending ? busy : label}
+    <Button type="submit" disabled={waiting} className={BIG_BTN}>
+      <span className="flex items-center justify-center gap-2">
+        {waiting ? busy : label}
+        {!waiting && icon}
+      </span>
     </Button>
   );
 }
