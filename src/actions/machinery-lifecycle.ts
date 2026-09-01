@@ -2779,6 +2779,66 @@ export async function recordPaymentPromise(_prev: ActionState, formData: FormDat
  * Yahan koi raqam nahi hilti aur koi ledger nahi chhoota -- sirf jawab
  * likha jata hai, aur ye bhi ke kis ne likha.
  */
+/**
+ * Booking ki jagah fehrist se pin karna.
+ *
+ * Ye khana booking banate waqt bhi maujood hai, magar us waqt aksar
+ * khali reh jata hai -- booking phone par hoti hai aur likhne wala
+ * daftar mein baitha hota hai. Jagah us waqt maloom hoti hai jab banda
+ * khet par khara ho, aur tab tak booking ki fehrist hi saamne hoti hai.
+ *
+ * Is liye pin wahin se lag sakti hai. Do rokein:
+ *
+ *   Jahan pin PEHLE SE lagi hai, wahan ye raasta khulta hi nahi. Us ke
+ *   baghair koi khet par khara ho kar ghalti se dobara daba deta, aur
+ *   asal khet ki jagah us ke khare hone ki jagah likhi jati -- aur
+ *   purani wali chup chaap gum ho jati.
+ *
+ *   Adad khud dekhe jate hain. GPS kabhi kabhi 0,0 ya koi bahar ka adad
+ *   deta hai; usay mehfooz kar lena "jagah maloom hai" ka jhoota nishan
+ *   laga dena hai.
+ */
+export async function setBookingLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const lat = num(formData, "latitude");
+  const lng = num(formData, "longitude");
+  if (lat === null || lng === null) return { error: "Jagah nahi mili -- dobara koshish karein." };
+  if (lat === 0 && lng === 0) return { error: "GPS ne theek jagah nahi di. Dobara koshish karein." };
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return { error: "GPS ka adad theek nahi lag raha. Dobara koshish karein." };
+  }
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, location_lat")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+  if (booking.location_lat !== null) {
+    return { error: "Is booking par jagah pehle se darj hai -- badalni ho to booking ke safhe se." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ location_lat: lat, location_lng: lng })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "location_pinned",
+    note: `Jagah pin ki gayi: ${lat}, ${lng}`,
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Jagah darj ho gayi." };
+}
+
 export async function markDieselNone(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);

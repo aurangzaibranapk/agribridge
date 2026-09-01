@@ -512,6 +512,18 @@ export const machineryDict = {
   mc_work_less: { en: "Hide the extra detail", rm: "Tafseel band karein", ur: "تفصیل بند کریں" },
   mc_work_on_map: { en: "on the map", rm: "naqshe par", ur: "نقشے پر" },
   // Kaam mukammal karte waqt diesel ke do sawal
+  // Fehrist se jagah pin karna
+  ml_location: { en: "Location", rm: "Jagah", ur: "جگہ" },
+  ml_pinned: { en: "pinned", rm: "pin lagi hai", ur: "پن لگی ہے" },
+  ml_pin_location: { en: "Pin location", rm: "Jagah pin karein", ur: "جگہ پن کریں" },
+  ml_pin_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  ml_pin_again: { en: "Take it again", rm: "Dobara lein", ur: "دوبارہ لیں" },
+  ml_pin_saved: { en: "Location saved", rm: "Jagah darj ho gayi", ur: "جگہ درج ہو گئی" },
+  ml_pin_failed: {
+    en: "The location did not come through. Allow location in the browser and try again.",
+    rm: "Jagah nahi mili. Browser mein location ki ijazat dein aur dobara koshish karein.",
+    ur: "جگہ نہیں ملی۔ براؤزر میں لوکیشن کی اجازت دیں اور دوبارہ کوشش کریں۔",
+  },
   mc_wd_heading: { en: "Diesel", rm: "Diesel", ur: "ڈیزل" },
   mc_wd_our_q: {
     en: "Did we bring the diesel filled ourselves?",

@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { emailMachineryBookingsList, type ActionState } from "@/actions/machinery-rental";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { PinLocation } from "./pin-location";
 import { Printer, Download, MessageCircle, Mail, ArrowLeft, X, Search } from "lucide-react";
 
 const initialState: ActionState = {};
@@ -40,6 +41,8 @@ interface Row {
   overdue: boolean;
   promiseDate: string | null;
   lastPayment: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 interface FarmerRow {
@@ -251,6 +254,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                 <Th right>{t("mc_bill_label", lang)}</Th>
                 <Th right>{t("mc_received_so_far", lang)}</Th>
                 <Th right>{t("mc_outstanding", lang)}</Th>
+                <Th>{t("ml_location", lang)}</Th>
                 <Th>{t("mc_next_action", lang)}</Th>
               </tr>
             </thead>
@@ -312,6 +316,25 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                         <span className="text-surface-400">—</span>
                       )}
                     </td>
+                    {/* Jagah. Pin lagi ho to seedha naqshe par le jati
+                        hai; na lagi ho to wahin se lag sakti hai --
+                        kyunke jagah us waqt maloom hoti hai jab banda
+                        khet par khara ho, aur tab tak yehi fehrist
+                        saamne hoti hai. */}
+                    <td className="px-3 py-2">
+                      {r.lat != null && r.lng != null ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-brand-700 underline dark:text-brand-300"
+                        >
+                          {t("ml_pinned", lang)}
+                        </a>
+                      ) : (
+                        <PinLocation bookingId={r.id} />
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <Link href={`/admin/machinery-rental/booking/${r.id}`} className={`flex items-center gap-1.5 font-medium hover:underline ${action.tone}`}>
                         <span className={`h-2 w-2 shrink-0 rounded-full ${action.dot}`} />
@@ -331,7 +354,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                 );
               })}
               {shown.length === 0 && (
-                <tr><td colSpan={9} className="py-8 text-center text-surface-400">{t("mc_no_bookings", lang)}</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-surface-400">{t("mc_no_bookings", lang)}</td></tr>
               )}
             </tbody>
             <tfoot>
@@ -340,6 +363,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
                 <td className="px-3 py-2 text-right">Rs {totals.bill.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right">Rs {totals.received.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">Rs {totals.outstanding.toLocaleString()}</td>
+                <td className="px-3 py-2" />
                 <td className="px-3 py-2" />
               </tr>
             </tfoot>

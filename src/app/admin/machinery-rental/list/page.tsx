@@ -19,10 +19,24 @@ export const dynamic = "force-dynamic";
 export default async function MachineryBookingsListPage() {
   const supabase = createClient();
 
-  const [{ data: rows }, { data: farmers }] = await Promise.all([
+  // Jagah view mein nahi hai, is liye seedha bookings se. View ko
+  // badalne ki zaroorat nahi -- wo hisaab ke liye hai, aur us mein har
+  // naya khana daalte rehna usay bhaari kar deta hai.
+  const [{ data: rows }, { data: farmers }, { data: places }] = await Promise.all([
     supabase.from("v_machinery_control").select("*").order("booking_date", { ascending: false }),
     supabase.from("v_machinery_farmer_statement").select("*").order("kul_baqi", { ascending: false }),
+    supabase.from("machinery_bookings").select("id, location_lat, location_lng"),
   ]);
+
+  const placeById = new Map(
+    (places ?? []).map((p) => [
+      p.id as string,
+      {
+        lat: p.location_lat === null ? null : Number(p.location_lat),
+        lng: p.location_lng === null ? null : Number(p.location_lng),
+      },
+    ])
+  );
 
   return (
     <MachineryListClient
@@ -57,6 +71,8 @@ export default async function MachineryBookingsListPage() {
         overdue: Boolean(r.kattai_ki_tareekh_guzri),
         promiseDate: r.payment_promise_date as string | null,
         lastPayment: r.aakhri_payment as string | null,
+        lat: placeById.get(r.booking_id as string)?.lat ?? null,
+        lng: placeById.get(r.booking_id as string)?.lng ?? null,
       }))}
       farmers={(farmers ?? []).map((f) => ({
         farmerId: f.farmer_id as string,
