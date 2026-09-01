@@ -511,6 +511,23 @@ export const machineryDict = {
   mc_work_more: { en: "More detail (optional)", rm: "Aur tafseel (marzi se)", ur: "اور تفصیل (مرضی سے)" },
   mc_work_less: { en: "Hide the extra detail", rm: "Tafseel band karein", ur: "تفصیل بند کریں" },
   mc_work_on_map: { en: "on the map", rm: "naqshe par", ur: "نقشے پر" },
+  // Kaam mukammal karte waqt diesel ke do sawal
+  mc_wd_heading: { en: "Diesel", rm: "Diesel", ur: "ڈیزل" },
+  mc_wd_our_q: {
+    en: "Did we bring the diesel filled ourselves?",
+    rm: "Kya hum khud diesel dalwa kar aaye the?",
+    ur: "کیا ہم خود ڈیزل ڈلوا کر آئے تھے؟",
+  },
+  mc_wd_farmer_q: {
+    en: "Did the farmer put in diesel?",
+    rm: "Kisan ne diesel dala?",
+    ur: "کسان نے ڈیزل ڈالا؟",
+  },
+  mc_wd_hint: {
+    en: "Both answers are needed. Two \"no\" answers are also an answer — it is recorded that no diesel was put in.",
+    rm: "Dono ka jawab chahiye. Do dafa \"nahi\" bhi ek jawab hai -- darj ho jata hai ke diesel dala hi nahi gaya.",
+    ur: "دونوں کا جواب چاہیے۔ دو دفعہ \"نہیں\" بھی ایک جواب ہے — درج ہو جاتا ہے کہ ڈیزل ڈالا ہی نہیں گیا۔",
+  },
   mc_diesel_none_mark: {
     en: "No diesel was put in for this booking",
     rm: "Is booking par diesel nahi dala",

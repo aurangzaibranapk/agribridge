@@ -1706,6 +1706,70 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
     .eq("id", bookingId);
   if (error) return { error: error.message };
 
+  // ---------------------------------------------------------------
+  // Diesel -- ab yahan poochha jata hai, apne alag qadam mein nahi.
+  //
+  // Purana khana booking bante hi khul jata tha aur poore safhe par
+  // khara rehta tha -- jabke us waqt diesel ka jawab kisi ke paas hota
+  // hi nahi. Ab do saaf sawal, wahin jahan kaam darj hota hai:
+  //
+  //   hum khud diesel dalwa kar aaye the?   -> ART ka diesel
+  //   kisan ne diesel dala?                 -> kisan ka diesel
+  //
+  // Yahan diesel ka apna hisaab DOBARA NAHI LIKHA JA RAHA. Har jawab
+  // wohi purana raasta (recordFuelEntry) se guzarta hai, taake ledger,
+  // vendor se wapsi, aur khate ki shart -- teenon ek hi jagah rahen.
+  // Naql banate hi kal ek raasta theek hota aur doosra purana reh jata.
+  const dieselNotes: string[] = [];
+  // Arrow, hoisted function nahi: hoisted function ke andar TypeScript
+  // bahar ki narrowing nahi maanta, aur bookingId wahan phir se
+  // "string | null" ban jata hai -- halanke upar us par pehra lag chuka
+  // hai.
+  const putDiesel = async (who: "company" | "farmer", litres: number | null, rate: number | null, accountId: string | null) => {
+    if (!litres || !rate) return;
+    const fd = new FormData();
+    fd.set("booking_id", bookingId);
+    fd.set("log_date", workDate);
+    fd.set("litres", String(litres));
+    fd.set("rate_per_litre", String(rate));
+    fd.set("paid_by", who);
+    if (accountId) fd.set("finance_account_id", accountId);
+    const r = await recordFuelEntry({}, fd);
+    if (r.error) dieselNotes.push(r.error);
+  };
+
+  const ourDiesel = str(formData, "our_diesel") === "haan";
+  const farmerDiesel = str(formData, "farmer_diesel") === "haan";
+
+  if (ourDiesel) {
+    await putDiesel("company", num(formData, "our_diesel_litres"), num(formData, "our_diesel_rate"), str(formData, "our_diesel_account"));
+  }
+  if (farmerDiesel) {
+    await putDiesel("farmer", num(formData, "farmer_diesel_litres"), num(formData, "farmer_diesel_rate"), null);
+  }
+
+  // Dono ka jawab "nahi" -- ye bhi ek jawab hai, khali jagah nahi.
+  // Is ke baghair "koi diesel darj nahi" aur "diesel dala hi nahi gaya"
+  // dobara ek jaise nazar aane lagte.
+  if (!ourDiesel && !farmerDiesel && str(formData, "diesel_asked") === "1") {
+    const { data: anyFuel } = await supabase
+      .from("machinery_fuel_logs")
+      .select("id")
+      .eq("booking_id", bookingId);
+    if ((anyFuel ?? []).length === 0) {
+      await supabase
+        .from("machinery_bookings")
+        .update({ diesel_none_at: new Date().toISOString(), diesel_none_by: actorId })
+        .eq("id", bookingId);
+    }
+  }
+
+
+  // Diesel darj na ho saka to wo baat CHHUPTI NAHI. Kaam mehfooz ho
+  // chuka hai (wo theek tha), magar bulane wale ko wajah milti hai --
+  // warna wo samajhta hai ke diesel bhi darj ho gaya.
+  const dieselTail = dieselNotes.length ? ` — Diesel darj nahi hua: ${dieselNotes.join(" | ")}` : "";
+
   await logEvent({
     bookingId,
     eventType: isFinal ? "work_completed" : "work_progress",
@@ -1720,7 +1784,7 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
 
   if (!isFinal) {
     revalidateAll(bookingId);
-    return { success: true, notice: `Ab tak ${doneSoFar} acre — baqi ${remaining} acre.` };
+    return { success: true, notice: `Ab tak ${doneSoFar} acre — baqi ${remaining} acre.${dieselTail}` };
   }
 
   // Agli fasal ki yaad dahani ka sawal YAHAN poochha jata hai, booking
@@ -1744,19 +1808,19 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
     revalidateAll(bookingId);
     return {
       success: true,
-      notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill abhi nahi bana: pehle kisan se final rate confirm karwayein.`,
+      notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill abhi nahi bana: pehle kisan se final rate confirm karwayein.${dieselTail}`,
     };
   }
 
   const billed = await buildFinalBill(supabase, bookingId, actorId);
   revalidateAll(bookingId);
   if (billed.error) {
-    return { success: true, notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill nahi bana: ${billed.error}` };
+    return { success: true, notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill nahi bana: ${billed.error}${dieselTail}` };
   }
   return {
     success: true,
     billNumber: billed.billNumber,
-    notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill ${billed.billNumber ?? ""} khud ban gaya hai.`,
+    notice: `Kaam mukammal — kul ${doneSoFar} acre. Bill ${billed.billNumber ?? ""} khud ban gaya hai.${dieselTail}`,
   };
 }
 

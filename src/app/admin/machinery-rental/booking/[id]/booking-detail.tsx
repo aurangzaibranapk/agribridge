@@ -490,81 +490,20 @@ export function BookingDetail({
           </StepCard>
 
           {/* Diesel -- jitni baar dala jaye */}
-          <StepCard n={4} title={t("mc_step_fuel", lang)} done={fuelLogs.length > 0 || Boolean(booking.diesel_none_at)} locked={!confirmed}>
-            {fuelLogs.length > 0 && (
-              <div className="mb-3 space-y-1 text-sm">
-                {fuelLogs.map((f) => (
-                  <div
-                    key={f.id}
-                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
-                  >
-                    <span className="text-surface-600 dark:text-surface-300">
-                      {new Date(f.log_date).toLocaleDateString()}
-                      {f.litres !== null && ` · ${f.litres} L`}
-                      {" · "}
-                      <span className={f.paid_by === "company" ? "text-surface-900 dark:text-surface-100" : "text-surface-500"}>
-                        {f.paid_by === "company"
-                          ? t("mc_diesel_by_company", lang)
-                          : f.paid_by === "vendor"
-                          ? t("mc_diesel_by_vendor", lang)
-                          : t("mc_diesel_by_farmer", lang)}
-                      </span>
-                    </span>
-                    <span className="font-medium">Rs {f.amount.toLocaleString()}</span>
-                  </div>
-                ))}
-                {ourFuelRecoverable > 0 && (
-                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
-                    <span className="text-surface-500">{t("mc_fuel_recoverable", lang)}</span>
-                    <span className="font-medium text-surface-900 dark:text-surface-100">
-                      Rs {ourFuelRecoverable.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {ourFuelExpense > 0 && (
-                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
-                    <span className="text-surface-500">{t("mc_fuel_ours", lang)}</span>
-                    <span className="font-medium text-surface-900 dark:text-surface-100">
-                      Rs {ourFuelExpense.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {othersFuel > 0 && (
-                  <div className="flex justify-between text-xs text-surface-500">
-                    <span>{t("mc_fuel_others", lang)}</span>
-                    <span>Rs {othersFuel.toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            )}
-            {/* Teen halatein, teen alag jawab:
-                  diesel darj ho chuka   -> form (aur "+ aur diesel")
-                  "nahi dala" likha hua  -> wo jawab, aur usay wapis lene ka raasta
-                  abhi kuch nahi         -> form, aur sath "diesel nahi dala" ka tick
+          {/* Diesel ka apna qadam yahan se hata diya gaya.
 
-                Teesri soorat pehle adhoori thi: form litre aur rate maangta
-                tha, aur "nahi dala" kehne ka koi raasta nahi tha. Us se
-                qadam 4 hamesha adhoora khara rehta aur ye pata hi nahi
-                chalta tha ke diesel dala hi nahi gaya, ya dala gaya magar
-                darj nahi hua. */}
-            {confirmed && fuelLogs.length === 0 && booking.diesel_none_at ? (
-              <DieselNone bookingId={booking.id} />
-            ) : (
-              confirmed && (
-                <>
-                  <FuelForm bookingId={booking.id} accounts={accounts} already={fuelLogs.length > 0} />
-                  {fuelLogs.length === 0 && (
-                    <div className="mt-2">
-                      <MarkDieselNoneButton bookingId={booking.id} />
-                    </div>
-                  )}
-                </>
-              )
-            )}
-          </StepCard>
+              Wo booking bante hi khul jata tha aur poore safhe par
+              khara rehta tha -- jabke diesel ka jawab us waqt kisi
+              ke paas hota hi nahi. Har dafa safha kholne par wohi
+              adhoora khana saamne aata tha.
+
+              Ab diesel ka sawal wahin poochha jata hai jahan us ka
+              jawab maujood hota hai: kaam mukammal darj karte waqt
+              (qadam 5). Do saaf sawal, dono haan/nahi. */}
+
 
           {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
-          <StepCard n={5} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
+          <StepCard n={4} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
             {work.length > 0 && (
               <div className="mb-3 space-y-1 text-sm">
                 {work.map((w) => (
@@ -639,12 +578,43 @@ export function BookingDetail({
                 <p className="mt-2 text-xs text-surface-500">{t("mc_eff_note", lang)}</p>
               </div>
             )}
+              {/* Jo diesel darj ho chuka. Pehle ye apne qadam mein tha; ab
+                kaam ke sath hai, kyunke diesel usi kaam ka kharcha hai. */}
+            {fuelLogs.length > 0 && (
+              <div className="mb-3 space-y-1 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
+                {fuelLogs.map((f) => (
+                  <div key={f.id} className="flex justify-between">
+                    <span className="text-surface-600 dark:text-surface-300">
+                      {f.litres} L ·{" "}
+                      {f.paid_by === "company"
+                        ? t("mc_diesel_by_company", lang)
+                        : f.paid_by === "vendor"
+                        ? t("mc_diesel_by_vendor", lang)
+                        : t("mc_diesel_by_farmer", lang)}
+                    </span>
+                    <span className="font-medium">Rs {f.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                {ourFuelRecoverable > 0 && (
+                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
+                    <span className="text-surface-500">{t("mc_fuel_recoverable", lang)}</span>
+                    <span className="font-medium">Rs {ourFuelRecoverable.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {fuelLogs.length === 0 && booking.diesel_none_at && (
+              <p className="mb-3 rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+                {t("mc_diesel_none_done", lang)}
+              </p>
+            )}
             {confirmed && !workFinished && (
-              <WorkForm
+            <WorkForm
                 bookingId={booking.id}
                 estimated={booking.harvest_area}
                 done={workDone}
                 harvestType={booking.harvest_type}
+                accounts={accounts}
               />
             )}
 
@@ -662,7 +632,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Bill */}
-          <StepCard n={6} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
+          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
@@ -748,7 +718,7 @@ export function BookingDetail({
 
           {/* Final payment */}
           {bill && (balance ?? 0) > 0 && (
-            <StepCard n={7} title={t("mc_step_final_payment", lang)} done={false}>
+            <StepCard n={6} title={t("mc_step_final_payment", lang)} done={false}>
               <FinalPaymentStep
                 bookingId={booking.id}
                 accounts={accounts}
@@ -763,7 +733,7 @@ export function BookingDetail({
 
           {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
           {bill && (
-            <StepCard n={8} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
+            <StepCard n={7} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
               <div className="mb-3 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <Row label={`Gross bill (${bill.actual_area} acre)`} value={bill.gross_amount} />
                 <Row label={`Hamara commission (${bill.commission_percentage}%)`} value={-bill.commission_amount} />
@@ -1030,6 +1000,22 @@ function MarkDieselNoneButton({ bookingId }: { bookingId: string }) {
         {t("mc_diesel_none_mark", lang)}
       </button>
     </form>
+  );
+}
+
+function YesNo({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        on
+          ? "rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white"
+          : "rounded-lg border border-surface-200 px-3 py-1.5 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+      }
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1839,11 +1825,13 @@ function WorkForm({
   estimated,
   done,
   harvestType,
+  accounts,
 }: {
   bookingId: string;
   estimated: number;
   done: number;
   harvestType: string | null;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
@@ -1859,6 +1847,8 @@ function WorkForm({
   // phir ya to andaze se bhar deta hai ya form chhoR deta hai. Dono
   // soorton mein record kharab hota hai.
   const [showMore, setShowMore] = useState(false);
+  const [ourDiesel, setOurDiesel] = useState<"haan" | "nahi" | "">("");
+  const [farmerDiesel, setFarmerDiesel] = useState<"haan" | "nahi" | "">("");
 
   // Do qism ki booking par ASAL kaam bhi do hisson mein likha jata hai
   // (176). Bill isi par banta hai -- booking par likhe andaze par nahi.
@@ -1867,8 +1857,17 @@ function WorkForm({
   const [kanal, setKanal] = useState("");
   const [sabit, setSabit] = useState("");
   const [kutra, setKutra] = useState("");
+  // Kanal alag se -- wohi wajah jo nayi booking wale form par likhi hai:
+  // poora raqba acre aur kanal dono mein likha ja sakta hai, magar ye do
+  // khane sirf acre maangte the.
+  const [sabitK, setSabitK] = useState("");
+  const [kutraK, setKutraK] = useState("");
   const total = Math.round(((Number(acres) || 0) + (Number(kanal) || 0) / 8) * 10000) / 10000;
-  const splitSum = Math.round(((Number(sabit) || 0) + (Number(kutra) || 0)) * 10000) / 10000;
+  // Kanal ko acre mein badal kar jorte hain (8 kanal = 1 acre) -- taake
+  // "do kanal kutra" likhne wale ko khud 0.25 nikalna na pare.
+  const splitSabit = Math.round(((Number(sabit) || 0) + (Number(sabitK) || 0) / 8) * 10000) / 10000;
+  const splitKutra = Math.round(((Number(kutra) || 0) + (Number(kutraK) || 0) / 8) * 10000) / 10000;
+  const splitSum = Math.round((splitSabit + splitKutra) * 10000) / 10000;
   const splitOk = total > 0 && Math.round(splitSum * 10000) === Math.round(total * 10000);
 
   // Ghante haath se nahi likhe jate: shuru aur khatam ka waqt upar
@@ -2020,11 +2019,20 @@ function WorkForm({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>{t("mh_actual_sabit", lang)}</Label>
-              <Input type="number" name="sabit_area" step="0.01" value={sabit} onChange={(e) => setSabit(e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="number" step="0.01" value={sabit} onChange={(e) => setSabit(e.target.value)} placeholder={t("md_acres_short", lang)} />
+                <Input type="number" step="0.01" value={sabitK} onChange={(e) => setSabitK(e.target.value)} placeholder={t("mc_kanal", lang)} />
+              </div>
+              {/* Server ko sirf acre jata hai; kanal yahin badla jata hai. */}
+              <input type="hidden" name="sabit_area" value={splitSabit || ""} />
             </div>
             <div>
               <Label>{t("mh_actual_kutra", lang)}</Label>
-              <Input type="number" name="kutra_area" step="0.01" value={kutra} onChange={(e) => setKutra(e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="number" step="0.01" value={kutra} onChange={(e) => setKutra(e.target.value)} placeholder={t("md_acres_short", lang)} />
+                <Input type="number" step="0.01" value={kutraK} onChange={(e) => setKutraK(e.target.value)} placeholder={t("mc_kanal", lang)} />
+              </div>
+              <input type="hidden" name="kutra_area" value={splitKutra || ""} />
             </div>
           </div>
           <p className={splitOk ? "text-xs text-green-700 dark:text-green-400" : "text-xs text-amber-700 dark:text-amber-400"}>
@@ -2033,6 +2041,70 @@ function WorkForm({
           </p>
         </div>
       )}
+
+      {/* Diesel ka sawal ab yahin hai -- apne alag qadam mein nahi.
+          Wahan wo booking bante hi khul jata tha, jab jawab kisi ke paas
+          hota hi nahi tha. Do saaf sawal, dono haan/nahi. */}
+      <div className="space-y-3 rounded-card border border-surface-200 p-3 dark:border-surface-700">
+        <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mc_wd_heading", lang)}</p>
+        <input type="hidden" name="diesel_asked" value="1" />
+
+        <div>
+          <p className="mb-1 text-sm text-surface-800 dark:text-surface-200">{t("mc_wd_our_q", lang)}</p>
+          <div className="flex gap-2">
+            <YesNo on={ourDiesel === "haan"} onClick={() => setOurDiesel("haan")}>{t("mc_yes", lang)}</YesNo>
+            <YesNo on={ourDiesel === "nahi"} onClick={() => setOurDiesel("nahi")}>{t("mc_no", lang)}</YesNo>
+          </div>
+          <input type="hidden" name="our_diesel" value={ourDiesel} />
+          {ourDiesel === "haan" && (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("mc_diesel_litre", lang)}</Label>
+                <Input type="number" name="our_diesel_litres" step="0.01" />
+              </div>
+              <div>
+                <Label>{t("mc_diesel_rate", lang)}</Label>
+                <Input type="number" name="our_diesel_rate" step="0.01" />
+              </div>
+              {/* Ye khana isi soorat mein aata hai. ART ka diesel hamare
+                  kisi khate se nikalta hai -- wo khata likhe baghair
+                  raqam ledger mein ja hi nahi sakti. */}
+              <div className="col-span-2">
+                <Label>{t("mc_diesel_account", lang)}</Label>
+                <Select name="our_diesel_account" defaultValue="">
+                  <option value="">—</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm text-surface-800 dark:text-surface-200">{t("mc_wd_farmer_q", lang)}</p>
+          <div className="flex gap-2">
+            <YesNo on={farmerDiesel === "haan"} onClick={() => setFarmerDiesel("haan")}>{t("mc_yes", lang)}</YesNo>
+            <YesNo on={farmerDiesel === "nahi"} onClick={() => setFarmerDiesel("nahi")}>{t("mc_no", lang)}</YesNo>
+          </div>
+          <input type="hidden" name="farmer_diesel" value={farmerDiesel} />
+          {farmerDiesel === "haan" && (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("mc_diesel_litre", lang)}</Label>
+                <Input type="number" name="farmer_diesel_litres" step="0.01" />
+              </div>
+              <div>
+                <Label>{t("mc_diesel_rate", lang)}</Label>
+                <Input type="number" name="farmer_diesel_rate" step="0.01" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-surface-500">{t("mc_wd_hint", lang)}</p>
+      </div>
 
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
         <input type="checkbox" name="farmer_confirmed" className="h-4 w-4" />

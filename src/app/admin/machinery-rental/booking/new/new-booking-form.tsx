@@ -967,6 +967,13 @@ function HarvestTypePicker({
   const [type, setType] = useState<"sabit" | "kutra" | "dono">("sabit");
   const [sabit, setSabit] = useState("");
   const [kutra, setKutra] = useState("");
+  // Kanal alag se. Upar poora raqba acre AUR kanal dono mein likha ja
+  // sakta hai, magar ye do khane sirf acre maangte the -- to "do kanal
+  // kutra" likhne ke liye bande ko khud 0.25 nikalna paRta tha. Wo
+  // hisaab har dafa haath se karna wahi jagah hai jahan ghalti hoti
+  // hai, aur us ghalti par seedha bill banta hai.
+  const [sabitK, setSabitK] = useState("");
+  const [kutraK, setKutraK] = useState("");
   const [sabitRate, setSabitRate] = useState("");
   const [kutraRate, setKutraRate] = useState("");
 
@@ -984,8 +991,8 @@ function HarvestTypePicker({
     // Fasal ya machine badle to default dobara dekha jata hai.
   }, [cardSabit?.id, cardKutra?.id, sabitTouched, kutraTouched]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sabitNum = Number(sabit) || 0;
-  const kutraNum = Number(kutra) || 0;
+  const sabitNum = (Number(sabit) || 0) + (Number(sabitK) || 0) / 8;
+  const kutraNum = (Number(kutra) || 0) + (Number(kutraK) || 0) / 8;
   const sum = Math.round((sabitNum + kutraNum) * 10000) / 10000;
   const matches = total > 0 && Math.round(sum * 10000) === Math.round(total * 10000);
   const estimate =
@@ -1023,25 +1030,46 @@ function HarvestTypePicker({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>{t("mh_sabit_acres", lang)}</Label>
-              <Input
-                type="number"
-                name="sabit_area"
-                step="0.01"
-                value={sabit}
-                onChange={(e) => setSabit(e.target.value)}
-                placeholder="0"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={sabit}
+                  onChange={(e) => setSabit(e.target.value)}
+                  placeholder={t("md_acres_short", lang)}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={sabitK}
+                  onChange={(e) => setSabitK(e.target.value)}
+                  placeholder={t("mc_kanal", lang)}
+                />
+              </div>
+              {/* Server ko sirf acre jata hai -- kanal yahin acre mein
+                  badal kar bheja jata hai (8 kanal = 1 acre). Do adad
+                  bhejne se kal koi ek ko jama karna bhool jata. */}
+              <input type="hidden" name="sabit_area" value={sabitNum || ""} />
             </div>
             <div>
               <Label>{t("mh_kutra_acres", lang)}</Label>
-              <Input
-                type="number"
-                name="kutra_area"
-                step="0.01"
-                value={kutra}
-                onChange={(e) => setKutra(e.target.value)}
-                placeholder="0"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={kutra}
+                  onChange={(e) => setKutra(e.target.value)}
+                  placeholder={t("md_acres_short", lang)}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={kutraK}
+                  onChange={(e) => setKutraK(e.target.value)}
+                  placeholder={t("mc_kanal", lang)}
+                />
+              </div>
+              <input type="hidden" name="kutra_area" value={kutraNum || ""} />
             </div>
           </div>
 
