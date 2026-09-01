@@ -4,10 +4,13 @@ import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Label } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 export function ImageUploadField({
   bucket, fieldName, label, defaultUrl, onUploaded,
 }: { bucket: string; fieldName: string; label: string; defaultUrl?: string; onUploaded?: (url: string) => void }) {
+  const lang = useLang();
   const [imageUrl, setImageUrl] = useState(defaultUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export function ImageUploadField({
             type="button"
             onClick={() => { setImageUrl(""); onUploaded?.(""); }}
             className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow"
-            aria-label="Remove image"
+            aria-label={t("sh_remove_image", lang)}
           >
             <X className="h-3.5 w-3.5" />
           </button>

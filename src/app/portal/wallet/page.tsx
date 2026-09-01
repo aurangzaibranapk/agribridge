@@ -41,6 +41,7 @@ export default async function FarmerWalletPage() {
       </Link>
       <h1 className="mb-6 font-display text-2xl font-semibold text-surface-900">{translate("my_wallet_title", lang)}</h1>
       <WalletView
+        lang={lang}
         balance={Number(wallet?.balance ?? 0)}
         heldBalance={Number(wallet?.held_balance ?? 0)}
         transactions={(transactions ?? []).map((tx) => ({ ...tx, amount: Number(tx.amount), balance_after: Number(tx.balance_after) }))}

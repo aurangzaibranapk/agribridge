@@ -1,12 +1,15 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { Eraser } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface SignaturePadProps {
   onChange: (dataUrl: string | null) => void;
 }
 
 export function SignaturePad({ onChange }: SignaturePadProps) {
+  const lang = useLang();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -89,10 +92,9 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <p className="text-xs text-surface-400">Ungli ya mouse se yahan sign karein</p>
+        <p className="text-xs text-surface-400">{t("sh_sign_here", lang)}</p>
         <button type="button" onClick={clear} className="flex items-center gap-1 text-xs text-surface-500 hover:text-red-600">
-          <Eraser className="h-3 w-3" /> Saaf Karein
-        </button>
+          <Eraser className="h-3 w-3" />{t("sh_clear", lang)}</button>
       </div>
     </div>
   );

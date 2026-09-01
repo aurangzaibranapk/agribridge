@@ -6,6 +6,8 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/format";
 import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
 import { iconByName } from "@/lib/access/icons";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -34,6 +36,7 @@ export function Sidebar({
   groups?: SidebarGroup[] | null;
 }) {
   const pathname = usePathname();
+  const lang = useLang();
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");
   }
@@ -57,9 +60,9 @@ export function Sidebar({
   return (
     <aside className="hidden w-64 shrink-0 border-r border-surface-800 bg-[#1a1f36] lg:flex lg:flex-col">
       <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">AR</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
         <div>
-          <p className="font-display text-sm font-semibold leading-tight text-white">Al Rana Traders</p>
+          <p className="font-display text-sm font-semibold leading-tight text-white">{t("au_company", lang)}</p>
           <p className="text-xs text-surface-400">{subtitle}</p>
         </div>
       </Link>

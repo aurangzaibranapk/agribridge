@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WalletView } from "@/components/wallet/wallet-view";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,7 @@ export default async function MyWalletPage() {
       <p className="mb-6 text-sm text-surface-500">{displayName}</p>
 
       <WalletView
+        lang={getLanguageFromCookies("rm")}
         balance={Number(wallet?.balance ?? 0)}
         heldBalance={Number(wallet?.held_balance ?? 0)}
         transactions={(transactions ?? []).map((t) => ({ ...t, amount: Number(t.amount), balance_after: Number(t.balance_after) }))}

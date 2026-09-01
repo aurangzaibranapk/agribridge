@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils/format";
 import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
 import { iconByName } from "@/lib/access/icons";
 import type { SidebarGroup } from "@/components/layout/sidebar";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 /**
  * Chhoti screen ka menu. Pehle ye HAR group dikhata tha, chahe banday ko
@@ -15,6 +17,7 @@ import type { SidebarGroup } from "@/components/layout/sidebar";
  * milti hai.
  */
 export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; groups?: SidebarGroup[] }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -42,7 +45,7 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open menu"
+        aria-label={t("sh_open_menu", lang)}
         className="rounded-lg p-2 text-surface-600 hover:bg-surface-100 lg:hidden dark:text-surface-300 dark:hover:bg-surface-800"
       >
         <Menu className="h-5 w-5" />
@@ -53,13 +56,13 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-[#1a1f36] shadow-xl">
             <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">AR</div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
                 <div>
-                  <p className="font-display text-sm font-semibold leading-tight text-white">Al Rana Traders</p>
+                  <p className="font-display text-sm font-semibold leading-tight text-white">{t("au_company", lang)}</p>
                   <p className="text-xs text-surface-400">{subtitle}</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-1.5 text-surface-400 hover:bg-white/5">
+              <button onClick={() => setOpen(false)} aria-label={t("sh_close_menu", lang)} className="rounded-lg p-1.5 text-surface-400 hover:bg-white/5">
                 <X className="h-4 w-4" />
               </button>
             </div>
