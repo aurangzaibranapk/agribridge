@@ -47,12 +47,13 @@ nahi.
 | Kahan | Kaun si |
 |---|---|
 | **Live par chal chuki** | 225, aur **226 se 242** (1 September, malik ke saaf hukm par) |
-| **Live par NAHI chalin** | **243, 244, 245, 246, 247** |
-| Testing par | 226 se 247 tak sab |
+| **Live par NAHI chalin** | **243 se 249 tak** |
+| Testing par | 226 se 249 tak sab |
 
-**243–247 chalne se pehle abhi ka build Live par upload nahi hona
+**243–249 chalne se pehle abhi ka build Live par upload nahi hona
 chahiye.** Warna ye safhe tootenge: products ki fehrist, POS, product
-ka form (naya aur edit), Maal Andar, aur CRM mein gahak mehfooz karna.
+ka form (naya aur edit), Maal Andar, Bill se Trade Rate, aur CRM mein
+gahak mehfooz karna.
 
 ---
 
@@ -104,7 +105,7 @@ bhi liya ja sakta hai.
 
 ## 4. Ye ginti dobara kab dekhni hai
 
-243–247 chalne ke **foran baad** wohi das tables dobara ginein aur upar
+243–249 chalne ke **foran baad** wohi das tables dobara ginein aur upar
 wali fehrist se milayein. Kisi bhi adad ka **kam** hona rukne ki wajah
 hai — un migrations mein koi cheez mitane wali nahi hai, is liye ginti
 sirf barh sakti hai, ghat nahi sakti.
@@ -121,7 +122,7 @@ Malik ka usool: system par na hon to command **hold**. Wo kahein
 1. **Backup** — do `pg_dump` command (schema + data). Connection string
    wo khud Supabase Dashboard se lenge; wo string chat mein kabhi nahi
    aani.
-2. **Rukna** — dono file ke size aayen, phir main **243–247 Live par
+2. **Rukna** — dono file ke size aayen, phir main **243–249 Live par
    chalaoon** aur ginti dobara milaoon.
 3. **Build + package** — do command, branch
    `claude/code-load-project-structure-fq91y9` se.
@@ -131,6 +132,11 @@ Malik ka usool: system par na hon to command **hold**. Wo kahein
    /admin/hr/settings, /admin/products/intake, /admin/pos ka "Thok"
    button. Aur do nazuk kaam: /admin/hr par tankhwah darj karna, aur
    /admin/hr/leave par chhutti maangna.
+6. **Naya safha** — /admin/products/bill-rates. Supplier ke bill ki ek
+   photo laga kar dekhein ke qatarein parhi jati hain ya nahi. Ye AI
+   par chalta hai, is liye **GEMINI_API_KEY** Live par laga hona
+   chahiye — bina us ke safha khulta hai magar qatarein khali aati
+   hain (aur safha khud ye baat likh kar bata deta hai).
 
 Is fehrist mein jo bhi naya kaam hota rahe, wo yahin juRta rahe — taake
 un ke aane par ek bhi qadam chhoot na jaye.

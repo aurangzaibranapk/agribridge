@@ -14,6 +14,8 @@ ek cheez nahi.
 | Cheez | Haalat |
 |---|---|
 | Migration 225 (`diesel_none_at` / `diesel_none_by`) | ✅ **Live par chal gayi** (1 Sep) |
+| Migration 226–242 | ✅ **Live par chal gayin** (1 Sep) |
+| Migration **243–249** | ❌ **Baqi** — in ke baghair naya build Live par nahi charhna chahiye (tafseel `LIVE-DEPLOYMENT-RECORD.md` mein) |
 | Live server par naya `.next` | ❌ **Baqi** — is liye `/admin/trust` par 404 aata hai |
 
 Live par app ka code **kabhi upload hi nahi hua**. Migrations database par
@@ -43,6 +45,10 @@ Phir cPanel: **Setup Node.js App → Stop** → File Manager →
 - **`WHATSAPP_OTP_TEMPLATE`** cPanel ke environment variables mein bhara ho
   (na ho to WhatsApp ka OTP chup chaap chhoot jayega aur hamesha SMS se jayega)
 - **Supabase par email (SMTP)** chal raha ho, warna email wala OTP nahi aayega
+- **`GEMINI_API_KEY`** cPanel ke environment variables mein bhara ho — Maal
+  Andar mein dabbe ki tasveer aur "Bill se Trade Rate" mein bill ki
+  tasveer, dono isi se parhi jati hain. Na ho to safhe khulte hain magar
+  khane khali aate hain (aur safha khud ye baat likh kar bata deta hai)
 
 ---
 
@@ -193,6 +199,12 @@ ke saare chhote safhe.
 
 Aakhri hisse mein **445 jumle, 221 files**.
 
+Us ke baad jo naye safhe bane, wo bhi teenon zabanon mein aa chuke hain:
+**Maal Andar**, **Products CSV se charhayein**, **Bill se Trade Rate**,
+aur POS ka thok wala hissa (dict: `products-flow.ts`). Un mein "trade
+rate", "barcode", "CSV" aur "MRP" jaan boojh kar waise ke waise hain —
+ye chhape hue lafz hain, tarjuma inhen pehchanne se rok deta hai.
+
 ### Jo jaan boojh kar tarjuma NAHI hue
 
 | Kya | Kyun |
@@ -310,6 +322,10 @@ banda phansa reh jata.
 
 - **`WHATSAPP_OTP_TEMPLATE`** cPanel ke environment variables mein bhara ho
 - **Supabase par email (SMTP)** chal raha ho, warna email wala OTP nahi aayega
+- **`GEMINI_API_KEY`** cPanel ke environment variables mein bhara ho — Maal
+  Andar mein dabbe ki tasveer aur "Bill se Trade Rate" mein bill ki
+  tasveer, dono isi se parhi jati hain. Na ho to safhe khulte hain magar
+  khane khali aate hain (aur safha khud ye baat likh kar bata deta hai)
 
 ---
 
@@ -321,6 +337,7 @@ banda phansa reh jata.
 | PWA icon `public/icons/icon-192.png` maujood nahi (404) | Phone par "Add to Home Screen" ka icon khali aata hai. Phase 17 ka hissa |
 | Booking ke safhe par upar wala `○ Payment` chip adaigi ke qadam tak na le jaye | Chhota, magar roz kaam aata |
 | PR #1 ka matn purana hai | Bina poochhe nahi badla jayega |
+| ~~`src/app/admin/products/page.tsx]` (0 byte, naam mein `]`)~~ | **Hata diya gaya** — pehli commit ki typo thi, kisi safhe ka hissa nahi thi |
 
 ---
 
