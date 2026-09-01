@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VendorDashboardClient } from "./vendor-dashboard-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function VendorPortalPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -41,9 +44,9 @@ export default async function VendorPortalPage() {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <h1 className="font-display text-xl font-bold text-surface-900">{vendor.vendor_name}</h1>
-        <p className="mt-1 text-sm text-surface-500">Machinery Vendor Portal</p>
+        <p className="mt-1 text-sm text-surface-500">{t("v_portal", lang)}</p>
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <p className="text-sm font-medium text-amber-800">Aap ka account filhaal band hai.</p>
+          <p className="text-sm font-medium text-amber-800">{t("v_account_closed", lang)}</p>
           <p className="mt-2 text-xs text-amber-700">
             Aap ka poora record mehfooz hai — purana kaam, hisaab aur adaigiyan sab apni jagah hain. Dobara chalu
             karwane ke liye AgriBridge ke daftar se raabta karein.

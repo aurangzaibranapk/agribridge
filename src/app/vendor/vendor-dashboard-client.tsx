@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { LogoutButton } from "@/components/layout/logout-button";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   Tractor, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays,
@@ -203,6 +205,7 @@ export function VendorDashboardClient({
   commissionRows: CommissionRow[];
 }) {
   const [drill, setDrill] = useState<Drill>(null);
+  const lang = useLang();
   const [machineId, setMachineId] = useState<string>("all");
 
   function toggle(key: Drill) {
@@ -251,7 +254,7 @@ export function VendorDashboardClient({
             </div>
             <div className="min-w-0">
               <h1 className="font-display text-2xl font-bold leading-tight text-surface-900">{vendorName}</h1>
-              <p className="text-sm text-surface-500">Machinery Vendor Portal</p>
+              <p className="text-sm text-surface-500">{t("v_portal", lang)}</p>
               <p className="mt-0.5 text-xs text-surface-400">
                 {machines.length} machine{machines.length === 1 ? "" : "ein"}
                 {activeMachines > 0 ? ` · ${activeMachines} kaam par` : ""} · Aaj {today}
@@ -266,7 +269,7 @@ export function VendorDashboardClient({
                 onChange={(e) => setMachineId(e.target.value)}
                 className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm"
               >
-                <option value="all">Sab machinein</option>
+                <option value="all">{t("v_all_machines", lang)}</option>
                 {machines.map((m) => (
                   <option key={m.id} value={m.id}>
                     {machineLabel(m)}
@@ -277,9 +280,7 @@ export function VendorDashboardClient({
             <a
               href="#gosharah"
               className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm font-medium text-surface-700 shadow-sm hover:bg-surface-50"
-            >
-              Gosharah
-            </a>
+            >{t("v_statement", lang)}</a>
             {/* Nikalne ka raasta. Ye tha hi nahi -- vendor ko browser
                 band karne ke ilawa koi chara nahi tha, aur sanjhe phone
                 par wo khatarnak hai: agla banda usi ke khate mein
@@ -324,30 +325,28 @@ export function VendorDashboardClient({
         <section className="mb-8 overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-sm">
           <div className="grid gap-px bg-surface-200 lg:grid-cols-[1.4fr_2.6fr]">
             <div className="bg-brand-50 p-6">
-              <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Net abhi milna hai</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-700">{t("v_net_to_receive", lang)}</p>
               <p className="mt-2 font-display text-4xl font-bold leading-none text-brand-800">
                 Rs {money.netNow.toLocaleString()}
               </p>
-              <p className="mt-2 text-xs leading-relaxed text-brand-700">
-                Jo ART ke paas jama hai, us mein se ART ka diesel kaat kar.
-              </p>
+              <p className="mt-2 text-xs leading-relaxed text-brand-700">{t("v_after_art_diesel", lang)}</p>
             </div>
             <div className="grid grid-cols-2 gap-px bg-surface-200 lg:grid-cols-4">
-              <HeroFigure label="ART ke paas jama" value={money.withArt} tone="brand" />
-              <HeroFigure label="Farmer se pending" value={money.withFarmer} tone="amber" />
-              <HeroFigure label="ART diesel katega" value={money.dieselAdvance} tone="plain" />
-              <HeroFigure label="Mil chuka" value={money.received} tone="plain" />
+              <HeroFigure label={t("v_held_by_art", lang)} value={money.withArt} tone="brand" />
+              <HeroFigure label={t("v_pending_from_farmer", lang)} value={money.withFarmer} tone="amber" />
+              <HeroFigure label={t("v_art_diesel_will_cut", lang)} value={money.dieselAdvance} tone="plain" />
+              <HeroFigure label={t("v_received", lang)} value={money.received} tone="plain" />
             </div>
           </div>
         </section>
 
         {/* ---------------------------------------------- Kaam */}
-        <SectionHead title="Kaam" hint="Card par ungli rakhein — us ki asal bookings neeche khul jayengi." />
+        <SectionHead title={t("v_work", lang)} hint="Card par ungli rakhein — us ki asal bookings neeche khul jayengi." />
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             icon={<Layers className="h-4 w-4" />}
             value={work.booked}
-            label="Total Booked Acres"
+            label={t("v_total_booked_acres", lang)}
             sub={`${work.done} mukammal`}
             barPct={pct(work.done, work.booked)}
             tone="neutral"
@@ -357,7 +356,7 @@ export function VendorDashboardClient({
           <StatCard
             icon={<CheckCircle2 className="h-4 w-4" />}
             value={work.done}
-            label="Completed Acres"
+            label={t("v_completed_acres_t", lang)}
             sub={`${pct(work.done, work.booked)}% ho chuka`}
             barPct={pct(work.done, work.booked)}
             tone="green"
@@ -367,7 +366,7 @@ export function VendorDashboardClient({
           <StatCard
             icon={<Loader2 className="h-4 w-4" />}
             value={work.running}
-            label="In Progress Acres"
+            label={t("v_in_progress_acres", lang)}
             sub={work.running > 0 ? "abhi chal rahe hain" : "koi kaam chal nahi raha"}
             barPct={pct(work.running, work.booked)}
             tone="purple"
@@ -377,7 +376,7 @@ export function VendorDashboardClient({
           <StatCard
             icon={<CircleDashed className="h-4 w-4" />}
             value={work.pending}
-            label="Pending Acres"
+            label={t("v_pending_acres", lang)}
             sub={`${pct(work.pending, work.booked)}% baqi`}
             barPct={pct(work.pending, work.booked)}
             tone="amber"
@@ -387,7 +386,7 @@ export function VendorDashboardClient({
           <StatCard
             icon={<CalendarDays className="h-4 w-4" />}
             value={work.next7}
-            label="Next 7 Days Acres"
+            label={t("v_next7_acres", lang)}
             sub={`${week.length} booking`}
             barPct={pct(work.next7, work.booked)}
             tone="blue"
@@ -397,7 +396,7 @@ export function VendorDashboardClient({
           <StatCard
             icon={<ShieldCheck className="h-4 w-4" />}
             value={awaitingCheck}
-            label="Verification Pending"
+            label={t("v_verification_pending", lang)}
             sub={awaitingCheck > 0 ? "ART ki tasdeeq ka intezar" : "kuch baqi nahi"}
             barPct={0}
             tone={awaitingCheck > 0 ? "amber" : "neutral"}
@@ -419,15 +418,15 @@ export function VendorDashboardClient({
             Chhe alag baatein, chhe alag card. In ko jor kar ek "baqi"
             dikhana wohi ghalti hai jis se jhagRa shuru hota hai: aadha
             paisa hamare paas aaya hi nahi hota. */}
-        <SectionHead title="Paisa" hint="Har raqam apne naam se — koi mila-jula adad nahi." />
+        <SectionHead title={t("v_money", lang)} hint="Har raqam apne naam se — koi mila-jula adad nahi." />
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MoneyCard label="Total Verified Earning" value={money.earned} emphasis tone="neutral" onClick={() => toggle("earned")} active={drill === "earned"} />
-          <MoneyCard label="Vendor ko Mil Chuka" value={money.received} tone="neutral" onClick={() => toggle("received")} active={drill === "received"} />
-          <MoneyCard label="ART ke Paas Jama" value={money.withArt} emphasis tone="green" onClick={() => toggle("withArt")} active={drill === "withArt"} />
-          <MoneyCard label="Farmer se Pending" value={money.withFarmer} tone="amber" onClick={() => toggle("withFarmer")} active={drill === "withFarmer"} />
-          <MoneyCard label="ART Diesel Recoverable" value={money.dieselAdvance} tone="neutral" onClick={() => toggle("dieselAdvance")} active={drill === "dieselAdvance"} />
+          <MoneyCard label={t("v_total_verified_earning", lang)} value={money.earned} emphasis tone="neutral" onClick={() => toggle("earned")} active={drill === "earned"} />
+          <MoneyCard label={t("v_vendor_received_t", lang)} value={money.received} tone="neutral" onClick={() => toggle("received")} active={drill === "received"} />
+          <MoneyCard label={t("v_held_by_art_t", lang)} value={money.withArt} emphasis tone="green" onClick={() => toggle("withArt")} active={drill === "withArt"} />
+          <MoneyCard label={t("v_pending_from_farmer_t", lang)} value={money.withFarmer} tone="amber" onClick={() => toggle("withFarmer")} active={drill === "withFarmer"} />
+          <MoneyCard label={t("v_art_diesel_recoverable", lang)} value={money.dieselAdvance} tone="neutral" onClick={() => toggle("dieselAdvance")} active={drill === "dieselAdvance"} />
           {/* Sirf raqam. Fisad kahin nahi -- na yahan, na tafseel mein. */}
-          <MoneyCard label="ART Commission" value={money.commission} tone="neutral" onClick={() => toggle("commission")} active={drill === "commission"} />
+          <MoneyCard label={t("v_art_commission", lang)} value={money.commission} tone="neutral" onClick={() => toggle("commission")} active={drill === "commission"} />
         </div>
 
         {money.withFarmer > 0 && (
@@ -438,13 +437,13 @@ export function VendorDashboardClient({
         )}
 
         {/* ---------------------------------------------- Diesel */}
-        <SectionHead title="Diesel" hint="Kis ne diya, kitna laga." />
+        <SectionHead title={t("v_diesel", lang)} hint="Kis ne diya, kitna laga." />
         <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <DieselCard label="Total Litres" value={`${diesel.litres}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
-          <DieselCard label="Total Value" value={`Rs ${diesel.amount.toLocaleString()}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
-          <DieselCard label="Vendor Paid" value={`Rs ${diesel.byVendor.toLocaleString()}`} onClick={() => toggle("dieselVendor")} active={drill === "dieselVendor"} />
-          <DieselCard label="Farmer Paid" value={`Rs ${diesel.byFarmer.toLocaleString()}`} onClick={() => toggle("dieselFarmer")} active={drill === "dieselFarmer"} />
-          <DieselCard label="ART Paid" value={`Rs ${diesel.byArt.toLocaleString()}`} onClick={() => toggle("dieselArt")} active={drill === "dieselArt"} />
+          <DieselCard label={t("v_total_litres", lang)} value={`${diesel.litres}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
+          <DieselCard label={t("v_total_value", lang)} value={`Rs ${diesel.amount.toLocaleString()}`} big onClick={() => toggle("dieselAll")} active={drill === "dieselAll"} />
+          <DieselCard label={t("v_vendor_paid", lang)} value={`Rs ${diesel.byVendor.toLocaleString()}`} onClick={() => toggle("dieselVendor")} active={drill === "dieselVendor"} />
+          <DieselCard label={t("v_farmer_paid", lang)} value={`Rs ${diesel.byFarmer.toLocaleString()}`} onClick={() => toggle("dieselFarmer")} active={drill === "dieselFarmer"} />
+          <DieselCard label={t("v_art_paid", lang)} value={`Rs ${diesel.byArt.toLocaleString()}`} onClick={() => toggle("dieselArt")} active={drill === "dieselArt"} />
         </div>
 
         {/* ---------------------------------------------- Do sutoon
@@ -453,9 +452,9 @@ export function VendorDashboardClient({
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <div>
-              <SectionHead title="Aaj ka Kaam" hint={today} />
+              <SectionHead title={t("v_todays_work", lang)} hint={today} />
               {todays.length === 0 ? (
-                <EmptyCard icon={<Calendar className="h-5 w-5" />} title="Aaj ke liye koi kaam nahi" text="Agle dinon ka schedule daayen taraf hai." />
+                <EmptyCard icon={<Calendar className="h-5 w-5" />} title={t("v_no_work_today", lang)} text="Agle dinon ka schedule daayen taraf hai." />
               ) : (
                 <div className="space-y-3">
                   {todays.map((b) => (
@@ -468,7 +467,7 @@ export function VendorDashboardClient({
             {pendingVerify.length > 0 && (
               <div>
                 <SectionHead
-                  title="Pending Verification"
+                  title={t("v_pending_verification_t", lang)}
                   hint={`${pendingVerify.length} job ART ki tasdeeq ke intezar mein`}
                 />
                 <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -489,7 +488,7 @@ export function VendorDashboardClient({
                 hint={`${shown.length} booking`}
               />
               {shown.length === 0 ? (
-                <EmptyCard icon={<Inbox className="h-5 w-5" />} title="Abhi koi booking nahi" text="Nayi booking aate hi yahan nazar aayegi." />
+                <EmptyCard icon={<Inbox className="h-5 w-5" />} title={t("v_no_booking", lang)} text="Nayi booking aate hi yahan nazar aayegi." />
               ) : (
                 <div className="space-y-3">
                   {shown.map((b) => (
@@ -503,9 +502,9 @@ export function VendorDashboardClient({
           <div className="space-y-6">
             {/* Agle 7 din -- chhoti si timeline */}
             <div>
-              <SectionHead title="Next 7 Days" hint={`${work.next7} acre`} />
+              <SectionHead title={t("v_next7", lang)} hint={`${work.next7} acre`} />
               {week.length === 0 ? (
-                <EmptyCard icon={<CalendarDays className="h-5 w-5" />} title="Agle 7 din khali hain" text="Nayi booking aate hi yahan aa jayegi." />
+                <EmptyCard icon={<CalendarDays className="h-5 w-5" />} title={t("v_next7_free", lang)} text="Nayi booking aate hi yahan aa jayegi." />
               ) : (
                 <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm">
                   <ol className="space-y-3">
@@ -530,14 +529,10 @@ export function VendorDashboardClient({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="font-medium text-brand-600 hover:underline"
-                              >
-                                Jagah
-                              </a>
+                              >{t("c_location", lang)}</a>
                             )}
                             {w.farmerPhone && (
-                              <a href={`tel:${w.farmerPhone}`} className="font-medium text-brand-600 hover:underline">
-                                Call
-                              </a>
+                              <a href={`tel:${w.farmerPhone}`} className="font-medium text-brand-600 hover:underline">{t("v_call", lang)}</a>
                             )}
                           </div>
                         </div>
@@ -550,9 +545,9 @@ export function VendorDashboardClient({
 
             {/* Jagah ke hisaab se -- vendor ek din mein ek hi taraf jata hai */}
             <div>
-              <SectionHead title="Location-wise Work" hint="Baqi kaam, jagah ke hisaab se" />
+              <SectionHead title={t("v_location_wise", lang)} hint="Baqi kaam, jagah ke hisaab se" />
               {locations.length === 0 ? (
-                <EmptyCard icon={<MapPin className="h-5 w-5" />} title="Koi baqi kaam nahi" text="Sab jagah ka kaam mukammal hai." />
+                <EmptyCard icon={<MapPin className="h-5 w-5" />} title={t("v_no_work_left", lang)} text="Sab jagah ka kaam mukammal hai." />
               ) : (
                 <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">
                   {locations.map((l, i) => (
@@ -576,7 +571,7 @@ export function VendorDashboardClient({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-surface-400 hover:text-brand-600"
-                            title="Naqshe par"
+                            title={t("v_on_map", lang)}
                           >
                             <Navigation className="h-4 w-4" />
                           </a>
@@ -590,9 +585,9 @@ export function VendorDashboardClient({
 
             {/* Meri machinein */}
             <div>
-              <SectionHead title="My Machines" hint={`${machines.length} machine`} />
+              <SectionHead title={t("v_my_machines", lang)} hint={`${machines.length} machine`} />
               {machines.length === 0 ? (
-                <EmptyCard icon={<Tractor className="h-5 w-5" />} title="Koi machine darj nahi" text="ART se kahein ke aap ki machine darj kar de." />
+                <EmptyCard icon={<Tractor className="h-5 w-5" />} title={t("v_no_machine", lang)} text="ART se kahein ke aap ki machine darj kar de." />
               ) : (
                 <div className="space-y-2">
                   {machines.map((m) => (
@@ -624,9 +619,7 @@ export function VendorDashboardClient({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-medium text-brand-600 hover:underline"
-                          >
-                            Aakhri jagah
-                          </a>
+                          >{t("v_last_location", lang)}</a>
                         )}
                       </div>
                     </div>
@@ -639,19 +632,19 @@ export function VendorDashboardClient({
 
         {/* ---------------------------------------------- Adaigiyan */}
         <div className="mt-8">
-          <SectionHead title="Recent Payments" hint="Mujhe hui adaigiyan" />
+          <SectionHead title={t("v_recent_payments", lang)} hint="Mujhe hui adaigiyan" />
           {payments.length === 0 ? (
-            <EmptyCard icon={<Banknote className="h-5 w-5" />} title="Abhi koi adaigi nahi hui" text="Pehli adaigi hote hi yahan qatar ban jayegi." />
+            <EmptyCard icon={<Banknote className="h-5 w-5" />} title={t("v_no_payment_yet", lang)} text="Pehli adaigi hote hi yahan qatar ban jayegi." />
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-surface-200 bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-200 text-left">
-                    <th className="px-4 py-3 font-medium text-surface-500">Tareekh</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Settlement</th>
-                    <th className="px-4 py-3 font-medium text-surface-500">Booking</th>
-                    <th className="px-4 py-3 text-right font-medium text-surface-500">Raqam</th>
-                    <th className="px-4 py-3 text-right font-medium text-surface-500">Cash mila</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("c_date", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("v_settlement", lang)}</th>
+                    <th className="px-4 py-3 font-medium text-surface-500">{t("v_booking", lang)}</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">{t("v_cash_received", lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -688,37 +681,35 @@ export function VendorDashboardClient({
             milti hai -- yahan koi naya adad nahi banta. */}
         <div id="gosharah" className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <SectionHead title="Mera Gosharah" hint="Upar ke cards ka poora hisaab, ek qatar mein" />
+            <SectionHead title={t("v_my_statement", lang)} hint="Upar ke cards ka poora hisaab, ek qatar mein" />
             <div className="rounded-2xl border border-surface-200 bg-white p-5 text-sm shadow-sm">
-              <Row3 label="Verified kaam se kamai" value={money.earned} strong />
+              <Row3 label={t("v_earning_from_verified", lang)} value={money.earned} strong />
               {money.dieselAdvance > 0 && (
-                <Row3 label="ART ka diesel (katega)" value={-money.dieselAdvance} tone="text-red-600" />
+                <Row3 label={t("v_art_diesel_cut", lang)} value={-money.dieselAdvance} tone="text-red-600" />
               )}
-              <Row3 label="Mil chuka" value={-money.received} />
+              <Row3 label={t("v_received", lang)} value={-money.received} />
               <div className="my-3 border-t border-surface-100" />
-              <Row3 label="ART ke paas mera jama" value={money.withArt} tone="text-brand-700" />
-              <Row3 label="Abhi kisan ke paas" value={money.withFarmer} tone="text-amber-700" />
+              <Row3 label={t("v_my_balance_at_art", lang)} value={money.withArt} tone="text-brand-700" />
+              <Row3 label={t("v_with_farmer_now", lang)} value={money.withFarmer} tone="text-amber-700" />
               <div className="mt-3 flex items-center justify-between border-t-2 border-surface-200 pt-3">
-                <span className="font-display text-base font-semibold text-surface-900">Net abhi milna hai</span>
+                <span className="font-display text-base font-semibold text-surface-900">{t("v_net_to_receive", lang)}</span>
                 <span className="font-display text-2xl font-bold text-brand-700">
                   Rs {money.netNow.toLocaleString()}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-surface-500">
-                Commission verified kamai mein se pehle hi nikal chuka hai — is liye yahan dobara nahi kata.
-              </p>
+              <p className="mt-2 text-xs text-surface-500">{t("v_commission_already_out", lang)}</p>
             </div>
           </div>
 
           <div>
-            <SectionHead title="Mera Season" hint="Ab tak ka khulasa" />
+            <SectionHead title={t("v_my_season", lang)} hint="Ab tak ka khulasa" />
             <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">
-              <SeasonRow label="Booked acres" value={`${work.booked}`} />
-              <SeasonRow label="Completed acres" value={`${work.done}`} />
-              <SeasonRow label="Remaining acres" value={`${work.pending}`} />
-              <SeasonRow label="Verified earning" value={`Rs ${money.earned.toLocaleString()}`} />
-              <SeasonRow label="Vendor received" value={`Rs ${money.received.toLocaleString()}`} />
-              <SeasonRow label="Net outstanding" value={`Rs ${money.netNow.toLocaleString()}`} strong />
+              <SeasonRow label={t("v_booked_acres", lang)} value={`${work.booked}`} />
+              <SeasonRow label={t("v_completed_acres", lang)} value={`${work.done}`} />
+              <SeasonRow label={t("v_remaining_acres", lang)} value={`${work.pending}`} />
+              <SeasonRow label={t("v_verified_earning", lang)} value={`Rs ${money.earned.toLocaleString()}`} />
+              <SeasonRow label={t("v_vendor_received", lang)} value={`Rs ${money.received.toLocaleString()}`} />
+              <SeasonRow label={t("v_net_outstanding", lang)} value={`Rs ${money.netNow.toLocaleString()}`} strong />
             </div>
           </div>
         </div>
@@ -911,13 +902,14 @@ const DRILL_TITLE: Record<string, string> = {
 
 /** Card ke peeche ki asal qatarein -- koi naya hisaab nahi, sirf chhantai. */
 function DrillBookings({ rows, kind }: { rows: Booking[]; kind: string }) {
+  const lang = useLang();
   return (
     <div className="mb-4 rounded-card border border-brand-200 bg-brand-50/40 p-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700">
         {DRILL_TITLE[kind] ?? "Tafseel"} ({rows.length})
       </p>
       {rows.length === 0 ? (
-        <p className="py-2 text-center text-xs text-surface-400">Koi qatar nahi.</p>
+        <p className="py-2 text-center text-xs text-surface-400">{t("v_no_rows", lang)}</p>
       ) : (
         <div className="space-y-1">
           {rows.map((b) => (
@@ -937,14 +929,10 @@ function DrillBookings({ rows, kind }: { rows: Booking[]; kind: string }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-brand-600 hover:underline"
-                  >
-                    Jagah
-                  </a>
+                  >{t("c_location", lang)}</a>
                 )}
                 {b.farmerPhone && (
-                  <a href={`tel:${b.farmerPhone}`} className="text-brand-600 hover:underline">
-                    Call
-                  </a>
+                  <a href={`tel:${b.farmerPhone}`} className="text-brand-600 hover:underline">{t("v_call", lang)}</a>
                 )}
               </span>
             </div>
@@ -956,13 +944,14 @@ function DrillBookings({ rows, kind }: { rows: Booking[]; kind: string }) {
 }
 
 function DrillWeek({ rows }: { rows: WeekRow[] }) {
+  const lang = useLang();
   return (
     <div className="mb-4 rounded-card border border-brand-200 bg-brand-50/40 p-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700">
         Agle 7 din ({rows.length})
       </p>
       {rows.length === 0 ? (
-        <p className="py-2 text-center text-xs text-surface-400">Agle 7 din mein koi kaam nahi.</p>
+        <p className="py-2 text-center text-xs text-surface-400">{t("v_next7_no_work", lang)}</p>
       ) : (
         <div className="space-y-1">
           {rows.map((w) => (
@@ -981,14 +970,10 @@ function DrillWeek({ rows }: { rows: WeekRow[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-brand-600 hover:underline"
-                  >
-                    Jagah
-                  </a>
+                  >{t("c_location", lang)}</a>
                 )}
                 {w.farmerPhone && (
-                  <a href={`tel:${w.farmerPhone}`} className="text-brand-600 hover:underline">
-                    Call
-                  </a>
+                  <a href={`tel:${w.farmerPhone}`} className="text-brand-600 hover:underline">{t("v_call", lang)}</a>
                 )}
               </span>
             </div>
@@ -1007,13 +992,14 @@ function DrillWeek({ rows }: { rows: WeekRow[] }) {
  * hi nahi, is liye ghalti se bhi nahi chhap sakta.
  */
 function DrillCommission({ rows }: { rows: CommissionRow[] }) {
+  const lang = useLang();
   return (
     <div className="mb-4 rounded-card border border-brand-200 bg-brand-50/40 p-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700">
         ART commission ({rows.length})
       </p>
       {rows.length === 0 ? (
-        <p className="py-2 text-center text-xs text-surface-400">Abhi koi bill nahi bana.</p>
+        <p className="py-2 text-center text-xs text-surface-400">{t("v_no_bill_yet", lang)}</p>
       ) : (
         <div className="space-y-1">
           {rows.map((c) => (
@@ -1097,6 +1083,7 @@ function Row3({ label, value, strong, tone }: { label: string; value: number; st
  * dafa jati hai, chaar dafa nahi.
  */
 function BookingCard({ booking }: { booking: Booking }) {
+  const lang = useLang();
   const [open, setOpen] = useState<null | "work" | "closing" | "fuel" | "cash">(null);
   const status = STATUS[booking.status] ?? { label: booking.status, color: "bg-surface-100 text-surface-600" };
   const canSubmitWork = ["ready_for_harvest", "in_progress"].includes(booking.status) && !booking.workDone;
@@ -1171,8 +1158,7 @@ function BookingCard({ booking }: { booking: Booking }) {
               rel="noreferrer"
               className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
             >
-              <MapPin className="h-3.5 w-3.5" /> Khet ka naqsha
-            </a>
+              <MapPin className="h-3.5 w-3.5" />{t("v_field_map", lang)}</a>
           )}
           {booking.farmerPhone && (
             <a
@@ -1197,7 +1183,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         <div className="mt-3 space-y-0.5 border-t border-surface-100 pt-2 text-sm">
           <Row label={`Kaam: ${booking.area} acre × Rs ${(booking.rate ?? 0).toLocaleString()}`} value={booking.gross} />
           <div className="flex justify-between border-t border-surface-100 pt-1 font-medium">
-            <span>Aap ki verified earning</span>
+            <span>{t("v_your_verified_earning", lang)}</span>
             <span>Rs {(booking.payable ?? 0).toLocaleString()}</span>
           </div>
           {booking.farmerDiesel > 0 && (
@@ -1208,16 +1194,16 @@ function BookingCard({ booking }: { booking: Booking }) {
           )}
           {booking.artDiesel > 0 && (
             <>
-              <Row label="ART ka diesel (adaigi par katega)" value={-booking.artDiesel} />
+              <Row label={t("v_art_diesel_on_payment", lang)} value={-booking.artDiesel} />
               <div className="flex justify-between border-t border-surface-100 pt-1 font-medium">
-                <span>Net vendor earning</span>
+                <span>{t("v_net_vendor_earning", lang)}</span>
                 <span>Rs {Math.max((booking.payable ?? 0) - booking.artDiesel, 0).toLocaleString()}</span>
               </div>
             </>
           )}
-          {booking.paid > 0 && <Row label="Aap ko mila" value={-booking.paid} />}
+          {booking.paid > 0 && <Row label={t("v_you_received", lang)} value={-booking.paid} />}
           <div className="flex justify-between font-display font-semibold">
-            <span>Baqi</span>
+            <span>{t("c_baqi", lang)}</span>
             <span className={booking.outstanding > 0 ? "text-amber-700" : "text-brand-700"}>
               Rs {Math.max(booking.outstanding - booking.artDiesel, 0).toLocaleString()}
             </span>
@@ -1226,9 +1212,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       )}
 
       {booking.claimed > 0 && (
-        <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
-          Aap ka bheja hua kaam AgriBridge ki tasdeeq ke intezar mein hai. Tasdeeq ke baad hi wo bill ka hissa banega.
-        </p>
+        <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">{t("v_awaiting_verification", lang)}</p>
       )}
 
       {booking.rejected.map((r) => (
@@ -1292,39 +1276,33 @@ function BookingCard({ booking }: { booking: Booking }) {
                   jata aur "kab pahunche the" ka jawab har dafa naya
                   hota. */}
               {!booking.reachedAt && (
-                <ProgressButton bookingId={booking.id} step="reached" label="Khet pahunch gaya" />
+                <ProgressButton bookingId={booking.id} step="reached" label={t("v_reached_field", lang)} />
               )}
               {booking.reachedAt && !booking.startedAt && (
-                <ProgressButton bookingId={booking.id} step="started" label="Kaam shuru" />
+                <ProgressButton bookingId={booking.id} step="started" label={t("v_work_started", lang)} />
               )}
               {canSubmitWork && (
                 <button
                   onClick={() => setOpen("work")}
                   className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-                >
-                  Kattai ki tafseel bhejein
-                </button>
+                >{t("v_harvest_details", lang)}</button>
               )}
               {needsClosing && (
                 <button
                   onClick={() => setOpen("closing")}
                   className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
-                >
-                  Kattai mukammal — do sawal baqi
-                </button>
+                >{t("v_harvest_done_two_q", lang)}</button>
               )}
               <button
                 onClick={() => setOpen("fuel")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700"
               >
-                <Fuel className="h-4 w-4" /> Diesel darj karein
-              </button>
+                <Fuel className="h-4 w-4" />{t("v_diesel_record", lang)}</button>
               <button
                 onClick={() => setOpen("cash")}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700"
               >
-                <HandCoins className="h-4 w-4" /> Kisan ne paisa diya
-              </button>
+                <HandCoins className="h-4 w-4" />{t("v_farmer_paid_stmt", lang)}</button>
             </div>
           ) : open === "work" ? (
             <WorkForm bookingId={booking.id} harvestType={booking.harvestType} onClose={() => setOpen(null)} />
@@ -1350,6 +1328,7 @@ function BookingCard({ booking }: { booking: Booking }) {
  * ke kharche mein aur ek dafa bill mein.
  */
 function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, action] = useFormState(submitVendorFuel, initialState);
   const [litres, setLitres] = useState("");
   const [rate, setRate] = useState("");
@@ -1365,10 +1344,10 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
       {state.error && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">{state.error}</p>}
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Tareekh">
+        <Field label={t("c_date", lang)}>
           <input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
-        <Field label="Kitne litre *">
+        <Field label={t("v_how_many_litres_req", lang)}>
           <input
             type="number"
             step="0.01"
@@ -1381,7 +1360,7 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
         </Field>
       </div>
 
-      <Field label="Us din ka rate per litre (Rs) *">
+      <Field label={t("v_that_day_rate", lang)}>
         <input
           type="number"
           step="0.01"
@@ -1401,28 +1380,24 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
         </p>
       )}
 
-      <Field label="Kis ne dala? *">
+      <Field label={t("v_who_put_it", lang)}>
         <select name="paid_by" required defaultValue="" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
           <option value="">—</option>
-          <option value="farmer">Kisan ne</option>
-          <option value="vendor">Main ne (vendor)</option>
-          <option value="company">Al Rana Traders ne</option>
+          <option value="farmer">{t("v_the_farmer", lang)}</option>
+          <option value="vendor">{t("v_i_did_vendor", lang)}</option>
+          <option value="company">{t("v_art_ne", lang)}</option>
         </select>
       </Field>
 
-      <Field label="Koi baat (marzi se)">
+      <Field label={t("v_a_note", lang)}>
         <input name="notes" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
       </Field>
 
-      <p className="text-xs text-surface-500">
-        Tasdeeq ke baad hi ye hisaab mein aayega. Diesel jitni dafa dala jaye, utni dafa darj karein.
-      </p>
+      <p className="text-xs text-surface-500">{t("v_diesel_after_verify", lang)}</p>
 
       <div className="flex gap-2">
         <Submit />
-        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
-          Rehne dein
-        </button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">{t("v_leave_it", lang)}</button>
       </div>
     </form>
   );
@@ -1437,6 +1412,7 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
  * nahi rehta.
  */
 function CollectionForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, action] = useFormState(submitVendorCollection, initialState);
 
   if (state.success) {
@@ -1449,35 +1425,31 @@ function CollectionForm({ bookingId, onClose }: { bookingId: string; onClose: ()
       {state.error && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">{state.error}</p>}
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Kitna diya (Rs) *">
+        <Field label={t("v_how_much_paid", lang)}>
           <input type="number" step="0.01" name="amount" required className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
-        <Field label="Kab diya">
+        <Field label={t("v_when_paid", lang)}>
           <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
       </div>
 
-      <Field label="Us paise ka kya kiya? *">
+      <Field label={t("v_what_did_you_do", lang)}>
         <select name="settlement" required defaultValue="" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
           <option value="">—</option>
-          <option value="kept">Apne hisse mein rakh liya</option>
-          <option value="handed_over">Al Rana Traders ko de raha hoon</option>
+          <option value="kept">{t("v_kept_my_share", lang)}</option>
+          <option value="handed_over">{t("v_giving_to_art", lang)}</option>
         </select>
       </Field>
 
-      <Field label="Koi nishani (marzi se)">
+      <Field label={t("v_a_reference", lang)}>
         <input name="reference" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
       </Field>
 
-      <p className="text-xs text-surface-500">
-        Ye abhi sirf aap ki baat hai — tasdeeq ke baad hi kisan ka baqi kam hoga.
-      </p>
+      <p className="text-xs text-surface-500">{t("v_only_your_word", lang)}</p>
 
       <div className="flex gap-2">
         <Submit />
-        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
-          Rehne dein
-        </button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">{t("v_leave_it", lang)}</button>
       </div>
     </form>
   );
@@ -1548,6 +1520,7 @@ function WorkForm({
   onClose: () => void;
 }) {
   const [state, action] = useFormState(submitVendorWork, initialState);
+  const lang = useLang();
 
   // Do qism ki booking par batwara wahin poochha jata hai (176). Baad
   // mein daftar ke bande ko yaad nahi hoga ke us din kitna sabit tha
@@ -1581,7 +1554,7 @@ function WorkForm({
       </p>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-xs font-medium text-surface-600">Kaam ki tareekh</label>
+          <label className="text-xs font-medium text-surface-600">{t("v_work_date", lang)}</label>
           <input
             type="date"
             name="work_date"
@@ -1590,11 +1563,11 @@ function WorkForm({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">Meter / ghante</label>
+          <label className="text-xs font-medium text-surface-600">{t("v_meter_hours", lang)}</label>
           <input type="number" step="0.01" name="meter_reading" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">Kitne acre</label>
+          <label className="text-xs font-medium text-surface-600">{t("v_how_many_acres", lang)}</label>
           <input
             type="number"
             step="0.01"
@@ -1605,7 +1578,7 @@ function WorkForm({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">Kanal</label>
+          <label className="text-xs font-medium text-surface-600">{t("v_kanal", lang)}</label>
           <input
             type="number"
             step="0.01"
@@ -1619,12 +1592,10 @@ function WorkForm({
 
       {isDono && (
         <div className="space-y-2 rounded-lg border border-surface-200 p-3">
-          <p className="text-xs text-surface-500">
-            Is booking mein dono qism hain — Sabit Parali aur Kutra alag alag likhein.
-          </p>
+          <p className="text-xs text-surface-500">{t("v_both_kinds", lang)}</p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-surface-600">Sabit Parali ke acre</label>
+              <label className="text-xs font-medium text-surface-600">{t("v_sabit_parali_acres", lang)}</label>
               <input
                 type="number"
                 step="0.01"
@@ -1635,7 +1606,7 @@ function WorkForm({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-600">Kutra ke acre</label>
+              <label className="text-xs font-medium text-surface-600">{t("v_kutra_acres", lang)}</label>
               <input
                 type="number"
                 step="0.01"
@@ -1652,7 +1623,7 @@ function WorkForm({
         </div>
       )}
       <div>
-        <label className="text-xs font-medium text-surface-600">Kuch aur batana ho</label>
+        <label className="text-xs font-medium text-surface-600">{t("v_anything_else", lang)}</label>
         <input name="notes" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
       </div>
       <label className="flex items-start gap-2 rounded-lg border-2 border-amber-200 bg-amber-50 p-3 text-sm">
@@ -1664,10 +1635,8 @@ function WorkForm({
           className="mt-0.5 h-4 w-4"
         />
         <span>
-          <span className="font-medium text-surface-900">Kaam poora ho gaya</span>
-          <span className="block text-xs text-surface-500">
-            Sirf aakhri din nishaan lagayein. Kaam kai din chale to har din ka alag indraj bhejein.
-          </span>
+          <span className="font-medium text-surface-900">{t("v_work_completed", lang)}</span>
+          <span className="block text-xs text-surface-500">{t("v_mark_last_day_only", lang)}</span>
         </span>
       </label>
 
@@ -1680,9 +1649,7 @@ function WorkForm({
       {isFinal && <EndOfWorkQuestions />}
       <div className="flex gap-2">
         <Submit />
-        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
-          Rehne dein
-        </button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">{t("v_leave_it", lang)}</button>
       </div>
     </form>
   );
@@ -1702,6 +1669,7 @@ function WorkForm({
  * banti hai. Wahi jagah hai jahan ek sifar zyada lag jata hai.
  */
 function EndOfWorkQuestions() {
+  const lang = useLang();
   const [diesel, setDiesel] = useState("");
   const [dLitres, setDLitres] = useState("");
   const [dRate, setDRate] = useState("");
@@ -1711,19 +1679,19 @@ function EndOfWorkQuestions() {
 
   return (
     <div className="space-y-3 rounded-lg border border-surface-200 bg-surface-50/60 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Jane se pehle do baatein</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("v_two_things_before", lang)}</p>
 
       <div>
-        <p className="text-sm font-medium text-surface-800">Kisan ne diesel dala?</p>
+        <p className="text-sm font-medium text-surface-800">{t("v_who_put_diesel_q", lang)}</p>
         <div className="mt-1.5 flex gap-1.5">
-          <Choice on={diesel === "haan"} onClick={() => setDiesel("haan")}>Haan</Choice>
-          <Choice on={diesel === "nahi"} onClick={() => setDiesel("nahi")}>Nahi</Choice>
+          <Choice on={diesel === "haan"} onClick={() => setDiesel("haan")}>{t("v_yes", lang)}</Choice>
+          <Choice on={diesel === "nahi"} onClick={() => setDiesel("nahi")}>{t("v_no", lang)}</Choice>
         </div>
         <input type="hidden" name="farmer_diesel" value={diesel} />
         {diesel === "haan" && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-surface-600">Kitne litre</label>
+              <label className="text-xs font-medium text-surface-600">{t("v_how_many_litres", lang)}</label>
               <input
                 type="number"
                 step="0.01"
@@ -1734,7 +1702,7 @@ function EndOfWorkQuestions() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-600">Rate per litre</label>
+              <label className="text-xs font-medium text-surface-600">{t("v_rate_per_litre", lang)}</label>
               <input
                 type="number"
                 step="0.01"
@@ -1754,15 +1722,15 @@ function EndOfWorkQuestions() {
       </div>
 
       <div className="border-t border-surface-200 pt-3">
-        <p className="text-sm font-medium text-surface-800">Kisan ne paisa diya?</p>
+        <p className="text-sm font-medium text-surface-800">{t("v_farmer_paid_q", lang)}</p>
         <div className="mt-1.5 flex gap-1.5">
-          <Choice on={paid === "haan"} onClick={() => setPaid("haan")}>Haan</Choice>
-          <Choice on={paid === "nahi"} onClick={() => setPaid("nahi")}>Nahi — udhaar hai</Choice>
+          <Choice on={paid === "haan"} onClick={() => setPaid("haan")}>{t("v_yes", lang)}</Choice>
+          <Choice on={paid === "nahi"} onClick={() => setPaid("nahi")}>{t("v_no_its_credit", lang)}</Choice>
         </div>
         <input type="hidden" name="farmer_paid" value={paid} />
         {paid === "haan" && (
           <div className="mt-2">
-            <label className="text-xs font-medium text-surface-600">Kitni raqam</label>
+            <label className="text-xs font-medium text-surface-600">{t("v_how_much", lang)}</label>
             <input
               type="number"
               step="0.01"
@@ -1771,16 +1739,12 @@ function EndOfWorkQuestions() {
               onChange={(e) => setPaidAmount(e.target.value)}
               className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
             />
-            <p className="mt-1 text-xs text-surface-500">
-              Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.
-            </p>
+            <p className="mt-1 text-xs text-surface-500">{t("v_money_with_you", lang)}</p>
           </div>
         )}
       </div>
 
-      <p className="text-xs text-surface-400">
-        Dono jawab tasdeeq ke liye jate hain — tasdeeq se pehle kisi hisaab mein shamil nahi hote.
-      </p>
+      <p className="text-xs text-surface-400">{t("v_both_answers_go", lang)}</p>
     </div>
   );
 }
@@ -1796,6 +1760,7 @@ function EndOfWorkQuestions() {
  * rehte, aur vendor sawal khatam karne ke liye jhoota "haan" likh deta.
  */
 function ClosingForm({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, action] = useFormState(submitVendorClosing, initialState);
 
   if (state.success) {
@@ -1813,9 +1778,7 @@ function ClosingForm({ bookingId, onClose }: { bookingId: string; onClose: () =>
       <EndOfWorkQuestions />
       <div className="flex gap-2">
         <Submit />
-        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">
-          Abhi nahi
-        </button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500">{t("v_not_now", lang)}</button>
       </div>
     </form>
   );
