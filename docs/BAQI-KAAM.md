@@ -113,32 +113,34 @@ likhne ke liye yehi chahiye. **Naya permission table nahi banana.**
 
 ---
 
-## 3. Tarjuma (Urdu / English / Roman)
+## 3. Tarjuma (Urdu / English / Roman) — **MUKAMMAL**
 
-**Kul 346+ files ho chukin. Takreeban 200 baqi, ~460 jumle.**
+**Ho gaya.** Ab teenon zabanon mein wo sab kuch hai jo screen par nazar
+aata hai — public website, kisan ka portal, dealer/buyer/expert ke
+portal, naukri ka offer, Trust ka safha, arhti ka poora hissa, aur admin
+ke saare chhote safhe.
 
-| Ho chuka | Jumle |
+Aakhri hisse mein **445 jumle, 221 files**.
+
+### Jo jaan boojh kar tarjuma NAHI hue
+
+| Kya | Kyun |
 |---|---|
-| Vendor portal | 119 |
-| Kisan portal | 139 |
-| Login / register / password | 66 + naya login safha |
-| Shared components (sidebar, khata, reports, batwa, table) | 71 |
+| **Nishan aur ikaiyan** — FAT, SNF %, LR, PO #, IBAN, URL, L/acre | Ye alfaz nahi, nishan hain. Kaghaz par, machine par aur bank ki parchi par bhi yehi likhe hote hain — tarjuma kar dene se banda unhen apne hi kaghaz par na pehchane |
+| **Bankon aur walleton ke naam** — JazzCash, Easypaisa, SadaPay, NayaPay | Wo un ki apni app par usi tarah likhe hain |
+| **Khanon ke namoone** — `PK__ ____ ____`, `XXXXX-XXXXXXX-X` | Ye shakl hain, jumla nahi |
+| **Karobar ke naam, email, website** | Naam tarjuma nahi hote |
+| `urdu-agreement-template.tsx` | Qanooni muahida — ek hi zaban mein rehna chahiye. English mode mein aadha angrezi muahida qanooni tor par bekar hota |
+| `art-logo.tsx` | Logo ka wordmark hota hai |
 
-| Baqi | Andaza |
-|---|---|
-| Public website — `src/app/(site)/*` aur `src/components/site` | ~193 |
-| `/admin/trust` | 38 |
-| Chhote admin safhon ki lambi qatar | ~150 |
-| Dealer / Buyer / Expert / Job-offer portal | ~80 |
+### Chaar kharabiyan jo sirf poori build ne pakrin
 
-**Jaan boojh kar chhora hua:** `urdu-agreement-template.tsx` (qanooni
-kaghaz, ek hi zaban mein hona chahiye) aur `art-logo.tsx` (logo ka
-aria-label).
+`tsc` in mein se ek bhi nahi pakarta:
 
-Karobar ke naam `src/lib/i18n/glossary.ts` mein darj hain:
-**ایگری بریج** · **الرانا ٹریڈرز** · **اے آر ٹی**
-
----
+1. **`get-language` (jo `next/headers` parhta hai) teen client safhon par chala gaya tha** — ek dafa `art-logo` ke raaste, ek dafa `timeline.tsx` ke. Ye TypeScript ki ghalti nahi, Next ka usool hai — aur wo sirf build par toot-ta hai. Ab poore import ke jaal par jaanch chala kar dekha (relative import bhi shamil): client ke raaste par ek bhi nahi bacha.
+2. Ek file mein `t` pehle se **ek theme ka naam** tha (`t.accent`, `t.text`) — wahan tarjume wala `tr` hai.
+3. Ek **lambe import** ({ … } kai lakeeron par) ke **beech** import gir gaya.
+4. Do dafa `lang` ki lakeer **nested function** ke andar giri, component ke top par nahi — yani component ke paas zaban thi hi nahi.
 
 ## 4. Score engine (Feature #1) — Live shadow mein
 
