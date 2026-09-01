@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Tractor, AlertCircle } from "lucide-react";
 import { getCropProgress } from "@/lib/utils/crop-duration";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 interface CropReminder {
   crop_name: string;
@@ -28,6 +30,7 @@ export function getMachineryReminders(crops: Crop[]): CropReminder[] {
 }
 
 export function MachineryReminderBanner({ reminders }: { reminders: CropReminder[] }) {
+  const lang = getLanguageFromCookies("ur");
   if (reminders.length === 0) return null;
 
   return (
@@ -35,20 +38,18 @@ export function MachineryReminderBanner({ reminders }: { reminders: CropReminder
       <div className="flex items-start gap-3">
         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
         <div>
-          <p className="text-sm font-medium text-amber-800">Machinery Booking Ka Waqt Aa Raha Hai</p>
+          <p className="text-sm font-medium text-amber-800">{t("pm_machinery_time", lang)}</p>
           <div className="mt-2 space-y-1">
             {reminders.map((r, i) => (
               <p key={i} className="text-sm text-amber-700">
-                {r.crop_name} ({r.farm_name}) - <strong>{r.daysRemaining} din</strong> mein harvest ready hoga. Machinery book karni hai?
-              </p>
+                {r.crop_name} ({r.farm_name}) - <strong>{r.daysRemaining} din</strong>{t("pm_harvest_ready_in", lang)}</p>
             ))}
           </div>
           <Link
             href="/portal/services/machinery"
             className="mt-2 inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
           >
-            <Tractor className="h-3.5 w-3.5" /> Machinery Book Karein
-          </Link>
+            <Tractor className="h-3.5 w-3.5" />{t("pm_book_machinery", lang)}</Link>
         </div>
       </div>
     </div>

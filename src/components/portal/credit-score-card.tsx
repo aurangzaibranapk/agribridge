@@ -1,4 +1,6 @@
 import { Award, Hourglass } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import {
   MIN_MEANINGFUL_EVENTS,
   MIN_RELATIONSHIP_DAYS,
@@ -22,6 +24,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; ring: string }> = {
  * hai.
  */
 export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
+  const lang = getLanguageFromCookies("ur");
   if (result.state === "building") {
     const daysLeft = Math.max(0, MIN_RELATIONSHIP_DAYS - result.relationshipDays);
     const eventsLeft = Math.max(0, MIN_MEANINGFUL_EVENTS - result.meaningfulEventCount);
@@ -30,22 +33,19 @@ export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
       <div className="rounded-card border border-surface-200 bg-surface-50 p-4 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-surface-700">
-            <Hourglass className="h-4 w-4" /> Kisan Credit Score
-          </h3>
-          <p className="text-sm font-semibold text-surface-600">Ban raha hai</p>
+            <Hourglass className="h-4 w-4" />{t("pm_kisan_score", lang)}</h3>
+          <p className="text-sm font-semibold text-surface-600">{t("pm_score_building", lang)}</p>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-surface-500">
-          Abhi itna record nahi bana ke koi darja diya ja sake. Ye koi kami nahi — hisaab shuru hua hai.
-        </p>
+        <p className="mt-2 text-xs leading-relaxed text-surface-500">{t("pm_score_building_msg", lang)}</p>
         <ul className="mt-3 space-y-1.5 text-xs text-surface-600">
           <li className="flex items-center justify-between gap-2">
-            <span>Hamare saath waqt</span>
+            <span>{t("pm_time_with_us", lang)}</span>
             <span className="font-medium">
               {daysLeft === 0 ? "poora ho gaya" : `${daysLeft} din aur`}
             </span>
           </li>
           <li className="flex items-center justify-between gap-2">
-            <span>Darj shuda kaam</span>
+            <span>{t("pm_recorded_work", lang)}</span>
             <span className="font-medium">
               {eventsLeft === 0 ? "poore ho gaye" : `${eventsLeft} aur`}
             </span>
@@ -61,8 +61,7 @@ export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
     <div className={`rounded-card border ${colors.ring} ${colors.bg} p-4 shadow-card`}>
       <div className="flex items-center justify-between">
         <h3 className={`flex items-center gap-2 text-sm font-semibold ${colors.text}`}>
-          <Award className="h-4 w-4" /> Kisan Credit Score
-        </h3>
+          <Award className="h-4 w-4" />{t("pm_kisan_score", lang)}</h3>
         <div className="text-right">
           <p className={`text-2xl font-bold ${colors.text}`}>{result.score}/100</p>
           <p className={`text-xs font-medium ${colors.text}`}>Grade {result.grade} - {result.gradeLabel}</p>

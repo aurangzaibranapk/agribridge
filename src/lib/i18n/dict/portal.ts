@@ -186,8 +186,8 @@ export const portalDict = {
   livestock_details_heading: { en: "Livestock Details", ur: "مویشیوں کی تفصیلات" },
   saved_msg: { en: "Saved.", ur: "محفوظ ہو گیا۔" },
   has_livestock_question: { en: "Do you keep livestock?", ur: "کیا آپ کے پاس مویشی ہیں؟" },
-  yes_label: { en: "Yes", ur: "جی ہاں" },
-  no_label: { en: "No", ur: "نہیں" },
+  yes_label: { en: "Yes", rm: "Haan", ur: "جی ہاں" },
+  no_label: { en: "No", rm: "Nahi", ur: "نہیں" },
   farm_location_saved: {
     en: "This farm's location is already saved — no need to capture it again.",
     ur: "اس کھیت کی جگہ پہلے سے محفوظ ہے — دوبارہ لینے کی ضرورت نہیں۔",

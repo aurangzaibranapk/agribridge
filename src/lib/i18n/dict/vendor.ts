@@ -9,10 +9,15 @@
  *
  * TEEN BAATEIN JO YAHAN JAAN BOOJH KAR AISE HAIN:
  *
- * 1. "Al Rana Traders" aur "ART" tarjuma nahi hote. Ye kisi cheez ka
- *    naam nahi, ek karobar ka naam hai. Usay "الرانا ٹریڈرز" likhna ek
- *    nayi hijje ijaad karna hoga jo kisi kaghaz par nahi hai. Wohi
- *    usool jo POS, WhatsApp aur CNIC par lagta hai.
+ * 1. "Al Rana Traders", "ART" aur "AgriBridge" ke Urdu naam PEHLE SE
+ *    tay hain, aur wohi yahan istemal hue hain: الرعنا ٹریڈرز،
+ *    اے آر ٹی، اور ایگری برج (machinery-slip.ts, machinery.ts,
+ *    finance-grain.ts). Pehle yahan ye teenon Urdu mein bhi angrezi
+ *    harfon mein likhe gaye the -- wo ghalat tha. Vendor ka safha aur
+ *    machinery ke daftari safhe EK HI paise ki baat karte hain; do
+ *    screenon par do hijje us paise ko do alag cheezein bana dete
+ *    hain. Roman (rm) aur English mein wo waise hi hain jaise bole
+ *    jate hain.
  *
  * 2. "Sabit Parali" aur "Kutra" chaare ki do qismein hain, do lafz
  *    nahi. Urdu mein wo "ثابت پرالی" aur "کترا" hain -- wohi jo mandi
@@ -46,7 +51,7 @@ export const vendorDict = {
   v_your_verified_earning: { en: "Your verified earning", rm: "Aap ki verified earning", ur: "آپ کی تصدیق شدہ کمائی" },
   v_earning_from_verified: { en: "Earning from verified work", rm: "Verified kaam se kamai", ur: "تصدیق شدہ کام سے کمائی" },
   v_total_verified_earning: { en: "Total Verified Earning", rm: "Kul tasdeeq shuda kamai", ur: "کل تصدیق شدہ کمائی" },
-  v_art_commission: { en: "ART Commission", rm: "ART Commission", ur: "ART کمیشن" },
+  v_art_commission: { en: "ART Commission", rm: "ART Commission", ur: "اے آر ٹی کمیشن" },
   v_net_vendor_earning: { en: "Net vendor earning", rm: "Vendor ki net kamai", ur: "وینڈر کی نیٹ کمائی" },
   v_commission_already_out: {
     en: "Commission has already been taken out of the verified earning — so it is not deducted again here.",
@@ -56,14 +61,14 @@ export const vendorDict = {
 
   // ---- Paisa kahan hai ----
   v_money: { en: "Money", rm: "Paisa", ur: "پیسہ" },
-  v_held_by_art_t: { en: "Held by ART", rm: "ART ke Paas Jama", ur: "ART کے پاس جمع" },
-  v_held_by_art: { en: "Held by ART", rm: "ART ke paas jama", ur: "ART کے پاس جمع" },
-  v_my_balance_at_art: { en: "My balance held by ART", rm: "ART ke paas mera jama", ur: "ART کے پاس میرا جمع" },
+  v_held_by_art_t: { en: "Held by ART", rm: "ART ke Paas Jama", ur: "اے آر ٹی کے پاس جمع" },
+  v_held_by_art: { en: "Held by ART", rm: "ART ke paas jama", ur: "اے آر ٹی کے پاس جمع" },
+  v_my_balance_at_art: { en: "My balance held by ART", rm: "ART ke paas mera jama", ur: "اے آر ٹی کے پاس میرا جمع" },
   v_with_farmer_now: { en: "Currently with the farmer", rm: "Abhi kisan ke paas", ur: "ابھی کسان کے پاس" },
   v_farmer_paid: { en: "Farmer Paid", rm: "Farmer Paid", ur: "کسان نے دیا" },
   v_pending_from_farmer_t: { en: "Pending from Farmer", rm: "Farmer se Pending", ur: "کسان سے باقی" },
   v_pending_from_farmer: { en: "Pending from Farmer", rm: "Farmer se pending", ur: "کسان سے باقی" },
-  v_art_paid: { en: "ART Paid", rm: "ART ne diya", ur: "ART نے دیا" },
+  v_art_paid: { en: "ART Paid", rm: "ART ne diya", ur: "اے آر ٹی نے دیا" },
   v_vendor_paid: { en: "Vendor Paid", rm: "Vendor Paid", ur: "وینڈر کو دیا" },
   v_vendor_received_t: { en: "Received by Vendor", rm: "Vendor ko Mil Chuka", ur: "وینڈر کو مل چکا" },
   v_vendor_received: { en: "Vendor received", rm: "Vendor received", ur: "وینڈر کو ملا" },
@@ -74,15 +79,15 @@ export const vendorDict = {
   v_after_art_diesel: {
     en: "From what is held by ART, after deducting ART's diesel.",
     rm: "Jo ART ke paas jama hai, us mein se ART ka diesel kaat kar.",
-    ur: "جو ART کے پاس جمع ہے، اس میں سے ART کا ڈیزل کاٹ کر۔",
+    ur: "جو اے آر ٹی کے پاس جمع ہے، اس میں سے اے آر ٹی کا ڈیزل کاٹ کر۔",
   },
 
   // ---- Diesel ----
   v_diesel_record: { en: "Record diesel", rm: "Diesel darj karein", ur: "ڈیزل درج کریں" },
-  v_art_diesel_recoverable: { en: "ART Diesel Recoverable", rm: "ART ka diesel wapas lena hai", ur: "ART کا ڈیزل واپس لینا ہے" },
-  v_art_diesel_will_cut: { en: "ART diesel will be deducted", rm: "ART diesel katega", ur: "ART کا ڈیزل کٹے گا" },
-  v_art_diesel_on_payment: { en: "ART diesel (deducted on payment)", rm: "ART ka diesel (adaigi par katega)", ur: "ART کا ڈیزل (ادائیگی پر کٹے گا)" },
-  v_art_diesel_cut: { en: "ART diesel (will be deducted)", rm: "ART ka diesel (katega)", ur: "ART کا ڈیزل (کٹے گا)" },
+  v_art_diesel_recoverable: { en: "ART Diesel Recoverable", rm: "ART ka diesel wapas lena hai", ur: "اے آر ٹی کا ڈیزل واپس لینا ہے" },
+  v_art_diesel_will_cut: { en: "ART diesel will be deducted", rm: "ART diesel katega", ur: "اے آر ٹی کا ڈیزل کٹے گا" },
+  v_art_diesel_on_payment: { en: "ART diesel (deducted on payment)", rm: "ART ka diesel (adaigi par katega)", ur: "اے آر ٹی کا ڈیزل (ادائیگی پر کٹے گا)" },
+  v_art_diesel_cut: { en: "ART diesel (will be deducted)", rm: "ART ka diesel (katega)", ur: "اے آر ٹی کا ڈیزل (کٹے گا)" },
   v_who_put_diesel_q: { en: "Did the farmer put in diesel?", rm: "Kisan ne diesel dala?", ur: "کسان نے ڈیزل ڈالا؟" },
   v_who_put_it: { en: "Who put it in? *", rm: "Kis ne dala? *", ur: "کس نے ڈالا؟ *" },
   v_the_farmer: { en: "The farmer", rm: "Kisan ne", ur: "کسان نے" },
@@ -139,12 +144,12 @@ export const vendorDict = {
   v_when_paid: { en: "When paid", rm: "Kab diya", ur: "کب دیا" },
   v_cash_received: { en: "Cash received", rm: "Cash mila", ur: "نقد ملا" },
   v_what_did_you_do: { en: "What did you do with that money? *", rm: "Us paise ka kya kiya? *", ur: "اس پیسے کا کیا کیا؟ *" },
-  v_giving_to_art: { en: "I am handing it to Al Rana Traders", rm: "Al Rana Traders ko de raha hoon", ur: "Al Rana Traders کو دے رہا ہوں" },
+  v_giving_to_art: { en: "I am handing it to Al Rana Traders", rm: "Al Rana Traders ko de raha hoon", ur: "الرعنا ٹریڈرز کو دے رہا ہوں" },
   v_kept_my_share: { en: "Kept as my share", rm: "Apne hisse mein rakh liya", ur: "اپنے حصے میں رکھ لیا" },
   v_money_with_you: {
     en: "This money is with you for now. Handing it to AgriBridge is a separate step.",
     rm: "Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.",
-    ur: "یہ پیسہ ابھی آپ کے پاس ہے۔ جب AgriBridge کو دیں تو اس کا اپنا قدم ہے۔",
+    ur: "یہ پیسہ ابھی آپ کے پاس ہے۔ جب ایگری برج کو دیں تو اس کا اپنا قدم ہے۔",
   },
   v_only_your_word: {
     en: "This is only your word for now — the farmer's balance drops only after verification.",
@@ -163,7 +168,7 @@ export const vendorDict = {
   v_awaiting_verification: {
     en: "The work you submitted is awaiting AgriBridge verification. Only after verification does it become part of the bill.",
     rm: "Aap ka bheja hua kaam AgriBridge ki tasdeeq ke intezar mein hai. Tasdeeq ke baad hi wo bill ka hissa banega.",
-    ur: "آپ کا بھیجا ہوا کام AgriBridge کی تصدیق کے انتظار میں ہے۔ تصدیق کے بعد ہی وہ بل کا حصہ بنے گا۔",
+    ur: "آپ کا بھیجا ہوا کام ایگری برج کی تصدیق کے انتظار میں ہے۔ تصدیق کے بعد ہی وہ بل کا حصہ بنے گا۔",
   },
 
   // ---- Booking aur acre ----
@@ -188,7 +193,7 @@ export const vendorDict = {
   v_no_payment_yet: { en: "No payment yet", rm: "Abhi koi adaigi nahi hui", ur: "ابھی کوئی ادائیگی نہیں ہوئی" },
   v_no_bill_yet: { en: "No bill has been made yet.", rm: "Abhi koi bill nahi bana.", ur: "ابھی کوئی بل نہیں بنا۔" },
   v_settlement: { en: "Settlement", rm: "Settlement", ur: "سیٹلمنٹ" },
-  v_art_ne: { en: "Al Rana Traders", rm: "Al Rana Traders ne", ur: "Al Rana Traders نے" },
+  v_art_ne: { en: "Al Rana Traders", rm: "Al Rana Traders ne", ur: "الرعنا ٹریڈرز نے" },
 
   // ---- Chhote lafz ----
   v_yes: { en: "Yes", rm: "Haan", ur: "ہاں" },

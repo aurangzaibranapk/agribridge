@@ -3,6 +3,8 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { checkFarmerUsername, setFarmerUsername, type UsernameState } from "@/actions/farmer-auth";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: UsernameState = {};
 
@@ -24,6 +26,7 @@ const initialState: UsernameState = {};
  * doosre ko saaf jawab milta hai.
  */
 export function UsernameCard({ current }: { current: string | null }) {
+  const lang = useLang();
   const router = useRouter();
   const [state, action] = useFormState(setFarmerUsername, initialState);
   const [name, setName] = useState("");
@@ -40,15 +43,13 @@ export function UsernameCard({ current }: { current: string | null }) {
   if (current) {
     return (
       <div className="rounded-card border border-surface-200 bg-white p-5">
-        <h2 className="font-display text-base font-semibold text-surface-900">Aap ki User ID</h2>
+        <h2 className="font-display text-base font-semibold text-surface-900">{t("pm_your_user_id", lang)}</h2>
         <p className="mt-2 font-mono text-lg font-semibold text-brand-700">{current}</p>
         <p className="mt-2 text-xs text-surface-500">
           Ab aap mobile aur OTP ke bajaye seedha User ID aur password se bhi login kar sakte hain. OTP wala raasta
           bhi khula hai — jo aasan lage, wohi istemal karein.
         </p>
-        <p className="mt-2 text-xs text-surface-400">
-          User ID ek dafa banti hai. Badalni ho to daftar se raabta karein.
-        </p>
+        <p className="mt-2 text-xs text-surface-400">{t("pm_user_id_once", lang)}</p>
       </div>
     );
   }
@@ -66,7 +67,7 @@ export function UsernameCard({ current }: { current: string | null }) {
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5">
-      <h2 className="font-display text-base font-semibold text-surface-900">Apni User ID banayein</h2>
+      <h2 className="font-display text-base font-semibold text-surface-900">{t("pm_make_user_id", lang)}</h2>
       <p className="mt-1 text-xs text-surface-500">
         Marzi ki baat hai. Bana lenge to har dafa OTP ka intezar nahi karna paRega — seedha User ID aur password se
         andar aa jayenge. Na banayein to bhi sab kuch waise hi chalta rahega.
@@ -76,22 +77,18 @@ export function UsernameCard({ current }: { current: string | null }) {
         {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
         <div>
-          <label htmlFor="username" className="mb-1 block text-xs font-medium text-surface-700">
-            User ID
-          </label>
+          <label htmlFor="username" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_user_id", lang)}</label>
           <input
             id="username"
             name="username"
             required
             value={name}
             onChange={(e) => checkName(e.target.value)}
-            placeholder="misal: aurangzeb"
+            placeholder={t("pm_eg_username", lang)}
             className="w-full rounded-lg border border-surface-200 px-3 py-2 font-mono text-sm lowercase"
           />
-          <p className="mt-1 text-[11px] text-surface-400">
-            Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.
-          </p>
-          {checking && <p className="mt-1 text-[11px] text-surface-400">Dekh rahe hain...</p>}
+          <p className="mt-1 text-[11px] text-surface-400">{t("pm_user_id_rule", lang)}</p>
+          {checking && <p className="mt-1 text-[11px] text-surface-400">{t("pm_checking", lang)}</p>}
           {!checking && hint && (
             <p className={`mt-1 text-[11px] font-medium ${hint.ok ? "text-brand-700" : "text-red-600"}`}>
               {hint.text}
@@ -101,9 +98,7 @@ export function UsernameCard({ current }: { current: string | null }) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-medium text-surface-700">
-              Password
-            </label>
+            <label htmlFor="password" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password", lang)}</label>
             <input
               id="password"
               name="password"
@@ -114,9 +109,7 @@ export function UsernameCard({ current }: { current: string | null }) {
             />
           </div>
           <div>
-            <label htmlFor="password_confirm" className="mb-1 block text-xs font-medium text-surface-700">
-              Password dobara
-            </label>
+            <label htmlFor="password_confirm" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password_again", lang)}</label>
             <input
               id="password_confirm"
               name="password_confirm"
