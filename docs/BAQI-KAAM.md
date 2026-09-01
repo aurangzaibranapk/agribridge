@@ -118,7 +118,34 @@ Karobar ke naam `src/lib/i18n/glossary.ts` mein darj hain:
 
 ## 4. Score engine (Feature #1) — Live shadow mein
 
-**Sab chal raha hai. Kuch toota nahi.** Magar teen cheezein khuli hain:
+### Teen LOCKED faisle — **teenon lag chuke hain** ✅
+
+| Aap ka faisla | Haalat | Kahan |
+|---|---|---|
+| Score Building = `30 din + 3 verified events`. Us se pehle `New / Score Building`, **`0 / Low` nahi** | ✅ Laga | `fn_recalc_score()` — 220 |
+| Rolling 12 mahine: `0–3m 100%` · `4–6m 70%` · `7–9m 40%` · `10–12m 20%` · `12m+ expire` | ✅ Laga | `fn_score_decay()` — 202 |
+| **Unresolved outstanding age se expire na ho** — jab tak raqam baqi hai, waqia poore wazan par | ✅ Laga | `never_decays`, aur ginti `decay_from` (hal hone wale din) se |
+| Visibility: apna / team / finance scope / master admin — **DB par, sirf UI hiding nahi** | ✅ Laga | `fn_score_visible()` + 4 tables par RLS |
+
+**Likhne ki koi policy hai hi nahi — jaan boojh kar.** Score haath se na
+barhaya ja sakta hai na ghataya; sirf engine likhta hai. "Apna score
+theek karo" ka darwaza hota to poora nizam usi din bekar ho jata.
+
+### Live par abhi kya haal hai
+
+| Cheez | Adad |
+|---|---|
+| Migrations 199–225 Live par | ✅ chal chukin |
+| Cron: queue tick har 5 minute | ✅ khud chal raha |
+| Cron: roz 3 baje (UTC) daily run | ✅ khud chal raha |
+| Nakaam runs / atki hui qatarein | **0 / 0** |
+| Subjects | 9 — **sab `score_building`** |
+
+9 ke 9 `score_building` par hain kyunke `30 din + 3 waqiat` abhi poore
+nahi hue. **Ye kharabi nahi.** Aur wahan **sifar nahi likha jata** —
+"Hisaab ban raha hai" likha jata hai.
+
+### Teen cheezein khuli hain:
 
 ### 4 September ko dekhna hai
 
@@ -144,25 +171,69 @@ pehla asal manfi waqia hoga** — us din khud dekha jayega.
 
 ---
 
-## 5. Chhote kaam
+## 5. Login ka safha — manzoor shuda naqsha
+
+**Aap ki bheji hui tasveer ke mutabiq ban chuka hai** (1 Sep). Safha:
+`src/app/login/page.tsx` + `login-form.tsx`.
+
+| Aap ka lock | Haalat |
+|---|---|
+| Mobile Number = User ID | ✅ |
+| Email = User ID alternative | ✅ **ab usi safhe par** — pehle chhote link ke peeche chhupa tha |
+| Primary OTP → WhatsApp | ✅ |
+| WhatsApp na aaye → SMS | ✅ **ab banda khud chun sakta hai**, aur "Dobara bhejein" raasta badal deta hai |
+| Google Login | ✅ neeche, aur ab dono taraf |
+| Facebook Login | ✅ |
+| New user → Register | ✅ |
+| Farmer/Customer aur Admin/Staff/Vendor ke flow alag | ✅ |
+| Existing Farmer ID / 360 duplicate na ho | ✅ |
+| Naqshe ki shakl: +92 ka khana, "YA" goliya, raaste ke do card, bhejne ka nishan, dhaal wala jumla, daayen taraf teen baaton ka card, neeche chaar ki patti | ✅ |
+| X ka nishan, login par khud hat jaye | ✅ |
+
+### Do cheezein jo sirf shakl ki nahi thin
+
+**1. Email ka khana chhupa hua tha — aur wo ek asal kharabi thi.** Gahak
+usay dhoondta hi nahi tha aur apna number upar wale khane mein likh deta.
+Wo khana sirf `farmers` mein dekhta hai — to gahak **naya kisan** ban
+jata, aur "ek number ek kisan" (124) ulta pad jata: ek hi bande ke do
+record, do alag hisaab.
+
+Email wala raasta **naya khata nahi banata** (`shouldCreateUser: false`).
+Ye aap ka pehle ka tay shuda usool hai — "email lagi hi nahi to pehle
+register karo". Khata yahan ban jata to us bande ka koi kisan record hi
+na hota: portal khulta magar andar kuch na hota.
+
+**2. WhatsApp/SMS ka chunav ek chhupi kharabi ka hal hai.** Pehle nizam
+hamesha WhatsApp aazmata aur **nakaam** hone par SMS bhejta. Ek soorat
+chhoot jati thi: WhatsApp **"chala gaya" magar bande tak pahuncha nahi**
+— wahan nakaami hoti hi nahi, is liye SMS kabhi chalta hi nahi tha aur
+banda phansa reh jata.
+
+### Live par is safhe ki do zaroortein
+
+- **`WHATSAPP_OTP_TEMPLATE`** cPanel ke environment variables mein bhara ho
+- **Supabase par email (SMTP)** chal raha ho, warna email wala OTP nahi aayega
+
+---
+
+## 6. Chhote kaam
 
 | Kaam | Kyun |
 |---|---|
 | PWA icon `public/icons/icon-192.png` maujood nahi (404) | Phone par "Add to Home Screen" ka icon khali aata hai. Phase 17 ka hissa |
 | Booking ke safhe par upar wala `○ Payment` chip adaigi ke qadam tak na le jaye | Chhota, magar roz kaam aata |
-| Login par SMS ka apna button | Filhal "Code nahi mila? Dobara bhejein" khud raasta badal deta hai (WhatsApp → SMS). Alag button chahiye to bataayein |
 | PR #1 ka matn purana hai | Bina poochhe nahi badla jayega |
 
 ---
 
-## 6. Jo abhi banaye hi nahi gaye
+## 7. Jo abhi banaye hi nahi gaye
 
 - **Vehicle Expense** — meter ki tasveer + petrol + mileage ka milan
 - **Milk Verification** — claim banam asal naap
 
 ---
 
-## 7. Aage ka naqsha (aap ka apna)
+## 8. Aage ka naqsha (aap ka apna)
 
 Phase 16 Delivery & Logistics ke baad **17 se 20 tak aap ki apni
 development** hai:
@@ -185,7 +256,7 @@ Do baatein aaj ke faislon par asar daalti hain:
 
 ---
 
-## 8. Do usool jo is project mein bar bar kaam aaye
+## 9. Do usool jo is project mein bar bar kaam aaye
 
 **Sifar aur "hisaab nahi rakha jata" ek cheez nahi.** Sifar kehta hai
 "dekh liya, kuch nahi hua". Jis cheez ka indraj hi nahi hota, us ke
