@@ -58,10 +58,17 @@ export default async function AttendanceBoardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: board, error: boardErr }, { data: attn }] = await Promise.all([
+  const [{ data: board, error: boardErr }, { data: attn }, { data: probDue }] = await Promise.all([
     supabase.rpc("fn_hr_today_board"),
     supabase.rpc("fn_hr_needs_attention"),
+    supabase.rpc("fn_hr_probation_due", { p_days_ahead: 14 }),
   ]);
+
+  // Guzri hui tareekh alag ginti hai. "3 ki aazmaish khatam ho rahi
+  // hai" aur "3 ka faisla ruka hua hai" do alag baatein hain -- doosri
+  // par kaam ab karna hai.
+  const probOverdue = (probDue ?? []).filter((p) => p.is_overdue).length;
+  const probSoon = (probDue ?? []).length - probOverdue;
 
   const a = attn?.[0] ?? null;
   const rows = board ?? [];
@@ -103,6 +110,13 @@ export default async function AttendanceBoardPage() {
           <Kpi label={t("hrb_missing_punch_7d", lang)} value={a?.missing_punch_7d ?? null} />
           <Kpi label={t("hrb_missing_7d", lang)} value={a?.missing_days_7d ?? null} />
         </div>
+
+        {(probOverdue > 0 || probSoon > 0) && (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Kpi label={t("hrp_overdue", lang)} value={probOverdue} href="/admin/hr/probation" />
+            <Kpi label={t("hrp_title", lang)} value={probSoon} href="/admin/hr/probation" />
+          </div>
+        )}
       </Card>
 
       {/* ---- Aaj ka khulasa ---- */}

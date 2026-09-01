@@ -34,7 +34,7 @@ export default async function MyAttendancePage() {
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
 
-  const [{ data: record }, { data: summaryRows }, { data: myCorrections }] = await Promise.all([
+  const [{ data: record }, { data: summaryRows }, { data: myCorrections }, { data: entRows }] = await Promise.all([
     supabase
       .from("attendance_records")
       .select("check_in_at, check_out_at")
@@ -48,9 +48,11 @@ export default async function MyAttendancePage() {
       .eq("profile_id", user.id)
       .order("attendance_date", { ascending: false })
       .limit(10),
+    supabase.rpc("fn_leave_entitlement", { p_profile: user.id, p_year: year }),
   ]);
 
   const s = summaryRows?.[0] ?? null;
+  const ent = entRows?.[0] ?? null;
 
   return (
     <div>
@@ -97,6 +99,24 @@ export default async function MyAttendancePage() {
               </p>
             )}
           </>
+        )}
+      </Card>
+
+      {/* ---- Saalana chhutti ---- */}
+      <Card className="mt-4">
+        <h2 className="mb-2 text-sm font-semibold">{t("hrl_balance", lang)} — {year}</h2>
+        {!ent ? (
+          <p className="text-sm text-surface-500">Chhutti ka hisaab parha nahi ja saka.</p>
+        ) : ent.is_confirmed === false ? (
+          // Sifar nahi likha jata: wajah likhi jati hai. "0 din baqi"
+          // aur "abhi haq shuru hi nahi hua" do alag baatein hain.
+          <p className="text-sm text-amber-800">{ent.reason ?? t("hrl_no_entitlement", lang)}</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label={t("hrl_entitled", lang)} value={Number(ent.entitled_days ?? 0)} />
+            <Stat label={t("hrl_used", lang)} value={Number(ent.used_days ?? 0)} tone="text-sky-700" />
+            <Stat label={t("hrl_remaining", lang)} value={Number(ent.remaining_days ?? 0)} tone="text-emerald-700" />
+          </div>
         )}
       </Card>
 

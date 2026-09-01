@@ -118,8 +118,19 @@ chhutti, ghair hazir, "record nahi", der. Rok pehle se thi, magar rok
 tab lagti thi jab banda form bhar chuka hota tha; ab adad pehle nazar
 aate hain.
 
+**Aazmaishi muddat aur saalana chhutti (238-239):** naya banda 3 mahine
+aazmaish par; us ke baad muddat baRhayein, pakka karein, ya alag karein
+— teenon par comment lazmi. Pakka hone par 20 din saalana chhutti;
+aazmaish ke dauran tankhwah wali koi chhutti nahi (bila tankhwah phir
+bhi mil sakti hai). Saare adad `/admin/hr/settings` se badalte hain.
+
+Sab se ahem usool: **tareekh guzarne se koi pakka nahi hota.** Faisla
+na ho to banda aazmaish par hi rehta hai aur board par laal "faisla
+baqi hai" likha aata hai. Us ka ulta bhi: muddat kul 6 mahine se aage
+nahi baRh sakti — us ke baad faisla karna hi paRta hai.
+
 **Jo jaan boojh kar abhi nahi bana:** biometric machine ka raasta,
-offline sync wali app, overtime ka usool, chhutti ka saalana kota.
+offline sync wali app, overtime ka usool.
 Wajahein `docs/HR-HAZRI-TESTING.md` ke section 8 mein likhi hain.
 
 ---

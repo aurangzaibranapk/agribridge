@@ -2316,6 +2316,78 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_leave_policy: {
+        Row: {
+          annual_leave_days: number
+          carry_forward_days: number
+          id: boolean
+          probation_max_total_months: number
+          probation_months: number
+          probation_paid_leave: boolean
+          prorate_first_year: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          annual_leave_days?: number
+          carry_forward_days?: number
+          id?: boolean
+          probation_max_total_months?: number
+          probation_months?: number
+          probation_paid_leave?: boolean
+          prorate_first_year?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          annual_leave_days?: number
+          carry_forward_days?: number
+          id?: boolean
+          probation_max_total_months?: number
+          probation_months?: number
+          probation_paid_leave?: boolean
+          prorate_first_year?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      staff_probation_reviews: {
+        Row: {
+          comment: string
+          decision: string
+          extend_months: number | null
+          id: string
+          new_end_date: string | null
+          old_end_date: string | null
+          profile_id: string
+          reviewed_at: string
+          reviewed_by: string | null
+        }
+        Insert: {
+          comment: string
+          decision: string
+          extend_months?: number | null
+          id?: string
+          new_end_date?: string | null
+          old_end_date?: string | null
+          profile_id: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Update: {
+          comment?: string
+          decision?: string
+          extend_months?: number | null
+          id?: string
+          new_end_date?: string | null
+          old_end_date?: string | null
+          profile_id?: string
+          reviewed_at?: string
+          reviewed_by?: string | null
+        }
+        Relationships: []
+      }
       hr_holidays: {
         Row: {
           branch_id: string | null
@@ -17084,13 +17156,18 @@ export type Database = {
           blood_group: string | null
           branch_id: string | null
           cnic: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           department_key: string | null
           designation: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employee_code: string | null
+          employment_status: string
           employment_type: string
+          exit_date: string | null
+          exit_reason: string | null
           hire_date: string | null
           id: string
           is_active: boolean
@@ -17098,6 +17175,8 @@ export type Database = {
           milk_route_name: string | null
           phone: string | null
           photo_url: string | null
+          probation_end_date: string | null
+          probation_start_date: string | null
           profile_id: string
           reports_to: string | null
           whatsapp_number: string | null
@@ -17110,13 +17189,18 @@ export type Database = {
           blood_group?: string | null
           branch_id?: string | null
           cnic?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           department_key?: string | null
           designation?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_code?: string | null
+          employment_status?: string
           employment_type?: string
+          exit_date?: string | null
+          exit_reason?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -17124,6 +17208,8 @@ export type Database = {
           milk_route_name?: string | null
           phone?: string | null
           photo_url?: string | null
+          probation_end_date?: string | null
+          probation_start_date?: string | null
           profile_id: string
           reports_to?: string | null
           whatsapp_number?: string | null
@@ -17136,13 +17222,18 @@ export type Database = {
           blood_group?: string | null
           branch_id?: string | null
           cnic?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           department_key?: string | null
           designation?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_code?: string | null
+          employment_status?: string
           employment_type?: string
+          exit_date?: string | null
+          exit_reason?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -17150,6 +17241,8 @@ export type Database = {
           milk_route_name?: string | null
           phone?: string | null
           photo_url?: string | null
+          probation_end_date?: string | null
+          probation_start_date?: string | null
           profile_id?: string
           reports_to?: string | null
           whatsapp_number?: string | null
@@ -22471,6 +22564,31 @@ export type Database = {
           missing_punch_7d: number
           pending_corrections: number
           pending_leaves: number
+        }[]
+      }
+      fn_hr_probation_due: {
+        Args: { p_days_ahead?: number }
+        Returns: {
+          can_extend: boolean
+          days_left: number
+          designation: string
+          extensions: number
+          full_name: string
+          is_overdue: boolean
+          probation_end_date: string
+          probation_start_date: string
+          profile_id: string
+        }[]
+      }
+      fn_leave_entitlement: {
+        Args: { p_profile: string; p_year: number }
+        Returns: {
+          confirmed_from: string
+          entitled_days: number
+          is_confirmed: boolean
+          reason: string
+          remaining_days: number
+          used_days: number
         }[]
       }
       fn_hr_schedule_for: {

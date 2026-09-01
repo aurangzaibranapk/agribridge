@@ -38,6 +38,48 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
     return { error: "Aadha din sirf ek hi din ka ho sakta hai. Do tareekhein ek rakhein." };
   }
 
+  // -----------------------------------------------------------------
+  // Aazmaishi muddat aur saalana chhutti ka hisaab
+  // -----------------------------------------------------------------
+  // Ye do sawal YAHAN poochhe jate hain, manzoori ke waqt nahi. Wajah:
+  // manzoori dene wale ko wo baat pata nahi hoti jo bande ko us waqt
+  // pata honi chahiye thi -- ke us ka haq banta hi nahi tha. Rok us
+  // lamhe lagni chahiye jab banda maang raha ho, na ke uske intezar ke
+  // baad.
+  const leaveYear = Number(from.slice(0, 4));
+
+  const [{ data: entRows, error: entErr }, { data: pol }] = await Promise.all([
+    supabase.rpc("fn_leave_entitlement", { p_profile: user.id, p_year: leaveYear }),
+    supabase.from("hr_leave_policy").select("probation_paid_leave").eq("id", true).maybeSingle(),
+  ]);
+
+  const ent = entRows?.[0] ?? null;
+
+  // "Parha nahi ja saka" ko "sab theek hai" nahi samjha jata. Yahan
+  // andaza lagana us bande ko chhutti de dena hai jis ka haq nahi tha,
+  // ya us se rok lena jis ka haq tha.
+  if (entErr || !ent) {
+    return { error: "Aap ki chhutti ka hisaab parha nahi ja saka, is liye darkhwast nahi bheji. HR ko batayein." };
+  }
+
+  if (ent.is_confirmed === false && type !== "unpaid" && pol?.probation_paid_leave !== true) {
+    return {
+      error:
+        ent.reason ??
+        "Aazmaishi muddat jaari hai. Is dauran tankhwah wali chhutti nahi milti — bila tankhwah (unpaid) chhutti maangi ja sakti hai.",
+    };
+  }
+
+  if (type === "annual") {
+    const asked = isHalfDay ? 0.5 : (new Date(to).getTime() - new Date(from).getTime()) / 86400000 + 1;
+    const left = Number(ent.remaining_days ?? 0);
+    if (asked > left) {
+      return {
+        error: `Saalana chhutti mein sirf ${left} din bache hain, aur ${asked} din maange ja rahe hain. Baqi ke liye bila tankhwah (unpaid) chunein.`,
+      };
+    }
+  }
+
   // Afsar ABHI tay hota hai. Baad mein reporting badal jaye to purani
   // darkhwast ka raasta nahi badalta -- warna wo darkhwast us bande ke
   // paas chali jati jis ne wo baat suni hi nahi thi.

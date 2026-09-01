@@ -1,7 +1,8 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { CalendarOff, Clock, Lock, Trash2, Unlock } from "lucide-react";
+import { CalendarOff, Clock, Lock, Trash2, Unlock, UserCheck } from "lucide-react";
+import { saveLeavePolicy } from "@/actions/hr-probation";
 import {
   lockAttendanceMonth,
   removeHoliday,
@@ -39,6 +40,7 @@ export function SettingsClient({
   branches,
   currentYear,
   currentMonth,
+  policy,
 }: {
   lang: Lang;
   schedule: { weeklyOffDays: number[]; shiftStart: string; shiftEnd: string; grace: number; halfDayMax: number } | null;
@@ -47,12 +49,21 @@ export function SettingsClient({
   branches: { id: string; name: string }[];
   currentYear: number;
   currentMonth: number;
+  policy: {
+    annualDays: number;
+    probationMonths: number;
+    probationMax: number;
+    probationPaidLeave: boolean;
+    prorateFirstYear: boolean;
+    carryForward: number;
+  } | null;
 }) {
   const [schedState, schedAction] = useFormState(saveWorkSchedule, initial);
   const [holState, holAction] = useFormState(saveHoliday, initial);
   const [delState, delAction] = useFormState(removeHoliday, initial);
   const [lockState, lockAction] = useFormState(lockAttendanceMonth, initial);
   const [openState, openAction] = useFormState(reopenAttendanceMonth, initial);
+  const [polState, polAction] = useFormState(saveLeavePolicy, initial);
 
   const off = schedule?.weeklyOffDays ?? [0];
 
@@ -100,6 +111,53 @@ export function SettingsClient({
           <div className="sm:col-span-4">
             <Submit label={t("hrt_save", lang)} />
             <Msg state={schedState} />
+          </div>
+        </form>
+      </Card>
+
+      {/* ---- Chhutti aur aazmaish ka usool ---- */}
+      <Card>
+        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+          <UserCheck className="h-4 w-4" /> {t("hrl_policy", lang)}
+        </h2>
+        <form action={polAction} className="grid gap-3 sm:grid-cols-4">
+          <div>
+            <Label htmlFor="ald">{t("hrl_annual_days", lang)}</Label>
+            <Input id="ald" type="number" name="annual_leave_days" min={0} max={60} defaultValue={policy?.annualDays ?? 20} />
+          </div>
+          <div>
+            <Label htmlFor="pmo">{t("hrl_probation_months", lang)}</Label>
+            <Input id="pmo" type="number" name="probation_months" min={0} max={24} defaultValue={policy?.probationMonths ?? 3} />
+          </div>
+          <div>
+            <Label htmlFor="pmx">{t("hrl_probation_max", lang)}</Label>
+            <Input id="pmx" type="number" name="probation_max_total_months" min={0} max={24} defaultValue={policy?.probationMax ?? 6} />
+          </div>
+          <div>
+            <Label htmlFor="cf">{t("hrl_carry", lang)}</Label>
+            <Input id="cf" type="number" name="carry_forward_days" min={0} max={60} defaultValue={policy?.carryForward ?? 0} />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="probation_paid_leave" value="yes" defaultChecked={policy?.probationPaidLeave ?? false} />
+            {t("hrl_probation_paid", lang)}
+          </label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="prorate_first_year" value="yes" defaultChecked={policy?.prorateFirstYear ?? true} />
+            {t("hrl_prorate", lang)}
+          </label>
+
+          {/* Ye jumla safhe par jaan boojh kar hai. Aazmaishi muddat
+              badalne wale ko usi lamhe maloom hona chahiye ke ye
+              pichhle faislon ko nahi chhuta. */}
+          <p className="text-xs text-surface-500 sm:col-span-4">
+            Aazmaishi muddat badalne se un logon ki tareekh nahi badalti jin ki aazmaish pehle shuru ho chuki hai — un se jo waada
+            hua tha, wohi rehta hai. Naya usool naye logon par lagega.
+          </p>
+
+          <div className="sm:col-span-4">
+            <Submit label={t("hrt_save", lang)} />
+            <Msg state={polState} />
           </div>
         </form>
       </Card>

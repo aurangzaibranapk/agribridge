@@ -121,6 +121,53 @@ jaanchein:
 
 ---
 
+## 5b. Aazmaishi muddat aur saalana chhutti
+
+`/admin/hr/settings` → **Chhutti ka usool**, aur `/admin/hr/probation`
+
+**Usool (default jo main ne rakhe):**
+
+| Cheez | Default | Aap badal sakte hain |
+|---|---|---|
+| Saalana chhutti | 20 din | Haan |
+| Aazmaishi muddat | 3 mahine | Haan |
+| Kul hadd | 6 mahine | Haan |
+| Aazmaish par tankhwah wali chhutti | **Nahi** | Haan (nishan laga dein) |
+| Pehla saal mahinon ke hisaab se | Haan | Haan |
+| Bachi chhutti agle saal | **Nahi (0)** | Haan |
+
+**Jaanchein:**
+
+- [ ] `/admin/hr/probation` → **Aazmaish shuru karein**: banda, tareekh,
+      mahine. Aakhri tareekh khud ban jayegi.
+- [ ] Us bande ke login se **saalana chhutti** maangein → rukna chahiye,
+      wajah ke sath ("aazmaishi muddat jaari hai").
+- [ ] Wohi banda **bila tankhwah (unpaid)** chhutti maange → mil jani
+      chahiye.
+- [ ] `/admin/my-attendance` par us bande ko **"0 din"** nahi, balke
+      **wajah** likhi dikhni chahiye.
+- [ ] Aazmaish ki tareekh guzarne dein → banda **khud ba khud pakka
+      NAHI hota**. Board aur probation ke safhe par **laal "Faisla baqi
+      hai"** dikhna chahiye.
+- [ ] **Muddat baRhayein** → comment ke baghair rukna chahiye.
+- [ ] BaRhate rahein → 6 mahine ki hadd par "ab aur nahi baRh sakti"
+      aana chahiye.
+- [ ] **Pakka karein** → us tareekh se saalana chhutti shuru. Agar saal
+      ke beech mein pakka hua to din **mahinon ke hisaab se** milenge
+      (mesalan September mein pakka = 20 × 4/12 = 6.7 din).
+- [ ] Ab wohi banda saalana chhutti maange → mil jani chahiye, aur
+      bacha hua adad ghat jaye.
+- [ ] Bache hue din se **zyada** maangein → rukna chahiye, adad bata
+      kar.
+- [ ] Pakka hue bande ko wapas aazmaish par daalne ki koshish karein →
+      pehle rukna chahiye, phir alag nishan laga kar hi hona chahiye
+      (kyunke us se us ki chhutti khatam ho jati hai).
+
+**Yaad rahe:** mojooda saara staff **"pakka"** likha gaya hai, aazmaish
+par nahi. Jo waqai naya hai, us ko HR haath se aazmaish par daalega.
+Ulta karne par un logon ki chhutti chup chaap khatam ho jati jo saalon
+se kaam kar rahe hain.
+
 ## 6. Mahina band karna aur tankhwah
 
 `/admin/hr/settings` → **Mahina band karna**

@@ -65,6 +65,12 @@ export default async function HrSettingsPage() {
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
   ]);
 
+  const { data: policy } = await supabase
+    .from("hr_leave_policy")
+    .select("annual_leave_days, probation_months, probation_max_total_months, probation_paid_leave, prorate_first_year, carry_forward_days")
+    .eq("id", true)
+    .maybeSingle();
+
   return (
     <div>
       <PageHeader title={t("hrs_title", lang)} description={t("hrs_subtitle", lang)} />
@@ -99,6 +105,18 @@ export default async function HrSettingsPage() {
         branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}
         currentYear={today.getFullYear()}
         currentMonth={today.getMonth() + 1}
+        policy={
+          policy
+            ? {
+                annualDays: policy.annual_leave_days,
+                probationMonths: policy.probation_months,
+                probationMax: policy.probation_max_total_months,
+                probationPaidLeave: policy.probation_paid_leave,
+                prorateFirstYear: policy.prorate_first_year,
+                carryForward: policy.carry_forward_days,
+              }
+            : null
+        }
       />
     </div>
   );
