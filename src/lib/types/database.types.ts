@@ -15189,6 +15189,7 @@ export type Database = {
           status: string
           unit: string | null
           updated_at: string
+          wholesale_price: number | null
         }
         Insert: {
           ai_raw?: Json | null
@@ -15217,6 +15218,7 @@ export type Database = {
           status?: string
           unit?: string | null
           updated_at?: string
+          wholesale_price?: number | null
         }
         Update: {
           ai_raw?: Json | null
@@ -15245,6 +15247,7 @@ export type Database = {
           status?: string
           unit?: string | null
           updated_at?: string
+          wholesale_price?: number | null
         }
         Relationships: []
       }
@@ -15282,6 +15285,7 @@ export type Database = {
           unit: string | null
           updated_at: string
           usage_instructions: string | null
+          wholesale_price: number | null
         }
         Insert: {
           active_ingredient?: string | null
@@ -15316,6 +15320,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           usage_instructions?: string | null
+          wholesale_price?: number | null
         }
         Update: {
           active_ingredient?: string | null
@@ -15350,6 +15355,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           usage_instructions?: string | null
+          wholesale_price?: number | null
         }
         Relationships: [
           {

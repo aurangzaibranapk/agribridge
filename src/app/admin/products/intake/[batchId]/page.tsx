@@ -92,6 +92,7 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
           expiryDate: i.expiry_date,
           mrpPrice: i.mrp_price,
           sellingPrice: i.selling_price,
+          wholesalePrice: i.wholesale_price,
           purchasePrice: i.purchase_price,
           openingQty: i.opening_qty,
           status: i.status,

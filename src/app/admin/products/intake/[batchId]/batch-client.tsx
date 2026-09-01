@@ -40,6 +40,7 @@ interface Item {
   expiryDate: string | null;
   mrpPrice: number | null;
   sellingPrice: number | null;
+  wholesalePrice: number | null;
   purchasePrice: number | null;
   openingQty: number;
   status: string;
@@ -389,6 +390,23 @@ function ItemCard({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label htmlFor={`whole-${item.id}`}>Thok ka rate</Label>
+              <Input
+                id={`whole-${item.id}`}
+                name="wholesale_price"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={item.wholesalePrice ?? ""}
+                disabled={done}
+                placeholder="thok par nahi milta"
+              />
+              {/* Khali chhoRna theek hai. Sifar likhne ka matlab "thok
+                  par muft" hota -- aur wo adad ek din bill par chala
+                  jata. */}
+              <p className="mt-0.5 text-[11px] text-surface-500">Khali = thok par nahi milta</p>
+            </div>
             <div>
               <Label htmlFor={`mfg-${item.id}`}>Manufacturing</Label>
               <Input id={`mfg-${item.id}`} name="manufacture_date" type="date" defaultValue={item.manufactureDate ?? ""} disabled={done} />

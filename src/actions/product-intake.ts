@@ -302,6 +302,8 @@ export async function saveIntakeItem(_prev: IntakeState, formData: FormData): Pr
     expiry_date: exp,
     mrp_price: num("mrp_price"),
     selling_price: sellingPrice,
+    // Thok ka rate NULL reh sakta hai -- har cheez thok par nahi milti.
+    wholesale_price: num("wholesale_price"),
     purchase_price: num("purchase_price"),
     opening_qty: num("opening_qty") ?? 0,
     // Naam aur sale rate dono ho to hi ye qatar charhne layak hai.
@@ -444,6 +446,7 @@ export async function approveIntakeBatch(_prev: IntakeState, formData: FormData)
         expiry_date: r.expiry_date,
         mrp_price: r.mrp_price,
         selling_price: Number(r.selling_price ?? 0),
+        wholesale_price: r.wholesale_price,
         // Trade rate na ho to sifar jata hai (khana NOT NULL hai) magar
         // us par nishan lagta hai -- warna wo sifar munafe mein chup
         // chaap juR jata (241).

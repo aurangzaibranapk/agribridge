@@ -34,6 +34,7 @@ interface ExistingProduct {
   purchase_price: number;
   selling_price: number;
   mrp_price: number | null;
+  wholesale_price: number | null;
   min_stock_threshold: number | null;
   image_url: string | null;
 }
@@ -239,6 +240,21 @@ export function ProductForm({
         <div>
           <Label htmlFor="mrp_price">{t("pf_mrp_rate", lang)}</Label>
           <Input id="mrp_price" name="mrp_price" type="number" step="0.01" defaultValue={product?.mrp_price ?? undefined} />
+        </div>
+        <div>
+          <Label htmlFor="wholesale_price">Thok ka rate</Label>
+          <Input
+            id="wholesale_price"
+            name="wholesale_price"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={product?.wholesale_price ?? undefined}
+            placeholder="thok par nahi milta"
+          />
+          {/* Khali chhoRna theek hai -- sifar ka matlab "thok par muft"
+              hota, aur wo adad ek din bill par chala jata. */}
+          <p className="mt-0.5 text-[11px] text-surface-500">Khali = thok par nahi milta</p>
         </div>
       </div>
       <div>

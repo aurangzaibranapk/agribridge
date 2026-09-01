@@ -75,6 +75,9 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       purchase_price: Number(formData.get("purchase_price")),
       selling_price: Number(formData.get("selling_price")),
       mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+      // Thok ka rate NULL rehta hai jab tak diya na jaye -- har cheez
+      // thok par nahi milti, aur sifar ka matlab "thok par muft" hota.
+      wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
       min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
       is_verified: skipApproval,
       created_by: userId,
@@ -135,6 +138,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     purchase_price: Number(formData.get("purchase_price")),
     selling_price: Number(formData.get("selling_price")),
     mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+    wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
     min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
   };
 

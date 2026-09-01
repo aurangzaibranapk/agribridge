@@ -27,6 +27,7 @@ export interface ImportRow {
   purchasePrice: number | null;
   sellingPrice: number | null;
   mrpPrice: number | null;
+  wholesalePrice: number | null;
   manufactureDate: string | null;
   expiryDate: string | null;
   minStock: number | null;
@@ -45,7 +46,7 @@ export interface ImportState {
   notice?: string;
   success?: boolean;
   rows?: ImportRow[];
-  summary?: { total: number; ready: number; duplicates: number; errors: number; noTradeRate: number };
+  summary?: { total: number; ready: number; duplicates: number; errors: number; noTradeRate: number; noWholesale: number };
   imported?: number;
 }
 
@@ -69,6 +70,19 @@ function parseCsv(text: string): string[][] {
 
   const src = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
 
+  // Excel se khane COPY karne par wo TAB se alag hote hain, comma se
+  // nahi. Bina is ke banda Excel se copy kar ke paste karta hai aur
+  // poori qatar ek hi khane mein chali jati hai -- aur us ka pata
+  // "naam ka khana nahi mila" jaise paighaam se chalta hai, jo asal
+  // masla batata hi nahi.
+  //
+  // Faisla pehli lakeer se hota hai: jis nishan ki ginti zyada, wohi
+  // us file ka nishan hai.
+  const firstLine = src.split("\n")[0] ?? "";
+  const tabs = (firstLine.match(/\t/g) ?? []).length;
+  const commas = (firstLine.match(/,/g) ?? []).length;
+  const sep = tabs > commas ? "\t" : ",";
+
   for (let i = 0; i < src.length; i++) {
     const ch = src[i];
 
@@ -88,7 +102,7 @@ function parseCsv(text: string): string[][] {
 
     if (ch === '"') {
       inQuotes = true;
-    } else if (ch === ",") {
+    } else if (ch === sep) {
       row.push(field);
       field = "";
     } else if (ch === "\n") {
@@ -120,6 +134,10 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   "sale rate": "sellingPrice", sale: "sellingPrice", "selling price": "sellingPrice",
   selling: "sellingPrice", price: "sellingPrice", qeemat: "sellingPrice",
   mrp: "mrpPrice", "mrp price": "mrpPrice", "printed price": "mrpPrice",
+  wholesale: "wholesalePrice", "wholesale rate": "wholesalePrice",
+  "wholesale price": "wholesalePrice", thok: "wholesalePrice",
+  "thok rate": "wholesalePrice", bulk: "wholesalePrice",
+  retail: "sellingPrice", "retail rate": "sellingPrice", "retail price": "sellingPrice",
   mfg: "manufactureDate", "manufacture date": "manufactureDate",
   "manufacturing date": "manufactureDate", manufacture: "manufactureDate",
   expiry: "expiryDate", "expiry date": "expiryDate", exp: "expiryDate",
@@ -262,6 +280,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     const purchasePrice = toNumber(at(r, "purchasePrice"));
     const sellingPrice = toNumber(at(r, "sellingPrice"));
     const mrpPrice = toNumber(at(r, "mrpPrice"));
+    const wholesalePrice = toNumber(at(r, "wholesalePrice"));
 
     const row: ImportRow = {
       line: i + 1,
@@ -272,6 +291,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       purchasePrice,
       sellingPrice,
       mrpPrice,
+      wholesalePrice,
       manufactureDate: toDate(at(r, "manufactureDate")),
       expiryDate: toDate(at(r, "expiryDate")),
       minStock: toNumber(at(r, "minStock")),
@@ -306,6 +326,16 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
 
     if (purchasePrice === null) {
       notes.push("Trade rate nahi diya — nishan lagega, Rs 0 nahi likha jayega.");
+    }
+
+    // Thok ka rate lagat se kam bhi ho sakta hai (purana maal nikalna)
+    // aur retail ke barabar bhi. Is liye ROK nahi -- sirf khabardari,
+    // taake faisla soch kar ho.
+    if (wholesalePrice !== null && purchasePrice !== null && wholesalePrice < purchasePrice) {
+      notes.push("Thok ka rate trade rate se KAM hai — thok par nuqsan hoga.");
+    }
+    if (wholesalePrice !== null && wholesalePrice > sellingPrice) {
+      notes.push("Thok ka rate retail se ZYADA hai — dekh lein, aksar ulta hota hai.");
     }
 
     if (row.expiryDate && row.manufactureDate && row.expiryDate < row.manufactureDate) {
@@ -351,6 +381,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     duplicates: rows.filter((r) => r.status === "duplicate").length,
     errors: rows.filter((r) => r.status === "error").length,
     noTradeRate: rows.filter((r) => r.status === "new" && r.purchasePrice === null).length,
+    noWholesale: rows.filter((r) => r.status === "new" && r.wholesalePrice === null).length,
   };
 
   return {
@@ -405,6 +436,9 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     trade_rate_pending: r.purchasePrice === null,
     selling_price: r.sellingPrice ?? 0,
     mrp_price: r.mrpPrice,
+    // Thok ka rate NULL rehta hai jab tak diya na jaye. Sifar likhne ka
+    // matlab "thok par muft" hota.
+    wholesale_price: r.wholesalePrice,
     manufacture_date: r.manufactureDate,
     expiry_date: r.expiryDate,
     min_stock_threshold: r.minStock,

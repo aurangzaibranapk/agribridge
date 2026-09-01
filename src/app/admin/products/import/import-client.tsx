@@ -10,10 +10,10 @@ import { Badge, Button, Label, Textarea } from "@/components/ui/form";
 
 const initial: ImportState = {};
 
-const SAMPLE = `name,pack_size,unit,barcode,sale_rate,trade_rate,mrp,expiry,category,brand
-Tapal Danedar Chai,250g,Packet,,650,,700,12/2027,Chai,Tapal
-Sufi Cooking Oil,1 Litre,Bottle,,540,485,560,06/2027,Ghee aur Tel,Sufi
-Lifebuoy Sabun,100g,Piece,,120,,130,,Sabun,Lifebuoy`;
+const SAMPLE = `name,pack_size,unit,barcode,sale_rate,wholesale,trade_rate,mrp,expiry,category,brand
+Tapal Danedar Chai,250g,Packet,,650,610,,700,12/2027,Chai,Tapal
+Sufi Cooking Oil,1 Litre,Bottle,,540,505,485,560,06/2027,Ghee aur Tel,Sufi
+Lifebuoy Sabun,100g,Piece,,120,,,130,,Sabun,Lifebuoy`;
 
 function Submit({ label, icon }: { label: string; icon?: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -95,7 +95,11 @@ export function ImportClient({
               <FileUp className="h-4 w-4" /> CSV file chunein
             </span>
           </Button>
-          <span className="text-xs text-surface-500">— ya neeche seedha paste kar dein</span>
+          {/* Excel se seedha copy-paste kaam karta hai: wahan khane TAB
+              se alag hote hain, aur parser dono nishan samajhta hai. */}
+          <span className="text-xs text-surface-500">
+            — ya Excel mein khane chun kar copy karein aur neeche paste kar dein
+          </span>
         </div>
 
         <form action={previewAction} className="mt-3 space-y-2">
@@ -131,8 +135,9 @@ export function ImportClient({
             </p>
             <p>
               <strong>Ikhtiyari:</strong> <code>pack_size</code>, <code>unit</code>, <code>barcode</code>,{" "}
-              <code>trade_rate</code>, <code>mrp</code>, <code>mfg</code>, <code>expiry</code>,{" "}
-              <code>min_stock</code>, <code>category</code>, <code>brand</code>, <code>company</code>.
+              <code>trade_rate</code>, <code>wholesale</code> (ya <code>thok</code>), <code>mrp</code>,{" "}
+              <code>mfg</code>, <code>expiry</code>, <code>min_stock</code>, <code>category</code>,{" "}
+              <code>brand</code>, <code>company</code>.
             </p>
             <p>
               Tareekh <code>05/09/2026</code> ka matlab <strong>5 September</strong> liya jayega (din pehle). Sirf
@@ -171,6 +176,7 @@ export function ImportClient({
             {s.duplicates > 0 && <Badge tone="amber">{s.duplicates} pehle se hain</Badge>}
             {s.errors > 0 && <Badge tone="red">{s.errors} mein ghalti</Badge>}
             {s.noTradeRate > 0 && <Badge tone="amber">{s.noTradeRate} ka trade rate nahi</Badge>}
+            {s.noWholesale > 0 && <Badge tone="gray">{s.noWholesale} par thok ka rate nahi</Badge>}
           </div>
 
           {previewState.notice && <p className="mb-3 text-sm text-surface-700">{previewState.notice}</p>}
@@ -184,6 +190,7 @@ export function ImportClient({
                   <th className="py-1.5">Pack</th>
                   <th className="py-1.5 text-right">Trade</th>
                   <th className="py-1.5 text-right">Sale</th>
+                  <th className="py-1.5 text-right">Thok</th>
                   <th className="py-1.5">Expiry</th>
                   <th className="py-1.5">Haalat</th>
                 </tr>
@@ -204,6 +211,11 @@ export function ImportClient({
                     </td>
                     <td className="py-1.5 text-right tabular-nums">
                       {r.sellingPrice === null ? "—" : r.sellingPrice.toLocaleString()}
+                    </td>
+                    {/* Thok ka rate na ho to "0" nahi -- khali. Sifar ka
+                        matlab "thok par muft" hota. */}
+                    <td className="py-1.5 text-right tabular-nums text-surface-500">
+                      {r.wholesalePrice === null ? "—" : r.wholesalePrice.toLocaleString()}
                     </td>
                     <td className="py-1.5 text-surface-600">{r.expiryDate ?? "—"}</td>
                     <td className="py-1.5">
