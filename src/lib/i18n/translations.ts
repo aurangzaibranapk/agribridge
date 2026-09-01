@@ -37,6 +37,7 @@ import { watchPagesDict } from "./dict/watch-pages";
 import { tailADict } from "./dict/tail-a";
 import { vendorDict } from "./dict/vendor";
 import { portalMoreDict } from "./dict/portal-more";
+import { authDict } from "./dict/auth";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -125,6 +126,7 @@ const dict = {
   ...tailADict,
   ...vendorDict,
   ...portalMoreDict,
+  ...authDict,
 };
 
 export type TranslationKey = keyof typeof dict;

@@ -1,9 +1,24 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LangProvider } from "@/lib/i18n/lang-context";
+import { t } from "@/lib/i18n/translations";
 
+/**
+ * LangProvider yahan lagta hai, root layout par nahi. Root layout
+ * poori website ka hai; wahan cookies() parhne se har safha dynamic ho
+ * jata aur public website ka static rendering khatam ho jata. Login ke
+ * safhe khud dynamic hain, is liye qeemat sirf yahin ada hoti hai.
+ *
+ * Is ke baghair andar wala form useLang() se hamesha default zaban leta
+ * -- safha tarjuma shuda lagta, magar Urdu chunne wale bande ko phir
+ * bhi Roman milta.
+ */
 export default function LoginPage() {
+  const lang = getLanguageFromCookies("ur");
   return (
+    <LangProvider lang={lang}>
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#C9A227]/10 blur-3xl" />
@@ -88,9 +103,9 @@ export default function LoginPage() {
               </g>
             </svg>
           </div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-white">Al Rana Traders</h1>
-          <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E8C767]">ART AgriBridge</p>
-          <p className="mt-2 text-sm text-[#9FB8A4]">Apne account mein sign in karein</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
+          <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E8C767]">{t("au_brand", lang)}</p>
+          <p className="mt-2 text-sm text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
         </div>
 
         <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-7">
@@ -103,8 +118,8 @@ export default function LoginPage() {
               nahi tha. */}
           <Link
             href="/"
-            aria-label="Band karein — website par wapas jayein"
-            title="Band karein"
+            aria-label={t("au_close_back_site", lang)}
+            title={t("au_close", lang)}
             className="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white text-[#4A5A4D] shadow-lg transition-colors hover:bg-[#0D2818] hover:text-white"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -121,12 +136,12 @@ export default function LoginPage() {
               nahi. Ab naye kisan ka raasta wohi hai jo purane ka hai:
               Kisan wale khane mein apna number likhein, OTP aaye, aur
               khata usi waqt ban jaye (197). */}
-          <p className="mt-5 text-center text-xs leading-relaxed text-[#6B7B6E]">
-            Naye kisan hain? Upar <span className="font-medium text-[#1E4A2E]">Kisan / Customer</span> chun kar apna
+          <p className="mt-5 text-center text-xs leading-relaxed text-[#6B7B6E]">{t("au_new_farmer_above", lang)}<span className="font-medium text-[#1E4A2E]">{t("au_farmer_customer", lang)}</span> chun kar apna
             mobile number likhein — khata khud ban jayega.
           </p>
         </div>
       </div>
     </div>
+    </LangProvider>
   );
 }

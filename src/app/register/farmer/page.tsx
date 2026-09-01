@@ -1,87 +1,17 @@
-"use client";
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { registerFarmer, type RegisterState } from "@/actions/registration";
-import { Button, Input, Label } from "@/components/ui/form";
-import { PasswordInput } from "@/components/ui/password-input";
-import { createClient } from "@/lib/supabase/client";
-const initialState: RegisterState = {};
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LangProvider } from "@/lib/i18n/lang-context";
+import { RegisterFarmerForm } from "./register-farmer-form";
+
+/**
+ * Wohi wajah jo forgot-password ke safhe par likhi hai: form client par
+ * chalta hai, aur cookie sirf server par parhi ja sakti hai. Zaban yahan
+ * nikaal kar neeche bheji jati hai.
+ */
 export default function RegisterFarmerPage() {
-  const router = useRouter();
-  const [state, formAction] = useFormState(registerFarmer, initialState);
-  useEffect(() => {
-    if (state.success) {
-      router.push("/portal/dashboard");
-      router.refresh();
-    }
-  }, [state.success, router]);
-  async function handleOAuth(provider: "google" | "facebook") {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  }
+  const lang = getLanguageFromCookies("ur");
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <Link href="/" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">← Back to Website</Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">Register as a Farmer</h1>
-      <p className="mt-1 text-surface-500">Just these five details — everything else (village, CNIC, farming details, documents) can be added later from your profile.</p>
-      <div className="mt-6 space-y-2">
-        <button
-          type="button"
-          onClick={() => handleOAuth("google")}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 hover:bg-surface-50"
-        >
-          Continue with Google
-        </button>
-        <button
-          type="button"
-          onClick={() => handleOAuth("facebook")}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1877F2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#166FE5]"
-        >
-          Continue with Facebook
-        </button>
-      </div>
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-surface-200" />
-        <span className="text-xs text-surface-400">or fill in the form</span>
-        <div className="h-px flex-1 bg-surface-200" />
-      </div>
-      <form action={formAction} className="space-y-4 rounded-card border border-surface-200 bg-white p-6 shadow-card">
-        {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-        <div>
-          <Label htmlFor="full_name">Name *</Label>
-          <Input id="full_name" name="full_name" required />
-        </div>
-        <div>
-          <Label htmlFor="phone_number">Mobile Number *</Label>
-          <Input id="phone_number" name="phone_number" required inputMode="tel" placeholder="03001234567" />
-        </div>
-        <div>
-          <Label htmlFor="email">Email Address *</Label>
-          <Input id="email" name="email" type="email" required placeholder="you@example.com" />
-        </div>
-        <div>
-          <Label htmlFor="password">Password *</Label>
-          <PasswordInput id="password" name="password" required minLength={6} />
-          <p className="mt-1 text-xs text-surface-400">At least 6 characters (numbers are fine)</p>
-        </div>
-        <div>
-          <Label htmlFor="district">District *</Label>
-          <Input id="district" name="district" required placeholder="e.g. Jhang" />
-        </div>
-        <SubmitButton />
-        <p className="text-center text-sm text-surface-500">
-          Already have an account? <Link href="/login" className="text-brand-700 hover:underline">Sign in</Link>
-        </p>
-      </form>
-    </div>
+    <LangProvider lang={lang}>
+      <RegisterFarmerForm />
+    </LangProvider>
   );
-}
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending} className="w-full">{pending ? "Creating account..." : "Register"}</Button>;
 }

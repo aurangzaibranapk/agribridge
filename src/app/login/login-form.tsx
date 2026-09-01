@@ -9,6 +9,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { useFormState, useFormStatus } from "react-dom";
 import { requestFarmerOtp, verifyFarmerOtp, loginWithUsername, type FarmerAuthState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 function GoogleIcon() {
   return (
@@ -46,6 +48,7 @@ const SOCIAL_BTN =
   "flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-surface-200 bg-white text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50";
 
 export function LoginForm() {
+  const lang = useLang();
   // Do side, aur taqseem KAAM ki nahi, BANDE ki hai.
   //
   // Baayen taraf wo log jo bahar se aate hain -- kisan aur gahak.
@@ -71,9 +74,7 @@ export function LoginForm() {
               ? "bg-brand-600 text-white shadow"
               : "text-surface-500 hover:text-surface-700"
           }`}
-        >
-          Kisan / Customer
-        </button>
+        >{t("au_farmer_customer", lang)}</button>
         <button
           type="button"
           onClick={() => setMode("team")}
@@ -82,9 +83,7 @@ export function LoginForm() {
               ? "bg-brand-600 text-white shadow"
               : "text-surface-500 hover:text-surface-700"
           }`}
-        >
-          Admin / Staff / Vendor
-        </button>
+        >{t("au_admin_staff_vendor", lang)}</button>
       </div>
 
       {mode === "public" ? <PublicLogin /> : <PasswordLogin />}
@@ -102,6 +101,7 @@ export function LoginForm() {
  * pata.
  */
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
+  const lang = useLang();
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -167,19 +167,19 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
         {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
 
         <div>
-          <Label htmlFor="identifier">Email ya Mobile</Label>
+          <Label htmlFor="identifier">{t("au_email_or_mobile", lang)}</Label>
           <Input
             id="identifier"
             required
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("au_eg_email", lang)}
             className={FIELD}
           />
         </div>
 
         <div>
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("pm_password", lang)}</Label>
           <PasswordInput
             id="password"
             required
@@ -192,9 +192,7 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
               Pehle wo "Password" ke naam ke barabar mein khara tha
               aur dono ek doosre se tang lagte the. */}
           <div className="mt-1.5 text-right">
-            <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">
-              Password bhool gaye?
-            </Link>
+            <Link href="/forgot-password" className="text-xs font-medium text-[#1E4A2E] hover:underline">{t("au_forgot_password", lang)}</Link>
           </div>
         </div>
 
@@ -209,17 +207,15 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
           raaste ko chhota kar deta tha. */}
       <div className="mt-5 flex items-center gap-3">
         <div className="h-px flex-1 bg-surface-200" />
-        <span className="text-xs font-medium text-surface-400">ya</span>
+        <span className="text-xs font-medium text-surface-400">{t("au_or", lang)}</span>
         <div className="h-px flex-1 bg-surface-200" />
       </div>
 
       <div className="mt-4 space-y-2.5">
         <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
-          <GoogleIcon /> Google se jaari rakhein
-        </button>
+          <GoogleIcon />{t("au_with_google", lang)}</button>
         <button type="button" onClick={() => handleOAuth("facebook")} className={SOCIAL_BTN}>
-          <FacebookIcon /> Facebook se jaari rakhein
-        </button>
+          <FacebookIcon />{t("au_with_facebook", lang)}</button>
       </div>
 
       {onBack && (
@@ -276,6 +272,7 @@ const emptyState: FarmerAuthState = {};
  * number likho, code likho, andar.
  */
 function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
+  const lang = useLang();
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [askState, askAction] = useFormState(requestFarmerOtp, emptyState);
@@ -301,7 +298,7 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
       <form action={askAction} className="space-y-4">
         {askState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error}</p>}
         <div>
-          <Label htmlFor="phone">Mobile Number</Label>
+          <Label htmlFor="phone">{t("c_mobile_number", lang)}</Label>
           <Input
             id="phone"
             name="phone"
@@ -313,11 +310,9 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
             placeholder="0300 1234567"
             className={FIELD}
           />
-          <p className="mt-1 text-xs text-surface-400">
-            Code aap ke WhatsApp par jayega. WhatsApp na ho to SMS par.
-          </p>
+          <p className="mt-1 text-xs text-surface-400">{t("au_otp_channel", lang)}</p>
         </div>
-        <SubmitBtn label="OTP bhejein" busy="Bheja ja raha hai..." />
+        <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." />
       </form>
       {/* Do chhote raaste, dono jaan boojh kar OTP ke NEECHE.
           User ID kisan ka apna banaya hua naam hai (198) -- naye kisan
@@ -330,16 +325,12 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
           type="button"
           onClick={onUsername}
           className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-        >
-          Apni User ID bana rakhi hai? Us se login karein
-        </button>
+        >{t("au_have_user_id", lang)}</button>
         <button
           type="button"
           onClick={onPassword}
           className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-        >
-          Customer hain? Email aur password se aayein
-        </button>
+        >{t("au_customer_email_login", lang)}</button>
       </div>
       </>
     );
@@ -361,7 +352,7 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
       <input type="hidden" name="phone" value={phone} />
 
       <div>
-        <Label htmlFor="code">Chhe hindse wala code</Label>
+        <Label htmlFor="code">{t("au_six_digit_code", lang)}</Label>
         <Input
           id="code"
           name="code"
@@ -376,21 +367,19 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
 
       {needsProfile && (
         <>
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Ye number pehli dafa aaya hai. Apna naam aur gaon likh dein — aap ka khata usi waqt ban jayega.
-          </p>
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("au_first_time_number", lang)}</p>
           <div>
-            <Label htmlFor="full_name">Aap ka naam</Label>
-            <Input id="full_name" name="full_name" required placeholder="Misal: Amir Sultan" className={FIELD} />
+            <Label htmlFor="full_name">{t("au_your_name", lang)}</Label>
+            <Input id="full_name" name="full_name" required placeholder={t("au_eg_name", lang)} className={FIELD} />
           </div>
           <div>
-            <Label htmlFor="village">Gaon</Label>
-            <Input id="village" name="village" placeholder="Misal: Chak Maha Bali" className={FIELD} />
+            <Label htmlFor="village">{t("au_village", lang)}</Label>
+            <Input id="village" name="village" placeholder={t("au_eg_village", lang)} className={FIELD} />
           </div>
         </>
       )}
 
-        <SubmitBtn label="Andar jayein" busy="Check ho raha hai..." />
+        <SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." />
       </form>
 
       {/* Kisan ke liye "Password bhool gaye?" bemaani hai -- us ka koi
@@ -402,9 +391,7 @@ function FarmerOtpLogin({ onUsername, onPassword }: { onUsername: () => void; on
           chaap gira deta hai. */}
       <form action={askAction} className="mt-3">
         <input type="hidden" name="phone" value={phone} />
-        <button type="submit" className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline">
-          Code nahi mila? Dobara bhejein
-        </button>
+        <button type="submit" className="w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline">{t("au_code_not_received", lang)}</button>
       </form>
     </div>
   );
@@ -429,6 +416,7 @@ function SubmitBtn({ label, busy }: { label: string; busy: string }) {
  * qadam hota hai.
  */
 function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
+  const lang = useLang();
   const router = useRouter();
   const [state, action] = useFormState(loginWithUsername, emptyState);
 
@@ -444,22 +432,20 @@ function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
       <form action={action} className="space-y-4">
         {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
         <div>
-          <Label htmlFor="username">User ID</Label>
-          <Input id="username" name="username" required autoComplete="username" placeholder="misal: aurangzeb" className={FIELD} />
+          <Label htmlFor="username">{t("pm_user_id", lang)}</Label>
+          <Input id="username" name="username" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} />
         </div>
         <div>
-          <Label htmlFor="fpassword">Password</Label>
+          <Label htmlFor="fpassword">{t("pm_password", lang)}</Label>
           <PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} />
         </div>
-        <SubmitBtn label="Andar jayein" busy="Check ho raha hai..." />
+        <SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." />
       </form>
       <button
         type="button"
         onClick={onBack}
         className="mt-3 w-full text-center text-xs font-medium text-[#1E4A2E] hover:underline"
-      >
-        Password yaad nahi? Mobile aur OTP se login karein
-      </button>
+      >{t("au_forgot_password_q", lang)}</button>
     </div>
   );
 }
