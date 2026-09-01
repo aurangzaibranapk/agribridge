@@ -77,14 +77,19 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         .eq("is_available", true)
         .order("machine_type"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
-      // Fasal uthane wale -- sirf chalu, aur sirf tab kaam aate hain jab
-      // kisan ne kaha ho ke fasal hamein bechega.
-      supabase.from("crop_lifters").select("id, name, commission_rate").eq("is_active", true).order("name"),
-      supabase
-        .from("booking_crop_lifts")
-        .select("lifter_id, status, commission_rate, crop_value, commission_amount, harvest_charge_moved, farmer_old_due_moved, farmer_old_due_reliable, farmer_payable, lifter_payable, crop_lifters(name)")
-        .eq("booking_id", id)
-        .maybeSingle(),
+      // ---------------------------------------------------------------
+      // LIVE-SAFE BUILD: fasal uthane wale ka hissa yahan BAND hai
+      // ---------------------------------------------------------------
+      // Ye build us server ke liye hai jahan migration 226-240 abhi
+      // chali nahi. Un tables ko poochhna wahan khali jawab deta hai,
+      // aur booking ka safha ek aisa qadam dikhata jo kaam hi nahi
+      // karta -- staff usay dabata rehta aur kuch na hota.
+      //
+      // Jab wo migrations Live par chal jayengi, ye build ki zaroorat
+      // hi nahi rahegi: asal branch (claude/code-load-project-structure-fq91y9)
+      // par ye hissa poora maujood hai.
+      Promise.resolve({ data: [] as Array<{ id: string; name: string; commission_rate: number }> }),
+      Promise.resolve({ data: null }),
       supabase.auth.getUser().then(async ({ data }) =>
         data.user ? supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle() : { data: null }
       ),
@@ -156,22 +161,11 @@ export default async function MachineryBookingPage({ params }: { params: Promise
   //
   // Wo function `security definer` hai: RLS ke peeche kam adad aa jata
   // to kisan ka baqi chup chaap maaf ho jata.
-  let liftBreakdown = { kattai: null as number | null, purana: null as number | null, reliable: false, unposted: null as number | null };
-  if (booking.will_sell_to_us === true && booking.farmer_id) {
-    const { data: bdRows } = await supabase.rpc("fn_farmer_due_breakdown", {
-      p_farmer_id: booking.farmer_id,
-      p_booking_id: id,
-    });
-    const bd: any = Array.isArray(bdRows) ? bdRows[0] : bdRows;
-    if (bd) {
-      liftBreakdown = {
-        kattai: bd.kattai_baqi === null ? null : Number(bd.kattai_baqi),
-        purana: bd.purana_baqi === null ? null : Number(bd.purana_baqi),
-        reliable: bd.bharosa === true,
-        unposted: bd.unposted === null ? null : Number(bd.unposted),
-      };
-    }
-  }
+  const liftBreakdown = { kattai: null as number | null, purana: null as number | null, reliable: false, unposted: null as number | null };
+  // LIVE-SAFE BUILD: kisan ka baqi is safhe par nahi nikalta.
+  // fn_farmer_due_breakdown us server par maujood hi nahi -- aur
+  // "jawab nahi mila" ko sifar likh dena is project mein teen dafa
+  // ghalat adad de chuka hai. Is liye teenon khane NULL rehte hain.
 
   return (
     <BookingDetail

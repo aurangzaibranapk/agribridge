@@ -805,7 +805,10 @@ export function BookingDetail({
               Aur ye kattai ke bill (5) aur adaigi (6) ke BAAD hai, kyunke
               bill bane baghair "kitna kattai ka baqi hai" ka koi jawab
               hi nahi hota. */}
-          {willSellToUs && (
+          {/* LIVE-SAFE BUILD: uthane walon ki fehrist khali ho to qadam 8
+              dikhta hi nahi. Aisa qadam dikhana jo kaam na kare, us se
+              bura kuch nahi. */}
+          {willSellToUs && lifters.length > 0 && (
             <StepCard
               n={8}
               title={t("ar_step_title", lang)}

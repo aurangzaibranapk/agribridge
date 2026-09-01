@@ -1,10 +1,9 @@
 "use client";
-import Link from "next/link";
-import { fetchAttendanceMonth } from "@/actions/hr-attendance";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   saveStaffDetails,
+  markAttendance,
   recordSalaryPayment,
   markSalaryPaid,
   inviteStaffMember,
@@ -350,20 +349,10 @@ function EditStaffModal({ staff, onClose }: { staff: Staff; onClose: () => void 
   );
 }
 
-/**
- * Hazri ab yahan se nahi lagti.
- *
- * Pehle ye modal seedha upsert karta tha: purani hazri par nayi likh kar
- * guzar jata tha, bina wajah ke, bina nishan ke. Ab hazri Calendar se
- * lagti hai -- wahan wajah lazmi hai, afsar ki hadd lagti hai, band
- * mahina rukta hai, aur purani qeemat record par mehfooz rehti hai.
- *
- * Modal ko chup chaap hata dena theek nahi tha: jo banda ise roz istemal
- * karta tha, usay ye maloom hona chahiye ke ab jana kahan hai.
- */
 function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () => void }) {
   const lang = useLang();
-  void staff;
+  const [state, formAction] = useFormState(markAttendance, initialState);
+  if (state.success) setTimeout(() => window.location.reload(), 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -372,15 +361,24 @@ function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () =
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_mark_attendance", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        <p className="mb-3 text-sm text-surface-600 dark:text-surface-300">
-          {t("hra_subtitle", lang)}
-        </p>
-        <Link
-          href="/admin/hr/attendance"
-          className="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          {t("hra_title", lang)}
-        </Link>
+        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        <form action={formAction} className="space-y-2">
+          <Select name="profile_id" required>
+            <option value="">{t("hr_pick_staff", lang)}</option>
+            {staff.map((s) => (
+              <option key={s.id} value={s.id}>{s.full_name}</option>
+            ))}
+          </Select>
+          <Input type="date" name="attendance_date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+          <Select name="status" required>
+            <option value="present">{t("hr_present", lang)}</option>
+            <option value="absent">{t("hr_absent", lang)}</option>
+            <option value="leave">{t("hr_leave", lang)}</option>
+            <option value="half_day">{t("hr_half_day", lang)}</option>
+          </Select>
+          <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
+          <SubmitButton label={t("hr_mark", lang)} />
+        </form>
       </div>
     </div>
   );
@@ -393,29 +391,6 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
 
   const now = new Date();
 
-  // Hazri ke adad form par PEHLE dikhte hain, rok ke baad nahi. Rok
-  // (recordSalaryPayment mein) tab lagti hai jab banda form bhar chuka
-  // hota hai -- us waqt tak wo adad zehen mein tay kar chuka hota hai.
-  const [who, setWho] = useState("");
-  const [mm, setMm] = useState(now.getMonth() + 1);
-  const [yy, setYy] = useState(now.getFullYear());
-  const [att, setAtt] = useState<Awaited<ReturnType<typeof fetchAttendanceMonth>> | undefined>(undefined);
-
-  useEffect(() => {
-    if (!who) {
-      setAtt(undefined);
-      return;
-    }
-    let alive = true;
-    setAtt(undefined);
-    fetchAttendanceMonth(who, yy, mm).then((r) => {
-      if (alive) setAtt(r);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [who, mm, yy]);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
@@ -425,58 +400,21 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Select name="profile_id" required value={who} onChange={(e) => setWho(e.target.value)}>
+          <Select name="profile_id" required>
             <option value="">{t("hr_pick_staff", lang)}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>{s.full_name}</option>
             ))}
           </Select>
           <div className="flex gap-2">
-            <Input type="number" name="pay_month" min="1" max="12" value={mm} onChange={(e) => setMm(Number(e.target.value))} required placeholder={t("hr_month", lang)} />
-            <Input type="number" name="pay_year" value={yy} onChange={(e) => setYy(Number(e.target.value))} required placeholder={t("hr_year", lang)} />
+            <Input type="number" name="pay_month" min="1" max="12" defaultValue={now.getMonth() + 1} required placeholder={t("hr_month", lang)} />
+            <Input type="number" name="pay_year" defaultValue={now.getFullYear()} required placeholder={t("hr_year", lang)} />
           </div>
-
-          {/* att === undefined: abhi poochha ja raha hai.
-              att === null:      poochha gaya, JAWAB NAHI MILA.
-              Doosri soorat mein sifar likhna jhoot hota. */}
-          {who && (
-            <div className="rounded-lg border border-surface-200 p-2 text-xs dark:border-surface-700">
-              {att === undefined ? (
-                <p className="text-surface-400">…</p>
-              ) : att === null ? (
-                <p className="text-surface-500">Is mahine ki hazri parhi nahi ja saki.</p>
-              ) : (
-                <>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <Fig label={t("hra_working_days", lang)} v={att.workingDays} />
-                    <Fig label={t("hra_present_days", lang)} v={att.presentDays} />
-                    <Fig label={t("hra_leave_days", lang)} v={att.paidLeave + att.unpaidLeave} />
-                    <Fig label={t("hra_absent_days", lang)} v={att.absentDays} />
-                    <Fig label={t("hra_missing_days", lang)} v={att.missingDays} />
-                    <Fig label={t("hra_late_days", lang)} v={att.lateCount} />
-                  </div>
-                  {(!att.isFinalized || att.openItems > 0) && (
-                    <p className="mt-1.5 text-amber-700">
-                      {t("hra_payroll_warning", lang)}
-                      {att.openItems > 0 ? ` (${att.openItems})` : ""}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-          )}
           <Input type="number" step="0.01" name="basic_salary" required placeholder={t("hr_basic_salary_req", lang)} />
           <Input type="number" step="0.01" name="bonus" placeholder={t("hr_bonus", lang)} />
           <Input type="number" step="0.01" name="deductions" placeholder={t("hr_deductions", lang)} />
           <Input type="number" step="0.01" name="advance_deduction" placeholder={t("hr_advance_deduction", lang)} />
           <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
-          {/* Ye nishan jaan boojh kar khali hai. Hazri adhoori ho to
-              action pehle rok deta hai; ye khana us soorat mein soch kar
-              aage baRhne ka raasta hai, aadat ka nahi. */}
-          <label className="flex items-start gap-2 text-xs text-surface-600 dark:text-surface-300">
-            <input type="checkbox" name="ack_unfinalized" value="yes" className="mt-0.5" />
-            <span>Hazri adhoori hai, phir bhi tankhwah banayein</span>
-          </label>
           <SubmitButton label={t("hr_record", lang)} />
         </form>
       </div>
@@ -523,18 +461,4 @@ function SubmitButton({ label }: { label: string }) {
   const lang = useLang();
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className="w-full">{pending ? t("hr_saving", lang) : label}</Button>;
-}
-
-/**
- * Ek chhota adad. Alag function is liye ke tankhwah ke form par ye
- * chhe dafa aata hai, aur chhe jagah alag alag likha jana wohi cheez
- * hai jis se adad ek doosre se mel khana chhoR dete hain.
- */
-function Fig({ label, v }: { label: string; v: number }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase text-surface-400">{label}</p>
-      <p className="font-bold tabular-nums text-surface-800 dark:text-surface-100">{v}</p>
-    </div>
-  );
 }
