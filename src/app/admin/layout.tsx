@@ -36,7 +36,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <LangProvider lang={lang}>
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
       <Sidebar subtitle="Website Admin" homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
-      <div className="flex flex-1 flex-col">
+      {/* min-w-0 -- is ke baghair poora safha daayen se kat jata hai.
+          Flex ki qatar mein har bachche ki kam se kam chaurai us ke andar
+          ke maal jitni hoti hai (min-width: auto). Yani ek chauri table
+          is khane ko screen se bara kar deti hai, aur wo Sidebar ke sath
+          mil kar poore safhe ko phaila deta hai -- daayen taraf likhi
+          hui raqamein bahar nikal jati hain, aur safha khud daayen-bayen
+          khisakne lagta hai.
+          min-w-0 lagane se ye khana sukar sakta hai. Chaura maal phir
+          <main> ke andar khisakta hai -- jo pehle se overflow-y-auto hai,
+          aur CSS ke qaide se us ka overflow-x bhi khud auto ho jata hai.
+          Yani table apne dabbe mein khisakti hai, poora safha nahi. */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           subtitle="Website Admin"
           searchAction="/admin/dashboard"

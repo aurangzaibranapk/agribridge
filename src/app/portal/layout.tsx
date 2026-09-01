@@ -44,7 +44,12 @@ export default async function PortalLayout({ children }: { children: React.React
     <LangProvider lang={lang}>
     <div dir={lang === "ur" ? "rtl" : "ltr"} className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
       <PortalSidebar lang={lang} />
-      <div className="flex-1">
+      {/* min-w-0 -- wohi wajah jo admin ke layout mein likhi hai: is ke
+          baghair ek chaura bachcha (table, lambi lakeer) is khane ko
+          screen se bara kar deta hai aur poora safha daayen se kat jata
+          hai. Kisan ke portal par ye aur bura hai: wahan safha aksar
+          phone par khulta hai, jahan chaurai pehle hi kam hoti hai. */}
+      <div className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-surface-200 bg-white px-4 py-3 sm:px-6 dark:bg-surface-900 dark:border-surface-800">
           <div className="flex items-center gap-2">
             <PortalMobileSidebar lang={lang} />

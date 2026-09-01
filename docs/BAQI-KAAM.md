@@ -1,6 +1,6 @@
 # Baqi kaam — ek hi jagah
 
-Aakhri dafa theek kiya: **1 September 2026**
+Aakhri dafa theek kiya: **1 September 2026** (sheham)
 
 Ye file un sab kaamon ki hai jo shuru ho chuke hain magar poore nahi, ya
 jin ka faisla ho chuka hai magar hath nahi laga. Har cheez ke saamne
@@ -43,6 +43,30 @@ Phir cPanel: **Setup Node.js App → Stop** → File Manager →
 - **`WHATSAPP_OTP_TEMPLATE`** cPanel ke environment variables mein bhara ho
   (na ho to WhatsApp ka OTP chup chaap chhoot jayega aur hamesha SMS se jayega)
 - **Supabase par email (SMTP)** chal raha ho, warna email wala OTP nahi aayega
+
+---
+
+## 1b. Testing ka intezar — fasal uthane wale (arhti)
+
+**Ban chuka. Testing par hai. Live par NAHI.**
+
+Poori testing ki fehrist alag file mein hai: **`docs/TESTING-FEHRIST.md`**
+— wahan qadam ba qadam likha hai ke kya chala kar dekhna hai aur kya
+ghalat hoga.
+
+| Kya bana | Kahan |
+|---|---|
+| Uthane walon ki fehrist | `Machinery → Hisaab → Fasal Uthane Wale` |
+| Booking par **Qadam 8** — tag, phir "fasal utha li" → bill | Booking ka safha |
+| Uthane wale ka khata + adaigi | `/admin/machinery-rental/lifters/[id]` |
+| **Arhti Board** — kis ke paas kitna, kitne din se, aur kis kisan ka | `Machinery → Reports → Arhti Board` |
+
+**Migrations 226, 227, 228, 229, 230 — paanchon sirf testing par.**
+
+Aap ke teen faisle jin par ye bana:
+1. Uthane walon ki **apni fehrist** (`suppliers` mein nahi milayi)
+2. Commission **fasal ki qeemat** par, aur **uthane wale ki jeb se** — kisan ki nahi
+3. Kisan ka khata **saaf**, raqam arhti ke zimme
 
 ---
 
@@ -220,6 +244,7 @@ banda phansa reh jata.
 
 | Kaam | Kyun |
 |---|---|
+| ~~Safha daayen se kat raha tha~~ | **Theek ho gaya** — admin aur portal dono ke layout par `min-w-0` laga. Chauri table ab apne dabbe mein khisakti hai, poora safha nahi |
 | PWA icon `public/icons/icon-192.png` maujood nahi (404) | Phone par "Add to Home Screen" ka icon khali aata hai. Phase 17 ka hissa |
 | Booking ke safhe par upar wala `○ Payment` chip adaigi ke qadam tak na le jaye | Chhota, magar roz kaam aata |
 | PR #1 ka matn purana hai | Bina poochhe nahi badla jayega |
