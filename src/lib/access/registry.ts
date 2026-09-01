@@ -20,6 +20,15 @@ export interface FeatureRow {
   route: string;
   icon: string | null;
   isSensitive: boolean;
+  /**
+   * Card ka doosra jumla -- "Bikri aur bill" (250).
+   *
+   * Khali ho sakta hai. Us soorat mein card par sirf naam aata hai --
+   * aur wo us se behtar hai ke khali jagah bharne ke liye kuch bana
+   * kar likh diya jaye, kyunke ghalat jumla bande ko ghalat safhe par
+   * bhejta hai.
+   */
+  description: string | null;
 }
 
 export interface DashboardRow {
@@ -80,7 +89,7 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
 
   const [{ data: dashboards }, { data: features }, { data: links }] = await Promise.all([
     service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, description, description_en, description_ur, sort_order").eq("is_active", true).order("sort_order"),
-    service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive").eq("is_active", true).order("label"),
+    service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive, description, description_en, description_ur").eq("is_active", true).order("label"),
     service.from("dashboard_features").select("dashboard_key, feature_key, sort_order, section, section_order").order("sort_order"),
   ]);
 
@@ -93,6 +102,7 @@ export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
       route: f.route,
       icon: f.icon,
       isSensitive: f.is_sensitive,
+      description: pickText(f, lang),
     });
     byRoute.set(f.route, f.key);
   }

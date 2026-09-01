@@ -15,7 +15,7 @@ ek cheez nahi.
 |---|---|
 | Migration 225 (`diesel_none_at` / `diesel_none_by`) | ✅ **Live par chal gayi** (1 Sep) |
 | Migration 226–242 | ✅ **Live par chal gayin** (1 Sep) |
-| Migration **243–249** | ❌ **Baqi** — in ke baghair naya build Live par nahi charhna chahiye (tafseel `LIVE-DEPLOYMENT-RECORD.md` mein) |
+| Migration **243–250** | ❌ **Baqi** — in ke baghair naya build Live par nahi charhna chahiye (tafseel `LIVE-DEPLOYMENT-RECORD.md` mein) |
 | Live server par naya `.next` | ❌ **Baqi** — is liye `/admin/trust` par 404 aata hai |
 
 Live par app ka code **kabhi upload hi nahi hua**. Migrations database par
@@ -147,9 +147,9 @@ Wajahein `docs/HR-HAZRI-TESTING.md` ke section 8 mein likhi hain.
 
 ---
 
-## 2. Feature #2 — Sidebar-Free Dashboards
+## 2. Feature #2 — Sidebar-Free Dashboards — **ban gaya** (250)
 
-**Faisla ho chuka hai (locked). Audit ho chuka hai. Banana baqi hai.**
+**Faisla locked tha, audit ho chuka tha. Ab staff wala hissa ban chuka hai.**
 
 Aap ka usool: *Master Admin = poori ERP navigation. Baqi sab = My Work
 Dashboard. Koi permanent sidebar nahi. No permission = no card. Card →
@@ -168,25 +168,47 @@ focused workspace → Back to My Dashboard.*
 | Score chip ke liye tayyar function | `fn_score_for()` |
 | Vendor dashboard — pehle se sidebar-free | `src/app/vendor/page.tsx` |
 
-### Jo missing hai
+### Chha gaps mein se paanch band ho gaye
 
-1. **Sidebar sab ko dikhti hai.** `src/app/admin/layout.tsx` har admin safhe
-   par `<Sidebar>` lagata hai — malik ho ya staff. Master Admin exception
-   laga hi nahi.
-2. **Compact top nav** (`← My Dashboard | POS | Notifications | Profile`)
-   hai hi nahi.
-3. **Cards department ke darje par hain** (Milk, Finance, Machinery).
-   Naqsha feature ke darje par chahta hai (POS, Orders, Customers,
-   Returns, Stock View, My Cash, My Performance).
-4. **Score chip** kisi dashboard ke header mein nahi.
-5. **Farmer portal ki apni sidebar hai** — `src/components/portal/sidebar.tsx`.
-6. **Dealer / Buyer / Expert** ka koi layout hi nahi.
+| Gap | Haalat | Kahan |
+|---|---|---|
+| 1. Sidebar sab ko dikhti thi | ✅ Ab Master Admin ke ilawa kisi ko nahi | `admin/layout.tsx` + `lib/access/sidebar-free.ts` |
+| 2. Compact top nav nahi thi | ✅ Ban gayi (`← Mera Kaam · POS · bell · profile`) | `components/layout/compact-nav.tsx` |
+| 3. Cards department ke darje par the | ✅ Ab har card ek KAAM hai; department sirf sarkhi | `admin/my-work/page.tsx` |
+| 4. Score chip kahin nahi tha | ✅ "Mera Kaam" ke header mein — apna score | `admin/my-work/page.tsx` |
+| 6. Dealer / Buyer / Expert ka layout nahi tha | ✅ Teenon maujood hain, aur teenon pehle se sidebar-free | `app/dealer|buyer|expert/layout.tsx` |
+| **5. Farmer portal ki apni sidebar** | ❌ **Jaan boojh kar nahi chheRi** | `components/portal/sidebar.tsx` |
 
-### Migration — sirf **ek**
+**Gap 5 kyun nahi kiya gaya.** Malik ka usool staff ke baare mein tha:
+*Master Admin = poori ERP navigation, baqi sab = My Work Dashboard.*
+Kisan ka portal staff ka ERP nahi hai, aur wahan "Mera Kaam" jaisa koi
+safha hai bhi nahi — us ki sidebar hi us ka poora raasta hai. Usay
+hatane ka matlab kisan ke liye NAYA ghar banana hota, aur wo naqsha
+malik se poochhe baghair banana theek nahi. **Ye ek sawal khula hai.**
 
-`features` table mein `description` ka khana nahi hai (dashboards ke paas
-hai, features ke paas nahi). "POS — *Sales & Billing*" wala doosra jumla
-likhne ke liye yehi chahiye. **Naya permission table nahi banana.**
+### Sidebar wapas laani ho to — ek line
+
+Faisla database mein rakha hai, code mein nahi. Agar counter par kuch
+ulajh jaye to poora build wapas karne ki zaroorat nahi:
+
+```sql
+update platform_settings
+   set value = '{"enabled": false}'::jsonb
+ where key = 'sidebar_free_dashboards';
+```
+
+Aur setting na mile, connection na bane, ya value kharab ho — teenon
+soorat mein **sidebar khud ba khud reh jati hai**. Wajah wohi hai jo
+`loadNav` ke fallback ki thi: navigation ka ghayab ho jana poora daftar
+rok deta hai, aur us waqt wajah dhoondna bohot mushkil hota hai.
+
+### Migration — sirf **ek** (250)
+
+`features.description` (+ `_en`, `_ur`) — card ka doosra jumla. Roz
+chalne wale gyarah safhon ke jumle bhar diye gaye; baqi khali hain, aur
+wahan card par sirf naam aata hai. Khali jagah bharne ke liye kuch bana
+kar likhna us se bura hota — ghalat jumla bande ko ghalat safhe par
+bhejta hai. **Naya permission table nahi bana.**
 
 ---
 

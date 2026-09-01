@@ -7149,6 +7149,9 @@ export type Database = {
       features: {
         Row: {
           created_at: string
+          description: string | null
+          description_en: string | null
+          description_ur: string | null
           icon: string | null
           is_active: boolean
           is_sensitive: boolean
@@ -7160,6 +7163,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          description_en?: string | null
+          description_ur?: string | null
           icon?: string | null
           is_active?: boolean
           is_sensitive?: boolean
@@ -7171,6 +7177,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
+          description_en?: string | null
+          description_ur?: string | null
           icon?: string | null
           is_active?: boolean
           is_sensitive?: boolean

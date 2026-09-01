@@ -24,6 +24,8 @@ export interface NavEntry {
   label: string;
   /** Icon ka naam -- component client ki taraf banta hai. */
   icon: string | null;
+  /** Card ka doosra jumla (250). Khali ho sakta hai. */
+  description?: string | null;
   /**
    * Group ke andar chhoti sarkhi (174). Khali ho to item sidha group ke
    * neeche aata hai -- purane group waise ke waise chalte hain.
@@ -88,7 +90,13 @@ function groupsFromRegistry(registry: Registry, visible: Set<string> | null): Na
         })
         .filter((x): x is NonNullable<typeof x> => !!x)
         .sort((a, b) => a.sectionOrder - b.sectionOrder || a.index - b.index)
-        .map((x) => ({ href: x.f.route, label: x.f.label, icon: x.f.icon, section: x.section })),
+        .map((x) => ({
+          href: x.f.route,
+          label: x.f.label,
+          icon: x.f.icon,
+          description: x.f.description,
+          section: x.section,
+        })),
     }))
     .filter((g) => g.items.length > 0);
 }

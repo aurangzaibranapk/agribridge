@@ -1,8 +1,10 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { CompactNav } from "@/components/layout/compact-nav";
 import { MessagesWidget } from "@/components/layout/messages-widget";
 import { createClient } from "@/lib/supabase/server";
-import { loadNav } from "@/lib/access/nav";
+import { loadNav, routeAllowed } from "@/lib/access/nav";
+import { sidebarModeFor } from "@/lib/access/sidebar-free";
 import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
@@ -18,6 +20,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   } = await supabase.auth.getUser();
   let role = "";
   let allowedPages: string[] | null = null;
+  // Sidebar dikhegi ya nahi -- ye faisla database mein rakha hai
+  // (250). Setting na mile to sidebar rehti hai: navigation ka ghayab
+  // ho jana poore daftar ko rok deta hai.
+  let showSidebar = true;
+  let showPos = false;
   let navGroups: { key: string; label: string; items: { href: string; label: string; icon: string | null }[] }[] = [];
   if (user) {
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
@@ -28,6 +35,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const nav = await loadNav(user.id, role, lang);
     navGroups = nav.groups;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
+
+    const mode = await sidebarModeFor(role);
+    showSidebar = mode.showSidebar;
+    // Patti par POS ka raasta bhi usi ijazat par lagta hai jis par
+    // menu lagta hai -- do jagah alag hisaab hota to banda patti par
+    // POS dekhta aur khol na pata.
+    showPos = nav.unrestricted || routeAllowed(nav.allowedRoutes, "/admin/pos");
   }
   // Zaban poore admin panel ke liye ek hi jagah se. Andar ke saare
   // client components isi se parhte hain -- kisi ko prop bhejne ki
@@ -36,7 +50,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <LangProvider lang={lang}>
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
-      <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+      {showSidebar && (
+        <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+      )}
       {/* min-w-0 -- is ke baghair poora safha daayen se kat jata hai.
           Flex ki qatar mein har bachche ki kam se kam chaurai us ke andar
           ke maal jitni hoti hai (min-width: auto). Yani ek chauri table
@@ -49,14 +65,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           aur CSS ke qaide se us ka overflow-x bhi khud auto ho jata hai.
           Yani table apne dabbe mein khisakti hai, poora safha nahi. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          subtitle={t("at_website_admin", lang)}
-          searchAction="/admin/dashboard"
-          searchPlaceholder="Search..."
-          notificationsHref="/admin/contact-messages"
-          navGroups={navGroups}
-          lang={lang}
-        />
+        {showSidebar ? (
+          <Topbar
+            subtitle={t("at_website_admin", lang)}
+            searchAction="/admin/dashboard"
+            searchPlaceholder="Search..."
+            notificationsHref="/admin/contact-messages"
+            navGroups={navGroups}
+            lang={lang}
+          />
+        ) : (
+          <CompactNav lang={lang} showPos={showPos} homeHref={homePageForRole(role)} />
+        )}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
       {user && <MessagesWidget />}

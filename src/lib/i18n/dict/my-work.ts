@@ -26,4 +26,12 @@ export const myWorkDict = {
     rm: "Apne manager se kahein ke wo aap ka department assign karein. Tab tak ye safha khali rehta hai — kuch kharab nahi hua.",
     ur: "اپنے منیجر سے کہیں کہ وہ آپ کا شعبہ دیں۔ تب تک یہ صفحہ خالی رہتا ہے — کچھ خراب نہیں ہوا۔",
   },
+
+  // ---- Sidebar ke baghair dashboards (250) ----
+  mw_my_score: { en: "My score", rm: "Mera score", ur: "میرا اسکور" },
+  mw_score_building: {
+    en: "Being worked out",
+    rm: "Hisaab ban raha hai",
+    ur: "حساب بن رہا ہے",
+  },
 } as const;
