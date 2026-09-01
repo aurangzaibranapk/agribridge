@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { AlertTriangle, ShieldAlert, Eye, Clock, CheckCircle2 } from "lucide-react";
 import { scoreDb } from "@/lib/score/read";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +71,7 @@ export default async function TrustPage({
 }: {
   searchParams?: { kind?: string };
 }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -78,7 +81,7 @@ export default async function TrustPage({
     : { data: null };
 
   if (!me?.is_active || !MASTER.includes(me.role as string)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Master Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("tr_master_only", lang)}</div>;
   }
 
   const kind = KINDS.find((k) => k.key === searchParams?.kind)?.key ?? "farmer";
@@ -137,7 +140,7 @@ export default async function TrustPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Trust & Performance Intelligence"
+        title={t("tr_title", lang)}
         description="Saye mein chal raha hai — abhi sirf aap dekh rahe hain."
       />
 
@@ -145,7 +148,7 @@ export default async function TrustPage({
         <div className="flex gap-3">
           <Eye className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div className="text-sm text-amber-900 dark:text-amber-200">
-            <p className="font-medium">Ye adad abhi kisi ko nahi dikhaye jate.</p>
+            <p className="font-medium">{t("tr_not_shown", lang)}</p>
             <p className="mt-1 text-amber-800 dark:text-amber-300">
               Na kisan ko, na customer ko, na vendor ko, na staff ko. Nizam parkha ja raha hai — aur
               ek aazmaishi adad ka kisi ke saamne aa jana wapas nahi liya ja sakta.
@@ -294,7 +297,7 @@ export default async function TrustPage({
       {/* ---- Fehrist ---- */}
       {rows.length === 0 ? (
         <EmptyState
-          title="Is kism ka koi record nahi"
+          title={t("tr_none_of_kind", lang)}
           description="Jin ke naam par koi waqia ya zimmedari darj hai, sirf wohi yahan aate hain."
         />
       ) : (
@@ -302,12 +305,12 @@ export default async function TrustPage({
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wider text-surface-400 dark:border-surface-700">
-                <th className="px-4 py-3 font-medium">Naam</th>
-                <th className="px-4 py-3 font-medium">Score</th>
-                <th className="px-4 py-3 font-medium">Saboot</th>
-                <th className="px-4 py-3 font-medium">Udhaar ka record</th>
-                <th className="px-4 py-3 font-medium">Nishan</th>
-                <th className="px-4 py-3 font-medium">Aakhri saboot</th>
+                <th className="px-4 py-3 font-medium">{t("tr_name", lang)}</th>
+                <th className="px-4 py-3 font-medium">{t("tr_score", lang)}</th>
+                <th className="px-4 py-3 font-medium">{t("tr_evidence", lang)}</th>
+                <th className="px-4 py-3 font-medium">{t("tr_credit_record", lang)}</th>
+                <th className="px-4 py-3 font-medium">{t("tr_flags", lang)}</th>
+                <th className="px-4 py-3 font-medium">{t("tr_last_evidence", lang)}</th>
               </tr>
             </thead>
             <tbody>

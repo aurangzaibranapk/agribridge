@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { ArrowLeft, ShieldAlert, FileText } from "lucide-react";
 import { scoreDb, type ScoreSnapshot, type ScoreEvent, type ScoreObligation, type CreditEligibility } from "@/lib/score/read";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,7 @@ export default async function TrustDetailPage({
 }: {
   params: { subjectType: string; id: string };
 }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -53,7 +56,7 @@ export default async function TrustDetailPage({
     : { data: null };
 
   if (!me?.is_active || !MASTER.includes(me.role as string)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Master Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("tr_master_only", lang)}</div>;
   }
 
   const { subjectType, id } = params;
@@ -93,9 +96,7 @@ export default async function TrustDetailPage({
     return (
       <div className="space-y-4">
         <BackLink />
-        <Card className="p-8 text-center text-surface-400">
-          Is bande ka koi hisaab abhi bana hi nahi.
-        </Card>
+        <Card className="p-8 text-center text-surface-400">{t("tr_no_score_yet", lang)}</Card>
       </div>
     );
   }
@@ -111,12 +112,12 @@ export default async function TrustDetailPage({
   return (
     <div className="space-y-4">
       <BackLink />
-      <PageHeader title="Ye number bana kahan se" description={`${subjectType} — saye wala hisaab`} />
+      <PageHeader title={t("tr_where_from", lang)} description={`${subjectType} — saye wala hisaab`} />
 
       {/* ---- TEEN ADAD, EK NAHI ---- */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <div className="text-[11px] uppercase tracking-wider text-surface-400">Score</div>
+          <div className="text-[11px] uppercase tracking-wider text-surface-400">{t("tr_score", lang)}</div>
           {snap.score === null ? (
             <div className="mt-1 text-lg font-medium text-surface-500">
               {STATE_LABEL[snap.state] ?? snap.state}
@@ -133,7 +134,7 @@ export default async function TrustDetailPage({
         </Card>
 
         <Card className="p-4">
-          <div className="text-[11px] uppercase tracking-wider text-surface-400">Evidence Coverage</div>
+          <div className="text-[11px] uppercase tracking-wider text-surface-400">{t("tr_coverage", lang)}</div>
           <div className="mt-1 font-mono text-3xl tabular-nums text-surface-900 dark:text-surface-100">
             {snap.evidence_coverage === null ? "—" : `${Math.round(snap.evidence_coverage * 100)}%`}
           </div>
@@ -143,7 +144,7 @@ export default async function TrustDetailPage({
         </Card>
 
         <Card className="p-4">
-          <div className="text-[11px] uppercase tracking-wider text-surface-400">Udhaar ki ijazat</div>
+          <div className="text-[11px] uppercase tracking-wider text-surface-400">{t("tr_credit_allowed", lang)}</div>
           <div className="mt-1 text-lg font-medium text-surface-900 dark:text-surface-100">
             {ELIG_LABEL[eligRow?.level ?? ""] ?? eligRow?.level ?? "—"}
           </div>
@@ -151,9 +152,7 @@ export default async function TrustDetailPage({
             {eligRow?.reasons?.[0]?.reason ?? ""}
           </div>
           {eligRow?.requires_human_approval ? (
-            <div className="mt-2 text-[11px] text-surface-500">
-              Faisla insaan ka hai — ye nizam manzoori nahi deta.
-            </div>
+            <div className="mt-2 text-[11px] text-surface-500">{t("tr_human_decides", lang)}</div>
           ) : null}
         </Card>
       </div>
@@ -163,7 +162,7 @@ export default async function TrustDetailPage({
           <div className="flex gap-3">
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-400" />
             <div className="text-sm">
-              <p className="font-medium text-red-900 dark:text-red-200">Khatre ka nishan</p>
+              <p className="font-medium text-red-900 dark:text-red-200">{t("tr_risk_flag", lang)}</p>
               <p className="mt-1 text-red-800 dark:text-red-300">{snap.risk_flags.join(", ")}</p>
             </div>
           </div>
@@ -175,11 +174,11 @@ export default async function TrustDetailPage({
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wider text-surface-400 dark:border-surface-700">
-              <th className="px-4 py-3 font-medium">Factor</th>
-              <th className="px-4 py-3 font-medium">Wazan</th>
-              <th className="px-4 py-3 font-medium">Nateeja</th>
-              <th className="px-4 py-3 font-medium">Number</th>
-              <th className="px-4 py-3 font-medium">Wajah</th>
+              <th className="px-4 py-3 font-medium">{t("tr_factor", lang)}</th>
+              <th className="px-4 py-3 font-medium">{t("tr_weight", lang)}</th>
+              <th className="px-4 py-3 font-medium">{t("tr_result", lang)}</th>
+              <th className="px-4 py-3 font-medium">{t("tr_number", lang)}</th>
+              <th className="px-4 py-3 font-medium">{t("tr_reason", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -197,7 +196,7 @@ export default async function TrustDetailPage({
                     f.sub_score?.toFixed(3)
                   ) : (
                     // N/A. Yahan number ki jagah hamesha wajah aati hai.
-                    <span className="text-amber-700 dark:text-amber-400">N/A</span>
+                    <span className="text-amber-700 dark:text-amber-400">{t("tr_na", lang)}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 font-mono tabular-nums text-surface-600 dark:text-surface-300">
@@ -215,17 +214,15 @@ export default async function TrustDetailPage({
       {/* ---- Zimmedariyan ---- */}
       {obs.length > 0 ? (
         <Card className="overflow-x-auto p-0">
-          <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">
-            Zimmedariyan
-          </div>
+          <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">{t("tr_obligations", lang)}</div>
           <table className="mt-2 w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wider text-surface-400 dark:border-surface-700">
-                <th className="px-4 py-2 font-medium">Kis cheez ki</th>
-                <th className="px-4 py-2 font-medium">Raqam</th>
-                <th className="px-4 py-2 font-medium">Aaya</th>
-                <th className="px-4 py-2 font-medium">Tareekh</th>
-                <th className="px-4 py-2 font-medium">Halat</th>
+                <th className="px-4 py-2 font-medium">{t("tr_what_of", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("tr_amount", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("tr_came", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("tr_date", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("tr_state", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -247,7 +244,7 @@ export default async function TrustDetailPage({
                       </span>
                     ) : (
                       // Khali tareekh koi kami nahi -- wo sach hai.
-                      <span className="text-surface-400">Tay hi nahi hui</span>
+                      <span className="text-surface-400">{t("tr_not_established", lang)}</span>
                     )}
                   </td>
                   <td className="px-4 py-2">{o.state}</td>
@@ -260,9 +257,7 @@ export default async function TrustDetailPage({
 
       {/* ---- Waqiat, aur un ke asal kaghaz ---- */}
       <Card className="p-0">
-        <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">
-          Waqiat — aur har ek ka asal kaghaz
-        </div>
+        <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">{t("tr_events_title", lang)}</div>
         <ul className="mt-2 divide-y divide-surface-100 dark:divide-surface-800">
           {live.map((e) => (
             <li key={e.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
@@ -279,9 +274,7 @@ export default async function TrustDetailPage({
               <span className="font-mono text-[11px] text-surface-400">{e.factor_key}</span>
               <span className="text-xs text-surface-400">{String(e.occurred_at).slice(0, 10)}</span>
               {e.never_decays ? (
-                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                  waqt se mehfooz
-                </span>
+                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{t("tr_time_safe", lang)}</span>
               ) : null}
               {e.evidence_state !== "verified" ? (
                 <span className="rounded bg-surface-100 px-1.5 py-0.5 text-[10px] text-surface-500 dark:bg-surface-800">
@@ -299,9 +292,7 @@ export default async function TrustDetailPage({
 
         {dead.length > 0 ? (
           <div className="border-t border-surface-200 px-4 py-3 dark:border-surface-700">
-            <div className="text-xs font-medium text-surface-500">
-              Batil ho chuke waqiat — hisaab mein nahi, magar tareekh se mite bhi nahi
-            </div>
+            <div className="text-xs font-medium text-surface-500">{t("tr_voided_title", lang)}</div>
             <ul className="mt-1.5 space-y-1">
               {dead.map((e) => (
                 <li key={e.id} className="text-xs text-surface-400">
@@ -319,16 +310,14 @@ export default async function TrustDetailPage({
 
       {/* ---- Guzra hua waqt ---- */}
       <Card className="overflow-x-auto p-0">
-        <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">
-          Guzra hua hisaab
-        </div>
+        <div className="px-4 pt-4 text-sm font-medium text-surface-900 dark:text-surface-100">{t("tr_past_ledger", lang)}</div>
         <table className="mt-2 w-full min-w-[520px] text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wider text-surface-400 dark:border-surface-700">
-              <th className="px-4 py-2 font-medium">Tareekh</th>
-              <th className="px-4 py-2 font-medium">Score</th>
-              <th className="px-4 py-2 font-medium">Saboot</th>
-              <th className="px-4 py-2 font-medium">Engine</th>
+              <th className="px-4 py-2 font-medium">{t("tr_date", lang)}</th>
+              <th className="px-4 py-2 font-medium">{t("tr_score", lang)}</th>
+              <th className="px-4 py-2 font-medium">{t("tr_evidence", lang)}</th>
+              <th className="px-4 py-2 font-medium">{t("tr_engine", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -358,13 +347,12 @@ export default async function TrustDetailPage({
 }
 
 function BackLink() {
+  const lang = getLanguageFromCookies("rm");
   return (
     <Link
       href="/admin/trust"
       className="inline-flex items-center gap-1.5 text-sm text-surface-500 hover:text-surface-900 dark:hover:text-surface-100"
     >
-      <ArrowLeft className="h-4 w-4" />
-      Wapas fehrist par
-    </Link>
+      <ArrowLeft className="h-4 w-4" />{t("tr_back_to_list", lang)}</Link>
   );
 }

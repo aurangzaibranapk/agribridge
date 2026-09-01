@@ -39,6 +39,7 @@ import { vendorDict } from "./dict/vendor";
 import { arhtiDict } from "./dict/arhti";
 import { siteHomeDict } from "./dict/site-home";
 import { sitePagesDict } from "./dict/site-pages";
+import { trustDict } from "./dict/trust";
 import { portalMoreDict } from "./dict/portal-more";
 import { authDict } from "./dict/auth";
 import { sharedDict } from "./dict/shared";
@@ -132,6 +133,7 @@ const dict = {
   ...arhtiDict,
   ...siteHomeDict,
   ...sitePagesDict,
+  ...trustDict,
   ...portalMoreDict,
   ...authDict,
   ...sharedDict,
