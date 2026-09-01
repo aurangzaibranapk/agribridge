@@ -151,6 +151,7 @@ export default async function MachineryRentalPage({
       booking_number: b.booking_number,
       booking_date: b.booking_date,
       farmer_name: farmer?.full_name ?? "-",
+      farmer_id: (farmer?.id as string | undefined) ?? null,
       vendor_name: vendor?.vendor_name ?? "-",
       machine_label: `${machine?.machine_type ?? ""}${machine?.model ? ` (${machine.model})` : ""}`,
       acres: b.acres ? Number(b.acres) : null,

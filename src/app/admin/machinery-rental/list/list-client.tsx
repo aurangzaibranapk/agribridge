@@ -509,10 +509,20 @@ function FarmerStatement({ farmers }: { farmers: FarmerRow[] }) {
             {shown.map((f) => (
               <tr key={f.farmerId} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                 <td className="px-3 py-2">
-                  <Link href={`/admin/farmers/${f.farmerId}`} className="font-medium text-surface-800 hover:underline dark:text-surface-200">
+                  {/* Naam par click karne se ab us kisan ka khata khulta
+                      hai -- lakeer ba lakeer. Pehle profile khulti thi,
+                      jahan "kitna baqi" to likha tha magar ye nahi ke
+                      wo baqi bana kaise. */}
+                  <Link href={`/admin/machinery-rental/khata/${f.farmerId}`} className="font-medium text-surface-800 hover:underline dark:text-surface-200">
                     {f.farmerName}
                   </Link>
-                  <p className="text-surface-400">{f.farmerCode || f.village || ""}</p>
+                  <p className="text-surface-400">
+                    {f.farmerCode || f.village || ""}
+                    {" · "}
+                    <Link href={`/admin/farmers/${f.farmerId}`} className="hover:underline">
+                      {t("profile", lang)}
+                    </Link>
+                  </p>
                 </td>
                 <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">
                   {f.bookings}

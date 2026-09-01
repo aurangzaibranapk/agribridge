@@ -716,7 +716,14 @@ export function BookingDetail({
             </Card>
           )}
 
-          {/* Final payment */}
+          {/* Final payment.
+
+              Pata (id="payment") shart se BAHAR hai, taake kisan ke
+              khate se aane wala link us soorat mein bhi theek jagah
+              utre jab yahan koi baqi na bacha ho -- warna link chup
+              chaap safhe ke shuru mein utar deta aur banda samajhta ke
+              kuch khula hi nahi. */}
+          <div id="payment" className="scroll-mt-20" />
           {bill && (balance ?? 0) > 0 && (
             <StepCard n={6} title={t("mc_step_final_payment", lang)} done={false}>
               <FinalPaymentStep

@@ -53,6 +53,7 @@ interface Booking {
   booking_number: string;
   booking_date: string;
   farmer_name: string;
+  farmer_id: string | null;
   vendor_name: string;
   machine_label: string;
   acres: number | null;
@@ -315,7 +316,15 @@ function BookingsTab({ bookings }: { bookings: Booking[] }) {
                     </Link>
                   </td>
                   <td className="px-3 py-2 text-xs text-surface-500">{new Date(b.booking_date).toLocaleDateString()}</td>
-                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{b.farmer_name}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                    {b.farmer_id ? (
+                      <Link href={`/admin/machinery-rental/khata/${b.farmer_id}`} className="hover:underline">
+                        {b.farmer_name}
+                      </Link>
+                    ) : (
+                      b.farmer_name
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{b.vendor_name} - {b.machine_label}</td>
                   <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {b.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-green-600">Rs {b.commission_amount.toLocaleString()}</td>
@@ -328,10 +337,18 @@ function BookingsTab({ bookings }: { bookings: Booking[] }) {
                           Booking ke safhe par poori zanjeer hai -- bill,
                           advance ka adjustment, split payment, vendor ka
                           hissa. Do jagah payment lene ka matlab hota ek
-                          hi raqam do dafa darj ho jana. */}
+                          hi raqam do dafa darj ho jana.
+
+                          "Farmer Se Lena" ab kisan ke KHATE par le jata
+                          hai: wahan pehle wo hisaab saamne aata hai jis
+                          se ye adad bana, aur wahin se ek click par usi
+                          booking ke payment wale khane tak. */}
                       {!b.has_bill && <span className="text-xs text-surface-400">{t("mc_bill_not_made", lang)}</span>}
                       {b.has_bill && farmerRemaining > 0 && (
-                        <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-left text-xs font-medium text-brand-600 hover:underline">
+                        <Link
+                          href={b.farmer_id ? `/admin/machinery-rental/khata/${b.farmer_id}` : `/admin/machinery-rental/booking/${b.id}#payment`}
+                          className="text-left text-xs font-medium text-brand-600 hover:underline"
+                        >
                           Farmer Se Lena: Rs {farmerRemaining.toLocaleString()}
                         </Link>
                       )}
