@@ -10,9 +10,9 @@
  * TEEN BAATEIN JO YAHAN JAAN BOOJH KAR AISE HAIN:
  *
  * 1. "Al Rana Traders", "ART" aur "AgriBridge" ke Urdu naam PEHLE SE
- *    tay hain, aur wohi yahan istemal hue hain: الرعنا ٹریڈرز،
- *    اے آر ٹی، اور ایگری برج (machinery-slip.ts, machinery.ts,
- *    finance-grain.ts). Pehle yahan ye teenon Urdu mein bhi angrezi
+ *    tay hain, aur wohi yahan istemal hue hain: الرانا ٹریڈرز،
+ *    اے آر ٹی، aur ایگری بریج -- ab ye glossary.ts mein darj hain.
+ *    Pehle yahan ye teenon Urdu mein bhi angrezi
  *    harfon mein likhe gaye the -- wo ghalat tha. Vendor ka safha aur
  *    machinery ke daftari safhe EK HI paise ki baat karte hain; do
  *    screenon par do hijje us paise ko do alag cheezein bana dete
@@ -144,12 +144,12 @@ export const vendorDict = {
   v_when_paid: { en: "When paid", rm: "Kab diya", ur: "کب دیا" },
   v_cash_received: { en: "Cash received", rm: "Cash mila", ur: "نقد ملا" },
   v_what_did_you_do: { en: "What did you do with that money? *", rm: "Us paise ka kya kiya? *", ur: "اس پیسے کا کیا کیا؟ *" },
-  v_giving_to_art: { en: "I am handing it to Al Rana Traders", rm: "Al Rana Traders ko de raha hoon", ur: "الرعنا ٹریڈرز کو دے رہا ہوں" },
+  v_giving_to_art: { en: "I am handing it to Al Rana Traders", rm: "Al Rana Traders ko de raha hoon", ur: "الرانا ٹریڈرز کو دے رہا ہوں" },
   v_kept_my_share: { en: "Kept as my share", rm: "Apne hisse mein rakh liya", ur: "اپنے حصے میں رکھ لیا" },
   v_money_with_you: {
     en: "This money is with you for now. Handing it to AgriBridge is a separate step.",
     rm: "Ye paisa abhi aap ke paas hai. Jab AgriBridge ko dein to us ka apna qadam hai.",
-    ur: "یہ پیسہ ابھی آپ کے پاس ہے۔ جب ایگری برج کو دیں تو اس کا اپنا قدم ہے۔",
+    ur: "یہ پیسہ ابھی آپ کے پاس ہے۔ جب ایگری بریج کو دیں تو اس کا اپنا قدم ہے۔",
   },
   v_only_your_word: {
     en: "This is only your word for now — the farmer's balance drops only after verification.",
@@ -168,7 +168,7 @@ export const vendorDict = {
   v_awaiting_verification: {
     en: "The work you submitted is awaiting AgriBridge verification. Only after verification does it become part of the bill.",
     rm: "Aap ka bheja hua kaam AgriBridge ki tasdeeq ke intezar mein hai. Tasdeeq ke baad hi wo bill ka hissa banega.",
-    ur: "آپ کا بھیجا ہوا کام ایگری برج کی تصدیق کے انتظار میں ہے۔ تصدیق کے بعد ہی وہ بل کا حصہ بنے گا۔",
+    ur: "آپ کا بھیجا ہوا کام ایگری بریج کی تصدیق کے انتظار میں ہے۔ تصدیق کے بعد ہی وہ بل کا حصہ بنے گا۔",
   },
 
   // ---- Booking aur acre ----
@@ -193,7 +193,7 @@ export const vendorDict = {
   v_no_payment_yet: { en: "No payment yet", rm: "Abhi koi adaigi nahi hui", ur: "ابھی کوئی ادائیگی نہیں ہوئی" },
   v_no_bill_yet: { en: "No bill has been made yet.", rm: "Abhi koi bill nahi bana.", ur: "ابھی کوئی بل نہیں بنا۔" },
   v_settlement: { en: "Settlement", rm: "Settlement", ur: "سیٹلمنٹ" },
-  v_art_ne: { en: "Al Rana Traders", rm: "Al Rana Traders ne", ur: "الرعنا ٹریڈرز نے" },
+  v_art_ne: { en: "Al Rana Traders", rm: "Al Rana Traders ne", ur: "الرانا ٹریڈرز نے" },
 
   // ---- Chhote lafz ----
   v_yes: { en: "Yes", rm: "Haan", ur: "ہاں" },

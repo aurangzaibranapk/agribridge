@@ -77,5 +77,26 @@
  * Kuch lafz jaan boojh kar tarjuma NAHI kiye jate: "POS", "WhatsApp",
  * "CNIC", "IBAN", "SMS". Ye har zaban mein isi tarah bole jate hain, aur
  * inhen "نقطہ فروخت" bana dena kisi ki madad nahi karta.
+ *
+ * ---------------------------------------------------------------------
+ *  NAAM -- in ka tarjuma nahi hota, magar HIJJE tay hain
+ * ---------------------------------------------------------------------
+ *  English            Roman Urdu        اردو
+ * ---------------------------------------------------------------------
+ *  AgriBridge         AgriBridge        ایگری بریج
+ *  Al Rana Traders    Al Rana Traders   الرانا ٹریڈرز
+ *  ART                ART               اے آر ٹی
+ * ---------------------------------------------------------------------
+ *
+ * Ye teen yahan is liye likhe gaye hain ke inhen na likhne ka nuqsan
+ * saamne aa chuka hai: nizam mein "الرعنا ٹریڈرز" aur "الرانا ٹریڈرز"
+ * dono chal rahe the -- kisan wale booking safhe ek hijja likhte the aur
+ * machinery ki parchi doosra. Isi tarah "ایگری برج" har jagah likha tha
+ * jabke naam "ایگری بریج" hai.
+ *
+ * Karobar ka naam koi aam lafz nahi ke har jagah apni marzi se likha
+ * jaye. Jis kisan ko parchi par ek naam nazar aaye aur safhe par doosra,
+ * us ke liye wo do alag karobar hain -- aur ye shak paise ke maamle mein
+ * sab se mehnga shak hai.
  */
 export {};

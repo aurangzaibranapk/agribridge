@@ -82,14 +82,14 @@ export const statementsDict = {
  */
 export const opsPagesDict = {
   // ---- Anaj ki adaigi ki parchi ----
-  ps_slip_title: { en: "AgriBridge — Grain Payment Slip", rm: "AgriBridge -- anaj ki adaigi ki parchi", ur: "ایگری برج — اناج کی ادائیگی کی پرچی" },
+  ps_slip_title: { en: "AgriBridge — Grain Payment Slip", rm: "AgriBridge -- anaj ki adaigi ki parchi", ur: "ایگری بریج — اناج کی ادائیگی کی پرچی" },
   ps_payment_amount: { en: "Payment Amount", rm: "Adaigi ki raqam", ur: "ادائیگی کی رقم" },
   ps_signed_receiving: { en: "Farmer's Signed Receiving", rm: "Kisan ki dastkhat shuda rasidgi", ur: "کسان کی دستخط شدہ رسیدگی" },
   ps_notes_label: { en: "Notes:", rm: "Note:", ur: "نوٹ:" },
   ps_computer_generated: {
     en: "This is a computer-generated payment slip from the AgriBridge system.",
     rm: "Ye parchi AgriBridge ke nizam se computer par bani hai.",
-    ur: "یہ پرچی ایگری برج کے نظام سے کمپیوٹر پر بنی ہے۔",
+    ur: "یہ پرچی ایگری بریج کے نظام سے کمپیوٹر پر بنی ہے۔",
   },
   ps_edit_payment: { en: "Edit Payment", rm: "Adaigi tabdeel karein", ur: "ادائیگی تبدیل کریں" },
   ps_amount_rs_dot: { en: "Amount (Rs.)", rm: "Raqam (Rs.)", ur: "رقم (روپے)" },

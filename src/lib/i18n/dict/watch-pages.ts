@@ -92,7 +92,7 @@ export const watchPagesDict = {
   },
   ra_slow_moving_full: { en: "Slow-Moving Stock (not sold in 90+ days)", rm: "Para hua stock (nawwe din se bika nahi)", ur: "پڑا ہوا اسٹاک (نوے دن سے بکا نہیں)" },
   ra_no_slow_moving: { en: "No slow-moving stock — everything is selling well.", rm: "Koi stock para hua nahi -- sab acha bik raha hai.", ur: "کوئی اسٹاک پڑا ہوا نہیں — سب اچھا بک رہا ہے۔" },
-  ra_grn_disc: { en: "GRN Discrepancies (AgriBridge orders)", rm: "GRN ke farq (AgriBridge ke order)", ur: "GRN کے فرق (ایگری برج کے آرڈر)" },
+  ra_grn_disc: { en: "GRN Discrepancies (AgriBridge orders)", rm: "GRN ke farq (AgriBridge ke order)", ur: "GRN کے فرق (ایگری بریج کے آرڈر)" },
   ra_delivery_disc: { en: "Delivery Discrepancies (short / damaged on arrival)", rm: "Delivery ke farq (kam ya toota hua mila)", ur: "ڈیلیوری کے فرق (کم یا ٹوٹا ہوا ملا)" },
   ra_transfer_disc: { en: "Stock Transfer Discrepancies", rm: "Stock transfer ke farq", ur: "اسٹاک ٹرانسفر کے فرق" },
   ra_see: { en: "see.", rm: "dekhein.", ur: "دیکھیں۔" },

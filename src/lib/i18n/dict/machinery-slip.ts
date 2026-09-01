@@ -29,7 +29,7 @@ export const machinerySlipDict = {
   ms_total_due: { en: "Total due", rm: "Kul dena hai", ur: "کل دینا ہے" },
   ms_in_words: { en: "In words:", rm: "Alfaz mein:", ur: "الفاظ میں:" },
   ms_farmer_signature: { en: "Farmer's signature", rm: "Kisan ke dastkhat", ur: "کسان کے دستخط" },
-  ms_from_art: { en: "On behalf of Al Rana Traders", rm: "Al Rana Traders ki taraf se", ur: "الرعنا ٹریڈرز کی طرف سے" },
+  ms_from_art: { en: "On behalf of Al Rana Traders", rm: "Al Rana Traders ki taraf se", ur: "الرانا ٹریڈرز کی طرف سے" },
   ms_estimate_note: {
     en: "This is the booking estimate. The real bill is made after harvesting, on the acres actually cut.",
     rm: "Ye booking ka andaza hai. Asal bill kattai ke baad, waqai kaate gaye acre par banega.",

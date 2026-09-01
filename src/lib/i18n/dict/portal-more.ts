@@ -143,7 +143,7 @@ export const portalMoreDict = {
   pm_order_routed: {
     en: "Your order will be routed to a verified dealer in your area, delivered under Al Rana Traders.",
     rm: "Aap ka order aap ke ilaqe ke tasdeeq shuda dealer ko jayega, aur Al Rana Traders ke taht pahunchega.",
-    ur: "آپ کا آرڈر آپ کے علاقے کے تصدیق شدہ ڈیلر کو جائے گا، اور الرعنا ٹریڈرز کے تحت پہنچے گا۔",
+    ur: "آپ کا آرڈر آپ کے علاقے کے تصدیق شدہ ڈیلر کو جائے گا، اور الرانا ٹریڈرز کے تحت پہنچے گا۔",
   },
   pm_dealer_notified: {
     en: "A verified dealer in your area has been notified. You'll be updated as your order progresses.",

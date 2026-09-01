@@ -82,7 +82,7 @@ export const approvalsDict = {
   fcl_computer_statement: {
     en: "This is a computer-generated statement from the AgriBridge system.",
     rm: "Ye gosharah AgriBridge ke nizam se computer par bana hai.",
-    ur: "یہ گوشوارہ ایگری برج کے نظام سے کمپیوٹر پر بنا ہے۔",
+    ur: "یہ گوشوارہ ایگری بریج کے نظام سے کمپیوٹر پر بنا ہے۔",
   },
 
   // ---- Shakh ka store credit ----

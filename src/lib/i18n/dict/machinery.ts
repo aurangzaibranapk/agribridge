@@ -676,7 +676,7 @@ export const machineryDict = {
   mc_eg_amount: { en: "e.g. 20000", rm: "misaal: 20000", ur: "مثلاً 20000" },
 
   // --- Slip ---
-  mc_slip_title: { en: "AgriBridge — Machinery Booking Slip", rm: "AgriBridge — Machinery Booking Slip", ur: "ایگری برج — مشینری بکنگ سلپ" },
+  mc_slip_title: { en: "AgriBridge — Machinery Booking Slip", rm: "AgriBridge — Machinery Booking Slip", ur: "ایگری بریج — مشینری بکنگ سلپ" },
   mc_vendor_machine: { en: "Vendor / Machine", rm: "Vendor / Machine", ur: "وینڈر / مشین" },
   mc_print_download: { en: "Print / Download", rm: "Print / Download", ur: "پرنٹ / ڈاؤن لوڈ" },
   mc_send_by_email: { en: "Send by email", rm: "Email se bhejein", ur: "ای میل سے بھیجیں" },
@@ -685,7 +685,7 @@ export const machineryDict = {
   mc_slip_footer: {
     en: "This is a computer-generated booking slip from the AgriBridge system.",
     rm: "Ye AgriBridge se khud bani hui booking slip hai.",
-    ur: "یہ ایگری برج سے خود بنی ہوئی بکنگ سلپ ہے۔",
+    ur: "یہ ایگری بریج سے خود بنی ہوئی بکنگ سلپ ہے۔",
   },
 
   // --- Control Center (fehrist ka safha) ---

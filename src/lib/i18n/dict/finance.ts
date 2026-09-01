@@ -85,7 +85,7 @@ export const financeDict = {
     ur: "جہاں بھی پیسہ لگتا ہے — سب ایک جگہ، دیکھنے اور منظوری کے لیے",
   },
   fq_total_pending: { en: "Total Pending Action", rm: "Kul Kaam Baqi", ur: "کل کام باقی" },
-  fq_order_payments: { en: "AgriBridge Order Payments", rm: "AgriBridge Order ki Adaigi", ur: "ایگری برج آرڈر کی ادائیگی" },
+  fq_order_payments: { en: "AgriBridge Order Payments", rm: "AgriBridge Order ki Adaigi", ur: "ایگری بریج آرڈر کی ادائیگی" },
   fq_no_payment_pending: { en: "No payment is pending.", rm: "Koi adaigi baqi nahi hai.", ur: "کوئی ادائیگی باقی نہیں ہے۔" },
   fq_expense_approvals: { en: "Company Expense Approvals", rm: "Company Kharch ki Manzoori", ur: "کمپنی خرچ کی منظوری" },
   fq_no_expense_pending: { en: "No expense is pending.", rm: "Koi kharch baqi nahi hai.", ur: "کوئی خرچ باقی نہیں ہے۔" },

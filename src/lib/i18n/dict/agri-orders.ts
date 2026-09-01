@@ -165,7 +165,7 @@ export const agriOrdersMoreDict = {
   ao_order_progress: { en: "Order Progress", rm: "Order kahan tak pahuncha", ur: "آرڈر کہاں تک پہنچا" },
   ao_detailed_log: { en: "Detailed Log", rm: "Poori tafseel", ur: "پوری تفصیل" },
   ao_new_order: { en: "New Agri Order", rm: "Naya Agri Order", ur: "نیا ایگری آرڈر" },
-  ao_ordering_title: { en: "AgriBridge Ordering", rm: "AgriBridge ka order nizam", ur: "ایگری برج کا آرڈر نظام" },
+  ao_ordering_title: { en: "AgriBridge Ordering", rm: "AgriBridge ka order nizam", ur: "ایگری بریج کا آرڈر نظام" },
   ao_total_order_value: { en: "Total Order Value", rm: "Order ki kul qeemat", ur: "آرڈر کی کل قیمت" },
   ao_pending_payment: { en: "Pending Payment", rm: "Adaigi baqi", ur: "ادائیگی باقی" },
   ao_month_sales: { en: "This Month's Sales", rm: "Is mahine ki bikri", ur: "اس مہینے کی بکری" },

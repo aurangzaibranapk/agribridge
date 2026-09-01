@@ -9,7 +9,7 @@
  * samajhta hai ke do alag cheezein hain.
  */
 export const portalDict = {
-  app_name: { en: "AgriBridge", ur: "ایگری برج" },
+  app_name: { en: "AgriBridge", ur: "ایگری بریج" },
   farmer_portal: { en: "Farmer Portal", ur: "کسان پورٹل" },
   back_to_website: { en: "Back to Website", ur: "ویب سائٹ پر واپس" },
   back_to_dashboard: { en: "Back to Dashboard", ur: "ڈیش بورڈ پر واپس" },

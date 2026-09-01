@@ -267,7 +267,7 @@ export const milkDict = {
     rm: "Doodh darj ho gaya — kisan ko paighaam bhej diya gaya.",
     ur: "دودھ درج ہو گیا — کسان کو پیغام بھیج دیا گیا۔",
   },
-  mk_receipt: { en: "AgriBridge Milk Receipt", rm: "AgriBridge Doodh ki Raseed", ur: "ایگری برج دودھ کی رسید" },
+  mk_receipt: { en: "AgriBridge Milk Receipt", rm: "AgriBridge Doodh ki Raseed", ur: "ایگری بریج دودھ کی رسید" },
   mk_collection: { en: "Collection", rm: "Wusooli", ur: "وصولی" },
   mk_milk: { en: "Milk", rm: "Doodh", ur: "دودھ" },
   mk_collection_id: { en: "Collection ID", rm: "Collection ID", ur: "کلیکشن آئی ڈی" },

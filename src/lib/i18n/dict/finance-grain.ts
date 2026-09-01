@@ -48,7 +48,7 @@ export const financeGrainDict = {
   wl_subsidy: { en: "Subsidy", rm: "Subsidy", ur: "سبسڈی" },
 
   // ---- Anaj ka bill ----
-  gb_title: { en: "AgriBridge — Grain Procurement Bill", rm: "AgriBridge -- anaj ki kharidari ka bill", ur: "ایگری برج — اناج کی خریداری کا بل" },
+  gb_title: { en: "AgriBridge — Grain Procurement Bill", rm: "AgriBridge -- anaj ki kharidari ka bill", ur: "ایگری بریج — اناج کی خریداری کا بل" },
   gb_warehouse: { en: "Warehouse", rm: "Godam", ur: "گودام" },
   gb_grain_type: { en: "Grain Type", rm: "Anaj ki qism", ur: "اناج کی قسم" },
   gb_gross_weight: { en: "Gross Weight", rm: "Poora wazan", ur: "پورا وزن" },
@@ -58,7 +58,7 @@ export const financeGrainDict = {
   gb_computer_bill: {
     en: "This is a computer-generated bill from the AgriBridge system.",
     rm: "Ye bill AgriBridge ke nizam se computer par bana hai.",
-    ur: "یہ بل ایگری برج کے نظام سے کمپیوٹر پر بنا ہے۔",
+    ur: "یہ بل ایگری بریج کے نظام سے کمپیوٹر پر بنا ہے۔",
   },
   gb_entry_not_found: { en: "Entry not found.", rm: "Indraj nahi mila.", ur: "اندراج نہیں ملا۔" },
   gb_payment_not_found: { en: "Payment not found.", rm: "Adaigi nahi mili.", ur: "ادائیگی نہیں ملی۔" },
@@ -84,7 +84,7 @@ export const financeGrainDict = {
   gst_computer_statement: {
     en: "This is a computer-generated statement from the AgriBridge system.",
     rm: "Ye gosharah AgriBridge ke nizam se computer par bana hai.",
-    ur: "یہ گوشوارہ ایگری برج کے نظام سے کمپیوٹر پر بنا ہے۔",
+    ur: "یہ گوشوارہ ایگری بریج کے نظام سے کمپیوٹر پر بنا ہے۔",
   },
   gst_select_party: { en: "Select a farmer or party.", rm: "Kisan ya party chunein.", ur: "کسان یا پارٹی چنیں۔" },
 

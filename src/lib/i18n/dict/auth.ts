@@ -14,8 +14,7 @@
  *    darwaza sab se pehle kisan ke liye hai.
  *
  * 2. "Al Rana Traders", "ART" aur "AgriBridge" ke Urdu naam wohi hain
- *    jo baqi nizam mein tay ho chuke hain (الرعنا ٹریڈرز، اے آر ٹی،
- *    ایگری برج). Login ka safha wo pehli jagah hai jahan banda ye naam
+ *    jo glossary.ts mein darj hain (الرانا ٹریڈرز، اے آر ٹی، ایگری بریج). Login ka safha wo pehli jagah hai jahan banda ye naam
  *    parhta hai -- yahan koi doosri hijje us ke liye doosra karobar
  *    bana degi.
  *
@@ -26,8 +25,8 @@
  */
 export const authDict = {
   // ---- Login ka safha ----
-  au_brand: { en: "ART AgriBridge", rm: "ART AgriBridge", ur: "اے آر ٹی ایگری برج" },
-  au_company: { en: "Al Rana Traders", rm: "Al Rana Traders", ur: "الرعنا ٹریڈرز" },
+  au_brand: { en: "ART AgriBridge", rm: "ART AgriBridge", ur: "اے آر ٹی ایگری بریج" },
+  au_company: { en: "Al Rana Traders", rm: "Al Rana Traders", ur: "الرانا ٹریڈرز" },
   au_sign_in_title: { en: "Sign in to your account", rm: "Apne account mein sign in karein", ur: "اپنے اکاؤنٹ میں سائن اِن کریں" },
   au_close: { en: "Close", rm: "Band karein", ur: "بند کریں" },
   au_close_back_site: { en: "Close — go back to the website", rm: "Band karein — website par wapas jayein", ur: "بند کریں — ویب سائٹ پر واپس جائیں" },
