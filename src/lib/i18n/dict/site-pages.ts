@@ -113,4 +113,118 @@ export const sitePagesDict = {
   sp_our_vision: { en: "Our Vision", rm: "Hamari soch", ur: "ہماری سوچ" },
   sp_our_values: { en: "Our Values", rm: "Hamare usool", ur: "ہمارے اصول" },
   sp_founder_since: { en: "Founder & CEO — Founded 2010", rm: "Bani aur CEO — 2010 mein shuru", ur: "بانی اور سی ای او — 2010 میں شروع" },
+
+  // ---- Cheezon ki fehrist ----
+  sp_products: { en: "Products", rm: "Cheezein", ur: "چیزیں" },
+  sp_products_lead: {
+    en: "Seed, fertilizer, and crop protection — updated directly from our inventory.",
+    rm: "Beej, khaad aur fasal ki hifazat ka saman — seedha hamare godam se, roz ka roz.",
+    ur: "بیج، کھاد اور فصل کی حفاظت کا سامان — سیدھا ہمارے گودام سے، روز کا روز۔",
+  },
+  sp_all_categories: { en: "All Categories", rm: "Sab qismein", ur: "سب قسمیں" },
+  sp_all_companies: { en: "All Companies", rm: "Sab companies", ur: "سب کمپنیاں" },
+  sp_filter: { en: "Filter", rm: "Chhantein", ur: "چھانٹیں" },
+  sp_no_products: { en: "No products match your filters.", rm: "Aap ki chhant par koi cheez nahi mili.", ur: "آپ کی چھانٹ پر کوئی چیز نہیں ملی۔" },
+  sp_search_products: { en: "Search products...", rm: "Cheezein dhoondein...", ur: "چیزیں ڈھونڈیں..." },
+
+  // ---- Ek cheez ka safha ----
+  sp_active_ingredient: { en: "Active Ingredient", rm: "Asal juzw", ur: "اصل جزو" },
+  sp_composition: { en: "Composition", rm: "Tarkeeb", ur: "ترکیب" },
+  sp_dosage: { en: "Dosage", rm: "Miqdar", ur: "مقدار" },
+  sp_pack_size: { en: "Pack Size", rm: "Pack ka size", ur: "پیک کا سائز" },
+  sp_unit: { en: "Unit", rm: "Unit", ur: "یونٹ" },
+  sp_best_before: { en: "Best Before", rm: "Is tareekh se pehle", ur: "اِس تاریخ سے پہلے" },
+  sp_usage: { en: "Usage Instructions", rm: "Istemal ka tareeqa", ur: "استعمال کا طریقہ" },
+  sp_safety: { en: "Safety Information", rm: "Hifazat ki baatein", ur: "حفاظت کی باتیں" },
+  sp_brochure: { en: "Download Brochure (PDF)", rm: "Kitabcha download karein (PDF)", ur: "کتابچہ ڈاؤن لوڈ کریں (پی ڈی ایف)" },
+  sp_order_this: { en: "Order This Product", rm: "Ye cheez order karein", ur: "یہ چیز آرڈر کریں" },
+  sp_related_products: { en: "Related Products", rm: "Isi tarah ki cheezein", ur: "اسی طرح کی چیزیں" },
+  sp_related_articles: { en: "Related Articles", rm: "Isi tarah ke mazameen", ur: "اسی طرح کے مضامین" },
+
+  // ---- Dhoondna ----
+  sp_search: { en: "Search", rm: "Dhoondein", ur: "ڈھونڈیں" },
+  sp_search_site: { en: "Search the site...", rm: "Website mein dhoondein...", ur: "ویب سائٹ میں ڈھونڈیں..." },
+  sp_search_start: { en: "Type something in the search bar to get started.", rm: "Upar wale khane mein kuch likhein.", ur: "اوپر والے خانے میں کچھ لکھیں۔" },
+  sp_no_results: {
+    en: "No results found. Try the Contact page if you need direct help.",
+    rm: "Kuch nahi mila. Seedhi madad chahiye to Raabta wala safha kholein.",
+    ur: "کچھ نہیں ملا۔ سیدھی مدد چاہیے تو رابطہ والا صفحہ کھولیں۔",
+  },
+  sp_services: { en: "Services", rm: "Khidmaat", ur: "خدمات" },
+  sp_services_lead: {
+    en: "What Al Rana Traders offers beyond the product catalog.",
+    rm: "Cheezon ki fehrist ke ilawa Al Rana Traders kya deta hai.",
+    ur: "چیزوں کی فہرست کے علاوہ الرانا ٹریڈرز کیا دیتا ہے۔",
+  },
+  sp_inquire_service: { en: "Inquire About This Service", rm: "Is khidmat ke bare mein poochein", ur: "اِس خدمت کے بارے میں پوچھیں" },
+
+  // ---- Blog ----
+  sp_blog: { en: "Blog", rm: "Blog", ur: "بلاگ" },
+  sp_blog_lead: {
+    en: "Farming tips, product guides, and stories from the field.",
+    rm: "Kheti ke mashware, cheezon ki rehnumai, aur khet se aayi baatein.",
+    ur: "کھیتی کے مشورے، چیزوں کی رہنمائی، اور کھیت سے آئی باتیں۔",
+  },
+  sp_all: { en: "All", rm: "Sab", ur: "سب" },
+  sp_no_articles: { en: "No articles found.", rm: "Koi mazmoon nahi mila.", ur: "کوئی مضمون نہیں ملا۔" },
+  sp_search_articles: { en: "Search articles...", rm: "Mazameen dhoondein...", ur: "مضامین ڈھونڈیں..." },
+
+  // ---- Naukri ----
+  sp_careers_title: { en: "Careers at Al Rana Traders", rm: "Al Rana Traders mein naukri", ur: "الرانا ٹریڈرز میں نوکری" },
+  sp_careers_lead: {
+    en: "Join our team — see the open positions below.",
+    rm: "Hamari team ka hissa banein — neeche khali jagahein dekhein.",
+    ur: "ہماری ٹیم کا حصہ بنیں — نیچے خالی جگہیں دیکھیں۔",
+  },
+  sp_no_vacancy: { en: "No vacancy is open right now.", rm: "Abhi koi jagah khali nahi hai.", ur: "ابھی کوئی جگہ خالی نہیں ہے۔" },
+  sp_apply: { en: "Apply", rm: "Darkhwast dein", ur: "درخواست دیں" },
+
+  // ---- Gallery, FAQ, testimonials ----
+  sp_gallery: { en: "Gallery", rm: "Gallery", ur: "گیلری" },
+  sp_gallery_lead: {
+    en: "Farm visits, dealer network events, and product demonstrations.",
+    rm: "Kheton ke dauray, dealer ki mehfilein, aur cheezon ka mazahira.",
+    ur: "کھیتوں کے دورے، ڈیلر کی محفلیں، اور چیزوں کا مظاہرہ۔",
+  },
+  sp_no_gallery: { en: "No gallery items yet.", rm: "Abhi gallery mein kuch nahi.", ur: "ابھی گیلری میں کچھ نہیں۔" },
+  sp_close: { en: "Close", rm: "Band karein", ur: "بند کریں" },
+  sp_faq_title: { en: "Frequently Asked Questions", rm: "Aksar poochhe jane wale sawal", ur: "اکثر پوچھے جانے والے سوال" },
+  sp_faq_lead: { en: "Answers to the questions we hear most often.", rm: "Un sawalon ke jawab jo sab se ziyada poochhe jate hain.", ur: "اُن سوالوں کے جواب جو سب سے زیادہ پوچھے جاتے ہیں۔" },
+  sp_no_faq: { en: "No FAQs match your search.", rm: "Aap ke dhoondne par koi sawal nahi mila.", ur: "آپ کے ڈھونڈنے پر کوئی سوال نہیں ملا۔" },
+  sp_search_faq: { en: "Search FAQs...", rm: "Sawal dhoondein...", ur: "سوال ڈھونڈیں..." },
+  sp_no_testimonials: { en: "No testimonials yet.", rm: "Abhi koi baat darj nahi.", ur: "ابھی کوئی بات درج نہیں۔" },
+  sp_testimonials_lead: {
+    en: "Real stories from farmers, dealers, and partners across Pakistan.",
+    rm: "Poore Pakistan ke kisanon, dealeron aur sathiyon ki apni baatein.",
+    ur: "پورے پاکستان کے کسانوں، ڈیلروں اور ساتھیوں کی اپنی باتیں۔",
+  },
+
+  // ---- Crop Doctor ----
+  sp_doctor_title: { en: "AI Crop Doctor", rm: "AI Crop Doctor", ur: "اے آئی کراپ ڈاکٹر" },
+  sp_doctor_offline: {
+    en: "AI Crop Doctor is not connected yet — please contact the system administrator.",
+    rm: "AI Crop Doctor abhi juri nahi — system administrator se raabta karein.",
+    ur: "اے آئی کراپ ڈاکٹر ابھی جڑی نہیں — سسٹم ایڈمنسٹریٹر سے رابطہ کریں۔",
+  },
+  sp_diagnose: { en: "Diagnose", rm: "Jaanch karein", ur: "جانچ کریں" },
+  sp_diagnosing: { en: "Diagnosing...", rm: "Jaanch ho rahi hai...", ur: "جانچ ہو رہی ہے..." },
+  sp_tap_upload: { en: "Tap to upload a photo of the affected crop", rm: "Kharab fasal ki tasveer bhejne ke liye yahan dabayein", ur: "خراب فصل کی تصویر بھیجنے کے لیے یہاں دبائیں" },
+  sp_photo_hint: { en: "JPG or PNG, a clear close-up works best", rm: "JPG ya PNG — qareeb se li hui saaf tasveer sab se behtar", ur: "جے پی جی یا پی این جی — قریب سے لی ہوئی صاف تصویر سب سے بہتر" },
+  sp_uploaded_crop: { en: "Uploaded crop", rm: "Bheji hui fasal", ur: "بھیجی ہوئی فصل" },
+  sp_treatment: { en: "Treatment", rm: "Ilaj", ur: "علاج" },
+  sp_spray_schedule: { en: "Spray Schedule", rm: "Spray ka nizam-ul-auqat", ur: "سپرے کا شیڈول" },
+
+  // ---- Chat widgets ----
+  sp_assistant: { en: "AgriBridge Assistant", rm: "AgriBridge Assistant", ur: "ایگری بریج اسسٹنٹ" },
+  sp_open_chat: { en: "Open chat assistant", rm: "Chat assistant kholein", ur: "چیٹ اسسٹنٹ کھولیں" },
+  sp_ask_question: { en: "Ask a question...", rm: "Koi sawal poochein...", ur: "کوئی سوال پوچھیں..." },
+  sp_typing: { en: "Typing...", rm: "Likh raha hai...", ur: "لکھ رہا ہے..." },
+  sp_open_page: { en: "Open page →", rm: "Safha kholein →", ur: "صفحہ کھولیں ←" },
+  sp_investment_assistant: { en: "Investment Assistant", rm: "Sarmayakari ka assistant", ur: "سرمایہ کاری کا اسسٹنٹ" },
+  sp_start_conversation: { en: "Start a Conversation", rm: "Baat shuru karein", ur: "بات شروع کریں" },
+  sp_ask_anything: { en: "Ask anything, such as:", rm: "Kuch bhi poochein, jaise:", ur: "کچھ بھی پوچھیں، جیسے:" },
+  sp_write_question: { en: "Write your question...", rm: "Apna sawal likhein...", ur: "اپنا سوال لکھیں..." },
+
+  // ---- Newsletter ----
+  sp_subscribed: { en: "Subscribed! Thank you.", rm: "Naam darj ho gaya. Shukriya.", ur: "نام درج ہو گیا۔ شکریہ۔" },
 } as const;

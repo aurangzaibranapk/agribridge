@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ const STATIC_SERVICES = [
 ];
 
 export default async function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const q = (searchParams.q ?? "").trim();
   const supabase = createClient();
 
@@ -30,26 +33,26 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
     <div className="mx-auto max-w-3xl px-4 py-16">
       <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">Search Results {q && <span className="text-surface-400">for &ldquo;{q}&rdquo;</span>}</h1>
 
-      {!q && <p className="mt-4 text-sm text-surface-500 dark:text-surface-400">Type something in the search bar to get started.</p>}
-      {q && !hasResults && <p className="mt-4 text-sm text-surface-500 dark:text-surface-400">No results found. Try the Contact page if you need direct help.</p>}
+      {!q && <p className="mt-4 text-sm text-surface-500 dark:text-surface-400">{t("sp_search_start", lang)}</p>}
+      {q && !hasResults && <p className="mt-4 text-sm text-surface-500 dark:text-surface-400">{t("sp_no_results", lang)}</p>}
 
       {(products?.length ?? 0) > 0 && (
-        <ResultSection title="Products">
+        <ResultSection title={t("sp_products", lang)}>
           {products!.map((p) => <Link key={p.id} href={`/products`} className="block rounded-card border border-surface-200 bg-white p-3 text-sm hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-200">{p.name} {p.pack_size && <span className="text-surface-400">({p.pack_size})</span>}</Link>)}
         </ResultSection>
       )}
       {services.length > 0 && (
-        <ResultSection title="Services">
+        <ResultSection title={t("sp_services", lang)}>
           {services.map((s) => <Link key={s.title} href={s.url} className="block rounded-card border border-surface-200 bg-white p-3 text-sm hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-200"><span className="font-medium">{s.title}</span> — {s.text}</Link>)}
         </ResultSection>
       )}
       {(posts?.length ?? 0) > 0 && (
-        <ResultSection title="Blog">
+        <ResultSection title={t("sp_blog", lang)}>
           {posts!.map((p) => <Link key={p.id} href={`/blog/${p.slug}`} className="block rounded-card border border-surface-200 bg-white p-3 text-sm hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-200">{p.title}</Link>)}
         </ResultSection>
       )}
       {(faqs?.length ?? 0) > 0 && (
-        <ResultSection title="FAQ">
+        <ResultSection title={t("sf_faq", lang)}>
           {faqs!.map((f) => <Link key={f.id} href="/faq" className="block rounded-card border border-surface-200 bg-white p-3 text-sm hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-200">{f.question}</Link>)}
         </ResultSection>
       )}
