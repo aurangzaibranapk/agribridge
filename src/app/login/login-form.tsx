@@ -41,11 +41,11 @@ function FacebookIcon() {
  * waqt yehi mehsoos karta ke wo kisi aur nizam mein aa gaya.
  */
 const FIELD =
-  "h-12 rounded-xl border-surface-200 bg-white px-4 text-[15px] shadow-sm placeholder:text-surface-400";
+  "h-11 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm placeholder:text-surface-400";
 const BIG_BTN =
-  "h-12 w-full rounded-xl text-[15px] font-semibold tracking-wide shadow-sm";
+  "h-11 w-full rounded-xl text-[15px] font-semibold tracking-wide shadow-sm";
 const SOCIAL_BTN =
-  "flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-surface-200 bg-white text-sm font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50";
+  "flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-surface-200 bg-white text-[13px] font-medium text-surface-700 transition-colors hover:border-surface-300 hover:bg-surface-50";
 
 export function LoginForm() {
   const lang = useLang();
@@ -281,19 +281,10 @@ function SendIcon() {
   );
 }
 
-function ShieldIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 function WhatsAppMark() {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]">
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="white">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]">
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="white">
         <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.5 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.6.1.2.6 1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.7.8c.3.1.4.2.5.3.1.2.1.6-.1 1Z" />
       </svg>
     </span>
@@ -302,8 +293,8 @@ function WhatsAppMark() {
 
 function SmsMark() {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4A7856]">
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#4A7856]">
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.7-5a8.4 8.4 0 0 1-.7-3.4 8.4 8.4 0 0 1 9-8.5 8.4 8.4 0 0 1 8 7.4Z" />
       </svg>
     </span>
@@ -528,27 +519,27 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
 
   /* ---------------- Pehla safha ---------------- */
 
-  const channelCard = (value: "whatsapp" | "sms", mark: React.ReactNode, title: string, note: string) => (
+  // Raaste ka chunav ab BARA CARD nahi, chhoti patti hai -- aur mobile ke
+  // khane ke saath juri hui.
+  //
+  // Do wajah. Ek: wo chunav sirf mobile par lagta hai (email par code
+  // email hi par jayega), is liye us ka ghar wahi hai; alag dabbe mein
+  // rakhne se wo ek nayi cheez lagta tha. Do: bare card mein naam kat
+  // rahe the -- "Send o..." aur "Send b..." -- aur kata hua naam har
+  // jagah kata hua hi rehta, chahe zaban koi bhi ho.
+  const channelChip = (value: "whatsapp" | "sms", mark: React.ReactNode, title: string) => (
     <button
       type="button"
       onClick={() => setChannel(value)}
       aria-pressed={channel === value}
-      className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[12.5px] font-medium transition-colors ${
         channel === value
-          ? "border-[#1E4A2E] bg-[#F1F7F2]"
-          : "border-surface-200 bg-white hover:border-surface-300"
+          ? "border-[#1E4A2E] bg-[#F1F7F2] text-[#1E4A2E]"
+          : "border-surface-200 bg-white text-surface-500 hover:border-surface-300"
       }`}
     >
       {mark}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold text-surface-800">{title}</span>
-        <span className="block truncate text-[11px] text-surface-500">{note}</span>
-      </span>
-      <span
-        className={`h-4 w-4 shrink-0 rounded-full border-2 ${
-          channel === value ? "border-[#1E4A2E] bg-[#1E4A2E] ring-2 ring-inset ring-white" : "border-surface-300"
-        }`}
-      />
+      {title}
     </button>
   );
 
@@ -564,7 +555,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
           setAsking(true);
           askAction(fd);
         }}
-        className="space-y-4"
+        className="space-y-3"
       >
         {(askState.error || emailError) && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error ?? emailError}</p>
@@ -590,7 +581,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
               name="cc"
               defaultValue="+92"
               aria-label="Country code"
-              className="h-12 shrink-0 rounded-xl border border-surface-200 bg-white px-3 text-[15px] text-surface-700 shadow-sm"
+              className="h-11 shrink-0 rounded-xl border border-surface-200 bg-white px-2.5 text-[15px] text-surface-700 shadow-sm"
             >
               <option value="+92">+92</option>
             </select>
@@ -605,11 +596,20 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
               className={`${FIELD} flex-1`}
             />
           </div>
-          <p className="mt-1.5 text-xs text-surface-400">{t("au_mobile_userid_help", lang)}</p>
+          {/* Chunav yahin, khane ke neeche. Email likha ho to ye ghayab
+              ho jata hai -- us waqt sawal hi nahi banta. */}
+          {!usingEmail && (
+            <div className="mt-2 flex gap-1.5">
+              <input type="hidden" name="channel" value={channel} />
+              {channelChip("whatsapp", <WhatsAppMark />, "WhatsApp")}
+              {channelChip("sms", <SmsMark />, "SMS")}
+            </div>
+          )}
+          <p className="mt-1.5 text-[11px] leading-snug text-surface-400">{t("au_mobile_userid_help", lang)}</p>
         </div>
 
         {/* ---- YA ---- */}
-        <div className="relative py-1">
+        <div className="relative py-0.5">
           <div className="absolute inset-x-0 top-1/2 h-px bg-surface-200" />
           <div className="relative mx-auto flex h-7 w-9 items-center justify-center rounded-full border border-surface-200 bg-white text-[11px] font-semibold text-surface-500">
             {t("au_ya", lang)}
@@ -634,35 +634,18 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
             placeholder="example@email.com"
             className={FIELD}
           />
-          <p className="mt-1.5 text-xs text-surface-400">{t("au_email_userid_help", lang)}</p>
+          <p className="mt-1.5 text-[11px] leading-snug text-surface-400">{t("au_email_userid_help", lang)}</p>
         </div>
 
-        {/* ---- Raaste ka chunav ----
-            Sirf mobile ke liye. Email likha ho to code email par hi
-            jayega -- us waqt WhatsApp/SMS ka sawal hi nahi banta, is
-            liye ye khana wahan dikhta hi nahi. Dikhta rehta to banda
-            chunav karta aur us ka koi asar na hota. */}
-        {!usingEmail && (
-          <div className="rounded-xl border border-surface-200 bg-surface-50/70 p-3">
-            <p className="mb-2 text-[13px] font-medium text-surface-700">{t("au_pick_channel", lang)}</p>
-            <input type="hidden" name="channel" value={channel} />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {channelCard("whatsapp", <WhatsAppMark />, t("au_via_whatsapp", lang), t("au_via_whatsapp_note", lang))}
-              {channelCard("sms", <SmsMark />, t("au_via_sms", lang), t("au_via_sms_note", lang))}
-            </div>
-          </div>
-        )}
-
+        {/* Dhaal wala jumla yahan se hata diya gaya. Wohi baat daayen
+            taraf ke card mein pehle se likhi hai, aur do jagah likhne
+            se safha lamba hota hai -- itna ke card screen se bahar
+            nikal jata tha. */}
         <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." icon={<SendIcon />} pending={emailBusy || asking} />
-
-        <p className="flex items-start gap-1.5 rounded-lg bg-[#F1F7F2] px-3 py-2 text-[11.5px] leading-relaxed text-[#3F5C46]">
-          <ShieldIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1E4A2E]" />
-          {t("au_channel_hint", lang)}
-        </p>
       </form>
 
       {/* ---- ya phir: Google / Facebook ---- */}
-      <div className="mt-5 flex items-center gap-3">
+      <div className="mt-4 flex items-center gap-3">
         <div className="h-px flex-1 bg-surface-200" />
         <span className="text-xs font-medium text-surface-400">{t("au_or_then", lang)}</span>
         <div className="h-px flex-1 bg-surface-200" />
@@ -670,7 +653,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
 
       <SocialButtons />
 
-      <p className="mt-4 text-center text-sm text-surface-600">
+      <p className="mt-3 text-center text-[13px] text-surface-600">
         {t("au_not_member", lang)}{" "}
         <Link href="/register" className="font-semibold text-[#1E4A2E] hover:underline">
           {t("au_register_now", lang)}
@@ -682,7 +665,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
           naye kisan ke paas hota hi nahi, is liye usay upar rakhna
           usay wahin rok deta. Password wala raasta us gahak ke liye
           hai jis ne khata email aur password se banaya tha. */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-surface-100 pt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-surface-100 pt-2.5">
         <button type="button" onClick={onUsername} className="text-[11px] font-medium text-surface-400 hover:text-[#1E4A2E] hover:underline">
           {t("au_have_user_id", lang)}
         </button>
@@ -713,7 +696,7 @@ function SocialButtons() {
   }
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+    <div className="mt-3 grid grid-cols-2 gap-2">
       <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
         <GoogleIcon />
         {t("au_with_google", lang)}

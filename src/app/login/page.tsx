@@ -19,7 +19,7 @@ export default function LoginPage() {
   const lang = getLanguageFromCookies("ur");
   return (
     <LangProvider lang={lang}>
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-10">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#C9A227]/10 blur-3xl" />
         <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-[#1E4A2E]/40 blur-3xl" />
@@ -76,9 +76,9 @@ export default function LoginPage() {
 
       <div className="relative flex w-full max-w-sm flex-col items-stretch lg:max-w-4xl lg:flex-row lg:items-start lg:justify-center lg:gap-8">
         <div className="w-full lg:max-w-sm">
-        <div className="mb-7 text-center">
-          <div className="mx-auto mb-4">
-            <svg width="72" height="80" viewBox="0 0 220 260" className="mx-auto">
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3">
+            <svg width="56" height="62" viewBox="0 0 220 260" className="mx-auto">
               <defs>
                 <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#F3D98B" />
@@ -104,12 +104,12 @@ export default function LoginPage() {
               </g>
             </svg>
           </div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
           <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E8C767]">{t("au_brand", lang)}</p>
-          <p className="mt-2 text-sm text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
+          <p className="mt-1.5 text-[13px] text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
         </div>
 
-        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-7">
+        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-6">
           {/* Band karne ka nishan.
               Login ho jaye to ye khud hat jata hai -- kyunke tab safha
               hi badal jata hai. Aur agar banda login nahi karna chahta
@@ -131,15 +131,12 @@ export default function LoginPage() {
           <Suspense fallback={null}>
             <LoginForm />
           </Suspense>
-          {/* Purana link "Naye farmer hain? Yahan register karein"
-              hata diya gaya. Wo email aur password wale safhe par le
-              jata tha -- ek aisi cheez maangne jo kisan ke paas hai hi
-              nahi. Ab naye kisan ka raasta wohi hai jo purane ka hai:
-              Kisan wale khane mein apna number likhein, OTP aaye, aur
-              khata usi waqt ban jaye (197). */}
-          <p className="mt-5 text-center text-xs leading-relaxed text-[#6B7B6E]">{t("au_new_farmer_above", lang)}<span className="font-medium text-[#1E4A2E]">{t("au_farmer_customer", lang)}</span> chun kar apna
-            mobile number likhein — khata khud ban jayega.
-          </p>
+          {/* Yahan pehle "naye kisan upar wala khana chunein" wala
+              jumla likha tha. Ab wo bemaani hai: form ke andar hi
+              "Member nahi hain? Register karein" maujood hai, aur naya
+              kisan waise bhi apna number likh kar seedha andar aa jata
+              hai (197). Do jagah ek hi baat likhne se safha lamba hota
+              tha -- itna ke card screen se bahar nikal jata. */}
         </div>
         </div>
 
@@ -150,8 +147,8 @@ export default function LoginPage() {
 
             Chhoti screen par ye form ke NEECHE aata hai, uper nahi:
             mobile par pehli cheez wohi honi chahiye jo bharni hai. */}
-        <aside className="mt-6 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-5 backdrop-blur-sm lg:mt-24 lg:max-w-xs">
-          <ul className="space-y-4">
+        <aside className="mt-5 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-4 backdrop-blur-sm lg:mt-20 lg:max-w-[17rem]">
+          <ul className="space-y-3">
             {[
               { icon: <ChatMark />, title: t("au_tip_channel_title", lang), body: t("au_tip_channel_body", lang) },
               { icon: <RefreshMark />, title: t("au_tip_resend_title", lang), body: t("au_tip_resend_body", lang) },
@@ -172,7 +169,7 @@ export default function LoginPage() {
       {/* Neeche ki patti. Ye bechne wali baat nahi hai -- ye us bande ke
           liye hai jo pehli dafa apna number kisi website par likh raha
           hai aur jhijak raha hai. */}
-      <div className="relative mt-10 w-full max-w-4xl border-t border-white/10 pt-5">
+      <div className="relative mt-8 w-full max-w-4xl border-t border-white/10 pt-4">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-center sm:grid-cols-4 sm:text-left">
           {[
             { icon: <ShieldMark />, title: t("au_foot_safe", lang), sub: t("au_foot_safe_sub", lang) },

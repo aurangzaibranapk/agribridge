@@ -71,15 +71,18 @@ export const authDict = {
   // ---- Login ka darwaza: dono User ID, aur raaste ka chunav ----
   au_mobile_userid: { en: "Mobile Number (User ID)", rm: "Mobile Number (User ID)", ur: "موبائل نمبر (یوزر آئی ڈی)" },
   au_email_userid: { en: "Email (User ID)", rm: "Email (User ID)", ur: "ای میل (یوزر آئی ڈی)" },
+  // Raasta ab neeche wali patti mein khud nazar aata hai, is liye us ka
+  // zikr yahan se hata diya -- ek hi baat do jagah likhne se safha lamba
+  // hota tha aur card screen se bahar nikal jata.
   au_mobile_userid_help: {
-    en: "This is your User ID. The OTP arrives on WhatsApp or SMS.",
-    rm: "Ye aap ka User ID hoga. OTP WhatsApp ya SMS par aayega.",
-    ur: "یہ آپ کی یوزر آئی ڈی ہوگی۔ او ٹی پی واٹس ایپ یا ایس ایم ایس پر آئے گا۔",
+    en: "This will be your User ID.",
+    rm: "Ye aap ka User ID hoga.",
+    ur: "یہ آپ کی یوزر آئی ڈی ہوگی۔",
   },
   au_email_userid_help: {
-    en: "Your email can be your User ID too. The OTP arrives by email.",
-    rm: "Email bhi aap ka User ID ho sakta hai. OTP email par aayega.",
-    ur: "ای میل بھی آپ کی یوزر آئی ڈی ہو سکتی ہے۔ او ٹی پی ای میل پر آئے گا۔",
+    en: "Also a User ID — the code arrives by email.",
+    rm: "Ye bhi User ID hai — code email par aayega.",
+    ur: "یہ بھی یوزر آئی ڈی ہے — کوڈ ای میل پر آئے گا۔",
   },
   au_pick_channel: { en: "Choose how to send the OTP", rm: "OTP bhejne ka tareeqa chunain", ur: "او ٹی پی بھیجنے کا طریقہ چنیں" },
   au_via_whatsapp: { en: "Send on WhatsApp", rm: "WhatsApp par bhejein", ur: "واٹس ایپ پر بھیجیں" },
