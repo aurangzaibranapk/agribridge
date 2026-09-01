@@ -15155,6 +15155,7 @@ export type Database = {
           selling_price: number
           shop_id: string | null
           show_expiry_to_customer: boolean
+          trade_rate_pending: boolean
           unit: string | null
           updated_at: string
           usage_instructions: string | null
@@ -15188,6 +15189,7 @@ export type Database = {
           selling_price?: number
           shop_id?: string | null
           show_expiry_to_customer?: boolean
+          trade_rate_pending?: boolean
           unit?: string | null
           updated_at?: string
           usage_instructions?: string | null
@@ -15221,6 +15223,7 @@ export type Database = {
           selling_price?: number
           shop_id?: string | null
           show_expiry_to_customer?: boolean
+          trade_rate_pending?: boolean
           unit?: string | null
           updated_at?: string
           usage_instructions?: string | null

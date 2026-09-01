@@ -12,7 +12,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 type ProductRow = {
-  id: string; name: string; pack_size: string | null; purchase_price: number; selling_price: number;
+  id: string; name: string; pack_size: string | null; purchase_price: number; selling_price: number; trade_rate_pending: boolean;
   is_available: boolean; is_verified: boolean; image_url: string | null; categories: { name: string } | null; brands: { name: string } | null;
 };
 export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
@@ -29,7 +29,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
 
   let query = supabase
     .from("products")
-    .select("id, name, pack_size, purchase_price, selling_price, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
+    .select("id, name, pack_size, purchase_price, selling_price, trade_rate_pending, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
     .eq("is_deleted", false);
   if (q) query = query.ilike("name", `%${q}%`);
   const { data: products, count } = await query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
@@ -50,7 +50,19 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
     },
     { header: "Category", accessor: (p) => p.categories?.name ?? "-" },
     { header: "Brand", accessor: (p) => p.brands?.name ?? "-" },
-    { header: "Purchase Price", accessor: (p) => formatCurrency(p.purchase_price), className: "text-right" },
+    // Jis ka trade rate abhi bhara hi nahi, us ke saamne Rs 0 likhna
+    // jhoot hai -- aur us par munafa sau feesad dikhta hai. "Sifar" aur
+    // "hisaab nahi rakha gaya" ek cheez nahi (241).
+    {
+      header: "Purchase Price",
+      accessor: (p) =>
+        p.trade_rate_pending ? (
+          <span className="text-amber-700">— baqi</span>
+        ) : (
+          formatCurrency(p.purchase_price)
+        ),
+      className: "text-right",
+    },
     { header: "Selling Price", accessor: (p) => formatCurrency(p.selling_price), className: "text-right" },
     {
       header: "Status",
