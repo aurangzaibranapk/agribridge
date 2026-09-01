@@ -1,5 +1,23 @@
 # AgriBridge — kaam karne ka tareeqa
 
+## Command: HAMESHA saari, ek sath, chat mein
+
+Malik ka usool (unhi ke alfaz): *"jab main system par nahi hota, main
+kaam karwa raha hota hon. Jab main bolon main system par aa gaya — tab
+tak tumhara haq banta hai, total command chat mein bhej diya karein."*
+
+Yani:
+
+- **Poore kaam ki saari command EK SATH** — ek de kar doosre ka intezar
+  nahi karana. Backup se le kar upload tak, sab ek hi paighaam mein.
+- **Chat mein, file mein nahi.** Wo chat se copy kar ke apni machine par
+  paste karte hain. File bana kar bhejne se wo raasta tootta hai.
+- Jahan tarteeb ahem ho (mesalan "pehle ye, phir mujhe batayein, phir
+  wo"), wahan **rukne ki jagah saaf likhein** — magar command phir bhi
+  saari pehle hi de dein.
+- Wo aksar system par nahi hote. Us waqt bhi kaam rukta nahi — command
+  taiyar rakhein taake baithte hi chala sakein.
+
 ## Deploy: HAMESHA dono command ek sath dein
 
 Malik apne computer par khud build kar ke cPanel par upload karte hain.
