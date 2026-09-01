@@ -70,6 +70,47 @@ Aap ke teen faisle jin par ye bana:
 
 ---
 
+## 1c. Testing ka intezar — HR Hazri ka nizam (migration 231-236)
+
+Poora nizam ban gaya hai, **sirf testing database par**. Live par
+aap ki haan ke baghair kuch nahi jayega.
+
+Testing ki qadam ba qadam fehrist: `docs/HR-HAZRI-TESTING.md`
+
+**Kya bana:**
+
+| Safha | Kya karta hai |
+|---|---|
+| `/admin/hr/attendance` | Mahine ka calendar. Din par click — waqt, der, kahan se, aur "kya kya badla". Wahin se darkhwast aur (afsar ko) hazri lagana. |
+| `/admin/hr/attendance/board` | Aaj ka board + "dhyan chahiye" ke chaar adad. |
+| `/admin/hr/corrections` | Afsar ke paas aayi darkhwastein — purana aur naya sath sath. |
+| `/admin/hr/team` | Kaun kis ko report karta hai (darakht ki shakl mein). |
+| `/admin/hr/settings` | Kaam ka waqt, hafte ki chhutti, Eid ki chhutti, mahine ka taala. |
+| `/admin/my-attendance` | Check-in/out + is mahine ka apna hisaab + apni darkhwastein. |
+
+**Teen puraani ghaltiyan jo isi kaam mein pakRi gayin:**
+
+1. **Hazri chupke se badal jati thi.** `markAttendance` seedha upsert
+   karta tha — purani qeemat, badalne wala, aur wajah teenon gayab.
+   Ab har tabdeeli `attendance_audit` mein girti hai (trigger se, code
+   se nahi), aur mitane ka koi raasta kisi ke paas nahi.
+
+2. **Check-out do dafa dabane par do din ki dihari chaRh jati thi.**
+   Ab check-out ek hi dafa lagta hai.
+
+3. **'hr' role ko apne hi module mein kuch nazar nahi aata tha.**
+   `profiles` ki policy `fn_is_staff()` par thi, jo sirf 4 roles jaanta
+   hai — `hr` un mein hai hi nahi. Yani HR ka banda staff ki fehrist
+   kholta to khali milti — na ghalti, na paighaam. Ab `fn_is_any_staff()`
+   par hai. (Tankhwah phir bhi har kisi ko nazar nahi aati: manager ke
+   liye alag darwaza hai jis mein tankhwah ka khana hai hi nahi.)
+
+**Jo jaan boojh kar abhi nahi bana:** biometric machine ka raasta,
+offline sync wali app, overtime ka usool, chhutti ka saalana kota.
+Wajahein `docs/HR-HAZRI-TESTING.md` ke section 8 mein likhi hain.
+
+---
+
 ## 2. Feature #2 — Sidebar-Free Dashboards
 
 **Faisla ho chuka hai (locked). Audit ho chuka hai. Banana baqi hai.**

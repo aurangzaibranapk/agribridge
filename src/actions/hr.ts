@@ -33,28 +33,26 @@ export async function saveStaffDetails(_prev: ActionState, formData: FormData): 
   return { success: true };
 }
 
-export async function markAttendance(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const profileId = String(formData.get("profile_id") ?? "");
-  const date = String(formData.get("attendance_date") ?? "");
-  const status = String(formData.get("status") ?? "present");
-  if (!profileId || !date) return { error: "Staff aur date zaroori hain." };
-
-  const { error } = await supabase.from("attendance_records").upsert(
-    {
-      profile_id: profileId,
-      attendance_date: date,
-      status,
-      check_in: (formData.get("check_in") as string) || null,
-      check_out: (formData.get("check_out") as string) || null,
-      notes: (formData.get("notes") as string) || null,
-    },
-    { onConflict: "profile_id,attendance_date" }
-  );
-  if (error) return { error: error.message };
-
-  revalidatePath("/admin/hr");
-  return { success: true };
+/**
+ * Hazri lagana -- ab yahan se nahi.
+ *
+ * Pehle ye seedha upsert karta tha: agar us din ka record maujood tha
+ * to naya usay MITA kar aage baRh jata tha. Kaun tha, kya tha, kis ne
+ * badla, kyun -- kisi ka jawab nahi bachta tha.
+ *
+ * Ab wo kaam managerSetAttendance (hr-attendance.ts) karta hai, jahan
+ * wajah lazmi hai, reporting ki hadd lagti hai, band mahina roka jata
+ * hai, aur purani qeemat attendance_audit mein reh jati hai.
+ *
+ * Ye function jaan boojh kar chhoRa gaya hai magar khali nahi: agar
+ * kahin purana form bacha ho to wo chup chaap hazri na badal de, balke
+ * saaf keh de ke ab raasta kaun sa hai.
+ */
+export async function markAttendance(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+  return {
+    error:
+      "Hazri ab yahan se nahi lagti. Attendance Calendar kholein — wahan din par click kar ke, wajah likh kar hazri lagti hai, aur purani qeemat record par mehfooz rehti hai.",
+  };
 }
 
 export async function recordSalaryPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -68,6 +66,40 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
   const advanceDeduction = Number(formData.get("advance_deduction") ?? 0);
 
   if (!profileId || !payMonth || !payYear) return { error: "Staff, month aur year zaroori hain." };
+
+  // ---------------------------------------------------------------
+  // Hazri band hui ya nahi -- ye poochhna LAZMI hai
+  // ---------------------------------------------------------------
+  // Spec ka saaf hukm: payroll sirf mukammal hazri par bane, aur agar
+  // koi darkhwast abhi zer-e-ghaur ho to pehle us par khabardar kare.
+  //
+  // Ye rok "block" nahi, "poochh kar aage" hai: kabhi kabhi tankhwah
+  // waqt par deni paRti hai. Magar us soorat mein wo faisla SOCH KAR
+  // hota hai, ittefaqan nahi -- aur form par nishan reh jata hai.
+  const { data: monthRows, error: monthErr } = await supabase.rpc("fn_attendance_month_summary", {
+    p_profile: profileId,
+    p_year: payYear,
+    p_month: payMonth,
+  });
+
+  const m = monthRows?.[0] ?? null;
+
+  if (monthErr || !m) {
+    // "Parha nahi ja saka" ko "sab theek hai" nahi samjha jata.
+    return {
+      error:
+        "Is mahine ki hazri parhi nahi ja saki, is liye tankhwah nahi banai. Hazri Calendar kholein aur dobara koshish karein.",
+    };
+  }
+
+  if ((!m.is_finalized || m.open_items > 0) && formData.get("ack_unfinalized") !== "yes") {
+    const bits: string[] = [];
+    if (!m.is_finalized) bits.push("ye mahina abhi band nahi hua");
+    if (m.open_items > 0) bits.push(`${m.open_items} darkhwastein abhi zer-e-ghaur hain`);
+    return {
+      error: `Hazri mukammal nahi: ${bits.join(", ")}. Pehle mahina band karein — ya form par "hazri adhoori hai, phir bhi banayein" par nishan lagayein.`,
+    };
+  }
 
   const netSalary = basicSalary + bonus - deductions - advanceDeduction;
 
@@ -182,17 +214,34 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
   const lng = formData.get("lng") ? Number(formData.get("lng")) : null;
 
-  const { error } = await supabase.from("attendance_records").upsert(
-    {
-      profile_id: user.id,
-      attendance_date: today,
-      status: "present",
-      check_in_at: now,
-      check_in_lat: lat,
-      check_in_lng: lng,
-    },
-    { onConflict: "profile_id,attendance_date" }
-  );
+  // Upsert JAAN BOOJH KAR nahi. Agar us din ka record pehle se hai --
+  // manzoor shuda chhutti, ya afsar ki lagayi hazri -- to upsert usay
+  // chup chaap "present" bana deta tha. Ab record maujood ho to check-in
+  // rukta hai aur wajah batata hai.
+  const { data: already } = await supabase
+    .from("attendance_records")
+    .select("status, check_in_at, source")
+    .eq("profile_id", user.id)
+    .eq("attendance_date", today)
+    .maybeSingle();
+
+  if (already) {
+    if (already.check_in_at) return { error: "Aaj ka check-in pehle ho chuka hai." };
+    if (already.source === "leave") {
+      return { error: "Aaj aap ki manzoor shuda chhutti hai. Aaye hain to HR ko batayein — wohi is din ko badal sakte hain." };
+    }
+    return { error: `Aaj ka record pehle se maujood hai (${already.status}). Badalne ke liye darkhwast dein.` };
+  }
+
+  const { error } = await supabase.from("attendance_records").insert({
+    profile_id: user.id,
+    attendance_date: today,
+    status: "present",
+    source: "web",
+    check_in_at: now,
+    check_in_lat: lat,
+    check_in_lng: lng,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/admin/my-attendance");
@@ -216,12 +265,22 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
   const lng = formData.get("lng") ? Number(formData.get("lng")) : null;
 
-  const { error } = await supabase
+  // .eq("check_out_at", null) ki jagah .is(...) -- aur ye shart hi wo
+  // cheez hai jo dobara check-out par dobara dihari chaRhne se rokti
+  // hai. Bina is ke button do dafa dabana do din ki dihari bana deta
+  // tha, aur wo farq kisi kitab mein nazar nahi aata tha.
+  const { data: updated, error } = await supabase
     .from("attendance_records")
     .update({ check_out_at: now, check_out_lat: lat, check_out_lng: lng })
     .eq("profile_id", user.id)
-    .eq("attendance_date", today);
+    .eq("attendance_date", today)
+    .is("check_out_at", null)
+    .select("id");
   if (error) return { error: error.message };
+
+  if (!updated || updated.length === 0) {
+    return { error: "Aaj ka check-out pehle ho chuka hai — ya aaj ka check-in hi nahi hua." };
+  }
 
   const { data: staffDetails } = await supabase.from("staff_details").select("basic_salary").eq("profile_id", user.id).single();
   const basicSalary = Number(staffDetails?.basic_salary ?? 0);

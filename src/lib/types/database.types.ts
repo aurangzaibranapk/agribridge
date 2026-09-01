@@ -2094,10 +2094,17 @@ export type Database = {
           client_action_id: string | null
           created_at: string
           id: string
+          is_offline: boolean
+          last_change_reason: string | null
+          last_changed_by: string | null
+          late_minutes: number | null
           notes: string | null
           profile_id: string
           source: string
           status: Database["public"]["Enums"]["attendance_status"]
+          synced_at: string | null
+          updated_at: string
+          work_minutes: number | null
         }
         Insert: {
           attendance_date: string
@@ -2116,10 +2123,17 @@ export type Database = {
           client_action_id?: string | null
           created_at?: string
           id?: string
+          is_offline?: boolean
+          last_change_reason?: string | null
+          last_changed_by?: string | null
+          late_minutes?: number | null
           notes?: string | null
           profile_id: string
           source?: string
           status?: Database["public"]["Enums"]["attendance_status"]
+          synced_at?: string | null
+          updated_at?: string
+          work_minutes?: number | null
         }
         Update: {
           attendance_date?: string
@@ -2138,10 +2152,17 @@ export type Database = {
           client_action_id?: string | null
           created_at?: string
           id?: string
+          is_offline?: boolean
+          last_change_reason?: string | null
+          last_changed_by?: string | null
+          late_minutes?: number | null
           notes?: string | null
           profile_id?: string
           source?: string
           status?: Database["public"]["Enums"]["attendance_status"]
+          synced_at?: string | null
+          updated_at?: string
+          work_minutes?: number | null
         }
         Relationships: [
           {
@@ -2159,6 +2180,216 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      attendance_audit: {
+        Row: {
+          action: string
+          attendance_date: string
+          attendance_id: string | null
+          changed_at: string
+          changed_by: string | null
+          changed_fields: string[] | null
+          id: number
+          new_value: Json | null
+          old_value: Json | null
+          profile_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          attendance_date: string
+          attendance_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          profile_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          attendance_date?: string
+          attendance_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          profile_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      attendance_corrections: {
+        Row: {
+          applied_at: string | null
+          attendance_date: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          manager_comment: string | null
+          manager_id: string | null
+          original_snapshot: Json | null
+          profile_id: string
+          reason: string
+          requested_check_in: string | null
+          requested_check_out: string | null
+          requested_status: Database["public"]["Enums"]["attendance_status"]
+          status: string
+        }
+        Insert: {
+          applied_at?: string | null
+          attendance_date: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          manager_comment?: string | null
+          manager_id?: string | null
+          original_snapshot?: Json | null
+          profile_id: string
+          reason: string
+          requested_check_in?: string | null
+          requested_check_out?: string | null
+          requested_status: Database["public"]["Enums"]["attendance_status"]
+          status?: string
+        }
+        Update: {
+          applied_at?: string | null
+          attendance_date?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          manager_comment?: string | null
+          manager_id?: string | null
+          original_snapshot?: Json | null
+          profile_id?: string
+          reason?: string
+          requested_check_in?: string | null
+          requested_check_out?: string | null
+          requested_status?: Database["public"]["Enums"]["attendance_status"]
+          status?: string
+        }
+        Relationships: []
+      }
+      attendance_month_locks: {
+        Row: {
+          branch_id: string | null
+          id: string
+          lock_month: number
+          lock_year: number
+          locked_at: string
+          locked_by: string | null
+          note: string | null
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          id?: string
+          lock_month: number
+          lock_year: number
+          locked_at?: string
+          locked_by?: string | null
+          note?: string | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          id?: string
+          lock_month?: number
+          lock_year?: number
+          locked_at?: string
+          locked_by?: string | null
+          note?: string | null
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+        }
+        Relationships: []
+      }
+      hr_holidays: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          holiday_date: string
+          id: string
+          is_paid: boolean
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          holiday_date: string
+          id?: string
+          is_paid?: boolean
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          holiday_date?: string
+          id?: string
+          is_paid?: boolean
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      hr_work_schedules: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          half_day_max_minutes: number
+          id: string
+          is_active: boolean
+          late_grace_minutes: number
+          notes: string | null
+          shift_end: string
+          shift_start: string
+          updated_at: string
+          weekly_off_days: number[]
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          half_day_max_minutes?: number
+          id?: string
+          is_active?: boolean
+          late_grace_minutes?: number
+          notes?: string | null
+          shift_end?: string
+          shift_start?: string
+          updated_at?: string
+          weekly_off_days?: number[]
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          half_day_max_minutes?: number
+          id?: string
+          is_active?: boolean
+          late_grace_minutes?: number
+          notes?: string | null
+          shift_end?: string
+          shift_start?: string
+          updated_at?: string
+          weekly_off_days?: number[]
+        }
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -9387,7 +9618,10 @@ export type Database = {
           decision_note: string | null
           from_date: string
           id: string
+          is_half_day: boolean
           leave_type: string
+          manager_comment: string | null
+          manager_id: string | null
           profile_id: string
           reason: string
           status: string
@@ -9401,7 +9635,10 @@ export type Database = {
           decision_note?: string | null
           from_date: string
           id?: string
+          is_half_day?: boolean
           leave_type?: string
+          manager_comment?: string | null
+          manager_id?: string | null
           profile_id: string
           reason: string
           status?: string
@@ -9415,7 +9652,10 @@ export type Database = {
           decision_note?: string | null
           from_date?: string
           id?: string
+          is_half_day?: boolean
           leave_type?: string
+          manager_comment?: string | null
+          manager_id?: string | null
           profile_id?: string
           reason?: string
           status?: string
@@ -16842,12 +17082,15 @@ export type Database = {
           bank_account: string | null
           basic_salary: number | null
           blood_group: string | null
+          branch_id: string | null
           cnic: string | null
           created_at: string
+          department_key: string | null
           designation: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employee_code: string | null
+          employment_type: string
           hire_date: string | null
           id: string
           is_active: boolean
@@ -16856,6 +17099,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           profile_id: string
+          reports_to: string | null
           whatsapp_number: string | null
           whatsapp_verified_at: string | null
         }
@@ -16864,12 +17108,15 @@ export type Database = {
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
+          branch_id?: string | null
           cnic?: string | null
           created_at?: string
+          department_key?: string | null
           designation?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_code?: string | null
+          employment_type?: string
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -16878,6 +17125,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           profile_id: string
+          reports_to?: string | null
           whatsapp_number?: string | null
           whatsapp_verified_at?: string | null
         }
@@ -16886,12 +17134,15 @@ export type Database = {
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
+          branch_id?: string | null
           cnic?: string | null
           created_at?: string
+          department_key?: string | null
           designation?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_code?: string | null
+          employment_type?: string
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -16900,6 +17151,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           profile_id?: string
+          reports_to?: string | null
           whatsapp_number?: string | null
           whatsapp_verified_at?: string | null
         }
@@ -22169,6 +22421,104 @@ export type Database = {
       fn_bump_farmer_code_counter: {
         Args: { p_number: number }
         Returns: undefined
+      }
+      fn_attendance_calendar: {
+        Args: { p_month: number; p_profile: string; p_year: number }
+        Returns: {
+          changes_count: number
+          check_in: string
+          check_out: string
+          correction_id: string
+          holiday_name: string
+          is_holiday: boolean
+          is_weekly_off: boolean
+          late_minutes: number
+          leave_pending: boolean
+          notes: string
+          pending_correction: boolean
+          raw_status: string
+          source: string
+          state: string
+          the_date: string
+          work_minutes: number
+        }[]
+      }
+      fn_attendance_month_summary: {
+        Args: { p_month: number; p_profile: string; p_year: number }
+        Returns: {
+          absent_days: number
+          half_days: number
+          holiday_days: number
+          is_finalized: boolean
+          late_count: number
+          late_minutes_total: number
+          missing_days: number
+          off_days: number
+          open_items: number
+          paid_leave_days: number
+          present_days: number
+          unpaid_leave_days: number
+          working_days: number
+          worked_minutes_total: number
+        }[]
+      }
+      fn_hr_can_decide_for: { Args: { p_target: string }; Returns: boolean }
+      fn_hr_can_view_staff: { Args: { p_target: string }; Returns: boolean }
+      fn_hr_needs_attention: {
+        Args: never
+        Returns: {
+          missing_days_7d: number
+          missing_punch_7d: number
+          pending_corrections: number
+          pending_leaves: number
+        }[]
+      }
+      fn_hr_schedule_for: {
+        Args: { p_profile: string }
+        Returns: {
+          half_day_max_minutes: number
+          late_grace_minutes: number
+          shift_end: string
+          shift_start: string
+          weekly_off_days: number[]
+        }[]
+      }
+      fn_hr_staff_directory: {
+        Args: never
+        Returns: {
+          branch_id: string
+          branch_name: string
+          department_key: string
+          department_label: string
+          designation: string
+          direct_reports: number
+          employment_type: string
+          full_name: string
+          hire_date: string
+          profile_id: string
+          reports_to: string
+          reports_to_name: string
+          role: string
+        }[]
+      }
+      fn_hr_team: {
+        Args: { p_manager: string }
+        Returns: { depth: number; profile_id: string }[]
+      }
+      fn_hr_today_board: {
+        Args: { p_date?: string }
+        Returns: {
+          check_in: string
+          check_out: string
+          department_key: string
+          designation: string
+          full_name: string
+          late_minutes: number
+          pending_correction: boolean
+          profile_id: string
+          source: string
+          state: string
+        }[]
       }
       fn_can_machinery: { Args: { p_action: string }; Returns: boolean }
       fn_create_farmer_otp: {

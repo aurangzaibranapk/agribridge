@@ -1,9 +1,9 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   saveStaffDetails,
-  markAttendance,
   recordSalaryPayment,
   markSalaryPaid,
   inviteStaffMember,
@@ -349,10 +349,20 @@ function EditStaffModal({ staff, onClose }: { staff: Staff; onClose: () => void 
   );
 }
 
+/**
+ * Hazri ab yahan se nahi lagti.
+ *
+ * Pehle ye modal seedha upsert karta tha: purani hazri par nayi likh kar
+ * guzar jata tha, bina wajah ke, bina nishan ke. Ab hazri Calendar se
+ * lagti hai -- wahan wajah lazmi hai, afsar ki hadd lagti hai, band
+ * mahina rukta hai, aur purani qeemat record par mehfooz rehti hai.
+ *
+ * Modal ko chup chaap hata dena theek nahi tha: jo banda ise roz istemal
+ * karta tha, usay ye maloom hona chahiye ke ab jana kahan hai.
+ */
 function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () => void }) {
   const lang = useLang();
-  const [state, formAction] = useFormState(markAttendance, initialState);
-  if (state.success) setTimeout(() => window.location.reload(), 800);
+  void staff;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -361,24 +371,15 @@ function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () =
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_mark_attendance", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        <form action={formAction} className="space-y-2">
-          <Select name="profile_id" required>
-            <option value="">{t("hr_pick_staff", lang)}</option>
-            {staff.map((s) => (
-              <option key={s.id} value={s.id}>{s.full_name}</option>
-            ))}
-          </Select>
-          <Input type="date" name="attendance_date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-          <Select name="status" required>
-            <option value="present">{t("hr_present", lang)}</option>
-            <option value="absent">{t("hr_absent", lang)}</option>
-            <option value="leave">{t("hr_leave", lang)}</option>
-            <option value="half_day">{t("hr_half_day", lang)}</option>
-          </Select>
-          <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
-          <SubmitButton label={t("hr_mark", lang)} />
-        </form>
+        <p className="mb-3 text-sm text-surface-600 dark:text-surface-300">
+          {t("hra_subtitle", lang)}
+        </p>
+        <Link
+          href="/admin/hr/attendance"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          {t("hra_title", lang)}
+        </Link>
       </div>
     </div>
   );
@@ -415,6 +416,13 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
           <Input type="number" step="0.01" name="deductions" placeholder={t("hr_deductions", lang)} />
           <Input type="number" step="0.01" name="advance_deduction" placeholder={t("hr_advance_deduction", lang)} />
           <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
+          {/* Ye nishan jaan boojh kar khali hai. Hazri adhoori ho to
+              action pehle rok deta hai; ye khana us soorat mein soch kar
+              aage baRhne ka raasta hai, aadat ka nahi. */}
+          <label className="flex items-start gap-2 text-xs text-surface-600 dark:text-surface-300">
+            <input type="checkbox" name="ack_unfinalized" value="yes" className="mt-0.5" />
+            <span>Hazri adhoori hai, phir bhi tankhwah banayein</span>
+          </label>
           <SubmitButton label={t("hr_record", lang)} />
         </form>
       </div>
