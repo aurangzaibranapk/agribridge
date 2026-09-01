@@ -173,6 +173,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         farmer_confirmed_at: booking.farmer_confirmed_at,
         payment_promise_date: booking.payment_promise_date,
         advance_declined_at: booking.advance_declined_at,
+        diesel_none_at: booking.diesel_none_at,
         follow_up_number: followUp?.booking_number ?? null,
         payment_promise_note: booking.payment_promise_note,
         will_sell_to_us: booking.will_sell_to_us,

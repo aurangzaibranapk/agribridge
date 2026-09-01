@@ -2700,6 +2700,82 @@ export async function recordPaymentPromise(_prev: ActionState, formData: FormDat
  * qatar lagti hai. Farq saaf rehna chahiye -- warna kal koi tasdeeq
  * shuda adaigi bhi "wapis" ke button se uRa dega.
  */
+/**
+ * "Is booking par diesel dala hi nahi" -- ye bhi ek jawab hai.
+ *
+ * Diesel ke khane mein litre aur rate dono lazmi hain, is liye jis
+ * booking par diesel dala hi nahi gaya us par kuch likha hi nahi ja
+ * sakta tha. Sifar litre likhna jhoot hai: us ka matlab "dala tha,
+ * sifar dala" banta hai.
+ *
+ * Nateeja ye tha ke qadam 4 hamesha adhoora khara rehta, aur us khali
+ * gole se ye pata nahi chalta tha ke diesel dala hi nahi gaya, ya dala
+ * gaya magar kisi ne darj nahi kiya. Do alag baatein, ek jaisi shakal.
+ *
+ * Yahan koi raqam nahi hilti aur koi ledger nahi chhoota -- sirf jawab
+ * likha jata hai, aur ye bhi ke kis ne likha.
+ */
+export async function markDieselNone(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  // Diesel ka indraj maujood ho to ye nishan lagta hi nahi. Shart ADAD
+  // par hai -- is baat par nahi ke pehle kya hua tha.
+  const { data: logs } = await supabase
+    .from("machinery_fuel_logs")
+    .select("id")
+    .eq("booking_id", bookingId);
+  if ((logs ?? []).length > 0) {
+    return { error: "Is booking par diesel ka indraj maujood hai -- \"nahi dala\" nahi likha ja sakta." };
+  }
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ diesel_none_at: new Date().toISOString(), diesel_none_by: actorId })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "diesel_none_marked",
+    note: "Darj kiya gaya ke is booking par diesel nahi dala",
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Darj ho gaya -- is booking par diesel nahi dala." };
+}
+
+/**
+ * Wo nishan wapis hatana -- baad mein diesel aa jaye, ya ghalti se lag
+ * jaye. Yahan bhi paisa hila hi nahi tha, is liye wapis lena mehfooz
+ * hai (wohi usool jo advance ke nishan par lagta hai).
+ */
+export async function undoDieselNone(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ diesel_none_at: null, diesel_none_by: null })
+    .eq("id", bookingId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "diesel_none_undone",
+    note: "\"Diesel nahi dala\" ka nishan wapis hataya gaya",
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Nishan hat gaya -- diesel ka khana dobara khul gaya hai." };
+}
+
 export async function undoAdvanceDeclined(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);

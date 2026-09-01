@@ -500,6 +500,22 @@ export const machineryDict = {
     rm: "Diesel — kitna, aur kis ne dala",
     ur: "ڈیزل — کتنا، اور کس نے ڈالا",
   },
+  // "Diesel nahi dala" -- ye jawab hai, khali jagah nahi.
+  mc_diesel_none_mark: {
+    en: "No diesel was put in for this booking",
+    rm: "Is booking par diesel nahi dala",
+    ur: "اس بکنگ پر ڈیزل نہیں ڈالا",
+  },
+  mc_diesel_none_done: {
+    en: "It is recorded that no diesel was put in for this booking. If diesel comes later, remove this mark first.",
+    rm: "Darj hai ke is booking par diesel nahi dala. Baad mein diesel aa jaye to pehle ye nishan hatayein.",
+    ur: "درج ہے کہ اس بکنگ پر ڈیزل نہیں ڈالا۔ بعد میں ڈیزل آ جائے تو پہلے یہ نشان ہٹائیں۔",
+  },
+  mc_diesel_none_undo: {
+    en: "Remove this mark",
+    rm: "Ye nishan hatayein",
+    ur: "یہ نشان ہٹائیں",
+  },
   mc_diesel_paid_by: { en: "Who paid for the diesel", rm: "Diesel kis ne dala", ur: "ڈیزل کس نے ڈالا" },
   mc_diesel_by_farmer: { en: "Farmer", rm: "Kisan ne", ur: "کسان نے" },
   mc_diesel_by_vendor: { en: "Machine vendor", rm: "Vendor ne", ur: "وینڈر نے" },

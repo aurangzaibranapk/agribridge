@@ -15,6 +15,8 @@ import {
   dispatchMachine,
   rescheduleBooking,
   undoAdvanceDeclined,
+  markDieselNone,
+  undoDieselNone,
   clearPaymentPromise,
   recordWorkCompletion,
   generateFinalBill,
@@ -27,7 +29,7 @@ import { recordVendorPayout } from "@/actions/machinery-rental";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
-import { Check, Circle, Plus, X, Undo2 } from "lucide-react";
+import { Check, Circle, Plus, X, Undo2, CheckCircle2 } from "lucide-react";
 
 const initialState: ActionState = {};
 
@@ -92,6 +94,7 @@ interface Booking {
   farmer_confirmed_at: string | null;
   payment_promise_date: string | null;
   advance_declined_at: string | null;
+  diesel_none_at: string | null;
   follow_up_number: string | null;
   payment_promise_note: string | null;
   will_sell_to_us: boolean | null;
@@ -484,7 +487,7 @@ export function BookingDetail({
           </StepCard>
 
           {/* Diesel -- jitni baar dala jaye */}
-          <StepCard n={4} title={t("mc_step_fuel", lang)} done={fuelLogs.length > 0} locked={!confirmed}>
+          <StepCard n={4} title={t("mc_step_fuel", lang)} done={fuelLogs.length > 0 || Boolean(booking.diesel_none_at)} locked={!confirmed}>
             {fuelLogs.length > 0 && (
               <div className="mb-3 space-y-1 text-sm">
                 {fuelLogs.map((f) => (
@@ -531,7 +534,30 @@ export function BookingDetail({
                 )}
               </div>
             )}
-            {confirmed && <FuelForm bookingId={booking.id} accounts={accounts} already={fuelLogs.length > 0} />}
+            {/* Teen halatein, teen alag jawab:
+                  diesel darj ho chuka   -> form (aur "+ aur diesel")
+                  "nahi dala" likha hua  -> wo jawab, aur usay wapis lene ka raasta
+                  abhi kuch nahi         -> form, aur sath "diesel nahi dala" ka tick
+
+                Teesri soorat pehle adhoori thi: form litre aur rate maangta
+                tha, aur "nahi dala" kehne ka koi raasta nahi tha. Us se
+                qadam 4 hamesha adhoora khara rehta aur ye pata hi nahi
+                chalta tha ke diesel dala hi nahi gaya, ya dala gaya magar
+                darj nahi hua. */}
+            {confirmed && fuelLogs.length === 0 && booking.diesel_none_at ? (
+              <DieselNone bookingId={booking.id} />
+            ) : (
+              confirmed && (
+                <>
+                  <FuelForm bookingId={booking.id} accounts={accounts} already={fuelLogs.length > 0} />
+                  {fuelLogs.length === 0 && (
+                    <div className="mt-2">
+                      <MarkDieselNoneButton bookingId={booking.id} />
+                    </div>
+                  )}
+                </>
+              )
+            )}
           </StepCard>
 
           {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
@@ -956,6 +982,38 @@ function Err({ state }: { state: ActionState }) {
  * Poochh kar hi chalta hai: ye bhi ek hi click hai, aur wohi ghalti
  * dobara na ho.
  */
+function DieselNone({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  return (
+    <div className="space-y-2">
+      <p className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+        {t("mc_diesel_none_done", lang)}
+      </p>
+      {/* Yahan bhi paisa hila hi nahi -- sirf ek jawab likha gaya tha --
+          is liye usay wapis lena mehfooz hai. */}
+      <UndoButton bookingId={bookingId} action={undoDieselNone} label={t("mc_diesel_none_undo", lang)} />
+    </div>
+  );
+}
+
+function MarkDieselNoneButton({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(markDieselNone, initialState);
+  if (state.error) return <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>;
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <button
+        type="submit"
+        className="flex items-center gap-2 rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        {t("mc_diesel_none_mark", lang)}
+      </button>
+    </form>
+  );
+}
+
 function UndoButton({
   bookingId,
   action,
