@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { respondToEscalation, type ActionState } from "@/actions/expert-portal";
 import { Stethoscope, MessageCircleQuestion, Send, Loader2, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -17,6 +19,7 @@ interface Escalation {
 }
 
 export function ExpertPortalClient({ expertName, escalations }: { expertName: string; escalations: Escalation[] }) {
+  const lang = useLang();
   const pending = escalations.filter((e) => e.status === "pending");
   const resolved = escalations.filter((e) => e.status !== "pending");
 
@@ -27,7 +30,7 @@ export function ExpertPortalClient({ expertName, escalations }: { expertName: st
           <Stethoscope className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="font-display text-xl font-bold text-surface-900">Expert Portal</h1>
+          <h1 className="font-display text-xl font-bold text-surface-900">{t("ou_expert_portal", lang)}</h1>
           <p className="text-sm text-surface-500">Khush Aamdeed, {expertName}</p>
         </div>
       </div>
@@ -36,9 +39,7 @@ export function ExpertPortalClient({ expertName, escalations }: { expertName: st
         <MessageCircleQuestion className="h-4 w-4" /> Pending Sawal ({pending.length})
       </h2>
       {pending.length === 0 ? (
-        <p className="mb-8 rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400">
-          Abhi koi Pending Escalation nahi hai.
-        </p>
+        <p className="mb-8 rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400">{t("ou_no_escalation", lang)}</p>
       ) : (
         <div className="mb-8 space-y-3">
           {pending.map((e) => (
@@ -50,13 +51,12 @@ export function ExpertPortalClient({ expertName, escalations }: { expertName: st
       {resolved.length > 0 && (
         <>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-green-700">
-            <CheckCircle2 className="h-4 w-4" /> Jawab Diye Gaye
-          </h2>
+            <CheckCircle2 className="h-4 w-4" />{t("ou_answers_given", lang)}</h2>
           <div className="space-y-2">
             {resolved.slice(0, 10).map((e) => (
               <div key={e.id} className="rounded-lg border border-surface-100 bg-surface-50 p-3 text-sm">
                 <p className="font-medium text-surface-700">{e.farmerName ?? "Farmer"} - {e.question}</p>
-                <p className="mt-1 text-xs text-green-600">Jawab diya gaya</p>
+                <p className="mt-1 text-xs text-green-600">{t("ou_answered", lang)}</p>
               </div>
             ))}
           </div>
@@ -67,6 +67,7 @@ export function ExpertPortalClient({ expertName, escalations }: { expertName: st
 }
 
 function EscalationCard({ escalation }: { escalation: Escalation }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(respondToEscalation, initialState);
   const [responded, setResponded] = useState(false);
 
@@ -76,8 +77,7 @@ function EscalationCard({ escalation }: { escalation: Escalation }) {
     return (
       <div className="rounded-card border border-green-200 bg-green-50 p-4">
         <p className="flex items-center gap-2 text-sm font-medium text-green-700">
-          <CheckCircle2 className="h-4 w-4" /> Jawab bhej diya gaya - Farmer ko WhatsApp pe pahunch gaya.
-        </p>
+          <CheckCircle2 className="h-4 w-4" />{t("ou_answer_sent", lang)}</p>
       </div>
     );
   }
@@ -102,7 +102,7 @@ function EscalationCard({ escalation }: { escalation: Escalation }) {
         <input
           name="response"
           required
-          placeholder="Apna Expert jawab likhein..."
+          placeholder={t("ou_write_answer", lang)}
           className="h-10 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm"
         />
         <SubmitButton />

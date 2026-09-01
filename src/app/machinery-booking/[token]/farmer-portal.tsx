@@ -10,6 +10,8 @@ import {
   type PortalBooking,
 } from "@/actions/public-machinery-booking";
 import { Tractor, Loader2, MapPin, CheckCircle2, Plus, Crosshair, Pencil } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: PublicBookingState = {};
 
@@ -52,6 +54,7 @@ export function FarmerPortal({
   bookings: PortalBooking[];
   pendingRequests: Array<{ id: string; machineType: string; acres: number | null; expectedDate: string | null; createdAt: string }>;
 }) {
+  const lang = useLang();
   const [tab, setTab] = useState<"bookings" | "new" | "farms">(
     bookings.length === 0 && pendingRequests.length === 0 ? "new" : "bookings"
   );
@@ -314,6 +317,7 @@ function LocationForm({
   initialLat: number | null;
   initialLng: number | null;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(updateFarmLocationByToken, initialState);
   const [coords, setCoords] = useState<{ lat: number; lng: number; acc: number | null } | null>(
     initialLat !== null && initialLng !== null ? { lat: initialLat, lng: initialLng, acc: null } : null
@@ -373,7 +377,7 @@ function LocationForm({
           <input
             type="number"
             step="0.000001"
-            placeholder="Latitude"
+            placeholder={t("ou_latitude", lang)}
             value={coords?.lat ?? ""}
             onChange={(e) => {
               setCoords({ lat: Number(e.target.value), lng: coords?.lng ?? 0, acc: null });
@@ -384,7 +388,7 @@ function LocationForm({
           <input
             type="number"
             step="0.000001"
-            placeholder="Longitude"
+            placeholder={t("ou_longitude", lang)}
             value={coords?.lng ?? ""}
             onChange={(e) => {
               setCoords({ lat: coords?.lat ?? 0, lng: Number(e.target.value), acc: null });

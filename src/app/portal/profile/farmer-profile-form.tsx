@@ -7,6 +7,7 @@ import { updateFarmerProfile, confirmFarmerProfile, type FarmerProfileState } fr
 import { Button, Input, Label } from "@/components/ui/form";
 import type { ProfileCompletion } from "@/lib/utils/farmer-profile";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FarmerProfileState = {};
 
@@ -76,22 +77,20 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             {/* Gaon mein ek hi naam ke kai log hote hain, aur CNIC har
                 kisi ke paas nahi hoti. "Aslam walad Ghulam Muhammad" wo
                 pehchan hai jo wahan waqai chalti hai. */}
-            <Label htmlFor="father_name">Walid ka naam</Label>
+            <Label htmlFor="father_name">{t("ou_father_name", lang)}</Label>
             <Input id="father_name" name="father_name" defaultValue={farmer.father_name ?? ""} />
           </div>
           <div className="col-span-2">
             <Label htmlFor="cnic">{t("cnic", lang)}</Label>
-            <Input id="cnic" name="cnic" defaultValue={farmer.cnic ?? ""} placeholder="XXXXX-XXXXXXX-X" />
+            <Input id="cnic" name="cnic" defaultValue={farmer.cnic ?? ""} placeholder={t("ou_cnic_format", lang)} />
           </div>
           <div className="col-span-2">
             {/* Mobile yahan sirf dikhaya jata hai, badla nahi ja sakta:
                 wohi kisan ki pehchan hai aur usi par sab kuch mila jata
                 hai. Badalna ho to daftar se, taake do khate na ban jayen. */}
-            <Label>Mobile</Label>
+            <Label>{t("ou_mobile", lang)}</Label>
             <Input value={farmer.phone_number ?? ""} readOnly disabled />
-            <p className="mt-1 text-xs text-surface-500">
-              Mobile aap ki pehchan hai. Badalwana ho to Al Rana Traders se raabta karein.
-            </p>
+            <p className="mt-1 text-xs text-surface-500">{t("ou_mobile_note", lang)}</p>
           </div>
         </div>
       </AccordionSection>
@@ -108,7 +107,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             <Input id="village" name="village" defaultValue={farmer.village ?? ""} />
           </div>
           <div>
-            <Label htmlFor="tehsil">Tehsil</Label>
+            <Label htmlFor="tehsil">{t("ou_tehsil", lang)}</Label>
             <Input id="tehsil" name="tehsil" defaultValue={farmer.tehsil ?? ""} />
           </div>
           <div className="col-span-2">
@@ -116,8 +115,8 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             <Input id="city" name="city" defaultValue={farmer.district ?? ""} />
           </div>
           <div className="col-span-2">
-            <Label htmlFor="address">Poora pata</Label>
-            <Input id="address" name="address" defaultValue={farmer.address ?? ""} placeholder="Ghar tak pahunchne ka pata" />
+            <Label htmlFor="address">{t("ou_full_address", lang)}</Label>
+            <Input id="address" name="address" defaultValue={farmer.address ?? ""} placeholder={t("ou_home_address", lang)} />
           </div>
         </div>
       </AccordionSection>
@@ -130,7 +129,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
       >
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="land_size_acres">Kul zameen (acre)</Label>
+            <Label htmlFor="land_size_acres">{t("ou_total_land", lang)}</Label>
             <Input
               id="land_size_acres"
               name="land_size_acres"
@@ -141,12 +140,12 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             />
           </div>
           <div>
-            <Label htmlFor="crop_types">Faslein</Label>
+            <Label htmlFor="crop_types">{t("ou_crops", lang)}</Label>
             <Input
               id="crop_types"
               name="crop_types"
               defaultValue={(farmer.crop_types ?? []).join(", ")}
-              placeholder="Gandum, Chawal"
+              placeholder={t("ou_eg_crops", lang)}
             />
           </div>
         </div>
@@ -156,9 +155,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             dono kabhi barabar nahi rehte. */}
         <p className="mt-3 text-xs text-surface-500">
           Har khet ki alag jagah, raqba aur malkiyat (apni ya theke par){" "}
-          <a href="/portal/farms" className="font-medium text-brand-700 underline">
-            Mere Khet
-          </a>{" "}
+          <a href="/portal/farms" className="font-medium text-brand-700 underline">{t("ou_my_fields", lang)}</a>{" "}
           wale safhe par likhein.
         </p>
       </AccordionSection>
@@ -173,18 +170,18 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             hoga: bohot se kisanon ke paas khata hai hi nahi, aur unhein
             rok dene ka matlab ye ke un ka paisa hamare paas para rehta
             hai. */}
-        <p className="mb-3 text-xs text-surface-500">Bank ya mobile wallet — koi ek kaafi hai.</p>
+        <p className="mb-3 text-xs text-surface-500">{t("ou_bank_or_wallet_note", lang)}</p>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="bank_name">Bank ka naam</Label>
+            <Label htmlFor="bank_name">{t("ou_bank_name", lang)}</Label>
             <Input id="bank_name" name="bank_name" defaultValue={farmer.bank_name ?? ""} />
           </div>
           <div>
-            <Label htmlFor="bank_account_title">Khata kis naam par</Label>
+            <Label htmlFor="bank_account_title">{t("ou_account_title", lang)}</Label>
             <Input id="bank_account_title" name="bank_account_title" defaultValue={farmer.bank_account_title ?? ""} />
           </div>
           <div>
-            <Label htmlFor="bank_account_number">Khata number</Label>
+            <Label htmlFor="bank_account_number">{t("ou_account_number", lang)}</Label>
             <Input id="bank_account_number" name="bank_account_number" defaultValue={farmer.bank_account_number ?? ""} />
           </div>
           <div>
@@ -192,7 +189,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             <Input id="bank_iban" name="bank_iban" defaultValue={farmer.bank_iban ?? ""} placeholder="PK__ ____ ____" />
           </div>
           <div>
-            <Label htmlFor="mobile_wallet_provider">Mobile wallet</Label>
+            <Label htmlFor="mobile_wallet_provider">{t("ou_wallet", lang)}</Label>
             <select
               id="mobile_wallet_provider"
               name="mobile_wallet_provider"
@@ -204,11 +201,11 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
               <option value="easypaisa">Easypaisa</option>
               <option value="sadapay">SadaPay</option>
               <option value="nayapay">NayaPay</option>
-              <option value="other">Deegar</option>
+              <option value="other">{t("ou_other", lang)}</option>
             </select>
           </div>
           <div>
-            <Label htmlFor="mobile_wallet_number">Wallet number</Label>
+            <Label htmlFor="mobile_wallet_number">{t("ou_wallet_number", lang)}</Label>
             <Input id="mobile_wallet_number" name="mobile_wallet_number" defaultValue={farmer.mobile_wallet_number ?? ""} />
           </div>
         </div>
@@ -229,7 +226,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-700 dark:bg-surface-900">
         {/* Zaban cookie mein bhi rehti hai, magar WhatsApp cookie nahi
             parhta -- aur wahi paighaam kisan sab se zyada parhta hai. */}
-        <Label htmlFor="preferred_language">Paighaam kis zaban mein?</Label>
+        <Label htmlFor="preferred_language">{t("ou_lang_q", lang)}</Label>
         <select
           id="preferred_language"
           name="preferred_language"
@@ -237,8 +234,8 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
           className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
         >
           <option value="ur">اردو</option>
-          <option value="rm">Roman Urdu</option>
-          <option value="en">English</option>
+          <option value="rm">{t("ou_roman", lang)}</option>
+          <option value="en">{t("ou_english", lang)}</option>
         </select>
         <label className="mt-3 flex items-center gap-2 text-sm text-surface-600">
           <input
@@ -277,6 +274,7 @@ export function ConfirmProfileCard({
   confirmedAt: string | null;
   isVerified: boolean;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(confirmFarmerProfile, initialState);
 
   if (isVerified) {
@@ -284,8 +282,8 @@ export function ConfirmProfileCard({
       <div className="mt-4 flex items-start gap-2 rounded-card border border-green-200 bg-green-50 p-4 text-sm text-green-800">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          <p className="font-medium">Profile tasdeeq shuda hai.</p>
-          <p className="mt-1">Al Rana Traders ne aap ke kaghazat dekh kar tasdeeq kar di hai.</p>
+          <p className="font-medium">{t("ou_profile_verified", lang)}</p>
+          <p className="mt-1">{t("ou_verified_note", lang)}</p>
         </div>
       </div>
     );
@@ -296,7 +294,7 @@ export function ConfirmProfileCard({
       <div className="mt-4 flex items-start gap-2 rounded-card border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          <p className="font-medium">Profile confirm ho chuki hai.</p>
+          <p className="font-medium">{t("ou_profile_confirmed", lang)}</p>
           <p className="mt-1">
             {new Date(confirmedAt).toLocaleDateString()} ko. Ab koi service aap se ye tafseel dobara nahi poochhegi.
             Kuch badalna ho to upar theek kar ke save kar dein.
@@ -309,13 +307,13 @@ export function ConfirmProfileCard({
   if (!completion.isComplete) {
     return (
       <div className="mt-4 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <p className="font-medium">Confirm karne ke liye ye hissay baqi hain:</p>
+        <p className="font-medium">{t("ou_missing_parts", lang)}</p>
         <ul className="mt-2 list-inside list-disc space-y-0.5">
-          {!completion.identityComplete && <li>Pehchan — walid ka naam, CNIC</li>}
-          {!completion.locationComplete && <li>Pata — gaon, tehsil, zila, poora pata</li>}
-          {!completion.farmingComplete && <li>Zameen aur fasal</li>}
-          {!completion.paymentComplete && <li>Bank ya mobile wallet</li>}
-          {!completion.documentsComplete && <li>CNIC ki dono taraf ki photo</li>}
+          {!completion.identityComplete && <li>{t("ou_identity", lang)}</li>}
+          {!completion.locationComplete && <li>{t("ou_address_full", lang)}</li>}
+          {!completion.farmingComplete && <li>{t("ou_land_and_crop", lang)}</li>}
+          {!completion.paymentComplete && <li>{t("ou_bank_or_wallet", lang)}</li>}
+          {!completion.documentsComplete && <li>{t("ou_cnic_photos", lang)}</li>}
         </ul>
       </div>
     );
@@ -325,7 +323,7 @@ export function ConfirmProfileCard({
     <form action={formAction} className="mt-4 rounded-card border border-brand-200 bg-white p-4 shadow-card dark:border-brand-900/40 dark:bg-surface-900">
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       {state.notice && <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{state.notice}</p>}
-      <p className="text-sm font-medium text-surface-900 dark:text-surface-100">Profile mukammal hai.</p>
+      <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{t("ou_profile_complete", lang)}</p>
       <p className="mt-1 text-sm text-surface-600 dark:text-surface-300">
         Confirm karne ke baad Al Rana Traders ki har service — machinery, doodh, anaj, marketplace, bataway — yahi
         tafseel istemal karegi. Aap se ye sab dobara nahi poocha jayega.
