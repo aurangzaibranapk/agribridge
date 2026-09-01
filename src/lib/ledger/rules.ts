@@ -58,6 +58,7 @@ export const ACC = {
   farmerAdvance: "1140",
   farmerDue: "1150",
   dealerDue: "1160",
+  cropLifterDue: "1170",
   stockGoods: "1200",
   stockMilk: "1210",
   stockGrain: "1220",
@@ -74,6 +75,7 @@ export const ACC = {
   salesGrain: "4010",
   salesMilk: "4020",
   machineryIncome: "4030",
+  cropCommission: "4040",
   otherIncome: "4090",
   cogs: "5000",
   milkPurchase: "5010",
@@ -984,6 +986,131 @@ export async function postMachineryVendorCollected(args: {
         credit: args.amount,
         partyType: "farmer",
         partyId: args.farmerId,
+        memo: args.description,
+      },
+    ],
+  });
+}
+
+/**
+ * Fasal uthane wale ka settlement -- ek hi entry, teen sabab.
+ *
+ * Uthane wale ne fasal utha li. Us ke baad teen cheezein ek sath hoti
+ * hain, aur teenon ek hi lamhe ka hissa hain -- is liye ek hi entry:
+ *
+ *   1. Kattai ka baqi kisan ke zimme se nikal kar us ke zimme
+ *   2. Kisan ka purana baqi bhi usi tarah
+ *   3. Hamara commission -- ye kisan se NAHI aata, uthane wale ki apni
+ *      jeb se hai (malik ka faisla), is liye us ki credit aamdani mein
+ *      jati hai, kisan ke khate mein nahi
+ *
+ * KISAN KA KHATA DONO PEHLI DO SE SAAF HOTA HAI, TEESRI SE NAHI. Agar
+ * commission bhi kisan ke khate se credit karte to us ka qarza us raqam
+ * se kam ho jata jo us ne kabhi di hi nahi -- aur wo raqam phir kabhi
+ * kisi se wasool na hoti.
+ *
+ * Ye `postMachineryVendorCollected` ka bara bhai hai: wahan bhi paisa
+ * kisi khate mein nahi aata, sirf us ka MALIK badalta hai.
+ */
+export async function postCropLiftSettlement(args: {
+  bookingId: string;
+  farmerId: string;
+  lifterId: string;
+  /** Kattai ka wo baqi jo is ke zimme gaya. */
+  harvestDue: number;
+  /** Kattai ke alawa kisan ka purana baqi. */
+  oldDue: number;
+  /** Hamara commission -- uthane wale ki jeb se. */
+  commission: number;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  // Paise ke jor ko goal karna zaroori hai: 0.1 + 0.2 JavaScript mein
+  // 0.30000000000000004 deta hai, aur postJournal debit/credit ka farq
+  // dekh kar entry rok deta hai. Wo rukawat theek hai -- magar us ki
+  // wajah hisaab nahi, hisaab ka tareeqa hoti.
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const fromFarmer = r2(args.harvestDue + args.oldDue);
+  const total = r2(fromFarmer + args.commission);
+
+  if (total <= 0) {
+    return { error: "Is bill par kuch bhi uthane wale ke zimme nahi ja raha — na kattai, na purana baqi, na commission." };
+  }
+
+  const lines: JournalLine[] = [
+    {
+      account: ACC.cropLifterDue,
+      debit: total,
+      partyType: "crop_lifter",
+      partyId: args.lifterId,
+      memo: args.description,
+    },
+  ];
+
+  // Kisan ka zimma utna hi kam hota hai jitna waqai us se uthane wale ke
+  // paas gaya. Sifar ho to qatar banti hi nahi -- khali qatar entry ko
+  // sirf lamba karti hai aur parhne wale ko ye sochne par majboor karti
+  // hai ke ye kis cheez ki hai.
+  if (fromFarmer > 0) {
+    lines.push({
+      account: ACC.farmerDue,
+      credit: fromFarmer,
+      partyType: "farmer",
+      partyId: args.farmerId,
+      memo: `${args.description} — kisan ka zimma uthane wale ke paas`,
+    });
+  }
+
+  if (args.commission > 0) {
+    lines.push({
+      account: ACC.cropCommission,
+      credit: args.commission,
+      memo: `${args.description} — hamara commission`,
+    });
+  }
+
+  return postJournal({
+    description: args.description,
+    sourceModule: "crop_lift",
+    sourceId: args.bookingId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines,
+  });
+}
+
+/**
+ * Uthane wale ne hamein paisa de diya.
+ *
+ * Yahan paisa WAQAI aata hai -- is liye khata lazmi hai (cash ke ilawa,
+ * jo lene wale ke haath mein hota hai; wohi faisla jo 171 mein hua tha).
+ */
+export async function postCropLifterPayment(args: {
+  paymentId: string;
+  lifterId: string;
+  amount: number;
+  /** Bank/wallet ka khata. Cash par khali. */
+  toAccount: string;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  return postJournal({
+    description: args.description,
+    sourceModule: "crop_lifter_payment",
+    sourceId: args.paymentId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      { account: args.toAccount, debit: args.amount, memo: args.description },
+      {
+        account: ACC.cropLifterDue,
+        credit: args.amount,
+        partyType: "crop_lifter",
+        partyId: args.lifterId,
         memo: args.description,
       },
     ],
