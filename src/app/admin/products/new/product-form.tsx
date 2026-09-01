@@ -42,7 +42,7 @@ interface ExistingProduct {
 export function ProductForm({
   companies, brands, categories, product,
 }: {
-  companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string }[];
+  companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string; category_kind: string; default_min_stock: number | null }[];
   product?: ExistingProduct;
 }) {
   const isEditMode = !!product;
@@ -58,6 +58,19 @@ export function ProductForm({
 
   const nameRef = useRef<HTMLInputElement>(null);
   const activeIngredientRef = useRef<HTMLInputElement>(null);
+  // Qism chunte hi form badal jata hai: karyana par saada, zarai par
+  // poore khane. Faisla qism par likha hai (247) -- yahan sirf us ka
+  // natija dikhta hai.
+  const [categoryId, setCategoryId] = useState<string>(product?.category_id ?? "");
+  const [showAgri, setShowAgri] = useState<boolean | null>(null);
+
+  const chosenCategory = categories.find((c) => c.id === categoryId);
+  // showAgri === null ka matlab: bande ne khud kuch nahi chuna, qism se
+  // tay hoga. Qism bhi na ho to khane CHHUPE rehte hain -- karyana wala
+  // banda paanch khali khane dekh kar rukta hai, aur wo khane us ke maal
+  // se koi taalluq nahi rakhte.
+  const agriVisible = showAgri ?? chosenCategory?.category_kind === "agri";
+
   const compositionRef = useRef<HTMLTextAreaElement>(null);
   const packSizeRef = useRef<HTMLInputElement>(null);
   const doseRef = useRef<HTMLInputElement>(null);
@@ -165,7 +178,25 @@ export function ProductForm({
         </div>
         <div>
           <Label htmlFor="category_id">{t("c_category", lang)}</Label>
-          <Select id="category_id" name="category_id" defaultValue={product?.category_id ?? ""}><option value="">- select -</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
+          <Select
+            id="category_id"
+            name="category_id"
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              // Qism badalne par bande ka apna faisla bhi hat jata hai --
+              // warna wo purani qism ka faisla nayi qism par chipka
+              // rehta.
+              setShowAgri(null);
+            }}
+          >
+            <option value="">- select -</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </div>
       </div>
 
@@ -205,6 +236,35 @@ export function ProductForm({
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
         <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} />{t("pf_show_expiry", lang)}</label>
 
+      {/* Zarai ke khane. Khaad, zeher aur wande par ye LAZMI hain --
+          bina safety aur dose ke wo maal bechna theek nahi. Karyana ke
+          dabbe par in mein se ek bhi nahi hota, is liye wahan ye chhupe
+          rehte hain.
+
+          Chhupane ka matlab MITANA nahi: jo qeemat pehle se bhari hui
+          hai wo form ke sath jati rahegi, kyunke ye khane hate nahi,
+          sirf nazar se ojhal hain. */}
+      {!agriVisible && (
+        <button
+          type="button"
+          onClick={() => setShowAgri(true)}
+          className="text-xs text-brand-700 underline"
+        >
+          Zarai ke khane dikhayein (dose, composition, safety)
+        </button>
+      )}
+
+      <div className={agriVisible ? "space-y-4" : "hidden"}>
+        {chosenCategory?.category_kind === "karyana" && (
+          <button
+            type="button"
+            onClick={() => setShowAgri(false)}
+            className="text-xs text-surface-500 underline"
+          >
+            ye khane chhupa dein — is qism par zaroorat nahi
+          </button>
+        )}
+
       <FieldWithMic label={t("pf_active_ingredient", lang)} inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
 
       <div>
@@ -226,6 +286,8 @@ export function ProductForm({
           <Textarea ref={safetyInformationRef} id="safety_information" name="safety_information" rows={2} defaultValue={product?.safety_information ?? undefined} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (safetyInformationRef.current) safetyInformationRef.current.value = text; }} />
         </div>
+      </div>
+
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -259,7 +321,17 @@ export function ProductForm({
       </div>
       <div>
         <Label htmlFor="min_stock_threshold">{t("pf_low_stock_below", lang)}</Label>
-        <Input id="min_stock_threshold" name="min_stock_threshold" type="number" step="0.001" defaultValue={product?.min_stock_threshold ?? undefined} />
+        <Input
+            id="min_stock_threshold"
+            name="min_stock_threshold"
+            type="number"
+            step="0.001"
+            min="0"
+            key={`ms-${categoryId}`}
+            defaultValue={
+              product?.min_stock_threshold ?? chosenCategory?.default_min_stock ?? undefined
+            }
+          />
       </div>
 
       <SubmitButton isEditMode={isEditMode} />

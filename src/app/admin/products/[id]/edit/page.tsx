@@ -15,7 +15,7 @@ export default async function EditProductPage({ params }: { params: { id: string
     supabase.from("products").select("*").eq("id", params.id).single(),
     supabase.from("companies").select("id, name").order("name"),
     supabase.from("brands").select("id, name").order("name"),
-    supabase.from("categories").select("id, name").order("name"),
+    supabase.from("categories").select("id, name, category_kind, default_min_stock").order("name"),
   ]);
 
   if (!product) notFound();

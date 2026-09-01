@@ -12,7 +12,7 @@ export default async function NewProductPage() {
   const [{ data: companies }, { data: brands }, { data: categories }] = await Promise.all([
     supabase.from("companies").select("id, name").order("name"),
     supabase.from("brands").select("id, name").order("name"),
-    supabase.from("categories").select("id, name").order("name"),
+    supabase.from("categories").select("id, name, category_kind, default_min_stock").order("name"),
   ]);
   return (
     <div className="mx-auto max-w-3xl">

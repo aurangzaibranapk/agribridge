@@ -17,6 +17,7 @@ interface ExistingCustomer {
   email: string | null;
   address: string | null;
   credit_limit: number;
+  customer_type?: string;
   payment_due_days: number;
 }
 
@@ -103,6 +104,28 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             <div>
               <Label>{t("cr_credit_limit_dot", lang)}</Label>
               <Input name="credit_limit" type="number" step="0.01" defaultValue={customer?.credit_limit} />
+            </div>
+            <div className="sm:col-span-2">
+              {/* Ye darja EK DAFA yahan likha jata hai. POS par har bill
+                  par "thok ya retail" chunne se rate counter wale ki
+                  marzi par aa jata, aur mahine baad ye sawal ka jawab
+                  nahi hota ke falan bill par thok kyun laga tha. */}
+              <label className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300">
+                <input
+                  type="checkbox"
+                  name="customer_type"
+                  value="wholesale_shop"
+                  defaultChecked={customer?.customer_type === "wholesale_shop"}
+                  className="mt-0.5"
+                />
+                <span>
+                  Ye <strong>thok wali dukan</strong> hai — hum isay maal dete hain
+                  <span className="block text-xs text-surface-500">
+                    POS par is ke bill par thok ka rate khud lagega. Jis cheez par thok ka rate darj
+                    nahi, us par retail lagega.
+                  </span>
+                </span>
+              </label>
             </div>
             <div>
               <Label>{t("cr_payment_due_days", lang)}</Label>

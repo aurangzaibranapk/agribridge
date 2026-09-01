@@ -60,7 +60,9 @@ export default async function PosPage() {
     );
   }
   let rawInventory: any[] | null = null;
-  let rawCustomers: { id: string; name: string; phone: string | null }[] | null = null;
+  let rawCustomers:
+    | { id: string; name: string; phone: string | null; isWholesaleShop: boolean }[]
+    | null = null;
   if (dealer) {
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
@@ -75,12 +77,14 @@ export default async function PosPage() {
         .order("name"),
     ]);
     rawInventory = inv;
-    rawCustomers = cust;
+    // Dealer ke apne gahakon par thok ka nizam abhi nahi -- wo alag
+    // table hai. Sab retail.
+    rawCustomers = (cust ?? []).map((c) => ({ ...c, isWholesaleShop: false }));
   } else {
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, selling_price)")
+          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, selling_price, wholesale_price)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };
@@ -92,20 +96,32 @@ export default async function PosPage() {
         product_id: row.product_id,
         stock_quantity: 0,
         selling_price: Number(product?.selling_price ?? 0),
+        // NULL rehta hai jab thok ka rate darj hi nahi -- sifar nahi.
+        // Sifar ka matlab "thok par muft" hota (245).
+        wholesale_price: product?.wholesale_price == null ? null : Number(product.wholesale_price),
         products: product,
       };
       cur.stock_quantity += Number(row.quantity_on_hand);
       aggMap.set(row.product_id, cur);
     });
     rawInventory = [...aggMap.values()];
-    const { data: cust } = await supabase.from("customers").select("id, name, phone_number").order("name");
-    rawCustomers = (cust ?? []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone_number }));
+    const { data: cust } = await supabase
+      .from("customers")
+      .select("id, name, phone_number, customer_type")
+      .order("name");
+    rawCustomers = (cust ?? []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone_number,
+      isWholesaleShop: c.customer_type === "wholesale_shop",
+    }));
   }
   const inventory = (rawInventory ?? []).map((item: any) => ({
     id: item.id,
     product_id: item.product_id,
     stock_quantity: item.stock_quantity,
     selling_price: item.selling_price,
+    wholesale_price: item.wholesale_price ?? null,
     products: Array.isArray(item.products) ? item.products[0] ?? null : item.products ?? null,
   }));
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;

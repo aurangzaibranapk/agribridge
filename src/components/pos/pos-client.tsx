@@ -15,12 +15,16 @@ interface InventoryItem {
   product_id: string;
   stock_quantity: number;
   selling_price: number;
+  /** NULL = is par thok ka rate nahi (retail lagega). Sifar se ALAG hai. */
+  wholesale_price: number | null;
   products: { name: string; pack_size: string | null; barcode: string | null } | null;
 }
 interface Customer {
   id: string;
   name: string;
   phone: string | null;
+  /** Wo dukan jise hum maal dete hain -- us par thok ka rate lagta hai (246). */
+  isWholesaleShop: boolean;
 }
 interface CartLine {
   product_id: string;
@@ -73,6 +77,44 @@ export function PosClient({
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
+  // "Thok" par click karte hi neeche sirf wo dukanein khulti hain jinhen
+  // hum maal dete hain. Aam gahak ki fehrist us waqt dikhti hi nahi --
+  // warna galti se aam aadmi par thok ka rate lag sakta hai.
+  const [wholesaleMode, setWholesaleMode] = useState(false);
+
+  const wholesaleShops = customers.filter((c) => c.isWholesaleShop);
+  const chosenCustomer = customers.find((c) => c.id === customerId) ?? null;
+  const wholesaleOn = chosenCustomer?.isWholesaleShop === true;
+
+  /**
+   * Kis rate par bikega.
+   *
+   * Thok wali dukan ho AUR us cheez ka thok ka rate darj ho, tabhi thok
+   * lagta hai. Rate darj na ho to retail lagta hai -- aur wo baat qatar
+   * par likhi bhi jati hai, warna dukandar samajhta hai ke usay thok
+   * mila hai jab ke nahi mila.
+   */
+  function priceFor(item: InventoryItem, forWholesale: boolean): number {
+    if (forWholesale && item.wholesale_price != null) return item.wholesale_price;
+    return item.selling_price;
+  }
+
+  /**
+   * Gahak badalne par POORA cart dobara rate par lagta hai.
+   *
+   * Bina is ke aadha bill retail ke rate par aur aadha thok ke rate par
+   * ban jata -- aur wo farq bill par nazar nahi aata.
+   */
+  function applyCustomer(id: string) {
+    setCustomerId(id);
+    const nowWholesale = customers.find((c) => c.id === id)?.isWholesaleShop === true;
+    setCart((prev) =>
+      prev.map((line) => {
+        const item = inventory.find((i) => i.product_id === line.product_id);
+        return item ? { ...line, unit_price: priceFor(item, nowWholesale) } : line;
+      })
+    );
+  }
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
     { id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
   ]);
@@ -117,7 +159,12 @@ export function PosClient({
       }
       return [
         ...prev,
-        { product_id: item.product_id, name: item.products!.name, quantity: 1, unit_price: item.selling_price },
+        {
+          product_id: item.product_id,
+          name: item.products!.name,
+          quantity: 1,
+          unit_price: priceFor(item, wholesaleOn),
+        },
       ];
     });
   }
@@ -167,6 +214,7 @@ export function PosClient({
   function resetSale() {
     setCart([]);
     setCustomerId("");
+    setWholesaleMode(false);
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
     barcodeRef.current?.focus();
   }
@@ -358,7 +406,16 @@ export function PosClient({
             <div key={line.product_id} className="flex items-center gap-2 rounded-lg border border-surface-100 p-2 dark:border-surface-800">
               <div className="flex-1">
                 <p className="text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</p>
-                <p className="text-xs text-surface-400">Rs {line.unit_price.toLocaleString()} each</p>
+                <p className="text-xs text-surface-400">
+                  Rs {line.unit_price.toLocaleString()} each
+                  {/* Thok chalu ho magar is cheez par rate na ho to saaf
+                      likha jata hai -- warna dukandar samajhta hai ke
+                      usay thok mila hai. */}
+                  {wholesaleOn &&
+                    inventory.find((i) => i.product_id === line.product_id)?.wholesale_price == null && (
+                      <span className="ml-1 text-amber-700">· thok ka rate nahi, retail laga</span>
+                    )}
+                </p>
               </div>
               <Input
                 type="number"
@@ -376,15 +433,78 @@ export function PosClient({
 
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>Customer {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
-          <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-            <option value="">{t("pos_walk_in", lang)}</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.phone ? ` - ${c.phone}` : ""}
-              </option>
-            ))}
-          </Select>
+
+          {/* Do alag darwaze, jaan boojh kar. Ek hi fehrist mein aam
+              gahak aur thok wali dukanein mila dene par galti se aam
+              aadmi par thok ka rate lag jata hai -- aur us ka pata
+              mahine baad munafa ginte waqt chalta hai. */}
+          <div className="mb-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWholesaleMode(false);
+                applyCustomer("");
+              }}
+              className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                !wholesaleMode
+                  ? "border-brand-500 bg-brand-50 text-brand-800"
+                  : "border-surface-300 text-surface-600"
+              }`}
+            >
+              Aam gahak
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWholesaleMode(true);
+                applyCustomer("");
+              }}
+              className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                wholesaleMode
+                  ? "border-amber-500 bg-amber-50 text-amber-900"
+                  : "border-surface-300 text-surface-600"
+              }`}
+            >
+              Thok (dukan)
+            </button>
+          </div>
+
+          {wholesaleMode ? (
+            wholesaleShops.length === 0 ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Abhi koi thok wali dukan darj nahi. CRM mein gahak ka darja
+                &ldquo;thok wali dukan&rdquo; rakhein, phir wo yahan aayegi.
+              </p>
+            ) : (
+              <Select value={customerId} onChange={(e) => applyCustomer(e.target.value)}>
+                <option value="">— dukan chunein —</option>
+                {wholesaleShops.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.phone ? ` - ${c.phone}` : ""}
+                  </option>
+                ))}
+              </Select>
+            )
+          ) : (
+            <Select value={customerId} onChange={(e) => applyCustomer(e.target.value)}>
+              <option value="">{t("pos_walk_in", lang)}</option>
+              {customers
+                .filter((c) => !c.isWholesaleShop)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.phone ? ` - ${c.phone}` : ""}
+                  </option>
+                ))}
+            </Select>
+          )}
+
+          {wholesaleOn && (
+            <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">
+              Thok ka rate lag raha hai. Jis cheez par thok ka rate darj nahi, us par retail lagega.
+            </p>
+          )}
         </div>
 
         <div>

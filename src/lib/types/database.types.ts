@@ -4009,19 +4009,25 @@ export type Database = {
       }
       categories: {
         Row: {
+          category_kind: string
           created_at: string
+          default_min_stock: number | null
           id: string
           name: string
           parent_category_id: string | null
         }
         Insert: {
+          category_kind?: string
           created_at?: string
+          default_min_stock?: number | null
           id?: string
           name: string
           parent_category_id?: string | null
         }
         Update: {
+          category_kind?: string
           created_at?: string
+          default_min_stock?: number | null
           id?: string
           name?: string
           parent_category_id?: string | null
@@ -5033,6 +5039,7 @@ export type Database = {
           created_at: string
           credit_limit: number | null
           current_balance: number
+          customer_type: string
           email: string | null
           id: string
           is_active: boolean
@@ -5051,6 +5058,7 @@ export type Database = {
           created_at?: string
           credit_limit?: number | null
           current_balance?: number
+          customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean
@@ -5069,6 +5077,7 @@ export type Database = {
           created_at?: string
           credit_limit?: number | null
           current_balance?: number
+          customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean
