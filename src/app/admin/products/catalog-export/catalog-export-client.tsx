@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
 import { Printer, Download, Mail, MessageCircle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Product {
   id: string;
@@ -37,6 +39,7 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
 
 export function CatalogExportClient({ products, categories }: { products: Product[]; categories: Category[] }) {
   const [categoryFilter, setCategoryFilter] = useState("");
+  const lang = useLang();
   const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
   const [search, setSearch] = useState("");
 
@@ -107,10 +110,10 @@ export function CatalogExportClient({ products, categories }: { products: Produc
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="">Sab Categories</option>
+          <option value="">{t("pd_all_categories", lang)}</option>
           {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Product dhoondein" className="rounded-lg border border-surface-200 p-2 text-sm" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="ml-auto flex gap-2">
           <button onClick={handlePrint} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
           <button onClick={handleDownload} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
@@ -120,7 +123,7 @@ export function CatalogExportClient({ products, categories }: { products: Produc
       </div>
 
       <div className="mb-4 rounded-card border border-surface-200 bg-white p-3 shadow-card print:hidden dark:border-surface-800 dark:bg-surface-900">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Fields Select Karein</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("pd_select_fields", lang)}</p>
         <div className="flex flex-wrap gap-3">
           {FIELD_OPTIONS.map((f) => (
             <label key={f.key} className="flex items-center gap-1.5 text-sm text-surface-600 dark:text-surface-300">
@@ -140,7 +143,7 @@ export function CatalogExportClient({ products, categories }: { products: Produc
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left dark:border-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                 <th key={f.key} className="px-3 py-2 font-medium text-surface-500">{f.label}</th>
               ))}
@@ -156,7 +159,7 @@ export function CatalogExportClient({ products, categories }: { products: Produc
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={selectedFields.length + 1} className="px-3 py-8 text-center text-surface-400">Koi product nahi mila.</td></tr>
+              <tr><td colSpan={selectedFields.length + 1} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
             )}
           </tbody>
         </table>

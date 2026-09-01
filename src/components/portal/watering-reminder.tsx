@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Droplets } from "lucide-react";
 import { getCropProgress } from "@/lib/utils/crop-duration";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 interface Crop {
   crop_name: string;
@@ -50,6 +52,7 @@ export function getWateringReminders(crops: Crop[]): WateringReminder[] {
 }
 
 export function WateringReminderBanner({ reminders }: { reminders: WateringReminder[] }) {
+  const lang = getLanguageFromCookies("ur");
   if (reminders.length === 0) return null;
 
   return (
@@ -57,7 +60,7 @@ export function WateringReminderBanner({ reminders }: { reminders: WateringRemin
       <div className="flex items-start gap-3">
         <Droplets className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
         <div>
-          <p className="text-sm font-medium text-sky-800">Pani Dene Ka Waqt</p>
+          <p className="text-sm font-medium text-sky-800">{t("pm_watering_time", lang)}</p>
           <div className="mt-2 space-y-1">
             {reminders.map((r, i) => (
               <p key={i} className="text-sm text-sky-700">
@@ -68,9 +71,7 @@ export function WateringReminderBanner({ reminders }: { reminders: WateringRemin
           <Link
             href="/portal/crops"
             className="mt-2 inline-block text-xs font-medium text-sky-700 hover:underline"
-          >
-            My Crops Dekhein
-          </Link>
+          >{t("pm_see_my_crops", lang)}</Link>
         </div>
       </div>
     </div>

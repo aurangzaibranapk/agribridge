@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SERVICES } from "@/lib/data/services";
 import { Button } from "@/components/ui/form";
 import { formatCurrency } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ export function generateStaticParams() {
 }
 
 export default async function ServiceDetailPage({ params }: { params: { slug: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const service = SERVICES.find((s) => s.slug === params.slug);
   if (!service) notFound();
 
@@ -32,12 +35,12 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
       <p className="mt-3 text-surface-600 dark:text-surface-300">{service.detail}</p>
 
       <Link href={`/contact?service=${encodeURIComponent(service.title)}`} className="mt-6 inline-block">
-        <Button size="md">Inquire About This Service</Button>
+        <Button size="md">{t("sp_inquire_service", lang)}</Button>
       </Link>
 
       {relatedProducts && relatedProducts.length > 0 && (
         <div className="mt-12 border-t border-surface-200 pt-8 dark:border-surface-800">
-          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">Related Products</h2>
+          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">{t("sp_related_products", lang)}</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {relatedProducts.map((p) => (
               <Link key={p.id} href={`/products/${p.id}`} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">

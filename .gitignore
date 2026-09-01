@@ -9,3 +9,9 @@ build/
 src.backup/
 .vercel
 *.zip 
+
+*.tsbuildinfo
+
+# Offline test ka bundle -- har dafa naya banta hai
+scripts/offline-test/queue.bundle.js
+scripts/offline-test/phone-profile/

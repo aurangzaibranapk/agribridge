@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { FarmerLoansClient } from "./farmer-loans-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function FarmerLoansPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [{ data: farmers }, { data: rawLoans }] = await Promise.all([
@@ -38,23 +41,23 @@ export default async function FarmerLoansPage() {
 
   return (
     <div>
-      <PageHeader title="Farmer Loans" description="Farmer ko Loan dein - Wallet se Weekly Installment khud katta rahega" />
+      <PageHeader title={t("at_farmer_loans", lang)} description="Farmer ko Loan dein - Wallet se Weekly Installment khud katta rahega" />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Diya Gaya</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_given", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalDisbursed.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Total Baaqi</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_total_remaining", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalOutstanding.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Active Loans</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_active_loans", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{activeCount}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Poore Ho Chuke</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_completed", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">{paidOffCount}</p>
         </Card>
       </div>

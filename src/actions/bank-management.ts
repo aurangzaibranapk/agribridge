@@ -31,7 +31,10 @@ export async function addBankAccount(_prev: ActionState, formData: FormData): Pr
     name,
     account_number: accountNumber,
     opening_balance: openingBalance,
-    current_balance: openingBalance,
+    // current_balance yahan nahi bheja jata -- database khud khulne ki
+    // raqam se bhar deta hai (023). Bhejne se koi nuqsan nahi tha, magar
+    // ye us shubhe ko zinda rakhta hai ke ye adad yahan se bhi likha ja
+    // sakta hai. Wo sirf finance_transactions se nikalta hai (127).
     logo_url: logoUrl,
     account_type: "bank",
     is_active: true,

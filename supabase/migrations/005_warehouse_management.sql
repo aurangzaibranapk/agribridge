@@ -36,8 +36,8 @@ insert into warehouses (branch_id, name, code)
   select id, 'Main Warehouse', 'MAIN' from branches
   on conflict (branch_id, code) do nothing;
 
-alter table inventory add column warehouse_id uuid references warehouses(id);
-alter table inventory add column bin_id uuid references warehouse_bins(id);
+alter table inventory add column if not exists warehouse_id uuid references warehouses(id);
+alter table inventory add column if not exists bin_id uuid references warehouse_bins(id);
 
 -- Backfill: every existing inventory row belongs to its product's
 -- branch's Main Warehouse (there's only one branch today, so this is

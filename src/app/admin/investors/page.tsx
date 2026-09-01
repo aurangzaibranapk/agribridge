@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { InvestorsListClient } from "./investors-list-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminInvestorsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: rawInvestors } = await supabase
     .from("investors")
@@ -30,7 +33,7 @@ export default async function AdminInvestorsPage() {
 
   return (
     <div>
-      <PageHeader title="Investors" description="People who've invested in AgriBridge products or business deals" />
+      <PageHeader title={t("at_investors", lang)} description="People who've invested in AgriBridge products or business deals" />
       <InvestorsListClient investors={investors} />
     </div>
   );

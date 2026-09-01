@@ -3,10 +3,13 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteProduct, type FormState } from "@/actions/products";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FormState = {};
 
 export function DeleteButton({ productId }: { productId: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(deleteProduct, initialState);
   const [confirming, setConfirming] = useState(false);
 
@@ -19,9 +22,7 @@ export function DeleteButton({ productId }: { productId: string }) {
           type="button"
           onClick={() => setConfirming(false)}
           className="text-xs text-surface-400 hover:text-surface-600"
-        >
-          Cancel
-        </button>
+        >{t("at_cancel", lang)}</button>
       </form>
     );
   }
@@ -33,8 +34,7 @@ export function DeleteButton({ productId }: { productId: string }) {
         onClick={() => setConfirming(true)}
         className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
       >
-        <Trash2 className="h-3.5 w-3.5" /> Delete
-      </button>
+        <Trash2 className="h-3.5 w-3.5" />{t("at_delete", lang)}</button>
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </div>
   );

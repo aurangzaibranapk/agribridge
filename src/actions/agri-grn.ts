@@ -59,7 +59,11 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: order } = await supabase.from("agri_orders").select("order_to_branch_id, payment_terms").eq("id", orderId).single();
+  const { data: order } = await supabase
+    .from("agri_orders")
+    .select("order_to_branch_id, order_from_branch_id, settlement_method, payment_terms")
+    .eq("id", orderId)
+    .single();
 
   if (order?.order_to_branch_id) {
     const isAdvancePaid = order.payment_terms === "Advance Payment";
@@ -72,6 +76,34 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
         notes: `GRN complete hone par charge hua: ${grnNumber}`,
         created_by: user?.id ?? null,
       });
+    }
+  }
+
+  // Branch-to-branch settlement. Maal ab lene wale ke paas pahunch chuka
+  // hai, is liye yahi wo lamha hai jab dene wali shop ka haq banta hai.
+  //
+  //   company_ledger -> Company beech mein hai: dene wali shop ke khate
+  //     mein utni raqam jama hoti hai ('adjustment' outstanding ghata
+  //     deta hai, bilkul usi formula se jo /admin/branch-credit page
+  //     istemal karta hai). Lene wali shop upar pehle hi charge ho chuki.
+  //
+  //   direct_branch -> Company ka koi taalluq nahi. Koi entry nahi jati,
+  //     sirf timeline par likh diya jata hai ke dono shops khud settle
+  //     karengi — warna Company ke khate mein aisa udhaar aa jayega jo
+  //     us ka hai hi nahi.
+  if (order?.order_from_branch_id && payableAmount > 0) {
+    if (order.settlement_method === "company_ledger") {
+      await supabase.from("branch_credit_transactions").insert({
+        branch_id: order.order_from_branch_id,
+        transaction_type: "adjustment",
+        amount: payableAmount,
+        order_id: orderId,
+        notes: `Shop-to-shop settlement: apna stock diya (${grnNumber}). Company ke zariye hisaab.`,
+        created_by: user?.id ?? null,
+      });
+      await logTimeline(orderId, "completed", `Settlement: Company ke zariye. Dene wali shop ke khate mein Rs ${payableAmount.toLocaleString()} jama huye.`);
+    } else if (order.settlement_method === "direct_branch") {
+      await logTimeline(orderId, "completed", `Settlement: Seedha shops ke darmiyan. Rs ${payableAmount.toLocaleString()} lene wali shop khud dene wali shop ko degi — Company ke khate mein koi entry nahi.`);
     }
   }
 
@@ -200,21 +232,37 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
 
         const { data: existingStock } = await supabase
           .from("inventory")
-          .select("id, quantity_on_hand")
+          .select("id")
           .eq("warehouse_id", warehouse.id)
           .eq("product_id", item.product_id)
           .maybeSingle();
 
-        if (existingStock) {
-          await supabase
-            .from("inventory")
-            .update({ quantity_on_hand: Number(existingStock.quantity_on_hand) + item.received_qty })
-            .eq("id", existingStock.id);
-        } else {
-          await supabase.from("inventory").insert({
-            warehouse_id: warehouse.id,
-            product_id: item.product_id,
-            quantity_on_hand: item.received_qty,
+        // Ye jagah baqi sab se alag tarah kharab thi: yahan ginti to
+        // badalti thi magar stock_movements mein KUCH LIKHA HI NAHI
+        // JATA tha. Yani maal godam mein aata tha aur us ka koi kaghaz
+        // nahi banta -- "ye sau bore kahan se aaye" ka jawab kahin nahi
+        // milta, aur GRN ka poora maqsad yehi sawal hai.
+        //
+        // Ab ginti khud nahi likhi jati (trigger karta hai, 129) aur
+        // harkat darj hoti hai.
+        const inventoryId =
+          existingStock?.id ??
+          (
+            await supabase
+              .from("inventory")
+              .insert({ warehouse_id: warehouse.id, product_id: item.product_id })
+              .select("id")
+              .single()
+          ).data?.id;
+
+        if (inventoryId) {
+          await supabase.from("stock_movements").insert({
+            inventory_id: inventoryId,
+            movement_type: "purchase_in",
+            quantity: item.received_qty,
+            reference_type: "agri_grn",
+            reference_id: orderId,
+            created_by: user?.id ?? null,
           });
         }
         if (item.batch_no) {

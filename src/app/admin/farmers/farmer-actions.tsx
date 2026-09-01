@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { toggleFarmerActive, deleteFarmer, promoteFarmerToStaff, type ActionState } from "@/actions/member-management";
 import { Power, Trash2, ShieldPlus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -10,6 +12,7 @@ export function FarmerActions({ farmerId, isActive }: { farmerId: string; isActi
   const [toggleState, toggleAction] = useFormState(toggleFarmerActive, initialState);
   const [promoteState, promoteAction] = useFormState(promoteFarmerToStaff, initialState);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const lang = useLang();
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
 
   return (
@@ -23,7 +26,7 @@ export function FarmerActions({ farmerId, isActive }: { farmerId: string; isActi
       <button
         onClick={() => setShowPromoteConfirm(true)}
         className="rounded-lg border border-purple-200 p-1.5 text-purple-600 hover:bg-purple-50 dark:border-purple-900/40 dark:hover:bg-purple-950/30"
-        title="Promote to Staff/Admin"
+        title={t("fp_promote", lang)}
       >
         <ShieldPlus className="h-3.5 w-3.5" />
       </button>
@@ -31,7 +34,7 @@ export function FarmerActions({ farmerId, isActive }: { farmerId: string; isActi
       <button
         onClick={() => setShowDeleteConfirm(true)}
         className="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
-        title="Delete"
+        title={t("c_delete", lang)}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -40,7 +43,7 @@ export function FarmerActions({ farmerId, isActive }: { farmerId: string; isActi
 
       {showDeleteConfirm && (
         <ConfirmModal
-          title="Delete Farmer?"
+          title={t("fp_delete_q", lang)}
           message="This hides the farmer from all lists. Their crop/harvest/milk history is kept for records but they can no longer log in or transact."
           action={deleteFarmer}
           hiddenFields={{ farmer_id: farmerId }}
@@ -52,7 +55,7 @@ export function FarmerActions({ farmerId, isActive }: { farmerId: string; isActi
 
       {showPromoteConfirm && (
         <ConfirmModal
-          title="Promote to Staff?"
+          title={t("fp_promote_q", lang)}
           message="This gives the farmer's login account Sales Staff access to your admin panel, in addition to their farmer profile. Only do this for someone you're hiring as staff."
           action={promoteFarmerToStaff}
           hiddenFields={{ farmer_id: farmerId }}
@@ -100,6 +103,7 @@ function ConfirmModal({
   confirmColor: "red" | "purple";
   onClose: () => void;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(action, initialState);
 
   if (state.success) {
@@ -125,17 +129,13 @@ function ConfirmModal({
           </p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Done.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_done", lang)}</p>
         )}
         <form action={formAction} className="flex gap-2">
           {Object.entries(hiddenFields).map(([key, value]) => (
             <input key={key} type="hidden" name={key} value={value} />
           ))}
-          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">
-            Cancel
-          </button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">{t("at_cancel", lang)}</button>
           <SubmitButton label={confirmLabel} colorClasses={colorClasses} />
         </form>
       </div>

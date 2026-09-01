@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { RequestsChart } from "@/components/dashboard/requests-chart";
 import { CategoryStatusChart } from "@/components/dashboard/category-status-chart";
@@ -67,6 +69,7 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
+  const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const { start: rangeStart, end: rangeEnd } = getDateRange(range);
@@ -334,54 +337,50 @@ export default async function AdminDashboardPage({
 
   return (
     <div>
-      <PageHeader title="Website Admin Dashboard" description="Content, inquiries, and registrations at a glance" />
+      <PageHeader title={t("db_title", lang)} description={t("db_business_summary", lang)} />
 
       <div className="mt-4">
         <DateRangeFilter current={range} />
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Business Summary
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_business_summary", lang)}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <Link href="/admin/dealers" className="block">
-            <StatCard label="Total Dealers" value={String(totalDealers ?? 0)} icon={Store} tone="blue" />
+            <StatCard label={t("db_total_dealers", lang)} value={String(totalDealers ?? 0)} icon={Store} tone="blue" />
           </Link>
           <Link href="/admin/dealers" className="block">
-            <StatCard label="Active Dealers" value={String(activeDealers ?? 0)} icon={Store} tone="brand" />
+            <StatCard label={t("db_active_dealers", lang)} value={String(activeDealers ?? 0)} icon={Store} tone="brand" />
           </Link>
           <Link href="/admin/buyers" className="block">
-            <StatCard label="Total Buyers" value={String(totalBuyers ?? 0)} icon={ShoppingCart} tone="orange" />
+            <StatCard label={t("db_total_buyers", lang)} value={String(totalBuyers ?? 0)} icon={ShoppingCart} tone="orange" />
           </Link>
           <Link href="/admin/investors" className="block">
-            <StatCard label="Total Investors" value={String(totalInvestors ?? 0)} icon={TrendingUp} tone="purple" />
+            <StatCard label={t("db_total_investors", lang)} value={String(totalInvestors ?? 0)} icon={TrendingUp} tone="purple" />
           </Link>
           <Link href="/admin/suppliers" className="block">
-            <StatCard label="Total Suppliers" value={String(totalSuppliers ?? 0)} icon={Truck} tone="warn" />
+            <StatCard label={t("db_total_suppliers", lang)} value={String(totalSuppliers ?? 0)} icon={Truck} tone="warn" />
           </Link>
           <Link href="/admin/branches" className="block">
-            <StatCard label="Total Shops/Branches" value={String(totalBranches ?? 0)} icon={Building2} tone="brand" />
+            <StatCard label={t("db_total_shops", lang)} value={String(totalBranches ?? 0)} icon={Building2} tone="brand" />
           </Link>
         </div>
       </div>
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Orders Overview
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_orders_overview", lang)}</h2>
           <div className="flex gap-3 text-xs">
-            <Link href="/admin/bridge-orders" className="text-brand-700 hover:underline">Bridge Orders &rarr;</Link>
-            <Link href="/admin/produce-orders" className="text-brand-700 hover:underline">Produce Orders &rarr;</Link>
+            <Link href="/admin/bridge-orders" className="text-brand-700 hover:underline">{t("db_bridge_orders", lang)} &rarr;</Link>
+            <Link href="/admin/produce-orders" className="text-brand-700 hover:underline">{t("db_produce_orders", lang)} &rarr;</Link>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Total Orders" value={String(totalOrdersCount)} icon={ClipboardList} tone="brand" />
-          <StatCard label="Pending" value={String(orderSummary.pending.count)} icon={Clock} tone="orange" />
-          <StatCard label="Processing" value={String(orderSummary.processing.count)} icon={RefreshCw} tone="blue" />
-          <StatCard label="Completed" value={String(orderSummary.completed.count)} icon={CheckCircle2} tone="brand" />
-          <StatCard label="Cancelled" value={String(orderSummary.cancelled.count)} icon={XCircle} tone="warn" />
+          <StatCard label={t("db_total_orders", lang)} value={String(totalOrdersCount)} icon={ClipboardList} tone="brand" />
+          <StatCard label={t("db_pending", lang)} value={String(orderSummary.pending.count)} icon={Clock} tone="orange" />
+          <StatCard label={t("db_processing", lang)} value={String(orderSummary.processing.count)} icon={RefreshCw} tone="blue" />
+          <StatCard label={t("db_completed", lang)} value={String(orderSummary.completed.count)} icon={CheckCircle2} tone="brand" />
+          <StatCard label={t("db_cancelled", lang)} value={String(orderSummary.cancelled.count)} icon={XCircle} tone="warn" />
         </div>
         <p className="mt-3 text-xs text-surface-500">
           Total order value in this period: Rs. {totalOrdersAmount.toLocaleString()}
@@ -389,30 +388,28 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Dealer &amp; Buyer Performance (this period)
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_dealer_buyer_perf", lang)}</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Pending Dealer Verification" value={String(pendingDealerVerification)} icon={AlertTriangle} tone="warn" />
-          <StatCard label="Total Dealer Payable" value={`Rs. ${totalDealerPayable.toLocaleString()}`} icon={Wallet} tone="orange" />
-          <StatCard label="Dealer Orders" value={String(dealerOrdersThisPeriod)} icon={Store} tone="blue" />
-          <StatCard label="Buyer Orders" value={String(buyerOrdersThisPeriod)} icon={ShoppingCart} tone="brand" />
-          <StatCard label="Buyer Purchases" value={`Rs. ${buyerPurchasesThisPeriod.toLocaleString()}`} icon={TrendingUp} tone="purple" />
+          <StatCard label={t("db_pending_dealer_verification", lang)} value={String(pendingDealerVerification)} icon={AlertTriangle} tone="warn" />
+          <StatCard label={t("db_total_dealer_payable", lang)} value={`Rs. ${totalDealerPayable.toLocaleString()}`} icon={Wallet} tone="orange" />
+          <StatCard label={t("db_dealer_orders", lang)} value={String(dealerOrdersThisPeriod)} icon={Store} tone="blue" />
+          <StatCard label={t("db_buyer_orders", lang)} value={String(buyerOrdersThisPeriod)} icon={ShoppingCart} tone="brand" />
+          <StatCard label={t("db_buyer_purchases", lang)} value={`Rs. ${buyerPurchasesThisPeriod.toLocaleString()}`} icon={TrendingUp} tone="purple" />
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">Top Dealers</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">{t("db_top_dealers", lang)}</h3>
             {topDealers.every((d) => d.orders === 0) ? (
-              <p className="text-xs text-surface-400">No dealer orders in this period.</p>
+              <p className="text-xs text-surface-400">{t("db_no_dealer_orders", lang)}</p>
             ) : (
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-surface-100 text-surface-500">
-                    <th className="py-1.5 pr-2">Dealer</th>
-                    <th className="py-1.5 pr-2">Orders</th>
-                    <th className="py-1.5 pr-2">Payout</th>
-                    <th className="py-1.5 pr-2">Outstanding</th>
+                    <th className="py-1.5 pr-2">{t("db_dealer", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_orders", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_payout", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_outstanding", lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -429,16 +426,16 @@ export default async function AdminDashboardPage({
             )}
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">Top Buyers</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">{t("db_top_buyers", lang)}</h3>
             {topBuyers.every((b) => b.orders === 0) ? (
-              <p className="text-xs text-surface-400">No buyer orders in this period.</p>
+              <p className="text-xs text-surface-400">{t("db_no_buyer_orders", lang)}</p>
             ) : (
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-surface-100 text-surface-500">
-                    <th className="py-1.5 pr-2">Buyer</th>
-                    <th className="py-1.5 pr-2">Orders</th>
-                    <th className="py-1.5 pr-2">Purchases</th>
+                    <th className="py-1.5 pr-2">{t("c_buyer", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_orders", lang)}</th>
+                    <th className="py-1.5 pr-2">{t("db_purchases", lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -458,26 +455,24 @@ export default async function AdminDashboardPage({
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Inventory Overview
-          </h2>
-          <Link href="/admin/inventory" className="text-xs text-brand-700 hover:underline">View all &rarr;</Link>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_inventory_overview", lang)}</h2>
+          <Link href="/admin/inventory" className="text-xs text-brand-700 hover:underline">{t("db_view_all", lang)} &rarr;</Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <Link href="/admin/products" className="block">
-            <StatCard label="Total Products" value={String(totalProducts)} icon={Package} tone="brand" />
+            <StatCard label={t("db_total_products", lang)} value={String(totalProducts)} icon={Package} tone="brand" />
           </Link>
-          <StatCard label="Active Products" value={String(activeProducts)} icon={CheckCircle2} tone="blue" />
-          <StatCard label="Out of Stock" value={String(outOfStockProducts)} icon={PackageX} tone="warn" />
-          <StatCard label="Total Stock Value" value={`Rs. ${totalStockValue.toLocaleString()}`} icon={Boxes} tone="purple" />
+          <StatCard label={t("db_active_products", lang)} value={String(activeProducts)} icon={CheckCircle2} tone="blue" />
+          <StatCard label={t("db_out_of_stock", lang)} value={String(outOfStockProducts)} icon={PackageX} tone="warn" />
+          <StatCard label={t("db_total_stock_value", lang)} value={`Rs. ${totalStockValue.toLocaleString()}`} icon={Boxes} tone="purple" />
           <Link href="/admin/stock-transfers" className="block">
-            <StatCard label="Pending Transfers" value={String(pendingStockTransfers ?? 0)} icon={ArrowLeftRight} tone="orange" />
+            <StatCard label={t("db_pending_transfers", lang)} value={String(pendingStockTransfers ?? 0)} icon={ArrowLeftRight} tone="orange" />
           </Link>
         </div>
 
         {lowStockProducts.length > 0 ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-surface-800 dark:bg-surface-900">
-            <p className="mb-2 text-xs font-semibold text-red-800 dark:text-red-300">Low Stock Alert</p>
+            <p className="mb-2 text-xs font-semibold text-red-800 dark:text-red-300">{t("db_low_stock_alert", lang)}</p>
             <ul className="space-y-1 text-xs text-red-800 dark:text-red-300">
               {lowStockProducts.map((p) => (
                 <li key={p.id}>
@@ -487,29 +482,25 @@ export default async function AdminDashboardPage({
             </ul>
           </div>
         ) : (
-          <p className="mt-4 text-xs text-surface-400">
-            Koi minimum-stock threshold set nahi hui abhi tak — Products page mein set karne par yahan alerts aayenge.
-          </p>
+          <p className="mt-4 text-xs text-surface-400">{t("at_no_threshold", lang)}</p>
         )}
       </div>
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Recent Orders
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_recent_orders", lang)}</h2>
         {recentOrders.length === 0 ? (
-          <p className="text-sm text-surface-400">No orders yet.</p>
+          <p className="text-sm text-surface-400">{t("db_no_orders_yet", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Order #</th>
-                  <th className="py-2 pr-3">Type</th>
-                  <th className="py-2 pr-3">Customer</th>
-                  <th className="py-2 pr-3">Amount</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">{t("db_order_no", lang)}</th>
+                  <th className="py-2 pr-3">{t("db_type", lang)}</th>
+                  <th className="py-2 pr-3">{t("db_customer", lang)}</th>
+                  <th className="py-2 pr-3">{t("db_amount", lang)}</th>
+                  <th className="py-2 pr-3">{t("db_status", lang)}</th>
+                  <th className="py-2 pr-3">{t("db_date", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -531,18 +522,16 @@ export default async function AdminDashboardPage({
 
       <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Farmer Credit
-          </h2>
-          <Link href="/admin/farmer-credit" className="text-xs text-brand-700 hover:underline">View all &rarr;</Link>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_farmer_credit", lang)}</h2>
+          <Link href="/admin/farmer-credit" className="text-xs text-brand-700 hover:underline">{t("db_view_all", lang)} &rarr;</Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Total Credit Given" value={`Rs. ${totalCreditGiven.toLocaleString()}`} icon={CreditCard} tone="blue" />
-          <StatCard label="Total Repaid" value={`Rs. ${totalRepaid.toLocaleString()}`} icon={Banknote} tone="brand" />
-          <StatCard label="Outstanding" value={`Rs. ${totalOutstanding.toLocaleString()}`} icon={Wallet} tone="orange" />
-          <StatCard label="Farmers with Credit" value={String(farmersWithCreditSet.size)} icon={UserCheck} tone="purple" />
+          <StatCard label={t("db_total_credit_given", lang)} value={`Rs. ${totalCreditGiven.toLocaleString()}`} icon={CreditCard} tone="blue" />
+          <StatCard label={t("db_total_repaid", lang)} value={`Rs. ${totalRepaid.toLocaleString()}`} icon={Banknote} tone="brand" />
+          <StatCard label={t("db_outstanding", lang)} value={`Rs. ${totalOutstanding.toLocaleString()}`} icon={Wallet} tone="orange" />
+          <StatCard label={t("db_farmers_with_credit", lang)} value={String(farmersWithCreditSet.size)} icon={UserCheck} tone="purple" />
           <Link href="/admin/credit-requests" className="block">
-            <StatCard label="Pending Requests" value={String(pendingCreditRequests ?? 0)} icon={AlertTriangle} tone="warn" />
+            <StatCard label={t("db_pending_requests", lang)} value={String(pendingCreditRequests ?? 0)} icon={AlertTriangle} tone="warn" />
           </Link>
         </div>
         <p className="mt-3 text-xs text-surface-500">
@@ -561,9 +550,7 @@ export default async function AdminDashboardPage({
 
         {staleCreditRequests.length > 0 && (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-surface-800 dark:bg-surface-900">
-            <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">
-              Credit Alerts — pending 3+ days
-            </p>
+            <p className="mb-2 text-xs font-semibold text-amber-800 dark:text-amber-300">{t("db_credit_alerts", lang)}</p>
             <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-300">
               {staleCreditRequests.map((r) => (
                 <li key={r.id}>
@@ -576,22 +563,20 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="New Contact Messages" value={String(newContactMessages ?? 0)} icon={Mail} tone="warn" />
-        <StatCard label="New Investor Inquiries" value={String(newInvestorInquiries ?? 0)} icon={Handshake} tone="warn" />
-        <StatCard label="Registered Farmers" value={String(farmers ?? 0)} icon={Wheat} tone="brand" />
-        <StatCard label="Machinery Requests" value={String(machineryRequests ?? 0)} icon={Tractor} tone="orange" />
-        <StatCard label="Fertilizer Requests" value={String(fertilizerRequests ?? 0)} icon={Sprout} tone="blue" />
-        <StatCard label="Livestock Loans" value={String(livestockLoans ?? 0)} icon={Landmark} tone="purple" />
-        <StatCard label="Blog Posts" value={String(blogPosts ?? 0)} icon={FileText} />
-        <StatCard label="Newsletter Subscribers" value={String(newsletterSubscribers ?? 0)} icon={Users} />
-        <StatCard label="Testimonials" value={String(testimonials ?? 0)} icon={Quote} />
+        <StatCard label={t("db_new_contact_messages", lang)} value={String(newContactMessages ?? 0)} icon={Mail} tone="warn" />
+        <StatCard label={t("db_new_investor_inquiries", lang)} value={String(newInvestorInquiries ?? 0)} icon={Handshake} tone="warn" />
+        <StatCard label={t("db_registered_farmers", lang)} value={String(farmers ?? 0)} icon={Wheat} tone="brand" />
+        <StatCard label={t("db_machinery_requests", lang)} value={String(machineryRequests ?? 0)} icon={Tractor} tone="orange" />
+        <StatCard label={t("db_fertilizer_requests", lang)} value={String(fertilizerRequests ?? 0)} icon={Sprout} tone="blue" />
+        <StatCard label={t("db_livestock_loans", lang)} value={String(livestockLoans ?? 0)} icon={Landmark} tone="purple" />
+        <StatCard label={t("db_blog_posts", lang)} value={String(blogPosts ?? 0)} icon={FileText} />
+        <StatCard label={t("db_newsletter_subscribers", lang)} value={String(newsletterSubscribers ?? 0)} icon={Users} />
+        <StatCard label={t("db_testimonials", lang)} value={String(testimonials ?? 0)} icon={Quote} />
         <AdminWeatherStatCard />
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Website Management - Quick Links
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_website_quick_links", lang)}</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {WEBSITE_LINKS.map((link) => (
             <Link
@@ -609,22 +594,20 @@ export default async function AdminDashboardPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Service Requests Overview
-        </h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("db_service_requests", lang)}</h2>
         <RequestsChart data={overviewData} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-card border border-orange-200 bg-orange-50 p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">Machinery - Status</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">{t("db_machinery_status", lang)}</h3>
           <CategoryStatusChart data={machineryBreakdown} color="#ea580c" />
         </div>
         <div className="rounded-card border border-blue-200 bg-blue-50 p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">Fertilizer - Status</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">{t("db_fertilizer_status", lang)}</h3>
           <CategoryStatusChart data={fertilizerBreakdown} color="#2563eb" />
         </div>
         <div className="rounded-card border border-purple-200 bg-purple-50 p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">Livestock - Status</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-800 dark:text-surface-100">{t("db_livestock_status", lang)}</h3>
           <CategoryStatusChart data={livestockBreakdown} color="#9333ea" />
         </div>
       </div>

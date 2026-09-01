@@ -4,32 +4,45 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/format";
-import { ADMIN_NAV_GROUPS, DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { iconByName } from "@/lib/access/icons";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 export type { NavItem } from "@/components/layout/nav-items";
+
+/**
+ * Menu ab database se aata hai, is liye group aur item yahan tak taiyar
+ * shakal mein pahunchte hain. Icon ka sirf naam aata hai -- us ka
+ * component yahan banta hai, kyunke component server se client tak bheja
+ * nahi ja sakta.
+ */
+export interface SidebarGroup {
+  key: string;
+  label: string;
+  items: { href: string; label: string; icon: string | null; section?: string | null }[];
+}
 
 export function Sidebar({
   subtitle,
   homeHref = "/",
   role = "",
   allowedPages = null,
+  groups = null,
 }: {
   subtitle: string;
   homeHref?: string;
   role?: string;
   allowedPages?: string[] | null;
+  groups?: SidebarGroup[] | null;
 }) {
   const pathname = usePathname();
+  const lang = useLang();
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
   const isUnrestricted = role === "owner" || role === "super_admin" || role === "admin";
-  const visibleGroups = isUnrestricted
-    ? ADMIN_NAV_GROUPS
-    : ADMIN_NAV_GROUPS.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => (allowedPages ?? []).includes(item.href)),
-      })).filter((g) => g.items.length > 0);
+  const visibleGroups: SidebarGroup[] = groups ?? [];
 
   const activeGroupLabel = visibleGroups.find((g) => g.items.some((item) => isActive(item.href)))?.label;
   const [openGroups, setOpenGroups] = useState<Set<string>>(
@@ -47,14 +60,14 @@ export function Sidebar({
   return (
     <aside className="hidden w-64 shrink-0 border-r border-surface-800 bg-[#1a1f36] lg:flex lg:flex-col">
       <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">AR</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
         <div>
-          <p className="font-display text-sm font-semibold leading-tight text-white">Al Rana Traders</p>
+          <p className="font-display text-sm font-semibold leading-tight text-white">{t("au_company", lang)}</p>
           <p className="text-xs text-surface-400">{subtitle}</p>
         </div>
       </Link>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {(isUnrestricted || (allowedPages ?? []).includes(DASHBOARD_ITEM.href)) && (
+        {(isUnrestricted || (allowedPages ?? []).includes(DASHBOARD_ITEM.href)) && homeHref !== DASHBOARD_ITEM.href && (
           <Link
             href={DASHBOARD_ITEM.href}
             className={cn(
@@ -73,7 +86,7 @@ export function Sidebar({
           const isOpen = openGroups.has(group.label);
           const groupActive = group.items.some((item) => isActive(item.href));
           return (
-            <div key={group.label}>
+            <div key={group.key}>
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
@@ -87,12 +100,23 @@ export function Sidebar({
               </button>
               {isOpen && (
                 <div className="space-y-0.5 pb-1">
-                  {group.items.map((item) => {
+                  {group.items.map((item, index) => {
                     const active = isActive(item.href);
-                    const Icon = item.icon;
+                    // Sarkhi sirf wahan chhapti hai jahan wo badalti hai --
+                    // har item par dohrana fehrist ko lamba karta hai, saaf
+                    // nahi.
+                    const prevSection = index > 0 ? (group.items[index - 1].section ?? null) : null;
+                    const section = item.section ?? null;
+                    const showSection = !!section && section !== prevSection;
+                    const Icon = iconByName(item.icon);
                     return (
+                      <div key={item.href}>
+                        {showSection && (
+                          <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                            {section}
+                          </p>
+                        )}
                       <Link
-                        key={item.href}
                         href={item.href}
                         className={cn(
                           "group flex items-center justify-between rounded-lg px-3 py-2 pl-6 text-sm font-medium transition-colors",
@@ -105,6 +129,7 @@ export function Sidebar({
                         </span>
                         {active && <ChevronRight className="h-3.5 w-3.5 text-white/70" />}
                       </Link>
+                      </div>
                     );
                   })}
                 </div>

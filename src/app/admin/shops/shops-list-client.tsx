@@ -5,6 +5,8 @@ import { createShop, updateShopStatus, deleteShop, type ActionState } from "@/ac
 import { DeleteButton } from "@/components/admin/delete-button";
 import { EmptyState } from "@/components/ui/layout-primitives";
 import { Store, Plus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -32,6 +34,7 @@ interface Branch {
 
 export function ShopsListClient({ shops, branches }: { shops: Shop[]; branches: Branch[] }) {
   const [showAdd, setShowAdd] = useState(false);
+  const lang = useLang();
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -41,12 +44,11 @@ export function ShopsListClient({ shops, branches }: { shops: Shop[]; branches: 
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
-            <Plus className="h-4 w-4" /> Nayi Shop Add Karein
-          </button>
+            <Plus className="h-4 w-4" />{t("sh_add_new", lang)}</button>
         </div>
 
         {shops.length === 0 ? (
-          <EmptyState title="Koi shop nahi hai" description="Upar 'Nayi Shop Add Karein' se pehli shop banayein." />
+          <EmptyState title={t("sh_none", lang)} description="Upar 'Nayi Shop Add Karein' se pehli shop banayein." />
         ) : (
           <div className="space-y-2">
             {shops.map((s) => (
@@ -102,14 +104,15 @@ function StatusToggle({ shopId, isActive }: { shopId: string; isActive: boolean 
 
 function AddShopForm({ branches, onDone }: { branches: Branch[]; onDone: () => void }) {
   const [state, formAction] = useFormState(createShop, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onDone, 800);
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h3 className="mb-3 font-display text-sm font-semibold text-surface-900 dark:text-white">Nayi Shop</h3>
+      <h3 className="mb-3 font-display text-sm font-semibold text-surface-900 dark:text-white">{t("sh_new", lang)}</h3>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
       <form action={formAction} className="space-y-2">
-        <input name="name" required placeholder="Shop ka naam (e.g. Karyana Shop)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input name="name" required placeholder={t("sh_name_eg", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <select name="branch_id" required className="w-full rounded-lg border border-surface-200 p-2 text-sm">
           <option value="">- Branch Select Karein -</option>
           {branches.map((b) => (
@@ -117,13 +120,13 @@ function AddShopForm({ branches, onDone }: { branches: Branch[]; onDone: () => v
           ))}
         </select>
         <select name="business_type" required className="w-full rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="karyana">Karyana</option>
-          <option value="agri_inputs">Agri Inputs (Fertilizer/Pesticide/Wanda)</option>
-          <option value="grain_procurement">Grain Procurement</option>
-          <option value="dairy">Dairy</option>
-          <option value="machinery_fleet">Machinery & Fleet</option>
+          <option value="karyana">{t("sh_karyana", lang)}</option>
+          <option value="agri_inputs">{t("sh_agri_inputs", lang)}</option>
+          <option value="grain_procurement">{t("sh_grain", lang)}</option>
+          <option value="dairy">{t("sh_dairy", lang)}</option>
+          <option value="machinery_fleet">{t("sh_machinery", lang)}</option>
         </select>
-        <input name="code" placeholder="Code (optional, e.g. MB-KAR)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input name="code" placeholder={t("sh_code_eg", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <SubmitButton />
       </form>
     </div>

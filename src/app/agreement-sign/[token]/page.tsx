@@ -1,10 +1,14 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { UrduAgreementTemplate } from "@/components/agreement/urdu-agreement-template";
 import { SignSection } from "./sign-section";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LangProvider } from "@/lib/i18n/lang-context";
+import { t } from "@/lib/i18n/translations";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgreementSignPage({ params }: { params: Promise<{ token: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { token } = await params;
   const serviceClient = createServiceClient();
 
@@ -19,7 +23,7 @@ export default async function AgreementSignPage({ params }: { params: Promise<{ 
   if (!agreement) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-50 p-4">
-        <p className="text-surface-500">Ye link ghalat hai ya expire ho chuka hai.</p>
+        <p className="text-surface-500">{t("ou_bad_link", lang)}</p>
       </div>
     );
   }
@@ -61,7 +65,9 @@ export default async function AgreementSignPage({ params }: { params: Promise<{ 
       <UrduAgreementTemplate data={templateData} />
       {!agreement.landlord_signature_data && (
         <div className="mx-auto mt-4 max-w-3xl">
-          <SignSection token={token} />
+          <LangProvider lang={getLanguageFromCookies("ur")}>
+            <SignSection token={token} />
+          </LangProvider>
         </div>
       )}
       {agreement.landlord_signature_data && (

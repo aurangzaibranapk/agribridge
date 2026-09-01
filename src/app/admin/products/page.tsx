@@ -7,6 +7,8 @@ import { Button, Badge } from "@/components/ui/form";
 import { DataTable, Pagination, type Column } from "@/components/ui/data-table";
 import { formatCurrency } from "@/lib/utils/format";
 import { DeleteButton } from "@/app/admin/products/delete-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 type ProductRow = {
@@ -14,6 +16,7 @@ type ProductRow = {
   is_available: boolean; is_verified: boolean; image_url: string | null; categories: { name: string } | null; brands: { name: string } | null;
 };
 export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const page = Math.max(1, Number(searchParams.page ?? 1));
   const q = searchParams.q?.trim();
@@ -54,7 +57,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
       accessor: (p) => (
         <div className="flex flex-wrap gap-1">
           <Badge tone={p.is_available ? "green" : "gray"}>{p.is_available ? "Available" : "Unavailable"}</Badge>
-          {!p.is_verified && <Badge tone="amber">Pending Verify</Badge>}
+          {!p.is_verified && <Badge tone="amber">{t("pd_pending_verify", lang)}</Badge>}
         </div>
       ),
     },
@@ -65,8 +68,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
           href={`/admin/products/${p.id}/edit`}
           className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
         >
-          <Pencil className="h-3.5 w-3.5" /> Edit
-        </Link>
+          <Pencil className="h-3.5 w-3.5" />{t("at_edit", lang)}</Link>
       ),
     },
     ...(isUnrestricted
@@ -81,11 +83,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
   return (
     <div>
       <PageHeader
-        title="Product Management"
+        title={t("pd_management", lang)}
         description="Products, pricing, and specifications"
         actions={
           <Link href="/admin/products/new">
-            <Button><Plus className="h-4 w-4" /> Add Product</Button>
+            <Button><Plus className="h-4 w-4" />{t("c_add_product", lang)}</Button>
           </Link>
         }
       />
@@ -93,7 +95,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
         <input
           name="q"
           defaultValue={q}
-          placeholder="Search products..."
+          placeholder={t("pd_search", lang)}
           className="h-10 w-full max-w-md rounded-lg border border-surface-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
       </form>

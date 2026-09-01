@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { WalletStatementClient } from "./statement-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default async function WalletStatementPage({ params }: { params: Promise<{ farmerId: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { farmerId } = await params;
   const supabase = createClient();
 
@@ -22,7 +25,7 @@ export default async function WalletStatementPage({ params }: { params: Promise<
   ]);
 
   if (!farmer || !wallet) {
-    return <div className="p-8 text-center text-surface-400">Farmer ya Wallet nahi mila.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("wl_not_found", lang)}</div>;
   }
 
   const { data: rawTxns } = await supabase

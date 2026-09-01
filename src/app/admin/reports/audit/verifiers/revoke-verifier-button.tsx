@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { revokeLossVerifier, type ActionState } from "@/actions/stock-loss";
 import { Trash2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -17,10 +19,10 @@ export function RevokeVerifierButton({ grantId }: { grantId: string }) {
 }
 
 function SubmitButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline disabled:opacity-60">
-      <Trash2 className="h-3.5 w-3.5" /> Hatayein
-    </button>
+      <Trash2 className="h-3.5 w-3.5" />{t("at_remove", lang)}</button>
   );
 }

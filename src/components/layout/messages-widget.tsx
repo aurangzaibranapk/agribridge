@@ -5,19 +5,21 @@ import { createClient } from "@/lib/supabase/client";
 import { sendMessage, markConversationRead, type ActionState } from "@/actions/messages";
 import { sendBroadcastMessage, type ActionState as BroadcastActionState } from "@/actions/messages-broadcast";
 import { MessageCircle, X, Send, Paperclip, Bot, FileText, ArrowLeft, Users } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 const initialBroadcastState: BroadcastActionState = {};
 
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "manager", "sales_staff", "finance",
-  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "ai_assistant",
+  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "machinery", "ai_assistant",
 ];
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Admin", admin: "Admin", owner: "Owner", admin_assistant: "Admin Assistant",
   manager: "Manager", sales_staff: "Sales", finance: "Finance", warehouse: "Warehouse",
-  hr: "HR", procurement: "Procurement", milk_collection: "Milk Collection", ai_assistant: "AI Assistant",
+  hr: "HR", procurement: "Procurement", milk_collection: "Milk Collection", machinery: "Machinery", ai_assistant: "AI Assistant",
 };
 
 interface Contact {
@@ -38,6 +40,7 @@ interface Message {
 }
 
 export function MessagesWidget() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -133,8 +136,8 @@ export function MessagesWidget() {
                   <Users className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-medium text-brand-700 dark:text-brand-300">Sab Staff Ko Bhejein</p>
-                  <p className="text-xs text-brand-500">Ek message, sab ko chala jayega</p>
+                  <p className="text-sm font-medium text-brand-700 dark:text-brand-300">{t("sh_send_all_staff", lang)}</p>
+                  <p className="text-xs text-brand-500">{t("sh_one_msg_all", lang)}</p>
                 </div>
               </button>
               {contacts.map((c) => (
@@ -157,7 +160,7 @@ export function MessagesWidget() {
                   {unreadBySender[c.id] > 0 && <span className="rounded-full bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadBySender[c.id]}</span>}
                 </button>
               ))}
-              {contacts.length === 0 && <p className="p-4 text-center text-xs text-surface-400">Koi contact nahi mila.</p>}
+              {contacts.length === 0 && <p className="p-4 text-center text-xs text-surface-400">{t("sh_no_contact", lang)}</p>}
             </div>
           )}
 
@@ -173,6 +176,7 @@ export function MessagesWidget() {
 }
 
 function BroadcastPane({ onSent }: { onSent: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(sendBroadcastMessage, initialBroadcastState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -186,7 +190,7 @@ function BroadcastPane({ onSent }: { onSent: () => void }) {
   return (
     <div className="flex flex-1 flex-col justify-between p-3">
       <div>
-        <p className="mb-2 text-xs text-surface-500">Ye message sab active staff (Sales, Finance, Warehouse, HR, etc) ko chala jayega.</p>
+        <p className="mb-2 text-xs text-surface-500">{t("sh_all_staff_note", lang)}</p>
         {state.error && <p className="mb-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700">{state.error}</p>}
       </div>
       <form ref={formRef} action={formAction} encType="multipart/form-data" className="flex items-center gap-1.5 border-t border-surface-100 pt-2 dark:border-surface-800">
@@ -194,7 +198,7 @@ function BroadcastPane({ onSent }: { onSent: () => void }) {
           <Paperclip className="h-4 w-4" />
           <input type="file" name="attachment" accept="image/*,application/pdf" className="hidden" />
         </label>
-        <input name="message" placeholder="Elaan likhein..." className="flex-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs" />
+        <input name="message" placeholder={t("sh_write_announcement", lang)} className="flex-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs" />
         <BroadcastSubmitButton />
       </form>
     </div>
@@ -211,6 +215,7 @@ function BroadcastSubmitButton() {
 }
 
 function ChatPane({ currentUserId, contact, conversation, onSent, unread }: { currentUserId: string; contact: Contact; conversation: Message[]; onSent: () => void; unread: number }) {
+  const lang = useLang();
   const [, markReadAction] = useFormState(markConversationRead, initialState);
   const [state, formAction] = useFormState(sendMessage, initialState);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -238,7 +243,7 @@ function ChatPane({ currentUserId, contact, conversation, onSent, unread }: { cu
   return (
     <>
       <div className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
-        {conversation.length === 0 && <p className="py-6 text-center text-xs text-surface-400">Koi message nahi hai abhi.</p>}
+        {conversation.length === 0 && <p className="py-6 text-center text-xs text-surface-400">{t("sh_no_messages", lang)}</p>}
         {conversation.map((m) => {
           const isMine = m.sender_id === currentUserId;
           return (
@@ -252,8 +257,7 @@ function ChatPane({ currentUserId, contact, conversation, onSent, unread }: { cu
                 )}
                 {m.attachment_url && m.attachment_type === "file" && (
                   <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 underline">
-                    <FileText className="h-3 w-3" /> File
-                  </a>
+                    <FileText className="h-3 w-3" />{t("sh_file", lang)}</a>
                 )}
               </div>
             </div>
@@ -268,7 +272,7 @@ function ChatPane({ currentUserId, contact, conversation, onSent, unread }: { cu
           <Paperclip className="h-4 w-4" />
           <input type="file" name="attachment" accept="image/*,application/pdf" className="hidden" />
         </label>
-        <input name="message" placeholder="Ask a question..." className="flex-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs" />
+        <input name="message" placeholder={t("sh_ask_question", lang)} className="flex-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs" />
         <SubmitButton />
       </form>
     </>

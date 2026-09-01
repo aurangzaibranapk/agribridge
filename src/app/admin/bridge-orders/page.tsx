@@ -3,10 +3,13 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { formatDateTime } from "@/lib/utils/format";
 import { OrderActions } from "@/app/admin/bridge-orders/order-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBridgeOrdersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [{ data: orders }, { data: financeAccounts }] = await Promise.all([
@@ -46,21 +49,21 @@ export default async function AdminBridgeOrdersPage() {
 
   return (
     <div>
-      <PageHeader title="Bridge Orders" description="Farmer orders routed to dealers - identity-masked on both sides" />
+      <PageHeader title={t("bo_title", lang)} description="Farmer orders routed to dealers - identity-masked on both sides" />
       {normalized.length === 0 ? (
-        <EmptyState title="No orders yet" />
+        <EmptyState title={t("bo_none", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Order #</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Dealer</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Area</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Subtotal</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Commission</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Action / Payment</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("po_order_hash", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("db_dealer", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("bo_area", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_subtotal", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_commission", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("bo_action_payment", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +71,7 @@ export default async function AdminBridgeOrdersPage() {
                 <tr key={o.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-4 py-3 font-mono text-xs text-surface-500">
                     {o.order_number}
-                    {o.source === "marketplace" && <span className="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">Marketplace</span>}
+                    {o.source === "marketplace" && <span className="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">{t("bo_marketplace", lang)}</span>}
                   </td>
                   <td className="px-4 py-3 text-surface-700 dark:text-surface-300">{o.dealer_name ?? "Unassigned"}</td>
                   <td className="px-4 py-3 text-surface-500">{[o.district, o.tehsil].filter(Boolean).join(", ")}</td>

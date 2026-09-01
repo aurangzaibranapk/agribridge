@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashOut, postWalletMovement, ACC } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 
@@ -135,17 +136,40 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   if (farmerId) {
     const { data: grainWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
     if (grainWallet) {
-      await supabase.from("wallet_transactions").insert({
-        wallet_id: grainWallet.id,
-        type: "grain_income",
-        direction: "credit",
-        amount: payableToSeller,
-        balance_after: 0,
-        reference_type: "grain_procurement_entry",
-        reference_id: entry.id,
-        notes: `Grain: ${netWeight}kg, ${grainType}, ${entryDate}`,
-        created_by: user?.id ?? null,
-      });
+      // Pehle yahan type "grain_income" likha tha jo wallet ki fehrist
+      // mein hai hi nahi -- is liye ye entry chup chaap nakaam ho jati
+      // thi aur kisan ka wallet khali reh jata tha.
+      const { data: grainWalletRow } = await supabase
+        .from("wallet_transactions")
+        .insert({
+          wallet_id: grainWallet.id,
+          type: "manual_adjustment",
+          direction: "credit",
+          amount: payableToSeller,
+          balance_after: 0,
+          reference_type: "grain_procurement_entry",
+          reference_id: entry.id,
+          notes: `Grain: ${netWeight}kg, ${grainType}, ${entryDate}`,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (grainWalletRow?.id) {
+        await postWalletMovement({
+          ownerType: "farmer",
+          ownerId: farmerId,
+          amount: payableToSeller,
+          direction: "credit",
+          against: ACC.grainPurchase,
+          description: `Grain khareed — ${netWeight}kg ${grainType}`,
+          ctx: {
+            createdBy: user?.id ?? null,
+            entryDate,
+            claims: [{ table: "wallet_transactions", rowId: grainWalletRow.id }],
+          },
+        });
+      }
     }
   }
 
@@ -157,31 +181,34 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       .eq("warehouse_id", warehouseId)
       .eq("product_id", productId)
       .maybeSingle();
+    // Ginti yahan se NAHI badalti -- wo harkat par trigger karta hai (129).
     let inventoryId: string;
-    let balanceAfter: number;
     if (existingInv) {
       inventoryId = existingInv.id;
-      balanceAfter = Number(existingInv.quantity_on_hand) + netWeight;
-      await supabase.from("inventory").update({ quantity_on_hand: balanceAfter, updated_at: new Date().toISOString() }).eq("id", inventoryId);
     } else {
-      balanceAfter = netWeight;
       const { data: newInv } = await supabase
         .from("inventory")
-        .insert({ warehouse_id: warehouseId, product_id: productId, quantity_on_hand: netWeight })
+        .insert({ warehouse_id: warehouseId, product_id: productId })
         .select("id")
         .single();
       inventoryId = newInv?.id ?? "";
     }
     if (inventoryId) {
-      await supabase.from("stock_movements").insert({
+      // Pehle yahan "grain_procurement_in" likha hua tha. Wo lafz
+      // stock_movement_type enum mein hai hi nahi, is liye ye qatar
+      // HAMESHA nakaam hoti thi -- aur error kabhi parha nahi jata tha.
+      // Yani anaj ka stock sirf upar wali hath ki likhai se barhta tha
+      // aur us ka koi kaghaz nahi banta tha. "purchase_in" wohi baat hai
+      // jo yahan ho rahi hai: kisan se maal khareeda gaya.
+      const { error: movementError } = await supabase.from("stock_movements").insert({
         inventory_id: inventoryId,
-        movement_type: "grain_procurement_in",
+        movement_type: "purchase_in",
         quantity: netWeight,
-        balance_after: balanceAfter,
         reference_type: "grain_procurement",
         reference_id: entry.id,
         created_by: user?.id ?? null,
       });
+      if (movementError) return { error: `Anaj ka stock darj nahi hua: ${movementError.message}` };
     }
     await supabase.from("stock_batches").insert({
       product_id: productId,
@@ -203,19 +230,37 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       entry_id: entry.id,
       created_by: user?.id ?? null,
     });
-    await supabase.from("finance_transactions").insert({
-      account_id: exp.account_id,
-      transaction_type: "expense",
-      category: "Grain Operations",
-      amount: exp.amount,
-      transaction_date: entryDate,
-      notes: `${exp.description || exp.category} (Grain Operations - Entry linked)`,
-      created_by: user?.id ?? null,
-    });
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", exp.account_id).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - exp.amount }).eq("id", exp.account_id);
+    const { data: opExpRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: exp.account_id,
+        transaction_type: "expense",
+        category: "Grain Operations",
+        amount: exp.amount,
+        transaction_date: entryDate,
+        notes: `${exp.description || exp.category} (Grain Operations - Entry linked)`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (opExpRow?.id) {
+      await postCashOut({
+        accountId: exp.account_id,
+        amount: Number(exp.amount),
+        description: `${exp.description || exp.category} (Grain Operations)`,
+        againstAccount: ACC.grainPurchase,
+        ctx: {
+          createdBy: user?.id ?? null,
+          entryDate,
+          claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
+        },
+      });
     }
+    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+    // 1,000 ka asar Rs 2,000 hota tha.
   }
 
   let paymentId: string | undefined;
@@ -264,7 +309,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         .limit(1)
         .maybeSingle();
       const prevBalance = Number(lastRow?.balance_after ?? 0);
-      await supabase.from("farmer_credit_ledger").insert({
+      const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
         farmer_id: farmerId,
         source_type: "grain_procurement",
         ledger_type: "credit",
@@ -273,6 +318,11 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         notes: "Grain payment se automatically kaata gaya",
         created_by: user?.id ?? null,
       });
+      // Ye chup chaap fail nahi hona chahiye. Naqad to kam diya ja chuka
+      // hai; agar katauti ledger mein na chare to kisan ka udhaar utna
+      // ka utna khara reh jata hai -- ek hi udhaar do dafa wasool hone
+      // ka raasta.
+      if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
     }
 
     if (actualCashOut > 0) {
@@ -285,10 +335,10 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         notes: `Grain payment (${paymentMethod ?? "cash"}) - Entry ke sath`,
         created_by: user?.id ?? null,
       });
-      const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", paymentAccountId).single();
-      if (account) {
-        await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - actualCashOut }).eq("id", paymentAccountId);
-      }
+      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+      // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+      // 1,000 ka asar Rs 2,000 hota tha.
       if (farmerId) {
         const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
         if (payWallet) {
@@ -392,7 +442,7 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       .limit(1)
       .maybeSingle();
     const prevBalance = Number(lastRow?.balance_after ?? 0);
-    await supabase.from("farmer_credit_ledger").insert({
+    const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
       farmer_id: farmerId,
       source_type: "grain_procurement",
       ledger_type: "credit",
@@ -401,6 +451,9 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       notes: "Grain payment se automatically kaata gaya",
       created_by: user?.id ?? null,
     });
+    // Upar wali wajah hi yahan bhi lagti hai -- katauti darj na ho to
+    // kisan ka udhaar khamoshi se khara reh jata hai.
+    if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
   }
 
   if (actualCashOut > 0) {
@@ -413,10 +466,10 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       notes: `Grain payment (${paymentMethod ?? "cash"})`,
       created_by: user?.id ?? null,
     });
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - actualCashOut }).eq("id", accountId);
-    }
+    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+    // 1,000 ka asar Rs 2,000 hota tha.
     if (farmerId) {
       const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
       if (payWallet) {

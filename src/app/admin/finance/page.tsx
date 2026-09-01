@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { FinanceClient } from "@/app/admin/finance/finance-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminFinancePage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const { data: accounts } = await supabase
     .from("finance_accounts")
@@ -16,10 +19,10 @@ export default async function AdminFinancePage() {
   if (!accounts || accounts.length === 0) {
     return (
       <div>
-        <PageHeader title="Finance / Cash Book" description="Multi-account cash book with income, expenses, and transfers" />
+        <PageHeader title={t("fn_title", lang)} description={t("fn_subtitle", lang)} />
         <EmptyState
-          title="No accounts yet"
-          description="You'll need at least one account (e.g. 'Cash' or a bank name) to get started - reload this page after creating one from the button that will appear here."
+          title={t("fn_no_accounts", lang)}
+          description={t("fn_no_accounts_note", lang)}
         />
         <div className="mt-4">
           <FinanceClient accounts={[]} transactions={[]} />
@@ -47,7 +50,7 @@ export default async function AdminFinancePage() {
 
   return (
     <div>
-      <PageHeader title="Finance / Cash Book" description="Multi-account cash book with income, expenses, and transfers" />
+      <PageHeader title={t("fn_title", lang)} description={t("fn_subtitle", lang)} />
       <FinanceClient accounts={accounts} transactions={transactions} />
     </div>
   );

@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SimpleOrderForm } from "./simple-order-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 // Only these root categories (and everything under them) are shown in
 // Karyana Ordering, so Fertilizer/Pesticide/Seeds/Wanda/Agricultural/
@@ -22,11 +24,12 @@ function collectDescendantIds(rootIds: string[], allCategories: { id: string; pa
   return result;
 }
 export default async function NewBranchOrderPage() {
+  const lang = getLanguageFromCookies("rm");
   const seller = await getCurrentSeller();
   if (!seller || seller.kind !== "branch") {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">Ye account kisi branch se linked nahi hai. Admin se rabta karein.</p>
+        <p className="text-surface-600">{t("at_no_branch_link", lang)}</p>
       </div>
     );
   }
@@ -80,10 +83,18 @@ export default async function NewBranchOrderPage() {
   const karyanaCategories = (allCategories ?? [])
     .filter((c) => karyanaCategoryIds.has(c.id) && !rootIds.includes(c.id))
     .map((c) => ({ id: c.id, name: c.name }));
+  // Doosri shops ki list, taake branch-to-branch order ho sake.
+  const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
+
   return (
     <div>
-      <PageHeader title="Karyana Order" description={seller.name} />
-      <SimpleOrderForm products={productsFormatted} categories={karyanaCategories} />
+      <PageHeader title={t("at_karyana_order", lang)} description={seller.name} />
+      <SimpleOrderForm
+        products={productsFormatted}
+        categories={karyanaCategories}
+        branches={branches ?? []}
+        ownBranchId={seller.id}
+      />
     </div>
   );
 }

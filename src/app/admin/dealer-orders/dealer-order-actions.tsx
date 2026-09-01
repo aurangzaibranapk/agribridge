@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { dealerRespondToOrder, dealerDispatchOrder, type ActionState } from "@/actions/bridge-orders";
 import { Check, X, Truck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -41,6 +43,7 @@ export function DealerOrderActions({ orderId, status }: { orderId: string; statu
 }
 
 function AcceptButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -48,12 +51,12 @@ function AcceptButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60"
     >
-      <Check className="h-3.5 w-3.5" /> Accept
-    </button>
+      <Check className="h-3.5 w-3.5" />{t("at_accept", lang)}</button>
   );
 }
 
 function RejectButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -61,12 +64,12 @@ function RejectButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60 dark:bg-red-950/30 dark:text-red-300"
     >
-      <X className="h-3.5 w-3.5" /> Reject
-    </button>
+      <X className="h-3.5 w-3.5" />{t("at_reject", lang)}</button>
   );
 }
 
 function DispatchButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -74,7 +77,6 @@ function DispatchButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
     >
-      <Truck className="h-3.5 w-3.5" /> Mark Dispatched
-    </button>
+      <Truck className="h-3.5 w-3.5" />{t("at_mark_dispatched", lang)}</button>
   );
 }

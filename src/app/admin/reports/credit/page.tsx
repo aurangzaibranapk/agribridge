@@ -4,6 +4,8 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { CreditCard, Banknote, Wallet, UserCheck, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,7 @@ export default async function CreditReportPage({
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const { start, end } = getDateRange(range);
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: ledgerRows } = await supabase
@@ -89,18 +92,18 @@ export default async function CreditReportPage({
 
   return (
     <div>
-      <PageHeader title="Credit Report" description="Farmer credit given, repaid, and outstanding" />
+      <PageHeader title={t("rc_title", lang)} description="Farmer credit given, repaid, and outstanding" />
 
       <div className="mt-4">
         <DateRangeFilter current={range} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Credit Given" value={`Rs. ${totalCreditGiven.toLocaleString()}`} icon={CreditCard} tone="blue" />
-        <StatCard label="Total Repaid" value={`Rs. ${totalRepaid.toLocaleString()}`} icon={Banknote} tone="brand" />
-        <StatCard label="Outstanding" value={`Rs. ${totalOutstanding.toLocaleString()}`} icon={Wallet} tone="orange" />
-        <StatCard label="Farmers with Credit" value={String(farmersWithCreditSet.size)} icon={UserCheck} tone="purple" />
-        <StatCard label="Pending Requests" value={String(pendingCreditRequests ?? 0)} icon={AlertTriangle} tone="warn" />
+        <StatCard label={t("db_total_credit_given", lang)} value={`Rs. ${totalCreditGiven.toLocaleString()}`} icon={CreditCard} tone="blue" />
+        <StatCard label={t("c_total_repaid", lang)} value={`Rs. ${totalRepaid.toLocaleString()}`} icon={Banknote} tone="brand" />
+        <StatCard label={t("c_outstanding", lang)} value={`Rs. ${totalOutstanding.toLocaleString()}`} icon={Wallet} tone="orange" />
+        <StatCard label={t("db_farmers_with_credit", lang)} value={String(farmersWithCreditSet.size)} icon={UserCheck} tone="purple" />
+        <StatCard label={t("db_pending_requests", lang)} value={String(pendingCreditRequests ?? 0)} icon={AlertTriangle} tone="warn" />
       </div>
 
       <p className="mt-3 text-xs text-surface-500">
@@ -109,9 +112,9 @@ export default async function CreditReportPage({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Credit by Category</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("rc_by_category", lang)}</h2>
           {categoryBreakdown.length === 0 ? (
-            <p className="text-sm text-surface-400">No credit given yet.</p>
+            <p className="text-sm text-surface-400">{t("rc_none_yet", lang)}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {categoryBreakdown.map(([cat, amount]) => (
@@ -126,10 +129,9 @@ export default async function CreditReportPage({
 
         <div className="rounded-card border border-amber-200 bg-amber-50 p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 flex items-center gap-1.5 font-display text-base font-semibold text-amber-800 dark:text-amber-300">
-            <AlertTriangle className="h-4 w-4" /> Credit Alerts — Pending 3+ Days
-          </h2>
+            <AlertTriangle className="h-4 w-4" />{t("at_credit_alerts", lang)}</h2>
           {staleRequests.length === 0 ? (
-            <p className="text-sm text-amber-700">No overdue pending requests.</p>
+            <p className="text-sm text-amber-700">{t("rc_no_overdue", lang)}</p>
           ) : (
             <ul className="space-y-1.5 text-sm text-amber-800 dark:text-amber-300">
               {staleRequests.map((r) => (

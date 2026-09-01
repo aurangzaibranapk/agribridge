@@ -1,8 +1,11 @@
 ﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 export const dynamic = "force-dynamic";
 export default async function PosPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -52,9 +55,7 @@ export default async function PosPage() {
   if (!dealer && !branch) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">
-          This account is not linked to a dealer or a branch. Contact admin to set up your POS access.
-        </p>
+        <p className="text-surface-600">{t("at_no_pos_access", lang)}</p>
       </div>
     );
   }
@@ -110,6 +111,7 @@ export default async function PosPage() {
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
   return (
     <PosClient
+      lang={getLanguageFromCookies("rm")}
       sellerName={sellerName}
       inventory={inventory}
       customers={rawCustomers ?? []}

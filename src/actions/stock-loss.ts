@@ -125,12 +125,17 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
       .maybeSingle();
     if (inv) {
       const deduct = Math.min(Number(loss.quantity), Number(inv.quantity_on_hand));
-      await supabase.from("inventory").update({ quantity_on_hand: Number(inv.quantity_on_hand) - deduct, updated_at: new Date().toISOString() }).eq("id", inv.id);
+      // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
       await supabase.from("stock_movements").insert({
         inventory_id: inv.id,
-        movement_type: "loss_write_off",
+        // Naam nuqsan ki apni qism se aata hai. Pehle yahan hamesha
+        // "loss_write_off" likha jata tha -- ek aisa lafz jo enum mein
+        // tha hi nahi, is liye ye qatar kabhi bani hi nahi aur nuqsan ka
+        // koi kaghaz nahi banta tha. Chori ko "damaged" keh dena bhi
+        // ghalat hota, is liye teesra lafz alag rakha gaya hai (129).
+        movement_type:
+          loss.loss_type === "damage" ? "damaged_out" : loss.loss_type === "expiry" ? "expired_out" : "loss_write_off",
         quantity: deduct,
-        balance_after: Number(inv.quantity_on_hand) - deduct,
         reference_type: "stock_loss",
         reference_id: lossId,
         created_by: user.id,

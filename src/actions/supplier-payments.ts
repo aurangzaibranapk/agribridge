@@ -41,9 +41,10 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
     created_by: user?.id ?? null,
   });
   if (error) return { error: error.message };
-  const { data: supplier } = await supabase.from("suppliers").select("current_payable").eq("id", supplierId).single();
-  const newPayable = Math.max(0, Number(supplier?.current_payable ?? 0) - amount);
-  await supabase.from("suppliers").update({ current_payable: newPayable }).eq("id", supplierId);
+  // Payable yahan se NAHI ghataya jata. supplier_payments mein qatar
+  // daalte hi trigger khud hisaab dobara laga deta hai (139). Pehle
+  // yahan Math.max(0, ...) tha, jo ghalati ko theek nahi karta tha --
+  // sirf chhupa deta tha.
   revalidatePath(`/admin/suppliers/${supplierId}/statement`);
   revalidatePath("/admin/suppliers");
   return { success: true };

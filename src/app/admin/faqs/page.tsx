@@ -4,20 +4,23 @@ import { Badge } from "@/components/ui/form";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteFaq } from "@/actions/cms";
 import { NewFaqForm } from "@/app/admin/faqs/new-faq-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminFaqsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("faqs").select("*").order("category").order("display_order");
 
   return (
     <div>
-      <PageHeader title="FAQ" description="Shown on the public /faq page, grouped by category" />
+      <PageHeader title={t("at_faq", lang)} description="Shown on the public /faq page, grouped by category" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No FAQs yet" />
+            <EmptyState title={t("at_no_faqs", lang)} />
           ) : (
             <div className="space-y-3">
               {items.map((f) => (

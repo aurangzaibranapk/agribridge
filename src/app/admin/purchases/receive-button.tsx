@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { receivePurchase, type ActionState } from "@/actions/purchases";
 import { PackageCheck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -18,6 +20,7 @@ export function ReceiveButton({ purchaseId }: { purchaseId: string }) {
 }
 
 function SubmitButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -25,7 +28,7 @@ function SubmitButton() {
       disabled={pending}
       className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <PackageCheck className="h-3.5 w-3.5" /> {pending ? "Receiving..." : "Mark Received"}
+      <PackageCheck className="h-3.5 w-3.5" /> {pending ? t("pu_receiving", lang) : t("pu_mark_received", lang)}
     </button>
   );
 }

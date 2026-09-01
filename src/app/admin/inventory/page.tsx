@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { InventoryClient } from "@/app/admin/inventory/inventory-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminInventoryPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const [{ data: rawInventory }, { data: warehouses }] = await Promise.all([
     supabase
@@ -40,7 +43,7 @@ export default async function AdminInventoryPage() {
 
   return (
     <div>
-      <PageHeader title="Inventory" description="Stock levels, value, and low-stock alerts across all warehouses" />
+      <PageHeader title={t("inv_title", lang)} description={t("inv_subtitle", lang)} />
       <InventoryClient rows={rows} warehouses={warehouses ?? []} />
     </div>
   );

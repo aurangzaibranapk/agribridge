@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { CompanyExpensesClient } from "./company-expenses-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function CompanyExpensesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: rawExpenses } = await supabase
     .from("company_expense_requests")
@@ -31,18 +34,18 @@ export default async function CompanyExpensesPage() {
   const pendingTotal = expenses.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
   return (
     <div>
-      <PageHeader title="Company Expenses" description="Har kharcha Request + Admin Approval ke sath - poora record" />
+      <PageHeader title={t("at_company_expenses", lang)} description="Har kharcha Request + Admin Approval ke sath - poora record" />
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Pending Approval</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_pending_approval", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">{pendingCount} (Rs {pendingTotal.toLocaleString()})</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Total Approved</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_total_approved", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {approvedTotal.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Requests</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_requests", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{expenses.length}</p>
         </Card>
       </div>

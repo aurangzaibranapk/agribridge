@@ -2,10 +2,13 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { verifyFarm, unverifyFarm, type ActionState } from "@/actions/farms";
 import { CheckCircle2, Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function FarmVerifyActions({ farmId, isVerified }: { farmId: string; isVerified: boolean }) {
+  const lang = useLang();
   const [, verifyAction] = useFormState(verifyFarm, initialState);
   const [, unverifyAction] = useFormState(unverifyFarm, initialState);
 
@@ -13,8 +16,7 @@ export function FarmVerifyActions({ farmId, isVerified }: { farmId: string; isVe
     return (
       <form action={unverifyAction} className="flex items-center gap-2">
         <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Verified
-        </span>
+          <CheckCircle2 className="h-3.5 w-3.5" />{t("at_verified", lang)}</span>
         <input type="hidden" name="farm_id" value={farmId} />
         <UnverifyButton />
       </form>
@@ -24,8 +26,7 @@ export function FarmVerifyActions({ farmId, isVerified }: { farmId: string; isVe
   return (
     <form action={verifyAction} className="flex items-center gap-2">
       <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-        <Clock className="h-3.5 w-3.5" /> Unverified
-      </span>
+        <Clock className="h-3.5 w-3.5" />{t("at_unverified", lang)}</span>
       <input type="hidden" name="farm_id" value={farmId} />
       <VerifyButton />
     </form>

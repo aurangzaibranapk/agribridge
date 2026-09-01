@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { approveTransfer, rejectTransfer, type ActionState } from "@/actions/inventory";
 import { Check, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -26,6 +28,7 @@ export function TransferActions({ transferId }: { transferId: string }) {
 }
 
 function ApproveButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -33,12 +36,13 @@ function ApproveButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60"
     >
-      <Check className="h-3.5 w-3.5" /> Approve
+      <Check className="h-3.5 w-3.5" /> {t("st_approve", lang)}
     </button>
   );
 }
 
 function RejectButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -46,7 +50,7 @@ function RejectButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60 dark:bg-red-950/30 dark:text-red-300"
     >
-      <X className="h-3.5 w-3.5" /> Reject
+      <X className="h-3.5 w-3.5" /> {t("st_reject", lang)}
     </button>
   );
 }

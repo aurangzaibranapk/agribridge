@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { FarmerCreditStatementClient } from "./statement-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +25,10 @@ export default async function FarmerCreditStatementPage({
   const params = await searchParams;
   const supabase = createClient();
   const farmerId = params.farmer_id ?? "";
+  const lang = getLanguageFromCookies("rm");
 
   if (!farmerId) {
-    return <div className="p-8 text-center text-surface-400">Farmer select karein.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("fcl_select_farmer", lang)}</div>;
   }
 
   const { data: farmer } = await supabase.from("farmers").select("full_name, farmer_code, phone_number, credit_limit").eq("id", farmerId).maybeSingle();

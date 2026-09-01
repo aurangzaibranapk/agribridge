@@ -2,11 +2,14 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { resendJobOfferEmail, type ActionState } from "@/actions/jobs";
 import { Send } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function ResendOfferButton({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(resendJobOfferEmail, initialState);
+  const lang = useLang();
 
   return (
     <div>
@@ -15,7 +18,7 @@ export function ResendOfferButton({ applicationId }: { applicationId: string }) 
         <SubmitButton />
       </form>
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
-      {state.success && <p className="mt-1 text-xs text-brand-700">Offer dobara bhej di gayi.</p>}
+      {state.success && <p className="mt-1 text-xs text-brand-700">{t("ja_offer_resent", lang)}</p>}
     </div>
   );
 }

@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { FuelClient } from "./fuel-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function FuelTrackerPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase.from("branches").select("id, name").order("is_main_branch", { ascending: false }).order("name");
   const { data: vehicles } = await supabase
@@ -49,7 +52,7 @@ export default async function FuelTrackerPage() {
 
   return (
     <div>
-      <PageHeader title="Route & Fuel Tracker" description="Motorcycle mileage, fuel cost per litre of milk collected" />
+      <PageHeader title={t("mc_fuel_title", lang)} description="Motorcycle mileage, fuel cost per litre of milk collected" />
       <FuelClient
         vehicles={vehiclesTyped}
         logs={logs}
