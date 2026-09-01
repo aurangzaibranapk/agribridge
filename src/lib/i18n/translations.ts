@@ -36,6 +36,7 @@ import { branchOpsDict } from "./dict/branch-ops";
 import { watchPagesDict } from "./dict/watch-pages";
 import { tailADict } from "./dict/tail-a";
 import { vendorDict } from "./dict/vendor";
+import { arhtiDict } from "./dict/arhti";
 import { portalMoreDict } from "./dict/portal-more";
 import { authDict } from "./dict/auth";
 import { sharedDict } from "./dict/shared";
@@ -126,6 +127,7 @@ const dict = {
   ...watchPagesDict,
   ...tailADict,
   ...vendorDict,
+  ...arhtiDict,
   ...portalMoreDict,
   ...authDict,
   ...sharedDict,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { LiftersClient } from "./lifters-client";
 
 export const dynamic = "force-dynamic";
@@ -55,30 +56,28 @@ export default async function LiftersPage() {
   return (
     <div>
       <PageHeader
-        title="Fasal Uthane Wale"
-        description="Arhti aur beopari — jo kisan ki fasal uthate hain. Kattai ka baqi aur kisan ka purana udhaar in ke zimme jata hai."
+        title={t("ar_title", lang)}
+        description={t("ar_subtitle", lang)}
       />
 
       <div className="mb-4">
         <Link
           href="/admin/machinery-rental/lifters/dashboard"
           className="text-sm font-medium text-brand-600 hover:underline"
-        >
-          Arhti Board — hamara paisa kis ke paas khara hai →
-        </Link>
+        >{t("ar_board_link", lang)}</Link>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Chalu</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ar_active", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{chalu}</p>
         </Card>
         <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
-          <p className="text-xs font-medium uppercase tracking-wide text-red-600">In se lena</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-red-600">{t("ar_to_collect", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-red-700">Rs {kulBaqi.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Uthai hui bookings</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ar_lifted_bookings", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">
             {rows.reduce((s, r) => s + r.bookings, 0)}
           </p>

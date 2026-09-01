@@ -808,7 +808,7 @@ export function BookingDetail({
           {willSellToUs && (
             <StepCard
               n={8}
-              title="Fasal uthane wala"
+              title={t("ar_step_title", lang)}
               done={lift?.status === "lifted"}
               locked={!bill}
             >

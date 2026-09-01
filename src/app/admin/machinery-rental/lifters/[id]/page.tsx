@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { LifterPaymentForm } from "./payment-form";
 
 export const dynamic = "force-dynamic";
@@ -94,21 +95,21 @@ export default async function LifterKhataPage({ params }: { params: Promise<{ id
       {/* Teen sabab, teen khane -- aur chautha un ka jor. */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Card>
-          <p className="text-xs uppercase tracking-wide text-surface-500">Kattai ka zimma</p>
+          <p className="text-xs uppercase tracking-wide text-surface-500">{t("ar_kattai_zimma", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold tabular-nums">Rs {kattai.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-surface-500">Kisan ka purana baqi</p>
+          <p className="text-xs uppercase tracking-wide text-surface-500">{t("ar_farmer_old_due", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold tabular-nums">Rs {purana.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20">
-          <p className="text-xs uppercase tracking-wide text-green-700">Hamara commission</p>
+          <p className="text-xs uppercase tracking-wide text-green-700">{t("ar_our_commission", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold tabular-nums text-green-700">
             Rs {commission.toLocaleString()}
           </p>
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-surface-500">Diya</p>
+          <p className="text-xs uppercase tracking-wide text-surface-500">{t("ar_paid", lang)}</p>
           <p className="mt-1 font-display text-lg font-semibold tabular-nums">Rs {diya.toLocaleString()}</p>
         </Card>
         <Card
@@ -133,9 +134,7 @@ export default async function LifterKhataPage({ params }: { params: Promise<{ id
 
       {baqi > 0 && (
         <Card className="mb-6">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Adaigi darj karein
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("ar_record_payment", lang)}</h2>
           <LifterPaymentForm lifterId={id} remaining={baqi} accounts={accounts ?? []} />
         </Card>
       )}
@@ -143,14 +142,10 @@ export default async function LifterKhataPage({ params }: { params: Promise<{ id
       {/* Har bill apni qatar mein -- aur us ke andar wo teen adad jin se
           wo bana. Kisi bhi adad par ungli rakh kar poochha ja sake ke ye
           bana kaise. */}
-      <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-        Uthai hui fasal
-      </h2>
+      <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("ar_lifted_crops", lang)}</h2>
       <div className="mb-6 space-y-2">
         {rows.length === 0 && (
-          <p className="rounded-card border border-surface-200 px-3 py-6 text-center text-sm text-surface-400 dark:border-surface-800">
-            Abhi is ke naam par koi booking nahi.
-          </p>
+          <p className="rounded-card border border-surface-200 px-3 py-6 text-center text-sm text-surface-400 dark:border-surface-800">{t("ar_no_bookings", lang)}</p>
         )}
         {rows.map((r) => (
           <div key={r.id} className="rounded-card border border-surface-200 p-3 dark:border-surface-700">
@@ -167,33 +162,27 @@ export default async function LifterKhataPage({ params }: { params: Promise<{ id
                 </p>
               </div>
               {r.status === "lifted" ? (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950/40 dark:text-green-300">
-                  Utha chuki
-                </span>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950/40 dark:text-green-300">{t("ar_lifted", lang)}</span>
               ) : (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                  Abhi uthani hai
-                </span>
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{t("ar_to_lift", lang)}</span>
               )}
             </div>
 
             {r.status === "lifted" && (
               <div className="mt-3 space-y-1 border-t border-surface-100 pt-2 text-sm dark:border-surface-800">
-                <Line label="Fasal ki qeemat" value={r.cropValue} strong />
-                <Line label="Kattai ka bill" value={r.kattai} minus />
-                <Line label="Kisan ka purana baqi" value={r.purana} minus />
-                <Line label="Kisan ko diya jana tha" value={r.farmerPayable} strong />
+                <Line label={t("ar_crop_value", lang)} value={r.cropValue} strong />
+                <Line label={t("ar_kattai_bill", lang)} value={r.kattai} minus />
+                <Line label={t("ar_farmer_old_due", lang)} value={r.purana} minus />
+                <Line label={t("ar_farmer_was_paid", lang)} value={r.farmerPayable} strong />
                 <div className="my-1 border-t border-surface-100 dark:border-surface-800" />
                 <Line label={`Hamara commission (${r.rate}%)`} value={r.commission} />
-                <Line label="Hamein dena" value={r.lifterPayable} strong />
+                <Line label={t("ar_owes_us", lang)} value={r.lifterPayable} strong />
                 {/* Bill banate waqt ledger adhoora tha ya nahi -- ye
                     baat qatar par likhi rehti hai, warna baad mein koi
                     nahi bata sakta ke us din adad par bharosa tha ya
                     nahi. */}
                 {r.reliable === false && (
-                  <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                    Ye bill us waqt bana jab kuch raqam ledger tak nahi pahunchi thi — purana baqi adhoora ho sakta hai.
-                  </p>
+                  <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{t("ar_unreliable_bill", lang)}</p>
                 )}
               </div>
             )}
@@ -201,10 +190,10 @@ export default async function LifterKhataPage({ params }: { params: Promise<{ id
         ))}
       </div>
 
-      <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Adaigi</h2>
+      <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("ar_payments", lang)}</h2>
       <div className="overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
         {(payments ?? []).length === 0 && (
-          <p className="px-3 py-6 text-center text-sm text-surface-400">Abhi koi adaigi darj nahi.</p>
+          <p className="px-3 py-6 text-center text-sm text-surface-400">{t("ar_no_payments", lang)}</p>
         )}
         {(payments ?? []).map((p: any) => (
           <div

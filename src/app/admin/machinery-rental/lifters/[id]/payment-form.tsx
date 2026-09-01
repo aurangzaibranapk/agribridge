@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { recordLifterPayment, type LifterState } from "@/actions/crop-lifters";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const empty: LifterState = {};
 
@@ -24,6 +26,7 @@ export function LifterPaymentForm({
   remaining: number;
   accounts: Array<{ id: string; name: string; account_type: string }>;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(recordLifterPayment, empty);
   const [method, setMethod] = useState("cash");
   const [again, setAgain] = useState(false);
@@ -41,9 +44,7 @@ export function LifterPaymentForm({
           type="button"
           onClick={() => setAgain(true)}
           className="text-sm font-medium text-brand-600 hover:underline"
-        >
-          Aur adaigi darj karein
-        </button>
+        >{t("ar_record_more", lang)}</button>
       </div>
     );
   }
@@ -57,27 +58,25 @@ export function LifterPaymentForm({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <Label htmlFor="method">Tareeqa</Label>
+          <Label htmlFor="method">{t("ar_method", lang)}</Label>
           <Select id="method" name="method" value={method} onChange={(e) => setMethod(e.target.value)}>
-            <option value="cash">Cash</option>
-            <option value="bank">Bank</option>
-            <option value="wallet">Wallet</option>
-            <option value="other">Doosra</option>
+            <option value="cash">{t("ar_cash", lang)}</option>
+            <option value="bank">{t("ar_bank", lang)}</option>
+            <option value="wallet">{t("ar_wallet", lang)}</option>
+            <option value="other">{t("ar_other", lang)}</option>
           </Select>
         </div>
         <div>
-          <Label htmlFor="amount">Raqam</Label>
+          <Label htmlFor="amount">{t("ar_amount", lang)}</Label>
           {/* Poora dena lazmi nahi -- jitna waqai mila utna. */}
           <Input id="amount" name="amount" type="number" step="0.01" required placeholder="0" />
         </div>
         <div>
           {method === "cash" || method === "other" ? (
-            <p className="mt-6 text-xs text-surface-500">
-              Cash lene wale ke haath mein rehta hai — us ka khata nahi poochha jata.
-            </p>
+            <p className="mt-6 text-xs text-surface-500">{t("ar_cash_note", lang)}</p>
           ) : (
             <>
-              <Label htmlFor="finance_account_id">Khata</Label>
+              <Label htmlFor="finance_account_id">{t("ar_account", lang)}</Label>
               <Select id="finance_account_id" name="finance_account_id" defaultValue="">
                 <option value="">—</option>
                 {accounts.map((a) => (
@@ -93,7 +92,7 @@ export function LifterPaymentForm({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <Label htmlFor="payment_date">Tareekh</Label>
+          <Label htmlFor="payment_date">{t("ar_date", lang)}</Label>
           <Input
             id="payment_date"
             name="payment_date"
@@ -102,13 +101,13 @@ export function LifterPaymentForm({
           />
         </div>
         <div>
-          <Label htmlFor="reference">Reference</Label>
-          <Input id="reference" name="reference" placeholder="Cheque / transaction number" />
+          <Label htmlFor="reference">{t("ar_reference", lang)}</Label>
+          <Input id="reference" name="reference" placeholder={t("ar_eg_reference", lang)} />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="notes">Note</Label>
+        <Label htmlFor="notes">{t("ar_note", lang)}</Label>
         <Textarea id="notes" name="notes" rows={2} />
       </div>
 
@@ -118,6 +117,7 @@ export function LifterPaymentForm({
 }
 
 function Submit() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
