@@ -101,8 +101,7 @@ export default async function MilkReportPage({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 flex items-center gap-1.5 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Users className="h-4 w-4" /> Top Suppliers (this period)
-          </h2>
+            <Users className="h-4 w-4" />{t("at_top_suppliers_period", lang)}</h2>
           {topSuppliers.length === 0 ? (
             <p className="text-sm text-surface-400">{t("mr_no_collection", lang)}</p>
           ) : (

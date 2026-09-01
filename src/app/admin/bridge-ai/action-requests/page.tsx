@@ -196,15 +196,13 @@ export default function ActionRequestsPage() {
                     disabled={busyId === r.id}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50"
                   >
-                    <MessageSquareWarning className="h-3.5 w-3.5" /> Changes Chahiye
-                  </button>
+                    <MessageSquareWarning className="h-3.5 w-3.5" />{t("at_changes_needed", lang)}</button>
                   <button
                     onClick={() => decide(r.id, "rejected")}
                     disabled={busyId === r.id}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
                   >
-                    <XCircle className="h-3.5 w-3.5" /> Reject
-                  </button>
+                    <XCircle className="h-3.5 w-3.5" />{t("at_reject", lang)}</button>
                 </div>
               </div>
             ))}
@@ -242,9 +240,7 @@ export default function ActionRequestsPage() {
                     href="/admin/purchases"
                     className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
                   >
-                    <PackageCheck className="h-3.5 w-3.5" />
-                    Purchase Order ban gaya - Purchases page par dekhein
-                  </Link>
+                    <PackageCheck className="h-3.5 w-3.5" />{t("at_po_created", lang)}</Link>
                 )}
               </div>
             ))}

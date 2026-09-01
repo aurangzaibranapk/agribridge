@@ -74,8 +74,7 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
                 </div>
                 <div className="flex items-center gap-2">
                   <Link href={`/admin/branches/${b.id}/statement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs text-surface-600 hover:bg-surface-50">
-                    <FileText className="h-3.5 w-3.5" /> Statement
-                  </Link>
+                    <FileText className="h-3.5 w-3.5" />{t("at_statement", lang)}</Link>
                   <BranchStatusManager branchId={b.id} status={b.status} />
                   {!b.is_main_branch && <DeleteBranchButton branchId={b.id} />}
                 </div>

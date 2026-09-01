@@ -3,7 +3,7 @@
 import { Stethoscope, Camera, FileText, Sprout } from "lucide-react";
 import { CropDoctorWidget } from "@/components/site/crop-doctor-widget";
 import { t } from "@/lib/i18n/translations";
-import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const STEPS = [
   { icon: Camera, title: "Upload a photo", description: "Take a clear photo of the affected crop, leaf, or plant." },
@@ -12,7 +12,7 @@ const STEPS = [
 ];
 
 export default function AiCropDoctorPublicPage() {
-  const lang = getLanguageFromCookies("rm");
+  const lang = useLang();
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       <div className="mb-10 text-center">

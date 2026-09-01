@@ -41,9 +41,7 @@ export function BranchCreditClient({ branches }: { branches: Branch[] }) {
             <div className="flex gap-2">
               <button onClick={() => setLimitModal(b)} className="flex items-center gap-1 rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
                 <Settings className="h-3 w-3" />{t("c_credit_limit", lang)}</button>
-              <button onClick={() => setAdvanceModal(b)} className="rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-                Advance Payment
-              </button>
+              <button onClick={() => setAdvanceModal(b)} className="rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("at_advance_payment", lang)}</button>
             </div>
           </div>
 

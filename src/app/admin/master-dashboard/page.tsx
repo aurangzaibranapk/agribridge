@@ -194,9 +194,7 @@ export default async function MasterDashboardPage() {
       />
 
       {!showCompanyWideFinancials && (
-        <p className="mb-4 text-xs text-surface-400">
-          Note: Bank/Inventory/Receivables/Payables abhi business-wise split nahi hain (poori company ke combined numbers hain) - ye Phase 9 mein aayega.
-        </p>
+        <p className="mb-4 text-xs text-surface-400">{t("at_note_split", lang)}</p>
       )}
 
       {(showAgri || showDairy) && (

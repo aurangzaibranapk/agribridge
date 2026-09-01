@@ -33,13 +33,12 @@ export default async function BranchLocationsPage() {
 
       <Card className="mb-4 p-4">
         <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <MapPin className="h-4 w-4" /> Location kaise nikalein
-        </h3>
+          <MapPin className="h-4 w-4" />{t("at_how_get_location", lang)}</h3>
         <ol className="list-inside list-decimal space-y-1 text-sm text-surface-600 dark:text-surface-400">
           <li>{t("bl_step_open_maps", lang)}</li>
           <li>{t("bl_step_long_press", lang)}</li>
           <li>{t("bl_step_two_numbers", lang)}<span className="font-mono text-xs">31.4504, 73.1350</span></li>
-          <li>Pehla number Latitude, doosra Longitude — neeche bhar dein</li>
+          <li>{t("at_lat_lng_order", lang)}</li>
         </ol>
         <p className="mt-2 text-xs text-surface-500">
           Daira (radius) wo faasla hai jis ke andar hazri &quot;sahi jagah se&quot; mani jayegi. 200 meter aam tor par theek rehta hai —

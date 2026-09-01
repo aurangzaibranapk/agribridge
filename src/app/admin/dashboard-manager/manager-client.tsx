@@ -9,6 +9,8 @@ import {
 } from "@/actions/dashboard-manager";
 import { ACTIONS, ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { Check, Search, LayoutGrid, Puzzle, ShieldAlert, Save } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -81,6 +83,7 @@ export function ManagerClient({
   rolePerms: RolePerm[];
   departments: DeptInfo[];
 }) {
+  const lang = useLang();
   const [tab, setTab] = useState<"dashboard" | "feature">("dashboard");
 
   return (
@@ -117,6 +120,7 @@ export function ManagerClient({
 /* ---------------- Dashboard ki taraf se ---------------- */
 
 function DashboardSide({ dashboards, features }: { dashboards: DashboardInfo[]; features: FeatureInfo[] }) {
+  const lang = useLang();
   const [key, setKey] = useState(dashboards[0]?.key ?? "");
   const dashboard = dashboards.find((d) => d.key === key);
   const [state, action] = useFormState(saveDashboardFeatures, initial);
@@ -149,7 +153,7 @@ function DashboardSide({ dashboards, features }: { dashboards: DashboardInfo[]; 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
       <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Dashboard</h2>
+        <h2 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("at_dashboard", lang)}</h2>
         <div className="space-y-1">
           {dashboards.map((d) => (
             <button
@@ -183,7 +187,7 @@ function DashboardSide({ dashboards, features }: { dashboards: DashboardInfo[]; 
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Feature dhoondein"
+              placeholder={t("at_find_feature", lang)}
               className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm"
             />
           </div>
@@ -223,8 +227,7 @@ function DashboardSide({ dashboards, features }: { dashboards: DashboardInfo[]; 
 
         <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <p className="text-sm text-surface-600 dark:text-surface-400">
-            <span className="font-semibold text-surface-900 dark:text-white">{picked.size}</span> feature
-          </p>
+            <span className="font-semibold text-surface-900 dark:text-white">{picked.size}</span>{t("at_feature", lang)}</p>
           <SaveButton />
         </div>
       </form>
@@ -245,6 +248,7 @@ function FeatureSide({
   rolePerms: RolePerm[];
   departments: DeptInfo[];
 }) {
+  const lang = useLang();
   const [query, setQuery] = useState("");
   const [key, setKey] = useState(features[0]?.key ?? "");
   const feature = features.find((f) => f.key === key);
@@ -263,7 +267,7 @@ function FeatureSide({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Feature dhoondein"
+            placeholder={t("at_find_feature", lang)}
             className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm"
           />
         </div>
@@ -304,6 +308,7 @@ function FeatureSide({
 }
 
 function FeatureDashboards({ feature, dashboards }: { feature: FeatureInfo; dashboards: DashboardInfo[] }) {
+  const lang = useLang();
   const [state, action] = useFormState(saveFeatureDashboards, initial);
   const [picked, setPicked] = useState<Set<string>>(new Set(feature.dashboardKeys));
 
@@ -316,7 +321,7 @@ function FeatureDashboards({ feature, dashboards }: { feature: FeatureInfo; dash
         {feature.isSensitive && <ShieldAlert className="h-4 w-4 text-amber-600" />}
       </h2>
       <p className="text-xs text-surface-400">{feature.route}</p>
-      <p className="mt-1 text-xs text-surface-500">Ye cheez kahan kahan nazar aaye:</p>
+      <p className="mt-1 text-xs text-surface-500">{t("at_where_visible", lang)}</p>
 
       <Notice state={state} />
 
@@ -368,13 +373,12 @@ function FeatureRoles({
   departments: DeptInfo[];
   rolePerms: RolePerm[];
 }) {
+  const lang = useLang();
   return (
     <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
       <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-        <h3 className="text-sm font-semibold text-surface-900 dark:text-white">Kaun kya kar sakta hai</h3>
-        <p className="text-xs text-surface-500">
-          Har department ke liye alag. Ek bhi kaam na chunein to us department se ye feature hat jata hai.
-        </p>
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t("at_who_can_do_what", lang)}</h3>
+        <p className="text-xs text-surface-500">{t("at_per_department", lang)}</p>
       </div>
       <ul className="divide-y divide-surface-100 dark:divide-surface-800">
         {departments.map((d) => (

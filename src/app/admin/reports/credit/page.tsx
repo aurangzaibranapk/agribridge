@@ -129,8 +129,7 @@ export default async function CreditReportPage({
 
         <div className="rounded-card border border-amber-200 bg-amber-50 p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 flex items-center gap-1.5 font-display text-base font-semibold text-amber-800 dark:text-amber-300">
-            <AlertTriangle className="h-4 w-4" /> Credit Alerts — Pending 3+ Days
-          </h2>
+            <AlertTriangle className="h-4 w-4" />{t("at_credit_alerts", lang)}</h2>
           {staleRequests.length === 0 ? (
             <p className="text-sm text-amber-700">{t("rc_no_overdue", lang)}</p>
           ) : (

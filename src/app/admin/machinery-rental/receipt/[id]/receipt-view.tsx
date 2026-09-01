@@ -74,15 +74,14 @@ export function ReceiptView({ receipt, lang, title }: { receipt: Receipt; lang: 
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
             >
-              <MessageCircle className="h-4 w-4" /> WhatsApp
-            </a>
+              <MessageCircle className="h-4 w-4" />{t("at_whatsapp", lang)}</a>
           )}
         </div>
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-6 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="border-b border-surface-200 pb-3 text-center dark:border-surface-700">
-          <h1 className="font-display text-lg font-bold text-surface-900 dark:text-white">Al Rana Traders</h1>
+          <h1 className="font-display text-lg font-bold text-surface-900 dark:text-white">{t("sh_company", lang)}</h1>
           <p className="text-xs text-surface-500">{title}</p>
           <p className="mt-1 font-mono text-sm font-medium text-surface-800 dark:text-surface-200">
             {receipt.receiptNumber}

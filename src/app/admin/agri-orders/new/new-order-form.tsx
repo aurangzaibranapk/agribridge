@@ -124,13 +124,13 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
         <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_order_info", lang)}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-surface-600">Order Type *</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_order_type_req", lang)}</label>
             <select name="order_type" value={orderType} onChange={(e) => setOrderType(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
               {ORDER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">Order To Type *</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_order_to_type_req", lang)}</label>
             <select name="order_to_type" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
               {ORDER_TO_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -185,8 +185,7 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_product_selection", lang)}</h2>
           <div className="flex gap-1 rounded-lg border border-surface-200 p-0.5">
             <button type="button" onClick={() => setViewMode("card")} className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs ${viewMode === "card" ? "bg-brand-600 text-white" : "text-surface-500"}`}>
-              <LayoutGrid className="h-3.5 w-3.5" /> Card
-            </button>
+              <LayoutGrid className="h-3.5 w-3.5" />{t("at_card", lang)}</button>
             <button type="button" onClick={() => setViewMode("table")} className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs ${viewMode === "table" ? "bg-brand-600 text-white" : "text-surface-500"}`}>
               <List className="h-3.5 w-3.5" /> Table
             </button>

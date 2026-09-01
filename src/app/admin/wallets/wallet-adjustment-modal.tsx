@@ -9,6 +9,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 
 export function WalletAdjustButton({ walletId, ownerName }: { walletId: string; ownerName: string }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -16,8 +17,7 @@ export function WalletAdjustButton({ walletId, ownerName }: { walletId: string; 
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
       >
-        <WalletIcon className="h-3.5 w-3.5" /> Add/Deduct
-      </button>
+        <WalletIcon className="h-3.5 w-3.5" />{t("at_add_deduct", lang)}</button>
       {open && <AdjustModal walletId={walletId} ownerName={ownerName} onClose={() => setOpen(false)} />}
     </>
   );

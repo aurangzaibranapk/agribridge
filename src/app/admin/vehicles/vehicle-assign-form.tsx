@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { assignVehicleToStaff, type ActionState } from "@/actions/vehicle-logs";
 import { Bike, Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -15,6 +17,7 @@ interface Vehicle {
 }
 
 export function VehicleAssignForm({ vehicle, staff }: { vehicle: Vehicle; staff: { id: string; name: string }[] }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(assignVehicleToStaff, initialState);
 
   return (
@@ -32,7 +35,7 @@ export function VehicleAssignForm({ vehicle, staff }: { vehicle: Vehicle; staff:
       </div>
 
       <div className="min-w-48">
-        <label className="text-xs font-medium text-surface-600">Kis staff ke paas</label>
+        <label className="text-xs font-medium text-surface-600">{t("at_which_staff", lang)}</label>
         <select
           name="assigned_profile_id"
           defaultValue={vehicle.assignedProfileId ?? ""}
@@ -49,7 +52,7 @@ export function VehicleAssignForm({ vehicle, staff }: { vehicle: Vehicle; staff:
 
       {state.error && <p className="w-full rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">{state.error}</p>}
       {state.success && (
-        <p className="w-full text-xs text-green-600"><Check className="mr-0.5 inline h-3 w-3" /> Mahfooz ho gaya</p>
+        <p className="w-full text-xs text-green-600"><Check className="mr-0.5 inline h-3 w-3" />{t("at_saved_short", lang)}</p>
       )}
     </form>
   );

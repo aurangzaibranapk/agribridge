@@ -114,8 +114,7 @@ export default async function PurchasesReportPage({
 
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Truck className="h-4 w-4" /> Top Suppliers
-          </h2>
+            <Truck className="h-4 w-4" />{t("at_top_suppliers", lang)}</h2>
           {topSuppliers.length === 0 ? (
             <p className="text-sm text-surface-400">{t("rpu_no_data", lang)}</p>
           ) : (

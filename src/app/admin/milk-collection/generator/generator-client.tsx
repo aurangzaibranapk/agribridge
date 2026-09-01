@@ -63,8 +63,7 @@ export function GeneratorClient({ logs, branches }: { logs: GeneratorLog[]; bran
                     <td className="px-3 py-2">
                       {l.meter_photo_url ? (
                         <a href={l.meter_photo_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-600 hover:underline">
-                          <ImageIcon className="h-3.5 w-3.5" /> Dekhein
-                        </a>
+                          <ImageIcon className="h-3.5 w-3.5" />{t("at_view", lang)}</a>
                       ) : (
                         <span className="text-xs text-surface-400">-</span>
                       )}
@@ -72,8 +71,7 @@ export function GeneratorClient({ logs, branches }: { logs: GeneratorLog[]; bran
                     <td className="px-3 py-2">
                       {l.is_anomaly ? (
                         <span className="flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                          <AlertTriangle className="h-3 w-3" /> Check Karein
-                        </span>
+                          <AlertTriangle className="h-3 w-3" />{t("at_check", lang)}</span>
                       ) : (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">{t("mf_ok", lang)}</span>
                       )}
@@ -100,8 +98,7 @@ function GeneratorLogForm({ branches }: { branches: Branch[] }) {
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-semibold text-surface-900 dark:text-white">
-        <Zap className="h-4 w-4" /> Daily Generator Log
-      </h2>
+        <Zap className="h-4 w-4" />{t("at_daily_generator", lang)}</h2>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
       {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("mo_log_saved_cost", lang)}</p>}
       <form action={formAction} encType="multipart/form-data" className="space-y-2">

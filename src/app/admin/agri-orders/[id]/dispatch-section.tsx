@@ -92,8 +92,7 @@ export function DispatchSection({
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <Truck className="h-4 w-4" /> Dispatch & Delivery
-      </h3>
+        <Truck className="h-4 w-4" />{t("at_dispatch_delivery", lang)}</h3>
 
       {/* Advance order mein poori payment aaye baghair dispatch ka button
           hi nahi khulta. Asal rok server par createDispatch mein hai —
@@ -333,8 +332,7 @@ function ConfirmDeliveryModal({
                       onClick={() => markComplete(item.id, item.dispatched_qty)}
                       className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 hover:bg-green-100"
                     >
-                      <Check className="h-3 w-3" /> Mukammal Sahi
-                    </button>
+                      <Check className="h-3 w-3" />{t("at_fully_correct", lang)}</button>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
                     <div>

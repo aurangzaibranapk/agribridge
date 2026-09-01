@@ -52,21 +52,18 @@ export function FarmerCreditStatementClient({
     <div className="mx-auto max-w-3xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/farmer-credit" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
-        </Link>
+          <ArrowLeft className="h-4 w-4" />{t("at_back", lang)}</Link>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print / PDF
-          </button>
+            <Printer className="h-3.5 w-3.5" />{t("at_print_pdf", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
         </div>
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
         <div className="mb-6 border-b border-surface-200 pb-4">
-          <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders - AgriBridge</h1>
+          <h1 className="font-display text-xl font-bold text-surface-900">{t("at_alrana_agribridge", lang)}</h1>
           <p className="text-sm text-surface-500">{t("fcl_statement_title", lang)}</p>
         </div>
 
@@ -139,7 +136,7 @@ export function FarmerCreditStatementClient({
         <div className="mt-8 border-t border-surface-100 pt-3">
           <p className="text-center text-[10px] text-surface-300">{t("fcl_computer_statement", lang)}</p>
           <div className="mt-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-surface-400">Software by ZR Technologies</p>
+            <p className="text-xs font-semibold text-surface-400">{t("at_software_by", lang)}</p>
             <p className="text-xs text-surface-400">0312-6513294</p>
           </div>
         </div>

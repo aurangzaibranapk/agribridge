@@ -1,6 +1,8 @@
 "use client";
 import { useFormState, useFormStatus } from "react-dom";
 import { bookQuantityLoss, type ActionState } from "@/actions/quantity-money";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -26,6 +28,7 @@ export function BookLossForm({
   month: number;
   year: number;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(bookQuantityLoss, initialState);
 
   return (
@@ -40,7 +43,7 @@ export function BookLossForm({
           required
           minLength={5}
           maxLength={255}
-          placeholder="Kami ki wajah — jaise: raaste mein chhalak gaya / naap ka farq"
+          placeholder={t("at_shortage_reason", lang)}
           className="min-w-[220px] flex-1 rounded-lg border border-surface-300 px-2 py-2 text-xs dark:border-surface-700 dark:bg-surface-900"
         />
         <Submit />

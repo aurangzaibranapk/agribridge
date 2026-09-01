@@ -135,7 +135,7 @@ export function LocationPicker({
           <input
             type="number"
             step="0.000001"
-            placeholder="Latitude"
+            placeholder={t("at_latitude", lang)}
             value={coords?.lat ?? ""}
             onChange={(e) => setManualCoord("lat", e.target.value)}
             className="rounded-lg border border-surface-200 p-2 text-sm"
@@ -143,7 +143,7 @@ export function LocationPicker({
           <input
             type="number"
             step="0.000001"
-            placeholder="Longitude"
+            placeholder={t("at_longitude", lang)}
             value={coords?.lng ?? ""}
             onChange={(e) => setManualCoord("lng", e.target.value)}
             className="rounded-lg border border-surface-200 p-2 text-sm"

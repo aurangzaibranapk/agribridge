@@ -14,12 +14,11 @@ interface Branch {
 }
 
 export function OfferButton({ applicationId, branches }: { applicationId: string; branches: Branch[] }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-        Offer Bhejein
-      </button>
+      <button onClick={() => setOpen(true)} className="rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("at_send_offer", lang)}</button>
       {open && <OfferModal applicationId={applicationId} branches={branches} onClose={() => setOpen(false)} />}
     </>
   );

@@ -66,19 +66,19 @@ export default async function SellGrainPage() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Sale Revenue</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_revenue", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalRevenue.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Cost (COGS)</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_cost", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalCogs.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Total Profit</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_total_profit", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalProfit.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Receivable (Buyer se lena hai)</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_receivable", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalReceivable.toLocaleString()}</p>
         </Card>
       </div>

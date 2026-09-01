@@ -123,8 +123,7 @@ export function DriverStatementClient({
           <div className="mb-2 flex justify-end">
             {vehicleId ? (
               <button onClick={() => setShowAddMaintenance(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-                <Plus className="h-3.5 w-3.5" /> Maintenance/Fuel Add Karein
-              </button>
+                <Plus className="h-3.5 w-3.5" />{t("at_add_maintenance_fuel", lang)}</button>
             ) : (
               <p className="text-xs text-surface-400">{t("st_no_vehicle_linked", lang)}</p>
             )}

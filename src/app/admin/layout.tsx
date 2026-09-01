@@ -6,6 +6,7 @@ import { loadNav } from "@/lib/access/nav";
 import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
+import { t } from "@/lib/i18n/translations";
 export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -35,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <LangProvider lang={lang}>
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
-      <Sidebar subtitle="Website Admin" homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+      <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
       {/* min-w-0 -- is ke baghair poora safha daayen se kat jata hai.
           Flex ki qatar mein har bachche ki kam se kam chaurai us ke andar
           ke maal jitni hoti hai (min-width: auto). Yani ek chauri table
@@ -49,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           Yani table apne dabbe mein khisakti hai, poora safha nahi. */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
-          subtitle="Website Admin"
+          subtitle={t("at_website_admin", lang)}
           searchAction="/admin/dashboard"
           searchPlaceholder="Search..."
           notificationsHref="/admin/contact-messages"

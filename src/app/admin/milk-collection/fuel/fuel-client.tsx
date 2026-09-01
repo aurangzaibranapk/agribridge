@@ -65,8 +65,7 @@ export function FuelClient({ vehicles, logs, rateSettings, branches }: { vehicle
             <Settings className="h-3.5 w-3.5" /> Rate Settings (Rs {rateSettings.petrol_rate + rateSettings.margin}/L)
           </button>
           <button onClick={() => setShowAddVehicle(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700">
-            <Plus className="h-3.5 w-3.5" /> Vehicle Add Karein
-          </button>
+            <Plus className="h-3.5 w-3.5" />{t("at_add_vehicle", lang)}</button>
         </div>
       </div>
       {showAddVehicle && <AddVehicleModal branches={branches} onClose={() => setShowAddVehicle(false)} />}
@@ -107,8 +106,7 @@ export function FuelClient({ vehicles, logs, rateSettings, branches }: { vehicle
                     <td className="px-3 py-2">
                       {l.meter_photo_url ? (
                         <a href={l.meter_photo_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-brand-600 hover:underline">
-                          <ImageIcon className="h-3.5 w-3.5" /> Dekhein
-                        </a>
+                          <ImageIcon className="h-3.5 w-3.5" />{t("at_view", lang)}</a>
                       ) : (
                         <span className="text-xs text-surface-400">-</span>
                       )}
@@ -116,8 +114,7 @@ export function FuelClient({ vehicles, logs, rateSettings, branches }: { vehicle
                     <td className="px-3 py-2">
                       {l.is_anomaly ? (
                         <span className="flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                          <AlertTriangle className="h-3 w-3" /> Check Karein
-                        </span>
+                          <AlertTriangle className="h-3 w-3" />{t("at_check", lang)}</span>
                       ) : (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">{t("mf_ok", lang)}</span>
                       )}
@@ -202,7 +199,7 @@ function RateSettingsModal({ settings, onClose }: { settings: RateSettings; onCl
             <input type="number" step="0.01" name="margin" defaultValue={settings.margin} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs text-surface-500">Generator: 1 Litre mein kitne ghante (e.g. 2h10m = 2.17)</label>
+            <label className="text-xs text-surface-500">{t("at_generator_hours", lang)}</label>
             <input type="number" step="0.01" name="generator_expected_hours_per_liter" defaultValue={settings.generator_expected_hours_per_liter} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <SubmitButton label={t("c_save", lang)} />

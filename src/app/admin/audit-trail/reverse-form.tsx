@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { reverseEntry, type ActionState } from "@/actions/ledger-reversal";
 import { Undo2, AlertTriangle, Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -28,6 +30,7 @@ export function ReverseForm({
   entryNumber: string;
   amount: number;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(reverseEntry, initialState);
   const [open, setOpen] = useState(false);
 
@@ -46,8 +49,7 @@ export function ReverseForm({
         onClick={() => setOpen(true)}
         className="mt-2 inline-flex items-center gap-1 text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
       >
-        <Undo2 className="h-3 w-3" /> ye entry ulti karein
-      </button>
+        <Undo2 className="h-3 w-3" />{t("at_reverse_entry", lang)}</button>
     );
   }
 
@@ -64,7 +66,7 @@ export function ReverseForm({
           <strong>{entryNumber}</strong> — Rs {Math.round(amount).toLocaleString()} ulti ho jayegi.
           <span className="mt-1 block font-normal">
             Purani entry mitegi nahi; us ke ulat ek nayi entry banegi aur dono hamesha nazar aati
-            rahengi. Ye sirf <strong>ledger</strong> theek karta hai — jo kaam hua tha (ginti, stock,
+            rahengi. Ye sirf <strong>{t("at_ledger", lang)}</strong> theek karta hai — jo kaam hua tha (ginti, stock,
             adaigi) wo apni jagah waisa hi rahega.
           </span>
         </span>
@@ -76,15 +78,13 @@ export function ReverseForm({
         minLength={10}
         maxLength={255}
         autoFocus
-        placeholder="Kyun ulti kar rahe hain? (lazmi — hamesha darj rahegi)"
+        placeholder={t("at_reverse_reason", lang)}
         className="mt-2 w-full rounded-lg border border-amber-300 px-2 py-1.5 text-xs dark:border-amber-800 dark:bg-surface-900"
       />
 
       <div className="mt-2 flex items-center gap-2">
         <Submit />
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-surface-500 underline">
-          rehne dein
-        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-surface-500 underline">{t("at_cancel", lang)}</button>
       </div>
 
       {state.error && (

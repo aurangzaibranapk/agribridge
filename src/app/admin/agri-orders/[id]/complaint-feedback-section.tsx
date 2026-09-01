@@ -56,13 +56,10 @@ export function ComplaintFeedbackSection({
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <MessageSquareWarning className="h-4 w-4" /> Complaints &amp; Feedback
-        </h3>
+          <MessageSquareWarning className="h-4 w-4" />{t("at_complaints", lang)}</h3>
         <div className="flex gap-2">
           {permissions.canSubmitComplaint && (
-            <button onClick={() => setShowComplaint(true)} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
-              Complaint Submit Karein
-            </button>
+            <button onClick={() => setShowComplaint(true)} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">{t("at_submit_complaint", lang)}</button>
           )}
           {["delivered", "completed"].includes(orderStatus) && !hasFeedback && permissions.canSubmitComplaint && (
             <button onClick={() => setShowFeedback(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("ac_give_feedback", lang)}</button>
@@ -123,8 +120,7 @@ function SubmitComplaintModal({ orderId, onClose }: { orderId: string; onClose: 
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-1.5 font-display text-base font-semibold text-surface-900">
-            <AlertCircle className="h-4 w-4" /> Complaint Submit Karein
-          </h3>
+            <AlertCircle className="h-4 w-4" />{t("at_submit_complaint", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}

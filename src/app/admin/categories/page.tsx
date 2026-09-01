@@ -3,20 +3,23 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteTaxonomyItem, saveTaxonomyItem } from "@/actions/taxonomy";
 import { NewTaxonomyItemForm } from "@/app/admin/categories/new-taxonomy-item-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCategoriesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("categories").select("*").order("name");
 
   return (
     <div>
-      <PageHeader title="Categories" description="Product categories shown on the Products page filter" />
+      <PageHeader title={t("at_categories", lang)} description="Product categories shown on the Products page filter" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No categories yet" />
+            <EmptyState title={t("at_no_categories", lang)} />
           ) : (
             <div className="space-y-2">
               {items.map((c) => (
@@ -28,7 +31,7 @@ export default async function AdminCategoriesPage() {
             </div>
           )}
         </div>
-        <NewTaxonomyItemForm table="categories" label="Category" action={saveTaxonomyItem.bind(null, "categories")} />
+        <NewTaxonomyItemForm table="categories" label={t("at_category", lang)} action={saveTaxonomyItem.bind(null, "categories")} />
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
   const visible = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   if (warehouseMissing) {
-    return <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">Is shop ka godown (warehouse) system mein set nahi hai. Admin se kehein ke pehle warehouse banayein.</p>;
+    return <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{t("at_no_warehouse_set", lang)}</p>;
   }
 
   if (products.length === 0) {

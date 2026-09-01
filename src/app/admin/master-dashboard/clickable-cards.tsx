@@ -87,8 +87,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <div className="rounded-card border border-surface-200 bg-white p-6 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
           <p className="flex items-center justify-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
-            <Scale className="h-4 w-4" /> Abhi Ka Position (Bank+Stock+Receivable-Payable)
-          </p>
+            <Scale className="h-4 w-4" />{t("at_position_now", lang)}</p>
           <p className="mt-2 font-display text-3xl font-bold text-surface-900 dark:text-white">Rs {props.currentPosition.toLocaleString()}</p>
         </div>
       </div>

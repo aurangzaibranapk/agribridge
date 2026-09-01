@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WalletView } from "@/components/wallet/wallet-view";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyWalletPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -43,7 +45,7 @@ export default async function MyWalletPage() {
   if (!ownerType || !ownerId) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">No wallet found for this account.</p>
+        <p className="text-surface-600">{t("at_no_wallet", lang)}</p>
       </div>
     );
   }
@@ -66,10 +68,8 @@ export default async function MyWalletPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/admin/pos" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        Back
-      </Link>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-surface-900 dark:text-white">My Wallet</h1>
+      <Link href="/admin/pos" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">{t("at_back", lang)}</Link>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("at_my_wallet", lang)}</h1>
       <p className="mb-6 text-sm text-surface-500">{displayName}</p>
 
       <WalletView

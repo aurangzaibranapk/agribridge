@@ -48,28 +48,23 @@ export function GrainBillClient({ bill }: { bill: Bill }) {
     <div className="mx-auto max-w-2xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/grain-procurement" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
-        </Link>
+          <ArrowLeft className="h-4 w-4" />{t("at_back", lang)}</Link>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print / PDF
-          </button>
+            <Printer className="h-3.5 w-3.5" />{t("at_print_pdf", lang)}</button>
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-200">
-            <Download className="h-3.5 w-3.5" /> Download
-          </button>
+            <Download className="h-3.5 w-3.5" />{t("at_download", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
           <button onClick={handleEmail} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-            <Mail className="h-3.5 w-3.5" /> Email
-          </button>
+            <Mail className="h-3.5 w-3.5" />{t("at_email", lang)}</button>
         </div>
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
         <div className="mb-6 flex items-center justify-between border-b border-surface-200 pb-4">
           <div>
-            <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders</h1>
+            <h1 className="font-display text-xl font-bold text-surface-900">{t("sh_company", lang)}</h1>
             <p className="text-sm text-surface-500">{t("gb_title", lang)}</p>
           </div>
           <div className="text-right">

@@ -4,6 +4,8 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { BookLossForm } from "./book-form";
 import { quantityReport } from "@/lib/ledger/quantity-money";
 import { AlertTriangle, CheckCircle2, Info, Scale } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default async function QuantityMoneyPage({
 }: {
   searchParams: Promise<{ m?: string; y?: string }>;
 }) {
+  const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const supabase = createClient();
 
@@ -34,7 +37,7 @@ export default async function QuantityMoneyPage({
     : { data: null };
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_finance_manager_admin", lang)}</div>;
   }
 
   const now = new Date();
@@ -50,7 +53,7 @@ export default async function QuantityMoneyPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Miqdar aur Paisa"
+        title={t("at_qty_and_money", lang)}
         description="Paise ka hisaab wo darj karta hai jo kisi ne kaha ke hua. Miqdar us hi waqie ka doosra, azad gawah hai."
       />
 
@@ -123,9 +126,7 @@ export default async function QuantityMoneyPage({
                   <Scale className="h-4 w-4 shrink-0" /> {s.label}
                 </h3>
                 {s.booked && s.canBook && (
-                  <span className="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950/40 dark:text-green-400">
-                    khate mein ja chuka
-                  </span>
+                  <span className="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-950/40 dark:text-green-400">{t("at_in_khata", lang)}</span>
                 )}
               </div>
 
@@ -149,7 +150,7 @@ export default async function QuantityMoneyPage({
                       : "border-surface-200 dark:border-surface-800"
                   }`}
                 >
-                  <p className="text-xs text-surface-500">Farq</p>
+                  <p className="text-xs text-surface-500">{t("at_difference", lang)}</p>
                   <p
                     className={`mt-0.5 text-sm font-medium tabular-nums ${
                       shortage && meaningful

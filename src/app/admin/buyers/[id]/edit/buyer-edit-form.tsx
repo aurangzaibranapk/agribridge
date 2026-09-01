@@ -30,7 +30,7 @@ export function BuyerEditForm({ buyer }: { buyer: Buyer }) {
       {state.success && <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{t("c_saved", lang)}</p>}
 
       <div>
-        <Label htmlFor="business_name">Business Name *</Label>
+        <Label htmlFor="business_name">{t("at_business_name_req", lang)}</Label>
         <Input id="business_name" name="business_name" required defaultValue={buyer.business_name} />
       </div>
       <div>

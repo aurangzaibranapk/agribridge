@@ -58,9 +58,7 @@ export default async function AdminJobApplicationsPage() {
         title={t("ja_title", lang)}
         description="Documents check -> Interview -> Score -> Offer"
         actions={
-          <Link href="/admin/hr-dashboard" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
-            HR Dashboard Dekhein
-          </Link>
+          <Link href="/admin/hr-dashboard" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">{t("at_view_hr_dashboard", lang)}</Link>
         }
       />
       {applications.length === 0 ? (

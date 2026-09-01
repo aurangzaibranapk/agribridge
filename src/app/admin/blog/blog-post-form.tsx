@@ -40,15 +40,13 @@ export function BlogPostForm({ post }: { post?: any }) {
         <p className="mb-2 text-sm text-surface-600 dark:text-surface-300">3. AI Draft - type a topic, let AI draft a starting point:</p>
         <AIDraftButton action={aiAction} />
         {aiState.notConfigured && (
-          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-            AI drafting isn&apos;t connected yet - needs the Gemini API key configured (GEMINI_API_KEY). Manual and Voice both work right now.
-          </p>
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t("at_ai_not_connected", lang)}</p>
         )}
         {aiState.data && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">{t("bg_draft_note", lang)}</p>}
       </div>
 
       <div>
-        <Label htmlFor="title">Title *</Label>
+        <Label htmlFor="title">{t("at_title_req", lang)}</Label>
         <div className="flex gap-2">
           <Input ref={titleRef} id="title" name="title" required defaultValue={post?.title} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (titleRef.current) titleRef.current.value = text; }} />
@@ -76,7 +74,7 @@ export function BlogPostForm({ post }: { post?: any }) {
       </div>
 
       <div>
-        <Label htmlFor="content">Content *</Label>
+        <Label htmlFor="content">{t("at_content_req", lang)}</Label>
         <div className="flex gap-2">
           <Textarea ref={contentRef} id="content" name="content" rows={10} required defaultValue={post?.content} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (contentRef.current) contentRef.current.value = (contentRef.current.value ? contentRef.current.value + " " : "") + text; }} />
@@ -84,8 +82,7 @@ export function BlogPostForm({ post }: { post?: any }) {
       </div>
 
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
-        <input type="checkbox" name="is_published" defaultChecked={post?.is_published} /> Published
-      </label>
+        <input type="checkbox" name="is_published" defaultChecked={post?.is_published} />{t("at_published", lang)}</label>
       <SubmitButton />
     </form>
   );

@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { assignDepartmentHead, removeDepartmentHead, type ActionState } from "@/actions/department-head";
 import { ACTIONS, ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { Crown, ShieldAlert } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ActionState = {};
 
@@ -40,6 +42,7 @@ export function HeadForm({
   staff: StaffOption[];
   head: HeadInfo | null;
 }) {
+  const lang = useLang();
   const [state, action] = useFormState(assignDepartmentHead, initial);
   const [removeState, removeAction] = useFormState(removeDepartmentHead, initial);
   const [actions, setActions] = useState<Set<string>>(new Set(head?.maxActions ?? ["view"]));
@@ -65,14 +68,14 @@ export function HeadForm({
           </form>
         </div>
       ) : (
-        <p className="mt-1 text-xs text-surface-500">Abhi koi head nahi laga.</p>
+        <p className="mt-1 text-xs text-surface-500">{t("at_no_head", lang)}</p>
       )}
 
       <form action={action} className="mt-3 space-y-3 border-t border-surface-200 pt-3 dark:border-surface-800">
         <input type="hidden" name="department_key" value={departmentKey} />
 
         <div>
-          <label className="text-xs font-medium text-surface-600">Head kaun hoga</label>
+          <label className="text-xs font-medium text-surface-600">{t("at_who_is_head", lang)}</label>
           <select name="profile_id" defaultValue={head?.profileId ?? ""} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
             <option value="">— chunein —</option>
             {staff.map((s) => (
@@ -85,8 +88,7 @@ export function HeadForm({
 
         <div>
           <label className="flex items-center gap-1 text-xs font-medium text-surface-600">
-            <ShieldAlert className="h-3 w-3 text-amber-600" /> Zyada se zyada kya de sakega
-          </label>
+            <ShieldAlert className="h-3 w-3 text-amber-600" />{t("at_max_can_give", lang)}</label>
           <div className="mt-1 flex flex-wrap gap-1">
             {ACTIONS.map((a: Action) => {
               const on = actions.has(a);
@@ -119,14 +121,12 @@ export function HeadForm({
               );
             })}
           </div>
-          <p className="mt-1 text-xs text-surface-400">
-            Head is se aage kuch nahi de sakega — aur wo bhi sirf tab jab wo cheez us ke apne paas ho.
-          </p>
+          <p className="mt-1 text-xs text-surface-400">{t("at_head_limit", lang)}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-surface-600">Data ki hadd</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_data_limit", lang)}</label>
             <select
               name="max_data_scope"
               defaultValue={head?.maxScope ?? "own_branch"}
@@ -140,7 +140,7 @@ export function HeadForm({
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">Kab tak (marzi)</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_until_when", lang)}</label>
             <input
               name="expires_at"
               type="date"

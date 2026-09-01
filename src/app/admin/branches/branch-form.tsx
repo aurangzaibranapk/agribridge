@@ -20,13 +20,11 @@ export function BranchForm() {
         </p>
       )}
       {state.success && (
-        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Shop added.
-        </p>
+        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_shop_added", lang)}</p>
       )}
       <form action={formAction} className="space-y-3">
         <div>
-          <Label htmlFor="branch-name">Shop Name *</Label>
+          <Label htmlFor="branch-name">{t("at_shop_name_req", lang)}</Label>
           <Input id="branch-name" name="name" required placeholder={t("br_name_eg", lang)} />
         </div>
         <div>

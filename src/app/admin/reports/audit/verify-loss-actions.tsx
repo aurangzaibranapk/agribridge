@@ -9,6 +9,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 
 export function VerifyLossActions({ lossId }: { lossId: string }) {
+  const lang = useLang();
   const [showReject, setShowReject] = useState(false);
   const [showReduced, setShowReduced] = useState(false);
   const [approveState, approveAction] = useFormState(verifyLossRecord, initialState);
@@ -22,11 +23,9 @@ export function VerifyLossActions({ lossId }: { lossId: string }) {
           <ApproveButton />
         </form>
         <button onClick={() => setShowReduced(true)} className="flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100">
-          <Percent className="h-3 w-3" /> Kam Rate
-        </button>
+          <Percent className="h-3 w-3" />{t("at_low_rate", lang)}</button>
         <button onClick={() => setShowReject(true)} className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-          <XCircle className="h-3 w-3" /> Reject
-        </button>
+          <XCircle className="h-3 w-3" />{t("at_reject", lang)}</button>
       </div>
       {approveState.error && <p className="text-xs text-red-600">{approveState.error}</p>}
       {showReject && <RejectModal lossId={lossId} onClose={() => setShowReject(false)} />}
@@ -80,7 +79,7 @@ function ReducedRateModal({ lossId, onClose }: { lossId: string; onClose: () => 
           <h3 className="font-display text-base font-semibold text-surface-900">{t("rl_sell_lower_rate", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        <p className="mb-2 text-xs text-surface-400">Ye poora loss nahi hai - stock waise hi rahega, sirf naye kam rate pe sale hoga. Sirf farak (original - naya rate) loss mein count hoga.</p>
+        <p className="mb-2 text-xs text-surface-400">{t("at_low_rate_note", lang)}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="loss_id" value={lossId} />

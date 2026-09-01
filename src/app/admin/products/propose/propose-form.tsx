@@ -21,7 +21,7 @@ export function ProposeForm({ categories }: { categories: Category[] }) {
       {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{t("pd_proposed_ok", lang)}</p>}
       <form action={formAction} className="space-y-3">
         <div>
-          <label className="text-sm font-medium text-surface-700 dark:text-surface-300">Product Naam *</label>
+          <label className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("at_product_name_req", lang)}</label>
           <input name="name" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
@@ -38,7 +38,7 @@ export function ProposeForm({ categories }: { categories: Category[] }) {
           <input name="pack_size" placeholder={t("pd_pack_size_eg2", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div>
-          <label className="text-sm font-medium text-surface-700 dark:text-surface-300">Proposed Rate (Rs) *</label>
+          <label className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("at_proposed_rate_req", lang)}</label>
           <input type="number" step="0.01" name="proposed_price" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <SubmitButton />

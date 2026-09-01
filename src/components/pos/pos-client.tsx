@@ -347,9 +347,7 @@ export function PosClient({
       <Card className="flex h-fit flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Cart
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2>
         </div>
 
         <div className="max-h-64 space-y-2 overflow-y-auto">

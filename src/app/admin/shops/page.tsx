@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { ShopsListClient } from "./shops-list-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function ShopsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawShops } = await supabase
@@ -25,7 +28,7 @@ export default async function ShopsPage() {
 
   return (
     <div>
-      <PageHeader title="Shops" description="Har Branch ke andar business-type ke hisab se Shops manage karein (Karyana, Agri Inputs, Dairy, wagera)" />
+      <PageHeader title={t("at_shops", lang)} description="Har Branch ke andar business-type ke hisab se Shops manage karein (Karyana, Agri Inputs, Dairy, wagera)" />
       <ShopsListClient shops={shops} branches={branches ?? []} />
     </div>
   );

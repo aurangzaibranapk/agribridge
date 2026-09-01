@@ -20,6 +20,7 @@ export function ConvertDealerButton({
   suggestedPhone: string | null;
   suggestedEmail: string | null;
 }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
 
   return (
@@ -28,8 +29,7 @@ export function ConvertDealerButton({
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
       >
-        <UserPlus className="h-3.5 w-3.5" /> Convert to Dealer
-      </button>
+        <UserPlus className="h-3.5 w-3.5" />{t("at_convert_dealer", lang)}</button>
       {open && (
         <ConvertModal
           inquiryId={inquiryId}
@@ -76,22 +76,20 @@ function ConvertModal({
           <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Dealer created! An invite email was sent to set their password.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_dealer_created", lang)}</p>
         )}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="inquiry_id" value={inquiryId} />
           <div>
-            <Label>Business Name *</Label>
+            <Label>{t("at_business_name_req", lang)}</Label>
             <Input name="business_name" defaultValue={suggestedName} required />
           </div>
           <div>
-            <Label>Email * (invite sent here)</Label>
+            <Label>{t("at_email_invite", lang)}</Label>
             <Input name="email" type="email" defaultValue={suggestedEmail ?? ""} required />
           </div>
           <div>
-            <Label>Phone *</Label>
+            <Label>{t("at_phone_req", lang)}</Label>
             <Input name="phone" defaultValue={suggestedPhone ?? ""} required />
           </div>
           <div>

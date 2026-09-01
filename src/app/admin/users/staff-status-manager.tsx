@@ -9,17 +9,14 @@ import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 
 export function StaffStatusManager({ userId, status }: { userId: string; status: string }) {
+  const lang = useLang();
   const [modalAction, setModalAction] = useState<"suspend" | "delete" | null>(null);
 
   if (status === "active") {
     return (
       <div className="flex gap-1.5">
-        <button onClick={() => setModalAction("suspend")} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
-          Suspend
-        </button>
-        <button onClick={() => setModalAction("delete")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-          Nikalein
-        </button>
+        <button onClick={() => setModalAction("suspend")} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">{t("at_suspend", lang)}</button>
+        <button onClick={() => setModalAction("delete")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">{t("at_withdraw", lang)}</button>
         {modalAction && <ReasonModal userId={userId} action={modalAction} onClose={() => setModalAction(null)} />}
       </div>
     );
@@ -28,9 +25,7 @@ export function StaffStatusManager({ userId, status }: { userId: string; status:
   return (
     <div className="flex gap-1.5">
       <ReactivateForm userId={userId} />
-      <button onClick={() => setModalAction("delete")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-        Nikalein
-      </button>
+      <button onClick={() => setModalAction("delete")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">{t("at_withdraw", lang)}</button>
       {modalAction === "delete" && <ReasonModal userId={userId} action="delete" onClose={() => setModalAction(null)} />}
     </div>
   );
@@ -63,13 +58,12 @@ function ReasonModal({ userId, action, onClose }: { userId: string; action: "sus
 }
 
 function ReactivateForm({ userId }: { userId: string }) {
+  const lang = useLang();
   const [, formAction] = useFormState(reactivateStaff, initialState);
   return (
     <form action={formAction}>
       <input type="hidden" name="user_id" value={userId} />
-      <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">
-        Reactivate
-      </button>
+      <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">{t("at_reactivate", lang)}</button>
     </form>
   );
 }

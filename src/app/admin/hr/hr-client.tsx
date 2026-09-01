@@ -300,7 +300,7 @@ function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: 
             {DEPARTMENTS.map((d) => (
               <option key={d.role} value={d.role}>{d.label}</option>
             ))}
-            <option value="admin">Admin</option>
+            <option value="admin">{t("at_admin", lang)}</option>
           </Select>
           <Select name="branch_id">
             <option value="">{t("hr_branch_optional", lang)}</option>
@@ -376,7 +376,7 @@ function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () =
             <option value="leave">{t("hr_leave", lang)}</option>
             <option value="half_day">{t("hr_half_day", lang)}</option>
           </Select>
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
+          <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
           <SubmitButton label={t("hr_mark", lang)} />
         </form>
       </div>
@@ -414,7 +414,7 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
           <Input type="number" step="0.01" name="bonus" placeholder={t("hr_bonus", lang)} />
           <Input type="number" step="0.01" name="deductions" placeholder={t("hr_deductions", lang)} />
           <Input type="number" step="0.01" name="advance_deduction" placeholder={t("hr_advance_deduction", lang)} />
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
+          <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
           <SubmitButton label={t("hr_record", lang)} />
         </form>
       </div>

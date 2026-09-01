@@ -104,9 +104,7 @@ export function MyVehicleClient({
               ))}
               {/* Nishan rok nahi hai -- record ban chuka hai. Ye sirf
                   manager ko dekhne ki cheez hai. */}
-              <p className="text-xs text-surface-400">
-                Ye sirf nishan hain — indraj darj ho chuka hai. Manager dekh kar faisla karega.
-              </p>
+              <p className="text-xs text-surface-400">{t("at_only_marks", lang)}</p>
             </div>
           )}
         </Card>
@@ -136,9 +134,7 @@ export function MyVehicleClient({
       {closingDone && (
         <Card>
           <p className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4" />
-            Aaj ka hisaab poora ho gaya — manager ke paas verify ke liye chala gaya hai.
-          </p>
+            <CheckCircle2 className="h-4 w-4" />{t("at_day_closed", lang)}</p>
         </Card>
       )}
 
@@ -205,9 +201,7 @@ function MeterForm({
             adad bina tasveer ke sirf kisi ka dawa hai. */}
         <PaymentSlipUpload onUploaded={setPhoto} />
         <p className="flex items-center gap-1.5 text-xs text-surface-500">
-          <Camera className="h-3.5 w-3.5" />
-          Meter ki tasveer laazmi hai.
-        </p>
+          <Camera className="h-3.5 w-3.5" />{t("at_meter_photo_required", lang)}</p>
         <Submit label={label} disabled={!photo} />
       </form>
     </Card>
@@ -260,9 +254,7 @@ function FuelForm() {
         )}
         <PaymentSlipUpload onUploaded={setPhoto} />
         <p className="flex items-center gap-1.5 text-xs text-surface-500">
-          <Camera className="h-3.5 w-3.5" />
-          Bill ki tasveer laazmi hai.
-        </p>
+          <Camera className="h-3.5 w-3.5" />{t("at_bill_photo_required", lang)}</p>
         <Submit label={t("mv_enter_bill", lang)} disabled={!photo} />
       </form>
     </Card>

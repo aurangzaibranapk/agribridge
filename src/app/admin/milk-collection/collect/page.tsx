@@ -28,7 +28,7 @@ export default async function MilkCollectPage() {
     : { data: null };
 
   if (!me?.is_active || !ALLOWED_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf doodh jama karne wale staff ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_milk_staff_only", lang)}</div>;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -73,7 +73,7 @@ export default async function MilkCollectPage() {
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{mine?.length ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Aaj ka doodh</p>
+          <p className="text-xs text-surface-500">{t("at_milk_today", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round(todaysLiters * 10) / 10} L
           </p>
@@ -84,10 +84,10 @@ export default async function MilkCollectPage() {
 
       <Card className="overflow-hidden">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">Aaj ki entries</h3>
+          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t("at_entries_today", lang)}</h3>
         </div>
         {(mine ?? []).length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-surface-400">Aaj abhi tak koi entry nahi.</p>
+          <p className="px-4 py-6 text-center text-sm text-surface-400">{t("at_no_entries_today", lang)}</p>
         ) : (
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {(mine ?? []).map((e) => {

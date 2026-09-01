@@ -62,7 +62,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
             <Building2 className={`h-4 w-4 ${!isBranch ? "text-brand-600" : "text-surface-400"}`} />
             <span className="text-sm font-semibold text-surface-900 dark:text-white">{t("ao_from_company_src", lang)}</span>
           </span>
-          <span className="mt-1 block text-xs text-surface-500">Maal HQ ke Central Warehouse se aayega — jaisa hamesha hota hai.</span>
+          <span className="mt-1 block text-xs text-surface-500">{t("at_hq_note", lang)}</span>
         </button>
 
         <button
@@ -84,7 +84,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
       {isBranch && (
         <div className="space-y-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
           <div>
-            <label className="text-xs font-medium text-surface-600">Kaun Si Shop Se? *</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_which_shop_req", lang)}</label>
             <select
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
@@ -99,7 +99,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-medium text-surface-600">Paisa Kaise Settle Hoga? *</p>
+            <p className="mb-2 text-xs font-medium text-surface-600">{t("at_settle_how_req", lang)}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {SETTLEMENTS.map(({ value, title, detail, Icon }) => {
                 const selected = settlement === value;
@@ -124,9 +124,7 @@ export function SourcingSelect({ branches, excludeBranchId }: { branches: Branch
             </div>
           </div>
 
-          <p className="rounded-lg bg-surface-50 p-2 text-xs text-surface-600 dark:bg-surface-800">
-            Approval waisi hi rahegi — Sales, Finance aur Manager HQ hi karega. Sirf dispatch chuni hui shop karegi.
-          </p>
+          <p className="rounded-lg bg-surface-50 p-2 text-xs text-surface-600 dark:bg-surface-800">{t("at_approval_note", lang)}</p>
         </div>
       )}
     </div>

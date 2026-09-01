@@ -91,17 +91,14 @@ export default async function CostPerLiterPage({
               ))}
             </select>
           </div>
-          <button type="submit" className="rounded-lg border border-surface-300 px-3 py-2 text-sm">
-            Dikhayein
-          </button>
+          <button type="submit" className="rounded-lg border border-surface-300 px-3 py-2 text-sm">{t("at_show", lang)}</button>
         </form>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="p-4">
           <p className="flex items-center gap-1 text-xs text-surface-500">
-            <Droplet className="h-3 w-3" /> Doodh
-          </p>
+            <Droplet className="h-3 w-3" />{t("at_milk", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round(sheet.liters).toLocaleString()} L
           </p>
@@ -130,8 +127,7 @@ export default async function CostPerLiterPage({
         <div className="rounded-card border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
           <p className="flex items-start gap-1.5 text-xs text-amber-900 dark:text-amber-300">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              In khanon mein is mahine koi entry nahi hui: <strong>{sheet.missing.join(", ")}</strong>.
+            <span>{t("at_no_entries_month", lang)}<strong>{sheet.missing.join(", ")}</strong>.
               <br />
               In ka matlab sifar nahi — matlab ye ke abhi darj nahi huye. Jab tak ye nahi bharte, fi litre
               kharcha asal se kam nazar aayega.
@@ -167,9 +163,7 @@ export default async function CostPerLiterPage({
           </tbody>
           <tfoot className="border-t-2 border-surface-300 dark:border-surface-700">
             <tr>
-              <td colSpan={2} className="px-4 py-2.5 font-semibold text-surface-900 dark:text-white">
-                Chalane ka kul kharcha
-              </td>
+              <td colSpan={2} className="px-4 py-2.5 font-semibold text-surface-900 dark:text-white">{t("at_running_cost", lang)}</td>
               <td className="px-4 py-2.5 text-right font-semibold text-surface-900 dark:text-white">
                 {rs(sheet.runningCost)}
               </td>
@@ -178,9 +172,7 @@ export default async function CostPerLiterPage({
               </td>
             </tr>
             <tr>
-              <td colSpan={2} className="px-4 py-2.5 text-surface-600 dark:text-surface-400">
-                Doodh ka daam bhi mila kar
-              </td>
+              <td colSpan={2} className="px-4 py-2.5 text-surface-600 dark:text-surface-400">{t("at_with_milk_price", lang)}</td>
               <td className="px-4 py-2.5 text-right text-surface-700 dark:text-surface-300">{rs(sheet.totalCost)}</td>
               <td className="px-4 py-2.5 text-right font-semibold text-surface-700 dark:text-surface-300">
                 {sheet.perLiterTotal == null ? "—" : `Rs ${sheet.perLiterTotal.toFixed(2)}`}

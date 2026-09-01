@@ -85,8 +85,8 @@ function ResetForm({ onCancel }: { onCancel: () => void }) {
   return (
     <form action={formAction} className="mt-4 space-y-2">
       {state.error && <p className="rounded-lg bg-red-100 px-3 py-2 text-xs text-red-800">{state.error}</p>}
-      <label className="block text-xs font-medium text-red-700">{t("rt_type_exactly", lang)}<strong>DELETE TEST DATA</strong>{t("rt_type_word", lang)}</label>
-      <input name="confirm_text" required placeholder="DELETE TEST DATA" className="w-full rounded-lg border border-red-300 p-2 text-sm" />
+      <label className="block text-xs font-medium text-red-700">{t("rt_type_exactly", lang)}<strong>{t("at_delete_test_data", lang)}</strong>{t("rt_type_word", lang)}</label>
+      <input name="confirm_text" required placeholder={t("at_delete_test_data", lang)} className="w-full rounded-lg border border-red-300 p-2 text-sm" />
       <div className="flex gap-2">
         <SubmitButton label={t("rt_yes_delete_all", lang)} />
         <button type="button" onClick={onCancel} className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50">{t("c_cancel", lang)}</button>
@@ -109,8 +109,8 @@ function LockForm({ onCancel }: { onCancel: () => void }) {
   return (
     <form action={formAction} className="mt-4 space-y-2">
       {state.error && <p className="rounded-lg bg-red-100 px-3 py-2 text-xs text-red-800">{state.error}</p>}
-      <label className="block text-xs font-medium text-amber-700">{t("rt_type_exactly", lang)}<strong>WE ARE LIVE</strong>{t("rt_type_word", lang)}</label>
-      <input name="confirm_text" required placeholder="WE ARE LIVE" className="w-full rounded-lg border border-amber-300 p-2 text-sm" />
+      <label className="block text-xs font-medium text-amber-700">{t("rt_type_exactly", lang)}<strong>{t("at_we_are_live", lang)}</strong>{t("rt_type_word", lang)}</label>
+      <input name="confirm_text" required placeholder={t("at_we_are_live", lang)} className="w-full rounded-lg border border-amber-300 p-2 text-sm" />
       <div className="flex gap-2">
         <SubmitButton label={t("rt_yes_lock_forever", lang)} />
         <button type="button" onClick={onCancel} className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50">{t("c_cancel", lang)}</button>

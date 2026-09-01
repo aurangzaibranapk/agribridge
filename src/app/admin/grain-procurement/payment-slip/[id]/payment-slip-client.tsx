@@ -51,8 +51,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
             <Printer className="h-3.5 w-3.5" />{t("gd_print_download", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
             <Mail className="h-3.5 w-3.5" />{t("c_email", lang)}</button>
         </div>
@@ -61,7 +60,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
       <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
         <div className="mb-6 flex items-center justify-between border-b border-surface-200 pb-4">
           <div>
-            <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders</h1>
+            <h1 className="font-display text-xl font-bold text-surface-900">{t("sh_company", lang)}</h1>
             <p className="text-sm text-surface-500">{t("ps_slip_title", lang)}</p>
           </div>
           <div className="text-right">
@@ -113,7 +112,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
         <div className="mt-8 border-t border-surface-100 pt-3">
           <p className="text-center text-[10px] text-surface-300">{t("ps_computer_generated", lang)}</p>
           <div className="mt-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-surface-400">Software by ZR Technologies</p>
+            <p className="text-xs font-semibold text-surface-400">{t("at_software_by", lang)}</p>
             <p className="text-xs text-surface-400">0312-6513294</p>
           </div>
         </div>

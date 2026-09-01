@@ -19,7 +19,7 @@ export default async function WalkInPage() {
     : { data: null };
 
   if (!me?.is_active || !MCO_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf chiller staff ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_chiller_only", lang)}</div>;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -51,13 +51,13 @@ export default async function WalkInPage() {
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{mine?.length ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Doodh</p>
+          <p className="text-xs text-surface-500">{t("at_milk", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round(liters * 10) / 10} L
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Raqam</p>
+          <p className="text-xs text-surface-500">{t("at_amount", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             {Math.round(amount).toLocaleString()}
           </p>
@@ -68,10 +68,10 @@ export default async function WalkInPage() {
 
       <Card className="overflow-hidden">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">Aaj ki walk-in entries</h3>
+          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t("at_walkin_today", lang)}</h3>
         </div>
         {(mine ?? []).length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-surface-400">Aaj abhi tak koi walk-in nahi.</p>
+          <p className="px-4 py-6 text-center text-sm text-surface-400">{t("at_no_walkin_today", lang)}</p>
         ) : (
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {(mine ?? []).map((e) => {

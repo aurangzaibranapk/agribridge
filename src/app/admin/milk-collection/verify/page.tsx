@@ -20,7 +20,7 @@ export default async function MilkVerifyPage() {
     : { data: null };
 
   if (!me?.is_active || !VERIFY_ROLES.includes(me.role)) {
-    return <div className="p-8 text-center text-surface-400">Ye safha sirf Manager aur Admin ke liye hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_manager_admin_only", lang)}</div>;
   }
 
   const mayVerify = await canDo("milk-collection.verify", "verify");
@@ -62,11 +62,11 @@ export default async function MilkVerifyPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Intezar mein</p>
+          <p className="text-xs text-surface-500">{t("at_waiting", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">{entries.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-surface-500">Kul raqam</p>
+          <p className="text-xs text-surface-500">{t("at_total_amount", lang)}</p>
           <p className="mt-1 text-2xl font-semibold text-surface-900 dark:text-white">
             Rs {Math.round(total).toLocaleString()}
           </p>
@@ -76,9 +76,7 @@ export default async function MilkVerifyPage() {
       {mayVerify ? (
         <VerifyClient entries={entries} />
       ) : (
-        <Card className="p-6 text-center text-sm text-surface-500">
-          Aap ye entries dekh sakte hain, magar tasdeeq ki ijazat aap ke paas nahi hai.
-        </Card>
+        <Card className="p-6 text-center text-sm text-surface-500">{t("at_view_only", lang)}</Card>
       )}
     </div>
   );

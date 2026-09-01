@@ -42,7 +42,7 @@ export function ProductImageUpload({ defaultUrl, onUploaded }: { defaultUrl?: st
 
       {imageUrl ? (
         <div className="relative inline-block">
-          <img src={imageUrl} alt="Product preview" className="h-28 w-28 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
+          <img src={imageUrl} alt={t("at_product_preview", lang)} className="h-28 w-28 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
           <button
             type="button"
             onClick={() => setImageUrl("")}

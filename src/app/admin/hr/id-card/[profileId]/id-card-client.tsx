@@ -117,7 +117,7 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
       <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl ${t.bg}`}>
         <div className={`h-2 w-full ${t.accent}`} />
         <div className="flex h-full flex-col items-center justify-center p-4">
-          <p className={`text-xs font-bold uppercase tracking-wider ${t.text}`}>Al Rana Traders</p>
+          <p className={`text-xs font-bold uppercase tracking-wider ${t.text}`}>{tr("sh_company", lang)}</p>
           <div className="my-2 h-20 w-20 overflow-hidden rounded-full border-2 border-white/50 bg-white/20">
             {photoUrl ? (
               <img src={photoUrl} alt={fullName} className="h-full w-full object-cover" />
@@ -143,7 +143,7 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
         <p className={t.text}><strong>{tr("ic_blood_label", lang)}</strong> {bloodGroup ?? "-"}</p>
         <p className={t.text}><strong>{tr("ic_emergency_label", lang)}</strong> {emergencyName ?? "-"} {emergencyPhone ? `(${emergencyPhone})` : ""}</p>
         <div className={`mt-2 border-t pt-2 ${design === "white" ? "border-surface-200" : "border-white/20"}`}>
-          <p className={`text-[10px] ${t.subtext}`}>Agar ye card kisi ko mile, barah-e-meherbani wapis karein: alranatraders.pk | job@alranatraders.pk</p>
+          <p className={`text-[10px] ${t.subtext}`}>{tr("at_card_return_note", lang)}</p>
         </div>
       </div>
     </div>

@@ -176,11 +176,9 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
             <Download className="h-3.5 w-3.5" /> {t("mc_download", lang)}
           </button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-            <Mail className="h-3.5 w-3.5" /> Email
-          </button>
+            <Mail className="h-3.5 w-3.5" />{t("at_email", lang)}</button>
         </div>
       </div>
 
@@ -234,9 +232,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
 
       <div className="mb-4 overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900 print:border-0 print:shadow-none">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h2 className="font-display text-base font-bold text-surface-900 dark:text-white">
-            Al Rana Traders — Machinery
-          </h2>
+          <h2 className="font-display text-base font-bold text-surface-900 dark:text-white">{t("at_alrana_machinery", lang)}</h2>
           <p className="text-xs text-surface-400">
             {t(CARDS.find((c) => c.id === filter)?.label ?? "mc_all", lang)} · {shown.length}
           </p>

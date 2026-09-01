@@ -69,8 +69,7 @@ export default async function AgriOrdersPage() {
         description="Order Creation se Delivery/GRN tak - poora tracking"
         actions={
           <Link href="/admin/agri-orders/new" className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            <Plus className="h-4 w-4" /> New Order
-          </Link>
+            <Plus className="h-4 w-4" />{t("at_new_order", lang)}</Link>
         }
       />
 
@@ -148,9 +147,7 @@ export default async function AgriOrdersPage() {
                     <Link
                       href={`/admin/agri-orders/${o.id}`}
                       className={`text-xs font-medium hover:underline ${needsAction ? "text-red-600" : isDone ? "text-green-600" : "text-brand-600"}`}
-                    >
-                      Dekhein
-                    </Link>
+                    >{t("at_view", lang)}</Link>
                   </td>
                 </tr>
               );

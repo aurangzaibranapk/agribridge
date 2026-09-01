@@ -3,6 +3,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateUserExtraRoles } from "@/actions/users";
 import { DEPARTMENTS } from "@/lib/departments";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 /**
  * Ek bande ke DOOSRE department.
@@ -30,6 +32,7 @@ export function ExtraDepartments({
   mainRole: string;
   current: string[];
 }) {
+  const lang = useLang();
   const router = useRouter();
   const [chosen, setChosen] = useState<string[]>(current);
   const [error, setError] = useState<string | null>(null);
@@ -75,9 +78,7 @@ export function ExtraDepartments({
             <span>{d.label}</span>
           </label>
         ))}
-        <p className="pt-1 text-[11px] leading-snug text-surface-400">
-          Jo tick hoga, us department ke safhe bhi khulenge aur us ka data bhi — apne department ke sath sath.
-        </p>
+        <p className="pt-1 text-[11px] leading-snug text-surface-400">{t("at_ticked_depts", lang)}</p>
         {error && <p className="text-[11px] text-red-600">{error}</p>}
       </div>
     </details>

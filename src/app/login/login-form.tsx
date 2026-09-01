@@ -580,7 +580,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
             <select
               name="cc"
               defaultValue="+92"
-              aria-label="Country code"
+              aria-label={t("at_country_code", lang)}
               className="h-11 shrink-0 rounded-xl border border-surface-200 bg-white px-2.5 text-[15px] text-surface-700 shadow-sm"
             >
               <option value="+92">+92</option>

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { runReconciliationNow, resolveFinding, type ActionState } from "@/actions/reconciliation";
 import { RefreshCw, Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -21,11 +23,12 @@ function Pending({ label, busy }: { label: string; busy: string }) {
 }
 
 export function RunNowButton() {
+  const lang = useLang();
   const [state, formAction] = useFormState(runReconciliationNow, initialState);
 
   return (
     <form action={formAction}>
-      <Pending label="Abhi jaanch chalayein" busy="Jaanch ho rahi hai…" />
+      <Pending label={t("at_run_check_now", lang)} busy="Jaanch ho rahi hai…" />
       {state.error && (
         <p className="mt-2 text-xs text-red-700 dark:text-red-400">{state.error}</p>
       )}
@@ -37,6 +40,7 @@ export function RunNowButton() {
 }
 
 export function ResolveForm({ findingId }: { findingId: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(resolveFinding, initialState);
   const [open, setOpen] = useState(false);
 
@@ -54,9 +58,7 @@ export function ResolveForm({ findingId }: { findingId: string }) {
       <button
         onClick={() => setOpen(true)}
         className="mt-2 text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
-      >
-        Ye baat band karein
-      </button>
+      >{t("at_stop_this", lang)}</button>
     );
   }
 
@@ -69,23 +71,19 @@ export function ResolveForm({ findingId }: { findingId: string }) {
         minLength={5}
         maxLength={255}
         autoFocus
-        placeholder="Kya kiya gaya? (lazmi)"
+        placeholder={t("at_what_was_done", lang)}
         className="w-full rounded-lg border border-surface-300 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
       />
       <div className="flex items-center gap-2">
         <button
           type="submit"
           className="rounded-lg bg-surface-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-surface-900 dark:bg-surface-200 dark:text-surface-900"
-        >
-          Band karein
-        </button>
+        >{t("at_close", lang)}</button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="text-xs text-surface-500 underline"
-        >
-          rehne dein
-        </button>
+        >{t("at_cancel", lang)}</button>
       </div>
       <p className="text-xs text-surface-400">
         Band karne se masla khatam nahi hota — agli jaanch mein wo phir nikle ga, kyunki jaanch haalat

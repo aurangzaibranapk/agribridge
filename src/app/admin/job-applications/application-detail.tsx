@@ -199,15 +199,14 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
 }
 
 function UnderReviewForm({ applicationId }: { applicationId: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(markUnderReview, initialState);
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       <form action={formAction}>
         <input type="hidden" name="application_id" value={applicationId} />
-        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          Review Mein Daalein
-        </button>
+        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("at_put_in_review", lang)}</button>
       </form>
     </div>
   );
@@ -224,9 +223,7 @@ function EligibilityForm({ applicationId }: { applicationId: string }) {
         <form action={formAction} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="is_eligible" value="true" />
-          <button type="submit" className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">
-            Shortlist Karein
-          </button>
+          <button type="submit" className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">{t("at_shortlist", lang)}</button>
         </form>
         <form action={formAction} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
@@ -273,8 +270,7 @@ function InterviewScoreForm({ applicationId }: { applicationId: string }) {
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-        <Award className="h-3.5 w-3.5" /> Interview Scoring
-      </p>
+        <Award className="h-3.5 w-3.5" />{t("at_interview_scoring", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       {state.success && <p className="mb-2 text-xs text-brand-700">{t("hj_score_saved", lang)}</p>}
       <form action={formAction} className="space-y-2">
@@ -323,8 +319,7 @@ function CreateLoginForm({ applicationId }: { applicationId: string }) {
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-        <KeyRound className="h-3.5 w-3.5" /> Official Login Banayein
-      </p>
+        <KeyRound className="h-3.5 w-3.5" />{t("at_official_login", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       {state.success && <p className="mb-2 flex items-center gap-1 text-xs text-brand-700"><CheckCircle2 className="h-3 w-3" />{t("hj_login_created", lang)}</p>}
       <form action={formAction} className="space-y-2">

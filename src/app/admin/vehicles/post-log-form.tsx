@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { postVehicleDailyLog, type ActionState } from "@/actions/vehicle-logs";
 import { COMMENT_MAX, COMMENT_MIN } from "@/lib/whatsapp-submissions";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -10,6 +12,7 @@ const initialState: ActionState = {};
 const FLAGGED_MIN = 15;
 
 export function PostLogForm({ logId, hasFlags }: { logId: string; hasFlags: boolean }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(postVehicleDailyLog, initialState);
   const [comment, setComment] = useState("");
 
@@ -22,8 +25,7 @@ export function PostLogForm({ logId, hasFlags }: { logId: string; hasFlags: bool
 
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
-      <label className="text-xs font-medium text-surface-600">
-        Manager ka comment * <span className="text-surface-400">(lazmi — accounts mein bhejne se pehle)</span>
+      <label className="text-xs font-medium text-surface-600">{t("at_manager_comment_req", lang)}<span className="text-surface-400">(lazmi — accounts mein bhejne se pehle)</span>
       </label>
       <textarea
         name="manager_comment"

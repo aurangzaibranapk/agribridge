@@ -29,8 +29,7 @@ export function ReturnActions({ returnId }: { returnId: string }) {
           onClick={() => setShowReject((v) => !v)}
           className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
         >
-          <X className="h-4 w-4" /> Reject Karein
-        </button>
+          <X className="h-4 w-4" />{t("at_reject", lang)}</button>
       </div>
 
       {showReject && (

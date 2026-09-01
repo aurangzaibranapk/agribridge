@@ -102,9 +102,7 @@ export function ProductCardGrid({
           type="button"
           onClick={() => setCategoryFilter("")}
           className={`rounded-full px-3 py-1.5 text-xs font-medium ${categoryFilter === "" ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200"}`}
-        >
-          Sab
-        </button>
+        >{t("at_all", lang)}</button>
         {categories.map((c) => (
           <button
             type="button"
@@ -155,9 +153,7 @@ export function ProductCardGrid({
                 </span>
               </div>
               {outOfStock ? (
-                <div className="mt-2 rounded-lg bg-red-50 py-1.5 text-center text-xs font-medium text-red-600 dark:bg-red-950/30">
-                  Stock Khatam - Order Nahi Ho Sakta
-                </div>
+                <div className="mt-2 rounded-lg bg-red-50 py-1.5 text-center text-xs font-medium text-red-600 dark:bg-red-950/30">{t("at_out_of_stock", lang)}</div>
               ) : (
                 <>
                   <div className="mt-2 flex items-center justify-center gap-2">
@@ -192,9 +188,7 @@ export function ProductCardGrid({
                       type="button"
                       onClick={() => onUpdateRow(p.id, "qty", 0, p.selling_price)}
                       className="mt-2 w-full rounded-lg bg-brand-600 py-1.5 text-xs font-medium text-white hover:bg-red-600"
-                    >
-                      Order Se Hatayein
-                    </button>
+                    >{t("at_remove_from_order", lang)}</button>
                   )}
                 </>
               )}

@@ -236,7 +236,7 @@ export function ReceiptModal({
 
             <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
             <p className="text-center text-xs text-surface-400">{t("pos_thank_you", lang)}</p>
-            <p className="text-center text-xs text-surface-400">POS Solution by ZR Technologies</p>
+            <p className="text-center text-xs text-surface-400">{t("at_pos_by", lang)}</p>
             <p className="text-center text-xs text-surface-400">📞 0312-6513294</p>
 
             <div className="mt-4 flex gap-2 print:hidden">

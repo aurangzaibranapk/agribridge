@@ -114,6 +114,7 @@ export function CompanyExpensesClient({ expenses, suppliers, branches, shops }: 
   );
 }
 function ApprovalActions({ expenseId }: { expenseId: string }) {
+  const lang = useLang();
   const [approveState, approveAction] = useFormState(approveExpense, initialState);
   const [showReject, setShowReject] = useState(false);
   return (
@@ -121,12 +122,10 @@ function ApprovalActions({ expenseId }: { expenseId: string }) {
       <form action={approveAction}>
         <input type="hidden" name="expense_id" value={expenseId} />
         <button type="submit" className="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100">
-          <CheckCircle2 className="h-3 w-3" /> Approve
-        </button>
+          <CheckCircle2 className="h-3 w-3" />{t("at_approve", lang)}</button>
       </form>
       <button onClick={() => setShowReject(true)} className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-        <XCircle className="h-3 w-3" /> Reject
-      </button>
+        <XCircle className="h-3 w-3" />{t("at_reject", lang)}</button>
       {showReject && <RejectModal expenseId={expenseId} onClose={() => setShowReject(false)} />}
     </div>
   );
@@ -194,7 +193,7 @@ function RequestExpenseModal({ suppliers, branches, shops, onClose }: { supplier
                   ))}
                 </select>
               )}
-              <p className="text-[10px] text-surface-400">Shop select karein taake ye kharcha us Shop ki P&L mein sahi jaye. Agar poore Branch ka mushtarka kharcha hai to Shop khaali chhod dein.</p>
+              <p className="text-[10px] text-surface-400">{t("at_shop_expense_note", lang)}</p>
             </>
           )}
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />

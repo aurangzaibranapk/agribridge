@@ -102,6 +102,7 @@ function ConfirmModal({
   confirmColor: "red" | "purple";
   onClose: () => void;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(action, initialState);
 
   if (state.success) {
@@ -127,17 +128,13 @@ function ConfirmModal({
           </p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Done.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_done", lang)}</p>
         )}
         <form action={formAction} className="flex gap-2">
           {Object.entries(hiddenFields).map(([key, value]) => (
             <input key={key} type="hidden" name={key} value={value} />
           ))}
-          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">
-            Cancel
-          </button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">{t("at_cancel", lang)}</button>
           <SubmitButton label={confirmLabel} colorClasses={colorClasses} />
         </form>
       </div>

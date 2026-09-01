@@ -97,8 +97,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             <Printer className="h-3.5 w-3.5" /> {t("mc_print_download", lang)}
           </button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
             <Mail className="h-3.5 w-3.5" />{t("c_email", lang)}</button>
         </div>
@@ -131,8 +130,8 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
             <div className="flex items-center gap-4">
               <ArtLogo width={54} />
               <div>
-                <h1 className="font-display text-2xl font-bold leading-tight tracking-tight">Al Rana Traders</h1>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C9A227]">ART AgriBridge</p>
+                <h1 className="font-display text-2xl font-bold leading-tight tracking-tight">{t("sh_company", lang)}</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C9A227]">{t("sh_brand", lang)}</p>
               </div>
             </div>
             <div className="shrink-0 text-right">
@@ -346,7 +345,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
         <div className="border-t border-[#C9A227]/40 bg-[#F6F8F5] px-8 py-3">
           <p className="text-center text-[10px] text-surface-400">{t("mc_slip_footer", lang)}</p>
           <div className="mt-1.5 flex items-center justify-between">
-            <p className="text-xs font-semibold text-surface-500">Software by ZR Technologies</p>
+            <p className="text-xs font-semibold text-surface-500">{t("at_software_by", lang)}</p>
             <p className="text-xs text-surface-500">0312-6513294</p>
           </div>
         </div>

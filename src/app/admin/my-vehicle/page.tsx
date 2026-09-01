@@ -52,9 +52,7 @@ export default async function MyVehiclePage() {
 
       {!vehicle ? (
         <Card>
-          <p className="py-6 text-center text-sm text-surface-500">
-            Aap ke naam par koi gaari nahi lagi. Admin se kehein ke gaari assign kar de.
-          </p>
+          <p className="py-6 text-center text-sm text-surface-500">{t("at_no_vehicle", lang)}</p>
         </Card>
       ) : (
         <MyVehicleClient

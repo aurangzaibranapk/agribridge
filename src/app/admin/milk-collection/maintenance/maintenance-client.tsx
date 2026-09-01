@@ -52,14 +52,11 @@ export function MaintenanceClient({
         <div className="flex items-center justify-between">
           <div>
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
-              <PiggyBank className="h-3.5 w-3.5" /> Motorcycle Replacement Fund
-            </p>
+              <PiggyBank className="h-3.5 w-3.5" />{t("at_motorcycle_fund", lang)}</p>
             <p className="mt-1 font-display text-2xl font-bold text-brand-900 dark:text-brand-100">Rs {fundBalance.toLocaleString()}</p>
             <p className="mt-0.5 text-xs text-brand-600 dark:text-brand-400">Rs {monthlyContribution.toLocaleString()}/month khud jama hoti hai</p>
           </div>
-          <button onClick={() => setShowWithdraw(true)} className="rounded-lg border border-brand-300 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50">
-            Withdrawal Karein
-          </button>
+          <button onClick={() => setShowWithdraw(true)} className="rounded-lg border border-brand-300 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50">{t("at_withdraw", lang)}</button>
         </div>
       </div>
       {showWithdraw && <WithdrawModal onClose={() => setShowWithdraw(false)} />}
@@ -125,8 +122,7 @@ function MaintenanceForm({ vehicles }: { vehicles: Vehicle[] }) {
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm font-semibold text-surface-900 dark:text-white">
-        <Wrench className="h-4 w-4" /> Service/Maintenance Log Karein
-      </h2>
+        <Wrench className="h-4 w-4" />{t("at_log_service", lang)}</h2>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
       {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("mo_log_saved", lang)}</p>}
       <form action={formAction} className="space-y-2">

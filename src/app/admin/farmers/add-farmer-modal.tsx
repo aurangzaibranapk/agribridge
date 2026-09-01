@@ -9,12 +9,12 @@ import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 
 export function AddFarmerButton() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-        <Plus className="h-4 w-4" /> Add Farmer
-      </button>
+        <Plus className="h-4 w-4" />{t("at_add_farmer", lang)}</button>
       {open && <AddFarmerModal onClose={() => setOpen(false)} />}
     </>
   );

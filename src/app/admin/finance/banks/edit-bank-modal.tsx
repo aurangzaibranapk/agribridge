@@ -61,7 +61,7 @@ export default function EditBankModal({ bank, onClose }: EditBankModalProps) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">Bank Naam *</label>
+            <label className="text-xs font-medium text-surface-600">{t("at_bank_name_req", lang)}</label>
             <input name="name" defaultValue={bank.name} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>

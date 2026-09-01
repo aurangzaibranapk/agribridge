@@ -64,8 +64,7 @@ export function WalletStatementClient({
           <button onClick={handleDownload} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-200">
             <Download className="h-3.5 w-3.5" />{t("c_download", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
           <button onClick={() => setShowEmail(true)} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
             <Mail className="h-3.5 w-3.5" />{t("c_email", lang)}</button>
         </div>
@@ -114,7 +113,7 @@ export function WalletStatementClient({
 
         <div className="mt-8 border-t border-surface-100 pt-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-surface-400">Software by ZR Technologies</p>
+            <p className="text-xs font-semibold text-surface-400">{t("at_software_by", lang)}</p>
             <p className="text-xs text-surface-400">0312-6513294</p>
           </div>
         </div>

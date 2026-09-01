@@ -121,7 +121,7 @@ export function AdminFarmerForm({ farmer }: { farmer: any }) {
           <div>
             <Label>{t("af_cnic_front", lang)}</Label>
             {farmer.cnic_image_url ? (
-              <img src={farmer.cnic_image_url} alt="CNIC Front" className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
+              <img src={farmer.cnic_image_url} alt={t("sp_cnic_front", lang)} className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
             ) : (
               <p className="text-sm text-surface-400">{t("af_not_uploaded", lang)}</p>
             )}
@@ -129,7 +129,7 @@ export function AdminFarmerForm({ farmer }: { farmer: any }) {
           <div>
             <Label>{t("af_cnic_back", lang)}</Label>
             {farmer.cnic_back_image_url ? (
-              <img src={farmer.cnic_back_image_url} alt="CNIC Back" className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
+              <img src={farmer.cnic_back_image_url} alt={t("sp_cnic_back", lang)} className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
             ) : (
               <p className="text-sm text-surface-400">{t("af_not_uploaded", lang)}</p>
             )}

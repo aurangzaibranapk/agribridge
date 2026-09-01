@@ -7,6 +7,8 @@ import { departmentByKey, departmentForRole, UNRESTRICTED_ROLES } from "@/lib/de
 import { effectiveAccess, canOpen } from "@/lib/effective-permissions";
 import { tilesFor } from "@/lib/department-dashboard";
 import { ArrowRight } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ function toneClass(tone?: string) {
 }
 
 export default async function DepartmentDashboard({ params }: { params: Promise<{ key: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { key } = await params;
   const dept = departmentByKey(key);
   if (!dept) notFound();
@@ -30,7 +33,7 @@ export default async function DepartmentDashboard({ params }: { params: Promise<
     : { data: null };
 
   if (!me?.is_active) {
-    return <div className="p-8 text-center text-surface-400">Ye account fa'aal nahi hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_account_inactive", lang)}</div>;
   }
 
   // Apna department, ya admin darje ka shakhs jo sab dekh sakta hai.
@@ -79,7 +82,7 @@ export default async function DepartmentDashboard({ params }: { params: Promise<
 
       <Card className="overflow-hidden">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">Aap ka kaam</h3>
+          <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t("at_my_work", lang)}</h3>
         </div>
         {shortcuts.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-surface-400">

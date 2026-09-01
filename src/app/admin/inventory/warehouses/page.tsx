@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { WarehouseForm } from "@/app/admin/inventory/warehouses/warehouse-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWarehousesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: warehouses } = await supabase
@@ -14,11 +17,11 @@ export default async function AdminWarehousesPage() {
 
   return (
     <div>
-      <PageHeader title="Warehouses" description="Physical storage locations for your stock" />
+      <PageHeader title={t("at_warehouses", lang)} description="Physical storage locations for your stock" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!warehouses || warehouses.length === 0 ? (
-            <EmptyState title="No warehouses yet" />
+            <EmptyState title={t("at_no_warehouses", lang)} />
           ) : (
             <div className="space-y-2">
               {warehouses.map((w) => (

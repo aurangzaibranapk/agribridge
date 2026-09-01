@@ -72,8 +72,7 @@ export function GrnSection({
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <ClipboardCheck className="h-4 w-4" /> GRN (Goods Receiving)
-      </h3>
+        <ClipboardCheck className="h-4 w-4" />{t("at_grn", lang)}</h3>
 
       {!grn && orderStatus === "delivered" && permissions.canCreateGrn && (
         <button onClick={() => setShowCreate(true)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("ao_create_grn", lang)}</button>
@@ -269,13 +268,11 @@ function CreateGrnModal({
                   <p className="text-sm font-medium text-surface-800">{item.product_name} (Ordered: {item.order_qty})</p>
                   {info && (info.short_qty > 0 || info.damaged_qty > 0) && (
                     <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                      <AlertTriangle className="h-3 w-3" /> Delivery pe farak mila tha
-                    </span>
+                      <AlertTriangle className="h-3 w-3" />{t("at_delivery_diff", lang)}</span>
                   )}
                   {info && info.short_qty === 0 && info.damaged_qty === 0 && (
                     <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                      <Check className="h-3 w-3" /> Delivery pe sahi mila tha
-                    </span>
+                      <Check className="h-3 w-3" />{t("at_delivery_ok", lang)}</span>
                   )}
                 </div>
                 {info?.reason && (
@@ -329,7 +326,7 @@ function CreateGrnModal({
           <div>
             <label className="text-xs text-surface-500">{t("ao_charges_ph", lang)}</label>
             <input type="number" name="additional_charges" value={additionalCharges} onChange={(e) => setAdditionalCharges(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-            <p className="mt-1 text-[11px] text-surface-400">Agar yahan amount daali to ye stock ki cost mein shamil ho jayegi (asal landed cost).</p>
+            <p className="mt-1 text-[11px] text-surface-400">{t("at_landed_cost_note", lang)}</p>
           </div>
           <div>
             <label className="text-xs text-surface-500">{t("ao_discount_adjustment_rs", lang)}</label>

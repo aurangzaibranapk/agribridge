@@ -118,7 +118,7 @@ export function LiveBoard() {
                     lagta hai -- aur ek hi kisan ki do bookingein do
                     alag bande jaise parhi jati hain. */}
                 <span className="font-mono text-xs text-surface-400">
-                  <span className="font-sans">Booking</span> {c.booking_number}
+                  <span className="font-sans">{t("at_booking", lang)}</span> {c.booking_number}
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${work.chip}`}>
                   {t(work.key, lang)}

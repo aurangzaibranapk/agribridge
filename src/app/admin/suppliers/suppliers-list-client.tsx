@@ -53,9 +53,9 @@ export function SuppliersListClient({ suppliers }: { suppliers: Supplier[] }) {
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {s.tax_status === "filer" ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"><FileCheck className="h-3 w-3" /> Filer</span>
+                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"><FileCheck className="h-3 w-3" />{t("at_filer", lang)}</span>
                   ) : (
-                    <span className="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-500">Non-Filer</span>
+                    <span className="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-500">{t("at_non_filer", lang)}</span>
                   )}
                   <StatusBadge status={s.status} />
                 </div>

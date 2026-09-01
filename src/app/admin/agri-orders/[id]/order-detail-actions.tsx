@@ -11,6 +11,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 const initialState: ActionState = {};
 
 export function OrderDetailActions({ orderId, status, permissions }: { orderId: string; status: string; permissions: OrderPermissions }) {
+  const lang = useLang();
   const [showReject, setShowReject] = useState(false);
   const [showAction, setShowAction] = useState<null | { action: any; label: string; icon: React.ReactNode }>(null);
   if (["completed", "cancelled", "rejected"].includes(status)) return null;
@@ -31,29 +32,25 @@ export function OrderDetailActions({ orderId, status, permissions }: { orderId: 
           onClick={() => setShowAction({ action: salesVerifyOrder, label: "Sales Verify Karein", icon: <CheckSquare className="h-3.5 w-3.5" /> })}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700"
         >
-          <CheckSquare className="h-3.5 w-3.5" /> Sales Verify Karein
-        </button>
+          <CheckSquare className="h-3.5 w-3.5" />{t("at_sales_verify", lang)}</button>
       )}
       {status === "sales_verified" && permissions.canFinanceVerify && (
         <button
           onClick={() => setShowAction({ action: financeVerifyOrder, label: "Finance Verify Karein", icon: <DollarSign className="h-3.5 w-3.5" /> })}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700"
         >
-          <DollarSign className="h-3.5 w-3.5" /> Finance Verify Karein
-        </button>
+          <DollarSign className="h-3.5 w-3.5" />{t("at_finance_verify", lang)}</button>
       )}
       {status === "finance_verified" && permissions.canApprove && (
         <button
           onClick={() => setShowAction({ action: approveOrder, label: "Order Approve Karein", icon: <CheckCircle2 className="h-3.5 w-3.5" /> })}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700"
         >
-          <CheckCircle2 className="h-3.5 w-3.5" /> Order Approve Karein
-        </button>
+          <CheckCircle2 className="h-3.5 w-3.5" />{t("at_approve_order", lang)}</button>
       )}
       {canShowReject && (
         <button onClick={() => setShowReject(true)} className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-100">
-          <XCircle className="h-3.5 w-3.5" /> Reject Karein
-        </button>
+          <XCircle className="h-3.5 w-3.5" />{t("at_reject", lang)}</button>
       )}
       {showReject && <RejectModal orderId={orderId} onClose={() => setShowReject(false)} />}
       {showAction && (

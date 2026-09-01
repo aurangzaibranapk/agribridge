@@ -121,7 +121,7 @@ function Submit() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Darj ho rahi hai..." : "Adaigi darj karein"}
+      {pending ? t("ar_recording", lang) : t("ar_record_payment", lang)}
     </Button>
   );
 }

@@ -52,8 +52,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
             <Layers className="h-3 w-3" /> {viewAll ? "Sab Band Karein" : "Sab Dekhein"}
           </button>
           <button onClick={downloadAll} className="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700 hover:bg-brand-100">
-            <Download className="h-3 w-3" /> Sab Download
-          </button>
+            <Download className="h-3 w-3" />{t("at_download_all", lang)}</button>
         </div>
       </div>
 

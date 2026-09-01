@@ -44,21 +44,19 @@ export function DealerForm() {
         </p>
       )}
       {state.success && (
-        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Dealer created! An invite email was sent to set their password.
-        </p>
+        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_dealer_created", lang)}</p>
       )}
       <form action={formAction} className="space-y-3">
         <div>
-          <Label>Business Name *</Label>
+          <Label>{t("at_business_name_req", lang)}</Label>
           <Input name="business_name" required placeholder={t("dl_business_eg", lang)} />
         </div>
         <div>
-          <Label>Email * (invite sent here)</Label>
+          <Label>{t("at_email_invite", lang)}</Label>
           <Input name="email" type="email" required />
         </div>
         <div>
-          <Label>Phone *</Label>
+          <Label>{t("at_phone_req", lang)}</Label>
           <Input name="phone_number" required />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -73,7 +71,7 @@ export function DealerForm() {
         </div>
 
         <div>
-          <Label>Dealer ki Location (Marketplace Delivery ke liye lazmi) *</Label>
+          <Label>{t("at_dealer_location_req", lang)}</Label>
           <button
             type="button"
             onClick={handleUseMyLocation}

@@ -227,8 +227,7 @@ export default async function PnlPage({
     return (
       <div>
         <Link href="/admin/reports/pnl" className="mb-3 flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Sab Branches par wapas
-        </Link>
+          <ArrowLeft className="h-4 w-4" />{t("at_all_branches_back", lang)}</Link>
         <PageHeader title={`${branch?.name ?? "Branch"} - Har Shop Ka Poora Hisaab`} description={`${from} se ${to} tak`} />
         <DateRangeForm branchId={params.branch_id} shopId={params.shop_id} from={from} to={to} shopOptions={(shops ?? []).map((s) => ({ id: s.id, name: s.name }))} />
 
@@ -254,9 +253,7 @@ export default async function PnlPage({
                   <Store className="h-4 w-4 text-brand-600" />
                   <span className="font-medium text-surface-900 dark:text-white">{s.name}</span>
                 </div>
-                <Link href={`/admin/reports/pnl?branch_id=${params.branch_id}&shop_id=${s.id}&from=${from}&to=${to}`} className="text-xs font-medium text-brand-600 hover:underline">
-                  Products Dekhein →
-                </Link>
+                <Link href={`/admin/reports/pnl?branch_id=${params.branch_id}&shop_id=${s.id}&from=${from}&to=${to}`} className="text-xs font-medium text-brand-600 hover:underline">{t("at_view_products", lang)}</Link>
               </div>
               <p className="mb-2 text-xs text-surface-400">{BUSINESS_TYPE_LABELS[s.business_type] ?? s.business_type} - {s.saleCount} sales</p>
 
@@ -384,9 +381,7 @@ export default async function PnlPage({
                   Rs {b.netProfit.toLocaleString()}
                 </td>
                 <td className="px-4 py-3">
-                  <Link href={`/admin/reports/pnl?branch_id=${b.id}&from=${from}&to=${to}`} className="text-xs font-medium text-brand-600 hover:underline">
-                    Poora Hisaab Dekhein →
-                  </Link>
+                  <Link href={`/admin/reports/pnl?branch_id=${b.id}&from=${from}&to=${to}`} className="text-xs font-medium text-brand-600 hover:underline">{t("at_full_account", lang)}</Link>
                 </td>
               </tr>
             ))}
@@ -396,9 +391,7 @@ export default async function PnlPage({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-surface-400">
-        Note: Sirf POS Sales (Karyana/Agri Inputs shops) Gross Profit mein shamil hain. Milk/Dairy ki P&L alag se Master Dashboard par dekhein.
-      </p>
+      <p className="mt-3 text-xs text-surface-400">{t("at_note_pos_only", lang)}</p>
     </div>
   );
 }

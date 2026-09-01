@@ -48,17 +48,14 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <CreditCard className="h-4 w-4" /> Payment Verification
-        </h3>
+          <CreditCard className="h-4 w-4" />{t("at_payment_verification", lang)}</h3>
         {canShowSubmitButton && (
           <button onClick={() => setShowSubmit(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("ao_submit_payment", lang)}</button>
         )}
       </div>
 
       {payments.some((p) => p.status === "pending_verification") && permissions.canSubmitPayment && (
-        <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
-          Aapki payment verification ke liye Finance Team ke paas bheji ja chuki hai — agle update ka intezar karein.
-        </p>
+        <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">{t("at_payment_sent_finance", lang)}</p>
       )}
       <div className="space-y-2">
         {payments.map((p) => (
@@ -71,8 +68,7 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
             {p.bank_name && <p className="text-xs text-surface-500">{p.bank_name} | TXN: {p.transaction_id ?? "-"}</p>}
             {p.receipt_url && (
               <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-brand-600 hover:underline">
-                <FileText className="h-3 w-3" /> Receipt Dekhein
-              </a>
+                <FileText className="h-3 w-3" />{t("at_view_receipt", lang)}</a>
             )}
             {p.rejection_reason && <p className="mt-1 text-xs text-red-600">Reject Wajah: {p.rejection_reason}</p>}
             {p.status === "pending_verification" && permissions.canVerifyPayment && <PaymentVerifyActions orderId={orderId} paymentId={p.id} />}
@@ -86,6 +82,7 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
 }
 
 function PaymentVerifyActions({ orderId, paymentId }: { orderId: string; paymentId: string }) {
+  const lang = useLang();
   const [showReject, setShowReject] = useState(false);
   const [verifyState, verifyAction] = useFormState(verifyOrderPayment, initialState);
   return (
@@ -95,12 +92,10 @@ function PaymentVerifyActions({ orderId, paymentId }: { orderId: string; payment
         <input type="hidden" name="payment_id" value={paymentId} />
         <input type="hidden" name="partial" value="false" />
         <button type="submit" className="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100">
-          <CheckCircle2 className="h-3 w-3" /> Verify Karein
-        </button>
+          <CheckCircle2 className="h-3 w-3" />{t("at_verify", lang)}</button>
       </form>
       <button onClick={() => setShowReject(true)} className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-        <XCircle className="h-3 w-3" /> Reject Karein
-      </button>
+        <XCircle className="h-3 w-3" />{t("at_reject", lang)}</button>
       {showReject && <RejectPaymentModal orderId={orderId} paymentId={paymentId} onClose={() => setShowReject(false)} />}
     </div>
   );

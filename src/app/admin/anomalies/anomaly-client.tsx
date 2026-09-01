@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { scanNow, reviewAnomaly, type ActionState } from "@/actions/anomalies";
 import { Search, Check, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -35,6 +37,7 @@ export function ScanButton() {
 }
 
 export function ReviewForm({ anomalyId }: { anomalyId: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(reviewAnomaly, initialState);
   const [verdict, setVerdict] = useState<"reviewed" | "confirmed" | null>(null);
 
@@ -53,15 +56,11 @@ export function ReviewForm({ anomalyId }: { anomalyId: string }) {
         <button
           onClick={() => setVerdict("reviewed")}
           className="rounded-lg border border-surface-300 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
-        >
-          Dekh li — wajah maqool thi
-        </button>
+        >{t("at_checked_ok", lang)}</button>
         <button
           onClick={() => setVerdict("confirmed")}
           className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
-        >
-          Dekh li — masla tha
-        </button>
+        >{t("at_checked_problem", lang)}</button>
       </div>
     );
   }
@@ -91,12 +90,8 @@ export function ReviewForm({ anomalyId }: { anomalyId: string }) {
         <button
           type="submit"
           className="rounded-lg bg-surface-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-surface-900 dark:bg-surface-200 dark:text-surface-900"
-        >
-          Darj karein
-        </button>
-        <button type="button" onClick={() => setVerdict(null)} className="text-xs text-surface-500 underline">
-          rehne dein
-        </button>
+        >{t("at_add", lang)}</button>
+        <button type="button" onClick={() => setVerdict(null)} className="text-xs text-surface-500 underline">{t("at_cancel", lang)}</button>
       </div>
       {state.error && (
         <p className="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-400">

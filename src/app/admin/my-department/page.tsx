@@ -4,15 +4,18 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadRegistry } from "@/lib/access/registry";
 import { loadHeadPower, grantableActions, grantableScope } from "@/lib/access/delegation";
 import { TeamClient, HeadLimitNotice, type TeamMember, type GrantableFeature, type ExistingGrant } from "./team-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyDepartmentPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return <div className="p-8 text-center text-surface-400">Login zaroori hai.</div>;
+  if (!user) return <div className="p-8 text-center text-surface-400">{t("at_login_required", lang)}</div>;
 
   const power = await loadHeadPower(user.id);
   if (!power) {

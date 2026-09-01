@@ -83,7 +83,7 @@ export default async function StaffWhatsAppPage() {
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_role", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_phone", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_cnic", lang)}</th>
-              <th className="px-3 py-2 font-medium text-surface-500">WhatsApp</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("at_whatsapp", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -108,8 +108,7 @@ export default async function StaffWhatsAppPage() {
         </table>
       </Card>
 
-      <p className="mt-3 text-sm text-surface-500">
-        Phone ya CNIC bharne ke liye <Link href="/admin/hr" className="text-brand-600 hover:underline">{t("sw_hr_page", lang)}</Link> par jayein.
+      <p className="mt-3 text-sm text-surface-500">{t("at_for_phone_cnic", lang)}<Link href="/admin/hr" className="text-brand-600 hover:underline">{t("sw_hr_page", lang)}</Link> par jayein.
         Branch ki jagah <Link href="/admin/branches/locations" className="text-brand-600 hover:underline">{t("sw_here", lang)}</Link> darj karein.
       </p>
     </div>

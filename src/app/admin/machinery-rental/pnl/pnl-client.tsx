@@ -510,7 +510,7 @@ function BookingList({ rows, lang }: { rows: PnlRow[]; lang: Lang }) {
           <tr className="text-left text-surface-400">
             <th className="py-1 pr-3 font-medium">{t("mc_booking_page", lang)}</th>
             <th className="py-1 pr-3 font-medium">{t("mp_from", lang)}</th>
-            <th className="py-1 pr-3 text-right font-medium">Acre</th>
+            <th className="py-1 pr-3 text-right font-medium">{t("at_acre", lang)}</th>
             <th className="py-1 pr-3 text-right font-medium">{t("mp_gross", lang)}</th>
             <th className="py-1 pr-3 text-right font-medium">{t("mp_vendor_share", lang)}</th>
             <th className="py-1 pr-3 text-right font-medium">{t("mp_own_diesel", lang)}</th>

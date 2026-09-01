@@ -30,15 +30,14 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function PendingEditsClient({ requests }: { requests: EditRequest[] }) {
+  const lang = useLang();
   return (
     <div className="space-y-3">
       {requests.map((r) => (
         <EditRow key={r.id} request={r} />
       ))}
       {requests.length === 0 && (
-        <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-surface-400">
-          Koi pending edit request nahi hai.
-        </p>
+        <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-surface-400">{t("at_no_pending_edit", lang)}</p>
       )}
     </div>
   );
@@ -78,14 +77,12 @@ function EditRow({ request }: { request: EditRequest }) {
         <form action={approveAction}>
           <input type="hidden" name="request_id" value={request.id} />
           <button type="submit" className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Approve Karein
-          </button>
+            <CheckCircle2 className="h-3.5 w-3.5" />{t("at_approve", lang)}</button>
         </form>
         <form action={rejectAction}>
           <input type="hidden" name="request_id" value={request.id} />
           <button type="submit" className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
-            <XCircle className="h-3.5 w-3.5" /> Reject Karein
-          </button>
+            <XCircle className="h-3.5 w-3.5" />{t("at_reject", lang)}</button>
         </form>
       </div>
     </div>

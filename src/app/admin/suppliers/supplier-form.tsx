@@ -54,7 +54,7 @@ export function SupplierForm({ editSupplier, onDoneEditing }: { editSupplier?: S
       <form action={formAction} encType="multipart/form-data" className="space-y-3">
         {editSupplier && <input type="hidden" name="id" value={editSupplier.id} />}
         <div>
-          <Label htmlFor="supplier-name">Supplier Name *</Label>
+          <Label htmlFor="supplier-name">{t("at_supplier_name_req", lang)}</Label>
           <div className="flex gap-2">
             <Input ref={nameRef} id="supplier-name" name="name" required defaultValue={editSupplier?.name} className="flex-1" />
             <VoiceDictationButton onResult={(text) => { if (nameRef.current) nameRef.current.value = text; }} />

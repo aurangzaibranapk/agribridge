@@ -1378,7 +1378,7 @@ function FarmerResponseForm({ bookingId }: { bookingId: string }) {
         <div>
           <Label>{t("mc_how_reply_came", lang)}</Label>
           <Select name="channel" defaultValue="whatsapp">
-            <option value="whatsapp">WhatsApp</option>
+            <option value="whatsapp">{t("at_whatsapp", lang)}</option>
             <option value="call">{t("mc_phone_call", lang)}</option>
             <option value="in_person">{t("mc_in_person", lang)}</option>
           </Select>

@@ -41,6 +41,7 @@ import { siteHomeDict } from "./dict/site-home";
 import { sitePagesDict } from "./dict/site-pages";
 import { trustDict } from "./dict/trust";
 import { outsideDict } from "./dict/outside";
+import { adminTailDict } from "./dict/admin-tail";
 import { portalMoreDict } from "./dict/portal-more";
 import { authDict } from "./dict/auth";
 import { sharedDict } from "./dict/shared";
@@ -136,6 +137,7 @@ const dict = {
   ...sitePagesDict,
   ...trustDict,
   ...outsideDict,
+  ...adminTailDict,
   ...portalMoreDict,
   ...authDict,
   ...sharedDict,

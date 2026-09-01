@@ -35,9 +35,7 @@ export default async function CashClosePage() {
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
     return (
-      <div className="p-8 text-center text-surface-400">
-        Ye safha sirf Manager, Finance aur Admin ke liye hai.
-      </div>
+      <div className="p-8 text-center text-surface-400">{t("at_manager_finance_admin", lang)}</div>
     );
   }
 

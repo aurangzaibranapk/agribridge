@@ -23,7 +23,7 @@ export default async function OrderingDashboardPage() {
   if (!seller) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">Ye account kisi branch ya dealer se linked nahi hai. Admin se rabta karein.</p>
+        <p className="text-surface-600">{t("at_no_branch_dealer_link", lang)}</p>
       </div>
     );
   }

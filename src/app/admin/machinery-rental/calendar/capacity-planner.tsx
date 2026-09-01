@@ -279,9 +279,7 @@ export function CapacityPlanner({
                 <strong className={dayInfo.free > 0 ? "text-green-700" : "text-red-600"}>{dayInfo.free} acre</strong>
               </p>
             </div>
-            <button type="button" onClick={() => go({ day: null })} className="text-xs text-surface-500 hover:underline">
-              band karein
-            </button>
+            <button type="button" onClick={() => go({ day: null })} className="text-xs text-surface-500 hover:underline">{t("at_close", lang)}</button>
           </div>
 
           {shownDayRows.length === 0 ? (
@@ -329,13 +327,11 @@ export function CapacityPlanner({
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 font-medium text-brand-600 hover:underline"
                       >
-                        <MapPin className="h-3 w-3" /> Jagah
-                      </a>
+                        <MapPin className="h-3 w-3" />{t("at_place", lang)}</a>
                     )}
                     {r.farmerPhone && (
                       <a href={`tel:${r.farmerPhone}`} className="flex items-center gap-1 font-medium text-brand-600 hover:underline">
-                        <Phone className="h-3 w-3" /> Call
-                      </a>
+                        <Phone className="h-3 w-3" />{t("sp_call", lang)}</a>
                     )}
                   </div>
                 </div>

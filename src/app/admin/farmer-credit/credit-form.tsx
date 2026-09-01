@@ -51,7 +51,7 @@ function CreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => v
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_credit_issued", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("at_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -60,7 +60,7 @@ function CreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => v
             </Select>
           </div>
           <div>
-            <Label>Credit Type *</Label>
+            <Label>{t("at_credit_type_req", lang)}</Label>
             <Select name="source_type" required>
               <option value="seed">{t("c_seed", lang)}</option>
               <option value="fertilizer">{t("c_fertilizer", lang)}</option>
@@ -70,7 +70,7 @@ function CreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => v
             </Select>
           </div>
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("at_amount_rs_req", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required />
           </div>
           <div>

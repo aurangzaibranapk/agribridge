@@ -114,9 +114,7 @@ export function MachineryClient({
   return (
     <div>
       {defaultRequestId && (
-        <div className="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
-          Farmer ki request se Booking bana rahe hain - Machine aur Rate select karein.
-        </div>
+        <div className="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">{t("at_from_request", lang)}</div>
       )}
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-surface-200 dark:border-surface-800">
         <div className="flex gap-2">
@@ -561,7 +559,7 @@ function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_lin
                   {t("mc_send_on_whatsapp", lang)}
                 </button>
               </div>
-              <p className="text-[11px] text-surface-400">Ye link is Farmer ke liye hamesha wahi rahega - jitni marzi booking, isi link se aati rahengi.</p>
+              <p className="text-[11px] text-surface-400">{t("at_farmer_link_note", lang)}</p>
             </>
           )}
         </div>

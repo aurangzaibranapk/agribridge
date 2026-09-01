@@ -89,7 +89,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
           <ul className="mt-1 list-inside list-disc">
             {flags.map((f, i) => <li key={i}>{f}</li>)}
           </ul>
-          <p className="mt-1 text-xs">Ye sirf ishara hai — faisla aap ka hai.</p>
+          <p className="mt-1 text-xs">{t("at_only_a_hint", lang)}</p>
         </div>
       )}
 
@@ -102,12 +102,10 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
               isImage ? (
                 <a href={evidenceUrl} target="_blank" rel="noopener noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={evidenceUrl} alt="Saboot" className="max-h-96 rounded-lg border border-surface-200" />
+                  <img src={evidenceUrl} alt={t("at_evidence", lang)} className="max-h-96 rounded-lg border border-surface-200" />
                 </a>
               ) : (
-                <a href={evidenceUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline">
-                  File kholein
-                </a>
+                <a href={evidenceUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline">{t("at_open_file", lang)}</a>
               )
             ) : (
               <p className="text-sm text-surface-400">{t("sb_no_photo", lang)}</p>
@@ -118,15 +116,14 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
             <Card className="p-4">
               <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("sb_what_ai_understood", lang)}</h3>
               <p className="whitespace-pre-wrap text-sm text-surface-600 dark:text-surface-400">{s.ai_summary}</p>
-              <p className="mt-2 text-xs text-surface-500">Ye AI ka andaza hai — asal saboot upar hai. Milaa kar dekh lein.</p>
+              <p className="mt-2 text-xs text-surface-500">{t("at_ai_guess", lang)}</p>
             </Card>
           )}
 
           {s.status !== "pending" && (
             <Card className="p-4">
               <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-                <MessageSquare className="h-4 w-4" /> Manager ka faisla
-              </h3>
+                <MessageSquare className="h-4 w-4" />{t("at_manager_decision", lang)}</h3>
               <p className="whitespace-pre-wrap rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">{s.manager_comment}</p>
               <p className="mt-2 text-xs text-surface-500">
                 {manager?.full_name ?? "Manager"} — {s.reviewed_at ? new Date(s.reviewed_at).toLocaleString() : ""}

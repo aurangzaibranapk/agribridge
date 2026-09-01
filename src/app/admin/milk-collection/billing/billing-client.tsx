@@ -63,12 +63,9 @@ export function BillingClient(props: Props) {
           <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_view", lang)}</button>
         </form>
         <div className="flex gap-2">
-          <button onClick={() => setShowExpense(true)} className="rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-600 hover:bg-surface-50">
-            Electricity/Maintenance Add Karein
-          </button>
+          <button onClick={() => setShowExpense(true)} className="rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-600 hover:bg-surface-50">{t("at_add_electricity", lang)}</button>
           <button onClick={() => setShowSettings(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-600 hover:bg-surface-50">
-            <Settings className="h-3.5 w-3.5" /> Rate Settings
-          </button>
+            <Settings className="h-3.5 w-3.5" />{t("at_rate_settings", lang)}</button>
         </div>
       </div>
 
@@ -139,7 +136,7 @@ function InvoiceCard(props: Props) {
 
         <h3 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-white">{t("mo_operational_expenses", lang)}</h3>
         {!props.branchFilter && props.deductions.staffSalaries > 0 && (
-          <p className="mb-2 text-xs text-surface-400">Staff Salaries sirf "Sab Chillers" view mein dikhti hain (per-chiller split abhi nahi hai).</p>
+          <p className="mb-2 text-xs text-surface-400">{t("at_note_staff_salaries", lang)}</p>
         )}
         <table className="w-full text-sm">
           <tbody>

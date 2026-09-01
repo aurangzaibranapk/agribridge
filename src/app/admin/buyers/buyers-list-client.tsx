@@ -41,12 +41,8 @@ export function BuyersListClient({ buyers }: { buyers: Buyer[] }) {
           </div>
           <div className="flex items-center gap-3">
             <StatusSelect buyerId={b.id} currentStatus={b.status} />
-            <Link href={`/admin/buyers/${b.id}/statement`} className="text-xs font-medium text-brand-600 hover:underline">
-              Statement
-            </Link>
-            <Link href={`/admin/buyers/${b.id}/edit`} className="text-xs font-medium text-brand-600 hover:underline">
-              Edit
-            </Link>
+            <Link href={`/admin/buyers/${b.id}/statement`} className="text-xs font-medium text-brand-600 hover:underline">{t("at_statement", lang)}</Link>
+            <Link href={`/admin/buyers/${b.id}/edit`} className="text-xs font-medium text-brand-600 hover:underline">{t("at_edit", lang)}</Link>
             <DeleteButton id={b.id} action={deleteBuyer} />
           </div>
         </div>

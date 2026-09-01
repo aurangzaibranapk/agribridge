@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Camera, Loader2, Sprout, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
-import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { useLang } from "@/lib/i18n/lang-context";
 
 type CropDiagnosis = {
   cropGuess?: string;
@@ -14,7 +14,7 @@ type CropDiagnosis = {
 };
 
 export function CropDoctorWidget({ mode }: { mode?: string }) {
-  const lang = getLanguageFromCookies("rm");
+  const lang = useLang();
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);

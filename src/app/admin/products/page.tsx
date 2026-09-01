@@ -68,8 +68,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
           href={`/admin/products/${p.id}/edit`}
           className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
         >
-          <Pencil className="h-3.5 w-3.5" /> Edit
-        </Link>
+          <Pencil className="h-3.5 w-3.5" />{t("at_edit", lang)}</Link>
       ),
     },
     ...(isUnrestricted

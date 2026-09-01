@@ -29,8 +29,7 @@ export function BanksClient({ banks }: { banks: Bank[] }) {
     <div>
       <div className="mb-4 flex justify-end">
         <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" /> Add Bank
-        </button>
+          <Plus className="h-4 w-4" />{t("at_add_bank", lang)}</button>
       </div>
 
       {banks.length === 0 ? (
@@ -74,9 +73,7 @@ export function BanksClient({ banks }: { banks: Bank[] }) {
                 <Link
                   href={`/admin/finance/banks/${bank.id}/statement`}
                   className="block w-full rounded-lg border border-surface-200 py-2 text-center text-sm font-medium text-surface-600 hover:bg-surface-50"
-                >
-                  View Statement
-                </Link>
+                >{t("at_view_statement", lang)}</Link>
               </div>
             </div>
           ))}

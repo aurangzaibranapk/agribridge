@@ -419,9 +419,7 @@ export function NewBookingForm({
   return (
     <form ref={formRef} action={formAction} className="space-y-4 pb-24">
       {defaultRequestId && (
-        <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
-          Kisan ki apni farmaish se booking bana rahe hain. Booking ban'ne par wo farmaish poori shudah ho jayegi.
-        </p>
+        <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">{t("at_from_request2", lang)}</p>
       )}
       <input type="hidden" name="request_id" value={defaultRequestId ?? ""} />
 

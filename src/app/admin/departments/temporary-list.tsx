@@ -2,6 +2,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { Card } from "@/components/ui/layout-primitives";
 import { ACTION_LABEL, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 /**
  * Waqti ijazat ka record.
@@ -13,6 +15,7 @@ import { Clock } from "lucide-react";
  * kuch ghalat ho chuka hota hai.
  */
 export async function TemporaryList() {
+  const lang = getLanguageFromCookies("rm");
   const service = createServiceClient();
 
   const { data: rows } = await service
@@ -23,9 +26,7 @@ export async function TemporaryList() {
 
   if (!rows || rows.length === 0) {
     return (
-      <Card className="p-6 text-center text-sm text-surface-400">
-        Abhi koi waqti ijazat chal nahi rahi.
-      </Card>
+      <Card className="p-6 text-center text-sm text-surface-400">{t("at_no_temp_access", lang)}</Card>
     );
   }
 

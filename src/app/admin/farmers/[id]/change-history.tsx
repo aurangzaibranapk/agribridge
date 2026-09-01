@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 /**
  * Is kisan par kya kya badla gaya.
@@ -12,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
  * pare, aur wo koi nahi karta.
  */
 export async function FarmerChangeHistory({ farmerId }: { farmerId: string }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rows } = await supabase
@@ -26,9 +29,7 @@ export async function FarmerChangeHistory({ farmerId }: { farmerId: string }) {
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-        Kya kya badla gaya
-      </h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_what_changed", lang)}</h2>
       <ul className="space-y-3">
         {rows.map((r) => {
           const changes = (r.changes ?? {}) as Record<string, { pehle: unknown; ab: unknown }>;

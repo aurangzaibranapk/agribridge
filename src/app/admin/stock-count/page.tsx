@@ -37,9 +37,7 @@ export default async function StockCountPage({
 
   if (!me?.is_active || !ROLES.includes(me.role)) {
     return (
-      <div className="p-8 text-center text-surface-400">
-        Ye safha sirf Godam, Manager, Finance aur Admin ke liye hai.
-      </div>
+      <div className="p-8 text-center text-surface-400">{t("at_warehouse_roles", lang)}</div>
     );
   }
 

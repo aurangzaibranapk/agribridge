@@ -21,6 +21,7 @@ interface ExistingCustomer {
 }
 
 export function AddCustomerButton() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -28,23 +29,21 @@ export function AddCustomerButton() {
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
       >
-        <Plus className="h-4 w-4" /> Add Customer
-      </button>
+        <Plus className="h-4 w-4" />{t("at_add_customer", lang)}</button>
       {open && <CustomerModal onClose={() => setOpen(false)} />}
     </>
   );
 }
 
 export function EditCustomerButton({ customer }: { customer: ExistingCustomer }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         onClick={() => setOpen(true)}
         className="text-xs font-medium text-brand-600 hover:underline"
-      >
-        Edit
-      </button>
+      >{t("at_edit", lang)}</button>
       {open && <CustomerModal customer={customer} onClose={() => setOpen(false)} />}
     </>
   );
@@ -76,14 +75,12 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
           </p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Saved.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_saved", lang)}</p>
         )}
         <form action={formAction} className="space-y-3">
           {isEditMode && <input type="hidden" name="id" value={customer.id} />}
           <div>
-            <Label>Customer Name *</Label>
+            <Label>{t("at_customer_name_req", lang)}</Label>
             <Input name="name" defaultValue={customer?.name} required />
           </div>
           <div>
@@ -91,7 +88,7 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             <Input name="contact_person" defaultValue={customer?.contact_person ?? ""} />
           </div>
           <div>
-            <Label>Phone Number *</Label>
+            <Label>{t("at_phone_number_req", lang)}</Label>
             <Input name="phone_number" defaultValue={customer?.phone_number} required />
           </div>
           <div>

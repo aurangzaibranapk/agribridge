@@ -54,7 +54,7 @@ export default async function LossVerifiersPage() {
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
               <th className="px-4 py-3 font-medium text-surface-500">{t("rv_staff_member", lang)}</th>
-              <th className="px-4 py-3 font-medium text-surface-500">Shop (khaali = Sab Shops)</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("at_shop_all", lang)}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>

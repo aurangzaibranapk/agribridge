@@ -482,9 +482,7 @@ export default async function AdminDashboardPage({
             </ul>
           </div>
         ) : (
-          <p className="mt-4 text-xs text-surface-400">
-            Koi minimum-stock threshold set nahi hui abhi tak — Products page mein set karne par yahan alerts aayenge.
-          </p>
+          <p className="mt-4 text-xs text-surface-400">{t("at_no_threshold", lang)}</p>
         )}
       </div>
 

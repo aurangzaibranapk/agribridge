@@ -102,7 +102,7 @@ export function BuyerStatementClient(props: Props) {
           <div className="flex flex-wrap gap-4 text-surface-600 dark:text-surface-400">
             {props.bankName && <span><strong>{t("st_bank_label", lang)}</strong> {props.bankName}</span>}
             {props.bankAccountTitle && <span><strong>{t("st_title_label", lang)}</strong> {props.bankAccountTitle}</span>}
-            {props.bankAccountNumber && <span><strong>Account #:</strong> {props.bankAccountNumber}</span>}
+            {props.bankAccountNumber && <span><strong>{t("at_account_hash", lang)}</strong> {props.bankAccountNumber}</span>}
             {props.bankIban && <span><strong>{t("st_iban_label", lang)}</strong> {props.bankIban}</span>}
           </div>
         </div>

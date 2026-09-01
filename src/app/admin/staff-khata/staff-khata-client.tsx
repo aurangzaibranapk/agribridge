@@ -53,9 +53,7 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1.5">
-                        <button onClick={() => setDebitTarget(b)} className="rounded-lg border border-surface-200 px-2 py-1 text-xs text-surface-600 hover:bg-surface-50">
-                          Spend Record Karein
-                        </button>
+                        <button onClick={() => setDebitTarget(b)} className="rounded-lg border border-surface-200 px-2 py-1 text-xs text-surface-600 hover:bg-surface-50">{t("at_record_spend", lang)}</button>
                         {b.balance > 0 && (
                           <button onClick={() => setProcessTarget(b)} className="flex items-center gap-1 rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">
                             <TrendingUp className="h-3 w-3" />{t("sk_month_end", lang)}</button>
@@ -143,8 +141,7 @@ function ProcessModal({ staff, onClose }: { staff: StaffBalance; onClose: () => 
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-3 text-xs text-surface-500">
-          {staff.full_name} - Balance <strong>Rs {staff.balance.toLocaleString()}</strong> Salary Due mein shift ho jayegi.
-        </p>
+          {staff.full_name} - Balance <strong>Rs {staff.balance.toLocaleString()}</strong>{t("at_salary_shift_note", lang)}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="profile_id" value={staff.profile_id} />
