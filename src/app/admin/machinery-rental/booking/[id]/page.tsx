@@ -53,7 +53,7 @@ export default async function MachineryBookingPage({ params }: { params: Promise
     })?.rate ?? null;
   const singleCardRate = cardRate(booking.harvest_type === "kutra" ? "kutra" : "sabit");
 
-  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: reminders }, { data: rawMachines }, { data: accounts }, { data: profile }] =
+  const [{ data: payments }, { data: dispatches }, { data: fuelLogs }, { data: efficiency }, { data: followUp }, { data: work }, { data: bill }, { data: events }, { data: reminders }, { data: rawMachines }, { data: accounts }, { data: lifterRows }, { data: liftRow }, { data: profile }] =
     await Promise.all([
       supabase.from("machinery_payments").select("*").eq("booking_id", id).order("created_at"),
       supabase.from("machinery_dispatches").select("*").eq("booking_id", id).order("departure_at"),
@@ -77,6 +77,14 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         .eq("is_available", true)
         .order("machine_type"),
       supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
+      // Fasal uthane wale -- sirf chalu, aur sirf tab kaam aate hain jab
+      // kisan ne kaha ho ke fasal hamein bechega.
+      supabase.from("crop_lifters").select("id, name, commission_rate").eq("is_active", true).order("name"),
+      supabase
+        .from("booking_crop_lifts")
+        .select("lifter_id, status, commission_rate, crop_value, commission_amount, harvest_charge_moved, farmer_old_due_moved, farmer_old_due_reliable, farmer_payable, lifter_payable, crop_lifters(name)")
+        .eq("booking_id", id)
+        .maybeSingle(),
       supabase.auth.getUser().then(async ({ data }) =>
         data.user ? supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle() : { data: null }
       ),
@@ -140,6 +148,30 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       free: cap?.free ?? null,
     };
   });
+
+  // Kisan ka baqi is safhe par DOBARA NAHI GINA JATA -- wohi function
+  // jo bill banate waqt chalta hai (fn_farmer_due_breakdown). Do jagah
+  // do hisaab banane ka anjaam ye hota hai ke safha kuch aur dikhata hai
+  // aur bill kuch aur banta hai.
+  //
+  // Wo function `security definer` hai: RLS ke peeche kam adad aa jata
+  // to kisan ka baqi chup chaap maaf ho jata.
+  let liftBreakdown = { kattai: null as number | null, purana: null as number | null, reliable: false, unposted: null as number | null };
+  if (booking.will_sell_to_us === true && booking.farmer_id) {
+    const { data: bdRows } = await supabase.rpc("fn_farmer_due_breakdown", {
+      p_farmer_id: booking.farmer_id,
+      p_booking_id: id,
+    });
+    const bd: any = Array.isArray(bdRows) ? bdRows[0] : bdRows;
+    if (bd) {
+      liftBreakdown = {
+        kattai: bd.kattai_baqi === null ? null : Number(bd.kattai_baqi),
+        purana: bd.purana_baqi === null ? null : Number(bd.purana_baqi),
+        reliable: bd.bharosa === true,
+        unposted: bd.unposted === null ? null : Number(bd.unposted),
+      };
+    }
+  }
 
   return (
     <BookingDetail
@@ -288,6 +320,38 @@ export default async function MachineryBookingPage({ params }: { params: Promise
       vendorName={vendorName}
       paidToVendor={Number(booking.amount_paid_to_vendor ?? 0)}
       canOverride={["owner", "super_admin", "admin", "manager"].includes(profile?.role ?? "")}
+      willSellToUs={booking.will_sell_to_us === true}
+      lifters={(lifterRows ?? []).map((l: any) => ({
+        id: l.id as string,
+        name: l.name as string,
+        commission_rate: Number(l.commission_rate),
+      }))}
+      lift={
+        liftRow
+          ? {
+              lifterId: (liftRow as any).lifter_id as string,
+              lifterName:
+                (Array.isArray((liftRow as any).crop_lifters)
+                  ? (liftRow as any).crop_lifters[0]?.name
+                  : (liftRow as any).crop_lifters?.name) ?? "Uthane wala",
+              status: (liftRow as any).status as "tagged" | "lifted" | "cancelled",
+              commissionRate: Number((liftRow as any).commission_rate),
+              cropValue: (liftRow as any).crop_value === null ? null : Number((liftRow as any).crop_value),
+              commission:
+                (liftRow as any).commission_amount === null ? null : Number((liftRow as any).commission_amount),
+              kattai:
+                (liftRow as any).harvest_charge_moved === null ? null : Number((liftRow as any).harvest_charge_moved),
+              purana:
+                (liftRow as any).farmer_old_due_moved === null ? null : Number((liftRow as any).farmer_old_due_moved),
+              reliable: (liftRow as any).farmer_old_due_reliable as boolean | null,
+              farmerPayable:
+                (liftRow as any).farmer_payable === null ? null : Number((liftRow as any).farmer_payable),
+              lifterPayable:
+                (liftRow as any).lifter_payable === null ? null : Number((liftRow as any).lifter_payable),
+            }
+          : null
+      }
+      liftBreakdown={liftBreakdown}
     />
   );
 }

@@ -30,6 +30,7 @@ import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/f
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import { LocationPicker } from "@/components/ui/location-picker";
+import { CropLiftStep, type CropLiftInfo } from "./crop-lift-step";
 import { Check, Circle, Plus, X, Undo2, CheckCircle2 } from "lucide-react";
 
 import { PaymentForm, Err, Submit, initialState } from "@/components/machinery/payment-form";
@@ -130,6 +131,10 @@ export function BookingDetail({
   vendorName,
   paidToVendor,
   canOverride,
+  willSellToUs,
+  lifters,
+  lift,
+  liftBreakdown,
 }: {
   booking: Booking;
   payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null; received_by_name: string | null }>;
@@ -188,6 +193,11 @@ export function BookingDetail({
   vendorName: string | null;
   paidToVendor: number;
   canOverride: boolean;
+  /** Kisan ne booking par kaha tha ke fasal hamein bechega. */
+  willSellToUs: boolean;
+  lifters: Array<{ id: string; name: string; commission_rate: number }>;
+  lift: CropLiftInfo | null;
+  liftBreakdown: { kattai: number | null; purana: number | null; reliable: boolean; unposted: number | null };
 }) {
   const lang = useLang();
   const confirmed = Boolean(booking.farmer_confirmed_at) || Boolean(booking.confirmation_override_reason);
@@ -783,6 +793,26 @@ export function BookingDetail({
                   vendorName={vendorName}
                 />
               )}
+            </StepCard>
+
+          )}
+          {/* Qadam 8 -- fasal kaun uthayega.
+              Ye qadam SIRF us booking par aata hai jis par kisan ne kaha
+              tha ke fasal hamein bechega. Baqi bookings par ye sawal
+              bemaani hai, aur bemaani sawal har safhe par rakh dene se
+              staff sab qadam parhna chhoR deta hai.
+
+              Aur ye kattai ke bill (5) aur adaigi (6) ke BAAD hai, kyunke
+              bill bane baghair "kitna kattai ka baqi hai" ka koi jawab
+              hi nahi hota. */}
+          {willSellToUs && (
+            <StepCard
+              n={8}
+              title="Fasal uthane wala"
+              done={lift?.status === "lifted"}
+              locked={!bill}
+            >
+              <CropLiftStep bookingId={booking.id} lift={lift} lifters={lifters} breakdown={liftBreakdown} />
             </StepCard>
           )}
 
