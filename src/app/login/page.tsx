@@ -149,8 +149,11 @@ export default function LoginPage() {
             mobile par pehli cheez wohi honi chahiye jo bharni hai. */}
         <aside className="mt-5 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-4 backdrop-blur-sm lg:mt-20 lg:max-w-[17rem]">
           <ul className="space-y-3">
+            {/* "WhatsApp pehle, SMS baad mein" wali baat yahan se hata
+                di gayi -- ab wo unhi do khanon ke neeche likhi hai jin
+                ki wo baat karti hai. Ek hi baat do jagah likhne se
+                parhne wala dono dafa parhta hai. */}
             {[
-              { icon: <ChatMark />, title: t("au_tip_channel_title", lang), body: t("au_tip_channel_body", lang) },
               { icon: <RefreshMark />, title: t("au_tip_resend_title", lang), body: t("au_tip_resend_body", lang) },
               { icon: <ShieldMark />, title: t("au_tip_safe_title", lang), body: t("au_tip_safe_body", lang) },
             ].map((tip) => (
@@ -205,14 +208,6 @@ const STROKE = {
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
 };
-
-function ChatMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.7-5a8.4 8.4 0 0 1-.7-3.4 8.4 8.4 0 0 1 9-8.5 8.4 8.4 0 0 1 8 7.4Z" />
-    </svg>
-  );
-}
 
 function RefreshMark() {
   return (

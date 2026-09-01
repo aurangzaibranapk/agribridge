@@ -599,11 +599,22 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
           {/* Chunav yahin, khane ke neeche. Email likha ho to ye ghayab
               ho jata hai -- us waqt sawal hi nahi banta. */}
           {!usingEmail && (
-            <div className="mt-2 flex gap-1.5">
-              <input type="hidden" name="channel" value={channel} />
-              {channelChip("whatsapp", <WhatsAppMark />, "WhatsApp")}
-              {channelChip("sms", <SmsMark />, "SMS")}
-            </div>
+            <>
+              <div className="mt-2 flex gap-1.5">
+                <input type="hidden" name="channel" value={channel} />
+                {channelChip("whatsapp", <WhatsAppMark />, "WhatsApp")}
+                {channelChip("sms", <SmsMark />, "SMS")}
+              </div>
+              {/* Ye jumla pehle safhe ke sab se upar, daayen taraf ke
+                  card mein khara tha -- yani us cheez se bohot door jis
+                  ki wo baat kar raha hai. Banda usay tab parhta hai jab
+                  code na aaye, aur us waqt us ki nazar in do khanon par
+                  hoti hai, kisi door pare card par nahi. Ab wo unhi ke
+                  neeche, darmiyan mein hai. */}
+              <p className="mt-1.5 text-center text-[11px] leading-snug text-surface-400">
+                {t("au_channel_hint", lang)}
+              </p>
+            </>
           )}
         </div>
 

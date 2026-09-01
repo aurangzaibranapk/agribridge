@@ -93,9 +93,9 @@ export const authDict = {
   au_via_sms: { en: "Send by SMS", rm: "SMS par bhejein", ur: "ایس ایم ایس پر بھیجیں" },
   au_via_sms_note: { en: "If WhatsApp is not available", rm: "Agar WhatsApp maujood na ho", ur: "اگر واٹس ایپ موجود نہ ہو" },
   au_channel_hint: {
-    en: 'If the OTP does not reach WhatsApp, choose "Send by SMS".',
-    rm: 'Agar WhatsApp par OTP na aaye to "SMS par bhejein" chunein.',
-    ur: 'اگر واٹس ایپ پر او ٹی پی نہ آئے تو "ایس ایم ایس پر بھیجیں" چنیں۔',
+    en: "If the code does not reach WhatsApp, choose SMS.",
+    rm: "WhatsApp par code na aaye to SMS chunein.",
+    ur: "واٹس ایپ پر کوڈ نہ آئے تو ایس ایم ایس چنیں۔",
   },
   au_not_member: { en: "Not a member?", rm: "Member nahi hain?", ur: "ممبر نہیں ہیں؟" },
   au_register_now: { en: "Register", rm: "Register karein", ur: "رجسٹر کریں" },
