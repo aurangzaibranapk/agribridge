@@ -15260,6 +15260,165 @@ export type Database = {
         }
         Relationships: []
       }
+      product_trade_rate_history: {
+        Row: {
+          bill_date: string | null
+          bill_line_id: string | null
+          bill_number: string | null
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_rate: number
+          old_rate: number | null
+          old_rate_was_pending: boolean
+          product_id: string
+          source: string
+          supplier_id: string | null
+        }
+        Insert: {
+          bill_date?: string | null
+          bill_line_id?: string | null
+          bill_number?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_rate: number
+          old_rate?: number | null
+          old_rate_was_pending?: boolean
+          product_id: string
+          source?: string
+          supplier_id?: string | null
+        }
+        Update: {
+          bill_date?: string | null
+          bill_line_id?: string | null
+          bill_number?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_rate?: number
+          old_rate?: number | null
+          old_rate_was_pending?: boolean
+          product_id?: string
+          source?: string
+          supplier_id?: string | null
+        }
+        Relationships: []
+      }
+      supplier_bill_reads: {
+        Row: {
+          ai_raw: Json | null
+          ai_read_at: string | null
+          applied_at: string | null
+          applied_by: string | null
+          bill_date: string | null
+          bill_number: string | null
+          bill_total: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string
+          notes: string | null
+          status: string
+          supplier_id: string | null
+          supplier_name_raw: string | null
+        }
+        Insert: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          bill_date?: string | null
+          bill_number?: string | null
+          bill_total?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url: string
+          notes?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name_raw?: string | null
+        }
+        Update: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          bill_date?: string | null
+          bill_number?: string | null
+          bill_total?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          notes?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name_raw?: string | null
+        }
+        Relationships: []
+      }
+      supplier_bill_lines: {
+        Row: {
+          applied_at: string | null
+          applied_rate: number | null
+          bill_read_id: string
+          created_at: string
+          id: string
+          item_name: string | null
+          line_no: number | null
+          line_total: number | null
+          match_source: string | null
+          pack_size: string | null
+          problem: string | null
+          product_id: string | null
+          qty: number | null
+          rate: number | null
+          raw_text: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_rate?: number | null
+          bill_read_id: string
+          created_at?: string
+          id?: string
+          item_name?: string | null
+          line_no?: number | null
+          line_total?: number | null
+          match_source?: string | null
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          qty?: number | null
+          rate?: number | null
+          raw_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_rate?: number | null
+          bill_read_id?: string
+          created_at?: string
+          id?: string
+          item_name?: string | null
+          line_no?: number | null
+          line_total?: number | null
+          match_source?: string | null
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          qty?: number | null
+          rate?: number | null
+          raw_text?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active_ingredient: string | null
@@ -19587,6 +19746,27 @@ export type Database = {
       }
     }
     Views: {
+      v_bill_lines_baqi: {
+        Row: {
+          bill_date: string | null
+          bill_number: string | null
+          bill_read_id: string | null
+          id: string | null
+          item_name: string | null
+          line_no: number | null
+          match_source: string | null
+          pack_size: string | null
+          problem: string | null
+          product_id: string | null
+          qty: number | null
+          rate: number | null
+          raw_text: string | null
+          status: string | null
+          supplier_name: string | null
+          supplier_name_raw: string | null
+        }
+        Relationships: []
+      }
       farmer_credit_balances: {
         Row: {
           balance_due: number | null
@@ -22652,6 +22832,10 @@ export type Database = {
       }
       current_dealer_id: { Args: never; Returns: string }
       current_shop_id: { Args: never; Returns: string }
+      fn_apply_bill_line_rate: {
+        Args: { p_line_id: string }
+        Returns: Json
+      }
       fn_bump_farmer_code_counter: {
         Args: { p_number: number }
         Returns: undefined
