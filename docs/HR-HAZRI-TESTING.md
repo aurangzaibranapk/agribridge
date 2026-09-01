@@ -91,7 +91,9 @@ jaanchein:
 
 ---
 
-## 5. Chhutti (Leave)
+## 5. Chhutti (Leave) — ab wohi qanoon jo hazri ka hai
+
+`/admin/hr/leave`
 
 - [ ] Chhutti manzoor karein → un dinon ka calendar khud "Chhutti"
       dikhaye.
@@ -99,6 +101,23 @@ jaanchein:
       zer-e-ghaur" dikhe — **"Ghair hazir" nahi**.
 - [ ] Manzoori wapas lein → sirf chhutti wali qatarein hatti hain, asli
       hazri wahin rehti hai.
+
+**Ye chaar cheezein nayi hain:**
+
+- [ ] **Comment ab manzoori par bhi lazmi hai** (pehle sirf na-manzoori
+      par tha). Khali chhoR kar dabayein → rukna chahiye.
+- [ ] **Wapas bhejein** ka teesra button. Wapas bheji hui darkhwast
+      "faisla shuda" nahi hoti — banda theek kar ke dobara bhej sakta
+      hai.
+- [ ] **Aadha din** ka khana. Do tareekhein alag rakh kar aadha din
+      chunein → rukna chahiye.
+- [ ] **Sirf apni team**: doosri branch ke bande ki chhutti manzoor
+      karne ki koshish karein → rukna chahiye. (Pehle koi bhi manager
+      kisi ki bhi chhutti manzoor kar sakta tha, aur us ke apne afsar
+      ko khabar bhi na hoti.)
+- [ ] Manager ke login se chhutti ki fehrist kholein → sirf apni team
+      ki darkhwastein dikhni chahiye. Chhutti ki wajah mein bimari
+      likhi hoti hai — wo har kisi ke parhne ki cheez nahi.
 
 ---
 
@@ -109,8 +128,11 @@ jaanchein:
 - [ ] Khuli darkhwastein rehte hue band karne ki koshish → "X
       darkhwastein abhi zer-e-ghaur hain" — rukna chahiye.
 - [ ] Sab par faisla kar ke phir band karein → ho jana chahiye.
-- [ ] `/admin/hr` → **Tankhwah darj karein**: mahina band na ho to
-      saaf paighaam aana chahiye.
+- [ ] `/admin/hr` → **Tankhwah darj karein**: mulazim aur mahina
+      chunte hi **us mahine ki hazri ke adad form par khud aa jayenge**
+      (kaam ke din, hazir, chhutti, ghair hazir, record nahi, der).
+      Adad dekh kar tankhwah likhein — rok ke intezar mein nahi.
+- [ ] Mahina band na ho to darj karne par saaf paighaam aana chahiye.
 - [ ] "Hazri adhoori hai, phir bhi banayein" par nishan laga kar →
       ban jani chahiye (yani rok soch kar toRi ja sakti hai, ittefaqan
       nahi).

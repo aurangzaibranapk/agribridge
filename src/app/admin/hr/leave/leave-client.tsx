@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { CalendarPlus, Check, X } from "lucide-react";
+import { CalendarPlus, Check, RotateCcw, X } from "lucide-react";
 import { requestLeave, decideLeave, type LeaveState } from "@/actions/leave";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -21,6 +21,7 @@ const STATUS_LABEL: Record<string, TranslationKey> = {
   approved: "lv_approved",
   rejected: "lv_rejected",
   cancelled: "lv_cancelled",
+  sent_back: "hra_send_back",
 };
 
 const STATUS_TONE: Record<string, "amber" | "green" | "red" | "gray"> = {
@@ -28,6 +29,7 @@ const STATUS_TONE: Record<string, "amber" | "green" | "red" | "gray"> = {
   approved: "green",
   rejected: "red",
   cancelled: "gray",
+  sent_back: "amber",
 };
 
 interface Mine {
@@ -93,17 +95,24 @@ export function LeaveClient({
                 </p>
                 <p className="mt-1 text-sm text-surface-700 dark:text-surface-200">{p.reason}</p>
 
+                {/* Comment ab teenon raaston par lazmi hai -- "haan" par
+                    bhi. Manzoori seedha hazri badal deti hai, aur mahine
+                    ke aakhir mein sawal "ye din chhutti kyun likha gaya"
+                    ka jawab "manzoor ho gayi thi" nahi ho sakta. */}
                 <div className="mt-2">
-                  <Label>{t("lv_decision_note", lang)}</Label>
-                  <Input name="decision_note" placeholder={t("lv_decision_note_hint", lang)} />
+                  <Label>{t("hra_manager_comment", lang)}</Label>
+                  <Input name="decision_note" placeholder={t("lv_decision_note_hint", lang)} required />
                 </div>
 
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button type="submit" name="decision" value="approved" size="sm">
                     <Check className="h-4 w-4" /> {t("lv_approve", lang)}
                   </Button>
                   <Button type="submit" name="decision" value="rejected" size="sm" variant="secondary">
                     <X className="h-4 w-4" /> {t("lv_reject", lang)}
+                  </Button>
+                  <Button type="submit" name="decision" value="sent_back" size="sm" variant="secondary">
+                    <RotateCcw className="h-4 w-4" /> {t("hra_send_back", lang)}
                   </Button>
                 </div>
               </form>
@@ -151,6 +160,12 @@ export function LeaveClient({
               <Label>{t("lv_reason", lang)}</Label>
               <Textarea name="reason" rows={2} placeholder={t("lv_reason_hint", lang)} />
             </div>
+            {/* Aadha din sirf ek hi din ka ho sakta hai -- ye rok
+                database mein bhi hai. */}
+            <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
+              <input type="checkbox" name="is_half_day" value="yes" />
+              {t("hra_st_half_day", lang)}
+            </label>
             <SubmitButton lang={lang} />
           </form>
         )}

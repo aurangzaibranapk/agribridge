@@ -105,6 +105,19 @@ Testing ki qadam ba qadam fehrist: `docs/HR-HAZRI-TESTING.md`
    par hai. (Tankhwah phir bhi har kisi ko nazar nahi aati: manager ke
    liye alag darwaza hai jis mein tankhwah ka khana hai hi nahi.)
 
+**Chhutti (Leave) bhi usi zanjeer par le aayi gayi (237):** ab faisla
+sirf apni reporting team ka, comment manzoori par bhi lazmi, "wapas
+bhejein" ka teesra raasta, aur aadha din. Pehle koi bhi manager kisi
+ki bhi chhutti manzoor kar sakta tha aur us bande ke apne afsar ko
+khabar bhi na hoti; aur chhutti ki wajah (jis mein bimari likhi hoti
+hai) har staff parh sakta tha.
+
+**Tankhwah ka form ab hazri dikhata hai:** mulazim aur mahina chunte
+hi us mahine ke adad form par aa jate hain — kaam ke din, hazir,
+chhutti, ghair hazir, "record nahi", der. Rok pehle se thi, magar rok
+tab lagti thi jab banda form bhar chuka hota tha; ab adad pehle nazar
+aate hain.
+
 **Jo jaan boojh kar abhi nahi bana:** biometric machine ka raasta,
 offline sync wali app, overtime ka usool, chhutti ka saalana kota.
 Wajahein `docs/HR-HAZRI-TESTING.md` ke section 8 mein likhi hain.

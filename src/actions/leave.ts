@@ -29,10 +29,23 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
   const to = String(formData.get("to_date") ?? "") || from;
   const type = String(formData.get("leave_type") ?? "casual");
   const reason = String(formData.get("reason") ?? "").trim();
+  const isHalfDay = formData.get("is_half_day") === "yes";
 
   if (!from) return { error: "Kis din se, wo tareekh chunein." };
   if (to < from) return { error: "Khatam hone ki tareekh shuru se pehle nahi ho sakti." };
   if (reason.length < 5) return { error: "Wajah likhein — kam az kam paanch harf. Ye wajah record par rehti hai." };
+  if (isHalfDay && to !== from) {
+    return { error: "Aadha din sirf ek hi din ka ho sakta hai. Do tareekhein ek rakhein." };
+  }
+
+  // Afsar ABHI tay hota hai. Baad mein reporting badal jaye to purani
+  // darkhwast ka raasta nahi badalta -- warna wo darkhwast us bande ke
+  // paas chali jati jis ne wo baat suni hi nahi thi.
+  const { data: sd } = await supabase
+    .from("staff_details")
+    .select("reports_to")
+    .eq("profile_id", user.id)
+    .maybeSingle();
 
   const { error } = await supabase.from("leave_requests").insert({
     profile_id: user.id,
@@ -40,6 +53,8 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
     to_date: to,
     leave_type: type,
     reason,
+    is_half_day: isHalfDay,
+    manager_id: sd?.reports_to ?? null,
   });
 
   if (error) {
@@ -50,7 +65,13 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
   }
 
   revalidatePath("/admin/hr/leave");
-  return { success: true, notice: "Darkhwast bhej di gayi. Manzoori ka intezar karein." };
+  revalidatePath("/admin/hr/attendance");
+  return {
+    success: true,
+    notice: sd?.reports_to
+      ? "Darkhwast apne afsar ko bhej di gayi. Un dinon ka calendar tab tak \u2018chhutti zer-e-ghaur\u2019 dikhayega — ghair hazir nahi."
+      : "Darkhwast bhej di gayi. Aap ka koi afsar darj nahi, is liye ye HR ke paas jayegi.",
+  };
 }
 
 /**
@@ -81,26 +102,49 @@ export async function decideLeave(_prev: LeaveState, formData: FormData): Promis
   const note = String(formData.get("decision_note") ?? "").trim();
 
   if (!id) return { error: "Kaun si darkhwast, wo saaf nahi." };
-  if (decision !== "approved" && decision !== "rejected") return { error: "Manzoor ya na-manzoor — koi ek chunein." };
+  if (!["approved", "rejected", "sent_back"].includes(decision)) {
+    return { error: "Manzoor, na-manzoor, ya wapas — koi ek chunein." };
+  }
+
+  // Comment ab TEENON par lazmi hai, sirf na-manzoori par nahi.
+  //
+  // Pehle sirf "nahi" ki wajah maangi jati thi, is khayal se ke "haan"
+  // apne aap mein poora jawab hai. Hazri wale nizam ne wo khayal ghalat
+  // sabit kar diya: manzoor shuda chhutti seedha hazri badal deti hai,
+  // aur mahine ke aakhir mein sawal ye hota hai ke "ye din chhutti kyun
+  // likha gaya" -- us waqt "manzoor ho gayi thi" koi jawab nahi hai.
+  if (note.length < 5) {
+    return { error: "Apna comment likhein — kam az kam paanch harf. Faisla bina comment ke darj nahi hota." };
+  }
 
   const { data: row } = await supabase.from("leave_requests").select("profile_id, status").eq("id", id).maybeSingle();
   if (!row) return { error: "Darkhwast nahi mili." };
   if (row.profile_id === user.id) return { error: "Apni chhutti khud manzoor nahi ki ja sakti." };
-  if (row.status !== "pending") return { error: `Is par pehle hi faisla ho chuka hai (${row.status}).` };
-
-  // Na-manzoori ki wajah lazmi hai. Manzoori ki nahi -- "haan" ka jawab
-  // apne aap mein poora hota hai, "nahi" ka nahi.
-  if (decision === "rejected" && note.length < 5) {
-    return { error: "Na-manzoor karne ki wajah likhein — kam az kam paanch harf." };
+  if (!["pending", "sent_back"].includes(row.status)) {
+    return { error: `Is par pehle hi faisla ho chuka hai (${row.status}).` };
   }
+
+  // Reporting ki hadd. Ye sawal database se poochha jata hai, code se
+  // nahi -- poori zanjeer wahin hai, aur apni cheez khud manzoor karne
+  // ki rok bhi usi function ke andar hai.
+  const { data: canDecide } = await supabase.rpc("fn_hr_can_decide_for", { p_target: row.profile_id });
+  if (canDecide !== true) {
+    return { error: "Ye banda aap ki reporting team mein nahi. Is ki chhutti ka faisla us ka apna afsar ya HR karega." };
+  }
+
+  // Wapas bhejna FAISLA nahi hai: darkhwast zinda rehti hai, banda usay
+  // theek kar ke dobara bhej sakta hai. Is liye decided_by yahan nahi
+  // lagta -- warna record kehta ke faisla ho chuka hai.
+  const sentBack = decision === "sent_back";
 
   const { error } = await supabase
     .from("leave_requests")
     .update({
       status: decision,
-      decided_by: user.id,
-      decided_at: new Date().toISOString(),
-      decision_note: note || null,
+      manager_comment: note,
+      decision_note: note,
+      decided_by: sentBack ? null : user.id,
+      decided_at: sentBack ? null : new Date().toISOString(),
     })
     .eq("id", id);
 
@@ -108,11 +152,14 @@ export async function decideLeave(_prev: LeaveState, formData: FormData): Promis
 
   revalidatePath("/admin/hr/leave");
   revalidatePath("/admin/hr/attendance-log");
+  revalidatePath("/admin/hr/attendance");
   return {
     success: true,
     notice:
       decision === "approved"
         ? "Manzoor ho gayi — un dinon ki hazri khud chhutti likhi ja chuki hai."
-        : "Na-manzoor kar di gayi.",
+        : decision === "rejected"
+          ? "Na-manzoor kar di gayi."
+          : "Wapas bhej di gayi — banda theek kar ke dobara bhej sakta hai.",
   };
 }

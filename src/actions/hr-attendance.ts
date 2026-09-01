@@ -755,3 +755,69 @@ export async function reopenAttendanceMonth(_prev: AttState, formData: FormData)
   revalidatePath("/admin/hr");
   return { success: true, notice: "Mahina khul gaya. Wajah record par mehfooz hai." };
 }
+
+// =====================================================================
+// 7) Tankhwah ke form ke liye: us mahine ki hazri
+// =====================================================================
+/**
+ * Ye rok nahi, DIKHAWA hai -- aur us ki apni wajah hai.
+ *
+ * Rok pehle se recordSalaryPayment mein hai: band mahine ke baghair
+ * tankhwah nahi banti. Magar rok tab lagti hai jab banda form bhar
+ * chuka hota hai. Us waqt tak wo apne zehen mein adad tay kar chuka
+ * hota hai, aur rok sirf ek rukawat lagti hai.
+ *
+ * Is liye adad form par PEHLE dikhte hain: 22 din hazir, 3 din record
+ * hi nahi, 2 darkhwastein khuli. Us ke baad jo tankhwah likhi jayegi,
+ * wo dekh kar likhi jayegi.
+ *
+ * NULL ka matlab "parha nahi ja saka" hai -- sifar nahi.
+ */
+export async function fetchAttendanceMonth(
+  profileId: string,
+  year: number,
+  month: number
+): Promise<{
+  workingDays: number;
+  presentDays: number;
+  halfDays: number;
+  paidLeave: number;
+  unpaidLeave: number;
+  absentDays: number;
+  missingDays: number;
+  lateCount: number;
+  workedMinutes: number;
+  openItems: number;
+  isFinalized: boolean;
+} | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  if (!profileId || !year || month < 1 || month > 12) return null;
+
+  const { data, error } = await supabase.rpc("fn_attendance_month_summary", {
+    p_profile: profileId,
+    p_year: year,
+    p_month: month,
+  });
+
+  const r = data?.[0];
+  if (error || !r) return null;
+
+  return {
+    workingDays: r.working_days,
+    presentDays: r.present_days,
+    halfDays: r.half_days,
+    paidLeave: r.paid_leave_days,
+    unpaidLeave: r.unpaid_leave_days,
+    absentDays: r.absent_days,
+    missingDays: r.missing_days,
+    lateCount: r.late_count,
+    workedMinutes: r.worked_minutes_total,
+    openItems: r.open_items,
+    isFinalized: r.is_finalized,
+  };
+}
