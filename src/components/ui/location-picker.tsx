@@ -24,10 +24,21 @@ export function LocationPicker({
   lang,
   defaultLat,
   defaultLng,
+  nameLat = "latitude",
+  nameLng = "longitude",
 }: {
   lang: Lang;
   defaultLat?: number | null;
   defaultLng?: number | null;
+  /**
+   * Khane ka naam bulane wala tay kar sakta hai. Wajah: khet ka form
+   * `latitude`/`longitude` bhejta hai, magar machinery ka kaam wala
+   * indraj `location_lat`/`location_lng` parhta hai. Naam yahan se
+   * badalna us aala ki naql banane se behtar hai -- naql banate hi
+   * kal ek jagah GPS theek hota aur doosri jagah purana reh jata.
+   */
+  nameLat?: string;
+  nameLng?: string;
 }) {
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
     defaultLat != null ? "done" : "idle"
@@ -71,8 +82,8 @@ export function LocationPicker({
 
   return (
     <div>
-      <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
-      <input type="hidden" name="longitude" value={coords?.lng ?? ""} />
+      <input type="hidden" name={nameLat} value={coords?.lat ?? ""} />
+      <input type="hidden" name={nameLng} value={coords?.lng ?? ""} />
       <input type="hidden" name="location_accuracy_m" value={accuracy ?? ""} />
       <input type="hidden" name="location_source" value={source} />
 

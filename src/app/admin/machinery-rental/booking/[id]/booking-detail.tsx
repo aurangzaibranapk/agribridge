@@ -29,6 +29,7 @@ import { recordVendorPayout } from "@/actions/machinery-rental";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
+import { LocationPicker } from "@/components/ui/location-picker";
 import { Check, Circle, Plus, X, Undo2, CheckCircle2 } from "lucide-react";
 
 const initialState: ActionState = {};
@@ -163,6 +164,8 @@ export function BookingDetail({
     finished_at: string | null;
     completion_photo_url: string | null;
     farmer_confirmed: boolean;
+    location_lat: number | null;
+    location_lng: number | null;
   }>;
   bill: { bill_number: string; bill_date: string; actual_area: number; rate_amount: number; gross_amount: number; discount_amount: number; discount_reason: string | null; advance_adjusted: number; previous_payment: number; balance_payable: number; commission_percentage: number; commission_amount: number; vendor_payable: number; diesel_deducted: number; sabit_area: number | null; kutra_area: number | null; sabit_rate: number | null; kutra_rate: number | null; sabit_amount: number | null; kutra_amount: number | null } | null;
   events: Array<{ id: string; event_type: string; note: string | null; to_status: string | null; created_at: string; actor_name: string | null }>;
@@ -573,7 +576,23 @@ export function BookingDetail({
                       {new Date(w.work_date).toLocaleDateString()}
                       {w.is_final && ` · ${t("mc_work_done_flag", lang)}`}
                     </span>
-                    <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
+                    <span className="flex items-center gap-2">
+                      {/* Jis indraj ke sath jagah mehfooz hai us par nishan
+                          aata hai. Ek booking par kai indraj hote hain, is
+                          liye "jahan jahan kattai hui" ka jawab in nishanon
+                          se banta hai -- kisi alag fehrist se nahi. */}
+                      {w.location_lat != null && w.location_lng != null && (
+                        <a
+                          href={`https://www.google.com/maps?q=${w.location_lat},${w.location_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-brand-700 underline dark:text-brand-300"
+                        >
+                          {t("mc_work_on_map", lang)}
+                        </a>
+                      )}
+                      <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
+                    </span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between border-t border-surface-200 pt-1 font-display font-semibold dark:border-surface-700">
@@ -1833,6 +1852,13 @@ function WorkForm({
   const [reminder, setReminder] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
+  // Baqi tafseel shuru mein band rehti hai. Wajah: is form mein sirf EK
+  // cheez lazmi hai -- asal raqba. Waqt, meter aur tasveer madadgar hain
+  // magar un ke baghair bhi kaam darj ho jata hai. Sab khane ek sath
+  // saamne rakhne se banda samajhta hai ke sab bharna zaroori hai, aur
+  // phir ya to andaze se bhar deta hai ya form chhoR deta hai. Dono
+  // soorton mein record kharab hota hai.
+  const [showMore, setShowMore] = useState(false);
 
   // Do qism ki booking par ASAL kaam bhi do hisson mein likha jata hai
   // (176). Bill isi par banta hai -- booking par likhe andaze par nahi.
@@ -1888,6 +1914,9 @@ function WorkForm({
           ? `Booking par andaza ${estimated} acre tha, ab tak ${done} acre ho chuke. Yahan SIRF is din ka kaam likhein — jor khud ban jayega.`
           : `Booking par andaza ${estimated} acre tha. Yahan wohi likhein jo WAQAI kaata gaya — bill isi se banega.`}
       </p>
+      {/* Sirf teen khane saamne: tareekh (khud bhari hui), aur asal
+          raqba -- wohi ek cheez jis ke baghair indraj ban hi nahi
+          sakta. Baqi sab neeche "aur tafseel" ke peeche hai. */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_work_date", lang)}</Label>
@@ -1895,7 +1924,7 @@ function WorkForm({
         </div>
         <div />
         <div>
-          <Label>{t("mc_actual_area", lang)}</Label>
+          <Label>{t("mc_actual_area", lang)} *</Label>
           <Input
             type="number"
             name="actual_area_acres"
@@ -1914,29 +1943,59 @@ function WorkForm({
             onChange={(e) => setKanal(e.target.value)}
           />
         </div>
-        <div>
-          <Label>{t("mc_start", lang)}</Label>
-          <TimeField name="started_at" value={startAt} onChange={setStartAt} />
-        </div>
-        <div>
-          <Label>{t("mc_end", lang)}</Label>
-          <TimeField name="finished_at" value={endAt} onChange={setEndAt} min={startAt || undefined} />
-        </div>
-        <div>
-          <Label>{t("mc_meter_only", lang)}</Label>
-          <Input type="number" name="meter_reading" step="0.01" />
-          <p className="mt-1 text-xs text-surface-500">{t("mc_meter_only_hint", lang)}</p>
-        </div>
-        {/* Ghante haath se nahi likhe jate -- do waqt upar likhe ja
-            chuke hain. Do jagah likha hua ek hi adad kisi din alag ho
-            jata hai, aur phir koi nahi bata sakta ke sach kaun sa hai. */}
-        <div>
-          <Label>{t("mc_hours_worked", lang)}</Label>
-          <p className="mt-1 rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
-            {hours !== null ? `${hours} ${t("mc_hours_unit", lang)}` : t("mc_hours_from_time", lang)}
-          </p>
-        </div>
       </div>
+
+      {/* Kattai kahan hui. Har indraj apni jagah ke sath mehfooz hota
+          hai, is liye kaam kai jagah phaila ho to har din ka alag
+          indraj apni apni pin rakhta hai -- aur "jahan jahan kattai
+          hui" ka jawab khud ban jata hai.
+
+          Ye khana khali chhoRa ja sakta hai. Jagah na maloom ho to
+          khali rehna sach hai; koi andaze wali pin lagana us se bura
+          hai, kyunke baad mein wo pin asal jagah samjhi jayegi. */}
+      <div className="rounded-card border border-surface-200 p-3 dark:border-surface-700">
+        <Label>{t("mc_work_where", lang)}</Label>
+        <p className="mb-2 text-xs text-surface-500">{t("mc_work_where_hint", lang)}</p>
+        <LocationPicker lang={lang} nameLat="location_lat" nameLng="location_lng" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowMore((v) => !v)}
+        className="text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+      >
+        {showMore ? t("mc_work_less", lang) : t("mc_work_more", lang)}
+      </button>
+
+      {showMore && (
+        <div className="grid grid-cols-2 gap-3 rounded-card border border-surface-200 p-3 dark:border-surface-700">
+          <div>
+            <Label>{t("mc_start", lang)}</Label>
+            <TimeField name="started_at" value={startAt} onChange={setStartAt} />
+          </div>
+          <div>
+            <Label>{t("mc_end", lang)}</Label>
+            <TimeField name="finished_at" value={endAt} onChange={setEndAt} min={startAt || undefined} />
+          </div>
+          <div>
+            <Label>{t("mc_meter_only", lang)}</Label>
+            <Input type="number" name="meter_reading" step="0.01" />
+            <p className="mt-1 text-xs text-surface-500">{t("mc_meter_only_hint", lang)}</p>
+          </div>
+          {/* Ghante haath se nahi likhe jate -- do waqt upar likhe ja
+              chuke hain. Do jagah likha hua ek hi adad kisi din alag ho
+              jata hai, aur phir koi nahi bata sakta ke sach kaun sa hai. */}
+          <div>
+            <Label>{t("mc_hours_worked", lang)}</Label>
+            <p className="mt-1 rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
+              {hours !== null ? `${hours} ${t("mc_hours_unit", lang)}` : t("mc_hours_from_time", lang)}
+            </p>
+          </div>
+          <div className="col-span-2">
+            <PaymentSlipUpload onUploaded={setPhoto} />
+          </div>
+        </div>
+      )}
 
       {/* Ulta waqt. Rok yahan bhi hai aur DB par bhi -- magar yahan us
           ke sath wo tareekh bhi hai jo staff ka asal matlab thi. */}
@@ -1979,7 +2038,6 @@ function WorkForm({
         <input type="checkbox" name="farmer_confirmed" className="h-4 w-4" />
         {t("mc_farmer_verified_onsite", lang)}
       </label>
-      <PaymentSlipUpload onUploaded={setPhoto} />
       {/* Kaam poora hone ka nishaan tareekh se nahi lagta -- tareekh ka
           andaza ghalat ho sakta hai, kaam poora hone ka nahi. Jab tak ye
           khali hai, booking "kaam darj karna" ki qatar mein khari rehti

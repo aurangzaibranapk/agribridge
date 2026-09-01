@@ -231,6 +231,8 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         finished_at: w.finished_at,
         completion_photo_url: w.completion_photo_url,
         farmer_confirmed: w.farmer_confirmed,
+        location_lat: w.location_lat === null ? null : Number(w.location_lat),
+        location_lng: w.location_lng === null ? null : Number(w.location_lng),
       }))}
       bill={
         bill

@@ -501,6 +501,16 @@ export const machineryDict = {
     ur: "ڈیزل — کتنا، اور کس نے ڈالا",
   },
   // "Diesel nahi dala" -- ye jawab hai, khali jagah nahi.
+  // Kaam wala form: kya lazmi hai aur kahan hua
+  mc_work_where: { en: "Where was it harvested", rm: "Kattai kahan hui", ur: "کٹائی کہاں ہوئی" },
+  mc_work_where_hint: {
+    en: "Optional. Each entry keeps its own pin, so work spread over several places shows up as several pins. If the place is not known, leave it empty — a guessed pin is worse than none.",
+    rm: "Marzi se. Har indraj apni pin rakhta hai, is liye kaam kai jagah phaila ho to kai pin ban jati hain. Jagah maloom na ho to khali rehne dein -- andaze wali pin na hone se bhi buri hai.",
+    ur: "مرضی سے۔ ہر اندراج اپنی پن رکھتا ہے، اس لیے کام کئی جگہ پھیلا ہو تو کئی پن بن جاتی ہیں۔ جگہ معلوم نہ ہو تو خالی رہنے دیں — اندازے والی پن نہ ہونے سے بھی بری ہے۔",
+  },
+  mc_work_more: { en: "More detail (optional)", rm: "Aur tafseel (marzi se)", ur: "اور تفصیل (مرضی سے)" },
+  mc_work_less: { en: "Hide the extra detail", rm: "Tafseel band karein", ur: "تفصیل بند کریں" },
+  mc_work_on_map: { en: "on the map", rm: "naqshe par", ur: "نقشے پر" },
   mc_diesel_none_mark: {
     en: "No diesel was put in for this booking",
     rm: "Is booking par diesel nahi dala",
