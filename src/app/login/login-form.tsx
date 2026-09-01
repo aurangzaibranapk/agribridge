@@ -555,7 +555,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
           setAsking(true);
           askAction(fd);
         }}
-        className="space-y-3"
+        className="space-y-2.5"
       >
         {(askState.error || emailError) && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error ?? emailError}</p>
@@ -605,7 +605,6 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
               {channelChip("sms", <SmsMark />, "SMS")}
             </div>
           )}
-          <p className="mt-1.5 text-[11px] leading-snug text-surface-400">{t("au_mobile_userid_help", lang)}</p>
         </div>
 
         {/* ---- YA ---- */}
@@ -634,7 +633,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
             placeholder="example@email.com"
             className={FIELD}
           />
-          <p className="mt-1.5 text-[11px] leading-snug text-surface-400">{t("au_email_userid_help", lang)}</p>
+          <p className="mt-1 text-[11px] leading-snug text-surface-400">{t("au_email_code_note", lang)}</p>
         </div>
 
         {/* Dhaal wala jumla yahan se hata diya gaya. Wohi baat daayen
@@ -667,10 +666,10 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
           hai jis ne khata email aur password se banaya tha. */}
       <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-surface-100 pt-2.5">
         <button type="button" onClick={onUsername} className="text-[11px] font-medium text-surface-400 hover:text-[#1E4A2E] hover:underline">
-          {t("au_have_user_id", lang)}
+          {t("au_link_user_id", lang)}
         </button>
         <button type="button" onClick={onPassword} className="text-[11px] font-medium text-surface-400 hover:text-[#1E4A2E] hover:underline">
-          {t("au_customer_email_login", lang)}
+          {t("au_link_password", lang)}
         </button>
       </div>
     </>
@@ -699,11 +698,11 @@ function SocialButtons() {
     <div className="mt-3 grid grid-cols-2 gap-2">
       <button type="button" onClick={() => handleOAuth("google")} className={SOCIAL_BTN}>
         <GoogleIcon />
-        {t("au_with_google", lang)}
+        Google
       </button>
       <button type="button" onClick={() => handleOAuth("facebook")} className={SOCIAL_BTN}>
         <FacebookIcon />
-        {t("au_with_facebook", lang)}
+        Facebook
       </button>
     </div>
   );

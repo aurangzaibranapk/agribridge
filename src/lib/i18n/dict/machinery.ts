@@ -541,6 +541,7 @@ export const machineryDict = {
     ur: "یہ ابھی باقی میں سے نہیں کٹی۔ تصدیق ہونے پر گنتی میں آئے گی۔",
   },
   mk_open_bookings: { en: "Bookings with a balance", rm: "Jin par abhi baqi hai", ur: "جن پر ابھی باقی ہے" },
+  mk_open_booking: { en: "Open the booking", rm: "Booking kholein", ur: "بکنگ کھولیں" },
   mk_record_payment: { en: "Record payment", rm: "Adaigi darj karein", ur: "ادائیگی درج کریں" },
   mk_open: { en: "Khata", rm: "Khata", ur: "کھاتہ" },
   ml_location: { en: "Location", rm: "Jagah", ur: "جگہ" },

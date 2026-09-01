@@ -65,6 +65,9 @@ export const authDict = {
   au_customer_email_login: { en: "A customer? Come in with email and password", rm: "Customer hain? Email aur password se aayein", ur: "گاہک ہیں؟ ای میل اور پاس ورڈ سے آئیں" },
   au_forgot_password: { en: "Forgot password?", rm: "Password bhool gaye?", ur: "پاس ورڈ بھول گئے؟" },
   au_or: { en: "or", rm: "ya", ur: "یا" },
+  au_email_code_note: { en: "The code arrives by email.", rm: "Code email par aayega.", ur: "کوڈ ای میل پر آئے گا۔" },
+  au_link_user_id: { en: "User ID", rm: "User ID", ur: "یوزر آئی ڈی" },
+  au_link_password: { en: "Password", rm: "Password", ur: "پاس ورڈ" },
   au_or_then: { en: "or else", rm: "ya phir", ur: "یا پھر" },
   au_ya: { en: "OR", rm: "YA", ur: "یا" },
 

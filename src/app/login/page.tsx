@@ -19,7 +19,7 @@ export default function LoginPage() {
   const lang = getLanguageFromCookies("ur");
   return (
     <LangProvider lang={lang}>
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-8">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#C9A227]/10 blur-3xl" />
         <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-[#1E4A2E]/40 blur-3xl" />
@@ -76,9 +76,9 @@ export default function LoginPage() {
 
       <div className="relative flex w-full max-w-sm flex-col items-stretch lg:max-w-4xl lg:flex-row lg:items-start lg:justify-center lg:gap-8">
         <div className="w-full lg:max-w-sm">
-        <div className="mb-5 text-center">
-          <div className="mx-auto mb-3">
-            <svg width="56" height="62" viewBox="0 0 220 260" className="mx-auto">
+        <div className="mb-4 text-center">
+          <div className="mx-auto mb-2">
+            <svg width="46" height="51" viewBox="0 0 220 260" className="mx-auto">
               <defs>
                 <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#F3D98B" />
@@ -104,12 +104,12 @@ export default function LoginPage() {
               </g>
             </svg>
           </div>
-          <h1 className="font-display text-xl font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
+          <h1 className="font-display text-lg font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
           <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E8C767]">{t("au_brand", lang)}</p>
-          <p className="mt-1.5 text-[13px] text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
+          <p className="mt-1 text-xs text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
         </div>
 
-        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-6">
+        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-5">
           {/* Band karne ka nishan.
               Login ho jaye to ye khud hat jata hai -- kyunke tab safha
               hi badal jata hai. Aur agar banda login nahi karna chahta
@@ -169,8 +169,8 @@ export default function LoginPage() {
       {/* Neeche ki patti. Ye bechne wali baat nahi hai -- ye us bande ke
           liye hai jo pehli dafa apna number kisi website par likh raha
           hai aur jhijak raha hai. */}
-      <div className="relative mt-8 w-full max-w-4xl border-t border-white/10 pt-4">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-center sm:grid-cols-4 sm:text-left">
+      <div className="relative mt-6 w-full max-w-4xl border-t border-white/10 pt-3">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-3 text-center sm:grid-cols-4 sm:text-left">
           {[
             { icon: <ShieldMark />, title: t("au_foot_safe", lang), sub: t("au_foot_safe_sub", lang) },
             { icon: <BoltMark />, title: t("au_foot_fast", lang), sub: t("au_foot_fast_sub", lang) },

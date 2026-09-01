@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { KhataPaymentRow } from "./payment-row";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,15 @@ export default async function FarmerMachineryKhataPage({ params }: { params: { f
 
   const ids = (bookings ?? []).map((b) => b.id);
   const bookingById = new Map((bookings ?? []).map((b) => [b.id, b]));
+
+  // Khate ki gadi ke liye khaton ki fehrist -- adaigi ab yahin darj
+  // hoti hai, aur bank/company wale raaste par khata likhna lazmi hai.
+  const { data: accountRows } = await supabase
+    .from("finance_accounts")
+    .select("id, name, account_type")
+    .eq("is_active", true)
+    .order("account_type");
+  const accounts = (accountRows ?? []).map((a) => ({ id: a.id, name: a.name, account_type: a.account_type }));
 
   const [{ data: bills }, { data: payments }] = await Promise.all([
     ids.length
@@ -202,34 +212,28 @@ export default async function FarmerMachineryKhataPage({ params }: { params: { f
         )}
       </div>
 
-      {/* Jin bookings par abhi baqi hai. Adaigi ka form YAHAN nahi
-          banaya gaya: us mein naqad, bank, khata aur vendor se wasooli
-          ke apne apne qaide hain (misal: bank ho to khata likhna lazmi,
-          warna paisa aaya to hai magar pahuncha kahin nahi). Doosra form
-          banate hi kal ek jagah qaida badalta aur doosri purani reh
-          jati -- aur wo farq paise ka hota. Is liye yahan se seedha usi
-          khane par le jaya jata hai jahan wo qaide pehle se hain. */}
+      {/* Jin bookings par abhi baqi hai -- aur adaigi WAHIN darj hoti
+          hai, isi safhe par.
+          Pehle yahan sirf booking ke safhe ka link tha. Wo ghalat tha:
+          paisa lene wala banda khata dekh raha hota hai, aur usay wahan
+          se kisi doosre safhe par bhejna ek aisa qadam hai jis ki koi
+          wajah nahi.
+          Khana wohi hai jo booking ke safhe par lagta hai (ek hi
+          component, ek hi server action) -- do nakalein banate to kal
+          ek jagah qaida badalta aur doosri purani reh jati, aur wo farq
+          paise ka hota. */}
       {outstanding.length > 0 && (
         <div className="mt-5 space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("mk_open_bookings", lang)}</p>
           {outstanding.map((o) => (
-            <div
+            <KhataPaymentRow
               key={o.bookingId}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-surface-200 px-3 py-2 dark:border-surface-700"
-            >
-              <div>
-                <p className="font-medium text-surface-800 dark:text-surface-200">{o.bookingNumber}</p>
-                <p className="text-xs text-surface-500">
-                  {t("mk_to_collect", lang)}: Rs {o.due.toLocaleString()}
-                </p>
-              </div>
-              <Link
-                href={`/admin/machinery-rental/booking/${o.bookingId}#payment`}
-                className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-800"
-              >
-                {t("mk_record_payment", lang)}
-              </Link>
-            </div>
+              bookingId={o.bookingId}
+              bookingNumber={o.bookingNumber}
+              due={o.due}
+              accounts={accounts}
+              lang={lang}
+            />
           ))}
         </div>
       )}
