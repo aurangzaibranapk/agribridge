@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { BillClient } from "./bill-client";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,7 @@ const ALLOWED = ["owner", "super_admin", "admin", "warehouse"];
 
 export default async function BillRatePage({ params }: { params: { billId: string } }) {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -21,9 +24,9 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   if (!me?.is_active || !ALLOWED.includes(me.role)) {
     return (
       <div>
-        <PageHeader title="Bill se Trade Rate" />
+        <PageHeader title={t("pf_bill_title", lang)} />
         <Card>
-          <p className="text-sm text-surface-600">Ye safha Owner, Admin aur Warehouse wale ke liye hai.</p>
+          <p className="text-sm text-surface-600">{t("pf_intake_gate_short", lang)}</p>
         </Card>
       </div>
     );
@@ -66,23 +69,26 @@ export default async function BillRatePage({ params }: { params: { billId: strin
         href="/admin/products/bill-rates"
         className="mb-2 inline-flex items-center gap-1 text-sm text-surface-500 hover:text-surface-800"
       >
-        <ArrowLeft className="h-4 w-4" /> Sab bill
+        <ArrowLeft className="h-4 w-4" /> {t("pf_bill_all", lang)}
       </Link>
 
       <PageHeader
-        title={supplierName ?? "Supplier ka bill"}
+        title={supplierName ?? t("pf_bill_of_supplier", lang)}
         description={
           [
             bill.bill_number ? `Bill #${bill.bill_number}` : null,
             bill.bill_date ? new Date(bill.bill_date).toLocaleDateString("en-GB") : null,
-            bill.bill_total != null ? `Bill par kul Rs ${Number(bill.bill_total).toLocaleString()}` : null,
+            bill.bill_total != null
+              ? t("pf_bill_total_on", lang).replace("{amount}", Number(bill.bill_total).toLocaleString())
+              : null,
           ]
             .filter(Boolean)
-            .join(" · ") || "Bill ki tafseel parhi nahi ja saki — qatarein khud dekh lein."
+            .join(" · ") || t("pf_bill_unread_head", lang)
         }
       />
 
       <BillClient
+        lang={lang}
         billId={bill.id}
         billStatus={bill.status}
         billImageUrl={bill.image_url}

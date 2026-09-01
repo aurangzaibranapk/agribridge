@@ -7,6 +7,8 @@ import { AlertTriangle, CheckCircle2, FileUp, Upload } from "lucide-react";
 import { importProductsCsv, previewProductsCsv, type ImportRow, type ImportState } from "@/actions/products-import";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Label, Textarea } from "@/components/ui/form";
+import { t, type Lang } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ImportState = {};
 
@@ -32,10 +34,10 @@ const TONE: Record<ImportRow["status"], "green" | "amber" | "red"> = {
   error: "red",
 };
 
-const LABEL: Record<ImportRow["status"], string> = {
-  new: "banega",
-  duplicate: "pehle se hai",
-  error: "ghalti",
+const LABEL_KEY: Record<ImportRow["status"], "pf_row_new" | "pf_row_dup" | "pf_row_error"> = {
+  new: "pf_row_new",
+  duplicate: "pf_row_dup",
+  error: "pf_row_error",
 };
 
 export function ImportClient({
@@ -49,6 +51,7 @@ export function ImportClient({
   companies: string[];
   tradeRatePending: number | null;
 }) {
+  const lang: Lang = useLang();
   const [csv, setCsv] = useState("");
   const [previewState, previewAction] = useFormState(previewProductsCsv, initial);
   const [importState, importAction] = useFormState(importProductsCsv, initial);
@@ -73,8 +76,7 @@ export function ImportClient({
           <p className="flex items-start gap-2 text-sm text-amber-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              <strong>{tradeRatePending}</strong> products aise hain jin ka <strong>trade rate abhi nahi bhara</strong>.
-              Un par munafa ka hisaab abhi nahi banta. Supplier ka bill aane par bhar dein.
+              <strong>{tradeRatePending}</strong> {t("pf_pending_rate_warn", lang)}
             </span>
           </p>
         </Card>
@@ -92,13 +94,13 @@ export function ImportClient({
           />
           <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()}>
             <span className="inline-flex items-center gap-1.5">
-              <FileUp className="h-4 w-4" /> CSV file chunein
+              <FileUp className="h-4 w-4" /> {t("pf_pick_csv", lang)}
             </span>
           </Button>
           {/* Excel se seedha copy-paste kaam karta hai: wahan khane TAB
               se alag hote hain, aur parser dono nishan samajhta hai. */}
           <span className="text-xs text-surface-500">
-            — ya Excel mein khane chun kar copy karein aur neeche paste kar dein
+            {t("pf_or_paste", lang)}
           </span>
         </div>
 
@@ -114,53 +116,52 @@ export function ImportClient({
             className="font-mono text-xs"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Submit label="Pehle dekhein" />
+            <Submit label={t("pf_preview_first", lang)} />
             <button
               type="button"
               onClick={() => setCsv(SAMPLE)}
               className="text-xs text-brand-700 underline"
             >
-              namoona bhar dein
+              {t("pf_fill_sample", lang)}
             </button>
           </div>
           {previewState.error && <p className="text-sm text-red-700">{previewState.error}</p>}
         </form>
 
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-medium text-surface-600">Khanon ke naam</summary>
+          <summary className="cursor-pointer text-xs font-medium text-surface-600">{t("pf_column_names", lang)}</summary>
           <div className="mt-2 space-y-2 text-xs text-surface-600">
             <p>
-              <strong>Lazmi:</strong> <code>name</code> (ya <code>naam</code>) aur <code>sale_rate</code> (ya{" "}
+              <strong>{t("pf_required", lang)}</strong> <code>name</code> (ya <code>naam</code>) aur <code>sale_rate</code> (ya{" "}
               <code>price</code>, <code>qeemat</code>).
             </p>
             <p>
-              <strong>Ikhtiyari:</strong> <code>pack_size</code>, <code>unit</code>, <code>barcode</code>,{" "}
+              <strong>{t("pf_optional", lang)}</strong> <code>pack_size</code>, <code>unit</code>, <code>barcode</code>,{" "}
               <code>trade_rate</code>, <code>wholesale</code> (ya <code>thok</code>), <code>mrp</code>,{" "}
               <code>mfg</code>, <code>expiry</code>, <code>min_stock</code>, <code>category</code>,{" "}
               <code>brand</code>, <code>company</code>.
             </p>
             <p>
-              Tareekh <code>05/09/2026</code> ka matlab <strong>5 September</strong> liya jayega (din pehle). Sirf
-              mahina likhein (<code>09/2027</code>) to us mahine ka aakhri din.
+              {t("pf_date_rule", lang)
+                .replace("{sample}", "05/09/2026")
+                .replace("{day}", t("pf_day_5_sep", lang))
+                .replace("{month}", "09/2027")}
             </p>
-            <p>
-              Qism, brand aur company ka naam <strong>hu ba hu</strong> wohi hona chahiye jo pehle se darj hai —
-              warna khali reh jayega. Naya khud se nahi banta (ek harf ki ghalti do alag brand bana deti hai).
-            </p>
+            <p>{t("pf_exact_names", lang)}</p>
             {categories.length > 0 && (
               <p>
-                <strong>Maujood qismein:</strong> {categories.join(" · ")}
+                <strong>{t("pf_existing_cats", lang)}</strong> {categories.join(" · ")}
               </p>
             )}
             {brands.length > 0 && (
               <p>
-                <strong>Maujood brands:</strong> {brands.slice(0, 40).join(" · ")}
+                <strong>{t("pf_existing_brands", lang)}</strong> {brands.slice(0, 40).join(" · ")}
                 {brands.length > 40 ? " …" : ""}
               </p>
             )}
             {companies.length > 0 && (
               <p>
-                <strong>Maujood companies:</strong> {companies.slice(0, 40).join(" · ")}
+                <strong>{t("pf_existing_companies", lang)}</strong> {companies.slice(0, 40).join(" · ")}
                 {companies.length > 40 ? " …" : ""}
               </p>
             )}
@@ -172,11 +173,11 @@ export function ImportClient({
       {s && (
         <Card>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge tone="green">{s.ready} banenge</Badge>
-            {s.duplicates > 0 && <Badge tone="amber">{s.duplicates} pehle se hain</Badge>}
-            {s.errors > 0 && <Badge tone="red">{s.errors} mein ghalti</Badge>}
-            {s.noTradeRate > 0 && <Badge tone="amber">{s.noTradeRate} ka trade rate nahi</Badge>}
-            {s.noWholesale > 0 && <Badge tone="gray">{s.noWholesale} par thok ka rate nahi</Badge>}
+            <Badge tone="green">{t("pf_will_create", lang).replace("{n}", String(s.ready))}</Badge>
+            {s.duplicates > 0 && <Badge tone="amber">{t("pf_already_there", lang).replace("{n}", String(s.duplicates))}</Badge>}
+            {s.errors > 0 && <Badge tone="red">{t("pf_has_errors", lang).replace("{n}", String(s.errors))}</Badge>}
+            {s.noTradeRate > 0 && <Badge tone="amber">{t("pf_no_trade_n", lang).replace("{n}", String(s.noTradeRate))}</Badge>}
+            {s.noWholesale > 0 && <Badge tone="gray">{t("pf_no_wholesale_n", lang).replace("{n}", String(s.noWholesale))}</Badge>}
           </div>
 
           {previewState.notice && <p className="mb-3 text-sm text-surface-700">{previewState.notice}</p>}
@@ -186,13 +187,13 @@ export function ImportClient({
               <thead>
                 <tr className="border-b border-surface-200 text-left uppercase text-surface-500">
                   <th className="py-1.5">#</th>
-                  <th className="py-1.5">Naam</th>
-                  <th className="py-1.5">Pack</th>
-                  <th className="py-1.5 text-right">Trade</th>
-                  <th className="py-1.5 text-right">Sale</th>
-                  <th className="py-1.5 text-right">Thok</th>
-                  <th className="py-1.5">Expiry</th>
-                  <th className="py-1.5">Haalat</th>
+                  <th className="py-1.5">{t("pf_th_name", lang)}</th>
+                  <th className="py-1.5">{t("pf_th_pack", lang)}</th>
+                  <th className="py-1.5 text-right">{t("pf_th_trade", lang)}</th>
+                  <th className="py-1.5 text-right">{t("pf_th_sale", lang)}</th>
+                  <th className="py-1.5 text-right">{t("pf_th_wholesale", lang)}</th>
+                  <th className="py-1.5">{t("pf_th_expiry", lang)}</th>
+                  <th className="py-1.5">{t("pf_th_state", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,7 +205,7 @@ export function ImportClient({
                     {/* Trade rate na ho to "0" nahi likha jata. */}
                     <td className="py-1.5 text-right tabular-nums">
                       {r.purchasePrice === null ? (
-                        <span className="text-amber-700">baqi</span>
+                        <span className="text-amber-700">{t("pf_pending_word", lang)}</span>
                       ) : (
                         r.purchasePrice.toLocaleString()
                       )}
@@ -219,7 +220,7 @@ export function ImportClient({
                     </td>
                     <td className="py-1.5 text-surface-600">{r.expiryDate ?? "—"}</td>
                     <td className="py-1.5">
-                      <Badge tone={TONE[r.status]}>{LABEL[r.status]}</Badge>
+                      <Badge tone={TONE[r.status]}>{t(LABEL_KEY[r.status], lang)}</Badge>
                       {r.problem && <p className="mt-0.5 text-[11px] text-surface-600">{r.problem}</p>}
                       {r.notes.map((n, i) => (
                         <p key={i} className="mt-0.5 text-[11px] text-amber-700">
@@ -239,10 +240,12 @@ export function ImportClient({
                   khud dobara parhta hai -- browser ka bheja hua natija
                   nahi maanta. */}
               <input type="hidden" name="csv" value={csv} />
-              <Submit label={`${s.ready} products charhayein`} icon={<Upload className="h-4 w-4" />} />
+              <Submit label={t("pf_upload_n", lang).replace("{n}", String(s.ready))} icon={<Upload className="h-4 w-4" />} />
               {s.duplicates + s.errors > 0 && (
                 <p className="mt-1.5 text-xs text-surface-500">
-                  {s.duplicates + s.errors} qatarein chhoR di jayengi — sirf {s.ready} banenge.
+                  {t("pf_skipped_note", lang)
+                    .replace("{skipped}", String(s.duplicates + s.errors))
+                    .replace("{ready}", String(s.ready))}
                 </p>
               )}
             </form>
@@ -260,7 +263,7 @@ export function ImportClient({
               <div>
                 <p className="text-sm text-emerald-800">{importState.notice}</p>
                 <Link href="/admin/products" className="mt-1 inline-block text-xs text-brand-700 underline">
-                  Products dekhein
+                  {t("pf_see_products", lang)}
                 </Link>
               </div>
             </div>

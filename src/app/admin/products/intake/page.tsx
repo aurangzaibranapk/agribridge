@@ -4,6 +4,8 @@ import { PackagePlus } from "lucide-react";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/server";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { NewBatchForm } from "./new-batch-form";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,7 @@ const ALLOWED = ["owner", "super_admin", "admin", "warehouse"];
  */
 export default async function IntakePage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -28,10 +31,10 @@ export default async function IntakePage() {
   if (!me?.is_active || !ALLOWED.includes(me.role)) {
     return (
       <div>
-        <PageHeader title="Maal Andar" />
+        <PageHeader title={t("pf_intake_title", lang)} />
         <Card>
           <p className="text-sm text-surface-600">
-            Ye safha Owner, Admin aur Warehouse wale ke liye hai — yahin se products bante hain aur stock andar aata hai.
+            {t("pf_intake_gate", lang)}
           </p>
         </Card>
       </div>
@@ -55,29 +58,29 @@ export default async function IntakePage() {
 
   const tally = new Map<string, { total: number; ready: number }>();
   for (const c of counts ?? []) {
-    const t = tally.get(c.batch_id) ?? { total: 0, ready: 0 };
-    if (c.status !== "skipped") t.total += 1;
-    if (c.status === "ready") t.ready += 1;
-    tally.set(c.batch_id, t);
+    const row = tally.get(c.batch_id) ?? { total: 0, ready: 0 };
+    if (c.status !== "skipped") row.total += 1;
+    if (c.status === "ready") row.ready += 1;
+    tally.set(c.batch_id, row);
   }
 
   return (
     <div>
       <PageHeader
-        title="Maal Andar"
-        description="Barcode scan karein, dabbe ki tasveer lagayein, AI khane bhar degi. Sab dekh kar ek sath manzoor karein — phir maal warehouse mein aa jayega."
+        title={t("pf_intake_title", lang)}
+        description={t("pf_intake_desc", lang)}
       />
 
       <NewBatchForm warehouses={(warehouses ?? []).map((w) => ({ id: w.id, name: w.name, code: w.code }))} />
 
       <Card className="mt-4">
-        <h2 className="mb-2 text-sm font-semibold">Pichhle chakkar</h2>
+        <h2 className="mb-2 text-sm font-semibold">{t("pf_past_batches", lang)}</h2>
         {(batches ?? []).length === 0 ? (
-          <p className="text-sm text-surface-500">Abhi koi chakkar nahi. Upar se naya shuru karein.</p>
+          <p className="text-sm text-surface-500">{t("pf_no_batches", lang)}</p>
         ) : (
           <ul className="divide-y divide-surface-100">
             {(batches ?? []).map((b) => {
-              const t = tally.get(b.id) ?? { total: 0, ready: 0 };
+              const c = tally.get(b.id) ?? { total: 0, ready: 0 };
               const wh = (b as unknown as { warehouses?: { name?: string } }).warehouses?.name;
               return (
                 <li key={b.id}>
@@ -87,13 +90,13 @@ export default async function IntakePage() {
                     {wh && <span className="text-xs text-surface-500">{wh}</span>}
                     <span className="text-xs text-surface-400">{new Date(b.created_at).toLocaleDateString("en-GB")}</span>
                     <span className="ml-auto flex items-center gap-2">
-                      <span className="text-xs text-surface-500">{t.total} qatarein</span>
+                      <span className="text-xs text-surface-500">{c.total} {t("pf_rows", lang)}</span>
                       {b.status === "approved" ? (
-                        <Badge tone="green">manzoor</Badge>
-                      ) : t.ready > 0 ? (
-                        <Badge tone="amber">{t.ready} tayyar</Badge>
+                        <Badge tone="green">{t("pf_approved", lang)}</Badge>
+                      ) : c.ready > 0 ? (
+                        <Badge tone="amber">{c.ready} {t("pf_ready", lang)}</Badge>
                       ) : (
-                        <Badge tone="gray">chal raha hai</Badge>
+                        <Badge tone="gray">{t("pf_running", lang)}</Badge>
                       )}
                     </span>
                   </Link>

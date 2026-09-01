@@ -1,0 +1,352 @@
+/**
+ * Maal andar lene, CSV se charhane, aur bill se rate bharne ke safhe.
+ *
+ * TEEN LAFZ JAAN BOOJH KAR AISE HI:
+ *
+ *   "Trade rate" teenon zabanon mein wohi rehta hai. Dukan par ye lafz
+ *   isi tarah bola jata hai; "purchase price" likhna daftari lagta hai
+ *   aur counter par koi nahi pehchanta.
+ *
+ *   "Baqi" aur "sifar" ka farq har zaban mein RAKHA gaya hai. Jahan
+ *   rate abhi maloom nahi, wahan "—" ya "baqi" aata hai, Rs 0 nahi.
+ *   Ye is project ka wohi usool hai: "hisaab nahi rakha jata" aur
+ *   "sifar" ek cheez nahi.
+ *
+ *   "Barcode", "CSV", "MRP" waise ke waise hain -- ye chhape hue lafz
+ *   hain, tarjuma un ko pehchanne se rok deta hai.
+ */
+export const productsFlowDict = {
+  // =====================================================================
+  // Maal Andar (intake)
+  // =====================================================================
+  pf_intake_title: { en: "Product Intake", rm: "Maal Andar", ur: "مال اندر" },
+  pf_intake_desc: {
+    en: "Scan the barcode, add a photo of the pack, and AI fills the fields. Check everything, approve it all at once — then the goods enter the warehouse.",
+    rm: "Barcode scan karein, dabbe ki tasveer lagayein, AI khane bhar degi. Sab dekh kar ek sath manzoor karein — phir maal warehouse mein aa jayega.",
+    ur: "بارکوڈ اسکین کریں، ڈبے کی تصویر لگائیں، AI خانے بھر دے گی۔ سب دیکھ کر ایک ساتھ منظور کریں — پھر مال گودام میں آ جائے گا۔",
+  },
+  pf_intake_gate: {
+    en: "This page is for the Owner, Admin and Warehouse staff — products are created here and stock comes in here.",
+    rm: "Ye safha Owner, Admin aur Warehouse wale ke liye hai — yahin se products bante hain aur stock andar aata hai.",
+    ur: "یہ صفحہ مالک، ایڈمن اور گودام والے کے لیے ہے — یہیں سے پروڈکٹ بنتے ہیں اور اسٹاک اندر آتا ہے۔",
+  },
+  pf_intake_gate_short: {
+    en: "This page is for the Owner, Admin and Warehouse staff.",
+    rm: "Ye safha Owner, Admin aur Warehouse wale ke liye hai.",
+    ur: "یہ صفحہ مالک، ایڈمن اور گودام والے کے لیے ہے۔",
+  },
+  pf_past_batches: { en: "Past rounds", rm: "Pichhle chakkar", ur: "پچھلے چکر" },
+  pf_no_batches: {
+    en: "No rounds yet. Start a new one above.",
+    rm: "Abhi koi chakkar nahi. Upar se naya shuru karein.",
+    ur: "ابھی کوئی چکر نہیں۔ اوپر سے نیا شروع کریں۔",
+  },
+  pf_rows: { en: "rows", rm: "qatarein", ur: "قطاریں" },
+  pf_approved: { en: "approved", rm: "manzoor", ur: "منظور" },
+  pf_ready: { en: "ready", rm: "tayyar", ur: "تیار" },
+  pf_running: { en: "in progress", rm: "chal raha hai", ur: "چل رہا ہے" },
+
+  pf_batch_name: { en: "Name this round", rm: "Is chakkar ka naam", ur: "اس چکر کا نام" },
+  pf_ka_maal: { en: "goods", rm: "ka maal", ur: "کا مال" },
+  pf_where_goods: { en: "Where the goods will go", rm: "Maal kahan aayega", ur: "مال کہاں آئے گا" },
+  pf_start: { en: "Start", rm: "Shuru karein", ur: "شروع کریں" },
+  pf_back: { en: "Back", rm: "Wapas", ur: "واپس" },
+
+  pf_after_approve_wh: {
+    en: 'After approval the goods enter "{warehouse}". From there they move to the shops by stock transfer.',
+    rm: 'Manzoori ke baad maal "{warehouse}" mein aayega. Wahan se dukanon par stock transfer se jayega.',
+    ur: 'منظوری کے بعد مال "{warehouse}" میں آئے گا۔ وہاں سے دکانوں پر اسٹاک ٹرانسفر سے جائے گا۔',
+  },
+  pf_after_approve: {
+    en: "After approval the goods enter the warehouse.",
+    rm: "Manzoori ke baad maal warehouse mein aayega.",
+    ur: "منظوری کے بعد مال گودام میں آئے گا۔",
+  },
+
+  pf_scan_barcode: { en: "Scan barcode", rm: "Barcode scan karein", ur: "بارکوڈ اسکین کریں" },
+  pf_without_barcode: { en: "Without a barcode", rm: "Bina barcode ke", ur: "بغیر بارکوڈ کے" },
+  pf_incomplete: { en: "incomplete", rm: "adhoori", ur: "ادھوری" },
+  pf_nothing_yet: {
+    en: "Nothing here yet. Pick up a pack and press Scan barcode.",
+    rm: "Abhi kuch nahi. Dabba haath mein lein aur Barcode scan karein dabayein.",
+    ur: "ابھی کچھ نہیں۔ ڈبہ ہاتھ میں لیں اور بارکوڈ اسکین کریں دبائیں۔",
+  },
+  pf_approve_n: { en: "Approve {n} products", rm: "{n} products manzoor karein", ur: "{n} پروڈکٹ منظور کریں" },
+  pf_incomplete_warn: {
+    en: "{n} rows are incomplete (name or sale rate missing) — those will not go up",
+    rm: "{n} qatarein adhoori hain (naam ya sale rate baqi) — wo charhengi nahi",
+    ur: "{n} قطاریں ادھوری ہیں (نام یا سیل ریٹ باقی) — وہ چڑھیں گی نہیں",
+  },
+  pf_batch_done: {
+    en: "This round is approved — the goods are in the warehouse.",
+    rm: "Ye chakkar manzoor ho chuka hai — maal warehouse mein aa gaya.",
+    ur: "یہ چکر منظور ہو چکا ہے — مال گودام میں آ گیا۔",
+  },
+  pf_ai_filled: { en: "AI filled this", rm: "AI ne bhara", ur: "AI نے بھرا" },
+  pf_photo_uploading: { en: "Uploading…", rm: "Charh rahi hai…", ur: "چڑھ رہی ہے…" },
+  pf_photo_change: { en: "Change photo", rm: "Tasveer badlein", ur: "تصویر بدلیں" },
+  pf_photo_add: { en: "Add photo", rm: "Tasveer lagayein", ur: "تصویر لگائیں" },
+  pf_photo_failed: {
+    en: "The photo could not be uploaded.",
+    rm: "Tasveer charh nahi saki.",
+    ur: "تصویر چڑھ نہیں سکی۔",
+  },
+
+  pf_f_name: { en: "Product name", rm: "Product ka naam", ur: "پروڈکٹ کا نام" },
+  pf_f_brand: { en: "Brand", rm: "Brand", ur: "برانڈ" },
+  pf_f_company: { en: "Company", rm: "Company", ur: "کمپنی" },
+  pf_f_category: { en: "Category", rm: "Qism", ur: "قسم" },
+  pf_f_pack: { en: "Pack size", rm: "Pack size", ur: "پیک سائز" },
+  pf_f_unit: { en: "Unit", rm: "Ikai", ur: "اکائی" },
+  pf_f_qty_in: { en: "How many came in", rm: "Kitne aaye", ur: "کتنے آئے" },
+  pf_f_trade: { en: "Trade rate", rm: "Trade rate", ur: "ٹریڈ ریٹ" },
+  pf_f_trade_ph: { en: "from the bill", rm: "bill se", ur: "بل سے" },
+  pf_f_trade_hint: {
+    en: "Not printed on the pack — fill it from the bill or leave it blank",
+    rm: "Dabbe par nahi hota — bill se bharein ya khali chhoRein",
+    ur: "ڈبے پر نہیں ہوتا — بل سے بھریں یا خالی چھوڑیں",
+  },
+  pf_f_sale: { en: "Sale rate", rm: "Sale rate", ur: "سیل ریٹ" },
+  pf_f_mrp: { en: "Printed price (MRP)", rm: "Chhapi hui qeemat (MRP)", ur: "چھپی ہوئی قیمت (MRP)" },
+  pf_f_wholesale: { en: "Wholesale rate", rm: "Thok ka rate", ur: "تھوک کا ریٹ" },
+  pf_f_wholesale_ph: {
+    en: "not sold wholesale",
+    rm: "thok par nahi milta",
+    ur: "تھوک پر نہیں ملتا",
+  },
+  pf_f_wholesale_hint: {
+    en: "Blank = not sold wholesale",
+    rm: "Khali = thok par nahi milta",
+    ur: "خالی = تھوک پر نہیں ملتا",
+  },
+  pf_f_mfg: { en: "Manufacturing", rm: "Manufacturing", ur: "تیاری کی تاریخ" },
+  pf_f_expiry: { en: "Expiry", rm: "Expiry", ur: "میعاد" },
+  pf_f_barcode: { en: "Barcode", rm: "Barcode", ur: "بارکوڈ" },
+
+  pf_bc_scanner: {
+    en: "from the scanner — the bars were read",
+    rm: "scanner se — lakeerein parhi gayin",
+    ur: "اسکینر سے — لکیریں پڑھی گئیں",
+  },
+  pf_bc_ai: { en: "AI read it — please check", rm: "AI ne parha — jaanch lein", ur: "AI نے پڑھا — جانچ لیں" },
+  pf_bc_manual: { en: "typed by hand", rm: "haath se likha", ur: "ہاتھ سے لکھا" },
+  pf_bc_bad_digit: {
+    en: " · check digit is wrong",
+    rm: " · check digit theek nahi",
+    ur: " · چیک ڈیجٹ ٹھیک نہیں",
+  },
+
+  pf_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  pf_saved: { en: "Saved.", rm: "Mehfooz ho gaya.", ur: "محفوظ ہو گیا۔" },
+  pf_drop_row: { en: "drop this row", rm: "ye qatar chhoR dein", ur: "یہ قطار چھوڑ دیں" },
+
+  // =====================================================================
+  // CSV se charhana (import)
+  // =====================================================================
+  pf_import_title: { en: "Import products from CSV", rm: "Products CSV se charhayein", ur: "پروڈکٹ CSV سے چڑھائیں" },
+  pf_import_desc: {
+    en: "Preview first — what will be created, what will be skipped, where the mistakes are. Only then does it go up.",
+    rm: "Pehle preview — kya banega, kya chhoRa jayega, kahan ghalti hai. Us ke baad hi charhega.",
+    ur: "پہلے پیش نظارہ — کیا بنے گا، کیا چھوڑا جائے گا، کہاں غلطی ہے۔ اس کے بعد ہی چڑھے گا۔",
+  },
+  pf_import_gate: {
+    en: "This page is for the Owner and Admin only. One file builds the whole catalogue — that is why this door is not left open.",
+    rm: "Ye safha sirf Owner aur Admin ke liye hai. Ek file poora catalogue banati hai — is liye ye darwaza khula nahi rakha gaya.",
+    ur: "یہ صفحہ صرف مالک اور ایڈمن کے لیے ہے۔ ایک فائل پورا کیٹلاگ بناتی ہے — اس لیے یہ دروازہ کھلا نہیں رکھا گیا۔",
+  },
+  pf_pending_rate_warn: {
+    en: "products have no trade rate filled in yet. Their profit cannot be worked out. Fill it in when the supplier's bill arrives.",
+    rm: "products aise hain jin ka trade rate abhi nahi bhara. Un par munafa ka hisaab abhi nahi banta. Supplier ka bill aane par bhar dein.",
+    ur: "پروڈکٹ ایسے ہیں جن کا ٹریڈ ریٹ ابھی نہیں بھرا۔ ان پر منافع کا حساب ابھی نہیں بنتا۔ سپلائر کا بل آنے پر بھر دیں۔",
+  },
+  pf_pick_csv: { en: "Choose a CSV file", rm: "CSV file chunein", ur: "CSV فائل چنیں" },
+  pf_or_paste: {
+    en: "— or select the cells in Excel, copy them, and paste below",
+    rm: "— ya Excel mein khane chun kar copy karein aur neeche paste kar dein",
+    ur: "— یا ایکسل میں خانے چن کر کاپی کریں اور نیچے پیسٹ کر دیں",
+  },
+  pf_preview_first: { en: "Preview first", rm: "Pehle dekhein", ur: "پہلے دیکھیں" },
+  pf_fill_sample: { en: "fill in a sample", rm: "namoona bhar dein", ur: "نمونہ بھر دیں" },
+  pf_column_names: { en: "Column names", rm: "Khanon ke naam", ur: "خانوں کے نام" },
+  pf_required: { en: "Required:", rm: "Lazmi:", ur: "لازمی:" },
+  pf_optional: { en: "Optional:", rm: "Ikhtiyari:", ur: "اختیاری:" },
+  pf_date_rule: {
+    en: "A date like {sample} is read as {day} (day first). Write only the month ({month}) and the last day of that month is used.",
+    rm: "Tareekh {sample} ka matlab {day} liya jayega (din pehle). Sirf mahina likhein ({month}) to us mahine ka aakhri din.",
+    ur: "تاریخ {sample} کا مطلب {day} لیا جائے گا (دن پہلے)۔ صرف مہینہ لکھیں ({month}) تو اس مہینے کا آخری دن۔",
+  },
+  pf_day_5_sep: { en: "5 September", rm: "5 September", ur: "5 ستمبر" },
+  pf_exact_names: {
+    en: "Category, brand and company names must match exactly what is already on record — otherwise the field stays empty. New ones are not created automatically (one wrong letter makes two separate brands).",
+    rm: "Qism, brand aur company ka naam hu ba hu wohi hona chahiye jo pehle se darj hai — warna khali reh jayega. Naya khud se nahi banta (ek harf ki ghalti do alag brand bana deti hai).",
+    ur: "قسم، برانڈ اور کمپنی کا نام ہو بہو وہی ہونا چاہیے جو پہلے سے درج ہے — ورنہ خالی رہ جائے گا۔ نیا خود سے نہیں بنتا (ایک حرف کی غلطی دو الگ برانڈ بنا دیتی ہے)۔",
+  },
+  pf_existing_cats: { en: "Categories on record:", rm: "Maujood qismein:", ur: "موجود قسمیں:" },
+  pf_existing_brands: { en: "Brands on record:", rm: "Maujood brands:", ur: "موجود برانڈز:" },
+  pf_existing_companies: { en: "Companies on record:", rm: "Maujood companies:", ur: "موجود کمپنیاں:" },
+
+  pf_will_create: { en: "{n} will be created", rm: "{n} banenge", ur: "{n} بنیں گے" },
+  pf_already_there: { en: "{n} already exist", rm: "{n} pehle se hain", ur: "{n} پہلے سے ہیں" },
+  pf_has_errors: { en: "{n} have mistakes", rm: "{n} mein ghalti", ur: "{n} میں غلطی" },
+  pf_no_trade_n: { en: "{n} have no trade rate", rm: "{n} ka trade rate nahi", ur: "{n} کا ٹریڈ ریٹ نہیں" },
+  pf_no_wholesale_n: { en: "{n} have no wholesale rate", rm: "{n} par thok ka rate nahi", ur: "{n} پر تھوک کا ریٹ نہیں" },
+
+  pf_th_name: { en: "Name", rm: "Naam", ur: "نام" },
+  pf_th_pack: { en: "Pack", rm: "Pack", ur: "پیک" },
+  pf_th_trade: { en: "Trade", rm: "Trade", ur: "ٹریڈ" },
+  pf_th_sale: { en: "Sale", rm: "Sale", ur: "سیل" },
+  pf_th_wholesale: { en: "Wholesale", rm: "Thok", ur: "تھوک" },
+  pf_th_expiry: { en: "Expiry", rm: "Expiry", ur: "میعاد" },
+  pf_th_state: { en: "State", rm: "Haalat", ur: "حالت" },
+
+  pf_row_new: { en: "will be created", rm: "banega", ur: "بنے گا" },
+  pf_row_dup: { en: "already there", rm: "pehle se hai", ur: "پہلے سے ہے" },
+  pf_row_error: { en: "mistake", rm: "ghalti", ur: "غلطی" },
+  pf_pending_word: { en: "pending", rm: "baqi", ur: "باقی" },
+
+  pf_upload_n: { en: "Upload {n} products", rm: "{n} products charhayein", ur: "{n} پروڈکٹ چڑھائیں" },
+  pf_skipped_note: {
+    en: "{skipped} rows will be left out — only {ready} will be created.",
+    rm: "{skipped} qatarein chhoR di jayengi — sirf {ready} banenge.",
+    ur: "{skipped} قطاریں چھوڑ دی جائیں گی — صرف {ready} بنیں گے۔",
+  },
+  pf_see_products: { en: "See products", rm: "Products dekhein", ur: "پروڈکٹ دیکھیں" },
+
+  // =====================================================================
+  // Bill se Trade Rate
+  // =====================================================================
+  pf_bill_title: { en: "Trade Rate from Bill", rm: "Bill se Trade Rate", ur: "بل سے ٹریڈ ریٹ" },
+  pf_bill_desc: {
+    en: "Add a photo of the supplier's bill. AI reads the rate on every line — you place it against the product and approve, then the cost goes up.",
+    rm: "Supplier ke bill ki photo lagayein. AI har qatar ka rate parhta hai — aap product ke saamne rakh kar manzoor karte hain, phir lagat charh jati hai.",
+    ur: "سپلائر کے بل کی تصویر لگائیں۔ AI ہر قطار کا ریٹ پڑھتا ہے — آپ پروڈکٹ کے سامنے رکھ کر منظور کرتے ہیں، پھر لاگت چڑھ جاتی ہے۔",
+  },
+  pf_bill_gate: {
+    en: "This page is for the Owner, Admin and Warehouse staff — product cost changes from here.",
+    rm: "Ye safha Owner, Admin aur Warehouse wale ke liye hai — yahan se products ki lagat badalti hai.",
+    ur: "یہ صفحہ مالک، ایڈمن اور گودام والے کے لیے ہے — یہاں سے پروڈکٹ کی لاگت بدلتی ہے۔",
+  },
+  pf_bill_pending_note: {
+    en: "products have no known trade rate yet. Their profit is not real profit — until the rate goes up, do not read them at zero cost.",
+    rm: "products aise hain jin ka trade rate abhi maloom nahi. Un ka munafa asal munafa nahi — jab tak rate na charhe, unhen sifar lagat par na parhein.",
+    ur: "پروڈکٹ ایسے ہیں جن کا ٹریڈ ریٹ ابھی معلوم نہیں۔ ان کا منافع اصل منافع نہیں — جب تک ریٹ نہ چڑھے، انہیں صفر لاگت پر نہ پڑھیں۔",
+  },
+  pf_bill_photo: { en: "Photo of the bill", rm: "Bill ki photo", ur: "بل کی تصویر" },
+  pf_bill_photo_add: {
+    en: "Add a photo or take one with the camera",
+    rm: "Photo lagayein ya camera se lein",
+    ur: "تصویر لگائیں یا کیمرے سے لیں",
+  },
+  pf_bill_photo_other: { en: "use a different one", rm: "doosri lagayein", ur: "دوسری لگائیں" },
+  pf_bill_supplier: { en: "Supplier (if known)", rm: "Supplier (agar maloom ho)", ur: "سپلائر (اگر معلوم ہو)" },
+  pf_bill_supplier_none: {
+    en: "— whatever name is on the bill —",
+    rm: "— bill par jo naam ho wohi —",
+    ur: "— بل پر جو نام ہو وہی —",
+  },
+  pf_bill_supplier_hint: {
+    en: "Choosing a supplier is not required. The name written on the bill is kept either way.",
+    rm: "Supplier chunna zaroori nahi. Bill par likha naam waise bhi mehfooz rehta hai.",
+    ur: "سپلائر چننا ضروری نہیں۔ بل پر لکھا نام ویسے بھی محفوظ رہتا ہے۔",
+  },
+  pf_bill_read_it: { en: "Read the bill", rm: "Bill parhwayein", ur: "بل پڑھوائیں" },
+  pf_bill_reading: { en: "AI is reading…", rm: "AI parh rahi hai…", ur: "AI پڑھ رہی ہے…" },
+  pf_bill_past: { en: "Past bills", rm: "Pichhle bill", ur: "پچھلے بل" },
+  pf_bill_none: {
+    en: "No bills yet. Add a photo above.",
+    rm: "Abhi koi bill nahi. Upar se photo lagayein.",
+    ur: "ابھی کوئی بل نہیں۔ اوپر سے تصویر لگائیں۔",
+  },
+  pf_bill_no_name: { en: "Name was not read", rm: "Naam nahi parha gaya", ur: "نام نہیں پڑھا گیا" },
+  pf_bill_applied_n: { en: "{n} went up", rm: "{n} charh gaye", ur: "{n} چڑھ گئے" },
+  pf_bill_to_check: { en: "to check", rm: "dekhna baqi", ur: "دیکھنا باقی" },
+  pf_bill_all: { en: "All bills", rm: "Sab bill", ur: "سب بل" },
+  pf_bill_of_supplier: { en: "Supplier's bill", rm: "Supplier ka bill", ur: "سپلائر کا بل" },
+  pf_bill_total_on: { en: "Bill total Rs {amount}", rm: "Bill par kul Rs {amount}", ur: "بل پر کل Rs {amount}" },
+  pf_bill_unread_head: {
+    en: "The bill details could not be read — please go through the lines yourself.",
+    rm: "Bill ki tafseel parhi nahi ja saki — qatarein khud dekh lein.",
+    ur: "بل کی تفصیل پڑھی نہیں جا سکی — قطاریں خود دیکھ لیں۔",
+  },
+  pf_bill_ai_off: {
+    en: "AI could not read this bill. The lines are empty — either GEMINI_API_KEY is not set, or the photo was not clear. Rates can also be typed by hand.",
+    rm: "Is bill ko AI parh nahi saki. Qatarein khali hain — ya to GEMINI_API_KEY nahi laga, ya tasveer saaf nahi thi. Rate haath se bhi likhe ja sakte hain.",
+    ur: "اس بل کو AI پڑھ نہیں سکی۔ قطاریں خالی ہیں — یا تو GEMINI_API_KEY نہیں لگا، یا تصویر صاف نہیں تھی۔ ریٹ ہاتھ سے بھی لکھے جا سکتے ہیں۔",
+  },
+  pf_bill_mismatch: {
+    en: "The lines add up to Rs {lines}, and the bill total is Rs {total} — a difference of Rs {diff}. A line may not have been read, or the bill may show discount/tax separately. Check before applying.",
+    rm: "Qataron ka jorh Rs {lines} hai, aur bill par kul Rs {total} — Rs {diff} ka farq. Ho sakta hai koi qatar parhi na gayi ho, ya bill par discount/tax alag likha ho. Charhane se pehle dekh lein.",
+    ur: "قطاروں کا جوڑ Rs {lines} ہے، اور بل پر کل Rs {total} — Rs {diff} کا فرق۔ ہو سکتا ہے کوئی قطار پڑھی نہ گئی ہو، یا بل پر ڈسکاؤنٹ/ٹیکس الگ لکھا ہو۔ چڑھانے سے پہلے دیکھ لیں۔",
+  },
+  pf_bill_hide_photo: { en: "hide the bill photo", rm: "bill ki photo chhupayein", ur: "بل کی تصویر چھپائیں" },
+  pf_bill_show_photo: { en: "see the bill photo", rm: "bill ki photo dekhein", ur: "بل کی تصویر دیکھیں" },
+  pf_bill_no_lines: {
+    en: "No lines were read from this bill.",
+    rm: "Is bill par koi qatar nahi parhi gayi.",
+    ur: "اس بل پر کوئی قطار نہیں پڑھی گئی۔",
+  },
+  pf_bill_applied_badge: { en: "applied · Rs {rate}", rm: "charh gaya · Rs {rate}", ur: "چڑھ گیا · Rs {rate}" },
+  pf_bill_line_item: { en: "This item on the bill", rm: "Bill par ye cheez", ur: "بل پر یہ چیز" },
+  pf_bill_line_rate: { en: "Trade rate (per unit)", rm: "Trade rate (ek ka)", ur: "ٹریڈ ریٹ (ایک کا)" },
+  pf_bill_rate_ph: { en: "was not clear on the bill", rm: "bill par saaf nahi tha", ur: "بل پر صاف نہیں تھا" },
+  pf_bill_rate_blank: {
+    en: "This rate was not clear on the bill — read it yourself and write it. Leaving it blank is better than writing zero.",
+    rm: "Bill par ye rate saaf nahi tha — khud dekh kar likhein. Khali chhoRna sifar likhne se behtar hai.",
+    ur: "بل پر یہ ریٹ صاف نہیں تھا — خود دیکھ کر لکھیں۔ خالی چھوڑنا صفر لکھنے سے بہتر ہے۔",
+  },
+  pf_bill_which_product: { en: "Which product of ours", rm: "Hamara kaun sa product", ur: "ہمارا کون سا پروڈکٹ" },
+  pf_bill_auto_match: {
+    en: "This matched automatically by name — check it once before applying.",
+    rm: "Ye naam se apne aap mila hai — charhane se pehle ek dafa dekh lein.",
+    ur: "یہ نام سے خود بخود ملا ہے — چڑھانے سے پہلے ایک دفعہ دیکھ لیں۔",
+  },
+  pf_bill_line_total: { en: "this line is Rs {amount} on the bill", rm: "bill par is qatar ka Rs {amount}", ur: "بل پر اس قطار کا Rs {amount}" },
+  pf_bill_drop_line: { en: "Drop this line", rm: "Ye qatar chhoR dein", ur: "یہ قطار چھوڑ دیں" },
+  pf_bill_search_product: { en: "Type the product name…", rm: "Product ka naam likhein…", ur: "پروڈکٹ کا نام لکھیں…" },
+  pf_bill_no_product: {
+    en: "No product found with that name. Create the product first, then choose it here.",
+    rm: "Is naam ka koi product nahi mila. Pehle product banayein, phir yahan chunein.",
+    ur: "اس نام کا کوئی پروڈکٹ نہیں ملا۔ پہلے پروڈکٹ بنائیں، پھر یہاں چنیں۔",
+  },
+  pf_bill_rate_was_none: {
+    en: "trade rate was not known until now",
+    rm: "trade rate abhi tak nahi tha",
+    ur: "ٹریڈ ریٹ ابھی تک نہیں تھا",
+  },
+  pf_bill_rate_now: { en: "current trade rate Rs {rate}", rm: "abhi ka trade rate Rs {rate}", ur: "ابھی کا ٹریڈ ریٹ Rs {rate}" },
+  pf_bill_rate_pending_short: { en: "rate pending", rm: "rate baqi", ur: "ریٹ باقی" },
+  pf_bill_change: { en: "change", rm: "badlein", ur: "بدلیں" },
+  pf_bill_ready_note: {
+    en: "{n} lines are ready to apply. Applying changes these products' trade rate, and the old rate is kept on record.",
+    rm: "{n} qatarein charhne ke liye tayyar hain. Charhne par in products ka trade rate badal jayega, aur purana rate indraj mein mehfooz ho jayega.",
+    ur: "{n} قطاریں چڑھنے کے لیے تیار ہیں۔ چڑھنے پر ان پروڈکٹ کا ٹریڈ ریٹ بدل جائے گا، اور پرانا ریٹ اندراج میں محفوظ ہو جائے گا۔",
+  },
+  pf_bill_apply_n: { en: "Apply {n} rates", rm: "{n} rate charhayein", ur: "{n} ریٹ چڑھائیں" },
+  pf_bill_done: {
+    en: "This bill is finished — {n} products now have their trade rate.",
+    rm: "Is bill ka kaam mukammal hai — {n} products ka trade rate charh chuka hai.",
+    ur: "اس بل کا کام مکمل ہے — {n} پروڈکٹ کا ٹریڈ ریٹ چڑھ چکا ہے۔",
+  },
+
+  // =====================================================================
+  // Thok (POS aur product form)
+  // =====================================================================
+  pf_pos_retail_customer: { en: "Regular customer", rm: "Aam gahak", ur: "عام گاہک" },
+  pf_pos_wholesale_shop: { en: "Wholesale (shop)", rm: "Thok (dukan)", ur: "تھوک (دکان)" },
+  pf_pos_no_shops: {
+    en: 'No wholesale shops on record yet. In CRM set a customer\u2019s type to "wholesale shop", and it will appear here.',
+    rm: 'Abhi koi thok wali dukan darj nahi. CRM mein gahak ka darja "thok wali dukan" rakhein, phir wo yahan aayegi.',
+    ur: 'ابھی کوئی تھوک والی دکان درج نہیں۔ CRM میں گاہک کا درجہ "تھوک والی دکان" رکھیں، پھر وہ یہاں آئے گی۔',
+  },
+  pf_pos_pick_shop: { en: "— choose a shop —", rm: "— dukan chunein —", ur: "— دکان چنیں —" },
+  pf_pos_wholesale_on: {
+    en: "Wholesale rates are being applied. Anything without a wholesale rate on record goes at retail.",
+    rm: "Thok ka rate lag raha hai. Jis cheez par thok ka rate darj nahi, us par retail lagega.",
+    ur: "تھوک کا ریٹ لگ رہا ہے۔ جس چیز پر تھوک کا ریٹ درج نہیں، اس پر ریٹیل لگے گا۔",
+  },
+  pf_pos_no_wholesale_rate: {
+    en: "\u00b7 no wholesale rate, retail applied",
+    rm: "\u00b7 thok ka rate nahi, retail laga",
+    ur: "\u00b7 تھوک کا ریٹ نہیں، ریٹیل لگا",
+  },
+} as const;

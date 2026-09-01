@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/server";
 import { BatchClient } from "./batch-client";
 
@@ -23,9 +24,9 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
   if (!me?.is_active || !ALLOWED.includes(me.role)) {
     return (
       <div>
-        <PageHeader title="Maal Andar" />
+        <PageHeader title={t("pf_intake_title", lang)} />
         <Card>
-          <p className="text-sm text-surface-600">Ye safha Owner, Admin aur Warehouse wale ke liye hai.</p>
+          <p className="text-sm text-surface-600">{t("pf_intake_gate_short", lang)}</p>
         </Card>
       </div>
     );
@@ -58,15 +59,15 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
         title={batch.name}
         description={
           warehouseName
-            ? `Manzoori ke baad maal "${warehouseName}" mein aayega. Wahan se dukanon par stock transfer se jayega.`
-            : "Manzoori ke baad maal warehouse mein aayega."
+            ? t("pf_after_approve_wh", lang).replace("{warehouse}", warehouseName)
+            : t("pf_after_approve", lang)
         }
         actions={
           <Link
             href="/admin/products/intake"
             className="inline-flex items-center gap-1 rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-50"
           >
-            <ArrowLeft className="h-4 w-4" /> Wapas
+            <ArrowLeft className="h-4 w-4" /> {t("pf_back", lang)}
           </Link>
         }
       />

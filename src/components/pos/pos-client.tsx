@@ -413,7 +413,7 @@ export function PosClient({
                       usay thok mila hai. */}
                   {wholesaleOn &&
                     inventory.find((i) => i.product_id === line.product_id)?.wholesale_price == null && (
-                      <span className="ml-1 text-amber-700">· thok ka rate nahi, retail laga</span>
+                      <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>
                     )}
                 </p>
               </div>
@@ -451,7 +451,7 @@ export function PosClient({
                   : "border-surface-300 text-surface-600"
               }`}
             >
-              Aam gahak
+              {t("pf_pos_retail_customer", lang)}
             </button>
             <button
               type="button"
@@ -465,19 +465,18 @@ export function PosClient({
                   : "border-surface-300 text-surface-600"
               }`}
             >
-              Thok (dukan)
+              {t("pf_pos_wholesale_shop", lang)}
             </button>
           </div>
 
           {wholesaleMode ? (
             wholesaleShops.length === 0 ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Abhi koi thok wali dukan darj nahi. CRM mein gahak ka darja
-                &ldquo;thok wali dukan&rdquo; rakhein, phir wo yahan aayegi.
+                {t("pf_pos_no_shops", lang)}
               </p>
             ) : (
               <Select value={customerId} onChange={(e) => applyCustomer(e.target.value)}>
-                <option value="">— dukan chunein —</option>
+                <option value="">{t("pf_pos_pick_shop", lang)}</option>
                 {wholesaleShops.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -502,7 +501,7 @@ export function PosClient({
 
           {wholesaleOn && (
             <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">
-              Thok ka rate lag raha hai. Jis cheez par thok ka rate darj nahi, us par retail lagega.
+              {t("pf_pos_wholesale_on", lang)}
             </p>
           )}
         </div>

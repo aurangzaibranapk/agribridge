@@ -11,6 +11,7 @@ import {
 } from "@/actions/supplier-bill-rates";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label } from "@/components/ui/form";
+import { t, type Lang } from "@/lib/i18n/translations";
 
 const initial: BillRateState = {};
 
@@ -64,11 +65,13 @@ function Msg({ state }: { state: BillRateState }) {
  * aur chuna hua naam saamne likha rehta hai.
  */
 function ProductPicker({
+  lang,
   name,
   products,
   defaultId,
   disabled,
 }: {
+  lang: Lang;
   name: string;
   products: Product[];
   defaultId: string | null;
@@ -101,8 +104,8 @@ function ProductPicker({
           </span>
           <span className="text-xs text-emerald-800">
             {chosenProduct.ratePending
-              ? "trade rate abhi tak nahi tha"
-              : `abhi ka trade rate Rs ${chosenProduct.purchasePrice.toLocaleString()}`}
+              ? t("pf_bill_rate_was_none", lang)
+              : t("pf_bill_rate_now", lang).replace("{rate}", chosenProduct.purchasePrice.toLocaleString())}
           </span>
           {!disabled && (
             <button
@@ -113,7 +116,7 @@ function ProductPicker({
               }}
               className="ml-auto text-xs text-emerald-800 underline"
             >
-              badlein
+              {t("pf_bill_change", lang)}
             </button>
           )}
         </div>
@@ -129,7 +132,7 @@ function ProductPicker({
                 setQuery(e.target.value);
                 setOpen(true);
               }}
-              placeholder="Product ka naam likhein…"
+              placeholder={t("pf_bill_search_product", lang)}
               className="w-full border-0 bg-transparent p-0 text-base outline-none placeholder:text-surface-400"
             />
           </div>
@@ -150,7 +153,7 @@ function ProductPicker({
                     <span className="text-sm font-medium">{p.name}</span>
                     {p.packSize && <span className="text-xs text-surface-500">{p.packSize}</span>}
                     <span className="ml-auto text-xs text-surface-500">
-                      {p.ratePending ? "rate baqi" : `Rs ${p.purchasePrice.toLocaleString()}`}
+                      {p.ratePending ? t("pf_bill_rate_pending_short", lang) : `Rs ${p.purchasePrice.toLocaleString()}`}
                     </span>
                   </button>
                 </li>
@@ -160,7 +163,7 @@ function ProductPicker({
 
           {open && query.trim().length > 1 && results.length === 0 && (
             <p className="mt-1 text-xs text-surface-500">
-              Is naam ka koi product nahi mila. Pehle product banayein, phir yahan chunein.
+              {t("pf_bill_no_product", lang)}
             </p>
           )}
         </div>
@@ -169,7 +172,7 @@ function ProductPicker({
   );
 }
 
-function LineRow({ line, products, billDone }: { line: Line; products: Product[]; billDone: boolean }) {
+function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; products: Product[]; billDone: boolean }) {
   const [saveState, saveAction] = useFormState(saveBillLine, initial);
   const [skipState, skipAction] = useFormState(skipBillLine, initial);
 
@@ -187,11 +190,11 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
         </span>
         <span className="ml-auto">
           {applied ? (
-            <Badge tone="green">charh gaya · Rs {line.appliedRate?.toLocaleString()}</Badge>
+            <Badge tone="green">{t("pf_bill_applied_badge", lang).replace("{rate}", line.appliedRate?.toLocaleString() ?? "—")}</Badge>
           ) : line.status === "ready" ? (
-            <Badge tone="amber">tayyar</Badge>
+            <Badge tone="amber">{t("pf_ready", lang)}</Badge>
           ) : (
-            <Badge tone="gray">dekhna baqi</Badge>
+            <Badge tone="gray">{t("pf_bill_to_check", lang)}</Badge>
           )}
         </span>
       </div>
@@ -207,7 +210,7 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
 
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div>
-            <Label htmlFor={`nm-${line.id}`}>Bill par ye cheez</Label>
+            <Label htmlFor={`nm-${line.id}`}>{t("pf_bill_line_item", lang)}</Label>
             <Input
               id={`nm-${line.id}`}
               name="item_name"
@@ -217,7 +220,7 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
             />
           </div>
           <div>
-            <Label htmlFor={`qt-${line.id}`}>Kitne aaye</Label>
+            <Label htmlFor={`qt-${line.id}`}>{t("pf_f_qty_in", lang)}</Label>
             <Input
               id={`qt-${line.id}`}
               name="qty"
@@ -230,7 +233,7 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
             />
           </div>
           <div>
-            <Label htmlFor={`rt-${line.id}`}>Trade rate (ek ka)</Label>
+            <Label htmlFor={`rt-${line.id}`}>{t("pf_bill_line_rate", lang)}</Label>
             <Input
               id={`rt-${line.id}`}
               name="rate"
@@ -239,32 +242,33 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
               min="0"
               defaultValue={line.rate ?? ""}
               disabled={locked}
-              placeholder="bill par saaf nahi tha"
+              placeholder={t("pf_bill_rate_ph", lang)}
               className="text-base"
             />
             {line.rate == null && !applied && (
               <p className="mt-1 text-xs text-amber-700">
-                Bill par ye rate saaf nahi tha — khud dekh kar likhein. Khali chhoRna sifar likhne se behtar hai.
+                {t("pf_bill_rate_blank", lang)}
               </p>
             )}
           </div>
         </div>
 
         <div>
-          <Label>Hamara kaun sa product</Label>
-          <ProductPicker name="product_id" products={products} defaultId={line.productId} disabled={locked} />
+          <Label>{t("pf_bill_which_product", lang)}</Label>
+          <ProductPicker lang={lang} name="product_id" products={products} defaultId={line.productId} disabled={locked} />
           {line.matchSource === "auto_name" && !applied && (
             <p className="mt-1 text-xs text-amber-700">
-              Ye naam se apne aap mila hai — charhane se pehle ek dafa dekh lein.
+              {t("pf_bill_auto_match", lang)}
             </p>
           )}
         </div>
 
         {!locked && (
           <div className="flex flex-wrap items-center gap-2">
-            <Submit label="Mehfooz karein" icon={<Save className="h-4 w-4" />} variant="secondary" />
+            <Submit label={t("pf_save", lang)} icon={<Save className="h-4 w-4" />} variant="secondary" />
             <span className="text-xs text-surface-500">
-              {line.lineTotal != null && `bill par is qatar ka Rs ${line.lineTotal.toLocaleString()}`}
+              {line.lineTotal != null &&
+                t("pf_bill_line_total", lang).replace("{amount}", line.lineTotal.toLocaleString())}
             </span>
           </div>
         )}
@@ -273,7 +277,7 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
       {!locked && (
         <form action={skipAction} className="mt-2">
           <input type="hidden" name="line_id" value={line.id} />
-          <Submit label="Ye qatar chhoR dein" icon={<Trash2 className="h-4 w-4" />} variant="secondary" />
+          <Submit label={t("pf_bill_drop_line", lang)} icon={<Trash2 className="h-4 w-4" />} variant="secondary" />
         </form>
       )}
 
@@ -284,6 +288,7 @@ function LineRow({ line, products, billDone }: { line: Line; products: Product[]
 }
 
 export function BillClient({
+  lang,
   billId,
   billStatus,
   billImageUrl,
@@ -293,6 +298,7 @@ export function BillClient({
   lines,
   products,
 }: {
+  lang: Lang;
   billId: string;
   billStatus: string;
   billImageUrl: string;
@@ -322,8 +328,7 @@ export function BillClient({
       {!aiRead && (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
-            Is bill ko AI parh nahi saki. Qatarein khali hain — ya to GEMINI_API_KEY nahi laga, ya tasveer saaf nahi
-            thi. Rate haath se bhi likhe ja sakte hain.
+            {t("pf_bill_ai_off", lang)}
           </p>
         </Card>
       )}
@@ -331,9 +336,10 @@ export function BillClient({
       {mismatch != null && (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
-            Qataron ka jorh <strong>Rs {linesTotal.toLocaleString()}</strong> hai, aur bill par kul{" "}
-            <strong>Rs {billTotal?.toLocaleString()}</strong> — Rs {mismatch.toLocaleString()} ka farq. Ho sakta hai koi
-            qatar parhi na gayi ho, ya bill par discount/tax alag likha ho. Charhane se pehle dekh lein.
+            {t("pf_bill_mismatch", lang)
+              .replace("{lines}", linesTotal.toLocaleString())
+              .replace("{total}", billTotal?.toLocaleString() ?? "—")
+              .replace("{diff}", mismatch.toLocaleString())}
           </p>
         </Card>
       )}
@@ -341,16 +347,16 @@ export function BillClient({
       <Card>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-surface-600">
-            {lines.length} qatarein · <strong className="text-emerald-700">{ready} tayyar</strong>
-            {draft > 0 && ` · ${draft} dekhna baqi`}
-            {applied > 0 && ` · ${applied} charh chuki`}
+            {lines.length} {t("pf_rows", lang)} · <strong className="text-emerald-700">{ready} {t("pf_ready", lang)}</strong>
+            {draft > 0 && ` · ${draft} ${t("pf_bill_to_check", lang)}`}
+            {applied > 0 && ` · ${applied} ${t("pf_approved", lang)}`}
           </span>
           <button
             type="button"
             onClick={() => setShowBill((v) => !v)}
             className="text-xs text-surface-500 underline"
           >
-            {showBill ? "bill ki photo chhupayein" : "bill ki photo dekhein"}
+            {showBill ? t("pf_bill_hide_photo", lang) : t("pf_bill_show_photo", lang)}
           </button>
         </div>
 
@@ -366,21 +372,20 @@ export function BillClient({
 
       {lines.length === 0 ? (
         <Card>
-          <p className="text-sm text-surface-500">Is bill par koi qatar nahi parhi gayi.</p>
+          <p className="text-sm text-surface-500">{t("pf_bill_no_lines", lang)}</p>
         </Card>
       ) : (
-        lines.map((line) => <LineRow key={line.id} line={line} products={products} billDone={done} />)
+        lines.map((line) => <LineRow key={line.id} lang={lang} line={line} products={products} billDone={done} />)
       )}
 
       {!done && ready > 0 && (
         <Card className="border-emerald-200 bg-emerald-50">
           <p className="mb-2 text-sm text-emerald-900">
-            <strong>{ready}</strong> qatarein charhne ke liye tayyar hain. Charhne par in products ka trade rate badal
-            jayega, aur purana rate indraj mein mehfooz ho jayega.
+            {t("pf_bill_ready_note", lang).replace("{n}", String(ready))}
           </p>
           <form action={applyAction}>
             <input type="hidden" name="bill_id" value={billId} />
-            <Submit label={`${ready} rate charhayein`} icon={<TrendingUp className="h-4 w-4" />} />
+            <Submit label={t("pf_bill_apply_n", lang).replace("{n}", String(ready))} icon={<TrendingUp className="h-4 w-4" />} />
           </form>
           <Msg state={applyState} />
         </Card>
@@ -389,7 +394,7 @@ export function BillClient({
       {done && (
         <Card className="border-emerald-200 bg-emerald-50">
           <p className="text-sm text-emerald-900">
-            Is bill ka kaam mukammal hai — {applied} products ka trade rate charh chuka hai.
+            {t("pf_bill_done", lang).replace("{n}", String(applied))}
           </p>
         </Card>
       )}

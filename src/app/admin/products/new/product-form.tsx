@@ -304,7 +304,7 @@ export function ProductForm({
           <Input id="mrp_price" name="mrp_price" type="number" step="0.01" defaultValue={product?.mrp_price ?? undefined} />
         </div>
         <div>
-          <Label htmlFor="wholesale_price">Thok ka rate</Label>
+          <Label htmlFor="wholesale_price">{t("pf_f_wholesale", lang)}</Label>
           <Input
             id="wholesale_price"
             name="wholesale_price"
@@ -312,11 +312,11 @@ export function ProductForm({
             step="0.01"
             min="0"
             defaultValue={product?.wholesale_price ?? undefined}
-            placeholder="thok par nahi milta"
+            placeholder={t("pf_f_wholesale_ph", lang)}
           />
           {/* Khali chhoRna theek hai -- sifar ka matlab "thok par muft"
               hota, aur wo adad ek din bill par chala jata. */}
-          <p className="mt-0.5 text-[11px] text-surface-500">Khali = thok par nahi milta</p>
+          <p className="mt-0.5 text-[11px] text-surface-500">{t("pf_f_wholesale_hint", lang)}</p>
         </div>
       </div>
       <div>

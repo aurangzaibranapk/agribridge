@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { ImportClient } from "./import-client";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ const ALLOWED = ["owner", "super_admin", "admin"];
  */
 export default async function ProductsImportPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -26,11 +29,10 @@ export default async function ProductsImportPage() {
   if (!me?.is_active || !ALLOWED.includes(me.role)) {
     return (
       <div>
-        <PageHeader title="Products CSV se charhayein" />
+        <PageHeader title={t("pf_import_title", lang)} />
         <Card>
           <p className="text-sm text-surface-600">
-            Ye safha sirf Owner aur Admin ke liye hai. Ek file poora catalogue banati hai — is liye ye darwaza
-            khula nahi rakha gaya.
+            {t("pf_import_gate", lang)}
           </p>
         </Card>
       </div>
@@ -51,8 +53,8 @@ export default async function ProductsImportPage() {
   return (
     <div>
       <PageHeader
-        title="Products CSV se charhayein"
-        description="Pehle preview — kya banega, kya chhoRa jayega, kahan ghalti hai. Us ke baad hi charhega."
+        title={t("pf_import_title", lang)}
+        description={t("pf_import_desc", lang)}
       />
       <ImportClient
         categories={(categories ?? []).map((c) => c.name)}

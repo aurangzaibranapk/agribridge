@@ -46,6 +46,7 @@ import { adminTailDict } from "./dict/admin-tail";
 import { portalMoreDict } from "./dict/portal-more";
 import { authDict } from "./dict/auth";
 import { sharedDict } from "./dict/shared";
+import { productsFlowDict } from "./dict/products-flow";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -143,6 +144,7 @@ const dict = {
   ...portalMoreDict,
   ...authDict,
   ...sharedDict,
+  ...productsFlowDict,
 };
 
 export type TranslationKey = keyof typeof dict;

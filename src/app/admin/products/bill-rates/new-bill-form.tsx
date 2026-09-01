@@ -8,21 +8,25 @@ import { createBillRead, type BillRateState } from "@/actions/supplier-bill-rate
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/layout-primitives";
 import { Button, Label, Select } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: BillRateState = {};
 
 function Submit({ disabled }: { disabled: boolean }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || disabled}>
       <span className="inline-flex items-center gap-1.5">
-        <Sparkles className="h-4 w-4" /> {pending ? "AI parh rahi hai…" : "Bill parhwayein"}
+        <Sparkles className="h-4 w-4" /> {pending ? t("pf_bill_reading", lang) : t("pf_bill_read_it", lang)}
       </span>
     </Button>
   );
 }
 
 export function NewBillForm({ suppliers }: { suppliers: { id: string; name: string }[] }) {
+  const lang = useLang();
   const [state, action] = useFormState(createBillRead, initial);
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -45,7 +49,7 @@ export function NewBillForm({ suppliers }: { suppliers: { id: string; name: stri
       const { data } = supabase.storage.from("products").getPublicUrl(path);
       setImageUrl(data.publicUrl);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Tasveer nahi charh saki.");
+      setUploadError(err instanceof Error ? err.message : t("pf_photo_failed", lang));
     } finally {
       setUploading(false);
     }
@@ -58,7 +62,7 @@ export function NewBillForm({ suppliers }: { suppliers: { id: string; name: stri
 
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div>
-            <Label>Bill ki photo</Label>
+            <Label>{t("pf_bill_photo", lang)}</Label>
             {imageUrl ? (
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -72,13 +76,13 @@ export function NewBillForm({ suppliers }: { suppliers: { id: string; name: stri
                   onClick={() => setImageUrl("")}
                   className="text-xs text-surface-500 underline"
                 >
-                  doosri lagayein
+                  {t("pf_bill_photo_other", lang)}
                 </button>
               </div>
             ) : (
               <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-surface-300 text-surface-500 hover:bg-surface-50">
                 <Camera className="h-6 w-6" />
-                <span className="text-xs">{uploading ? "charh rahi hai…" : "Photo lagayein ya camera se lein"}</span>
+                <span className="text-xs">{uploading ? t("pf_photo_uploading", lang) : t("pf_bill_photo_add", lang)}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -93,9 +97,9 @@ export function NewBillForm({ suppliers }: { suppliers: { id: string; name: stri
           </div>
 
           <div>
-            <Label htmlFor="sup">Supplier (agar maloom ho)</Label>
+            <Label htmlFor="sup">{t("pf_bill_supplier", lang)}</Label>
             <Select id="sup" name="supplier_id" defaultValue="" className="w-full">
-              <option value="">— bill par jo naam ho wohi —</option>
+              <option value="">{t("pf_bill_supplier_none", lang)}</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -103,7 +107,7 @@ export function NewBillForm({ suppliers }: { suppliers: { id: string; name: stri
               ))}
             </Select>
             <p className="mt-1 text-xs text-surface-500">
-              Supplier chunna zaroori nahi. Bill par likha naam waise bhi mehfooz rehta hai.
+              {t("pf_bill_supplier_hint", lang)}
             </p>
           </div>
         </div>
