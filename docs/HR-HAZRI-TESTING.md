@@ -134,7 +134,7 @@ jaanchein:
 | Kul hadd | 6 mahine | Haan |
 | Aazmaish par tankhwah wali chhutti | **Nahi** | Haan (nishan laga dein) |
 | Pehla saal mahinon ke hisaab se | Haan | Haan |
-| Bachi chhutti agle saal | **Nahi (0)** | Haan |
+| Bachi chhutti agle saal | **Nahi — 31 December ko khatam** (aap ka usool) | Haan |
 
 **Jaanchein:**
 
@@ -159,6 +159,16 @@ jaanchein:
       bacha hua adad ghat jaye.
 - [ ] Bache hue din se **zyada** maangein → rukna chahiye, adad bata
       kar.
+- [ ] **Chhutti ka khatam hona**: `/admin/my-attendance` par har waqt
+      likha rehna chahiye ke bachi hui chhutti 31 December ko khatam ho
+      jati hai. Aur saal ke aakhri teen mahinon mein us ke sath gina
+      hua jumla bhi: "X din — Y din baqi hain".
+- [ ] Usi teen mahinon mein `/admin/hr/attendance/board` par HR ko
+      fehrist dikhni chahiye ke **kis kis ki chhutti khatam ho rahi
+      hai** — taake wo pehle se bata sakein.
+- [ ] Settings mein "agle saal le jayein" ko sifar se oopar kar dein →
+      ye dono warning **khatam ho jani chahiye** (kyunke phir kuch
+      khatam nahi ho raha, aur jhooti warning se bura kuch nahi).
 - [ ] Pakka hue bande ko wapas aazmaish par daalne ki koshish karein →
       pehle rukna chahiye, phir alag nishan laga kar hi hona chahiye
       (kyunke us se us ki chhutti khatam ho jati hai).

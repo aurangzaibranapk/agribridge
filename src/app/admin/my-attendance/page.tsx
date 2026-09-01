@@ -54,6 +54,10 @@ export default async function MyAttendancePage() {
   const s = summaryRows?.[0] ?? null;
   const ent = entRows?.[0] ?? null;
 
+  const daysToYearEnd = Math.ceil(
+    (Date.UTC(year, 11, 31) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000
+  );
+
   return (
     <div>
       <PageHeader
@@ -112,11 +116,26 @@ export default async function MyAttendancePage() {
           // aur "abhi haq shuru hi nahi hua" do alag baatein hain.
           <p className="text-sm text-amber-800">{ent.reason ?? t("hrl_no_entitlement", lang)}</p>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label={t("hrl_entitled", lang)} value={Number(ent.entitled_days ?? 0)} />
-            <Stat label={t("hrl_used", lang)} value={Number(ent.used_days ?? 0)} tone="text-sky-700" />
-            <Stat label={t("hrl_remaining", lang)} value={Number(ent.remaining_days ?? 0)} tone="text-emerald-700" />
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label={t("hrl_entitled", lang)} value={Number(ent.entitled_days ?? 0)} />
+              <Stat label={t("hrl_used", lang)} value={Number(ent.used_days ?? 0)} tone="text-sky-700" />
+              <Stat label={t("hrl_remaining", lang)} value={Number(ent.remaining_days ?? 0)} tone="text-emerald-700" />
+            </div>
+
+            {/* Bachi hui chhutti 31 December ko khatam ho jati hai.
+                Ye jumla har waqt likha rehta hai, sirf December mein
+                nahi -- jis din ye khabar kaam ki hoti hai us din tak
+                chhutti lena mumkin nahi rehta. December mein wohi baat
+                gin kar bhi likhi jati hai. */}
+            <p className="mt-2 text-xs text-surface-500">{t("hrl_expiring_note", lang)}</p>
+            {Number(ent.remaining_days ?? 0) > 0 && daysToYearEnd <= 90 && (
+              <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-amber-800">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {Number(ent.remaining_days)} din — {daysToYearEnd} {t("hrl_expiring_soon", lang)}
+              </p>
+            )}
+          </>
         )}
       </Card>
 

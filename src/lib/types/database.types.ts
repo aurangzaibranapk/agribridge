@@ -22566,6 +22566,16 @@ export type Database = {
           pending_leaves: number
         }[]
       }
+      fn_hr_expiring_leave: {
+        Args: never
+        Returns: {
+          days_to_expiry: number
+          designation: string
+          full_name: string
+          profile_id: string
+          remaining_days: number
+        }[]
+      }
       fn_hr_probation_due: {
         Args: { p_days_ahead?: number }
         Returns: {

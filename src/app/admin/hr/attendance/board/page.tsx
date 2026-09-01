@@ -64,6 +64,14 @@ export default async function AttendanceBoardPage() {
     supabase.rpc("fn_hr_probation_due", { p_days_ahead: 14 }),
   ]);
 
+  // Sirf aakhri teen mahine. Us se pehle ye khabar kaam ki nahi -- aur
+  // saal bhar likhi rahe to koi nahi parhta.
+  const yearEnd = Date.UTC(new Date().getFullYear(), 11, 31);
+  const daysToYearEnd = Math.ceil((yearEnd - Date.now()) / 86400000);
+  const { data: expiring } = daysToYearEnd <= 90
+    ? await supabase.rpc("fn_hr_expiring_leave")
+    : { data: [] };
+
   // Guzri hui tareekh alag ginti hai. "3 ki aazmaish khatam ho rahi
   // hai" aur "3 ka faisla ruka hua hai" do alag baatein hain -- doosri
   // par kaam ab karna hai.
@@ -115,6 +123,21 @@ export default async function AttendanceBoardPage() {
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Kpi label={t("hrp_overdue", lang)} value={probOverdue} href="/admin/hr/probation" />
             <Kpi label={t("hrp_title", lang)} value={probSoon} href="/admin/hr/probation" />
+          </div>
+        )}
+
+        {(expiring ?? []).length > 0 && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-2">
+            <p className="text-xs font-semibold text-amber-900">
+              {t("hrl_expiring_people", lang)} — {daysToYearEnd} {t("hrl_expiring_soon", lang)}
+            </p>
+            <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-surface-700">
+              {(expiring ?? []).map((e) => (
+                <li key={e.profile_id}>
+                  {e.full_name}: <span className="font-semibold tabular-nums">{e.remaining_days}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </Card>

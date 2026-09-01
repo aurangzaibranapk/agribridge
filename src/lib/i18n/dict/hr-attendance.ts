@@ -217,4 +217,16 @@ export const hrAttendanceDict = {
   hrl_probation_paid: { en: "Paid leave during probation", rm: "Aazmaish par tankhwah wali chhutti", ur: "آزمائش پر تنخواہ والی چھٹی" },
   hrl_prorate: { en: "First year counted by month", rm: "Pehla saal mahinon ke hisaab se", ur: "پہلا سال مہینوں کے حساب سے" },
   hrl_carry: { en: "Carry forward (days)", rm: "Agle saal le jayein (din)", ur: "اگلے سال لے جائیں (دن)" },
+  hrl_expires: { en: "Expires 31 December", rm: "31 December ko khatam", ur: "31 دسمبر کو ختم" },
+  hrl_expiring_note: {
+    en: "Unused annual leave does not carry over — it expires on 31 December.",
+    rm: "Bachi hui saalana chhutti agle saal nahi jati — 31 December ko khatam ho jati hai.",
+    ur: "بچی ہوئی سالانہ چھٹی اگلے سال نہیں جاتی — 31 دسمبر کو ختم ہو جاتی ہے۔",
+  },
+  hrl_expiring_soon: {
+    en: "days left to use it",
+    rm: "din baqi hain — us se pehle le lein",
+    ur: "دن باقی ہیں — اُس سے پہلے لے لیں",
+  },
+  hrl_expiring_people: { en: "Leave expiring", rm: "Chhutti khatam ho rahi", ur: "چھٹی ختم ہو رہی" },
 } as const;

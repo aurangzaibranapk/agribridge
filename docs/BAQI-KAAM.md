@@ -124,6 +124,12 @@ aazmaish par; us ke baad muddat baRhayein, pakka karein, ya alag karein
 aazmaish ke dauran tankhwah wali koi chhutti nahi (bila tankhwah phir
 bhi mil sakti hai). Saare adad `/admin/hr/settings` se badalte hain.
 
+**Bachi hui chhutti agle saal nahi jati — 31 December ko khatam ho
+jati hai** (malik ka usool). Us ka saya ye tha ke kisi ke 8 din
+khamoshi se khatam ho jate aur usay pata bhi na chalta; is liye 240
+mein us ka nishan laga diya: bande ko apne safhe par, aur HR ko board
+par saal ke aakhri teen mahinon mein fehrist ke sath.
+
 Sab se ahem usool: **tareekh guzarne se koi pakka nahi hota.** Faisla
 na ho to banda aazmaish par hi rehta hai aur board par laal "faisla
 baqi hai" likha aata hai. Us ka ulta bhi: muddat kul 6 mahine se aage
