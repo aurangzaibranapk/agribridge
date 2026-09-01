@@ -15125,6 +15125,129 @@ export type Database = {
           },
         ]
       }
+      product_intake_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          warehouse_id?: string | null
+        }
+        Relationships: []
+      }
+      product_intake_items: {
+        Row: {
+          ai_raw: Json | null
+          ai_read_at: string | null
+          barcode: string | null
+          barcode_image_url: string | null
+          barcode_source: string | null
+          barcode_verified: boolean | null
+          batch_id: string
+          brand_name: string | null
+          category_name: string | null
+          company_name: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          image_url: string | null
+          manufacture_date: string | null
+          mrp_price: number | null
+          name: string | null
+          opening_qty: number
+          pack_size: string | null
+          problem: string | null
+          product_id: string | null
+          purchase_price: number | null
+          selling_price: number | null
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          barcode?: string | null
+          barcode_image_url?: string | null
+          barcode_source?: string | null
+          barcode_verified?: boolean | null
+          batch_id: string
+          brand_name?: string | null
+          category_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          image_url?: string | null
+          manufacture_date?: string | null
+          mrp_price?: number | null
+          name?: string | null
+          opening_qty?: number
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          barcode?: string | null
+          barcode_image_url?: string | null
+          barcode_source?: string | null
+          barcode_verified?: boolean | null
+          batch_id?: string
+          brand_name?: string | null
+          category_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          image_url?: string | null
+          manufacture_date?: string | null
+          mrp_price?: number | null
+          name?: string | null
+          opening_qty?: number
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active_ingredient: string | null
