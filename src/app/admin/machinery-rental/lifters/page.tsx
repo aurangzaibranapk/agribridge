@@ -59,6 +59,15 @@ export default async function LiftersPage() {
         description="Arhti aur beopari — jo kisan ki fasal uthate hain. Kattai ka baqi aur kisan ka purana udhaar in ke zimme jata hai."
       />
 
+      <div className="mb-4">
+        <Link
+          href="/admin/machinery-rental/lifters/dashboard"
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          Arhti Board — hamara paisa kis ke paas khara hai →
+        </Link>
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Chalu</p>
