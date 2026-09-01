@@ -56,12 +56,18 @@ koi STOP nahi, kisi production qatar ko haath nahi lagaya gaya.**
 | 221 | runner_ko_mazboot_karna | `dead` darja, `FOR UPDATE SKIP LOCKED`, health mein dead + last_drain |
 | 222 | pg_cron_do_kaam | `pg_cron`; queue `*/5`, daily `0 3 * * *` |
 | 223 | taala_khud_khulne_wala | `pg_try_advisory_xact_lock` |
+| 224 | cron_ka_kaam_aakhir_mein | Scheduling sab function ke baad; function na mile to migration rukti hai; aakhir mein dono job ki ginti |
 
-**Ek baat darj karne wali:** 222 wo cron job banati hai jo `fn_score_queue_tick`
-ko bulata hai, aur wo function 223 mein banta hai. Dono foran ek doosre ke baad
-chalayi gayin (chand second ka faasla). Agar us darmiyan cron chal jata to ek
-tick nakaam hota — us ka koi asar data par nahi hota. Aage se 223 ko 222 se
-pehle rakhna behtar hoga.
+**Ek baat darj karne wali (ab hal ho chuki):** 222 wo cron job banati hai jo
+`fn_score_queue_tick` ko bulata hai, aur wo function 223 mein banta hai. Dono
+foran ek doosre ke baad chalayi gayin (chand second ka faasla). Agar us darmiyan
+cron chal jata to ek tick nakaam hota — data par koi asar nahi.
+
+**Migration 224** ne ise hal kar diya: scheduling ab sab function ban jane ke
+BAAD dobara hoti hai, aur us se pehle ek pehra hai jo function na milne par
+migration ROK deta hai. 222 ko haath nahi lagaya gaya — wo dono database par
+chal chuki hai, aur chali hui migration ka matn badalna file ko jhoota bana
+dena hota.
 
 ---
 
@@ -179,7 +185,11 @@ koi nishan nahi laga.
 5. **Backfill sirf machinery se hai**, kyunke Live par baqi kuch hai hi nahi.
    Milk / grain / orders / credit ka asal imtihaan tab hoga jab Live par un ka
    data aayega.
-6. **222 aur 223 ki tarteeb** (upar §2) — aage ke liye theek karni chahiye.
+6. ~~222 aur 223 ki tarteeb~~ — **BAND. Migration 224 se hal ho gaya** (2026-09-01).
+   Pehle testing par chalayi, wahan pehre ki apni jaanch bhi ki (jaan boojh kar
+   ghalat function ka naam de kar dekha — migration theek se ruk gayi), phir Live
+   par. Dono jagah: do hi job, wohi waqt, wohi command, health "Sab theek hai",
+   koi data nahi hila.
 
 ---
 
