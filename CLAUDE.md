@@ -1,22 +1,29 @@
 # AgriBridge — kaam karne ka tareeqa
 
-## Command: HAMESHA saari, ek sath, chat mein
+## Command kab bhejni hain: malik ke kehne par, pehle nahi
 
-Malik ka usool (unhi ke alfaz): *"jab main system par nahi hota, main
-kaam karwa raha hota hon. Jab main bolon main system par aa gaya — tab
-tak tumhara haq banta hai, total command chat mein bhej diya karein."*
+Malik ka usool (unhi ke alfaz): *"main jab bolon ke system par nahi —
+command HOLD. Jab main bolon system par aa gaya, tab aap ne jo jo kaam
+hua ya us time tak hum ne kiya hai, un ki command bhej deni hai."*
 
 Yani:
 
-- **Poore kaam ki saari command EK SATH** — ek de kar doosre ka intezar
-  nahi karana. Backup se le kar upload tak, sab ek hi paighaam mein.
+- **Wo system par nahi hote to command NAHI bhejni.** Kaam chalta
+  rehta hai, magar command rok kar rakhni hai. Bhej dena un ke liye
+  bekaar hai — wo us waqt kahin aur kaam karwa rahe hote hain, aur
+  paighaam neeche dab jata hai.
+- **Wo kahein "system par aa gaya"** — tab us waqt tak ka SAARA kaam ki
+  **poori command ek sath**, ek hi paighaam mein.
 - **Chat mein, file mein nahi.** Wo chat se copy kar ke apni machine par
-  paste karte hain. File bana kar bhejne se wo raasta tootta hai.
-- Jahan tarteeb ahem ho (mesalan "pehle ye, phir mujhe batayein, phir
-  wo"), wahan **rukne ki jagah saaf likhein** — magar command phir bhi
-  saari pehle hi de dein.
-- Wo aksar system par nahi hote. Us waqt bhi kaam rukta nahi — command
-  taiyar rakhein taake baithte hi chala sakein.
+  paste karte hain.
+- Jahan tarteeb ahem ho ("pehle ye, phir mujhe batayein, phir wo"),
+  wahan rukne ki jagah saaf likhein — magar command phir bhi saari ek
+  sath.
+
+**Is liye rokay hue kaam ki fehrist rakhni paRti hai.** Kaun si migration
+Live par chalni baqi hai, kaun sa build banna hai — ye
+`docs/LIVE-DEPLOYMENT-RECORD.md` mein likha rehta hai, taake un ke
+aane par poori fehrist ek sath ban sake aur koi qadam chhoot na jaye.
 
 ## Deploy: HAMESHA dono command ek sath dein
 

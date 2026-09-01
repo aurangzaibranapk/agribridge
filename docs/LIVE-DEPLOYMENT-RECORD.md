@@ -108,3 +108,29 @@ bhi liya ja sakta hai.
 wali fehrist se milayein. Kisi bhi adad ka **kam** hona rukne ki wajah
 hai — un migrations mein koi cheez mitane wali nahi hai, is liye ginti
 sirf barh sakti hai, ghat nahi sakti.
+
+---
+
+## 5. Rokay hue qadam — malik ke system par aane ka intezar
+
+Malik ka usool: system par na hon to command **hold**. Wo kahein
+"system par aa gaya", tab ye poori fehrist ek sath jayegi.
+
+**Us waqt jo bhejna hai, isi tarteeb mein:**
+
+1. **Backup** — do `pg_dump` command (schema + data). Connection string
+   wo khud Supabase Dashboard se lenge; wo string chat mein kabhi nahi
+   aani.
+2. **Rukna** — dono file ke size aayen, phir main **243–247 Live par
+   chalaoon** aur ginti dobara milaoon.
+3. **Build + package** — do command, branch
+   `claude/code-load-project-structure-fq91y9` se.
+4. **cPanel** — Stop → upload (overwrite) → Extract → Start.
+5. **Upload ke baad aath cheezein dekhna** — login ka safha, /admin/trust,
+   zaban badalna, machinery booking ka qadam 8, /admin/hr/attendance,
+   /admin/hr/settings, /admin/products/intake, /admin/pos ka "Thok"
+   button. Aur do nazuk kaam: /admin/hr par tankhwah darj karna, aur
+   /admin/hr/leave par chhutti maangna.
+
+Is fehrist mein jo bhi naya kaam hota rahe, wo yahin juRta rahe — taake
+un ke aane par ek bhi qadam chhoot na jaye.
