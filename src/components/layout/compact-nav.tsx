@@ -6,6 +6,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitch } from "@/components/ui/language-switch";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { HelpButton } from "@/components/help/help-button";
+import { UiModeToggle } from "@/components/guided/ui-mode-toggle";
+import { getUiMode } from "@/lib/access/ui-mode";
 import { t, type Lang } from "@/lib/i18n/translations";
 
 /**
@@ -76,6 +78,7 @@ export async function CompactNav({
       </div>
 
       <div className="flex items-center gap-1 sm:gap-3">
+        <UiModeToggle mode={await getUiMode()} />
         <HelpButton compact />
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />

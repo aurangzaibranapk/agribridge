@@ -34,13 +34,17 @@ export function PurchaseForm({
   isAdminLevel,
   branches,
   staffBranchName,
+  uiMode = "advanced",
 }: {
   suppliers: Supplier[];
   products: Product[];
   isAdminLevel: boolean;
   branches: { id: string; name: string }[];
   staffBranchName: string | null;
+  /** Simple = sirf product, tadad, rate, adaigi; batch/expiry/notes chhupe (E). */
+  uiMode?: "simple" | "advanced";
 }) {
+  const simple = uiMode === "simple";
   const lang = useLang();
   const [state, formAction] = useFormState(createPurchase, initialState);
   const [supplierId, setSupplierId] = useState("");
@@ -142,10 +146,12 @@ export function PurchaseForm({
           )
         )}
 
-        <div>
-          <Label>{t("pu_notes", lang)}</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </div>
+        {!simple && (
+          <div>
+            <Label>{t("pu_notes", lang)}</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+        )}
 
         {/* Adaigi ki shartein (255): poora / kuch / udhaar, aur kab tak. */}
         <PaymentTermsFields />
@@ -196,17 +202,21 @@ export function PurchaseForm({
                     value={line.unit_cost}
                     onChange={(e) => updateLine(idx, "unit_cost", e.target.value)}
                   />
-                  <Input
-                    placeholder={t("pu_batch_optional", lang)}
-                    value={line.batch_number}
-                    onChange={(e) => updateLine(idx, "batch_number", e.target.value)}
-                  />
-                  <Input
-                    type="date"
-                    placeholder={t("pu_expiry", lang)}
-                    value={line.expiry_date}
-                    onChange={(e) => updateLine(idx, "expiry_date", e.target.value)}
-                  />
+                  {!simple && (
+                    <>
+                      <Input
+                        placeholder={t("pu_batch_optional", lang)}
+                        value={line.batch_number}
+                        onChange={(e) => updateLine(idx, "batch_number", e.target.value)}
+                      />
+                      <Input
+                        type="date"
+                        placeholder={t("pu_expiry", lang)}
+                        value={line.expiry_date}
+                        onChange={(e) => updateLine(idx, "expiry_date", e.target.value)}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             ))}

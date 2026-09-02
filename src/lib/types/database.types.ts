@@ -15368,6 +15368,75 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_training_progress: {
+        Row: {
+          completed_at: string | null
+          module_key: string
+          profile_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          module_key: string
+          profile_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          module_key?: string
+          profile_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_modules: {
+        Row: {
+          department_key: string | null
+          is_active: boolean
+          key: string
+          sort_order: number
+          steps: string[]
+          summary: string | null
+          title: string
+          title_en: string | null
+          title_ur: string | null
+          try_route: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          department_key?: string | null
+          is_active?: boolean
+          key: string
+          sort_order?: number
+          steps?: string[]
+          summary?: string | null
+          title: string
+          title_en?: string | null
+          title_ur?: string | null
+          try_route?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          department_key?: string | null
+          is_active?: boolean
+          key?: string
+          sort_order?: number
+          steps?: string[]
+          summary?: string | null
+          title?: string
+          title_en?: string | null
+          title_ur?: string | null
+          try_route?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       supplier_bill_files: {
         Row: {
           ai_read_at: string | null
@@ -15713,6 +15782,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          training_mode: boolean
+          ui_mode: string
           allowed_pages: Json | null
           branch_id: string | null
           created_at: string
@@ -15729,6 +15800,8 @@ export type Database = {
           status_reason: string | null
         }
         Insert: {
+          training_mode?: boolean
+          ui_mode?: string
           allowed_pages?: Json | null
           branch_id?: string | null
           created_at?: string
@@ -15745,6 +15818,8 @@ export type Database = {
           status_reason?: string | null
         }
         Update: {
+          training_mode?: boolean
+          ui_mode?: string
           allowed_pages?: Json | null
           branch_id?: string | null
           created_at?: string

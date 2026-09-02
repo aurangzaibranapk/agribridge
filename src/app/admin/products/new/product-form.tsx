@@ -40,11 +40,14 @@ interface ExistingProduct {
 }
 
 export function ProductForm({
-  companies, brands, categories, product,
+  companies, brands, categories, product, uiMode = "advanced",
 }: {
   companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string; category_kind: string; default_min_stock: number | null }[];
   product?: ExistingProduct;
+  /** Simple = zarai/technical khane chhupe (E). Rok wahi rehti hai. */
+  uiMode?: "simple" | "advanced";
 }) {
+  const simple = uiMode === "simple";
   const isEditMode = !!product;
   const [state, formAction] = useFormState(isEditMode ? updateProduct : createProduct, initialState);
   const lang = useLang();
@@ -266,6 +269,8 @@ export function ProductForm({
           </button>
         )}
 
+      {!simple && (
+        <>
       <FieldWithMic label={t("pf_active_ingredient", lang)} inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
 
       <div>
@@ -288,6 +293,8 @@ export function ProductForm({
           <VoiceDictationButton onResult={(text) => { if (safetyInformationRef.current) safetyInformationRef.current.value = text; }} />
         </div>
       </div>
+        </>
+      )}
 
       </div>
 

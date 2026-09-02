@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { getUiMode } from "@/lib/access/ui-mode";
 import { ProductForm } from "@/app/admin/products/new/product-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -23,7 +24,7 @@ export default async function EditProductPage({ params }: { params: { id: string
   return (
     <div>
       <PageHeader title={t("pd_edit_product", lang)} description={product.name} />
-      <ProductForm
+      <ProductForm uiMode={await getUiMode()}
         companies={companies ?? []}
         brands={brands ?? []}
         categories={categories ?? []}

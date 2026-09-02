@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
+import { getUiMode } from "@/lib/access/ui-mode";
 import { ProductForm } from "@/app/admin/products/new/product-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -18,7 +19,7 @@ export default async function NewProductPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader title={t("c_add_product", lang)} description="Company, brand, category, and specifications" />
       <Card>
-        <ProductForm companies={companies ?? []} brands={brands ?? []} categories={categories ?? []} />
+        <ProductForm uiMode={await getUiMode()} companies={companies ?? []} brands={brands ?? []} categories={categories ?? []} />
       </Card>
     </div>
   );

@@ -6,6 +6,8 @@ import { loadNav } from "@/lib/access/nav";
 import { pendingByDepartment } from "@/lib/access/pending-counts";
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { WorkCoachBox } from "@/components/guided/work-coach-box";
+import { TrainingBanner } from "@/components/guided/training-banner";
+import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 
@@ -66,10 +68,16 @@ export default async function MyWorkPage() {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, training_mode")
     .eq("id", user.id)
     .maybeSingle();
   if (!me) redirect("/login");
+
+  // Training Mode (D): apne department ka module -- pehle N kaam.
+  const dept = departmentForRole(me.role);
+  const { data: trainingModule } = me.training_mode
+    ? await supabase.from("training_modules").select("title, steps, try_route").eq("department_key", dept?.key ?? "").eq("is_active", true).maybeSingle()
+    : { data: null };
 
   const [nav, signals, scoreRes] = await Promise.all([
     loadNav(user.id, me.role, lang),
@@ -127,6 +135,16 @@ export default async function MyWorkPage() {
 
       {/* Aaj kya baqi hai -- role ke raaston par, click par kaam ke safhe par (B). */}
       <div className="mb-6 space-y-4">
+        {me.training_mode && (
+          <TrainingBanner
+            lang={lang}
+            name={me.full_name}
+            department={dept?.label ?? null}
+            steps={trainingModule?.steps ?? []}
+            tryRoute={trainingModule?.try_route ?? null}
+            moduleTitle={trainingModule?.title ?? null}
+          />
+        )}
         {/* "Aaj kya karna hai?" -- Work Coach (C). */}
         <WorkCoachBox />
         <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} />

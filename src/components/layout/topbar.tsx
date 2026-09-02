@@ -11,6 +11,8 @@ import { BusinessSelector } from "@/components/layout/business-selector";
 import { getBusinessContext } from "@/lib/utils/get-business-context";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { HelpButton } from "@/components/help/help-button";
+import { UiModeToggle } from "@/components/guided/ui-mode-toggle";
+import { getUiMode } from "@/lib/access/ui-mode";
 
 export async function Topbar({
   subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [], lang = "rm",
@@ -52,7 +54,8 @@ export async function Topbar({
         </form>
       </div>
       <div className="flex items-center gap-1 sm:gap-3">
-        {/* "? Is Page Ko Samjhein" -- har safhe par (266). */}
+        {/* Simple / Advanced (E) aur "? Samjhein" (266). */}
+        <UiModeToggle mode={await getUiMode()} />
         <HelpButton />
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />

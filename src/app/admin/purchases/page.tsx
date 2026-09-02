@@ -7,6 +7,7 @@ import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
 import { NextStepStrip, purchaseSteps } from "@/components/guided/next-step";
+import { getUiMode } from "@/lib/access/ui-mode";
 import { ReviewBadge, ReviewPanel, type PurchaseComment } from "@/app/admin/purchases/review-panel";
 export const dynamic = "force-dynamic";
 
@@ -192,6 +193,7 @@ export default async function AdminPurchasesPage() {
           isAdminLevel={isAdminLevel}
           branches={branches ?? []}
           staffBranchName={staffBranchName ?? null}
+          uiMode={await getUiMode()}
         />
       </div>
     </div>
