@@ -36,7 +36,7 @@ hain:
 | 10 | AI product setup (label ki photo se khane) | ✅ Bana hua | Maal Andar (243) — dabbe ki tasveer se naam, MRP, dates. AI sale price final nahi karta |
 | 11 | Readiness gate: 🔴 NOT SALE READY | ✅ Bana hua (252) | Sale rate missing → bikta nahi. **Barcode-missing ko gate mein daalna: malik ka faisla** (karyana mein bahut cheezon par barcode nahi hota) |
 | 12 | "Products Need Attention" ginti ka dashboard | ✅ **Ban gaya (258)** | Setup queue ke upar chhe khane (`v_product_setup_counts`), har khana filter bhi hai; Maal Andar ke khule chakkar bhi ginte hain |
-| 13 | Internal barcode banana + label print | ❌ Baqi | Scanner + check digit hai (243); **apna barcode banana aur chhaapna nahi** |
+| 13 | Internal barcode banana + label print | ✅ **Ban gaya (261)** | Apna EAN-13 (200..., GS1 ka andaruni range), `fn_assign_internal_barcode`; scanner wale khane mein wohi, POS dono se dhoondta hai; `/admin/products/labels` par label sheet (apna SVG encoder, koi library nahi); Adhoore Products par bhi "apna barcode bana dein" |
 | 14 | Batch-level expiry, FEFO | ✅ **Ban gaya (257)** | Har raaste ka maal apna batch banata hai (purchase, sheet, Maal Andar). `products.expiry_date` sirf dikhane ke liye: qareeb batch ki miyaad, trigger rakhta hai. FEFO: POS pehle se, transfers/dispatch ab (`stock-movement.ts`) |
 | 15 | Warehouse product card (stock, reserved, batches) | 🟡 Adha | `/admin/inventory`, `/admin/inventory/report`. **Reserved aur nearest-expiry ek card par baqi** |
 | 16 | Shop stock request (grid, qty +/−) | ✅ Bana hua | `/admin/pos/ordering` — agri_orders; Sales → Finance → Manager → dispatch → GRN ki poori chain (PR #1) |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **19 bane hue**, **4 adhe**, **0 baqi**.
+**Ginti:** 23 mein se **20 bane hue**, **3 adhe**, **0 baqi**.
 
 ---
 
@@ -89,10 +89,10 @@ stock, POS, rate baqi ki fehrist.
 | **F** | ~~Send-back + comment~~ | ✅ **Ho gaya (259)** | — |
 | **G** | ~~AI order draft~~ | ✅ **Ho gaya (260)** | — |
 | **H** | ~~Fuzzy product matching~~ | ✅ **Ho gaya** (koi migration nahi) | — |
-| **I** | Internal barcode + label print | #13 | 1 din |
+| **I** | ~~Internal barcode + label print~~ | ✅ **Ho gaya (261)** | — |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se H tak ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se I tak ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

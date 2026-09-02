@@ -127,6 +127,15 @@ export function QueueClient({
         })}
       </div>
 
+      {counts.barcode > 0 && (
+        <p className="px-1 text-xs text-surface-500">
+          {t("pf_sq_labels_hint", lang)}{" "}
+          <Link href="/admin/products/labels?f=missing" className="font-medium text-brand-600 underline">
+            {t("pf_lb_title", lang)}
+          </Link>
+        </p>
+      )}
+
       {counts.intakeOpen > 0 && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20">
           <p className="text-sm text-amber-900 dark:text-amber-200">
@@ -217,7 +226,12 @@ export function QueueClient({
                         </td>
                         <td className="py-2 pr-2">
                           {r.barcodeMissing ? (
-                            <Input name={`barcode_${r.id}`} inputMode="numeric" placeholder={t("pf_sq_scan_here", lang)} className="h-8 font-mono" />
+                            <div className="space-y-1">
+                              <Input name={`barcode_${r.id}`} inputMode="numeric" placeholder={t("pf_sq_scan_here", lang)} className="h-8 font-mono" />
+                              <label className="flex items-center gap-1 text-[11px] text-surface-500">
+                                <input type="checkbox" name={`mkbc_${r.id}`} /> {t("pf_sq_make_internal", lang)}
+                              </label>
+                            </div>
                           ) : (
                             <span className="font-mono text-xs text-surface-500">{r.barcode}</span>
                           )}

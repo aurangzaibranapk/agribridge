@@ -71,7 +71,7 @@ export default async function PosPage() {
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase

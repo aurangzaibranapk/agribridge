@@ -15478,6 +15478,8 @@ export type Database = {
       }
       products: {
         Row: {
+          barcode_source: string | null
+          internal_barcode: string | null
           active_ingredient: string | null
           barcode: string | null
           branch_id: string | null
@@ -15514,6 +15516,8 @@ export type Database = {
           wholesale_price: number | null
         }
         Insert: {
+          barcode_source?: string | null
+          internal_barcode?: string | null
           active_ingredient?: string | null
           barcode?: string | null
           branch_id?: string | null
@@ -15550,6 +15554,8 @@ export type Database = {
           wholesale_price?: number | null
         }
         Update: {
+          barcode_source?: string | null
+          internal_barcode?: string | null
           active_ingredient?: string | null
           barcode?: string | null
           branch_id?: string | null
@@ -23094,6 +23100,18 @@ export type Database = {
       fn_apply_bill_line_rate: {
         Args: { p_line_id: string }
         Returns: Json
+      }
+      fn_assign_internal_barcode: {
+        Args: { p_product_id: string }
+        Returns: string
+      }
+      fn_assign_internal_barcodes_missing: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      fn_ean13_check_digit: {
+        Args: { p_first12: string }
+        Returns: number
       }
       fn_set_product_rates: {
         Args: {

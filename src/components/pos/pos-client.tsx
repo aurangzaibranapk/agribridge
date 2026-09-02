@@ -17,7 +17,7 @@ interface InventoryItem {
   selling_price: number;
   /** NULL = is par thok ka rate nahi (retail lagega). Sifar se ALAG hai. */
   wholesale_price: number | null;
-  products: { name: string; pack_size: string | null; barcode: string | null } | null;
+  products: { name: string; pack_size: string | null; barcode: string | null; internal_barcode?: string | null } | null;
 }
 interface Customer {
   id: string;
@@ -179,7 +179,8 @@ export function PosClient({
   function findByBarcode(code: string): InventoryItem | undefined {
     const trimmed = code.trim();
     if (!trimmed) return undefined;
-    return inventory.find((item) => item.products?.barcode === trimmed);
+    // Company ka barcode ya apna (261) -- dono se milta hai.
+    return inventory.find((item) => item.products?.barcode === trimmed || item.products?.internal_barcode === trimmed);
   }
 
   function handleBarcodeSubmit(e: React.FormEvent) {

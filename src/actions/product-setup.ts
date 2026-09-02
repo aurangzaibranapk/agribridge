@@ -60,8 +60,20 @@ export async function saveSetupQueue(_prev: SetupState, formData: FormData): Pro
     const trade = num(String(formData.get(`trade_${id}`) ?? ""));
     const barcodeRaw = String(formData.get(`barcode_${id}`) ?? "").trim();
     const approve = formData.get(`verify_${id}`) === "on";
+    const makeInternal = formData.get(`mkbc_${id}`) === "on";
 
-    if (sale === null && trade === null && !barcodeRaw && !approve) continue;
+    if (sale === null && trade === null && !barcodeRaw && !approve && !makeInternal) continue;
+
+    // Apna barcode (261): company ka nahi likha to system ka EAN-13.
+    if (makeInternal && !barcodeRaw) {
+      const { error: bcErr } = await supabase.rpc("fn_assign_internal_barcode", { p_product_id: id });
+      if (bcErr) {
+        problems.push(`${id.slice(0, 8)}: apna barcode nahi bana: ${bcErr.message}`);
+      } else if (sale === null && trade === null && !approve) {
+        saved += 1;
+        continue;
+      }
+    }
 
     const { data: p } = await supabase
       .from("products")
@@ -148,4 +160,53 @@ export async function saveSetupQueue(_prev: SetupState, formData: FormData): Pro
     saved,
     notice: problems.length === 0 ? undefined : `Kuch nahi charha: ${problems.slice(0, 4).join(" | ")}`,
   };
+}
+
+/**
+ * Apna barcode banana (261) -- ek ya sab ke liye. Jin par company ka
+ * barcode nahi, unhen EAN-13 (200...) milta hai; scanner wale khane
+ * mein wohi jata hai, is liye counter par foran chalta hai.
+ */
+export async function assignInternalBarcodes(_prev: SetupState, formData: FormData): Promise<SetupState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !ALLOWED.includes(me.role)) {
+    return { error: "Barcode banana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+  }
+
+  const all = String(formData.get("all_missing") ?? "") === "1";
+  const ids = formData.getAll("id").map(String).filter(Boolean);
+
+  let made = 0;
+  if (all) {
+    const { data, error } = await supabase.rpc("fn_assign_internal_barcodes_missing");
+    if (error) return { error: error.message };
+    made = Number(data ?? 0);
+  } else {
+    if (ids.length === 0) return { error: "Koi product nahi chuna." };
+    for (const id of ids) {
+      const { error } = await supabase.rpc("fn_assign_internal_barcode", { p_product_id: id });
+      if (error) return { error: error.message, saved: made };
+      made += 1;
+    }
+  }
+
+  if (made > 0) {
+    await logAudit({
+      actionType: "update",
+      module: "products",
+      recordId: ids[0] ?? "all",
+      recordLabel: "Apna barcode",
+      description: `${made} products ko apna barcode mila (200...)`,
+    });
+  }
+  revalidatePath("/admin/products/labels");
+  revalidatePath("/admin/products/setup-queue");
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/pos");
+  return { success: true, saved: made, notice: made === 0 ? "Sab par pehle se barcode hai." : undefined };
 }
