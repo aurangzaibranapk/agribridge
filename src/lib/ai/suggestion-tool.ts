@@ -1,6 +1,7 @@
 import { Type, type FunctionDeclaration } from "@google/genai";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createSuggestion, CATEGORIES } from "@/actions/suggestions";
+import { createSuggestion } from "@/lib/suggestions";
+import { CATEGORIES } from "@/lib/suggestions-const";
 import { bestMatches } from "@/lib/product-match";
 import type { CoachContext } from "@/lib/ai/work-coach";
 
