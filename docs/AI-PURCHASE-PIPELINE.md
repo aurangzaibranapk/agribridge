@@ -27,7 +27,7 @@ hain:
 | 2 | AI product matching, "95% match / confirm" | 🟡 Adha | Bill ki qatar par naam se apne aap milaan (sirf poora naam), banda chunta hai. **Fuzzy score aur "confirm" ka button baqi** |
 | 3 | Naya product → Pending Products queue | ✅ Bana hua | `/admin/products/propose` + `/admin/products/pending` + `pending-edits`. **Bill se seedha propose hona baqi** |
 | 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | 🟡 Adha | Bill-rates ka safha yehi karta hai (qatar + raw_text + photo). **Har khane par confidence ka nishan baqi** |
-| 4 | Approve / Send Back / Reject + comment | ❌ Baqi purchase ke liye | `purchases` mein sirf pending/received/cancelled. **Send-back aur comment baqi** |
+| 4 | Approve / Send Back / Reject + comment | ✅ **Ban gaya (259)** | `purchases.review_status` (submitted / sent_back / approved / rejected); AI aur sheet ke draft manzoori ke liye jate hain; Owner/Admin manzoor / wapas (wajah lazmi) / radd; banane wala jawab de kar dobara bhejta hai; `purchase_comments` kabhi mitta nahi; bina manzoori receive ka taala DB par |
 | 5 | Two-stage GRN: invoice 50, aaye 48, damaged 1, short 1, photo | ✅ **Ban gaya (256)** | Receive par har line: theek aaya / toota / kam (jorh = invoice, DB rok), tasveer, note. Stock mein sirf theek aaya; dena bhi utne ka. `v_purchase_discrepancies` |
 | 6 | Vendor ledger (kharid, adaigi, baqi) | ✅ Bana hua | `fn_supplier_true_payable` (139), `supplier_payments`, `supplier_payment_requests`, `/admin/purchases/bills` |
 | 7 | Payment terms: paid / partial / credit, due date | ✅ **Ban gaya (255)** | `purchases.payment_terms/credit_days/due_date`; abhi diya hua `supplier_payments` mein (ek hi darwaza); `v_supplier_due_calendar`; finance aur supplier-bills par "agle 7 din" |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **16 bane hue**, **5 adhe**, **2 baqi**.
+**Ginti:** 23 mein se **17 bane hue**, **5 adhe**, **1 baqi**.
 
 ---
 
@@ -86,13 +86,13 @@ stock, POS, rate baqi ki fehrist.
 | **C** | ~~GRN mein short/damage/photo~~ | ✅ **Ho gaya (256)** | — |
 | **D** | ~~Batch-level expiry~~ | ✅ **Ho gaya (257)** | — |
 | **E** | ~~Product Setup Queue~~ | ✅ **Ho gaya (258)** | — |
-| **F** | **Send-back + comment** purchase approval par | #4 | Aadha din |
+| **F** | ~~Send-back + comment~~ | ✅ **Ho gaya (259)** | — |
 | **G** | **AI order draft** — Bridge AI ka tool: "Mahabali ke liye DAP 20" → agri_orders draft | #17 — ordering chain pehle se hai | 1 din |
 | **H** | Fuzzy product matching (score + confirm) | #2 | Aadha din |
 | **I** | Internal barcode + label print | #13 | 1 din |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se E tak ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se F tak ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

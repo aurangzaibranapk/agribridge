@@ -15728,6 +15728,48 @@ export type Database = {
           },
         ]
       }
+      purchase_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          purchase_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          purchase_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          purchase_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_comments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_items: {
         Row: {
           batch_id: string | null
@@ -15836,6 +15878,9 @@ export type Database = {
       }
       purchases: {
         Row: {
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           branch_id: string | null
           created_at: string
           created_by: string | null
@@ -15858,6 +15903,9 @@ export type Database = {
           total_amount: number
         }
         Insert: {
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           branch_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -15880,6 +15928,9 @@ export type Database = {
           total_amount?: number
         }
         Update: {
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           branch_id?: string | null
           created_at?: string
           created_by?: string | null

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/form";
 import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
+import { ReviewBadge, ReviewPanel, type PurchaseComment } from "@/app/admin/purchases/review-panel";
 export const dynamic = "force-dynamic";
 
 /** Halat database mein angrezi mein rehti hai; screen ka lafz yahan se. */
@@ -36,7 +37,7 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size))"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
       )
       .order("created_at", { ascending: false })
       .limit(50),
@@ -58,6 +59,20 @@ export default async function AdminPurchasesPage() {
     status: p.status,
     total_amount: p.total_amount,
     invoice_total: p.invoice_total as number | null,
+    review_status: (p.review_status as string) ?? "approved",
+    // Baat ka silsila (259), purane pehle.
+    comments: ((p.purchase_comments ?? []) as any[])
+      .map((c) => {
+        const who = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+        return {
+          id: c.id as string,
+          kind: c.kind as string,
+          body: c.body as string,
+          author: (who?.full_name as string) ?? "—",
+          created_at: c.created_at as string,
+        } as PurchaseComment;
+      })
+      .sort((a, b) => a.created_at.localeCompare(b.created_at)),
     // Ginti ke liye lines (256) -- sirf pending par kaam aati hain.
     items: ((p.purchase_items ?? []) as any[]).map((i) => {
       const rel = Array.isArray(i.products) ? i.products[0] : i.products;
@@ -119,12 +134,27 @@ export default async function AdminPurchasesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
+                          {/* Manzoori ka darja sirf jab abhi receive na hui ho (259). */}
+                          {p.status === "pending" && p.review_status !== "approved" && <ReviewBadge status={p.review_status} />}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        {p.status === "pending" && (
-                          <ReceiveButton purchaseId={p.id} purchaseNumber={p.purchase_number} items={p.items} />
-                        )}
+                        <div className="flex flex-col items-start gap-1.5">
+                          {p.status === "pending" && p.review_status === "approved" && (
+                            <ReceiveButton purchaseId={p.id} purchaseNumber={p.purchase_number} items={p.items} />
+                          )}
+                          {p.status === "pending" && (
+                            <ReviewPanel
+                              purchaseId={p.id}
+                              purchaseNumber={p.purchase_number}
+                              reviewStatus={p.review_status}
+                              comments={p.comments}
+                              canApprove={isAdminLevel}
+                            />
+                          )}
+                        </div>
                       </td>
                       {isAdminLevel && (
                         <td className="px-4 py-3">

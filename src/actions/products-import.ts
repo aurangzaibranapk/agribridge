@@ -702,6 +702,8 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         // "pending" -- yani maal kaghaz par aa gaya, haqeeqat mein
         // nahi. Receive dabne tak na stock barhta hai na dena.
         status: "pending",
+        // Sheet ka draft: manzoori ke baghair receive nahi (259).
+        review_status: "submitted",
         total_amount: totalAmount,
         notes: "Sheet se charhaya gaya",
         created_by: user.id,

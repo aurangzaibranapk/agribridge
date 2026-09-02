@@ -745,6 +745,8 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
       // na stock, na dena.
       status: "pending",
+      // AI ka draft: manzoori ke baghair receive nahi (259).
+      review_status: "submitted",
       total_amount: totalAmount,
       payment_terms: terms.terms,
       credit_days: terms.creditDays,

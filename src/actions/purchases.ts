@@ -36,6 +36,9 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .eq("id", user?.id ?? "")
     .maybeSingle();
   const isAdminLevel = profile?.role === "super_admin" || profile?.role === "admin";
+  // Manzoori (259): jo khud manzoor karne wala hai us ki purchase seedha
+  // approved; baqi staff ki purchase manzoori ke liye jati hai.
+  const approver = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
   let branchId: string | null;
   if (isAdminLevel) {
     branchId = String(formData.get("branch_id") ?? "") || null;
@@ -68,6 +71,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       branch_id: branchId,
       purchase_date: purchaseDate,
       status: "pending",
+      review_status: approver ? "approved" : "submitted",
       total_amount: totalAmount,
       payment_terms: terms.terms,
       credit_days: terms.creditDays,
@@ -79,6 +83,14 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .single();
   if (purchaseError || !purchase) {
     return { error: purchaseError?.message ?? "Failed to create purchase." };
+  }
+  if (!approver && user) {
+    await supabase.from("purchase_comments").insert({
+      purchase_id: purchase.id,
+      author_id: user.id,
+      kind: "submit",
+      body: "Manzoori ke liye bheji",
+    });
   }
 
   // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
@@ -154,12 +166,16 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, status, branch_id, total_amount, invoice_total")
+    .select("id, status, branch_id, total_amount, invoice_total, review_status")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
   if (purchase.status === "received") return { error: "This purchase is already marked received." };
   if (purchase.status === "cancelled") return { error: "Cancelled purchase receive nahi ho sakti." };
+  // Taala database par bhi hai (259); yahan sirf saaf paighaam ke liye.
+  if (purchase.review_status !== "approved") {
+    return { error: "Ye purchase abhi manzoor nahi hui. Pehle Owner/Admin manzoor karein, phir maal ginein." };
+  }
   const { data: items } = await supabase
     .from("purchase_items")
     .select("id, product_id, batch_id, quantity, unit_cost, products(name)")
@@ -407,5 +423,127 @@ export async function deletePurchase(_prev: ActionState, formData: FormData): Pr
   });
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/inventory");
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------
+// Manzoori, wapas bhejna, radd, aur baat (259)
+// ---------------------------------------------------------------------
+const APPROVERS = ["owner", "super_admin", "admin"];
+
+/**
+ * Owner/Admin ka faisla: manzoor / wapas / radd. Wapas aur radd par
+ * wajah likhna lazmi hai -- bina wajah ke wapas bheji hui cheez par
+ * banane wala kya theek kare, use pata hi nahi hota.
+ */
+export async function reviewPurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const purchaseId = String(formData.get("purchase_id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const comment = String(formData.get("comment") ?? "").trim();
+  if (!purchaseId) return { error: "Missing purchase id." };
+  if (!["approve", "send_back", "reject"].includes(decision)) return { error: "Faisla saaf nahi." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !APPROVERS.includes(me.role)) {
+    return { error: "Purchase manzoor ya wapas sirf Owner/Admin kar sakta hai." };
+  }
+
+  const { data: purchase } = await supabase
+    .from("purchases")
+    .select("id, purchase_number, status, review_status")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (!purchase) return { error: "Purchase not found." };
+  if (purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
+  if ((decision === "send_back" || decision === "reject") && !comment) {
+    return { error: "Wapas bhejne ya radd karne ki wajah likhein -- banane wale ko yehi parhna hai." };
+  }
+
+  const update: Record<string, unknown> = {
+    review_status: decision === "approve" ? "approved" : decision === "send_back" ? "sent_back" : "rejected",
+    reviewed_by: user.id,
+    reviewed_at: new Date().toISOString(),
+  };
+  if (decision === "reject") update.status = "cancelled";
+
+  const { error } = await supabase.from("purchases").update(update).eq("id", purchaseId);
+  if (error) return { error: error.message };
+
+  await supabase.from("purchase_comments").insert({
+    purchase_id: purchaseId,
+    author_id: user.id,
+    kind: decision,
+    body: comment || (decision === "approve" ? "Manzoor" : ""),
+  });
+
+  await logAudit({
+    actionType: "update",
+    module: "purchases",
+    recordId: purchaseId,
+    recordLabel: purchase.purchase_number,
+    description:
+      decision === "approve"
+        ? `Purchase manzoor hui${comment ? `: ${comment}` : ""}`
+        : decision === "send_back"
+          ? `Purchase wapas bheji: ${comment}`
+          : `Purchase radd hui: ${comment}`,
+  });
+
+  revalidatePath("/admin/purchases");
+  revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/finance");
+  return { success: true };
+}
+
+/**
+ * Banane wale ka jawab: baat likhna, aur wapas aayi purchase ko dobara
+ * manzoori ke liye bhejna. Koi bhi staff baat likh sakta hai; dobara
+ * bhejne ke liye jawab lazmi hai.
+ */
+export async function commentPurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const purchaseId = String(formData.get("purchase_id") ?? "");
+  const resubmit = String(formData.get("resubmit") ?? "") === "1";
+  const comment = String(formData.get("comment") ?? "").trim();
+  if (!purchaseId) return { error: "Missing purchase id." };
+  if (!comment) return { error: "Kuch likhein to sahi." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: purchase } = await supabase
+    .from("purchases")
+    .select("id, purchase_number, status, review_status")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (!purchase) return { error: "Purchase not found." };
+
+  if (resubmit) {
+    if (purchase.status !== "pending" || purchase.review_status !== "sent_back") {
+      return { error: "Sirf wapas aayi hui purchase dobara bheji ja sakti hai." };
+    }
+    const { error } = await supabase
+      .from("purchases")
+      .update({ review_status: "submitted", reviewed_by: null, reviewed_at: null })
+      .eq("id", purchaseId);
+    if (error) return { error: error.message };
+  }
+
+  const { error: cErr } = await supabase.from("purchase_comments").insert({
+    purchase_id: purchaseId,
+    author_id: user.id,
+    kind: resubmit ? "resubmit" : "comment",
+    body: comment,
+  });
+  if (cErr) return { error: cErr.message };
+
+  revalidatePath("/admin/purchases");
   return { success: true };
 }
