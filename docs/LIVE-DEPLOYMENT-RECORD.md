@@ -46,12 +46,11 @@ nahi.
 
 | Kahan | Kaun si |
 |---|---|
-| **Live par chal chuki** | 225, aur **226 se 242** (1 September, malik ke saaf hukm par) |
-| **Live par NAHI chalin** | **243 se 263 tak** |
-| Testing par | 226 se 263 tak sab |
+| **Live par chal chuki** | 225, **226 se 242** (1 September), aur **243 se 264** (2 September, ~12:50 UTC -- malik ne naya build pehle Start kar diya tha, is liye backup ki tasdeeq ke baghair, paanch batch mein) |
+| **Live par NAHI chalin** | koi nahi |
+| Testing par | 226 se 264 tak sab |
 
-**243–263 chalne se pehle abhi ka build Live par upload nahi hona
-chahiye.** Warna ye safhe tootenge: products ki fehrist, POS, product
+**(Ho chuka.) 243–264 chalne se pehle build upload nahi hona chahiye tha.** Warna ye safhe tootenge: products ki fehrist, POS, product
 ka form (naya aur edit), Maal Andar, Bill se Trade Rate, aur CRM mein
 gahak mehfooz karna.
 
@@ -103,7 +102,24 @@ bhi liya ja sakta hai.
 
 ---
 
-## 4. Ye ginti dobara kab dekhni hai
+## 4. Ginti -- 2 September 2026, 243–264 ke BAAD
+
+| Table | 1 Sep | 2 Sep (baad) |
+|---|---|---|
+| farmers | 5 | **6** |
+| profiles | 19 | 19 |
+| machinery_bookings | 6 | **7** |
+| machinery_bills | 3 | 3 |
+| products | 206 | 206 |
+| journal_lines | 16 | 16 |
+| milk_entries / agri_orders / farmer_credit_ledger / grain_procurement_entries | 0 | 0 |
+
+Koi adad kam nahi hua. farmers aur bookings 1 Sep ke baad asal kaam se
+barhe. Naye: 7 tables, 11 views, 8 functions, 6 menu items -- sab
+maujood. 206 mein se **177 products par barcode nahi** (Barcode Label
+safha isi ke liye hai).
+
+## 4b. Ye ginti dobara kab dekhni hai
 
 243–263 chalne ke **foran baad** wohi das tables dobara ginein aur upar
 wali fehrist se milayein. Kisi bhi adad ka **kam** hona rukne ki wajah
