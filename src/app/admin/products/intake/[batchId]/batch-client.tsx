@@ -70,13 +70,17 @@ export function BatchClient({
   batchStatus,
   categories,
   items,
+  units,
 }: {
   lang: Lang;
   batchId: string;
   batchStatus: string;
   categories: string[];
   items: Item[];
+  /** Units ka master (273); khali ho to built-in fehrist. */
+  units?: string[];
 }) {
+  const unitOptions = units && units.length > 0 ? units : UNITS;
   const router = useRouter();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanState, scanAction] = useFormState(addScannedItem, initial);
@@ -138,7 +142,7 @@ export function BatchClient({
         </Card>
       ) : (
         items.map((item, idx) => (
-          <ItemCard key={item.id} n={idx + 1} lang={lang} item={item} categories={categories} done={done} />
+          <ItemCard key={item.id} n={idx + 1} lang={lang} item={item} categories={categories} units={unitOptions} done={done} />
         ))
       )}
 
@@ -185,12 +189,14 @@ function ItemCard({
   lang,
   item,
   categories,
+  units: unitOptions,
   done,
 }: {
   n: number;
   lang: Lang;
   item: Item;
   categories: string[];
+  units: string[];
   done: boolean;
 }) {
   const router = useRouter();
@@ -334,7 +340,7 @@ function ItemCard({
               <Label htmlFor={`unit-${item.id}`}>{t("pf_f_unit", lang)}</Label>
               <Select id={`unit-${item.id}`} name="unit" defaultValue={item.unit ?? ""} disabled={done} className="w-full">
                 <option value="">—</option>
-                {UNITS.map((u) => (
+                {unitOptions.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>

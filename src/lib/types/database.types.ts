@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      sod_transaction_rules: {
+        Row: { approver_col: string; created_at: string; creator_col: string; enforcement: string; exempt_roles: string[]; id: string; is_active: boolean; label: string; table_name: string; updated_at: string }
+        Insert: { approver_col: string; created_at?: string; creator_col: string; enforcement?: string; exempt_roles?: string[]; id?: string; is_active?: boolean; label: string; table_name: string; updated_at?: string }
+        Update: { approver_col?: string; created_at?: string; creator_col?: string; enforcement?: string; exempt_roles?: string[]; id?: string; is_active?: boolean; label?: string; table_name?: string; updated_at?: string }
+        Relationships: []
+      }
+      sod_transaction_events: {
+        Row: { actor_id: string | null; created_at: string; detail: Json | null; event: string; id: string; record_id: string | null; rule_id: string | null; table_name: string }
+        Insert: { actor_id?: string | null; created_at?: string; detail?: Json | null; event: string; id?: string; record_id?: string | null; rule_id?: string | null; table_name: string }
+        Update: { actor_id?: string | null; created_at?: string; detail?: Json | null; event?: string; id?: string; record_id?: string | null; rule_id?: string | null; table_name?: string }
+        Relationships: []
+      }
       units: {
         Row: { aliases: string[]; base_code: string | null; code: string; created_at: string; factor: number | null; is_active: boolean; kind: string; label: string; label_en: string | null; sort_order: number }
         Insert: { aliases?: string[]; base_code?: string | null; code: string; created_at?: string; factor?: number | null; is_active?: boolean; kind?: string; label: string; label_en?: string | null; sort_order?: number }
@@ -15569,6 +15581,7 @@ export type Database = {
       training_modules: {
         Row: {
           department_key: string | null
+          guide: Json | null
           is_active: boolean
           key: string
           sort_order: number
@@ -15583,6 +15596,7 @@ export type Database = {
         }
         Insert: {
           department_key?: string | null
+          guide?: Json | null
           is_active?: boolean
           key: string
           sort_order?: number
@@ -15597,6 +15611,7 @@ export type Database = {
         }
         Update: {
           department_key?: string | null
+          guide?: Json | null
           is_active?: boolean
           key?: string
           sort_order?: number

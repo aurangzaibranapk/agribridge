@@ -76,7 +76,7 @@ export default async function MyWorkPage() {
   // Training Mode (D): apne department ka module -- pehle N kaam.
   const dept = departmentForRole(me.role);
   const { data: trainingModule } = me.training_mode
-    ? await supabase.from("training_modules").select("title, steps, try_route").eq("department_key", dept?.key ?? "").eq("is_active", true).maybeSingle()
+    ? await supabase.from("training_modules").select("key, title, steps, try_route").eq("department_key", dept?.key ?? "").eq("is_active", true).maybeSingle()
     : { data: null };
 
   const [nav, signals, scoreRes] = await Promise.all([
@@ -143,6 +143,7 @@ export default async function MyWorkPage() {
             steps={trainingModule?.steps ?? []}
             tryRoute={trainingModule?.try_route ?? null}
             moduleTitle={trainingModule?.title ?? null}
+            moduleKey={trainingModule?.key ?? null}
           />
         )}
         {/* "Aaj kya karna hai?" -- Work Coach (C). */}

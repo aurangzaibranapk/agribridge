@@ -360,6 +360,7 @@ export const productsFlowDict = {
   ma_no_requests: { en: "None.", rm: "Koi nahi.", ur: "کوئی نہیں۔" },
   ma_cancel: { en: "Withdraw", rm: "Wapas lein", ur: "واپس لیں" },
   cfl_t_conflicts: { en: "Conflicts", rm: "Takraao", ur: "ٹکراؤ" },
+  ac_guide_start: { en: "Start guided walkthrough", rm: "Guide ke sath chalein", ur: "گائیڈ کے ساتھ چلیں" },
   un_desc: { en: "Units products are counted in: code, label, kind, base conversion, and the words bills use for them (aliases).", rm: "Products kis ikai mein ginte hain: code, label, qisam, base ka hisaab, aur bill par is ke liye jo lafz aate hain (aliases).", ur: "پروڈکٹ کس اکائی میں گنتے ہیں۔" },
   un_no_unit: { en: "Products without a unit", rm: "Bina unit ke products", ur: "بغیر اکائی کے پروڈکٹ" },
   un_new: { en: "New unit", rm: "Nayi ikai", ur: "نئی اکائی" },

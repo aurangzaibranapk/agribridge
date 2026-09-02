@@ -1,3 +1,4 @@
+import { loadUserAccess, can } from "@/lib/access/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { ReverseForm } from "./reverse-form";
@@ -9,7 +10,6 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 
 const ROLES = ["owner", "super_admin", "admin", "manager", "finance"];
-const CAN_REVERSE = ["owner", "super_admin", "admin", "finance"];
 
 function rs(value: number): string {
   return `Rs ${Math.round(value).toLocaleString()}`;
@@ -30,7 +30,8 @@ export default async function AuditTrailPage() {
     return <div className="p-8 text-center text-surface-400">{t("c_only_finance_admin", lang)}</div>;
   }
 
-  const canReverse = CAN_REVERSE.includes(me.role);
+  const access = user ? await loadUserAccess(user.id) : null;
+  const canReverse = !!access && can(access, "finance.reversal", "create");
   const [watch, entries, logs] = await Promise.all([ledgerWatch(40), recentEntries(30), auditLog(50)]);
 
   const reversals = watch.filter((w) => w.kind === "reversal");

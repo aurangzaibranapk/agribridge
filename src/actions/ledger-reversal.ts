@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { reverseJournal } from "@/lib/ledger/post";
 import { logAudit } from "@/lib/audit";
 import { REVERSAL_REASON_MIN } from "@/lib/ledger/audit-trail";
+import { loadUserAccess, can } from "@/lib/access/permissions";
 
 export interface ActionState {
   error?: string;
@@ -13,7 +14,6 @@ export interface ActionState {
 }
 
 /** Hisaab ka zimmedar kaun -- reversal ek maali kaam hai. */
-const CAN_REVERSE = ["owner", "super_admin", "admin", "finance"];
 
 /**
  * Ghalti theek karne ka wahid raasta.
@@ -47,16 +47,13 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
 
-  const { data: me } = await service
-    .from("profiles")
-    .select("role, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!me?.is_active || !CAN_REVERSE.includes(me.role)) {
+  // Reversal ab apna feature hai (finance.reversal, 274): role se kisi ko
+  // nahi, Owner/Admin unrestricted; baqi ko darkhwast se ijazat milti hai.
+  const access = await loadUserAccess(user.id);
+  if (!access || !can(access, "finance.reversal", "create")) {
     return {
       error:
-        "Entry ulti karne ka haq sirf Malik, Admin aur Finance ke paas hai — reversal ek maali kaam hai, aur us ka jawab dene wala hi wo kar sakta hai.",
+        "Entry ulti karne ki ijazat (finance.reversal) aap ke paas nahi. Ye Owner/Admin ke paas hai; zaroorat ho to Work Coach se darkhwast karein -- adaigi banane/manzoor karne wale ko ye nahi milni chahiye (SoD).",
     };
   }
 

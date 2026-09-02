@@ -277,3 +277,42 @@ Nahi badla: intake batch form ki chhoti UNITS fehrist (Packet, Bottle...) aur
 farmer portal ka unit select -- wo apni jagah theek hain; masters se jorna
 baad ka kaam.
 
+## 10. "Sara complete" — 274: transaction-level SoD, Reversal feature, Training guide
+
+**Transaction-level SoD (backlog wala, ab bana):** `sod_transaction_rules`
+(16 qawaid, badalne ke qabil) + trigger `fn_sod_no_self_approval` har us
+table par (`fn_sod_attach_triggers()`): jis ne banaya wohi manzoor/tasdeeq/
+receive na kare. block = exception (UI se bypass nahi); warn = chalne do,
+`sod_transaction_events` mein likho; Owner/super_admin/admin exempt magar
+event likha jata hai. Tables: purchases (review block, receive warn),
+supplier_payment_requests, agri_order_payments, stock_counts, cash_handovers,
+pos_returns, milk_entries, agri_orders (sales verify warn; finance verify,
+approve block), agri_order_returns (warn), product_intake_batches (warn),
+company_expense_requests, machinery_work_records, machinery_fuel_logs.
+
+**Khabardar (Live se pehle):** jahan aaj ek hi banda banata aur manzoor
+karta hai (chhoti branch), wahan block wale qadam ruk jayenge -- paighaam
+saaf aata hai ("SOD: ... doosra authorized banda kare"). Rule ko 'warn'
+karna ho to `sod_transaction_rules.enforcement` badlein; naya table jorna ho
+to qatar daal kar `select fn_sod_attach_triggers()`.
+
+**Reversal feature:** `finance.reversal` (is_sensitive). Role se kisi ko
+nahi; Owner/Admin unrestricted; baqi darkhwast se. `ledger-reversal.ts` aur
+audit-trail ab `can(access, 'finance.reversal', 'create')` dekhte hain
+(pehle role list `CAN_REVERSE` -- finance bhi tha; ab nahi). SOD-PAY-REVERSE
+ki teesri duty ab isi feature par -- cash book edit wala TEMPORARY PROXY
+khatam.
+
+**Training guide (priority 3):** `training_modules.guide` jsonb
+[{path, target, text}]. `GuideOverlay` (admin layout, `?guide=key&step=n`)
+asal button (`data-guide`) par roshan ring + card + Next/Pichhla; doosre
+safhe par hon to us safhe ka link roshan aur "Wahan jayein". guide na ho to
+steps ke text se raasta. Anchors: bill-upload, purchase-review,
+purchase-receive. Academy card aur Training banner par "Guide ke sath
+chalein"; Coach tool `start_guide`. Seed: procurement (5 qadam), warehouse
+(6); baqi modules steps se chalte hain.
+
+**Units:** intake batch form ab master ki fehrist; products par trigger
+`unit_code` khud bhare (intake/import/propose sab raaste). Farmer portal ka
+kg/maund/ton select waise hi (kisan ke liye teen hi kaafi).
+

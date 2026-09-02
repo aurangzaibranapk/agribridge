@@ -90,7 +90,7 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
 
   return (
     <>
-      <button
+      <button data-guide="purchase-receive"
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700"

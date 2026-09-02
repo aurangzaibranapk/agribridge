@@ -73,7 +73,7 @@ export function ReviewPanel({
 
   return (
     <>
-      <button
+      <button data-guide="purchase-review"
         type="button"
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"

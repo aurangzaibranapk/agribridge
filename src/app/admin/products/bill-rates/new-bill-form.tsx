@@ -27,7 +27,7 @@ interface PickedFile {
 function Submit({ label, busyLabel, icon, disabled }: { label: string; busyLabel: string; icon: React.ReactNode; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending || disabled}>
+    <Button type="submit" data-guide="bill-upload" disabled={pending || disabled}>
       <span className="inline-flex items-center gap-1.5">
         {icon} {pending ? busyLabel : label}
       </span>

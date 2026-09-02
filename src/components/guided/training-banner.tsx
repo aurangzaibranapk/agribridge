@@ -29,6 +29,7 @@ export function TrainingBanner({
   steps,
   tryRoute,
   moduleTitle,
+  moduleKey = null,
 }: {
   lang: Lang;
   name: string;
@@ -36,6 +37,8 @@ export function TrainingBanner({
   steps: string[];
   tryRoute: string | null;
   moduleTitle: string | null;
+  /** Guide (274): asal button highlight ke sath qadam ba qadam. */
+  moduleKey?: string | null;
 }) {
   const [, action] = useFormState(setTrainingMode, initial);
   return (

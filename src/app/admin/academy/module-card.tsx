@@ -76,8 +76,13 @@ export function ModuleCard({
           </ol>
           <div className="flex flex-wrap items-center gap-2 border-t border-surface-200 pt-3 dark:border-surface-800">
             {tryRoute && (
-              <Link href={tryRoute} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-                <ExternalLink className="h-4 w-4" /> {t("ac_try", lang)}
+              <Link href={`${tryRoute}${tryRoute.includes("?") ? "&" : "?"}guide=${moduleKey}&step=1`} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+                <ExternalLink className="h-4 w-4" /> {t("ac_guide_start", lang)}
+              </Link>
+            )}
+            {tryRoute && (
+              <Link href={tryRoute} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-700 dark:border-surface-700 dark:text-surface-300">
+                {t("ac_try", lang)}
               </Link>
             )}
             <Link href={`/admin/bridge-ai?q=${encodeURIComponent(title + ": " + t("ac_ask_q", lang))}`} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-700 dark:border-surface-700 dark:text-surface-300">

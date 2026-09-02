@@ -10,6 +10,7 @@ import { t } from "@/lib/i18n/translations";
 import { Type, type FunctionDeclaration } from "@google/genai";
 import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool";
 import { ACCESS_TOOL, CONFLICT_TOOL, executeAccessTool, executeConflictTool } from "@/lib/ai/access-tool";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -139,6 +140,15 @@ const COACH_TOOLS: FunctionDeclaration[] = [
       required: ["query"],
     },
   },
+  {
+    name: "start_guide",
+    description: "Training guide shuru karna: qadam ba qadam, asal button roshan hota hai aur 'Next' aage le jata hai (Training Mode). 'Mujhe purchase sikhao', 'warehouse ka kaam kaise', 'guide chalao' jaise sawal par. Jawab mein link -- staff us par click kare.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { query: { type: Type.STRING, description: "Module ya kaam ka naam: purchase, warehouse, sales, finance, milk, machinery, hr, products" } },
+      required: ["query"],
+    },
+  },
 ];
 const COACH_TOOL_NAMES = new Set(COACH_TOOLS.map((d) => d.name!));
 
@@ -148,6 +158,33 @@ function norm(s: string) {
 
 async function executeCoachTool(name: string, args: Record<string, any>, ctx: Awaited<ReturnType<typeof buildCoachContext>>) {
   if (!ctx) return { error: "Context nahi mila." };
+  if (name === "start_guide") {
+    const service = createServiceClient();
+    const { data: mods } = await service.from("training_modules" as never).select("key, title, title_en, department_key, summary, steps, try_route, guide").eq("is_active", true);
+    const qn = norm(String(args.query ?? ""));
+    const list = ((mods ?? []) as any[])
+      .map((m) => {
+        const hay = norm(`${m.key} ${m.title} ${m.title_en ?? ""} ${m.department_key ?? ""} ${m.summary ?? ""}`);
+        let score = 0;
+        for (const w of qn.split(" ")) if (w.length >= 3 && hay.includes(w)) score += 1;
+        if (norm(m.key) === qn || norm(m.title) === qn) score += 5;
+        return { m, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    if (list.length === 0) return { found: false, modules: ((mods ?? []) as any[]).map((m) => `${m.title} (${m.key})`) };
+    const m = list[0].m;
+    const guide = Array.isArray(m.guide) && m.guide.length ? (m.guide as any[]) : ((m.steps as string[]) ?? []).map((text) => ({ path: (text.match(/\/admin[\w\-\/?=&.]*/) ?? [m.try_route])[0], text }));
+    const first = guide[0]?.path ?? m.try_route ?? "/admin/academy";
+    const link = `${first}${String(first).includes("?") ? "&" : "?"}guide=${m.key}&step=1`;
+    return {
+      found: true,
+      module: m.title,
+      steps: guide.map((g: any, i: number) => `${i + 1}. ${g.text}`),
+      start_link: link,
+      instruction: "Staff ko ye link dein (system usay button bana deta hai): us par click karte hi pehla qadam roshan hoga aur 'Next' aage le jayega. Qadam bhi chhote lafzon mein bata dein.",
+    };
+  }
   if (name === "get_my_work") {
     const all = await loadNeedsAttention();
     const items = filterAttention(all, ctx.allowedRoutes).map((a) => ({ count: a.count, what: t(a.label, "rm"), page: a.href }));

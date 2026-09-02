@@ -1,3 +1,4 @@
+import { loadUnits } from "@/lib/units";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -40,7 +41,7 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
 
   if (!batch) notFound();
 
-  const [{ data: items }, { data: categories }, { data: units }] = await Promise.all([
+  const [{ data: items }, { data: categories }, units] = await Promise.all([
     supabase
       .from("product_intake_items")
       .select("*")
@@ -48,7 +49,7 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
       .neq("status", "skipped")
       .order("created_at"),
     supabase.from("categories").select("name").order("name"),
-    Promise.resolve({ data: null }),
+    loadUnits(true),
   ]);
 
   const warehouseName = (batch as unknown as { warehouses?: { name?: string } }).warehouses?.name ?? null;
@@ -77,6 +78,7 @@ export default async function IntakeBatchPage({ params }: { params: { batchId: s
         batchId={batch.id}
         batchStatus={batch.status}
         categories={(categories ?? []).map((c) => c.name)}
+        units={units.map((u) => u.label)}
         items={(items ?? []).map((i) => ({
           id: i.id,
           imageUrl: i.image_url,
