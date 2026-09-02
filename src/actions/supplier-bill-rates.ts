@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
@@ -86,52 +87,41 @@ function matchKey(s: string): string {
  * wajah likhi jati hai -- khamoshi se chhoR dene par banda samajhta
  * hai ke poora bill parh liya gaya.
  */
-async function matchMap(supabase: ReturnType<typeof createClient>) {
+type MatchCatalogue = { id: string; name: string; pack_size: string | null }[];
+
+async function matchMap(supabase: ReturnType<typeof createClient>): Promise<MatchCatalogue> {
   const { data: products } = await supabase
     .from("products")
     .select("id, name, pack_size")
     .eq("is_deleted", false)
     .limit(5000);
-
-  const byName = new Map<string, string>();
-  for (const p of products ?? []) {
-    const k = matchKey(p.name);
-    // Do products ka naam ek jaisa ho to milaan chhoR diya jata hai --
-    // aadha sahi milaan bilkul galat milaan jitna hi khatarnak hai.
-    if (byName.has(k)) byName.set(k, "");
-    else byName.set(k, p.id);
-
-    if (p.pack_size) {
-      const k2 = matchKey(`${p.name}${p.pack_size}`);
-      if (byName.has(k2)) byName.set(k2, "");
-      else byName.set(k2, p.id);
-    }
-  }
-  return byName;
+  return (products ?? []) as MatchCatalogue;
 }
 
 /**
- * Naam se apne aap milaan -- sirf poora naam milne par.
+ * Naam se apne aap milaan -- score ke sath (H).
+ *
+ * Bilkul wohi naam -> "auto_name". Milta julta aur doosre se saaf aage
+ * -> "fuzzy:NN" (NN = feesad): product lag jata hai magar ANDAZE ka
+ * nishan sath; banda Save dabaye to "confirmed" hota hai, aur us se
+ * pehle rate nahi charhta. Do barabar hon ya score kam ho -> khali.
  *
  * `taken` wo products hain jo isi bill mein pehle se kisi qatar par lag
  * chuke hain. Ek hi bill mein ek product do dafa charhne se rate do
- * dafa badalta hai aur aakhri jeet jata hai -- bina kisi ke jaane. Is
- * liye doosri dafa milaan nahi hota, qatar khali chhoR di jati hai aur
- * banda khud dekhta hai.
+ * dafa badalta hai aur aakhri jeet jata hai -- bina kisi ke jaane.
  */
 function autoMatch(
-  byName: Map<string, string>,
+  catalogue: MatchCatalogue,
   taken: Set<string>,
   itemName: string | null,
   packSize: string | null
-): string | null {
+): { id: string; source: string } | null {
   if (!itemName) return null;
-  const direct = byName.get(matchKey(itemName));
-  const withPack = packSize ? byName.get(matchKey(`${itemName}${packSize}`)) : undefined;
-  const id = (withPack || direct) ?? null;
-  if (!id || id === "" || taken.has(id)) return null;
-  taken.add(id);
-  return id;
+  const d = decideMatch(itemName, packSize, catalogue);
+  if (d.kind === "none") return null;
+  if (taken.has(d.item.id)) return null;
+  taken.add(d.item.id);
+  return { id: d.item.id, source: d.kind === "exact" ? "auto_name" : `fuzzy:${Math.round(d.score * 100)}` };
 }
 
 export async function createBillFromFiles(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
@@ -225,7 +215,8 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
 
     const rows = reading.lines.map((line) => {
       lineNo += 1;
-      const productId = autoMatch(byName, taken, line.itemName, line.packSize);
+      const m = autoMatch(byName, taken, line.itemName, line.packSize);
+      const productId = m?.id ?? null;
       if (line.rate == null) binaRate += 1;
       return {
         bill_read_id: bill.id,
@@ -238,7 +229,7 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
         rate: line.rate,
         line_total: line.lineTotal,
         product_id: productId,
-        match_source: productId ? "auto_name" : null,
+        match_source: m?.source ?? null,
         status: "draft",
       };
     });
@@ -385,7 +376,8 @@ export async function createBillFromSheet(_prev: BillRateState, formData: FormDa
     // "muft aaya" hota, aur wo adad seedha munafe mein chala jata.
     const rate = num(r[iRate]);
     if (rate == null) binaRate += 1;
-    const productId = autoMatch(byName, taken, itemName, packSize);
+    const m = autoMatch(byName, taken, itemName, packSize);
+    const productId = m?.id ?? null;
 
     return {
       bill_read_id: bill.id,
@@ -397,7 +389,7 @@ export async function createBillFromSheet(_prev: BillRateState, formData: FormDa
       rate,
       line_total: null,
       product_id: productId,
-      match_source: productId ? "auto_name" : null,
+      match_source: m?.source ?? null,
       status: "draft",
     };
   });
@@ -475,7 +467,15 @@ export async function saveBillLine(_prev: BillRateState, formData: FormData): Pr
       qty,
       rate,
       product_id: productId,
-      match_source: productId ? (productId === line.product_id ? line.match_source ?? "chosen" : "chosen") : null,
+      // Andaze wala milaan Save par "confirmed" ho jata hai -- banda dekh
+      // kar aage barha, yehi tasdeeq hai (H).
+      match_source: productId
+        ? productId === line.product_id
+          ? (line.match_source ?? "").startsWith("fuzzy")
+            ? "confirmed"
+            : line.match_source ?? "chosen"
+          : "chosen"
+        : null,
       status: ready ? "ready" : "draft",
       problem: null,
     })
@@ -553,14 +553,26 @@ export async function applyBillRates(_prev: BillRateState, formData: FormData): 
 
   const { data: lines } = await supabase
     .from("supplier_bill_lines")
-    .select("id, item_name, rate, product_id")
+    .select("id, item_name, rate, product_id, match_source")
     .eq("bill_read_id", billId)
     .eq("status", "ready");
 
-  const ready = lines ?? [];
+  // Andaze wala milaan bina tasdeeq ke nahi charhta (H). Aisi qatar
+  // "ready" ho bhi to yahan ruk jati hai, aur wajah likhi jati hai.
+  const unconfirmed = (lines ?? []).filter((l) => (l.match_source ?? "").startsWith("fuzzy"));
+  for (const l of unconfirmed) {
+    await supabase
+      .from("supplier_bill_lines")
+      .update({ problem: "Product andaze se mila tha -- qatar khol kar dekhein aur Save dabayein, tab charhega." })
+      .eq("id", l.id);
+  }
+  const ready = (lines ?? []).filter((l) => !(l.match_source ?? "").startsWith("fuzzy"));
   if (ready.length === 0) {
     return {
-      error: "Koi qatar charhne ke liye tayyar nahi. Har qatar par product chunna aur rate hona zaroori hai.",
+      error:
+        unconfirmed.length > 0
+          ? `${unconfirmed.length} qatar par product andaze se mila hai -- har ek khol kar dekhein aur Save dabayein, tab charhega.`
+          : "Koi qatar charhne ke liye tayyar nahi. Har qatar par product chunna aur rate hona zaroori hai.",
     };
   }
 

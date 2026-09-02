@@ -300,6 +300,11 @@ export const productsFlowDict = {
     ur: "بل پر یہ ریٹ صاف نہیں تھا — خود دیکھ کر لکھیں۔ خالی چھوڑنا صفر لکھنے سے بہتر ہے۔",
   },
   pf_bill_which_product: { en: "Which product of ours", rm: "Hamara kaun sa product", ur: "ہمارا کون سا پروڈکٹ" },
+  pf_bill_fuzzy_match: {
+    en: "Guessed match ({score}%) — not confirmed. Check the product, then press Save; the rate will not apply before that.",
+    rm: "Andaze se mila ({score}%) — abhi tasdeeq nahi. Product dekh kar Save dabayein; us se pehle rate nahi charhega.",
+    ur: "اندازے سے ملا ({score}%) — ابھی تصدیق نہیں۔ پروڈکٹ دیکھ کر Save دبائیں؛ اس سے پہلے ریٹ نہیں چڑھے گا۔",
+  },
   pf_bill_auto_match: {
     en: "This matched automatically by name — check it once before applying.",
     rm: "Ye naam se apne aap mila hai — charhane se pehle ek dafa dekh lein.",

@@ -280,6 +280,11 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               {t("pf_bill_auto_match", lang)}
             </p>
           )}
+          {(line.matchSource ?? "").startsWith("fuzzy") && !applied && (
+            <p className="mt-1 text-xs font-medium text-amber-800">
+              {t("pf_bill_fuzzy_match", lang).replace("{score}", line.matchSource!.split(":")[1] ?? "?")}
+            </p>
+          )}
         </div>
 
         {!locked && (

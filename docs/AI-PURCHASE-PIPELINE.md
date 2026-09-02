@@ -24,7 +24,7 @@ hain:
 |---|---|---|---|
 | 1 | Bill upload (photo/PDF/kai safhe) → AI parhe | ✅ **Bana hua** | `/admin/products/bill-rates` (248, 251). Photo, PDF, kai file, sheet — chaaron |
 | 1 | …magar us se **Purchase ka draft** bane | ✅ **Ban gaya (254)** | Bill ke safhe par "Purchase banayein": purchase (pending) + items + batch, rate bhi charhta hai. Stock aur dena Receive par |
-| 2 | AI product matching, "95% match / confirm" | 🟡 Adha | Bill ki qatar par naam se apne aap milaan (sirf poora naam), banda chunta hai. **Fuzzy score aur "confirm" ka button baqi** |
+| 2 | AI product matching, "95% match / confirm" | ✅ **Ban gaya (H)** | `lib/product-match.ts`: lafz + harf ka score, pack ka adad alag ho to kataoti. Bill: bilkul wohi → apne aap; milta julta (≥80%, doosre se saaf aage) → lagta hai magar "andaza NN%" ke nishan ke sath, Save = tasdeeq, bina tasdeeq rate nahi charhta. Sheet: milta julta product ho to qatar rukti hai, banda naam tay karta hai. AI order: wohi score |
 | 3 | Naya product → Pending Products queue | ✅ Bana hua | `/admin/products/propose` + `/admin/products/pending` + `pending-edits`. **Bill se seedha propose hona baqi** |
 | 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | 🟡 Adha | Bill-rates ka safha yehi karta hai (qatar + raw_text + photo). **Har khane par confidence ka nishan baqi** |
 | 4 | Approve / Send Back / Reject + comment | ✅ **Ban gaya (259)** | `purchases.review_status` (submitted / sent_back / approved / rejected); AI aur sheet ke draft manzoori ke liye jate hain; Owner/Admin manzoor / wapas (wajah lazmi) / radd; banane wala jawab de kar dobara bhejta hai; `purchase_comments` kabhi mitta nahi; bina manzoori receive ka taala DB par |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **18 bane hue**, **5 adhe**, **0 baqi**.
+**Ginti:** 23 mein se **19 bane hue**, **4 adhe**, **0 baqi**.
 
 ---
 
@@ -88,11 +88,11 @@ stock, POS, rate baqi ki fehrist.
 | **E** | ~~Product Setup Queue~~ | ✅ **Ho gaya (258)** | — |
 | **F** | ~~Send-back + comment~~ | ✅ **Ho gaya (259)** | — |
 | **G** | ~~AI order draft~~ | ✅ **Ho gaya (260)** | — |
-| **H** | Fuzzy product matching (score + confirm) | #2 | Aadha din |
+| **H** | ~~Fuzzy product matching~~ | ✅ **Ho gaya** (koi migration nahi) | — |
 | **I** | Internal barcode + label print | #13 | 1 din |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se G tak ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se H tak ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

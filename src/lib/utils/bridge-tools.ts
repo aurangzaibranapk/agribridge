@@ -1,4 +1,5 @@
 import { Type, type FunctionDeclaration } from "@google/genai";
+import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
 
@@ -361,24 +362,30 @@ async function draftShopOrder(
   const shop = shops[0];
 
   // Products: ek ek naam. Do milen to poochho; rate na ho to line nahi.
+  const { data: catalogueRows } = await supabase
+    .from("products")
+    .select("id, name, pack_size, selling_price, wholesale_price, sale_rate_pending")
+    .eq("is_deleted", false)
+    .limit(5000);
+  const catalogue = catalogueRows ?? [];
   const matched: { product_id: string; product_name: string; pack_size: string | null; unit_price: number; order_qty: number }[] = [];
   const problems: { product_name: string; problem: string; candidates?: string[] }[] = [];
   for (const it of items) {
     const name = String(it.product_name).trim();
-    const { data: found } = await supabase
-      .from("products")
-      .select("id, name, pack_size, selling_price, wholesale_price, sale_rate_pending")
-      .eq("is_deleted", false)
-      .ilike("name", `%${name}%`)
-      .limit(6);
-    const list = found ?? [];
-    const exact = list.filter((p) => p.name.trim().toLowerCase() === name.toLowerCase());
-    const pick = exact.length === 1 ? exact[0] : list.length === 1 ? list[0] : null;
-    if (!pick) {
-      if (list.length === 0) problems.push({ product_name: name, problem: "nahi mila" });
-      else problems.push({ product_name: name, problem: "ek se zyada milte hain", candidates: list.map((p) => `${p.name}${p.pack_size ? ` (${p.pack_size})` : ""}`) });
+    // Score ke sath milaan (H): bilkul wohi ya saaf aage wala lagta
+    // hai; do barabar hon ya score kam ho to poochha jata hai.
+    const d = decideMatch(name, null, catalogue);
+    if (d.kind === "none") {
+      if (d.candidates.length === 0) problems.push({ product_name: name, problem: "nahi mila" });
+      else
+        problems.push({
+          product_name: name,
+          problem: "saaf nahi kaun sa -- in mein se kaun sa?",
+          candidates: d.candidates.map((c) => `${c.item.name}${c.item.pack_size ? ` (${c.item.pack_size})` : ""} ~${Math.round(c.score * 100)}%`),
+        });
       continue;
     }
+    const pick = d.item;
     // Thok rate branch ka rate hai; na ho to sale rate. Sale rate bhi
     // baqi ho to is line ka koi rate nahi -- 0 likhna jhoot hota.
     const unit = pick.wholesale_price != null ? Number(pick.wholesale_price) : pick.sale_rate_pending ? null : Number(pick.selling_price);

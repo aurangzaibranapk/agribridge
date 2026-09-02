@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import { looksBinary, parseDelimited } from "@/lib/csv";
+import { decideMatch } from "@/lib/product-match";
 
 /**
  * CSV se products charhana.
@@ -267,7 +268,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     supabase.from("companies").select("id, name"),
     supabase
       .from("products")
-      .select("id, name, barcode, selling_price, purchase_price, trade_rate_pending, sale_rate_pending")
+      .select("id, name, pack_size, barcode, selling_price, purchase_price, trade_rate_pending, sale_rate_pending")
       .eq("is_deleted", false),
   ]);
 
@@ -306,6 +307,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     if (bc) byBarcodeMap.set(bc, rec);
   }
 
+  const existingList = (existing ?? []).map((p) => ({ id: p.id, name: p.name, pack_size: p.pack_size ?? null }));
   const existingNames = new Set(byNameMap.keys());
   const existingBarcodes = new Set(byBarcodeMap.keys());
 
@@ -439,6 +441,16 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
         row.status = "duplicate";
         row.problem =
           "Is naam ke ek se zyada products pehle se hain — kaun sa murad hai ye sheet se tay nahi hota. Naam mein farq laga dein.";
+      } else if (hit === undefined) {
+        // Poora naam nahi mila. Milta julta hai? (H) Score ke sath
+        // rok: shayad yehi product hai. Banda tay kare -- wohi hai to
+        // naam bilkul wohi likh de (rate charhega), alag hai to farq
+        // laga de. Chup chaap naya banana dohra product banata hai.
+        const d = decideMatch(name, row.packSize ?? null, existingList);
+        if (d.kind === "strong") {
+          row.status = "duplicate";
+          row.problem = `Shayad yehi product pehle se hai: "${d.item.name}"${d.item.pack_size ? ` (${d.item.pack_size})` : ""} — ${Math.round(d.score * 100)}% milta hai. Wohi hai to naam bilkul "${d.item.name}" likh dein (rate us par charhega); alag hai to naam mein farq laga dein.`;
+        }
       } else if (hit) {
         row.status = "update";
         row.existingId = hit.id;
