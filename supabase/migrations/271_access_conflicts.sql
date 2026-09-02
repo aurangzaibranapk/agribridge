@@ -447,7 +447,7 @@ insert into access_conflict_rules (code, kind, label, description, severity, enf
    'Manzoori/tasdeeq Finance Manager ya Owner ke paas rakhein; banane wala alag ho.'),
 
   ('SOD-PAY-REVERSE', 'sod', 'Adaigi banana + manzoor karna + ulta karna (teeno ek haath mein)',
-   'Create + Verify/Approve + Reverse ek hi user ke paas: adaigi bana kar, manzoor kar ke, phir ulta bhi kar sakta hai -- koi nishan nahi bachta.',
+   'Create + Verify/Approve + Reverse ek hi user ke paas: adaigi bana kar, manzoor kar ke, phir ulta bhi kar sakta hai -- koi nishan nahi bachta. TEMPORARY PROXY (malik, 2 Sep): "Ulta karna" abhi cash book (finance) ke edit se naapa jata hai kyunke reversal ka apna action-feature nahi. Jab "Reversal / Correct Posted Entry" feature bane, teesri duty us par shift karein -- ye rule permanent nahi.',
    'critical', 'block',
    '[{"label":"Adaigi banana","features":["payouts","purchases.bills","finance"],"actions":["create"]},
      {"label":"Adaigi manzoor / tasdeeq","features":["payouts","submissions","finance"],"actions":["approve","verify"]},

@@ -197,3 +197,56 @@ Saaf likh dein: reversal engine mein alag action nahi (ledger-reversal role se r
 is liye SOD-PAY-REVERSE mein cash book (`finance`) ka `edit` reversal ka proxy hai; rule
 badalne ke qabil hai.
 
+### 8a. Malik ke faisle (2 September, Priority 1 ki report ke baad)
+
+**Halat: Code Complete / Testing Almost Complete. Live Accepted NAHI.** Live ka
+raasta sirf backup ki tasdeeq aur Department Head ke manual test ke PASS ke
+baad khulega. "Code mein hai" final testing ke barabar nahi.
+
+1. **Baseline ke 9 takraao auto-fix nahi.** Pehle role-wise review. Jo access
+   operationally zaroori hai us par documented override; jo faltu hai wo role
+   se hate. **Finance ka SOD-PAY-REVERSE (critical/block) current shakl mein
+   qabool nahi -- role design se alag karein, override se nahi.**
+2. **Reversal proxy waqti hai.** cash book edit = reversal permanent rule nahi.
+   Agli finance improvement mein "Reversal / Correct Posted Entry" ka apna
+   action-feature banega, phir SOD-PAY-REVERSE us par shift hoga (false
+   positives kam). Rule ki description mein "TEMPORARY PROXY" likh diya (271
+   ki seed aur testing DB dono).
+3. **Live abhi nahi.** P0 rule wahi: backup verified → pre-migration record →
+   265–271 → verification → build → smoke test → Live accepted.
+
+**Baseline handling (malik ki fehrist) aur role ki tajweez** -- ye tajweez hai,
+role ki ijazat abhi NAHI badli; malik ke "chalao" par migration banegi:
+
+| Takraao | Malik ka faisla | Role mein tajweez (abhi nahi lagi) |
+|---|---|---|
+| Finance: Create + Approve + Reverse (critical) | Role split; normal operation mein override nahi | `finance` role se `submissions` ka approve/reject hatayein (manzoori Owner/Manager ke paas) -- is se PAY-REVERSE aur PAY-CREATE-APPROVE dono khatam; reversal proxy (finance edit) rehta hai magar teeno ek sath nahi rehte |
+| Finance: Create + Approve (high) | Role split behtar; emergency waqti Owner/Admin override chal sakta hai | Upar wali tabdeeli se khud hal |
+| Finance: Cash Handover + Reconciliation (high) | Jahan mumkin ho alag | `finance` se `cash-handover` ka create hatayein (handover Manager/shop kare, finance sirf dekhe/export) ya reconciliation ka edit Owner ke paas |
+| Finance: Bank Entry + Reconciliation (warning) | Qabool; waqtan fawaqtan review | Koi tabdeeli nahi; acknowledge + note |
+| Finance: Sensitive Load (info) | Sirf info | Kuch nahi |
+| HR: HR Edit + Staff Payment (high) | Payment ki manzoori alag | `hr` role se `staff-khata` ka create hatayein (adaigi finance banaye) ya staff-khata par approve ka qadam |
+| Manager: Stock Count Create + Approve (high) | Approve doosri authority ko | `manager` se `stock-count` ka approve hatayein (Owner/Finance approve kare) |
+| Manager: Cash Handover + Cash Close (high) | Alag checker behtar | `manager` se `cash-close` ka create hatayein (Finance close kare) ya cash-close par verify Owner ka |
+| Manager: Sensitive Load (info) | Sirf info | Kuch nahi |
+
+**Backlog (lock):** *Permission-level conflict detection + transaction-level
+self-approval prevention = complete SoD protection.* Yani Ahmed ke paas Create
+aur Approve dono hon tab bhi wo apni banayi hui payment khud approve na kar
+sake. Yehi usool purchase (`fn_no_receive_without_approval` ke sath), stock
+count, milk verify, cash handover aur returns par -- database trigger/check
+`created_by <> approved_by` ki shakl mein, ta ke UI bypass na ho sake.
+
+**Live se pehle lazmi manual test (Testing par, PASS chahiye):**
+
+1. Kisi department head ke login se `/admin/access-requests` kholein.
+2. Aisi pending darkhwast chunein jis par HIGH takraao banta ho (misal
+   warehouse staff ke liye `stock-count` approve).
+3. Umeed: laal/narangi box "Is permission se ye existing access conflict
+   create hoga", Approve button band, paighaam "sirf Owner/Admin override".
+4. Owner login se wohi darkhwast: override ki wajah ke baghair Approve →
+   ruk jaye; wajah + miyaad ke sath → lag jaye, `override_by/at/expires_at`
+   bhare, `access_conflict_events` mein `approved_with_override`, ijazat ki
+   `expires_at` override ki miyaad se aage na ho.
+5. Head ke login se Takraao tab par "Override" button nazar na aaye.
+

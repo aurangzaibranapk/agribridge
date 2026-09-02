@@ -138,6 +138,11 @@ record → migrations 265→271 → verification → naya build upload → smoke
 test → Live accepted. **Backup confirm hone se pehle 265–271 Live par
 NAHI chalengi.**
 
+**271 ke liye alag shart (malik, 2 Sep):** Live se pehle Testing par
+Department Head ka manual test PASS hona lazmi (qadam `docs/GUIDED-ERP.md`
+8a mein). Bina us ke 271 Live par nahi. Priority 1 ki halat: Code Complete /
+Testing Almost Complete, Live Accepted nahi.
+
 **Us waqt jo bhejna hai, isi tarteeb mein:**
 
 1. **Backup** — do `pg_dump` command (schema + data). Connection string
