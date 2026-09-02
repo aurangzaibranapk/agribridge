@@ -22885,6 +22885,43 @@ export type Database = {
         }
         Relationships: []
       }
+      v_product_setup_counts: {
+        Row: {
+          approval_pending: number | null
+          barcode_missing: number | null
+          expiry_attention: number | null
+          image_missing: number | null
+          intake_open: number | null
+          rate_pending: number | null
+          total_products: number | null
+        }
+        Relationships: []
+      }
+      v_product_setup_queue: {
+        Row: {
+          approval_pending: boolean | null
+          barcode: string | null
+          barcode_missing: boolean | null
+          created_at: string | null
+          days_left: number | null
+          expired: boolean | null
+          expiry_date: string | null
+          expiry_soon: boolean | null
+          id: string | null
+          image_missing: boolean | null
+          image_url: string | null
+          is_verified: boolean | null
+          issue_count: number | null
+          mrp_price: number | null
+          name: string | null
+          pack_size: string | null
+          purchase_price: number | null
+          sale_rate_pending: boolean | null
+          selling_price: number | null
+          trade_rate_pending: boolean | null
+        }
+        Relationships: []
+      }
       v_product_batches: {
         Row: {
           batch_id: string | null
