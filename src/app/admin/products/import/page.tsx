@@ -39,7 +39,7 @@ export default async function ProductsImportPage() {
     );
   }
 
-  const [{ data: categories }, { data: brands }, { data: companies }, { count: pendingCount }] = await Promise.all([
+  const [{ data: categories }, { data: brands }, { data: companies }, { count: pendingCount }, { data: warehouses }] = await Promise.all([
     supabase.from("categories").select("name").order("name"),
     supabase.from("brands").select("name").order("name"),
     supabase.from("companies").select("name").order("name"),
@@ -48,6 +48,7 @@ export default async function ProductsImportPage() {
       .select("id", { count: "exact", head: true })
       .eq("trade_rate_pending", true)
       .eq("is_deleted", false),
+    supabase.from("warehouses").select("id, name, code").order("name"),
   ]);
 
   return (
@@ -61,6 +62,7 @@ export default async function ProductsImportPage() {
         brands={(brands ?? []).map((b) => b.name)}
         companies={(companies ?? []).map((c) => c.name)}
         tradeRatePending={pendingCount ?? null}
+        warehouses={(warehouses ?? []).map((w) => ({ id: w.id, name: w.name, code: w.code }))}
       />
     </div>
   );

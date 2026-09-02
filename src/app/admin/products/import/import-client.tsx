@@ -6,7 +6,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { AlertTriangle, CheckCircle2, FileUp, RotateCcw, Trash2, Upload } from "lucide-react";
 import { importProductsCsv, previewProductsCsv, type ImportRow, type ImportState } from "@/actions/products-import";
 import { Card } from "@/components/ui/layout-primitives";
-import { Badge, Button, Input, Label, Textarea } from "@/components/ui/form";
+import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -28,15 +28,20 @@ function Submit({ label, icon }: { label: string; icon?: React.ReactNode }) {
   );
 }
 
-const TONE: Record<ImportRow["status"], "green" | "amber" | "red" | "gray"> = {
+const TONE: Record<ImportRow["status"], "green" | "amber" | "red" | "gray" | "blue"> = {
   new: "green",
+  update: "blue",
   duplicate: "amber",
   error: "red",
   skipped: "gray",
 };
 
-const LABEL_KEY: Record<ImportRow["status"], "pf_row_new" | "pf_row_dup" | "pf_row_error" | "pf_row_skipped"> = {
+const LABEL_KEY: Record<
+  ImportRow["status"],
+  "pf_row_new" | "pf_row_dup" | "pf_row_error" | "pf_row_skipped" | "pf_row_update"
+> = {
   new: "pf_row_new",
+  update: "pf_row_update",
   duplicate: "pf_row_dup",
   error: "pf_row_error",
   skipped: "pf_row_skipped",
@@ -58,11 +63,13 @@ export function ImportClient({
   brands,
   companies,
   tradeRatePending,
+  warehouses,
 }: {
   categories: string[];
   brands: string[];
   companies: string[];
   tradeRatePending: number | null;
+  warehouses: { id: string; name: string; code: string | null }[];
 }) {
   const lang: Lang = useLang();
   const [csv, setCsv] = useState("");
@@ -219,6 +226,7 @@ export function ImportClient({
             {s.errors > 0 && <Badge tone="red">{t("pf_has_errors", lang).replace("{n}", String(s.errors))}</Badge>}
             {s.noTradeRate > 0 && <Badge tone="amber">{t("pf_no_trade_n", lang).replace("{n}", String(s.noTradeRate))}</Badge>}
             {s.noWholesale > 0 && <Badge tone="gray">{t("pf_no_wholesale_n", lang).replace("{n}", String(s.noWholesale))}</Badge>}
+            {s.updates > 0 && <Badge tone="blue">{t("pf_updates_n", lang).replace("{n}", String(s.updates))}</Badge>}
             {s.skipped > 0 && <Badge tone="gray">{t("pf_skipped_n", lang).replace("{n}", String(s.skipped))}</Badge>}
           </div>
 
@@ -326,8 +334,24 @@ export function ImportClient({
             </table>
           </div>
 
-          {s.ready > 0 && (
-            <form action={importAction} className="mt-4 border-t border-surface-200 pt-3">
+          {s.ready + s.updates > 0 && (
+            <form action={importAction} className="mt-4 space-y-3 border-t border-surface-200 pt-3">
+              {/* Stock ki hamesha ek jagah hoti hai. Bina jagah ke adad
+                  hawa mein khaRa rehta hai (253). */}
+              <div className="max-w-sm">
+                <Label htmlFor="wh">{t("pf_wh_label", lang)}</Label>
+                <Select id="wh" name="warehouse_id" defaultValue="" className="w-full">
+                  <option value="">{t("pf_wh_none", lang)}</option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                      {w.code === "MAIN" ? " (Main)" : ""}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1 text-xs text-surface-500">{t("pf_wh_hint", lang)}</p>
+              </div>
+
               {/* Wohi matn dobara jata hai jo dekha gaya. Server usay
                   khud dobara parhta hai -- browser ka bheja hua natija
                   nahi maanta. */}
@@ -337,7 +361,14 @@ export function ImportClient({
                   wo do alag cheezein ban jatin. */}
               <input type="hidden" name="edits" value={editFields} />
               <input type="hidden" name="skip" value={skipFields} />
-              <Submit label={t("pf_upload_n", lang).replace("{n}", String(s.ready))} icon={<Upload className="h-4 w-4" />} />
+              <Submit
+                label={
+                  s.updates > 0
+                    ? t("pf_upload_mixed", lang).replace("{n}", String(s.ready + s.updates))
+                    : t("pf_upload_n", lang).replace("{n}", String(s.ready))
+                }
+                icon={<Upload className="h-4 w-4" />}
+              />
               {s.duplicates + s.errors + s.skipped > 0 && (
                 <p className="mt-1.5 text-xs text-surface-500">
                   {t("pf_skipped_note", lang)

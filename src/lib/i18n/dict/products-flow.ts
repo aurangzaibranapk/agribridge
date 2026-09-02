@@ -449,4 +449,20 @@ export const productsFlowDict = {
     rm: "Jo maloom hai wo bhar kar mehfooz karein. Jo rate maloom nahi wo khali rehne dein — 0 hargiz na likhein, kyunke 0 ka matlab muft hai.",
     ur: "جو معلوم ہے وہ بھر کر محفوظ کریں۔ جو ریٹ معلوم نہیں وہ خالی رہنے دیں — 0 ہرگز نہ لکھیں، کیونکہ 0 کا مطلب مفت ہے۔",
   },
+
+  // ---- Purane product par charhna, aur stock (253) ----
+  pf_row_update: { en: "rate will change", rm: "rate badlega", ur: "ریٹ بدلے گا" },
+  pf_updates_n: { en: "{n} rates will change", rm: "{n} ka rate badlega", ur: "{n} کا ریٹ بدلے گا" },
+  pf_wh_label: { en: "Where the goods are lying", rm: "Maal kahan para hai", ur: "مال کہاں پڑا ہے" },
+  pf_wh_none: { en: "— do not add stock —", rm: "— stock nahi charhana —", ur: "— اسٹاک نہیں چڑھانا —" },
+  pf_wh_hint: {
+    en: 'The "how many came" column is used only when you choose a place. Stock always has a place — an amount without one stands in mid-air, and that shows up on counting day.',
+    rm: '"Kitne aaye" wala khana tabhi chalta hai jab aap jagah chunein. Stock ki hamesha ek jagah hoti hai — bina jagah ke adad hawa mein khaRa rehta hai, aur us ka pata ginti ke din chalta hai.',
+    ur: '"کتنے آئے" والا خانہ تبھی چلتا ہے جب آپ جگہ چنیں۔ اسٹاک کی ہمیشہ ایک جگہ ہوتی ہے — بغیر جگہ کے عدد ہوا میں کھڑا رہتا ہے، اور اس کا پتہ گنتی کے دن چلتا ہے۔',
+  },
+  pf_upload_mixed: {
+    en: "Save {n} rows",
+    rm: "{n} qatarein charhayein",
+    ur: "{n} قطاریں چڑھائیں",
+  },
 } as const;

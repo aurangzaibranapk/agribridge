@@ -22909,6 +22909,16 @@ export type Database = {
         Args: { p_line_id: string }
         Returns: Json
       }
+      fn_set_product_rates: {
+        Args: {
+          p_product_id: string
+          p_sale?: number | null
+          p_source?: string
+          p_trade?: number | null
+          p_wholesale?: number | null
+        }
+        Returns: Json
+      }
       fn_bump_farmer_code_counter: {
         Args: { p_number: number }
         Returns: undefined

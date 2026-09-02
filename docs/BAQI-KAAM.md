@@ -15,7 +15,7 @@ ek cheez nahi.
 |---|---|
 | Migration 225 (`diesel_none_at` / `diesel_none_by`) | ✅ **Live par chal gayi** (1 Sep) |
 | Migration 226–242 | ✅ **Live par chal gayin** (1 Sep) |
-| Migration **243–252** | ❌ **Baqi** — in ke baghair naya build Live par nahi charhna chahiye (tafseel `LIVE-DEPLOYMENT-RECORD.md` mein) |
+| Migration **243–253** | ❌ **Baqi** — in ke baghair naya build Live par nahi charhna chahiye (tafseel `LIVE-DEPLOYMENT-RECORD.md` mein) |
 | Live server par naya `.next` | ❌ **Baqi** — is liye `/admin/trust` par 404 aata hai |
 
 Live par app ka code **kabhi upload hi nahi hua**. Migrations database par

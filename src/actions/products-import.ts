@@ -32,12 +32,16 @@ export interface ImportRow {
   manufactureDate: string | null;
   expiryDate: string | null;
   minStock: number | null;
+  /** Sheet ka "kitne aaye" -- stock tabhi charhta hai jab warehouse chuna gaya ho. */
+  openingQty: number | null;
   categoryName: string | null;
   brandName: string | null;
   companyName: string | null;
 
   // Preview ke faisle
-  status: "new" | "duplicate" | "error" | "skipped";
+  status: "new" | "update" | "duplicate" | "error" | "skipped";
+  /** Jab qatar kisi maujood product par charhni ho. */
+  existingId?: string | null;
   problem: string | null;
   notes: string[];
 }
@@ -47,7 +51,7 @@ export interface ImportState {
   notice?: string;
   success?: boolean;
   rows?: ImportRow[];
-  summary?: { total: number; ready: number; duplicates: number; errors: number; skipped: number; noTradeRate: number; noWholesale: number };
+  summary?: { total: number; ready: number; updates: number; duplicates: number; errors: number; skipped: number; noTradeRate: number; noWholesale: number };
   imported?: number;
 }
 
@@ -82,6 +86,11 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   expairy: "expiryDate", "expairy date": "expiryDate", experi: "expiryDate",
   "experi date": "expiryDate", expire: "expiryDate", "expire date": "expiryDate",
   "min stock": "minStock", "minimum stock": "minStock", minstock: "minStock",
+  // "Kitne aaye" -- ye product ka khana nahi, stock ka hai. Isi liye
+  // wo tabhi charhta hai jab banda warehouse chunta hai (253).
+  qty: "openingQty", quantity: "openingQty", quantiti: "openingQty",
+  quantati: "openingQty", quentety: "openingQty", tadad: "openingQty",
+  "opening qty": "openingQty", stock: "openingQty",
   category: "categoryName", categories: "categoryName", qism: "categoryName",
   brand: "brandName", brands: "brandName",
   company: "companyName", companies: "companyName", "manufacturer": "companyName",
@@ -256,7 +265,10 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     supabase.from("categories").select("id, name"),
     supabase.from("brands").select("id, name"),
     supabase.from("companies").select("id, name"),
-    supabase.from("products").select("name, barcode").eq("is_deleted", false),
+    supabase
+      .from("products")
+      .select("id, name, barcode, selling_price, purchase_price, trade_rate_pending, sale_rate_pending")
+      .eq("is_deleted", false),
   ]);
 
   const byName = (list: { id: string; name: string }[] | null) =>
@@ -265,10 +277,37 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
   const brandMap = byName(brands);
   const compMap = byName(companies);
 
-  const existingNames = new Set((existing ?? []).map((p) => norm(p.name)));
-  const existingBarcodes = new Set(
-    (existing ?? []).map((p) => (p.barcode ?? "").trim()).filter(Boolean)
-  );
+  // Maujood products -- naam aur barcode, dono se pehchan.
+  //
+  // Naam ek se zyada products par ho sakta hai (do "supreme"). Aise
+  // naam par milaan NAHI hota: kaun sa "supreme" murad hai, ye faisla
+  // sheet nahi kar sakti, aur ghalat product ka rate badalna khamoshi
+  // se ghalat lagat bana deta hai.
+  type Existing = {
+    id: string;
+    selling_price: number;
+    purchase_price: number;
+    trade_rate_pending: boolean;
+    sale_rate_pending: boolean;
+  };
+  const byNameMap = new Map<string, Existing | null>();
+  const byBarcodeMap = new Map<string, Existing>();
+  for (const p of existing ?? []) {
+    const rec: Existing = {
+      id: p.id,
+      selling_price: Number(p.selling_price ?? 0),
+      purchase_price: Number(p.purchase_price ?? 0),
+      trade_rate_pending: Boolean(p.trade_rate_pending),
+      sale_rate_pending: Boolean(p.sale_rate_pending),
+    };
+    const k = norm(p.name);
+    byNameMap.set(k, byNameMap.has(k) ? null : rec);
+    const bc = (p.barcode ?? "").trim();
+    if (bc) byBarcodeMap.set(bc, rec);
+  }
+
+  const existingNames = new Set(byNameMap.keys());
+  const existingBarcodes = new Set(byBarcodeMap.keys());
 
   // Isi file ke andar ki dohri qatarein bhi pakRi jati hain -- warna
   // ek hi product do dafa ban jata hai aur stock do jagah bat jata hai.
@@ -311,6 +350,8 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       manufactureDate: toDate(pick("manufactureDate")),
       expiryDate: toDate(pick("expiryDate")),
       minStock: toNumber(at(r, "minStock")),
+      openingQty: toNumber(at(r, "openingQty")),
+      existingId: null,
       categoryName: (at(r, "categoryName") ?? "").trim() || null,
       brandName: (at(r, "brandName") ?? "").trim() || null,
       companyName: (at(r, "companyName") ?? "").trim() || null,
@@ -377,12 +418,56 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     }
 
     const key = norm(name);
-    if (barcode && (existingBarcodes.has(barcode) || seenBarcodes.has(barcode))) {
+    // Isi file ke andar ki dohri qatar ab bhi chhoRi jati hai -- ek hi
+    // sheet mein ek cheez do dafa ho to doosri wali pehli par charh kar
+    // us ka rate badal deti, aur aakhri jeet jata. Wo ghalti khamoshi
+    // se hoti hai.
+    if (barcode && seenBarcodes.has(barcode)) {
       row.status = "duplicate";
-      row.problem = "Ye barcode pehle se maujood hai — ye qatar chhoR di jayegi.";
-    } else if (existingNames.has(key) || seenNames.has(key)) {
+      row.problem = "Isi sheet mein ye barcode do dafa hai — ye qatar chhoR di jayegi.";
+    } else if (seenNames.has(key)) {
       row.status = "duplicate";
-      row.problem = "Is naam ka product pehle se hai — ye qatar chhoR di jayegi.";
+      row.problem = "Isi sheet mein ye naam do dafa hai — har ek ko apna naam dein.";
+    } else {
+      // Maujood product mila to qatar CHHOTI nahi jati -- us par charh
+      // jati hai. Sheet har mahine naye rate ke sath aati hai, aur har
+      // dafa "pehle se hai" keh dena us sheet ko bekaar kar deta hai.
+      const hit = (barcode ? byBarcodeMap.get(barcode) : undefined) ?? byNameMap.get(key) ?? undefined;
+
+      if (hit === undefined && byNameMap.has(key)) {
+        // Naam to mila, magar us naam par ek se zyada product hain.
+        row.status = "duplicate";
+        row.problem =
+          "Is naam ke ek se zyada products pehle se hain — kaun sa murad hai ye sheet se tay nahi hota. Naam mein farq laga dein.";
+      } else if (hit) {
+        row.status = "update";
+        row.existingId = hit.id;
+
+        // Purana rate saamne likha jata hai, taake tabdeeli dekh kar
+        // manzoor ho -- chup chaap nahi.
+        if (purchasePrice !== null) {
+          notes.push(
+            hit.trade_rate_pending
+              ? `Trade rate charhega: pehle maloom nahi tha → ${purchasePrice}`
+              : hit.purchase_price === purchasePrice
+                ? "Trade rate wohi hai — koi tabdeeli nahi."
+                : `Trade rate badlega: ${hit.purchase_price} → ${purchasePrice}`
+          );
+        }
+        if (sellingPrice !== null) {
+          notes.push(
+            hit.sale_rate_pending
+              ? `Sale rate charhega: pehle maloom nahi tha → ${sellingPrice}`
+              : hit.selling_price === sellingPrice
+                ? "Sale rate wohi hai — koi tabdeeli nahi."
+                : `Sale rate badlega: ${hit.selling_price} → ${sellingPrice}`
+          );
+        }
+        if (purchasePrice === null && sellingPrice === null && wholesalePrice === null) {
+          row.status = "duplicate";
+          row.problem = "Ye product pehle se hai aur is qatar mein koi naya rate nahi — kuch nahi badlega.";
+        }
+      }
     }
 
     if (row.status === "new") {
@@ -409,6 +494,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
   const summary = {
     total: rows.length,
     ready: rows.filter((r) => r.status === "new").length,
+    updates: rows.filter((r) => r.status === "update").length,
     duplicates: rows.filter((r) => r.status === "duplicate").length,
     errors: rows.filter((r) => r.status === "error").length,
     skipped: rows.filter((r) => r.status === "skipped").length,
@@ -441,9 +527,19 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
   if (preview.error) return preview;
 
   const rows = (preview.rows ?? []).filter((r) => r.status === "new");
-  if (rows.length === 0) {
+  const updateRows = (preview.rows ?? []).filter((r) => r.status === "update" && r.existingId);
+  if (rows.length === 0 && updateRows.length === 0) {
     return { error: "Charhne layak koi qatar nahi. Pehle wajahein theek karein." };
   }
+
+  // "Kitne aaye" tabhi charhta hai jab banda warehouse chunta hai.
+  //
+  // Ye rok jaan boojh kar hai. Stock ka ek hi malik hai (129), aur us
+  // ke har adad ke sath ye sawal juRa hai ke maal PARA KAHAN hai. Sheet
+  // us sawal ka jawab nahi deti. Bina jagah ke adad barha dena stock ko
+  // hawa mein khaRa kar deta hai -- aur us ka pata ginti ke din chalta
+  // hai.
+  const warehouseId = String(formData.get("warehouse_id") ?? "").trim() || null;
 
   const [{ data: categories }, { data: brands }, { data: companies }] = await Promise.all([
     supabase.from("categories").select("id, name"),
@@ -484,13 +580,17 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     created_by: user.id,
   }));
 
-  const { data: inserted, error } = await supabase.from("products").insert(payload).select("id, branch_id");
-  if (error) return { error: `Charhte waqt ruk gaya, kuch bhi nahi charha: ${error.message}` };
+  let inserted: { id: string; branch_id: string | null; name: string }[] = [];
+  if (payload.length > 0) {
+    const { data, error } = await supabase.from("products").insert(payload).select("id, branch_id, name");
+    if (error) return { error: `Charhte waqt ruk gaya, kuch bhi nahi charha: ${error.message}` };
+    inserted = (data ?? []) as typeof inserted;
+  }
 
   // Har naye product ka inventory ka khana bhi banta hai -- wohi kaam
   // jo ek ek product banate waqt hota hai. Ye na ho to product POS par
   // to dikhta hai magar stock ka koi khana nahi hota.
-  const branchIds = Array.from(new Set((inserted ?? []).map((p) => p.branch_id).filter(Boolean)));
+  const branchIds = Array.from(new Set(inserted.map((p) => p.branch_id).filter(Boolean)));
   const { data: warehouses } = await supabase
     .from("warehouses")
     .select("id, branch_id")
@@ -498,7 +598,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     .in("branch_id", branchIds.length ? (branchIds as string[]) : ["00000000-0000-0000-0000-000000000000"]);
 
   const whByBranch = new Map((warehouses ?? []).map((w) => [w.branch_id, w.id]));
-  const invRows = (inserted ?? [])
+  const invRows = inserted
     .map((p) => {
       const wh = p.branch_id ? whByBranch.get(p.branch_id) : null;
       return wh ? { product_id: p.id, warehouse_id: wh, quantity_on_hand: 0 } : null;
@@ -509,6 +609,80 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     await supabase.from("inventory").insert(invRows);
   }
 
+  // -------------------------------------------------------------------
+  // Purane products par naya rate
+  // -------------------------------------------------------------------
+  // Rate seedha yahan se nahi likha jata. fn_set_product_rates (253)
+  // teen kaam ek sath karta hai: rate likhna, "abhi maloom nahi" ka
+  // nishan hatana, aur indraj karna. Alag alag likhne se wo soorat
+  // banti hai jahan rate charh gaya aur indraj reh gaya -- aur us ka
+  // pata us din chalta hai jis din koi poochhta hai "ye cheez pehle
+  // 240 ki thi, ab 310 ki kyun hai?"
+  let updated = 0;
+  const updateProblems: string[] = [];
+
+  for (const r of updateRows) {
+    const { error: rateErr } = await supabase.rpc("fn_set_product_rates", {
+      p_product_id: r.existingId as string,
+      p_sale: r.sellingPrice,
+      p_trade: r.purchasePrice,
+      p_wholesale: r.wholesalePrice,
+      p_source: "import",
+    });
+    if (rateErr) {
+      updateProblems.push(`${r.name}: ${rateErr.message}`);
+      continue;
+    }
+    updated += 1;
+  }
+
+  // -------------------------------------------------------------------
+  // "Kitne aaye" -- sirf tab, jab jagah maloom ho
+  // -------------------------------------------------------------------
+  let stocked = 0;
+  let qtyIgnored = 0;
+
+  const withQty = [...rows, ...updateRows].filter((r) => (r.openingQty ?? 0) > 0);
+
+  if (withQty.length > 0 && !warehouseId) {
+    qtyIgnored = withQty.length;
+  } else if (withQty.length > 0 && warehouseId) {
+    const idByName = new Map(inserted.map((p) => [norm(p.name), p.id]));
+
+    for (const r of withQty) {
+      const pid = r.existingId ?? idByName.get(norm(r.name));
+      if (!pid) continue;
+
+      // batch_id khali wali qatar hi barhti hai. Jis maal ka apna batch
+      // hai us ka hisaab alag rehta hai -- us mein sheet se adad jorhna
+      // do alag cheezon ko mila dena hai.
+      const { data: existingInv } = await supabase
+        .from("inventory")
+        .select("id, quantity_on_hand")
+        .eq("product_id", pid)
+        .eq("warehouse_id", warehouseId)
+        .is("batch_id", null)
+        .maybeSingle();
+
+      const add = Number(r.openingQty ?? 0);
+
+      if (existingInv) {
+        // Barhta hai, badalta nahi. Sheet kehti hai "itna aaya", ye
+        // nahi ke "ab kul itna hai".
+        const { error: upErr } = await supabase
+          .from("inventory")
+          .update({ quantity_on_hand: Number(existingInv.quantity_on_hand ?? 0) + add })
+          .eq("id", existingInv.id);
+        if (!upErr) stocked += 1;
+      } else {
+        const { error: insErr } = await supabase
+          .from("inventory")
+          .insert({ product_id: pid, warehouse_id: warehouseId, quantity_on_hand: add });
+        if (!insErr) stocked += 1;
+      }
+    }
+  }
+
   const pending = payload.filter((p) => p.trade_rate_pending).length;
 
   await logAudit({
@@ -516,22 +690,39 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     module: "products",
     recordId: "csv-import",
     recordLabel: "CSV se products",
-    description: `${payload.length} products CSV se charhaye gaye${pending ? `, ${pending} ka trade rate baqi` : ""}`,
+    description:
+      `${payload.length} products bane, ${updated} purane products ka rate badla` +
+      (stocked ? `, ${stocked} par stock charha` : "") +
+      (pending ? `, ${pending} ka trade rate baqi` : ""),
     changes: {
-      charhe: { pehle: 0, ab: payload.length },
+      bane: { pehle: 0, ab: payload.length },
+      rate_badla: { pehle: 0, ab: updated },
+      stock_charha: { pehle: 0, ab: stocked },
       trade_rate_baqi: { pehle: 0, ab: pending },
     },
   });
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/products/import");
+  revalidatePath("/admin/products/rates-baqi");
+  revalidatePath("/admin/pos");
+
+  const parts: string[] = [];
+  if (payload.length) parts.push(`${payload.length} naye products bane.`);
+  if (updated) parts.push(`${updated} purane products ka rate badal gaya.`);
+  if (stocked) parts.push(`${stocked} par stock charh gaya.`);
+  if (qtyIgnored) {
+    parts.push(
+      `${qtyIgnored} qataron mein "kitne aaye" likha tha magar warehouse nahi chuna gaya — wo adad nahi charhe.`
+    );
+  }
+  if (pending) parts.push(`${pending} ka trade rate abhi baqi hai — un par nishan laga hua hai.`);
+  if (updateProblems.length) parts.push(`Kuch rate nahi charhe: ${updateProblems.slice(0, 3).join(" | ")}`);
 
   return {
     success: true,
-    imported: payload.length,
+    imported: payload.length + updated,
     summary: preview.summary,
-    notice: pending
-      ? `${payload.length} products charh gaye. In mein ${pending} ka trade rate abhi baqi hai — un par nishan laga hua hai.`
-      : `${payload.length} products charh gaye.`,
+    notice: parts.join(" "),
   };
 }
