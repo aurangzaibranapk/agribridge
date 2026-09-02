@@ -300,6 +300,45 @@ export const productsFlowDict = {
     ur: "بل پر یہ ریٹ صاف نہیں تھا — خود دیکھ کر لکھیں۔ خالی چھوڑنا صفر لکھنے سے بہتر ہے۔",
   },
   pf_bill_which_product: { en: "Which product of ours", rm: "Hamara kaun sa product", ur: "ہمارا کون سا پروڈکٹ" },
+  // ---- Kya mangwana hai (262) ----
+  pf_ro_title: { en: "What to Reorder", rm: "Kya Mangwana Hai", ur: "کیا منگوانا ہے" },
+  pf_ro_desc: {
+    en: "From the last 30 days of sales: how many days of stock are left, and how much to order (7 days lead + 14 days cover).",
+    rm: "Pichhle 30 din ki bikri se: kitne din ka stock baqi hai, aur kitna mangwayein (7 din raasta + 14 din ka stock).",
+    ur: "پچھلے 30 دن کی بکری سے: کتنے دن کا اسٹاک باقی ہے، اور کتنا منگوائیں (7 دن راستہ + 14 دن کا اسٹاک)۔",
+  },
+  pf_ro_hint: {
+    en: "These are suggestions, not orders. Fix the quantity, cost and supplier, tick the rows, and make purchase drafts — one per supplier — which then go for approval.",
+    rm: "Ye sujhaav hain, hukm nahi. Tadad, rate aur supplier theek karein, qatarein chunein, aur purchase ke draft banayein — har supplier ki alag — jo phir manzoori par jate hain.",
+    ur: "یہ تجاویز ہیں، حکم نہیں۔ تعداد، ریٹ اور سپلائر ٹھیک کریں، قطاریں چنیں، اور پرچیز کے ڈرافٹ بنائیں — ہر سپلائر کی الگ — جو پھر منظوری پر جاتے ہیں۔",
+  },
+  pf_ro_none: {
+    en: "Nothing to reorder right now — every selling product has more than 21 days of stock.",
+    rm: "Abhi kuch mangwane ki zaroorat nahi — har bikne wali cheez ka 21 din se zyada ka stock hai.",
+    ur: "ابھی کچھ منگوانے کی ضرورت نہیں — ہر بکنے والی چیز کا 21 دن سے زیادہ کا اسٹاک ہے۔",
+  },
+  pf_ro_u_out: { en: "Out of stock", rm: "Khatam", ur: "ختم" },
+  pf_ro_u_critical: { en: "Under 7 days", rm: "7 din se kam", ur: "7 دن سے کم" },
+  pf_ro_u_soon: { en: "Under 21 days", rm: "21 din se kam", ur: "21 دن سے کم" },
+  pf_ro_u_low: { en: "Below minimum", rm: "Kam az kam se neeche", ur: "کم از کم سے نیچے" },
+  pf_ro_u_ok: { en: "OK", rm: "Theek", ur: "ٹھیک" },
+  pf_ro_th_urgency: { en: "State", rm: "Halat", ur: "حالت" },
+  pf_ro_th_sold30: { en: "Sold 30d", rm: "30 din bikri", ur: "30 دن بکری" },
+  pf_ro_th_sold7: { en: "Sold 7d", rm: "7 din", ur: "7 دن" },
+  pf_ro_th_stock: { en: "In stock", rm: "Stock", ur: "اسٹاک" },
+  pf_ro_th_days: { en: "Days left", rm: "Din baqi", ur: "دن باقی" },
+  pf_ro_th_qty: { en: "Order qty", rm: "Mangwayein", ur: "منگوائیں" },
+  pf_ro_th_cost: { en: "Cost", rm: "Rate", ur: "ریٹ" },
+  pf_ro_th_supplier: { en: "Supplier", rm: "Supplier", ur: "سپلائر" },
+  pf_ro_last_buy: { en: "last bought", rm: "aakhri kharid", ur: "آخری خرید" },
+  pf_ro_make: { en: "Make purchase drafts ({n})", rm: "Purchase draft banayein ({n})", ur: "پرچیز ڈرافٹ بنائیں ({n})" },
+  pf_ro_made: { en: "{n} purchase draft(s) made — now awaiting approval on Purchases.", rm: "{n} purchase draft ban gaye — ab Purchases par manzoori ke liye.", ur: "{n} پرچیز ڈرافٹ بن گئے — اب Purchases پر منظوری کے لیے۔" },
+  pf_ro_submit_hint: {
+    en: "One purchase per supplier. Nothing reaches stock or the supplier's account until it is approved and received.",
+    rm: "Har supplier ki ek purchase. Manzoor aur receive hone tak na stock badalta hai na supplier ka dena.",
+    ur: "ہر سپلائر کی ایک پرچیز۔ منظور اور ریسیو ہونے تک نہ اسٹاک بدلتا ہے نہ سپلائر کا دینا۔",
+  },
+
   // ---- Apna barcode aur label (261) ----
   pf_lb_title: { en: "Barcode Labels", rm: "Barcode Label", ur: "بارکوڈ لیبل" },
   pf_lb_desc: {

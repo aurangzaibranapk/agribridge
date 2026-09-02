@@ -44,11 +44,11 @@ hain:
 | 18 | Warehouse: approve & pick → packed → dispatched → in transit | ✅ Bana hua | `createDispatch` stock nikalta hai; lene wale ki inventory mein GRN par jata hai — raaste ka maal kisi ke stock mein nahi ginta |
 | 19 | Shop receive: expected 60, mila 59, damaged 1 | 🟡 Adha | Agri-orders ka GRN hai. **Short/damage ka alag hisaab baqi** |
 | 20 | Role ke hisaab se sirf apna kaam | ✅ Bana hua | Feature permissions, `loadNav`, "Mera Kaam" (250) |
-| 21 | AI Command Center ("kaunse products ka rate missing hai?") | 🟡 Adha | Bridge AI sawal ka jawab deta hai. **Purchase/stock ke naye tools baqi** |
+| 21 | AI Command Center ("kaunse products ka rate missing hai?") | ✅ **Ban gaya (260, 262)** | Bridge AI ke naye tools: `draft_shop_order` (shop order ka draft), `get_reorder_suggestions` (kya mangwana hai). Rate/barcode/tasveer ki ginti ke liye Adhoore Products ka safha (258) |
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
-| 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
+| 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ✅ **Ban gaya (262)** | `v_reorder_suggestions`: 30 din ki bikri / 30 = roz ki raftaar; din ka stock (bikri sifar ho to NULL, sifar nahi); mangwana = raftaar × (7 + 14) − stock; `/admin/products/reorder` se supplier-war purchase draft (manzoori ke liye); Bridge AI tool `get_reorder_suggestions` |
 
-**Ginti:** 23 mein se **20 bane hue**, **3 adhe**, **0 baqi**.
+**Ginti:** 23 cheezein, 25 qatarein (do ke do hisse): **22 bani hui**, **3 adhi** (bill par confidence ka nishan, warehouse card par reserved, agri-GRN ka short/damage), **0 baqi**.
 
 ---
 
@@ -90,9 +90,9 @@ stock, POS, rate baqi ki fehrist.
 | **G** | ~~AI order draft~~ | ✅ **Ho gaya (260)** | — |
 | **H** | ~~Fuzzy product matching~~ | ✅ **Ho gaya** (koi migration nahi) | — |
 | **I** | ~~Internal barcode + label print~~ | ✅ **Ho gaya (261)** | — |
-| **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
+| **J** | ~~AI Reorder~~ | ✅ **Ho gaya (262)** | — |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se I tak ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se J tak sab ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

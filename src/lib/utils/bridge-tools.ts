@@ -483,6 +483,36 @@ async function draftShopOrder(
   };
 }
 
+// ===== Tool 11: Kya mangwana hai (262) =====
+// Bikri ki raftaar se: kitne din ka stock, kitna mangwayein. Sirf
+// parhta hai -- purchase banana safhe se ya draft_shop_order/propose se.
+async function getReorderSuggestions(supabase: ReturnType<typeof createClient>) {
+  const { data } = await supabase
+    .from("v_reorder_suggestions")
+    .select("name, pack_size, sold_30, on_hand, daily_rate, days_cover, suggested_qty, urgency, last_supplier_name, last_unit_cost")
+    .order("urgency")
+    .order("days_cover", { ascending: true, nullsFirst: false })
+    .limit(20);
+  const rows = (data ?? []).map((r) => ({
+    product: `${r.name}${r.pack_size ? ` (${r.pack_size})` : ""}`,
+    sold_last_30_days: Number(r.sold_30 ?? 0),
+    in_stock: Number(r.on_hand ?? 0),
+    // Bikri sifar ho to din ka hisaab NULL -- "hisaab nahi banta", sifar nahi.
+    days_of_stock_left: r.days_cover == null ? null : Number(r.days_cover),
+    suggested_order_qty: Number(r.suggested_qty ?? 0),
+    urgency: r.urgency,
+    last_supplier: r.last_supplier_name,
+    last_unit_cost: r.last_unit_cost == null ? null : Number(r.last_unit_cost),
+  }));
+  return {
+    rule: "roz ki bikri = 30 din ki bikri / 30; mangwana = roz ki bikri x (7 din raasta + 14 din stock) - jo para hai",
+    count: rows.length,
+    items: rows,
+    page: "/admin/products/reorder",
+    currency: "PKR",
+  };
+}
+
 // ===== Gemini ko batata hai har tool kya karta hai =====
 export const bridgeToolDeclarations: FunctionDeclaration[] = [
   {
@@ -526,6 +556,11 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
     description:
       "Machinery Rental ka summary deta hai: total bookings value, kamaya hua commission, farmers se baaqi paisa, aur kitni bookings pending hain.",
     parameters: { type: Type.OBJECT, properties: {} },
+  },
+  {
+    name: "get_reorder_suggestions",
+    description:
+      "Kya mangwana chahiye: pichhle 30 din ki bikri ki raftaar se har product ka kitne din ka stock baqi hai aur kitna mangwana chahiye (7 din raasta + 14 din ka stock). Jab user pooche 'kya mangwana hai', 'kaun si cheez khatam ho rahi hai', 'stock kitne din chalega'.",
   },
   {
     name: "propose_action",
@@ -628,6 +663,8 @@ export async function executeBridgeTool(
       return broadcastToFarmers(supabase, args ?? {});
     case "draft_shop_order":
       return draftShopOrder(supabase, args ?? {});
+    case "get_reorder_suggestions":
+      return getReorderSuggestions(supabase);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

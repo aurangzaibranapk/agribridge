@@ -22982,6 +22982,31 @@ export type Database = {
         }
         Relationships: []
       }
+      v_reorder_suggestions: {
+        Row: {
+          cover_days: number | null
+          daily_rate: number | null
+          days_cover: number | null
+          last_purchase_date: string | null
+          last_sold_at: string | null
+          last_supplier_id: string | null
+          last_supplier_name: string | null
+          last_unit_cost: number | null
+          lead_days: number | null
+          min_stock_threshold: number | null
+          name: string | null
+          on_hand: number | null
+          pack_size: string | null
+          product_id: string | null
+          purchase_price: number | null
+          sold_30: number | null
+          sold_7: number | null
+          suggested_qty: number | null
+          trade_rate_pending: boolean | null
+          urgency: string | null
+        }
+        Relationships: []
+      }
       v_product_batches: {
         Row: {
           batch_id: string | null
