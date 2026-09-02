@@ -47,8 +47,8 @@ nahi.
 | Kahan | Kaun si |
 |---|---|
 | **Live par chal chuki** | 225, **226 se 242** (1 September), aur **243 se 264** (2 September, ~12:50 UTC -- malik ne naya build pehle Start kar diya tha, is liye backup ki tasdeeq ke baghair, paanch batch mein) |
-| **Live par NAHI chalin** | **265** (Inventory menu saaf -- sirf menu ki qatarein, koi table nahi) |
-| Testing par | 226 se 265 tak sab |
+| **Live par NAHI chalin** | **265 se 270** -- 265 Inventory menu saaf (sirf menu qatarein); 266 feature_help + 32 help; 267 my-work feature; 268 training_mode / ui_mode / training_modules / staff_training_progress / academy; 269 suggestions + suggestion_comments (Improvements Center); 270 access_requests + access_request_events (AI Access Request). **Naya build (ea693b9) in ke BAAD upload ho** -- warna My Work, Academy, Improvements, My Access, "?" help panel aur Work Coach ke naye tools tootenge. |
+| Testing par | 226 se 270 tak sab |
 
 **(Ho chuka.) 243–264 chalne se pehle build upload nahi hona chahiye tha.** Warna ye safhe tootenge: products ki fehrist, POS, product
 ka form (naya aur edit), Maal Andar, Bill se Trade Rate, aur CRM mein
