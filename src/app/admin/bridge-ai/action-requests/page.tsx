@@ -19,6 +19,9 @@ interface ActionRequest {
   product_purchase_price: number | null;
   suggested_quantity: number | null;
   created_purchase_id: string | null;
+  created_order_id: string | null;
+  order_number: string | null;
+  order_status: string | null;
 }
 
 interface Option {
@@ -120,6 +123,11 @@ export default function ActionRequestsPage() {
                         Product identified: {r.product_name}
                       </p>
                     )}
+                    {r.created_order_id && (
+                      <Link href={`/admin/agri-orders/${r.created_order_id}`} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                        <PackageCheck className="h-3.5 w-3.5" /> Draft {r.order_number} dekhein
+                      </Link>
+                    )}
                   </div>
                   <span className="shrink-0 text-xs text-surface-400">{new Date(r.created_at).toLocaleString()}</span>
                 </div>
@@ -189,7 +197,7 @@ export default function ActionRequestsPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    {r.product_id ? "Approve & Create Purchase Order" : "Approve"}
+                    {r.created_order_id ? "Manzoor - order Sales ko bhejein" : r.product_id ? "Approve & Create Purchase Order" : "Approve"}
                   </button>
                   <button
                     onClick={() => decide(r.id, "needs_changes")}
@@ -235,6 +243,14 @@ export default function ActionRequestsPage() {
                   </span>
                 </div>
                 {r.review_notes && <p className="mt-1 text-xs text-surface-500">{r.review_notes}</p>}
+                {r.created_order_id && (
+                  <Link
+                    href={`/admin/agri-orders/${r.created_order_id}`}
+                    className="mt-2 mr-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    <PackageCheck className="h-3.5 w-3.5" /> {r.order_number} ({r.order_status})
+                  </Link>
+                )}
                 {r.created_purchase_id && (
                   <Link
                     href="/admin/purchases"

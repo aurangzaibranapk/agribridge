@@ -3189,6 +3189,7 @@ export type Database = {
       }
       bridge_ai_action_requests: {
         Row: {
+          created_order_id: string | null
           action_type: string
           created_at: string
           created_purchase_id: string | null
@@ -3203,6 +3204,7 @@ export type Database = {
           suggested_quantity: number | null
         }
         Insert: {
+          created_order_id?: string | null
           action_type: string
           created_at?: string
           created_purchase_id?: string | null
@@ -3217,6 +3219,7 @@ export type Database = {
           suggested_quantity?: number | null
         }
         Update: {
+          created_order_id?: string | null
           action_type?: string
           created_at?: string
           created_purchase_id?: string | null

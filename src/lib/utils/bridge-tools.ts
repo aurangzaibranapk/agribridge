@@ -311,6 +311,171 @@ async function broadcastToFarmers(
   return { sent: true, message: "Announcement ban gayi hai - sab Farmers ko unke agle Portal Login pe dikhegi." };
 }
 
+// ===== Tool 10: Shop order ka DRAFT (260) =====
+// "Mahabali ke liye DAP 20, Urea 30" -> agri_orders mein draft. Shop aur
+// product database se milte hain; jo na mile ya do mil jayen, wahan
+// order NAHI banta -- wapas poochha jata hai. Draft ordering ki chain
+// mein tab jata hai jab koi banda action-requests par manzoor kare. AI
+// khud kabhi 'submitted' nahi karta, rate khud nahi banata (thok rate
+// product par jo hai wohi; na ho to wo line nahi charhti).
+async function draftShopOrder(
+  supabase: ReturnType<typeof createClient>,
+  args: {
+    shop_name?: string;
+    items?: { product_name?: string; qty?: number }[];
+    payment_terms?: string;
+    notes?: string;
+  }
+) {
+  const { data: settings } = await supabase
+    .from("bridge_ai_settings")
+    .select("actions_enabled")
+    .eq("id", true)
+    .single();
+  if (!settings?.actions_enabled) {
+    return { created: false, message: "Action proposals abhi band hain - admin ne ye feature disable kar rakha hai." };
+  }
+  const shopName = (args.shop_name ?? "").trim();
+  const items = (args.items ?? []).filter((i) => i && i.product_name && Number(i.qty) > 0);
+  if (!shopName) return { created: false, message: "Kis shop/branch ke liye order hai, wo naam chahiye." };
+  if (items.length === 0) return { created: false, message: "Kam az kam ek product aur us ki tadad chahiye." };
+
+  // Shop: naam se milan. Main branch ko order nahi hota -- wo bhejne wala hai.
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name, is_main_branch")
+    .eq("is_active", true)
+    .ilike("name", `%${shopName}%`);
+  const shops = (branches ?? []).filter((b) => !b.is_main_branch);
+  if (shops.length === 0) {
+    const { data: all } = await supabase.from("branches").select("name").eq("is_active", true).eq("is_main_branch", false).order("name").limit(20);
+    return {
+      created: false,
+      message: `"${shopName}" naam ki koi shop/branch nahi mili.`,
+      available_shops: (all ?? []).map((b) => b.name),
+    };
+  }
+  if (shops.length > 1) {
+    return { created: false, message: `"${shopName}" se ek se zyada shops milti hain -- kaun si?`, candidates: shops.map((b) => b.name) };
+  }
+  const shop = shops[0];
+
+  // Products: ek ek naam. Do milen to poochho; rate na ho to line nahi.
+  const matched: { product_id: string; product_name: string; pack_size: string | null; unit_price: number; order_qty: number }[] = [];
+  const problems: { product_name: string; problem: string; candidates?: string[] }[] = [];
+  for (const it of items) {
+    const name = String(it.product_name).trim();
+    const { data: found } = await supabase
+      .from("products")
+      .select("id, name, pack_size, selling_price, wholesale_price, sale_rate_pending")
+      .eq("is_deleted", false)
+      .ilike("name", `%${name}%`)
+      .limit(6);
+    const list = found ?? [];
+    const exact = list.filter((p) => p.name.trim().toLowerCase() === name.toLowerCase());
+    const pick = exact.length === 1 ? exact[0] : list.length === 1 ? list[0] : null;
+    if (!pick) {
+      if (list.length === 0) problems.push({ product_name: name, problem: "nahi mila" });
+      else problems.push({ product_name: name, problem: "ek se zyada milte hain", candidates: list.map((p) => `${p.name}${p.pack_size ? ` (${p.pack_size})` : ""}`) });
+      continue;
+    }
+    // Thok rate branch ka rate hai; na ho to sale rate. Sale rate bhi
+    // baqi ho to is line ka koi rate nahi -- 0 likhna jhoot hota.
+    const unit = pick.wholesale_price != null ? Number(pick.wholesale_price) : pick.sale_rate_pending ? null : Number(pick.selling_price);
+    if (unit == null || unit <= 0) {
+      problems.push({ product_name: pick.name, problem: "rate baqi hai -- pehle Adhoore Products par rate bharein" });
+      continue;
+    }
+    matched.push({ product_id: pick.id, product_name: pick.name, pack_size: pick.pack_size, unit_price: unit, order_qty: Number(it.qty) });
+  }
+  if (problems.length > 0) {
+    return { created: false, message: "Kuch products par order nahi ban sakta -- pehle ye saaf karein.", problems, matched: matched.map((m) => `${m.product_name} x ${m.order_qty}`) };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Order number: wohi ginti jo haath se banaye order par chalti hai.
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  const svc = createServiceClient();
+  const year = new Date().getFullYear() % 100;
+  const { data: counter } = await svc.from("agri_order_counters").select("last_number").eq("year", year).maybeSingle();
+  const next = (counter?.last_number ?? 0) + 1;
+  if (counter) await svc.from("agri_order_counters").update({ last_number: next }).eq("year", year);
+  else await svc.from("agri_order_counters").insert({ year, last_number: next });
+  const orderNumber = `AGR-${year}-${String(next).padStart(5, "0")}`;
+
+  const subtotal = matched.reduce((s, m) => s + m.order_qty * m.unit_price, 0);
+  const paymentTerms = args.payment_terms === "Advance Payment" ? "Advance Payment" : "Credit";
+
+  const { data: order, error } = await supabase
+    .from("agri_orders")
+    .insert({
+      order_number: orderNumber,
+      order_type: "FMCG / Other",
+      order_from: "AgriBridge Company",
+      order_to_type: "Branch",
+      order_to_branch_id: shop.id,
+      shop_dealer_name: shop.name,
+      subtotal,
+      discount: 0,
+      tax: 0,
+      freight_charges: 0,
+      other_charges: 0,
+      grand_total: subtotal,
+      payment_terms: paymentTerms,
+      credit_limit: 0,
+      existing_outstanding: 0,
+      available_credit: 0,
+      projected_outstanding: subtotal,
+      // DRAFT: chain mein nahi. Manzoori par submitted hota hai.
+      status: "draft",
+      requested_by: user?.id ?? null,
+      notes: `Bridge AI ka draft${args.notes ? `: ${args.notes}` : ""}`,
+    })
+    .select("id")
+    .single();
+  if (error || !order) return { created: false, message: `Draft nahi ban saka: ${error?.message ?? "wajah maloom nahi"}` };
+
+  const { error: itemsErr } = await supabase.from("agri_order_items").insert(
+    matched.map((m) => ({
+      order_id: order.id,
+      product_id: m.product_id,
+      product_name: m.product_name,
+      pack_size: m.pack_size,
+      order_qty: m.order_qty,
+      unit_price: m.unit_price,
+      discount: 0,
+      tax: 0,
+      net_price: m.unit_price,
+      line_total: m.order_qty * m.unit_price,
+    }))
+  );
+  if (itemsErr) return { created: false, message: `Draft bana magar lines nahi charhin: ${itemsErr.message}` };
+
+  await supabase.from("agri_order_timeline").insert({ order_id: order.id, status: "draft", note: `Bridge AI ne draft banaya - ${orderNumber}`, created_by: user?.id ?? null });
+
+  const lines = matched.map((m) => `${m.product_name} x ${m.order_qty} @ Rs ${m.unit_price}`).join(", ");
+  await supabase.from("bridge_ai_action_requests").insert({
+    action_type: "order_draft",
+    description: `${shop.name} ke liye order draft ${orderNumber}: ${lines}`,
+    details: args.notes ?? null,
+    status: "pending",
+    created_order_id: order.id,
+  });
+
+  return {
+    created: true,
+    order_number: orderNumber,
+    shop: shop.name,
+    lines: matched.map((m) => ({ product: m.product_name, qty: m.order_qty, unit_price: m.unit_price })),
+    total: subtotal,
+    currency: "PKR",
+    message: `Draft ${orderNumber} ban gaya (Rs ${subtotal.toLocaleString()}). Ye abhi order NAHI hai -- /admin/bridge-ai/action-requests par manzoor hone ke baad Sales ke paas jayega.`,
+  };
+}
+
 // ===== Gemini ko batata hai har tool kya karta hai =====
 export const bridgeToolDeclarations: FunctionDeclaration[] = [
   {
@@ -387,6 +552,32 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "draft_shop_order",
+    description:
+      "Kisi shop/branch ke liye stock order ka DRAFT banata hai (jaise 'Mahabali ke liye DAP 20 aur Urea 30'). Sirf draft -- asal order tab banta hai jab admin action-requests par manzoor kare. Shop aur product ka naam database se milaya jata hai; na mile ya kai milen to draft nahi banta aur wapas poochna hota hai. Rate khud mat likhein, system product ka thok rate lagata hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        shop_name: { type: Type.STRING, description: "Shop/branch ka naam jis ke liye maal chahiye (jaise 'Mahabali')" },
+        items: {
+          type: Type.ARRAY,
+          description: "Products aur tadad",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              product_name: { type: Type.STRING, description: "Product ka naam jaisa user ne kaha (jaise 'DAP')" },
+              qty: { type: Type.NUMBER, description: "Tadad (sirf number)" },
+            },
+            required: ["product_name", "qty"],
+          },
+        },
+        payment_terms: { type: Type.STRING, description: "'Credit' (khata, default) ya 'Advance Payment'" },
+        notes: { type: Type.STRING, description: "Koi note (Roman Urdu), optional" },
+      },
+      required: ["shop_name", "items"],
+    },
+  },
+  {
     name: "broadcast_to_farmers",
     description:
       "Jab user chahe ke saare Farmers ko ek Announcement/Message bheja jaye (jaise Naya Feature ka Elaan), ya kisi ek specific Farmer ko Reward/Individual Message bheji jaye, to ye tool use karein. 'target' ko 'all' rakhein sab Farmers ke liye (Announcement banega, unke Portal Login pe dikhega), ya 'specific' rakhein aur 'farmer_phone' dein ek Farmer ko seedha WhatsApp bhejne ke liye.",
@@ -428,6 +619,8 @@ export async function executeBridgeTool(
       return proposeAction(supabase, args ?? {});
     case "broadcast_to_farmers":
       return broadcastToFarmers(supabase, args ?? {});
+    case "draft_shop_order":
+      return draftShopOrder(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -436,13 +629,13 @@ export async function executeBridgeTool(
 // ===== Specialized Agent System Instructions =====
 export const AGENT_SYSTEM_INSTRUCTIONS: Record<string, string> = {
   crop:
-    "Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
   livestock:
-    "Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
   finance:
-    "Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
   general:
-    "Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein.",
+    "Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
 };
 
 // Simple keyword-based router - koi extra AI call nahi lagti, turant

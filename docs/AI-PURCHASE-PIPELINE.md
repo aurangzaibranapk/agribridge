@@ -40,7 +40,7 @@ hain:
 | 14 | Batch-level expiry, FEFO | ✅ **Ban gaya (257)** | Har raaste ka maal apna batch banata hai (purchase, sheet, Maal Andar). `products.expiry_date` sirf dikhane ke liye: qareeb batch ki miyaad, trigger rakhta hai. FEFO: POS pehle se, transfers/dispatch ab (`stock-movement.ts`) |
 | 15 | Warehouse product card (stock, reserved, batches) | 🟡 Adha | `/admin/inventory`, `/admin/inventory/report`. **Reserved aur nearest-expiry ek card par baqi** |
 | 16 | Shop stock request (grid, qty +/−) | ✅ Bana hua | `/admin/pos/ordering` — agri_orders; Sales → Finance → Manager → dispatch → GRN ki poori chain (PR #1) |
-| 17 | AI se shop order ("DAP 20, Urea 30 mangwa do") | ❌ Baqi | Bridge AI hai, magar **order-draft ka tool nahi** |
+| 17 | AI se shop order ("DAP 20, Urea 30 mangwa do") | ✅ **Ban gaya (260)** | Bridge AI tool `draft_shop_order`: shop aur product naam se milte hain (na mile / do milen / rate baqi → draft nahi, wapas sawal); `agri_orders` mein **draft**; action-requests par manzoor → submitted (Sales → Finance → Manager chain), radd → cancelled. AI rate nahi banata, thok rate product ka |
 | 18 | Warehouse: approve & pick → packed → dispatched → in transit | ✅ Bana hua | `createDispatch` stock nikalta hai; lene wale ki inventory mein GRN par jata hai — raaste ka maal kisi ke stock mein nahi ginta |
 | 19 | Shop receive: expected 60, mila 59, damaged 1 | 🟡 Adha | Agri-orders ka GRN hai. **Short/damage ka alag hisaab baqi** |
 | 20 | Role ke hisaab se sirf apna kaam | ✅ Bana hua | Feature permissions, `loadNav`, "Mera Kaam" (250) |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **17 bane hue**, **5 adhe**, **1 baqi**.
+**Ginti:** 23 mein se **18 bane hue**, **5 adhe**, **0 baqi**.
 
 ---
 
@@ -87,12 +87,12 @@ stock, POS, rate baqi ki fehrist.
 | **D** | ~~Batch-level expiry~~ | ✅ **Ho gaya (257)** | — |
 | **E** | ~~Product Setup Queue~~ | ✅ **Ho gaya (258)** | — |
 | **F** | ~~Send-back + comment~~ | ✅ **Ho gaya (259)** | — |
-| **G** | **AI order draft** — Bridge AI ka tool: "Mahabali ke liye DAP 20" → agri_orders draft | #17 — ordering chain pehle se hai | 1 din |
+| **G** | ~~AI order draft~~ | ✅ **Ho gaya (260)** | — |
 | **H** | Fuzzy product matching (score + confirm) | #2 | Aadha din |
 | **I** | Internal barcode + label print | #13 | 1 din |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se F tak ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A se G tak ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

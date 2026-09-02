@@ -16,6 +16,37 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   let createdPurchaseId: string | null = null;
 
+  // AI ka order draft (260): manzoor -> submitted (chain mein), radd ->
+  // cancelled, changes -> draft hi rehta hai. Draft khud kabhi aage
+  // nahi jata.
+  const { data: reqRow } = await supabase
+    .from("bridge_ai_action_requests")
+    .select("created_order_id")
+    .eq("id", params.id)
+    .maybeSingle();
+  if (reqRow?.created_order_id) {
+    const orderId = reqRow.created_order_id;
+    const { data: order } = await supabase.from("agri_orders").select("order_number, status, shop_dealer_name").eq("id", orderId).maybeSingle();
+    if (order && order.status === "draft" && (status === "approved" || status === "rejected")) {
+      const nextStatus = status === "approved" ? "submitted" : "cancelled";
+      const { error: oErr } = await supabase
+        .from("agri_orders")
+        .update(status === "approved" ? { status: nextStatus } : { status: nextStatus, rejection_reason: reviewNotes || "AI draft radd" })
+        .eq("id", orderId);
+      if (oErr) return NextResponse.json({ error: `Order ka darja nahi badla: ${oErr.message}` }, { status: 500 });
+      await supabase.from("agri_order_timeline").insert({
+        order_id: orderId,
+        status: nextStatus,
+        note: status === "approved" ? `AI draft manzoor - ${order.order_number} Sales ke paas` : `AI draft radd${reviewNotes ? `: ${reviewNotes}` : ""}`,
+        created_by: user?.id ?? null,
+      });
+      if (status === "approved") {
+        const { notifyRoles } = await import("@/lib/notifications");
+        await notifyRoles(["sales_staff", "super_admin", "admin", "owner"], "Naya Order Aaya", `${order.shop_dealer_name ?? "Shop"} ke liye ${order.order_number} (AI draft, manzoor) - verify karein.`, `/admin/agri-orders/${orderId}`);
+      }
+    }
+  }
+
   // Agar approve ho raha hai aur supplier/branch/quantity di gayi hai, to asal Purchase Order bana dein
   if (status === "approved" && supplierId && branchId && quantity) {
     const { data: actionRequest } = await supabase
