@@ -133,14 +133,20 @@ sirf barh sakti hai, ghat nahi sakti.
 Malik ka usool: system par na hon to command **hold**. Wo kahein
 "system par aa gaya", tab ye poori fehrist ek sath jayegi.
 
+**P0 rule (malik, 2 September):** Backup verified → pre-migration
+record → migrations 265→270 → verification → naya build upload → smoke
+test → Live accepted. **Backup confirm hone se pehle 265–270 Live par
+NAHI chalengi.**
+
 **Us waqt jo bhejna hai, isi tarteeb mein:**
 
 1. **Backup** — do `pg_dump` command (schema + data). Connection string
    wo khud Supabase Dashboard se lenge; wo string chat mein kabhi nahi
    aani.
-2. **Rukna** — dono file ke size aayen, phir main **243–263 Live par
-   chalaoon** aur ginti dobara milaoon.
-3. **Build + package** — do command, branch
+2. **Rukna** — dono file ke size aayen (backup verified), phir
+   pre-migration ginti (section 4 wali), phir main **265–270 Live par
+   chalaoon** aur ginti dobara milaoon. (243–264 ho chuki hain.)
+3. **Build + package** — sirf migrations ke BAAD; do command, branch
    `claude/code-load-project-structure-fq91y9` se.
 4. **cPanel** — Stop → upload (overwrite) → Extract → Start.
 5. **Upload ke baad aath cheezein dekhna** — login ka safha, /admin/trust,

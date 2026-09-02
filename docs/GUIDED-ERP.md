@@ -153,3 +153,16 @@ khud khatam hoti hai. Sirf darkhwast aur us ka silsila naya hai.
 
 Jo NAHI hai (saaf): "excessive/conflicting access" ki khud-kar jaanch
 nahi — "Kis ke paas kya" ki fehrist hai, faisla insaan ka.
+
+## 7. Baqi teen kaam — malik ki priority (2 September ki report ke baad)
+
+| # | Kaam | Priority | Malik ka maqsad |
+|---|---|---|---|
+| 1 | Excessive / Conflicting Access detection | **High** | Access Requests Live hone ke baad zaroori: ek hi banda Create Payment + Verify Payment + Reverse Payment sab na le le; department scope se faltu access jama na ho. Report `/admin/access-requests` mein tab, jaanch rules table se, faisla insaan ka |
+| 2 | Units / Pack Sizes masters | **Medium/High** | Bag / Bottle / Liter / Kg / Piece / Carton aur 500ml / 1L / 5L / 20kg / 50kg. Product matching aur bill extraction saaf hogi |
+| 3 | Training Mode mein button highlight | **Medium** | AI sirf "Stock par jayein" na kahe, asal Stock button highlight ho aur "Next" aage le jaye |
+
+"100% complete" ka usool ab saat hisson ka hai (CLAUDE.md dekhein):
+Feature + Permission + Help + AI Knowledge + Audit + Simple Staff
+Workflow + Testing.
+

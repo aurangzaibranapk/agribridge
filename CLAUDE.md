@@ -97,8 +97,27 @@ Do baatein aaj ke faislon par asar daalti hain, is liye yahan likhi hain:
 
 ## Feature kab "poora" hai (malik ka usool, 2 September)
 
-Koi bhi naya feature tab tak poora nahi jab tak paanchon na hon:
-**Code ✓ Permissions ✓ Help (feature_help) ✓ AI Knowledge ✓ Training
-Guide ✓.** Naqsha aur tarteeb `docs/GUIDED-ERP.md` mein hai. Har naye
-safhe ke sath us ki `feature_help` qatar (maqsad, kaun, kab, kaise,
-agla qadam, ghaltiyan) usi commit mein jaye.
+Koi bhi naya feature tab tak "100% poora" nahi jab tak saaton na hon
+(malik ne 2 September ki report ke baad ye lock kiya):
+**Feature (code) ✓ Permission ✓ Help (feature_help) ✓ AI Knowledge
+(SYSTEM_MAP / coach tools) ✓ Audit ✓ Simple Staff Workflow (Mera Kaam
+par raasta, agla qadam) ✓ Testing (rollback test testing DB par) ✓.**
+Naqsha aur tarteeb `docs/GUIDED-ERP.md` mein hai. Har naye safhe ke
+sath us ki `feature_help` qatar (maqsad, kaun, kab, kaise, agla qadam,
+ghaltiyan) usi commit mein jaye.
+
+Falsafa (malik ke alfaz): *"Staff ko ERP seekhna nahi — AgriBridge ko
+staff ko kaam sikhana hai."*
+
+## Live deploy ki tarteeb — P0 rule (2 September ke baad)
+
+Pichli deployment mein build migrations se pehle start hua aur backup ki
+tasdeeq nahi thi. Ab ye tarteeb kabhi nahi badlegi:
+
+**Backup verified → pre-migration record (ginti) → migrations →
+verification (ginti dobara) → naya build upload → smoke test → Live
+accepted.**
+
+Backup ki tasdeeq (file ka size chat mein) aane se pehle koi migration
+Live par nahi chalegi — malik "chalao" bhi kahein to pehle backup
+poochna hai. Build migrations ke baad hi upload ho.
