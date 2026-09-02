@@ -21,7 +21,7 @@ export interface AttentionItem {
   href: string;
   tone: "red" | "amber" | "blue" | "gray";
   /** Kis dashboard ka kaam hai -- department ke safhe par chhantne ke liye. */
-  area: "purchase" | "inventory" | "products" | "sales" | "finance" | "ai";
+  area: "purchase" | "inventory" | "products" | "sales" | "finance" | "ai" | "admin";
 }
 
 type Q = (q: any) => any;
@@ -69,6 +69,8 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     dueSoon,
     reorderUrgent,
     aiRequests,
+    accessPending,
+    accessConflicts,
   ] = await Promise.all([
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "submitted")),
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "sent_back")),
@@ -86,6 +88,8 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     countView("v_supplier_due_calendar", "purchase_id", (q) => q.gte("due_date", today).lte("days_left", 7).gt("supplier_payable", 0)),
     countView("v_reorder_suggestions", "product_id", (q) => q.in("urgency", ["out", "critical"])),
     count("bridge_ai_action_requests", (q) => q.eq("status", "pending")),
+    count("access_requests", (q) => q.eq("status", "pending")),
+    count("access_conflict_findings", (q) => q.eq("status", "open").in("severity", ["high", "critical"])),
   ]);
 
   const items: AttentionItem[] = [
@@ -105,6 +109,8 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     { key: "due_soon", label: "na_due_soon", count: dueSoon, href: "/admin/purchases/bills", tone: "amber", area: "finance" },
     { key: "reorder_urgent", label: "na_reorder_urgent", count: reorderUrgent, href: "/admin/products/reorder", tone: "red", area: "purchase" },
     { key: "ai_requests", label: "na_ai_requests", count: aiRequests, href: "/admin/bridge-ai/action-requests", tone: "blue", area: "ai" },
+    { key: "access_pending", label: "na_access_pending", count: accessPending, href: "/admin/access-requests", tone: "amber", area: "admin" },
+    { key: "access_conflicts", label: "na_access_conflicts", count: accessConflicts, href: "/admin/access-requests?tab=conflicts", tone: "red", area: "admin" },
   ];
   return items;
 }

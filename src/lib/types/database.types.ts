@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_conflict_events: {
+        Row: { actor_id: string | null; created_at: string; detail: Json | null; event: string; finding_id: string | null; id: string; request_id: string | null; scan_id: string | null }
+        Insert: { actor_id?: string | null; created_at?: string; detail?: Json | null; event: string; finding_id?: string | null; id?: string; request_id?: string | null; scan_id?: string | null }
+        Update: { actor_id?: string | null; created_at?: string; detail?: Json | null; event?: string; finding_id?: string | null; id?: string; request_id?: string | null; scan_id?: string | null }
+        Relationships: []
+      }
+      access_conflict_findings: {
+        Row: { enforcement: string; fingerprint: string; first_seen_at: string; id: string; kind: string; label: string; last_scan_id: string | null; last_seen_at: string; matched: Json; override_expires_at: string | null; profile_id: string; recommendation: string | null; resolved_reason: string | null; rule_code: string; rule_id: string | null; severity: string; status: string; status_at: string | null; status_by: string | null; status_note: string | null }
+        Insert: { enforcement: string; fingerprint: string; first_seen_at?: string; id?: string; kind: string; label: string; last_scan_id?: string | null; last_seen_at?: string; matched?: Json; override_expires_at?: string | null; profile_id: string; recommendation?: string | null; resolved_reason?: string | null; rule_code: string; rule_id?: string | null; severity: string; status?: string; status_at?: string | null; status_by?: string | null; status_note?: string | null }
+        Update: { enforcement?: string; fingerprint?: string; first_seen_at?: string; id?: string; kind?: string; label?: string; last_scan_id?: string | null; last_seen_at?: string; matched?: Json; override_expires_at?: string | null; profile_id?: string; recommendation?: string | null; resolved_reason?: string | null; rule_code?: string; rule_id?: string | null; severity?: string; status?: string; status_at?: string | null; status_by?: string | null; status_note?: string | null }
+        Relationships: []
+      }
+      access_conflict_rules: {
+        Row: { applies_to_departments: string[] | null; code: string; created_at: string; created_by: string | null; description: string | null; duties: Json; enforcement: string; exempt_roles: string[]; id: string; is_active: boolean; kind: string; label: string; min_scope: string; narrow_scope_severity: string | null; params: Json; recommendation: string | null; severity: string; updated_at: string; updated_by: string | null }
+        Insert: { applies_to_departments?: string[] | null; code: string; created_at?: string; created_by?: string | null; description?: string | null; duties?: Json; enforcement?: string; exempt_roles?: string[]; id?: string; is_active?: boolean; kind?: string; label: string; min_scope?: string; narrow_scope_severity?: string | null; params?: Json; recommendation?: string | null; severity?: string; updated_at?: string; updated_by?: string | null }
+        Update: { applies_to_departments?: string[] | null; code?: string; created_at?: string; created_by?: string | null; description?: string | null; duties?: Json; enforcement?: string; exempt_roles?: string[]; id?: string; is_active?: boolean; kind?: string; label?: string; min_scope?: string; narrow_scope_severity?: string | null; params?: Json; recommendation?: string | null; severity?: string; updated_at?: string; updated_by?: string | null }
+        Relationships: []
+      }
+      access_conflict_scans: {
+        Row: { by_severity: Json | null; findings: number | null; id: string; new_findings: number | null; resolved: number | null; run_at: string; run_by: string | null; trigger: string; users_checked: number | null }
+        Insert: { by_severity?: Json | null; findings?: number | null; id?: string; new_findings?: number | null; resolved?: number | null; run_at?: string; run_by?: string | null; trigger?: string; users_checked?: number | null }
+        Update: { by_severity?: Json | null; findings?: number | null; id?: string; new_findings?: number | null; resolved?: number | null; run_at?: string; run_by?: string | null; trigger?: string; users_checked?: number | null }
+        Relationships: []
+      }
       access_request_events: {
         Row: {
           actor_id: string | null
@@ -47,6 +71,11 @@ export type Database = {
           ai_interpretation: Json | null
           applied_at: string | null
           branch_id: string | null
+          conflict_check: Json | null
+          override_at: string | null
+          override_by: string | null
+          override_expires_at: string | null
+          override_reason: string | null
           created_at: string
           data_scope: string
           decided_at: string | null
@@ -73,6 +102,11 @@ export type Database = {
           ai_interpretation?: Json | null
           applied_at?: string | null
           branch_id?: string | null
+          conflict_check?: Json | null
+          override_at?: string | null
+          override_by?: string | null
+          override_expires_at?: string | null
+          override_reason?: string | null
           created_at?: string
           data_scope?: string
           decided_at?: string | null
@@ -99,6 +133,11 @@ export type Database = {
           ai_interpretation?: Json | null
           applied_at?: string | null
           branch_id?: string | null
+          conflict_check?: Json | null
+          override_at?: string | null
+          override_by?: string | null
+          override_expires_at?: string | null
+          override_reason?: string | null
           created_at?: string
           data_scope?: string
           decided_at?: string | null

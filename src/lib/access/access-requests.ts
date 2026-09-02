@@ -6,6 +6,7 @@ import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { notifyUser, notifyRoles } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
 import { departmentByKey, DEPARTMENTS } from "@/lib/departments";
+import { previewConflicts, canOverride, SEVERITY_RANK, type ConflictPreview } from "@/lib/access/conflicts";
 
 /**
  * Ijazat ki darkhwast (270) -- AI draft, insaan manzoor, engine lagata hai.
@@ -99,6 +100,10 @@ export async function createAccessRequest(input: AccessRequestInput): Promise<{ 
   }
   const risk = riskLevel(input.featureKey ?? null, actions, input.kind, cross);
 
+  // Takraao ki pehli jaanch (271): darkhwast ke sath hi likh di jati hai
+  // taake AI, staff aur approver teeno wahi dekhein.
+  const preview = input.featureKey ? await previewConflicts(input.requestedFor, input.featureKey, actions, scope, target.full_name) : null;
+
   const { data, error } = await service
     .from("access_requests")
     .insert({
@@ -115,12 +120,16 @@ export async function createAccessRequest(input: AccessRequestInput): Promise<{ 
       expires_at: expiryFor(duration, input.customExpiry),
       risk_level: risk,
       ai_interpretation: (input.aiInterpretation as any) ?? null,
-    })
+      conflict_check: preview ? ({ at: "request", highest: preview.highest, blocked: preview.blocked, needs_override: preview.needsOverride, created: preview.created, messages: preview.messages } as any) : null,
+    } as any)
     .select("id, number")
     .single();
   if (error || !data) return { ok: false, message: error?.message ?? "Darkhwast nahi bani." };
 
-  await service.from("access_request_events").insert({ request_id: data.id, actor_id: input.requestedBy, event: "requested", detail: { actions, scope, duration, risk, ai: input.aiInterpretation ?? null } as any });
+  await service.from("access_request_events").insert({ request_id: data.id, actor_id: input.requestedBy, event: "requested", detail: { actions, scope, duration, risk, ai: input.aiInterpretation ?? null, conflicts: preview?.created.map((c) => `${c.severity}:${c.rule_code}`) ?? [] } as any });
+  if (preview && preview.created.length) {
+    await service.from("access_conflict_events" as never).insert({ request_id: data.id, actor_id: input.requestedBy, event: "request_checked", detail: { highest: preview.highest, blocked: preview.blocked, created: preview.created.map((c) => ({ rule: c.rule_code, severity: c.severity, enforcement: c.enforcement })) } } as never);
+  }
 
   const label = input.featureKey ?? `department ${input.departmentKey}`;
   const approvers = risk === "high" ? MASTER : [...MASTER, "manager"];
@@ -128,11 +137,25 @@ export async function createAccessRequest(input: AccessRequestInput): Promise<{ 
   if (input.requestedFor !== input.requestedBy) {
     await notifyUser(input.requestedFor, `Aap ke liye ijazat maangi gayi ${data.number}`, `${label} -- manzoori ke baad khud lag jayegi.`, "/admin/my-access");
   }
-  return { ok: true, number: data.number, id: data.id, risk, message: `Darkhwast ${data.number} approver ke paas gayi (${risk === "high" ? "sirf Owner/Admin" : "Owner/Admin/Manager ya department head"}).` };
+  const conflictNote = preview?.blocked
+    ? " Khabardar: ye combination policy mein hard block hai -- approver manzoor nahi kar sakega jab tak ijazat alag na ho."
+    : preview?.needsOverride
+      ? " Khabardar: HIGH/CRITICAL takraao banega -- sirf Owner/Admin wajah likh kar override kar sakta hai."
+      : preview?.created.length
+        ? ` Note: ${preview.created.length} takraao (advisory) approver ko dikhega.`
+        : "";
+  return { ok: true, number: data.number, id: data.id, risk, message: `Darkhwast ${data.number} approver ke paas gayi (${risk === "high" ? "sirf Owner/Admin" : "Owner/Admin/Manager ya department head"}).${conflictNote}` };
 }
 
 /** Faisla: approve -> lagao; reject. Ceiling: head ke liye capGrant; master ke liye poora. */
-export async function decideAccessRequest(requestId: string, deciderId: string, decision: "approved" | "rejected", note: string | null): Promise<{ ok: boolean; message: string; refused?: string[] }> {
+export interface DecideOptions {
+  /** HIGH/CRITICAL takraao par Owner/Admin ki wajah (lazmi). */
+  overrideReason?: string | null;
+  /** Override ki miyaad -- ijazat is se aage nahi jayegi. */
+  overrideExpiresAt?: string | null;
+}
+
+export async function decideAccessRequest(requestId: string, deciderId: string, decision: "approved" | "rejected", note: string | null, opts: DecideOptions = {}): Promise<{ ok: boolean; message: string; refused?: string[]; conflicts?: ConflictPreview }> {
   const service = createServiceClient();
   const { data: me } = await service.from("profiles").select("role, full_name, is_active").eq("id", deciderId).maybeSingle();
   if (!me?.is_active) return { ok: false, message: "Account fa'aal nahi." };
@@ -161,6 +184,51 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
   let refused: string[] = [];
   const oldSnap: Record<string, unknown> = {};
 
+  // ---- Takraao ki jaanch manzoori se PEHLE (271) ----
+  // Department assign par us dashboard ke har feature ki jaanch; sab se
+  // ooncha darja chalta hai.
+  const { data: targetProf } = await service.from("profiles").select("full_name").eq("id", req.requested_for).maybeSingle();
+  const featuresToCheck: string[] = [];
+  if (req.kind === "feature_access" && req.feature_key) featuresToCheck.push(req.feature_key);
+  else if (req.kind === "department_assign" && req.department_key) {
+    const { data: deptRow } = await service.from("departments").select("dashboard_key").eq("key", req.department_key).maybeSingle();
+    const registry = await loadRegistry();
+    featuresToCheck.push(...(deptRow?.dashboard_key ? registry.byDashboard.get(deptRow.dashboard_key) ?? [] : []));
+  }
+  const conflicts: ConflictPreview = { existing: [], created: [], highest: null, blocked: false, needsOverride: false, messages: [] };
+  for (const fk of featuresToCheck) {
+    const p = await previewConflicts(req.requested_for, fk, wantActions.length ? wantActions : ["view"], wantScope, targetProf?.full_name ?? null);
+    conflicts.existing = p.existing;
+    for (const c of p.created) if (!conflicts.created.some((x) => x.fingerprint === c.fingerprint)) conflicts.created.push(c);
+    conflicts.messages.push(...p.messages);
+    conflicts.blocked = conflicts.blocked || p.blocked;
+    conflicts.needsOverride = conflicts.needsOverride || p.needsOverride;
+    if (p.highest && (!conflicts.highest || SEVERITY_RANK[p.highest] > SEVERITY_RANK[conflicts.highest])) conflicts.highest = p.highest;
+  }
+  const logConflictEvent = async (event: string, detail: Record<string, unknown>) =>
+    service.from("access_conflict_events" as never).insert({ request_id: requestId, actor_id: deciderId, event, detail: { ...detail, created: conflicts.created.map((c) => ({ rule: c.rule_code, severity: c.severity, enforcement: c.enforcement })) } } as never);
+
+  let overrideExpiry: string | null = null;
+  if (conflicts.blocked) {
+    await logConflictEvent("approval_blocked", { messages: conflicts.messages });
+    await service.from("access_requests").update({ conflict_check: { at: "decision", blocked: true, created: conflicts.created, messages: conflicts.messages } } as any).eq("id", requestId);
+    return { ok: false, message: `Manzoor nahi ho sakti -- policy hard block: ${conflicts.messages.join(" ")}`, conflicts };
+  }
+  if (conflicts.needsOverride) {
+    if (!canOverride(me.role)) {
+      await logConflictEvent("approval_needs_master", {});
+      return { ok: false, message: `HIGH/CRITICAL takraao banega -- sirf Owner/Admin override kar sakta hai. ${conflicts.messages.join(" ")}`, conflicts };
+    }
+    const reason = (opts.overrideReason ?? "").trim();
+    if (reason.length < 5) {
+      return { ok: false, message: `Is permission se ye existing access conflict create hoga: ${conflicts.messages.join(" ")} -- override ki wajah likhein (lazmi).`, conflicts };
+    }
+    overrideExpiry = opts.overrideExpiresAt ? new Date(opts.overrideExpiresAt).toISOString() : null;
+  }
+  // Ijazat ki miyaad: darkhwast ki apni ya override ki, jo pehle aaye.
+  const grantExpiry = [req.expires_at, overrideExpiry].filter(Boolean).map((d) => new Date(d as string).getTime());
+  const finalExpiry = grantExpiry.length ? new Date(Math.min(...grantExpiry)).toISOString() : null;
+
   const applyOne = async (featureKey: string, actions: Action[], scope: DataScope) => {
     oldSnap[featureKey] = await currentAccess(req.requested_for, featureKey);
     let final = { actions, scope, refused: [] as Action[] };
@@ -177,7 +245,7 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
       feature_key: featureKey,
       actions: final.actions,
       data_scope: final.scope,
-      expires_at: req.expires_at,
+      expires_at: finalExpiry,
       starts_at: req.starts_at,
       reason: `${req.number}${req.reason ? `: ${req.reason}` : ""}`,
       granted_by: deciderId,
@@ -219,10 +287,25 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
       applied_at: new Date().toISOString(),
       old_permissions: oldSnap as any,
       new_permissions: applied as any,
-    })
+      conflict_check: { at: "decision", highest: conflicts.highest, blocked: false, needs_override: conflicts.needsOverride, created: conflicts.created, messages: conflicts.messages },
+      override_reason: conflicts.needsOverride ? opts.overrideReason?.trim() ?? null : null,
+      override_by: conflicts.needsOverride ? deciderId : null,
+      override_at: conflicts.needsOverride ? new Date().toISOString() : null,
+      override_expires_at: conflicts.needsOverride ? overrideExpiry : null,
+    } as any)
     .eq("id", requestId);
-  await service.from("access_request_events").insert({ request_id: requestId, actor_id: deciderId, event: "approved_applied", detail: { note, applied, refused, expires_at: req.expires_at } as any });
+  await service.from("access_request_events").insert({ request_id: requestId, actor_id: deciderId, event: "approved_applied", detail: { note, applied, refused, expires_at: finalExpiry, conflicts: conflicts.created.map((c) => `${c.severity}:${c.rule_code}`), override_reason: conflicts.needsOverride ? opts.overrideReason : null } as any });
+  if (conflicts.created.length) {
+    await logConflictEvent(conflicts.needsOverride ? "approved_with_override" : "approved_with_conflict", { reason: opts.overrideReason ?? null, override_expires_at: overrideExpiry, applied });
+    // Findings ki fehrist taaza -- naya takraao 'detected' ke sath darj ho jaye (kuch hatta nahi)
+    await (service as any).rpc("fn_run_access_conflict_scan", { p_trigger: "approval", p_actor: deciderId });
+  }
   await logAudit({ actionType: "update", module: "access_requests", recordId: requestId, recordLabel: req.number, description: `Manzoor: ${applied.map((a) => `${a.feature_key} [${a.actions.join(",")}/${a.scope}]`).join("; ")}${refused.length ? ` — nahi diya: ${refused.join(", ")}` : ""}` });
   await notifyUser(req.requested_for, `Access Granted ${req.number}`, `${applied.map((a) => a.feature_key).join(", ")}${req.expires_at ? ` (${new Date(req.expires_at).toLocaleDateString("en-GB")} tak)` : ""}`, "/admin/my-access");
-  return { ok: true, message: `Lag gayi: ${applied.map((a) => a.feature_key).join(", ")}${refused.length ? `. Nahi diya (ceiling): ${refused.join(", ")}` : ""}`, refused };
+  return {
+    ok: true,
+    message: `Lag gayi: ${applied.map((a) => a.feature_key).join(", ")}${finalExpiry ? ` (${new Date(finalExpiry).toLocaleDateString("en-GB")} tak)` : ""}${refused.length ? `. Nahi diya (ceiling): ${refused.join(", ")}` : ""}${conflicts.created.length ? `. Takraao darj: ${conflicts.created.map((c) => c.rule_code).join(", ")}${conflicts.needsOverride ? " (override, wajah mehfooz)" : " (advisory)"}` : ""}`,
+    refused,
+    conflicts,
+  };
 }

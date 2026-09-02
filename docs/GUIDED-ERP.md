@@ -166,3 +166,34 @@ nahi — "Kis ke paas kya" ki fehrist hai, faisla insaan ka.
 Feature + Permission + Help + AI Knowledge + Audit + Simple Staff
 Workflow + Testing.
 
+## 8. Priority 1 — Ijazat ka takraao (Excessive / Conflicting Access) — ✅ (271)
+
+Malik ke controls (2 September) aur unka jawab:
+
+| Control | Bana |
+|---|---|
+| Rules configurable, code mein hard-code nahi | `access_conflict_rules` (13 seeded: 11 SoD + cross-department + sensitive load); Conflicts > Qawaid par Owner/Admin severity, enforcement, duties (JSON), min_scope, threshold badal sakta hai; har tabdeeli `access_conflict_events` mein |
+| Separation of Duties primary | SoD rule = duties ki fehrist [{label, features[], actions[]}]; takraao tab jab HAR duty poori ho. Misal SOD-PAY-REVERSE: create + approve/verify + finance edit (reversal ka proxy) = CRITICAL/block |
+| Feature naam nahi, action + department + scope | `fn_access_conflicts`: har (feature, action) alag; role/extra_roles/user grants teeno; rule ka `min_scope` + `narrow_scope_severity` (tang scope par kam darja ya koi takraao nahi); `applies_to_departments`; `exempt_roles` (owner/super_admin/admin) |
+| Severity INFO / WARNING / HIGH / CRITICAL | `severity` + `enforcement` (advise / override / block) alag alag |
+| Conflicts advisory screen, AI kuch na hataye | `/admin/access-requests?tab=conflicts`: findings (open/acknowledged/overridden/resolved), duties ki table, kahan se aayi, mashwara, silsila; "Scan chalayein" sirf report. Ijazat alag karna `/admin/permissions` par insaan ka kaam |
+| Pre-approval check, saaf paighaam | `previewConflicts()` = pehle/baad ka farq; DecideForm par box "Is permission se ye existing access conflict create hoga" + jumle; darkhwast banate waqt bhi `conflict_check` mehfooz |
+| HIGH/CRITICAL override: wajah + approver + waqt + miyaad; block par override nahi | `decideAccessRequest`: block → radd (event `approval_blocked`); override → sirf Owner/Admin, `override_reason` lazmi, `override_by/at/expires_at`; ijazat ki miyaad = min(darkhwast, override); head ko "Approve" band |
+| Migration ke baad kuch revoke nahi; pehle baseline | 271 ke aakhir mein `fn_run_access_conflict_scan('baseline')` -- sirf findings; testing par 9 mile (1 critical, 5 high, 1 warning, 2 info), kuch nahi hata |
+| Head apni ceiling se bahar na kare | Head override nahi kar sakta (`canOverride` = UNRESTRICTED_ROLES); approval par `capGrant` waise hi; acknowledge sirf apne department mein |
+| Har detection/resolution/override ka audit | `access_conflict_events` append-only: detected, re_detected, resolved (no_longer_detected), acknowledged, overridden, reopened, override_expired, request_checked, approval_blocked, approval_needs_master, approved_with_override, approved_with_conflict, rule_updated |
+| AI: detect → explain → suggest; faisla insaan | Coach tool `check_access_conflicts` (report / ek banday / "agar ye de dein to"); `request_access` ke draft mein `access_conflicts.warnings`; jumla `explainConflict()`: "High Access Conflict: Ahmed ke paas ... already hai. ... dene se ek hi user ... kar sakega. Recommended: ..." |
+
+Testing (sab rollback mein, testing DB): same-user conflict ✅, tang scope → warning ✅,
+doosra user/doosri branch → koi takraao nahi ✅, waqti ijazat: miyaad khatam → takraao
+khatam, scan resolved + events ✅, override expiry → wapas open + event ✅, CRITICAL/block
+finance role par, owner exempt ✅, department-scoped rule + cross-department (3 grants) ✅,
+rule off/severity/enforcement badalna ✅. TypeScript: diffConflicts/explainConflict unit test
+(6 cases) ✅. Head ceiling aur approval override ka raasta code mein hai (tsc pass); end-to-end
+approval test Next ke session ke baghair yahan nahi chal saka -- Live se pehle testing par
+ek dafa haath se dekhna hai.
+
+Saaf likh dein: reversal engine mein alag action nahi (ledger-reversal role se rukta hai),
+is liye SOD-PAY-REVERSE mein cash book (`finance`) ka `edit` reversal ka proxy hai; rule
+badalne ke qabil hai.
+
