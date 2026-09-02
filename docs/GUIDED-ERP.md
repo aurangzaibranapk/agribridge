@@ -20,9 +20,9 @@ hota.
 | # | Malik ka nukta | Halat | Aaj kya hai, kya nahi |
 |---|---|---|---|
 | 1 | Staff ko sirf "My Work" dikhe, poora sidebar nahi | ✅ (B) | 250 ke baad staff ko sidebar nahi milti; ghar "Mera Kaam" hai; department dashboards role se bante hain. **Magar "Aaj ka Kaam" ki fehrist department-war nahi** (Purchase Staff → New Purchase, Pending Bills...). `pending-counts.ts` mein ginti hai, kaam ki fehrist nahi |
-| 2 | "Aaj kya karna hai?" AI box har dashboard par | ❌ | Bridge AI ek alag safha hai (/admin/bridge-ai). Dashboard par box nahi; "kahan jaun" ka jawab nahi deta; safha kholne ka link nahi deta |
-| 3 | Department-trained AI | 🟡 | `classifyAgent` sawal ke lafzon se 4 agent chunta hai (crop/livestock/finance/general). **Banday ke department se nahi.** Purchase/Warehouse/Shop/Admin agent hain hi nahi |
-| 4 | Screenshot Help | ❌ | Gemini tasveer parhta hai (Maal Andar, bill) magar "ye safha samjhao" ka raasta nahi. Is ke liye #11 (feature ki maloomat) pehle chahiye, warna AI andaza lagayega |
+| 2 | "Aaj kya karna hai?" AI box har dashboard par | ✅ (C) | Bridge AI ek alag safha hai (/admin/bridge-ai). Dashboard par box nahi; "kahan jaun" ka jawab nahi deta; safha kholne ka link nahi deta |
+| 3 | Department-trained AI | ✅ (C: role/department/ijazat AI ke saamne; alag "agent" ki jagah ek coach jo jaanta hai kaun pooch raha hai) | `classifyAgent` sawal ke lafzon se 4 agent chunta hai (crop/livestock/finance/general). **Banday ke department se nahi.** Purchase/Warehouse/Shop/Admin agent hain hi nahi |
+| 4 | Screenshot Help | ✅ (C: tasveer + sawal → safha pehchan → feature_help se jawab) | Gemini tasveer parhta hai (Maal Andar, bill) magar "ye safha samjhao" ka raasta nahi. Is ke liye #11 (feature ki maloomat) pehle chahiye, warna AI andaza lagayega |
 | 5 | Har safhe par "?" Is Page Ko Samjhein | ✅ (266) | Har safhe ke upar daayen "? Samjhein" → side panel: maqsad, kaun, kab, aam raasta, aage kya, ghaltiyan, video, FAQ, mutalliqa safhe, AI se poochein |
 | 6 | Guided / Training Mode naye banday ke liye | ❌ | Kuch nahi |
 | 7 | Simple vs Advanced mode | ❌ | Profile par koi mode nahi; form sab ke liye ek jaise (purchase form par 15+ khane) |
@@ -30,13 +30,13 @@ hota.
 | 9 | Dashboard par "Needs Attention" | ✅ (B) | Ginti alag alag jagah: Adhoore Products (258), Due Soon (255), pending-counts. **Ek jagah, role ke hisaab se, click karne layak fehrist nahi** |
 | 10 | Training documentaries | ❌ | Ye content malik banayenge (video). System mein video ka khana bhi nahi |
 | 11 | Har feature ki documentation system ke andar | ✅ (266) | `feature_help` table, 33 features likhe (Inventory ke 11, purchase ka raasta, POS, CRM, cash-close, Mera Kaam, Bridge AI); baqi features Owner/Admin `/admin/platform/help` par likhte hain, kaun sa baqi hai wahin dikhta hai |
-| 12 | AI ko system ka asal naqsha pata ho, user ki halat dekh kar jawab de | ❌ | AI ke paas naqsha nahi. "Maal aa gaya, ab kya?" par wo purchase ka darja dekh kar nahi bolta |
-| 13 | AI ko pata ho kaun pooch raha hai (role-aware) | ❌ | API route sirf "staff hai" dekhta hai. Role, department, ijazatein AI tak nahi jatin |
+| 12 | AI ko system ka asal naqsha pata ho, user ki halat dekh kar jawab de | ✅ (C: SYSTEM_MAP + get_my_work asal ginti se) | AI ke paas naqsha nahi. "Maal aa gaya, ab kya?" par wo purchase ka darja dekh kar nahi bolta |
+| 13 | AI ko pata ho kaun pooch raha hai (role-aware) | ✅ (C) | API route sirf "staff hai" dekhta hai. Role, department, ijazatein AI tak nahi jatin |
 | 14 | UI ki zaban staff-dost | 🟡 | Roz ke safhe Roman Urdu mein (ur/en bhi). Kuch label abhi technical: "Stock Transfer", "Pending Product Edits", "Catalog Export" |
 | 15 | AgriBridge Academy (module, demo, progress) | ❌ | Kuch nahi |
-| 16 | "System khol lo" aur system khud bata de | ❌ | #1 + #9 + #12 + #13 milkar yahi banta hai |
+| 16 | "System khol lo" aur system khud bata de | ✅ (A+B+C: Mera Kaam par Aaj kya baqi hai + coach) | #1 + #9 + #12 + #13 milkar yahi banta hai |
 
-**Ginti (B ke baad):** 16 mein se 5 poore, 3 adhe, 8 baqi. Jo bana hua hai wo
+**Ginti (C ke baad):** 16 mein se 11 poore, 1 adha (#14 zaban), 4 baqi (#6, #7, #10, #15 — D aur E). Jo bana hua hai wo
 neev hai (role-based dashboards, Mera Kaam, Bridge AI ke tools,
 Gemini se tasveer parhna). Guided ERP us ke upar banega.
 
@@ -83,7 +83,7 @@ par khaRa ho.
 |---|---|---|---|
 | **A** | ~~Feature ki maloomat + "?" panel~~ | ✅ **Ho gaya (266)** — `feature_help` (rm/en, ur Roman par girta hai), har safhe ke upar "? Samjhein" (sidebar wali aur bina-sidebar dono patti), 33 features ki maloomat, Owner/Admin ka editor `/admin/platform/help`, "AI se poochein" Bridge AI par sawal ke sath | 5, 11 | — |
 | **B** | ~~Needs Attention + Agla Qadam~~ | ✅ **Ho gaya** — `needs-attention.ts` (16 asal ginti, service client, "—" jab na mile), Mera Kaam aur department dashboards par role ke raaston ke mutabiq; "Agla qadam" ki patti purchases ki har qatar aur bill ke safhe par | 1, 8, 9 | — |
-| **C** | **Work Coach.** Har dashboard par "Aaj kya karna hai?" box. AI ko: banday ka role, department, ijazatein, feature_help, system ka naqsha, aur B ki asal halat (tools: `get_my_work`, `open_page` jo link deta hai, purane tools). Role ke hisaab se jawab ("aap purchase nahi banate, stock request banate hain"). **Screenshot help**: tasveer + sawal -> safha pehchan -> feature_help se jawab | 2, 3, 4, 12, 13, 16 | 2 din |
+| **C** | ~~Work Coach~~ | ✅ **Ho gaya** — `lib/ai/work-coach.ts`: AI ko role, department, khulne wale raaste, system ka naqsha, feature_help, aur aaj ki asal ginti; tools `get_my_work`, `explain_page`, `open_page`; "Aaj kya karna hai?" box Mera Kaam aur department dashboards par; screenshot (tasveer) ke sath sawal, jawab mein safhe ke link | 2, 3, 4, 12, 13, 16 | — |
 | **D** | **Training Mode + Academy.** `training_modules` (department-war, video + qadam + "demo try karein"), `staff_training_progress`; naye banday ka pehla login Training Mode mein: sirf 4 kaam, agla button highlight; manager ko progress. Video malik ke -- system khane deta hai | 6, 10, 15 | 2 din |
 | **E** | **Simple / Advanced mode + zaban ki safai.** Profile par mode; Simple mein purchase = Upload → Check → Bhejein (baqi khane chhupe), POS/receiving/stock request bhi; Advanced sab. Technical label ki jagah kaam ka lafz, technical naam doosri line mein (Admin ke liye) | 7, 14 | 1.5 din |
 

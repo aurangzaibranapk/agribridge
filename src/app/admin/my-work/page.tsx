@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { pendingByDepartment } from "@/lib/access/pending-counts";
 import { NeedsAttention } from "@/components/guided/needs-attention";
+import { WorkCoachBox } from "@/components/guided/work-coach-box";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 
@@ -125,7 +126,9 @@ export default async function MyWorkPage() {
       </div>
 
       {/* Aaj kya baqi hai -- role ke raaston par, click par kaam ke safhe par (B). */}
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
+        {/* "Aaj kya karna hai?" -- Work Coach (C). */}
+        <WorkCoachBox />
         <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} />
       </div>
 

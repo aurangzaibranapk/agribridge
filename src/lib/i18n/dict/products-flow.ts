@@ -313,6 +313,14 @@ export const productsFlowDict = {
   pf_ps_t_export: { en: "Export", rm: "Export", ur: "ایکسپورٹ" },
   pd_all_categories: { en: "All", rm: "Sab", ur: "سب" },
 
+  // ---- Work Coach (Guided ERP C) ----
+  wc_title: { en: "What do you want to do today?", rm: "Aaj kya karna hai?", ur: "آج کیا کرنا ہے؟" },
+  wc_hint: { en: "ask, or attach a screenshot", rm: "poochein, ya screenshot lagayein", ur: "پوچھیں، یا اسکرین شاٹ لگائیں" },
+  wc_placeholder: { en: "e.g. supplier bill arrived — where do I start?", rm: "misal: supplier ka bill aaya hai, kahan se shuru karoon?", ur: "مثلاً: سپلائر کا بل آیا ہے، کہاں سے شروع کروں؟" },
+  wc_screenshot: { en: "Attach a screenshot", rm: "Screenshot lagayein", ur: "اسکرین شاٹ لگائیں" },
+  wc_explain_shot: { en: "Explain this page to me.", rm: "Ye safha mujhe samjhao.", ur: "یہ صفحہ مجھے سمجھاؤ۔" },
+  wc_error: { en: "Could not reach the coach. Try again.", rm: "Coach tak nahi pahuncha. Dobara koshish karein.", ur: "کوچ تک نہیں پہنچا۔ دوبارہ کوشش کریں۔" },
+
   // ---- Needs Attention + Agla Qadam (Guided ERP B) ----
   na_title: { en: "Needs attention", rm: "Aaj kya baqi hai", ur: "آج کیا باقی ہے" },
   na_today: { en: "live counts", rm: "asal ginti", ur: "اصل گنتی" },

@@ -1,0 +1,132 @@
+import { createServiceClient } from "@/lib/supabase/service";
+import { loadNav } from "@/lib/access/nav";
+import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
+import { departmentForRole, UNRESTRICTED_ROLES } from "@/lib/departments";
+import { t, type Lang } from "@/lib/i18n/translations";
+
+/**
+ * Work Coach (Guided ERP, qadam C).
+ *
+ * AI ko teen cheezein di jati hain jo pehle nahi thin:
+ *   1. Kaun pooch raha hai: role, department, aur kaun se raaste us par
+ *      khulte hain. Wohi sawal shop boy aur admin ke liye alag jawab
+ *      rakhta hai.
+ *   2. System ka naqsha aur har feature ki likhi hui maloomat
+ *      (feature_help). Jawab isi se -- AI ke apne ilm se nahi.
+ *   3. Banday ki asal halat: aaj kya baqi hai (asal ginti se).
+ *
+ * AI ab bhi kuch mehfooz nahi karta. Draft banata hai, safha batata
+ * hai, aage ka qadam batata hai.
+ */
+
+export interface CoachContext {
+  userId: string;
+  role: string;
+  fullName: string;
+  departmentKey: string | null;
+  departmentLabel: string | null;
+  unrestricted: boolean;
+  allowedRoutes: string[] | null;
+  features: { key: string; label: string; route: string; purpose: string | null; who: string | null; next: string | null; how: string[] }[];
+  attention: { label: string; count: number | null; href: string }[];
+  lang: Lang;
+}
+
+/** Purchase se POS tak ka raasta -- AI ko ye yaad nahi rakhna, yahan likha hai. */
+export const SYSTEM_MAP = [
+  "Supplier bill (photo/PDF/sheet) -> /admin/products/bill-rates (AI qatarein parhta hai, product milata hai, rate charhta hai)",
+  "-> Purchase draft banta hai (/admin/purchases, review_status = submitted)",
+  "-> Owner/Admin manzoor / wapas / radd (/admin/purchases, Jaanch)",
+  "-> Maal ginna: theek aaya / toota / kam (/admin/inventory/receiving ya /admin/purchases, Maal Aa Gaya) -> stock charhta hai, supplier ka dena utne ka jitna theek aaya",
+  "-> Product setup: rate, barcode, tasveer, miyaad, manzoori (/admin/products/setup) -> Sale Ready",
+  "-> POS par bikri (/admin/pos); bina sale rate ke cheez bikti nahi (database ki rok)",
+  "Shop order: shop request (/admin/pos/ordering ya AI draft) -> Sales verify -> Finance verify -> Manager approve -> Warehouse dispatch (stock bhejne wale se kam) -> Shop GRN (/admin/purchases/grn; theek/toota/kam) -> shop ka stock",
+  "Shop se wapas: /admin/agri-returns (HQ receive kare tab stock aur khata hilte hain)",
+  "Stock ka ek hi malik: har tabdeeli stock_movements ki harkat (Stock Ledger /admin/stock-ledger); ginti haath se nahi badalti",
+  "Supplier ka dena = received purchases - adaigiyan (/admin/purchases/bills, /admin/suppliers); haath se nahi likha jata",
+  "Kya mangwana hai: 30 din ki bikri se (/admin/products/reorder) -> purchase draft -> manzoori",
+  "Sifar aur 'hisaab nahi rakha' ek cheez nahi: jahan adad na mile wahan '—' ya NULL, 0 nahi",
+].join("\n");
+
+export async function buildCoachContext(userId: string, lang: Lang): Promise<CoachContext | null> {
+  const service = createServiceClient();
+  const { data: me } = await service.from("profiles").select("role, full_name, is_active").eq("id", userId).maybeSingle();
+  if (!me || !me.is_active) return null;
+
+  const nav = await loadNav(userId, me.role, lang);
+  const unrestricted = nav.unrestricted || UNRESTRICTED_ROLES.includes(me.role);
+  const allowedRoutes = unrestricted ? null : nav.allowedRoutes;
+  const dept = departmentForRole(me.role);
+
+  const [{ data: features }, { data: helps }, attentionAll] = await Promise.all([
+    service.from("features").select("key, label, route").eq("is_active", true),
+    service.from("feature_help").select("feature_key, purpose, who_uses, next_step, how_steps").eq("lang", "rm"),
+    loadNeedsAttention(),
+  ]);
+  const helpByKey = new Map((helps ?? []).map((h) => [h.feature_key, h]));
+  const visible = (features ?? []).filter((f) => !allowedRoutes || allowedRoutes.some((r) => f.route === r || f.route.startsWith(r + "/")));
+  const featureRows = (features ?? []).map((f) => {
+    const h = helpByKey.get(f.key);
+    return { key: f.key, label: f.label, route: f.route, purpose: h?.purpose ?? null, who: h?.who_uses ?? null, next: h?.next_step ?? null, how: h?.how_steps ?? [] };
+  });
+  void visible;
+
+  const attention = filterAttention(attentionAll, allowedRoutes).map((a) => ({ label: t(a.label, "rm"), count: a.count, href: a.href }));
+
+  return {
+    userId,
+    role: me.role,
+    fullName: me.full_name ?? "",
+    departmentKey: dept?.key ?? null,
+    departmentLabel: dept?.label ?? null,
+    unrestricted,
+    allowedRoutes,
+    features: featureRows,
+    attention,
+    lang,
+  };
+}
+
+/** AI ko banday aur system ka poora context -- system instruction ka hissa. */
+export function coachInstruction(ctx: CoachContext): string {
+  const routes = ctx.unrestricted
+    ? "Ye Owner/Admin darje ka shakhs hai: sab safhe khulte hain."
+    : `Is shakhs ko SIRF ye raaste khulte hain: ${(ctx.allowedRoutes ?? []).join(", ") || "(koi nahi)"}. Jo kaam in raaston par nahi hota, wo ye nahi kar sakta -- saaf batayein kaun karta hai (feature ki 'kaun' wali maloomat se) aur ye khud kya kar sakta hai.`;
+  const featureLines = ctx.features
+    .map((f) => {
+      const parts = [`${f.label} [${f.key}] ${f.route}`];
+      if (f.purpose) parts.push(`maqsad: ${f.purpose}`);
+      if (f.who) parts.push(`kaun: ${f.who}`);
+      if (f.how.length) parts.push(`qadam: ${f.how.join(" | ")}`);
+      if (f.next) parts.push(`aage: ${f.next}`);
+      return "- " + parts.join(" · ");
+    })
+    .join("\n");
+  const attention = ctx.attention.length
+    ? ctx.attention.map((a) => `- ${a.count == null ? "—" : a.count} ${a.label} -> ${a.href}`).join("\n")
+    : "- kuch baqi nahi";
+
+  return `
+=== WORK COACH ===
+Aap AgriBridge Work Coach hain. Sawal karne wala: ${ctx.fullName || "staff"}, role "${ctx.role}", department "${ctx.departmentLabel ?? "—"}".
+${routes}
+
+USOOL:
+- Jawab Roman Urdu mein, chhota, qadam ba qadam. Jahan safha batana ho wahan us ka raasta likhein, misal: "/admin/products/setup" -- system usay link bana deta hai.
+- Har jawab NEECHE likhi feature ki maloomat aur system ke naqshe se dein. Jo cheez in mein nahi, us par "ye mujhe nahi maloom" kahein -- andaza na lagayein.
+- "Ab kya karoon" jaisa sawal ho to pehle "AAJ BAQI" wali fehrist dekhein aur us se batayein; aur tool get_my_work se taaza fehrist lein.
+- Agar sawal kisi safhe ke baare mein ho ("ye safha samjhao", screenshot), to tool explain_page se us feature ki maloomat lein aur wohi batayein.
+- Jo kaam is shakhs ke raaston par nahi, wo usay na sikhayein -- batayein kaun karta hai aur ye kya kar sakta hai.
+- Aap kuch mehfooz nahi karte: sirf draft (draft_shop_order / propose_action), safha aur agla qadam.
+- Screenshot mile to pehle us ke title/labels/URL se pehchanein ye kaun sa safha hai (neeche ki fehrist se), phir usi feature ki maloomat se samjhayein.
+
+SYSTEM KA NAQSHA:
+${SYSTEM_MAP}
+
+AAJ BAQI (is shakhs ke liye, asal ginti):
+${attention}
+
+FEATURES AUR UN KI MALOOMAT:
+${featureLines}
+`;
+}

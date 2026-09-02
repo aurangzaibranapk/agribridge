@@ -7,6 +7,7 @@ import { departmentByKey, departmentForRole, UNRESTRICTED_ROLES } from "@/lib/de
 import { effectiveAccess, canOpen } from "@/lib/effective-permissions";
 import { tilesFor } from "@/lib/department-dashboard";
 import { NeedsAttention } from "@/components/guided/needs-attention";
+import { WorkCoachBox } from "@/components/guided/work-coach-box";
 import { loadNav } from "@/lib/access/nav";
 import { ArrowRight } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -89,6 +90,7 @@ export default async function DepartmentDashboard({ params }: { params: Promise<
         </div>
       )}
 
+      <WorkCoachBox />
       <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} areas={AREAS[key]} />
 
       <Card className="overflow-hidden">

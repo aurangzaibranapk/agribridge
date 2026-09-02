@@ -3,6 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { bridgeToolDeclarations, executeBridgeTool, classifyAgent, AGENT_SYSTEM_INSTRUCTIONS } from "@/lib/utils/bridge-tools";
 import { requireStaff } from "@/lib/api-auth";
+import { buildCoachContext, coachInstruction } from "@/lib/ai/work-coach";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
+import { t } from "@/lib/i18n/translations";
+import { Type, type FunctionDeclaration } from "@google/genai";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -11,8 +16,14 @@ export async function POST(request: NextRequest) {
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
-    const { message } = await request.json();
-    if (!message || typeof message !== "string") {
+    const body = await request.json();
+    const message: string = typeof body?.message === "string" ? body.message : "";
+    // Screenshot help (Guided ERP C): tasveer + sawal.
+    const image: { mimeType: string; data: string } | null =
+      body?.image && typeof body.image.data === "string" && typeof body.image.mimeType === "string" && body.image.mimeType.startsWith("image/")
+        ? { mimeType: body.image.mimeType, data: body.image.data }
+        : null;
+    if (!message && !image) {
       return NextResponse.json({ error: "Message zaroori hai" }, { status: 400 });
     }
 
@@ -20,17 +31,27 @@ export async function POST(request: NextRequest) {
     const ai = new GoogleGenAI({ apiKey: process.env.BRIDGE_AI_GEMINI_API_KEY! });
 
     const agent = classifyAgent(message);
-    const systemInstruction = AGENT_SYSTEM_INSTRUCTIONS[agent];
+    const lang = getLanguageFromCookies("rm");
+    // Kaun pooch raha hai, kya khulta hai, system ka naqsha, aaj kya
+    // baqi -- sab AI ke saamne (Work Coach, C).
+    const ctx = await buildCoachContext(auth.caller.userId, lang);
+    const systemInstruction = AGENT_SYSTEM_INSTRUCTIONS[agent] + (ctx ? "\n" + coachInstruction(ctx) : "");
 
     const chat = ai.chats.create({
       model: "gemini-3.6-flash",
       config: {
-        tools: [{ functionDeclarations: bridgeToolDeclarations }],
+        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS] }],
         systemInstruction,
       },
     });
 
-    const result = await chat.sendMessage({ message });
+    const parts: any[] = [];
+    if (message) parts.push({ text: message });
+    if (image) {
+      parts.push({ inlineData: { mimeType: image.mimeType, data: image.data } });
+      if (!message) parts.push({ text: "Ye safha mujhe samjhao." });
+    }
+    const result = await chat.sendMessage({ message: parts });
     const functionCalls = result.functionCalls;
     const toolsCalled: string[] = [];
     let answer: string;
@@ -39,7 +60,9 @@ export async function POST(request: NextRequest) {
       const functionResponseParts = await Promise.all(
         functionCalls.map(async (call) => {
           toolsCalled.push(call.name!);
-          const toolResult = await executeBridgeTool(call.name!, supabase, call.args);
+          const toolResult = COACH_TOOL_NAMES.has(call.name!)
+            ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
+            : await executeBridgeTool(call.name!, supabase, call.args);
           return {
             functionResponse: {
               name: call.name!,
@@ -62,7 +85,7 @@ export async function POST(request: NextRequest) {
       // Logging failure should never break the user-facing answer
     }
 
-    return NextResponse.json({ answer, agent });
+    return NextResponse.json({ answer, agent, role: ctx?.role ?? auth.caller.role });
   } catch (error: any) {
     console.error("Bridge AI error:", error);
     return NextResponse.json(
@@ -70,4 +93,81 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// =====================================================================
+// Work Coach ke tools (C): sirf parhte hain aur raasta batate hain.
+// =====================================================================
+const COACH_TOOLS: FunctionDeclaration[] = [
+  {
+    name: "get_my_work",
+    description: "Is shakhs ke liye aaj kya baqi hai -- asal ginti aur har kaam ka safha. 'Ab kya karoon', 'mera kaam', 'kya pending hai' jaise sawal par.",
+  },
+  {
+    name: "explain_page",
+    description: "Kisi safhe/feature ki likhi hui maloomat: maqsad, kaun, kab, qadam, aage kya, ghaltiyan, FAQ. Feature ka naam, key ya raasta (/admin/...) dein. Screenshot samjhane ke liye bhi yehi.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { query: { type: Type.STRING, description: "Feature ka naam, key ya raasta, jaise 'Product Setup' ya '/admin/products/setup'" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "open_page",
+    description: "Kaam ke liye sahi safha dhoondna: naam ya kaam batayein (jaise 'payment jama karni hai', 'stock bhejna'), jawab mein raasta aur ye ke is shakhs ko khulta hai ya nahi.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { query: { type: Type.STRING, description: "Kaam ya safhe ka naam" } },
+      required: ["query"],
+    },
+  },
+];
+const COACH_TOOL_NAMES = new Set(COACH_TOOLS.map((d) => d.name!));
+
+function norm(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9/]+/g, " ").trim();
+}
+
+async function executeCoachTool(name: string, args: Record<string, any>, ctx: Awaited<ReturnType<typeof buildCoachContext>>) {
+  if (!ctx) return { error: "Context nahi mila." };
+  if (name === "get_my_work") {
+    const all = await loadNeedsAttention();
+    const items = filterAttention(all, ctx.allowedRoutes).map((a) => ({ count: a.count, what: t(a.label, "rm"), page: a.href }));
+    return { role: ctx.role, department: ctx.departmentLabel, items, note: "count null = ginti nahi mil saki, sifar nahi" };
+  }
+  const q = norm(String(args.query ?? ""));
+  if (!q) return { found: false };
+  const scored = ctx.features
+    .map((f) => {
+      const hay = norm(`${f.label} ${f.key} ${f.route} ${f.purpose ?? ""}`);
+      let score = 0;
+      if (q.startsWith("/admin") && (f.route === q.split(" ")[0] || q.startsWith(f.route))) score += 10;
+      for (const w of q.split(" ")) if (w.length >= 3 && hay.includes(w)) score += 1;
+      if (norm(f.label) === q) score += 5;
+      return { f, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  if (scored.length === 0) return { found: false, message: "Aisa koi safha fehrist mein nahi." };
+  const allowed = (route: string) => !ctx.allowedRoutes || ctx.allowedRoutes.some((r) => route === r || route.startsWith(r + "/"));
+  if (name === "open_page") {
+    return {
+      found: true,
+      matches: scored.map(({ f }) => ({ label: f.label, page: f.route, opens_for_this_user: allowed(f.route), who: f.who })),
+    };
+  }
+  // explain_page
+  const f = scored[0].f;
+  return {
+    found: true,
+    label: f.label,
+    page: f.route,
+    opens_for_this_user: allowed(f.route),
+    purpose: f.purpose,
+    who: f.who,
+    steps: f.how,
+    next: f.next,
+    help_panel: "Safhe par upar daayen '? Samjhein' dabane se yehi maloomat panel mein khulti hai.",
+  };
 }
