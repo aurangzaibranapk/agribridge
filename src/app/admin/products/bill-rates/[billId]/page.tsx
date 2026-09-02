@@ -135,6 +135,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
           pageNo: l.page_no,
           productId: l.product_id,
           matchSource: l.match_source,
+          confidence: (l as { confidence?: string | null }).confidence ?? null,
           status: l.status,
           problem: l.problem,
           appliedRate: l.applied_rate == null ? null : Number(l.applied_rate),

@@ -569,6 +569,7 @@ export type Database = {
       }
       agri_grn_items: {
         Row: {
+          damaged_qty: number
           batch_no: string | null
           difference_qty: number
           difference_type: string
@@ -587,6 +588,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          damaged_qty?: number
           batch_no?: string | null
           difference_qty?: number
           difference_type?: string
@@ -605,6 +607,7 @@ export type Database = {
           unit_price?: number
         }
         Update: {
+          damaged_qty?: number
           batch_no?: string | null
           difference_qty?: number
           difference_type?: string
@@ -15415,6 +15418,7 @@ export type Database = {
       }
       supplier_bill_lines: {
         Row: {
+          confidence: string | null
           applied_at: string | null
           applied_rate: number | null
           bill_read_id: string
@@ -15435,6 +15439,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          confidence?: string | null
           applied_at?: string | null
           applied_rate?: number | null
           bill_read_id: string
@@ -15455,6 +15460,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          confidence?: string | null
           applied_at?: string | null
           applied_rate?: number | null
           bill_read_id?: string
@@ -23004,6 +23010,26 @@ export type Database = {
           suggested_qty: number | null
           trade_rate_pending: boolean | null
           urgency: string | null
+        }
+        Relationships: []
+      }
+      v_warehouse_product_card: {
+        Row: {
+          available: number | null
+          batch_count: number | null
+          branch_id: string | null
+          days_left: number | null
+          last_movement_at: string | null
+          min_stock_threshold: number | null
+          nearest_expiry: string | null
+          on_hand: number | null
+          pack_size: string | null
+          product_id: string | null
+          product_name: string | null
+          reserved: number | null
+          warehouse_code: string | null
+          warehouse_id: string | null
+          warehouse_name: string | null
         }
         Relationships: []
       }

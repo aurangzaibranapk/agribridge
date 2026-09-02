@@ -46,6 +46,8 @@ export interface BillLineReading {
   /** Ek adad ka trade rate. NULL = bill par saaf nahi tha. */
   rate: number | null;
   lineTotal: number | null;
+  /** AI ka is qatar par bharosa (263). */
+  confidence: "low" | "medium" | "high";
 }
 
 export interface BillLinesReading {
@@ -75,6 +77,7 @@ Respond with ONLY a JSON object with these exact keys:
     - qty: the quantity as a plain number, or null
     - rate: the RATE PER UNIT as a plain number, or null
     - lineTotal: that line's amount as a plain number, or null
+    - confidence: "low", "medium" or "high" — how sure you are about THIS line's numbers (blurry, handwritten, cut off = low)
 - confidence: "low", "medium" or "high" — how clearly you can read the rate column
 - summary: one or two short sentences in Roman Urdu describing what you see, e.g. "Al-Fajar Traders ka bill, 8 qatarein, kul Rs 84,300." If the rate column is blurry or cut off, say so.
 
@@ -182,6 +185,7 @@ export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesR
           qty: cleanNumber(e.qty),
           rate: cleanNumber(e.rate),
           lineTotal: cleanNumber(e.lineTotal),
+          confidence: (["high", "medium", "low"].includes(String(e.confidence)) ? String(e.confidence) : "medium") as "low" | "medium" | "high",
         };
       })
       .filter(usableLine);

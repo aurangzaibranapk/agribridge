@@ -40,9 +40,35 @@ interface Line {
   lineTotal: number | null;
   productId: string | null;
   matchSource: string | null;
+  confidence: string | null;
   status: string;
   problem: string | null;
   appliedRate: number | null;
+}
+
+/**
+ * Har khane ke saamne nishan (263): AI ne kya parha, us par kitna
+ * bharosa. Ye hisaab safhe par hota hai, database mein nahi -- kyunke
+ * banda khane badalta hai to nishan bhi usi waqt badalna chahiye.
+ */
+function fieldMarks(line: Line): { name: "ok" | "warn" | "none"; qty: "ok" | "warn" | "none"; rate: "ok" | "warn" | "none"; adds: boolean | null } {
+  const src = line.matchSource ?? "";
+  const name: "ok" | "warn" | "none" = !line.productId ? "none" : src.startsWith("fuzzy") ? "warn" : "ok";
+  let adds: boolean | null = null;
+  if (line.qty != null && line.rate != null && line.lineTotal != null) {
+    const calc = line.qty * line.rate;
+    adds = Math.abs(calc - line.lineTotal) <= Math.max(1, line.lineTotal * 0.01);
+  }
+  const low = line.confidence === "low";
+  const qty: "ok" | "warn" | "none" = line.qty == null ? "none" : adds === false || low ? "warn" : "ok";
+  const rate: "ok" | "warn" | "none" = line.rate == null ? "none" : adds === false || low ? "warn" : "ok";
+  return { name, qty, rate, adds };
+}
+
+function Mark({ state, lang }: { state: "ok" | "warn" | "none"; lang: Lang }) {
+  if (state === "ok") return <span className="ml-1 text-xs text-emerald-600" title={t("pf_bill_c_ok", lang)}>✓</span>;
+  if (state === "warn") return <span className="ml-1 text-xs text-amber-600" title={t("pf_bill_c_warn", lang)}>⚠</span>;
+  return <span className="ml-1 text-xs text-surface-400" title={t("pf_bill_c_none", lang)}>?</span>;
 }
 
 interface Product {
@@ -193,6 +219,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
   const applied = line.status === "applied";
   const locked = applied || billDone;
 
+  const marks = fieldMarks(line);
   return (
     <Card className={applied ? "border-emerald-200" : line.status === "ready" ? "border-amber-200" : undefined}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -207,6 +234,11 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
         <span className="rounded bg-surface-100 px-2 py-0.5 font-mono text-xs text-surface-700">
           {line.rawText ?? "—"}
         </span>
+        {line.confidence && !applied && (
+          <Badge tone={line.confidence === "high" ? "green" : line.confidence === "medium" ? "gray" : "amber"}>
+            {t(line.confidence === "high" ? "pf_bill_c_high" : line.confidence === "medium" ? "pf_bill_c_medium" : "pf_bill_c_low", lang)}
+          </Badge>
+        )}
         <span className="ml-auto">
           {applied ? (
             <Badge tone="green">{t("pf_bill_applied_badge", lang).replace("{rate}", line.appliedRate?.toLocaleString() ?? "—")}</Badge>
@@ -229,7 +261,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
 
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div>
-            <Label htmlFor={`nm-${line.id}`}>{t("pf_bill_line_item", lang)}</Label>
+            <Label htmlFor={`nm-${line.id}`}>{t("pf_bill_line_item", lang)}<Mark state={marks.name} lang={lang} /></Label>
             <Input
               id={`nm-${line.id}`}
               name="item_name"
@@ -239,7 +271,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
             />
           </div>
           <div>
-            <Label htmlFor={`qt-${line.id}`}>{t("pf_f_qty_in", lang)}</Label>
+            <Label htmlFor={`qt-${line.id}`}>{t("pf_f_qty_in", lang)}<Mark state={marks.qty} lang={lang} /></Label>
             <Input
               id={`qt-${line.id}`}
               name="qty"
@@ -252,7 +284,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
             />
           </div>
           <div>
-            <Label htmlFor={`rt-${line.id}`}>{t("pf_bill_line_rate", lang)}</Label>
+            <Label htmlFor={`rt-${line.id}`}>{t("pf_bill_line_rate", lang)}<Mark state={marks.rate} lang={lang} /></Label>
             <Input
               id={`rt-${line.id}`}
               name="rate"
@@ -267,6 +299,13 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
             {line.rate == null && !applied && (
               <p className="mt-1 text-xs text-amber-700">
                 {t("pf_bill_rate_blank", lang)}
+              </p>
+            )}
+            {marks.adds === false && !applied && (
+              <p className="mt-1 text-xs text-amber-700">
+                {t("pf_bill_c_not_adding", lang)
+                  .replace("{calc}", ((line.qty ?? 0) * (line.rate ?? 0)).toLocaleString())
+                  .replace("{total}", (line.lineTotal ?? 0).toLocaleString())}
               </p>
             )}
           </div>

@@ -26,7 +26,7 @@ hain:
 | 1 | …magar us se **Purchase ka draft** bane | ✅ **Ban gaya (254)** | Bill ke safhe par "Purchase banayein": purchase (pending) + items + batch, rate bhi charhta hai. Stock aur dena Receive par |
 | 2 | AI product matching, "95% match / confirm" | ✅ **Ban gaya (H)** | `lib/product-match.ts`: lafz + harf ka score, pack ka adad alag ho to kataoti. Bill: bilkul wohi → apne aap; milta julta (≥80%, doosre se saaf aage) → lagta hai magar "andaza NN%" ke nishan ke sath, Save = tasdeeq, bina tasdeeq rate nahi charhta. Sheet: milta julta product ho to qatar rukti hai, banda naam tay karta hai. AI order: wohi score |
 | 3 | Naya product → Pending Products queue | ✅ Bana hua | `/admin/products/propose` + `/admin/products/pending` + `pending-edits`. **Bill se seedha propose hona baqi** |
-| 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | 🟡 Adha | Bill-rates ka safha yehi karta hai (qatar + raw_text + photo). **Har khane par confidence ka nishan baqi** |
+| 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | ✅ **Ban gaya (263)** | Har qatar par AI ka bharosa (low/medium/high) aur har khane par nishan: naam mila ✓ / andaza ⚠ / nahi ?, tadad × rate = kul ✓ warna ⚠ (farq likha hua) |
 | 4 | Approve / Send Back / Reject + comment | ✅ **Ban gaya (259)** | `purchases.review_status` (submitted / sent_back / approved / rejected); AI aur sheet ke draft manzoori ke liye jate hain; Owner/Admin manzoor / wapas (wajah lazmi) / radd; banane wala jawab de kar dobara bhejta hai; `purchase_comments` kabhi mitta nahi; bina manzoori receive ka taala DB par |
 | 5 | Two-stage GRN: invoice 50, aaye 48, damaged 1, short 1, photo | ✅ **Ban gaya (256)** | Receive par har line: theek aaya / toota / kam (jorh = invoice, DB rok), tasveer, note. Stock mein sirf theek aaya; dena bhi utne ka. `v_purchase_discrepancies` |
 | 6 | Vendor ledger (kharid, adaigi, baqi) | ✅ Bana hua | `fn_supplier_true_payable` (139), `supplier_payments`, `supplier_payment_requests`, `/admin/purchases/bills` |
@@ -38,17 +38,17 @@ hain:
 | 12 | "Products Need Attention" ginti ka dashboard | ✅ **Ban gaya (258)** | Setup queue ke upar chhe khane (`v_product_setup_counts`), har khana filter bhi hai; Maal Andar ke khule chakkar bhi ginte hain |
 | 13 | Internal barcode banana + label print | ✅ **Ban gaya (261)** | Apna EAN-13 (200..., GS1 ka andaruni range), `fn_assign_internal_barcode`; scanner wale khane mein wohi, POS dono se dhoondta hai; `/admin/products/labels` par label sheet (apna SVG encoder, koi library nahi); Adhoore Products par bhi "apna barcode bana dein" |
 | 14 | Batch-level expiry, FEFO | ✅ **Ban gaya (257)** | Har raaste ka maal apna batch banata hai (purchase, sheet, Maal Andar). `products.expiry_date` sirf dikhane ke liye: qareeb batch ki miyaad, trigger rakhta hai. FEFO: POS pehle se, transfers/dispatch ab (`stock-movement.ts`) |
-| 15 | Warehouse product card (stock, reserved, batches) | 🟡 Adha | `/admin/inventory`, `/admin/inventory/report`. **Reserved aur nearest-expiry ek card par baqi** |
+| 15 | Warehouse product card (stock, reserved, batches) | ✅ **Ban gaya (263)** | `/admin/inventory/product/[id]`: har godam ka card — para hua, manzoor orders ke liye rakha hua (reserved), khula, batch, qareeb miyaad; batches aur haal ki harkatein neeche. `v_warehouse_product_card` |
 | 16 | Shop stock request (grid, qty +/−) | ✅ Bana hua | `/admin/pos/ordering` — agri_orders; Sales → Finance → Manager → dispatch → GRN ki poori chain (PR #1) |
 | 17 | AI se shop order ("DAP 20, Urea 30 mangwa do") | ✅ **Ban gaya (260)** | Bridge AI tool `draft_shop_order`: shop aur product naam se milte hain (na mile / do milen / rate baqi → draft nahi, wapas sawal); `agri_orders` mein **draft**; action-requests par manzoor → submitted (Sales → Finance → Manager chain), radd → cancelled. AI rate nahi banata, thok rate product ka |
 | 18 | Warehouse: approve & pick → packed → dispatched → in transit | ✅ Bana hua | `createDispatch` stock nikalta hai; lene wale ki inventory mein GRN par jata hai — raaste ka maal kisi ke stock mein nahi ginta |
-| 19 | Shop receive: expected 60, mila 59, damaged 1 | 🟡 Adha | Agri-orders ka GRN hai. **Short/damage ka alag hisaab baqi** |
+| 19 | Shop receive: expected 60, mila 59, damaged 1 | ✅ **Ban gaya (263)** | Agri GRN par ek qatar mein theek aaya + toota, kam khud nikalta hai (`agri_grn_items.damaged_qty`); kami aur toote ka paisa alag alag payable se katta hai |
 | 20 | Role ke hisaab se sirf apna kaam | ✅ Bana hua | Feature permissions, `loadNav`, "Mera Kaam" (250) |
 | 21 | AI Command Center ("kaunse products ka rate missing hai?") | ✅ **Ban gaya (260, 262)** | Bridge AI ke naye tools: `draft_shop_order` (shop order ka draft), `get_reorder_suggestions` (kya mangwana hai). Rate/barcode/tasveer ki ginti ke liye Adhoore Products ka safha (258) |
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ✅ **Ban gaya (262)** | `v_reorder_suggestions`: 30 din ki bikri / 30 = roz ki raftaar; din ka stock (bikri sifar ho to NULL, sifar nahi); mangwana = raftaar × (7 + 14) − stock; `/admin/products/reorder` se supplier-war purchase draft (manzoori ke liye); Bridge AI tool `get_reorder_suggestions` |
 
-**Ginti:** 23 cheezein, 25 qatarein (do ke do hisse): **22 bani hui**, **3 adhi** (bill par confidence ka nishan, warehouse card par reserved, agri-GRN ka short/damage), **0 baqi**.
+**Ginti:** 23 cheezein, 25 qatarein (do ke do hisse): **25 bani hui**, **0 adhi**, **0 baqi**.
 
 ---
 

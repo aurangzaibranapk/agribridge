@@ -230,6 +230,7 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
         line_total: line.lineTotal,
         product_id: productId,
         match_source: m?.source ?? null,
+        confidence: line.confidence,
         status: "draft",
       };
     });

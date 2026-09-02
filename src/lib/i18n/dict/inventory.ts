@@ -62,6 +62,28 @@ export const inventoryDict = {
   inv_to_warehouse: { en: "To Warehouse", rm: "Kis godam mein", ur: "کس گودام میں" },
   inv_select: { en: "- select -", rm: "- chunein -", ur: "- منتخب کریں -" },
   inv_notes: { en: "Notes", rm: "Notes", ur: "نوٹس" },
+
+  // ---- Product card (263) ----
+  inv_pc_title: { en: "Product card", rm: "Product ka card", ur: "پروڈکٹ کا کارڈ" },
+  inv_pc_desc: {
+    en: "Per warehouse: on hand, reserved for approved orders, free to sell, batches and nearest expiry.",
+    rm: "Har godam mein: para hua, manzoor orders ke liye rakha hua, khula, batch aur qareeb miyaad.",
+    ur: "ہر گودام میں: پڑا ہوا، منظور آرڈرز کے لیے رکھا ہوا، کھلا، بیچ اور قریب میعاد۔",
+  },
+  inv_pc_on_hand: { en: "On hand", rm: "Para hua", ur: "پڑا ہوا" },
+  inv_pc_reserved: { en: "Reserved", rm: "Rakha hua", ur: "رکھا ہوا" },
+  inv_pc_reserved_hint: {
+    en: "Approved orders not yet dispatched from this warehouse.",
+    rm: "Manzoor orders jo abhi is godam se bheje nahi gaye.",
+    ur: "منظور آرڈرز جو ابھی اس گودام سے بھیجے نہیں گئے۔",
+  },
+  inv_pc_available: { en: "Free", rm: "Khula", ur: "کھلا" },
+  inv_pc_batches: { en: "Batches", rm: "Batch", ur: "بیچ" },
+  inv_pc_nearest: { en: "Nearest expiry", rm: "Qareeb miyaad", ur: "قریب میعاد" },
+  inv_pc_last_move: { en: "Last movement", rm: "Aakhri harkat", ur: "آخری حرکت" },
+  inv_pc_movements: { en: "Recent movements", rm: "Haal ki harkatein", ur: "حال کی حرکتیں" },
+  inv_pc_no_stock: { en: "No stock row in any warehouse yet.", rm: "Abhi kisi godam mein is ka khana nahi.", ur: "ابھی کسی گودام میں اس کا خانہ نہیں۔" },
+  inv_pc_back: { en: "Back to inventory", rm: "Stock ki fehrist par wapas", ur: "اسٹاک کی فہرست پر واپس" },
 } as const;
 
 /**

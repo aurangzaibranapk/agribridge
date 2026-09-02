@@ -42,6 +42,7 @@ interface DeliveryInfo {
 
 interface ItemRow {
   received_qty: number;
+  damaged_qty: number;
   difference_type: string;
   seal_condition: string;
   packaging_condition: string;
@@ -193,6 +194,7 @@ function CreateGrnModal({
           i.id,
           {
             received_qty: info ? info.received_qty : i.order_qty,
+            damaged_qty: info ? info.damaged_qty : 0,
             difference_type: hasDiff ? (info!.short_qty > 0 ? "Short" : "Damaged") : "None",
             seal_condition: "Good",
             packaging_condition: hasDiff ? "Damaged" : "Good",
@@ -210,16 +212,10 @@ function CreateGrnModal({
   }
 
   const liveReceivedValue = orderItems.reduce((sum, i) => sum + (rows[i.id]?.received_qty ?? i.order_qty) * i.unit_price, 0);
-  const liveShortage = orderItems.reduce((sum, i) => {
-    const row = rows[i.id];
-    if (row?.difference_type !== "Short") return sum;
-    return sum + Math.abs((row.received_qty ?? i.order_qty) - i.order_qty) * i.unit_price;
-  }, 0);
-  const liveDamage = orderItems.reduce((sum, i) => {
-    const row = rows[i.id];
-    if (row?.difference_type !== "Damaged") return sum;
-    return sum + Math.abs((row.received_qty ?? i.order_qty) - i.order_qty || row.received_qty) * i.unit_price;
-  }, 0);
+  // Kam = ordered - theek aaya - toota (263). Dono ek sath ho sakte hain.
+  const shortOf = (i: OrderItem) => Math.max(0, i.order_qty - (rows[i.id]?.received_qty ?? i.order_qty) - (rows[i.id]?.damaged_qty ?? 0));
+  const liveShortage = orderItems.reduce((sum, i) => sum + shortOf(i) * i.unit_price, 0);
+  const liveDamage = orderItems.reduce((sum, i) => sum + (rows[i.id]?.damaged_qty ?? 0) * i.unit_price, 0);
   const liveTotalPayable = liveReceivedValue - liveShortage - liveDamage - discountAdjustment + additionalCharges;
 
   const itemsJson = JSON.stringify(
@@ -233,6 +229,7 @@ function CreateGrnModal({
       unit_price: i.unit_price,
       ordered_qty: i.order_qty,
       received_qty: rows[i.id]?.received_qty ?? i.order_qty,
+      damaged_qty: rows[i.id]?.damaged_qty ?? 0,
       difference_type: rows[i.id]?.difference_type ?? "None",
       seal_condition: rows[i.id]?.seal_condition ?? "Good",
       packaging_condition: rows[i.id]?.packaging_condition ?? "Good",
@@ -278,10 +275,18 @@ function CreateGrnModal({
                 {info?.reason && (
                   <p className="mb-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Delivery Wajah: {info.reason}</p>
                 )}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
                   <div>
                     <label className="text-[10px] text-surface-400">{t("ao_received_qty", lang)}</label>
-                    <input type="number" value={row.received_qty} onChange={(e) => updateRow(item.id, "received_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
+                    <input type="number" min={0} value={row.received_qty} onChange={(e) => updateRow(item.id, "received_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-surface-400">{t("c_damaged", lang)}</label>
+                    <input type="number" min={0} value={row.damaged_qty} onChange={(e) => updateRow(item.id, "damaged_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-surface-400">{t("c_short", lang)}</label>
+                    <p className={`rounded border border-surface-100 bg-surface-50 p-1.5 text-xs tabular-nums ${shortOf(item) > 0 ? "font-medium text-amber-700" : "text-surface-500"}`}>{shortOf(item)}</p>
                   </div>
                   <div>
                     <label className="text-[10px] text-surface-400">{t("ao_difference", lang)}</label>

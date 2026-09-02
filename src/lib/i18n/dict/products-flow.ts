@@ -373,6 +373,18 @@ export const productsFlowDict = {
     rm: "Bahut cheezon par barcode nahi? Apna barcode bana kar label chhaapein:",
     ur: "بہت چیزوں پر بارکوڈ نہیں؟ اپنا بارکوڈ بنا کر لیبل چھاپیں:",
   },
+  // ---- Bill ki qatar par nishan (263) ----
+  pf_bill_c_ok: { en: "Looks right", rm: "Theek lagta hai", ur: "ٹھیک لگتا ہے" },
+  pf_bill_c_warn: { en: "Check this", rm: "Ye dekh lein", ur: "یہ دیکھ لیں" },
+  pf_bill_c_none: { en: "Not read", rm: "Parha nahi gaya", ur: "پڑھا نہیں گیا" },
+  pf_bill_c_high: { en: "AI: clear", rm: "AI: saaf parha", ur: "AI: صاف پڑھا" },
+  pf_bill_c_medium: { en: "AI: fairly clear", rm: "AI: theek theek", ur: "AI: ٹھیک ٹھیک" },
+  pf_bill_c_low: { en: "AI: unclear — verify", rm: "AI: dhundla — mila lein", ur: "AI: دھندلا — ملا لیں" },
+  pf_bill_c_not_adding: {
+    en: "Qty × rate = {calc}, but the line total on the bill is {total}. One of the three is misread.",
+    rm: "Tadad × rate = {calc}, magar bill par is qatar ka kul {total} hai. Teenon mein se ek ghalat parha gaya.",
+    ur: "تعداد × ریٹ = {calc}، مگر بل پر اس قطار کا کل {total} ہے۔ تینوں میں سے ایک غلط پڑھا گیا۔",
+  },
   pf_bill_fuzzy_match: {
     en: "Guessed match ({score}%) — not confirmed. Check the product, then press Save; the rate will not apply before that.",
     rm: "Andaze se mila ({score}%) — abhi tasdeeq nahi. Product dekh kar Save dabayein; us se pehle rate nahi charhega.",

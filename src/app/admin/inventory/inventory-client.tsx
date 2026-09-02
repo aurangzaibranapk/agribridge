@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { adjustStock, transferStock, type ActionState } from "@/actions/inventory";
@@ -95,7 +96,9 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
               return (
                 <tr key={r.id} className={`border-b border-surface-100 last:border-0 dark:border-surface-800 ${isLow ? "bg-red-50/50 dark:bg-red-950/10" : ""}`}>
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">
-                    {r.product_name}{r.pack_size ? ` (${r.pack_size})` : ""}
+                    <Link href={`/admin/inventory/product/${r.product_id}`} className="hover:text-brand-600 hover:underline">
+                      {r.product_name}{r.pack_size ? ` (${r.pack_size})` : ""}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{r.warehouse_name}</td>
                   <td className="px-4 py-3 text-surface-500">

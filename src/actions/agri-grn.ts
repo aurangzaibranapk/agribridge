@@ -46,6 +46,8 @@ interface GrnItemInput {
   unit_price: number;
   ordered_qty: number;
   received_qty: number;
+  /** Aaya magar toota (263). received_qty theek aaya hua hai. */
+  damaged_qty?: number;
   difference_type: string;
   seal_condition: string;
   packaging_condition: string;
@@ -148,11 +150,19 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   let damageAmount = 0;
 
   const itemRows = items.map((i) => {
+    // Kam aur toota ek sath ho sakte hain (263): 60 mangwaye, 59 aaye,
+    // un mein 1 toota -> received 58, damaged 1, short 1.
+    const damaged = Math.max(0, Number(i.damaged_qty ?? 0));
+    const short = Math.max(0, i.ordered_qty - i.received_qty - damaged);
     const diffQty = i.received_qty - i.ordered_qty;
     orderedValue += i.ordered_qty * i.unit_price;
     receivedValue += i.received_qty * i.unit_price;
-    if (i.difference_type === "Short") shortageAmount += Math.abs(diffQty) * i.unit_price;
-    if (i.difference_type === "Damaged") damageAmount += Math.abs(diffQty || i.received_qty) * i.unit_price;
+    shortageAmount += short * i.unit_price;
+    damageAmount += damaged * i.unit_price;
+    // Purana "farq ki qisam" ab adadon se nikalta hai, taake purani
+    // reports par bhi sahi lafz aaye.
+    const differenceType =
+      short > 0 && damaged > 0 ? "Short+Damaged" : short > 0 ? "Short" : damaged > 0 ? "Damaged" : diffQty > 0 ? "Excess" : i.difference_type || "None";
 
     return {
       order_item_id: i.order_item_id || null,
@@ -163,8 +173,9 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
       unit_price: i.unit_price,
       ordered_qty: i.ordered_qty,
       received_qty: i.received_qty,
+      damaged_qty: damaged,
       difference_qty: diffQty,
-      difference_type: i.difference_type,
+      difference_type: differenceType,
       seal_condition: i.seal_condition,
       packaging_condition: i.packaging_condition,
       quality_status: i.quality_status,
