@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Send, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
@@ -19,7 +20,9 @@ const EXAMPLE_QUESTIONS = [
 export default function BridgeAiPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const lang = useLang();
-  const [input, setInput] = useState("");
+  // "?" panel se "AI se poochein" -> sawal pehle se likha hua aata hai (266).
+  const searchParams = useSearchParams();
+  const [input, setInput] = useState(searchParams.get("q") ?? "");
   const [loading, setLoading] = useState(false);
   const [actionsEnabled, setActionsEnabled] = useState(false);
   const [togglingActions, setTogglingActions] = useState(false);

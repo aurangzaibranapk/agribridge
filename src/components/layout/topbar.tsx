@@ -10,6 +10,7 @@ import type { SidebarGroup } from "@/components/layout/sidebar";
 import { BusinessSelector } from "@/components/layout/business-selector";
 import { getBusinessContext } from "@/lib/utils/get-business-context";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { HelpButton } from "@/components/help/help-button";
 
 export async function Topbar({
   subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [], lang = "rm",
@@ -51,6 +52,8 @@ export async function Topbar({
         </form>
       </div>
       <div className="flex items-center gap-1 sm:gap-3">
+        {/* "? Is Page Ko Samjhein" -- har safhe par (266). */}
+        <HelpButton />
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />
         <NotificationBell initialCount={unreadCount} href={notificationsHref} />

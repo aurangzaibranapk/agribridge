@@ -313,6 +313,33 @@ export const productsFlowDict = {
   pf_ps_t_export: { en: "Export", rm: "Export", ur: "ایکسپورٹ" },
   pd_all_categories: { en: "All", rm: "Sab", ur: "سب" },
 
+  // ---- "?" Is Page Ko Samjhein (266) ----
+  hp_button: { en: "Help", rm: "Samjhein", ur: "سمجھیں" },
+  hp_title: { en: "About this page", rm: "Is safhe ke baare mein", ur: "اس صفحے کے بارے میں" },
+  hp_unknown: { en: "This page", rm: "Ye safha", ur: "یہ صفحہ" },
+  hp_no_feature: { en: "This page is not in the feature list yet.", rm: "Ye safha abhi features ki fehrist mein nahi.", ur: "یہ صفحہ ابھی فیچرز کی فہرست میں نہیں۔" },
+  hp_not_written: { en: "Help for this page has not been written yet.", rm: "Is safhe ki maloomat abhi likhi nahi gayi.", ur: "اس صفحے کی معلومات ابھی لکھی نہیں گئی۔" },
+  hp_write: { en: "Write it", rm: "Likhein", ur: "لکھیں" },
+  hp_edit: { en: "Edit help", rm: "Maloomat badlein", ur: "معلومات بدلیں" },
+  hp_purpose: { en: "What is this page for?", rm: "Ye safha kis liye hai?", ur: "یہ صفحہ کس لیے ہے؟" },
+  hp_who: { en: "Who uses it", rm: "Kaun istemal karta hai", ur: "کون استعمال کرتا ہے" },
+  hp_when: { en: "When", rm: "Kab", ur: "کب" },
+  hp_how: { en: "Normal steps", rm: "Aam raasta", ur: "عام راستہ" },
+  hp_next: { en: "What happens next", rm: "Aage kya hota hai", ur: "آگے کیا ہوتا ہے" },
+  hp_mistakes: { en: "Common mistakes", rm: "Aam ghaltiyan", ur: "عام غلطیاں" },
+  hp_video: { en: "Watch the 2-minute video", rm: "2 minute ki video dekhein", ur: "2 منٹ کی ویڈیو دیکھیں" },
+  hp_faq: { en: "Questions people ask", rm: "Log kya poochte hain", ur: "لوگ کیا پوچھتے ہیں" },
+  hp_related: { en: "Related pages", rm: "Mutalliqa safhe", ur: "متعلقہ صفحات" },
+  hp_ask_ai: { en: "Ask AI", rm: "AI se poochein", ur: "AI سے پوچھیں" },
+  hp_ask_default: { en: "explain this page to me", rm: "ye safha mujhe samjhao", ur: "یہ صفحہ مجھے سمجھاؤ" },
+  hp_lang_fallback: { en: "(shown in Roman Urdu — not written in your language yet)", rm: "(Roman mein — aap ki zaban mein abhi nahi likha)", ur: "(رومن میں — آپ کی زبان میں ابھی نہیں لکھا)" },
+  hp_admin_title: { en: "Page Help", rm: "Safhon ki Maloomat", ur: "صفحات کی معلومات" },
+  hp_admin_desc: { en: "{n} of {total} features have help written. Every new feature must have one before it counts as done.", rm: "{total} mein se {n} features ki maloomat likhi hui hai. Har naya feature tab poora hai jab us ki maloomat likhi ho.", ur: "{total} میں سے {n} فیچرز کی معلومات لکھی ہوئی ہے۔" },
+  hp_admin_pick: { en: "Pick a feature on the left.", rm: "Baen se feature chunein.", ur: "بائیں سے فیچر چنیں۔" },
+  hp_one_per_line: { en: "one per line", rm: "har satar ek", ur: "ہر سطر ایک" },
+  hp_save: { en: "Save help", rm: "Maloomat mehfooz karein", ur: "معلومات محفوظ کریں" },
+  hp_saved: { en: "Saved.", rm: "Mehfooz.", ur: "محفوظ۔" },
+
   // ---- Kya mangwana hai (262) ----
   pf_ro_title: { en: "What to Reorder", rm: "Kya Mangwana Hai", ur: "کیا منگوانا ہے" },
   pf_ro_desc: {

@@ -7152,6 +7152,54 @@ export type Database = {
           },
         ]
       }
+      feature_help: {
+        Row: {
+          faq: Json
+          feature_key: string
+          how_steps: string[]
+          lang: string
+          mistakes: string[]
+          next_step: string | null
+          purpose: string
+          related: string[]
+          updated_at: string
+          updated_by: string | null
+          video_url: string | null
+          when_use: string | null
+          who_uses: string | null
+        }
+        Insert: {
+          faq?: Json
+          feature_key: string
+          how_steps?: string[]
+          lang?: string
+          mistakes?: string[]
+          next_step?: string | null
+          purpose: string
+          related?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          video_url?: string | null
+          when_use?: string | null
+          who_uses?: string | null
+        }
+        Update: {
+          faq?: Json
+          feature_key?: string
+          how_steps?: string[]
+          lang?: string
+          mistakes?: string[]
+          next_step?: string | null
+          purpose?: string
+          related?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          video_url?: string | null
+          when_use?: string | null
+          who_uses?: string | null
+        }
+        Relationships: []
+      }
       features: {
         Row: {
           created_at: string
