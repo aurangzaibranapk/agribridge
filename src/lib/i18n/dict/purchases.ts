@@ -145,4 +145,46 @@ export const purchasesDict = {
     rm: "Ek purchase ka apna \"baqi\" jaan boojh kar nahi likha: adaigi supplier ke khate par hoti hai, kisi ek bill par nahi. Ek bill ka baqi ginna wo adad banana hai jo asal mein hai hi nahi.",
     ur: "ایک پرچیز کا اپنا \"باقی\" جان بوجھ کر نہیں لکھا: ادائیگی سپلائر کے کھاتے پر ہوتی ہے، کسی ایک بل پر نہیں۔ ایک بل کا باقی گننا وہ عدد بنانا ہے جو اصل میں ہے ہی نہیں۔",
   },
+
+  // ---- GRN: kitna aaya, kitna toota, kitna kam (256) ----
+  grn_title: { en: "Count the goods", rm: "Maal ginein", ur: "مال گنیں" },
+  grn_hint: {
+    en: "Write what actually arrived. Received + damaged + short must equal the invoice quantity — nothing goes missing quietly.",
+    rm: "Jo asal mein aaya wo likhein. Aaya + toota + kam = invoice ki tadad — kuch chup chaap gum nahi hota.",
+    ur: "جو اصل میں آیا وہ لکھیں۔ آیا + ٹوٹا + کم = انوائس کی تعداد — کچھ چپ چاپ گم نہیں ہوتا۔",
+  },
+  grn_invoice_qty: { en: "On invoice", rm: "Invoice par", ur: "انوائس پر" },
+  grn_received: { en: "Arrived OK", rm: "Theek aaya", ur: "ٹھیک آیا" },
+  grn_damaged: { en: "Damaged", rm: "Toota", ur: "ٹوٹا" },
+  grn_short: { en: "Short", rm: "Kam", ur: "کم" },
+  grn_all_ok: { en: "All arrived as invoiced", rm: "Sab invoice jitna aaya", ur: "سب انوائس جتنا آیا" },
+  grn_photo: { en: "Photo (evidence)", rm: "Tasveer (saboot)", ur: "تصویر (ثبوت)" },
+  grn_photo_hint: {
+    en: "Optional — but when something is damaged or short, a photo settles the argument with the supplier later.",
+    rm: "Ikhtiyari — magar jab kuch toota ya kam ho, tasveer baad mein supplier se behes khatam kar deti hai.",
+    ur: "اختیاری — مگر جب کچھ ٹوٹا یا کم ہو، تصویر بعد میں سپلائر سے بحث ختم کر دیتی ہے۔",
+  },
+  grn_note: { en: "Note", rm: "Note", ur: "نوٹ" },
+  grn_note_req: {
+    en: "When something is damaged or short, write a note — what and why.",
+    rm: "Jab kuch toota ya kam ho to note likhein — kya aur kyun.",
+    ur: "جب کچھ ٹوٹا یا کم ہو تو نوٹ لکھیں — کیا اور کیوں۔",
+  },
+  grn_confirm: { en: "Confirm & bring stock in", rm: "Tasdeeq karein, maal andar layein", ur: "تصدیق کریں، مال اندر لائیں" },
+  grn_payable_note: {
+    en: "The supplier is owed only for what arrived OK. Damaged and short units are not paid for — the difference stays visible on the purchase.",
+    rm: "Supplier ka dena sirf utna banega jitna maal theek aaya. Toota aur kam — dono ka paisa nahi banta; farq purchase par nazar aata rehta hai.",
+    ur: "سپلائر کا دینا صرف اتنا بنے گا جتنا مال ٹھیک آیا۔ ٹوٹا اور کم — دونوں کا پیسہ نہیں بنتا؛ فرق پرچیز پر نظر آتا رہتا ہے۔",
+  },
+  grn_adds_up_err: {
+    en: "{name}: arrived + damaged is more than the invoice quantity ({qty}).",
+    rm: "{name}: aaya + toota invoice ki tadad ({qty}) se zyada hai.",
+    ur: "{name}: آیا + ٹوٹا انوائس کی تعداد ({qty}) سے زیادہ ہے۔",
+  },
+  grn_done: {
+    en: "Received. {ok} units in, {dmg} damaged, {short} short.",
+    rm: "Receive ho gaya. {ok} andar aaye, {dmg} toote, {short} kam.",
+    ur: "ریسیو ہو گیا۔ {ok} اندر آئے، {dmg} ٹوٹے، {short} کم۔",
+  },
+  grn_discrepancy: { en: "Invoice vs arrived", rm: "Invoice banam aaya", ur: "انوائس بمقابلہ آیا" },
 } as const;

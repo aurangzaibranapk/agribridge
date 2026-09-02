@@ -15731,29 +15731,41 @@ export type Database = {
       purchase_items: {
         Row: {
           batch_id: string | null
+          damaged_qty: number
+          grn_note: string | null
           id: string
           line_total: number
           product_id: string
           purchase_id: string
           quantity: number
+          received_qty: number | null
+          short_qty: number
           unit_cost: number
         }
         Insert: {
           batch_id?: string | null
+          damaged_qty?: number
+          grn_note?: string | null
           id?: string
           line_total: number
           product_id: string
           purchase_id: string
           quantity: number
+          received_qty?: number | null
+          short_qty?: number
           unit_cost: number
         }
         Update: {
           batch_id?: string | null
+          damaged_qty?: number
+          grn_note?: string | null
           id?: string
           line_total?: number
           product_id?: string
           purchase_id?: string
           quantity?: number
+          received_qty?: number | null
+          short_qty?: number
           unit_cost?: number
         }
         Relationships: [
@@ -15829,12 +15841,17 @@ export type Database = {
           created_by: string | null
           credit_days: number | null
           due_date: string | null
+          grn_note: string | null
+          grn_photo_url: string | null
           id: string
+          invoice_total: number | null
           notes: string | null
           organization_id: string
           payment_terms: string
           purchase_date: string
           purchase_number: string
+          received_at: string | null
+          received_by: string | null
           shop_id: string | null
           status: Database["public"]["Enums"]["purchase_status"]
           supplier_id: string
@@ -15846,12 +15863,17 @@ export type Database = {
           created_by?: string | null
           credit_days?: number | null
           due_date?: string | null
+          grn_note?: string | null
+          grn_photo_url?: string | null
           id?: string
+          invoice_total?: number | null
           notes?: string | null
           organization_id?: string
           payment_terms?: string
           purchase_date?: string
           purchase_number: string
+          received_at?: string | null
+          received_by?: string | null
           shop_id?: string | null
           status?: Database["public"]["Enums"]["purchase_status"]
           supplier_id: string
@@ -15863,12 +15885,17 @@ export type Database = {
           created_by?: string | null
           credit_days?: number | null
           due_date?: string | null
+          grn_note?: string | null
+          grn_photo_url?: string | null
           id?: string
+          invoice_total?: number | null
           notes?: string | null
           organization_id?: string
           payment_terms?: string
           purchase_date?: string
           purchase_number?: string
+          received_at?: string | null
+          received_by?: string | null
           shop_id?: string | null
           status?: Database["public"]["Enums"]["purchase_status"]
           supplier_id?: string
@@ -22855,6 +22882,23 @@ export type Database = {
           din_guzray: number | null
           warehouse_id: string | null
           warehouse_name: string | null
+        }
+        Relationships: []
+      }
+      v_purchase_discrepancies: {
+        Row: {
+          accepted_total: number | null
+          damaged_units: number | null
+          farq: number | null
+          grn_note: string | null
+          grn_photo_url: string | null
+          invoice_total: number | null
+          purchase_date: string | null
+          purchase_id: string | null
+          purchase_number: string | null
+          received_at: string | null
+          short_units: number | null
+          supplier_name: string | null
         }
         Relationships: []
       }

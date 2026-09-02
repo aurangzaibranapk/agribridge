@@ -28,7 +28,7 @@ hain:
 | 3 | Naya product → Pending Products queue | ✅ Bana hua | `/admin/products/propose` + `/admin/products/pending` + `pending-edits`. **Bill se seedha propose hona baqi** |
 | 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | 🟡 Adha | Bill-rates ka safha yehi karta hai (qatar + raw_text + photo). **Har khane par confidence ka nishan baqi** |
 | 4 | Approve / Send Back / Reject + comment | ❌ Baqi purchase ke liye | `purchases` mein sirf pending/received/cancelled. **Send-back aur comment baqi** |
-| 5 | Two-stage GRN: invoice 50, aaye 48, damaged 1, short 1, photo | 🟡 Adha | `receivePurchase` **sab ya kuch nahi** — poori invoice qty aati hai. **Short/damage/photo baqi**. (Machinery aur agri-orders mein GRN pehle se do-marhala hai) |
+| 5 | Two-stage GRN: invoice 50, aaye 48, damaged 1, short 1, photo | ✅ **Ban gaya (256)** | Receive par har line: theek aaya / toota / kam (jorh = invoice, DB rok), tasveer, note. Stock mein sirf theek aaya; dena bhi utne ka. `v_purchase_discrepancies` |
 | 6 | Vendor ledger (kharid, adaigi, baqi) | ✅ Bana hua | `fn_supplier_true_payable` (139), `supplier_payments`, `supplier_payment_requests`, `/admin/purchases/bills` |
 | 7 | Payment terms: paid / partial / credit, due date | ✅ **Ban gaya (255)** | `purchases.payment_terms/credit_days/due_date`; abhi diya hua `supplier_payments` mein (ek hi darwaza); `v_supplier_due_calendar`; finance aur supplier-bills par "agle 7 din" |
 | 8 | Ek payment sab jagah reflect ho | ✅ Bana hua | Supplier payment → ledger + cash book (127) + money trail. Do jagah nahi likhna paRta |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **12 bane hue**, **8 adhe**, **3 baqi**.
+**Ginti:** 23 mein se **13 bane hue**, **7 adhe**, **3 baqi**.
 
 ---
 
@@ -83,7 +83,7 @@ stock, POS, rate baqi ki fehrist.
 |---|---|---|---|
 | **A** | ~~Bill → Purchase draft~~ | ✅ **Ho gaya (254)** | — |
 | **B** | ~~Payment terms~~ | ✅ **Ho gaya (255)** | — |
-| **C** | **GRN mein short/damage/photo.** Receive par "invoice 50, aaye 48". Short → purchase adjust; damaged → `damaged_out` harkat. | #5 — aaj receive sab-ya-kuch-nahi hai; asal duniya mein kabhi nahi hota | 1 din |
+| **C** | ~~GRN mein short/damage/photo~~ | ✅ **Ho gaya (256)** | — |
 | **D** | **Batch-level expiry** ko sheet aur Maal Andar mein bhi. `products.expiry_date` sirf dikhane ke liye (nearest batch). | #14 — doosra batch aate hi zaroori | 1 din |
 | **E** | **Product Setup Queue** — ek safha: rate baqi, barcode nahi, tasveer nahi, expiry dekhni hai, manzoori baqi. Ginti upar. | #9, #12 — rates-baqi ko barha kar | Aadha din |
 | **F** | **Send-back + comment** purchase approval par | #4 | Aadha din |
@@ -92,7 +92,14 @@ stock, POS, rate baqi ki fehrist.
 | **I** | Internal barcode + label print | #13 | 1 din |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A, B, C ho chuke.
+
+C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
+`damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena
+sirf theek aaye maal ka banta hai), to wo hamara nuqsan nahi — supplier
+ka hai. Loss report mein wo adad aata to jhoot hota. Toota aur kam
+`purchase_items.damaged_qty / short_qty` mein rehta hai aur
+`v_purchase_discrepancies` se nazar aata hai.
 
 ---
 

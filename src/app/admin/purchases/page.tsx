@@ -35,7 +35,9 @@ export default async function AdminPurchasesPage() {
   const [{ data: purchases }, { data: suppliers }, { data: products }, { data: branches }] = await Promise.all([
     supabase
       .from("purchases")
-      .select("id, purchase_number, purchase_date, status, total_amount, suppliers(name), branches(name)")
+      .select(
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size))"
+      )
       .order("created_at", { ascending: false })
       .limit(50),
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
@@ -55,6 +57,18 @@ export default async function AdminPurchasesPage() {
     purchase_date: p.purchase_date,
     status: p.status,
     total_amount: p.total_amount,
+    invoice_total: p.invoice_total as number | null,
+    // Ginti ke liye lines (256) -- sirf pending par kaam aati hain.
+    items: ((p.purchase_items ?? []) as any[]).map((i) => {
+      const rel = Array.isArray(i.products) ? i.products[0] : i.products;
+      return {
+        id: i.id as string,
+        name: (rel?.name as string) ?? "Product",
+        pack_size: (rel?.pack_size as string | null) ?? null,
+        quantity: Number(i.quantity),
+        unit_cost: Number(i.unit_cost),
+      };
+    }),
     supplier_name: Array.isArray(p.suppliers) ? p.suppliers[0]?.name : p.suppliers?.name,
     branch_name: Array.isArray(p.branches) ? p.branches[0]?.name : p.branches?.name,
   }));
@@ -98,12 +112,19 @@ export default async function AdminPurchasesPage() {
                       <td className="px-4 py-3 text-surface-500">{p.purchase_date}</td>
                       <td className="px-4 py-3 text-right font-semibold text-surface-800 dark:text-surface-200">
                         Rs {Number(p.total_amount).toLocaleString()}
+                        {p.invoice_total != null && Number(p.invoice_total) !== Number(p.total_amount) && (
+                          <span className="block text-[11px] font-normal text-amber-700 dark:text-amber-400">
+                            {t("grn_discrepancy", lang)}: Rs {Number(p.invoice_total).toLocaleString()}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
                       </td>
                       <td className="px-4 py-3">
-                        {p.status === "pending" && <ReceiveButton purchaseId={p.id} />}
+                        {p.status === "pending" && (
+                          <ReceiveButton purchaseId={p.id} purchaseNumber={p.purchase_number} items={p.items} />
+                        )}
                       </td>
                       {isAdminLevel && (
                         <td className="px-4 py-3">

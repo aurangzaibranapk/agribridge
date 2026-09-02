@@ -8,6 +8,8 @@ export interface ActionState {
   error?: string;
   success?: boolean;
   purchaseId?: string;
+  /** Receive ke baad ginti ka khulasa (256). */
+  grn?: { received: number; damaged: number; short: number };
 }
 
 type PurchaseItemInput = {
@@ -128,31 +130,132 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   return { success: true, purchaseId: purchase.id };
 }
 
+/**
+ * Maal ginna (256): invoice par 50, aaye 48, toota 1, kam 1.
+ *
+ * Form se har line ke liye recv_<itemId> aur dmg_<itemId> aate hain;
+ * kam = invoice - aaya - toota (database par bhi yehi rok lagi hai).
+ * Purane form (sirf purchase_id) par sab kuch invoice jitna maan liya
+ * jata hai -- wohi jo pehle hota tha.
+ *
+ * Stock mein sirf THEEK aaya hua maal jata hai. Toota hua stock mein
+ * daal kar phir damaged_out likhna ghalat hoga: us ka paisa hum de hi
+ * nahi rahe, to wo hamara nuqsan nahi -- supplier ka hai. Us ka indraj
+ * purchase_items.damaged_qty mein rehta hai, v_purchase_discrepancies
+ * se nazar aata hai.
+ *
+ * Dena (139) purchases.total_amount se banta hai, is liye receive par
+ * total_amount = aaya x cost; invoice ka asal kul invoice_total mein
+ * mehfooz. Farq chhupta nahi.
+ */
 export async function receivePurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const purchaseId = String(formData.get("purchase_id") ?? "");
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, status, branch_id")
+    .select("id, status, branch_id, total_amount, invoice_total")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
   if (purchase.status === "received") return { error: "This purchase is already marked received." };
+  if (purchase.status === "cancelled") return { error: "Cancelled purchase receive nahi ho sakti." };
   const { data: items } = await supabase
     .from("purchase_items")
-    .select("id, product_id, batch_id, quantity, unit_cost")
+    .select("id, product_id, batch_id, quantity, unit_cost, products(name)")
     .eq("purchase_id", purchaseId);
   if (!items || items.length === 0) return { error: "No items on this purchase." };
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Purana form (sirf purchase_id) ya naya (har line ka adad)?
+  const counted = items.some((i) => formData.has(`recv_${i.id}`));
+  const grnNote = String(formData.get("grn_note") ?? "").trim() || null;
+  const grnPhotoUrl = String(formData.get("grn_photo_url") ?? "").trim() || null;
+
+  type Counted = {
+    id: string;
+    product_id: string;
+    batch_id: string | null;
+    unit_cost: number;
+    quantity: number;
+    received: number;
+    damaged: number;
+    short: number;
+    note: string | null;
+    name: string;
+  };
+  const rows: Counted[] = [];
   for (const item of items) {
+    const rel: any = (item as any).products;
+    const name: string = (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "Product";
+    const quantity = Number(item.quantity);
+    let received = quantity;
+    let damaged = 0;
+    let note: string | null = null;
+    if (counted) {
+      const r = String(formData.get(`recv_${item.id}`) ?? "").trim();
+      const d = String(formData.get(`dmg_${item.id}`) ?? "").trim();
+      received = r === "" ? 0 : Number(r);
+      damaged = d === "" ? 0 : Number(d);
+      note = String(formData.get(`note_${item.id}`) ?? "").trim() || null;
+      if (!Number.isFinite(received) || received < 0) return { error: `${name}: "theek aaya" ka adad sahi nahi.` };
+      if (!Number.isFinite(damaged) || damaged < 0) return { error: `${name}: "toota" ka adad sahi nahi.` };
+    }
+    const short = quantity - received - damaged;
+    if (short < 0) {
+      return { error: `${name}: aaya (${received}) + toota (${damaged}) invoice ki tadad (${quantity}) se zyada hai.` };
+    }
+    rows.push({
+      id: item.id,
+      product_id: item.product_id,
+      batch_id: item.batch_id,
+      unit_cost: Number(item.unit_cost),
+      quantity,
+      received,
+      damaged,
+      short,
+      note,
+      name,
+    });
+  }
+
+  const totalDamaged = rows.reduce((s, r) => s + r.damaged, 0);
+  const totalShort = rows.reduce((s, r) => s + r.short, 0);
+  const totalReceived = rows.reduce((s, r) => s + r.received, 0);
+  if (totalDamaged + totalShort > 0 && !grnNote && !rows.some((r) => r.note)) {
+    return { error: "Kuch toota ya kam hai -- note likhein: kya aur kyun. Baad mein supplier se yehi baat hogi." };
+  }
+
+  for (const row of rows) {
+    // Ginti ke adad pehle likhe jate hain, stock baad mein. Agar rok
+    // (received + damaged + short = quantity) yahan tooti to stock
+    // chhua hi nahi gaya.
+    const { error: lineErr } = await supabase
+      .from("purchase_items")
+      .update({
+        received_qty: row.received,
+        damaged_qty: row.damaged,
+        short_qty: row.short,
+        grn_note: row.note,
+        line_total: row.received * row.unit_cost,
+      })
+      .eq("id", row.id);
+    if (lineErr) return { error: `${row.name}: ginti likhi nahi ja saki: ${lineErr.message}` };
+
+    if (row.received <= 0) {
+      // Kuch aaya hi nahi: batch khali, stock mein koi harkat nahi.
+      if (row.batch_id) {
+        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: row.unit_cost }).eq("id", row.batch_id);
+      }
+      continue;
+    }
+
     const { data: product } = await supabase
       .from("products")
       .select("shop_id, branch_id")
-      .eq("id", item.product_id)
+      .eq("id", row.product_id)
       .single();
 
     let warehouseId: string | null = null;
@@ -169,17 +272,17 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       return { error: "Is product ki shop/branch ke liye koi warehouse set up nahi hai." };
     }
 
-    if (item.batch_id) {
+    if (row.batch_id) {
       await supabase
         .from("stock_batches")
-        .update({ warehouse_id: warehouseId, remaining_quantity: item.quantity, unit_cost: item.unit_cost })
-        .eq("id", item.batch_id);
+        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: row.unit_cost })
+        .eq("id", row.batch_id);
     }
 
     const { data: existingInventory } = await supabase
       .from("inventory")
       .select("id, quantity_on_hand")
-      .eq("product_id", item.product_id)
+      .eq("product_id", row.product_id)
       .eq("warehouse_id", warehouseId)
       .maybeSingle();
 
@@ -193,7 +296,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       const { data: newInventory, error: invError } = await supabase
         .from("inventory")
         .insert({
-          product_id: item.product_id,
+          product_id: row.product_id,
           warehouse_id: warehouseId,
         })
         .select("id")
@@ -207,23 +310,38 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     const { error: movementError } = await supabase.from("stock_movements").insert({
       inventory_id: inventoryId,
       movement_type: "purchase_in",
-      quantity: item.quantity,
+      quantity: row.received,
       reference_type: "purchase",
       reference_id: purchaseId,
+      notes: row.damaged + row.short > 0 ? `Invoice ${row.quantity}, aaya ${row.received}, toota ${row.damaged}, kam ${row.short}` : null,
       created_by: user?.id ?? null,
     });
     if (movementError) {
       return { error: `Failed to record stock movement: ${movementError.message}` };
     }
   }
+
+  // Dena utne ka jitna theek aaya. Invoice ka asal kul ek dafa mehfooz
+  // hota hai (agar bill se pehle hi likha ho to wohi rehta hai).
+  const acceptedTotal = rows.reduce((s, r) => s + r.received * r.unit_cost, 0);
   const { error: statusError } = await supabase
     .from("purchases")
-    .update({ status: "received" })
+    .update({
+      status: "received",
+      invoice_total: purchase.invoice_total ?? Number(purchase.total_amount ?? 0),
+      total_amount: acceptedTotal,
+      grn_photo_url: grnPhotoUrl,
+      grn_note: grnNote,
+      received_at: new Date().toISOString(),
+      received_by: user?.id ?? null,
+    })
     .eq("id", purchaseId);
   if (statusError) return { error: statusError.message };
   revalidatePath("/admin/purchases");
+  revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory");
-  return { success: true };
+  return { success: true, grn: { received: totalReceived, damaged: totalDamaged, short: totalShort } };
 }
 
 // Delete Purchase - sirf Admin/Owner, reason mandatory. Poori chain
