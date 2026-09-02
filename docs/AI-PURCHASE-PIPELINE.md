@@ -37,7 +37,7 @@ hain:
 | 11 | Readiness gate: 🔴 NOT SALE READY | ✅ Bana hua (252) | Sale rate missing → bikta nahi. **Barcode-missing ko gate mein daalna: malik ka faisla** (karyana mein bahut cheezon par barcode nahi hota) |
 | 12 | "Products Need Attention" ginti ka dashboard | ❌ Baqi | #9 ke sath banega |
 | 13 | Internal barcode banana + label print | ❌ Baqi | Scanner + check digit hai (243); **apna barcode banana aur chhaapna nahi** |
-| 14 | Batch-level expiry, FEFO | 🟡 Adha | `stock_batches` mein expiry hai (purchase ke raaste). **Magar `products.expiry_date` bhi hai aur sheet/intake usi ko likhte hain.** FEFO baqi |
+| 14 | Batch-level expiry, FEFO | ✅ **Ban gaya (257)** | Har raaste ka maal apna batch banata hai (purchase, sheet, Maal Andar). `products.expiry_date` sirf dikhane ke liye: qareeb batch ki miyaad, trigger rakhta hai. FEFO: POS pehle se, transfers/dispatch ab (`stock-movement.ts`) |
 | 15 | Warehouse product card (stock, reserved, batches) | 🟡 Adha | `/admin/inventory`, `/admin/inventory/report`. **Reserved aur nearest-expiry ek card par baqi** |
 | 16 | Shop stock request (grid, qty +/−) | ✅ Bana hua | `/admin/pos/ordering` — agri_orders; Sales → Finance → Manager → dispatch → GRN ki poori chain (PR #1) |
 | 17 | AI se shop order ("DAP 20, Urea 30 mangwa do") | ❌ Baqi | Bridge AI hai, magar **order-draft ka tool nahi** |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **13 bane hue**, **7 adhe**, **3 baqi**.
+**Ginti:** 23 mein se **14 bane hue**, **6 adhe**, **3 baqi**.
 
 ---
 
@@ -84,7 +84,7 @@ stock, POS, rate baqi ki fehrist.
 | **A** | ~~Bill → Purchase draft~~ | ✅ **Ho gaya (254)** | — |
 | **B** | ~~Payment terms~~ | ✅ **Ho gaya (255)** | — |
 | **C** | ~~GRN mein short/damage/photo~~ | ✅ **Ho gaya (256)** | — |
-| **D** | **Batch-level expiry** ko sheet aur Maal Andar mein bhi. `products.expiry_date` sirf dikhane ke liye (nearest batch). | #14 — doosra batch aate hi zaroori | 1 din |
+| **D** | ~~Batch-level expiry~~ | ✅ **Ho gaya (257)** | — |
 | **E** | **Product Setup Queue** — ek safha: rate baqi, barcode nahi, tasveer nahi, expiry dekhni hai, manzoori baqi. Ginti upar. | #9, #12 — rates-baqi ko barha kar | Aadha din |
 | **F** | **Send-back + comment** purchase approval par | #4 | Aadha din |
 | **G** | **AI order draft** — Bridge AI ka tool: "Mahabali ke liye DAP 20" → agri_orders draft | #17 — ordering chain pehle se hai | 1 din |
@@ -92,7 +92,7 @@ stock, POS, rate baqi ki fehrist.
 | **I** | Internal barcode + label print | #13 | 1 din |
 | **J** | AI Reorder (sale velocity) | #23 — sab se aakhir, kyunke bikri ka data pehle jama hona chahiye | 2 din |
 
-A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A, B, C ho chuke.
+A se E tak — pipeline ka **reerh ki haddi** — chaar paanch din ka kaam. A, B, C, D ho chuke.
 
 C ka ek faisla naqshe se alag hai: toota hua maal stock mein daal kar
 `damaged_out` NAHI likha jata. Us ka paisa hum de hi nahi rahe (dena

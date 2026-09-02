@@ -519,6 +519,23 @@ export async function approveIntakeBatch(_prev: IntakeState, formData: FormData)
           error: `Products ban gaye, magar stock ki harkat nahi likhi ja saki: ${mvErr.message}. Stock haath se daalein.`,
         };
       }
+      // Miyaad batch ki hoti hai (257). Dabbe se parhi expiry is maal
+      // ke batch par; product ki tareekh wahan se khud aati hai.
+      const { error: sbErr } = await supabase.from("stock_batches").insert({
+        product_id: pid,
+        batch_number: `MA-${batchId.slice(0, 8)}-${pid.slice(0, 8)}`,
+        warehouse_id: batch.warehouse_id as string,
+        manufacture_date: r.manufacture_date,
+        expiry_date: r.expiry_date,
+        initial_quantity: qty,
+        remaining_quantity: qty,
+        unit_cost: r.purchase_price,
+      });
+      if (sbErr) {
+        return {
+          error: `Products ban gaye aur stock aa gaya, magar batch (miyaad) nahi likha ja saka: ${sbErr.message}.`,
+        };
+      }
     }
   }
 

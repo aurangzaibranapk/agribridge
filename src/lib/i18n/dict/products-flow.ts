@@ -83,6 +83,11 @@ export const productsFlowDict = {
     ur: "یہ چکر منظور ہو چکا ہے — مال گودام میں آ گیا۔",
   },
   pf_ai_filled: { en: "AI filled this", rm: "AI ne bhara", ur: "AI نے بھرا" },
+  pf_expiry_from_batch: {
+    en: "Expiry belongs to the batch. Once stock with an expiry arrives (purchase, sheet, or Maal Andar), this shows the nearest batch's date and hand edits are overridden.",
+    rm: "Miyaad batch ki hoti hai. Jab miyaad wala maal aaye (purchase, sheet ya Maal Andar), yahan sab se qareeb batch ki tareekh dikhti hai aur haath se likhi tareekh nahi tikti.",
+    ur: "میعاد بیچ کی ہوتی ہے۔ جب میعاد والا مال آئے (پرچیز، شیٹ یا مال اندر)، یہاں سب سے قریب بیچ کی تاریخ دکھتی ہے اور ہاتھ سے لکھی تاریخ نہیں ٹکتی۔",
+  },
   pf_photo_uploading: { en: "Uploading…", rm: "Charh rahi hai…", ur: "چڑھ رہی ہے…" },
   pf_photo_change: { en: "Change photo", rm: "Tasveer badlein", ur: "تصویر بدلیں" },
   pf_photo_add: { en: "Add photo", rm: "Tasveer lagayein", ur: "تصویر لگائیں" },

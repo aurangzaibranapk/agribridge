@@ -16,6 +16,8 @@ interface InventoryRow {
   pack_size: string | null;
   batch_number: string | null;
   expiry_date: string | null;
+  days_left: number | null;
+  batch_count: number;
   warehouse_id: string;
   warehouse_name: string;
   quantity_on_hand: number;
@@ -96,8 +98,16 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
                     {r.product_name}{r.pack_size ? ` (${r.pack_size})` : ""}
                   </td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{r.warehouse_name}</td>
-                  <td className="px-4 py-3 text-surface-500">{r.batch_number ?? "-"}</td>
-                  <td className="px-4 py-3 text-surface-500">{r.expiry_date ?? "-"}</td>
+                  <td className="px-4 py-3 text-surface-500">
+                    {r.batch_number ?? "-"}
+                    {r.batch_count > 1 && <span className="ml-1 text-xs text-surface-400">+{r.batch_count - 1}</span>}
+                  </td>
+                  <td className={`px-4 py-3 ${r.days_left != null && r.days_left <= 30 ? "font-medium text-red-600" : r.days_left != null && r.days_left <= 90 ? "text-amber-700 dark:text-amber-400" : "text-surface-500"}`}>
+                    {r.expiry_date ?? "-"}
+                    {r.days_left != null && r.days_left <= 90 && (
+                      <span className="ml-1 text-xs">({r.days_left < 0 ? t("inv_expired", lang) : `${r.days_left} ${t("inv_days", lang)}`})</span>
+                    )}
+                  </td>
                   <td className={`px-4 py-3 text-right font-semibold ${isLow ? "text-red-600" : "text-surface-800 dark:text-surface-200"}`}>
                     {r.quantity_on_hand}
                     {isLow && <span className="ml-1 text-xs">({t("inv_low", lang)})</span>}

@@ -32,6 +32,9 @@ export const inventoryDict = {
   inv_value: { en: "Value", rm: "Qeemat", ur: "قیمت" },
   inv_actions: { en: "Actions", rm: "Kaam", ur: "کام" },
   inv_low: { en: "Low", rm: "Kam", ur: "کم" },
+  // Miyaad batch ki (257): sab se qareeb wala batch dikhta hai.
+  inv_days: { en: "days", rm: "din", ur: "دن" },
+  inv_expired: { en: "expired", rm: "guzar gayi", ur: "گزر گئی" },
   inv_empty: {
     en: "No inventory yet. Receive a purchase order to add stock.",
     rm: "Abhi koi maal nahi. Kharidari ka maal wusool karne se stock aata hai.",

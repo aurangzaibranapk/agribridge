@@ -231,6 +231,7 @@ export function ProductForm({
         <div>
           <Label htmlFor="expiry_date">{t("c_expiry_date", lang)}</Label>
           <Input ref={expiryDateRef} id="expiry_date" name="expiry_date" type="date" defaultValue={product?.expiry_date ?? undefined} />
+          <p className="mt-1 text-[11px] text-surface-400">{t("pf_expiry_from_batch", lang)}</p>
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">

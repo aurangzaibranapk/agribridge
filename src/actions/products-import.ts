@@ -777,8 +777,25 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         reference_type: "opening_stock",
         created_by: user.id,
       });
-      if (mvErr) stockProblems.push(`${x.row.name}: ${mvErr.message}`);
-      else stocked += 1;
+      if (mvErr) {
+        stockProblems.push(`${x.row.name}: ${mvErr.message}`);
+        continue;
+      }
+      stocked += 1;
+
+      // Miyaad batch ki hoti hai (257). Sheet par likhi expiry is maal
+      // ke batch par jati hai; product ki tareekh wahan se khud aati hai.
+      const { error: sbErr } = await supabase.from("stock_batches").insert({
+        product_id: x.pid,
+        batch_number: `OPEN-${Date.now()}-${x.pid.slice(0, 8)}`,
+        warehouse_id: warehouseId as string,
+        manufacture_date: x.row.manufactureDate,
+        expiry_date: x.row.expiryDate,
+        initial_quantity: Number(x.row.openingQty ?? 0),
+        remaining_quantity: Number(x.row.openingQty ?? 0),
+        unit_cost: x.row.purchasePrice,
+      });
+      if (sbErr) stockProblems.push(`${x.row.name}: batch nahi bana: ${sbErr.message}`);
     }
   } else if (withQty.length > 0) {
     qtyIgnored = withQty.length;

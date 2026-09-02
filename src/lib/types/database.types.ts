@@ -22885,6 +22885,24 @@ export type Database = {
         }
         Relationships: []
       }
+      v_product_batches: {
+        Row: {
+          batch_id: string | null
+          batch_number: string | null
+          created_at: string | null
+          days_left: number | null
+          expiry_date: string | null
+          manufacture_date: string | null
+          pack_size: string | null
+          product_id: string | null
+          product_name: string | null
+          remaining_quantity: number | null
+          unit_cost: number | null
+          warehouse_id: string | null
+          warehouse_name: string | null
+        }
+        Relationships: []
+      }
       v_purchase_discrepancies: {
         Row: {
           accepted_total: number | null

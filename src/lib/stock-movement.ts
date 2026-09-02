@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Stock ki harkat ka ek hi markazi tareeqa — FIFO se batches nikalna,
+ * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
+ * (jo pehle kharab hoga wo pehle; 257),
  * aur har harkat stock_movements mein likhna.
  *
  * Ginti (inventory.quantity_on_hand) yahan se NAHI badalti. Wo un
@@ -60,6 +61,9 @@ async function deductStock(
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .gt("remaining_quantity", 0)
+    // Pehle wo jo pehle kharab hoga (FEFO, 257); miyaad na likhi ho to
+    // wo aakhir mein, aur un mein purana pehle.
+    .order("expiry_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
   for (const batch of batches ?? []) {
     if (remaining <= 0) break;
