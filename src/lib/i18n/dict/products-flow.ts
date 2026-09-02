@@ -390,4 +390,25 @@ export const productsFlowDict = {
     rm: "Ye bill sheet se aaya hai — is ki koi tasveer nahi.",
     ur: "یہ بل شیٹ سے آیا ہے — اس کی کوئی تصویر نہیں۔",
   },
+
+  // ---- Preview mein durusti (252) ----
+  pf_row_skipped: { en: "left out", rm: "chhoR di", ur: "چھوڑ دی" },
+  pf_skipped_n: { en: "{n} left out", rm: "{n} chhoR di", ur: "{n} چھوڑ دی" },
+  pf_edit_hint: {
+    en: "Anything below can be corrected right here. Change a name that repeats, fix a rate, or leave a row out — then press Preview again.",
+    rm: "Neeche har khana yahin theek ho sakta hai. Jo naam bar bar aa raha hai usay badlein, rate durust karein, ya qatar chhoR dein — phir dobara Pehle dekhein dabayein.",
+    ur: "نیچے ہر خانہ یہیں ٹھیک ہو سکتا ہے۔ جو نام بار بار آ رہا ہے اسے بدلیں، ریٹ درست کریں، یا قطار چھوڑ دیں — پھر دوبارہ پہلے دیکھیں دبائیں۔",
+  },
+  pf_edit_rerun: {
+    en: "Press Preview again to see the corrections",
+    rm: "Durusti dekhne ke liye dobara Pehle dekhein dabayein",
+    ur: "درستی دیکھنے کے لیے دوبارہ پہلے دیکھیں دبائیں",
+  },
+  pf_row_skip: { en: "leave out", rm: "chhoR dein", ur: "چھوڑ دیں" },
+  pf_row_unskip: { en: "take back", rm: "wapas lein", ur: "واپس لیں" },
+  pf_dup_hint: {
+    en: "The same name appears more than once. Only the first one is created — give each its own name (add the pack size), or leave the extra rows out.",
+    rm: "Ek hi naam kai dafa aaya hai. Sirf pehli wali banti hai — har ek ko apna naam dein (pack size laga dein), ya baqi qatarein chhoR dein.",
+    ur: "ایک ہی نام کئی دفعہ آیا ہے۔ صرف پہلی والی بنتی ہے — ہر ایک کو اپنا نام دیں (پیک سائز لگا دیں)، یا باقی قطاریں چھوڑ دیں۔",
+  },
 } as const;

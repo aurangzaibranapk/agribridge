@@ -37,7 +37,7 @@ export interface ImportRow {
   companyName: string | null;
 
   // Preview ke faisle
-  status: "new" | "duplicate" | "error";
+  status: "new" | "duplicate" | "error" | "skipped";
   problem: string | null;
   notes: string[];
 }
@@ -47,7 +47,7 @@ export interface ImportState {
   notice?: string;
   success?: boolean;
   rows?: ImportRow[];
-  summary?: { total: number; ready: number; duplicates: number; errors: number; noTradeRate: number; noWholesale: number };
+  summary?: { total: number; ready: number; duplicates: number; errors: number; skipped: number; noTradeRate: number; noWholesale: number };
   imported?: number;
 }
 
@@ -151,6 +151,68 @@ async function canImport() {
   return { supabase, user, ok: !!me?.is_active && HR_ROLES.includes(me.role) };
 }
 
+
+// ---------------------------------------------------------------------
+// Bande ki apni durustiyan
+// ---------------------------------------------------------------------
+/**
+ * Preview par likhi hui durusti, aur chhoRi hui qatarein.
+ *
+ * YE KYA HAIN, AUR KYA NAHI: yahan se sirf wo LIKHAI aati hai jo bande
+ * ne khud theek ki -- naam, pack, rate, tareekh. Faisle (kya banega,
+ * kya pehle se hai, kahan ghalti hai, dohri qatar kaun si) yahan se
+ * NAHI aate; wo ab bhi server khud CSV par se banata hai.
+ *
+ * Is liye wo purana usool qaim hai: browser ka bheja hua NATIJA nahi
+ * maana jata. Natija nahi aata -- sirf likhai aati hai, aur us par wohi
+ * poori jaanch dobara chalti hai jo baqi qataron par chalti hai.
+ *
+ * Faida ye ke jo preview mein nazar aata hai, bilkul wohi charhta hai:
+ * dono jagah ek hi hisaab, do nahi.
+ */
+type RowEdit = Partial<Record<"name" | "packSize" | "purchasePrice" | "sellingPrice" | "wholesalePrice" | "expiryDate" | "manufactureDate" | "barcode", string>>;
+
+const EDITABLE = new Set([
+  "name", "packSize", "purchasePrice", "sellingPrice", "wholesalePrice", "expiryDate", "manufactureDate", "barcode",
+]);
+
+function parseEdits(raw: FormDataEntryValue | null): Map<number, RowEdit> {
+  const out = new Map<number, RowEdit>();
+  if (typeof raw !== "string" || !raw.trim()) return out;
+  try {
+    const obj = JSON.parse(raw) as Record<string, Record<string, unknown>>;
+    for (const [line, fields] of Object.entries(obj ?? {})) {
+      const n = Number(line);
+      if (!Number.isInteger(n)) continue;
+      const edit: RowEdit = {};
+      for (const [k, v] of Object.entries(fields ?? {})) {
+        // Sirf wohi khane jin ki ijazat hai. Bahar se koi aur naam
+        // bhej de to wo chup chaap chhoR diya jata hai.
+        if (EDITABLE.has(k) && typeof v === "string") (edit as Record<string, string>)[k] = v.slice(0, 300);
+      }
+      if (Object.keys(edit).length > 0) out.set(n, edit);
+    }
+  } catch {
+    // Kharab JSON par durusti chhoR di jati hai, poora kaam nahi.
+  }
+  return out;
+}
+
+function parseSkips(raw: FormDataEntryValue | null): Set<number> {
+  const out = new Set<number>();
+  if (typeof raw !== "string" || !raw.trim()) return out;
+  try {
+    const arr = JSON.parse(raw) as unknown[];
+    for (const v of Array.isArray(arr) ? arr : []) {
+      const n = Number(v);
+      if (Number.isInteger(n)) out.add(n);
+    }
+  } catch {
+    // wohi soch
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------
 // Qadam 1: preview
 // ---------------------------------------------------------------------
@@ -186,6 +248,9 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     return i === undefined ? undefined : r[i]?.trim();
   };
 
+  const edits = parseEdits(formData.get("edits"));
+  const skips = parseSkips(formData.get("skip"));
+
   // Naam se pehchan -- ek dafa, har qatar par alag sawal nahi.
   const [{ data: categories }, { data: brands }, { data: companies }, { data: existing }] = await Promise.all([
     supabase.from("categories").select("id, name"),
@@ -214,27 +279,37 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
 
   for (let i = 1; i < table.length; i++) {
     const r = table[i];
-    const name = (at(r, "name") ?? "").trim();
+    const lineNo = i + 1;
+
+    // Bande ki likhi hui durusti CSV ki likhai par bhaari hai -- magar
+    // jaanch dono par ek jaisi chalti hai.
+    const edit = edits.get(lineNo);
+    const pick = (k: keyof ImportRow & keyof RowEdit) => {
+      const v = edit?.[k];
+      return v !== undefined ? v.trim() : at(r, k);
+    };
+
+    const name = (pick("name") ?? "").trim();
     const notes: string[] = [];
 
-    const barcode = (at(r, "barcode") ?? "").trim() || null;
-    const purchasePrice = toNumber(at(r, "purchasePrice"));
-    const sellingPrice = toNumber(at(r, "sellingPrice"));
+    const barcode = (pick("barcode") ?? "").trim() || null;
+    const purchasePrice = toNumber(pick("purchasePrice"));
+    const sellingPrice = toNumber(pick("sellingPrice"));
     const mrpPrice = toNumber(at(r, "mrpPrice"));
-    const wholesalePrice = toNumber(at(r, "wholesalePrice"));
+    const wholesalePrice = toNumber(pick("wholesalePrice"));
 
     const row: ImportRow = {
-      line: i + 1,
+      line: lineNo,
       name,
-      packSize: (at(r, "packSize") ?? "").trim() || null,
+      packSize: (pick("packSize") ?? "").trim() || null,
       unit: (at(r, "unit") ?? "").trim() || null,
       barcode,
       purchasePrice,
       sellingPrice,
       mrpPrice,
       wholesalePrice,
-      manufactureDate: toDate(at(r, "manufactureDate")),
-      expiryDate: toDate(at(r, "expiryDate")),
+      manufactureDate: toDate(pick("manufactureDate")),
+      expiryDate: toDate(pick("expiryDate")),
       minStock: toNumber(at(r, "minStock")),
       categoryName: (at(r, "categoryName") ?? "").trim() || null,
       brandName: (at(r, "brandName") ?? "").trim() || null,
@@ -243,6 +318,16 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       problem: null,
       notes,
     };
+
+    // Jo qatar bande ne khud chhoR di, us par koi jaanch nahi chalti
+    // aur wo dohri qatar ki ginti mein bhi nahi aati -- warna ek
+    // chhoRi hui qatar us jaise doosre naam ko rok deti.
+    if (skips.has(lineNo)) {
+      row.status = "skipped";
+      row.problem = "Aap ne ye qatar chhoR di hai.";
+      rows.push(row);
+      continue;
+    }
 
     if (!name) {
       row.status = "error";
@@ -321,6 +406,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     ready: rows.filter((r) => r.status === "new").length,
     duplicates: rows.filter((r) => r.status === "duplicate").length,
     errors: rows.filter((r) => r.status === "error").length,
+    skipped: rows.filter((r) => r.status === "skipped").length,
     noTradeRate: rows.filter((r) => r.status === "new" && r.purchasePrice === null).length,
     noWholesale: rows.filter((r) => r.status === "new" && r.wholesalePrice === null).length,
   };
