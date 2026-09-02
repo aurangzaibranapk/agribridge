@@ -15314,6 +15314,42 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_bill_files: {
+        Row: {
+          ai_read_at: string | null
+          bill_read_id: string
+          created_at: string
+          file_url: string
+          id: string
+          lines_found: number | null
+          mime_type: string | null
+          page_no: number
+          problem: string | null
+        }
+        Insert: {
+          ai_read_at?: string | null
+          bill_read_id: string
+          created_at?: string
+          file_url: string
+          id?: string
+          lines_found?: number | null
+          mime_type?: string | null
+          page_no?: number
+          problem?: string | null
+        }
+        Update: {
+          ai_read_at?: string | null
+          bill_read_id?: string
+          created_at?: string
+          file_url?: string
+          id?: string
+          lines_found?: number | null
+          mime_type?: string | null
+          page_no?: number
+          problem?: string | null
+        }
+        Relationships: []
+      }
       supplier_bill_reads: {
         Row: {
           ai_raw: Json | null
@@ -15326,8 +15362,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          image_url: string
+          image_url: string | null
           notes: string | null
+          source: string
           status: string
           supplier_id: string | null
           supplier_name_raw: string | null
@@ -15343,8 +15380,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          image_url: string
+          image_url?: string | null
           notes?: string | null
+          source?: string
           status?: string
           supplier_id?: string | null
           supplier_name_raw?: string | null
@@ -15360,8 +15398,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          image_url?: string
+          image_url?: string | null
           notes?: string | null
+          source?: string
           status?: string
           supplier_id?: string | null
           supplier_name_raw?: string | null
@@ -15380,6 +15419,7 @@ export type Database = {
           line_total: number | null
           match_source: string | null
           pack_size: string | null
+          page_no: number | null
           problem: string | null
           product_id: string | null
           qty: number | null
@@ -15399,6 +15439,7 @@ export type Database = {
           line_total?: number | null
           match_source?: string | null
           pack_size?: string | null
+          page_no?: number | null
           problem?: string | null
           product_id?: string | null
           qty?: number | null
@@ -15418,6 +15459,7 @@ export type Database = {
           line_total?: number | null
           match_source?: string | null
           pack_size?: string | null
+          page_no?: number | null
           problem?: string | null
           product_id?: string | null
           qty?: number | null
@@ -19765,6 +19807,8 @@ export type Database = {
           line_no: number | null
           match_source: string | null
           pack_size: string | null
+          page_no: number | null
+          source: string | null
           problem: string | null
           product_id: string | null
           qty: number | null

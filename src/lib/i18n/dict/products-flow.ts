@@ -349,4 +349,45 @@ export const productsFlowDict = {
     rm: "\u00b7 thok ka rate nahi, retail laga",
     ur: "\u00b7 تھوک کا ریٹ نہیں، ریٹیل لگا",
   },
+
+  // ---- Bill har shakl mein (251) ----
+  pf_bill_tab_files: { en: "Bill file", rm: "Bill ki file", ur: "بل کی فائل" },
+  pf_bill_tab_sheet: { en: "From a sheet", rm: "Sheet se", ur: "شیٹ سے" },
+  pf_bill_files_add: {
+    en: "Add photos or a PDF — more than one is fine",
+    rm: "Tasveerein ya PDF lagayein — ek se zyada bhi chalti hain",
+    ur: "تصویریں یا PDF لگائیں — ایک سے زیادہ بھی چلتی ہیں",
+  },
+  pf_bill_files_hint: {
+    en: "A bill of two or three pages stays one bill. Add every page.",
+    rm: "Do ya teen safhon ka bill ek hi bill rehta hai. Har safha laga dein.",
+    ur: "دو یا تین صفحوں کا بل ایک ہی بل رہتا ہے۔ ہر صفحہ لگا دیں۔",
+  },
+  pf_bill_files_n: { en: "{n} file added", rm: "{n} file lagi hain", ur: "{n} فائل لگی ہیں" },
+  pf_bill_file_remove: { en: "remove", rm: "hatayein", ur: "ہٹائیں" },
+  pf_bill_sheet_label: { en: "Paste the sheet here", rm: "Sheet yahan paste karein", ur: "شیٹ یہاں پیسٹ کریں" },
+  pf_bill_sheet_hint: {
+    en: 'Row 1 must have the column names. "name" (or "naam") and "trade rate" (or "rate") are required; "pack" and "qty" are optional. Copying straight from Excel or Google Sheets works.',
+    rm: 'Pehli lakeer khanon ke naam ki honi chahiye. "name" (ya "naam") aur "trade rate" (ya "rate") lazmi hain; "pack" aur "qty" ikhtiyari. Excel ya Google Sheet se seedha copy kar ke paste karna kaam karta hai.',
+    ur: 'پہلی لکیر خانوں کے نام کی ہونی چاہیے۔ "name" (یا "naam") اور "trade rate" (یا "rate") لازمی ہیں؛ "pack" اور "qty" اختیاری۔ ایکسل یا گوگل شیٹ سے سیدھا کاپی کر کے پیسٹ کرنا کام کرتا ہے۔',
+  },
+  pf_bill_sheet_go: { en: "Read the sheet", rm: "Sheet parhwayein", ur: "شیٹ پڑھوائیں" },
+  pf_bill_sheet_sample: { en: "fill in a sample", rm: "namoona bhar dein", ur: "نمونہ بھر دیں" },
+  pf_bill_number: { en: "Bill number (optional)", rm: "Bill number (ikhtiyari)", ur: "بل نمبر (اختیاری)" },
+  pf_bill_date: { en: "Bill date (optional)", rm: "Bill ki tareekh (ikhtiyari)", ur: "بل کی تاریخ (اختیاری)" },
+  pf_bill_from_sheet: { en: "from a sheet", rm: "sheet se", ur: "شیٹ سے" },
+  pf_bill_from_pdf: { en: "PDF", rm: "PDF", ur: "PDF" },
+  pf_bill_pages_n: { en: "{n} pages", rm: "{n} safhe", ur: "{n} صفحات" },
+  pf_bill_page_failed: {
+    en: "This file could not be read — write those lines in by hand.",
+    rm: "Ye file parhi nahi ja saki — us ki qatarein khud likh lein.",
+    ur: "یہ فائل پڑھی نہیں جا سکی — اس کی قطاریں خود لکھ لیں۔",
+  },
+  pf_bill_page_label: { en: "Page {n}", rm: "Safha {n}", ur: "صفحہ {n}" },
+  pf_bill_open_file: { en: "open", rm: "kholein", ur: "کھولیں" },
+  pf_bill_no_photo: {
+    en: "This bill came from a sheet — there is no photo.",
+    rm: "Ye bill sheet se aaya hai — is ki koi tasveer nahi.",
+    ur: "یہ بل شیٹ سے آیا ہے — اس کی کوئی تصویر نہیں۔",
+  },
 } as const;

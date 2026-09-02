@@ -35,14 +35,14 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   const { data: bill } = await supabase
     .from("supplier_bill_reads")
     .select(
-      "id, bill_number, bill_date, bill_total, supplier_name_raw, image_url, status, ai_read_at, created_at, suppliers(name)"
+      "id, bill_number, bill_date, bill_total, supplier_name_raw, image_url, source, status, ai_read_at, created_at, suppliers(name)"
     )
     .eq("id", params.billId)
     .maybeSingle();
 
   if (!bill) notFound();
 
-  const [{ data: lines }, { data: products }] = await Promise.all([
+  const [{ data: lines }, { data: products }, { data: billFiles }] = await Promise.all([
     supabase
       .from("supplier_bill_lines")
       .select("*")
@@ -55,6 +55,11 @@ export default async function BillRatePage({ params }: { params: { billId: strin
       .eq("is_deleted", false)
       .order("name")
       .limit(5000),
+    supabase
+      .from("supplier_bill_files")
+      .select("id, file_url, mime_type, page_no, ai_read_at, problem, lines_found")
+      .eq("bill_read_id", params.billId)
+      .order("page_no"),
   ]);
 
   const supplierName = (bill as unknown as { suppliers?: { name?: string } }).suppliers?.name ?? bill.supplier_name_raw;
@@ -91,7 +96,16 @@ export default async function BillRatePage({ params }: { params: { billId: strin
         lang={lang}
         billId={bill.id}
         billStatus={bill.status}
-        billImageUrl={bill.image_url}
+        source={bill.source}
+        files={(billFiles ?? []).map((f) => ({
+          id: f.id,
+          url: f.file_url,
+          mime: f.mime_type,
+          pageNo: f.page_no,
+          read: Boolean(f.ai_read_at),
+          problem: f.problem,
+          linesFound: f.lines_found,
+        }))}
         billTotal={bill.bill_total == null ? null : Number(bill.bill_total)}
         linesTotal={linesTotal}
         aiRead={Boolean(bill.ai_read_at)}
@@ -104,6 +118,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
           qty: l.qty == null ? null : Number(l.qty),
           rate: l.rate == null ? null : Number(l.rate),
           lineTotal: l.line_total == null ? null : Number(l.line_total),
+          pageNo: l.page_no,
           productId: l.product_id,
           matchSource: l.match_source,
           status: l.status,

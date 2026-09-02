@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, CheckCircle2, Save, Search, Trash2, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Save, Search, Table2, Trash2, TrendingUp } from "lucide-react";
 import {
   applyBillRates,
   saveBillLine,
@@ -15,9 +15,20 @@ import { t, type Lang } from "@/lib/i18n/translations";
 
 const initial: BillRateState = {};
 
+interface BillFile {
+  id: string;
+  url: string;
+  mime: string | null;
+  pageNo: number;
+  read: boolean;
+  problem: string | null;
+  linesFound: number | null;
+}
+
 interface Line {
   id: string;
   lineNo: number | null;
+  pageNo: number | null;
   rawText: string | null;
   itemName: string | null;
   packSize: string | null;
@@ -183,6 +194,11 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
     <Card className={applied ? "border-emerald-200" : line.status === "ready" ? "border-amber-200" : undefined}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-xs text-surface-400">#{line.lineNo ?? "—"}</span>
+        {line.pageNo != null && (
+          <span className="text-xs text-surface-400">
+            {t("pf_bill_page_label", lang).replace("{n}", String(line.pageNo))}
+          </span>
+        )}
         {/* Bill par jo likha tha, jyun ka tyun. Ye kabhi nahi badalta --
             baad mein "AI ne kya parha tha" ka jawab isi se milta hai. */}
         <span className="rounded bg-surface-100 px-2 py-0.5 font-mono text-xs text-surface-700">
@@ -291,7 +307,8 @@ export function BillClient({
   lang,
   billId,
   billStatus,
-  billImageUrl,
+  source,
+  files,
   billTotal,
   linesTotal,
   aiRead,
@@ -301,7 +318,8 @@ export function BillClient({
   lang: Lang;
   billId: string;
   billStatus: string;
-  billImageUrl: string;
+  source: string;
+  files: BillFile[];
   billTotal: number | null;
   linesTotal: number;
   aiRead: boolean;
@@ -351,22 +369,72 @@ export function BillClient({
             {draft > 0 && ` · ${draft} ${t("pf_bill_to_check", lang)}`}
             {applied > 0 && ` · ${applied} ${t("pf_approved", lang)}`}
           </span>
-          <button
-            type="button"
-            onClick={() => setShowBill((v) => !v)}
-            className="text-xs text-surface-500 underline"
-          >
-            {showBill ? t("pf_bill_hide_photo", lang) : t("pf_bill_show_photo", lang)}
-          </button>
+
+          {source === "sheet" ? (
+            <span className="inline-flex items-center gap-1 text-xs text-surface-500">
+              <Table2 className="h-3.5 w-3.5" /> {t("pf_bill_from_sheet", lang)}
+            </span>
+          ) : (
+            files.length > 0 && (
+              <>
+                <span className="text-xs text-surface-500">
+                  {t("pf_bill_pages_n", lang).replace("{n}", String(files.length))}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowBill((v) => !v)}
+                  className="text-xs text-surface-500 underline"
+                >
+                  {showBill ? t("pf_bill_hide_photo", lang) : t("pf_bill_show_photo", lang)}
+                </button>
+              </>
+            )
+          )}
         </div>
 
-        {showBill && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={billImageUrl}
-            alt="Supplier ka bill"
-            className="mt-3 max-h-[28rem] w-full rounded-lg border border-surface-200 object-contain"
-          />
+        {source === "sheet" && <p className="mt-2 text-xs text-surface-500">{t("pf_bill_no_photo", lang)}</p>}
+
+        {/* Har file ka apna khana. Jo file parhi na ja saki us par
+            wajah likhi jati hai -- khamoshi se chhoR dene par banda
+            samajhta hai ke poora bill parh liya gaya. */}
+        {showBill && source !== "sheet" && files.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {files.map((f) => (
+              <div key={f.id}>
+                <p className="mb-1 flex flex-wrap items-center gap-2 text-xs text-surface-500">
+                  <span>{t("pf_bill_page_label", lang).replace("{n}", String(f.pageNo))}</span>
+                  {f.linesFound != null && <span>· {f.linesFound} {t("pf_rows", lang)}</span>}
+                  <a href={f.url} target="_blank" rel="noreferrer" className="underline">
+                    {t("pf_bill_open_file", lang)}
+                  </a>
+                </p>
+
+                {f.problem && (
+                  <p className="mb-1 flex items-start gap-1.5 text-sm text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {f.problem}
+                  </p>
+                )}
+
+                {f.mime === "application/pdf" ? (
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-surface-200 px-3 py-3 text-sm hover:bg-surface-50"
+                  >
+                    <FileText className="h-5 w-5 text-red-600" /> PDF
+                  </a>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.url}
+                    alt={t("pf_bill_page_label", lang).replace("{n}", String(f.pageNo))}
+                    className="max-h-[28rem] w-full rounded-lg border border-surface-200 object-contain"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </Card>
 

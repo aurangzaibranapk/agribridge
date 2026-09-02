@@ -59,7 +59,7 @@ export interface BillLinesReading {
   summary: string;
 }
 
-const PROMPT = `You are reading a photo of a SUPPLIER'S PURCHASE INVOICE (bill) received by a shop in Pakistan. Amounts are in Pakistani Rupees (PKR). Text may be printed or handwritten, in English, Urdu or Roman Urdu.
+const PROMPT = `You are reading a SUPPLIER'S PURCHASE INVOICE (bill) received by a shop in Pakistan. It may be a photo of a paper bill, or a PDF. If it is a PDF with more than one page, read the item lines from every page, in order. Amounts are in Pakistani Rupees (PKR). Text may be printed or handwritten, in English, Urdu or Roman Urdu.
 
 Your job is to read the ITEM LINES of the bill — what was bought, how many, and at what rate per unit.
 
@@ -111,17 +111,36 @@ function usableLine(line: BillLineReading): boolean {
   return Boolean(line.rawText || line.itemName);
 }
 
-export async function readSupplierBillLines(imageUrl: string): Promise<BillLinesReading | null> {
+/**
+ * Kaun si file bheji ja sakti hai.
+ *
+ * PDF jaan boojh kar shamil hai: supplier ka bill aksar PDF hi hota
+ * hai, aur us ka screenshot lene mein safha kat jane ya dhundla hone
+ * ka khatra rehta hai. Reader ko PDF waisi ki waisi jati hai.
+ *
+ * Fehrist band hai (jo likha hai sirf wohi) -- warna kisi din koi
+ * .docx ya .zip charh jati hai, aur reader ke paas us ka jawab "kuch
+ * nahi mila" hota, jo bilkul aisa lagta hai jaise bill khali tha.
+ */
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
+
+export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesReading | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   // Key na ho to ye ghalti nahi -- bas AI band hai. Bill phir bhi
   // charhta hai, banda qatarein khud likh sakta hai.
   if (!apiKey) return null;
 
   try {
-    const imageRes = await fetch(imageUrl);
+    const imageRes = await fetch(fileUrl);
     if (!imageRes.ok) return null;
 
-    const contentType = imageRes.headers.get("content-type") || "image/jpeg";
+    const rawType = (imageRes.headers.get("content-type") || "image/jpeg").split(";")[0].trim().toLowerCase();
+    const contentType = ALLOWED_TYPES.includes(rawType) ? rawType : null;
+    if (!contentType) {
+      console.error("Bill lines: is qism ki file nahi parhi jati:", rawType);
+      return null;
+    }
+
     const base64Image = Buffer.from(await imageRes.arrayBuffer()).toString("base64");
 
     const response = await fetch(`${MODEL_URL}?key=${apiKey}`, {

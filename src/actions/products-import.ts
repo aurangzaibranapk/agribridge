@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { parseDelimited } from "@/lib/csv";
 
 /**
  * CSV se products charhana.
@@ -51,77 +52,6 @@ export interface ImportState {
 }
 
 const HR_ROLES = ["owner", "super_admin", "admin"];
-
-// ---------------------------------------------------------------------
-// CSV parhna
-// ---------------------------------------------------------------------
-/**
- * Chhota parser, bahar ki library ke baghair.
- *
- * Quote ke andar comma aur nayi lakeer dono chalti hain -- ye wo do
- * cheezein hain jin par saada `split(",")` toot jata hai, aur us tootne
- * ka pata tab chalta hai jab qeemat ka khana naam mein chala gaya ho.
- */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-
-  const src = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
-
-  // Excel se khane COPY karne par wo TAB se alag hote hain, comma se
-  // nahi. Bina is ke banda Excel se copy kar ke paste karta hai aur
-  // poori qatar ek hi khane mein chali jati hai -- aur us ka pata
-  // "naam ka khana nahi mila" jaise paighaam se chalta hai, jo asal
-  // masla batata hi nahi.
-  //
-  // Faisla pehli lakeer se hota hai: jis nishan ki ginti zyada, wohi
-  // us file ka nishan hai.
-  const firstLine = src.split("\n")[0] ?? "";
-  const tabs = (firstLine.match(/\t/g) ?? []).length;
-  const commas = (firstLine.match(/,/g) ?? []).length;
-  const sep = tabs > commas ? "\t" : ",";
-
-  for (let i = 0; i < src.length; i++) {
-    const ch = src[i];
-
-    if (inQuotes) {
-      if (ch === '"') {
-        if (src[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        field += ch;
-      }
-      continue;
-    }
-
-    if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === sep) {
-      row.push(field);
-      field = "";
-    } else if (ch === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else {
-      field += ch;
-    }
-  }
-
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-
-  return rows.filter((r) => r.some((c) => c.trim() !== ""));
-}
 
 /** Header ke naam: angrezi, Roman Urdu, aur aam ghaltiyan -- sab ek jagah. */
 const HEADER_MAP: Record<string, keyof ImportRow> = {
@@ -222,7 +152,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
   const text = String(formData.get("csv") ?? "");
   if (!text.trim()) return { error: "CSV khali hai. File chunein ya matn yahan paste karein." };
 
-  const table = parseCsv(text);
+  const table = parseDelimited(text);
   if (table.length < 2) {
     return { error: "CSV mein sirf ek lakeer hai. Pehli lakeer khanon ke naam ki honi chahiye, us ke neeche products." };
   }
