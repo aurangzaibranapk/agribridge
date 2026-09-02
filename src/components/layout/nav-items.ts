@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
-  Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox,
+  Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -61,18 +61,16 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Inventory",
     items: [
       { href: "/admin/products", label: "Products", icon: Package },
-      { href: "/admin/products/propose", label: "Propose Product", icon: PackagePlus },
-      { href: "/admin/products/pending", label: "Pending Products", icon: ClipboardCheck },
-      { href: "/admin/products/pending-edits", label: "Pending Product Edits", icon: ClipboardCheck },
-      { href: "/admin/products/catalog-export", label: "Product Catalog Export", icon: FileSpreadsheet },
+      { href: "/admin/products/setup", label: "Product Setup", icon: ListChecks },
+      { href: "/admin/products/masters", label: "Product Masters", icon: Layers },
       { href: "/admin/inventory", label: "Stock", icon: Boxes },
-      { href: "/admin/agri-orders", label: "AgriBridge Ordering", icon: ClipboardType },
-      { href: "/admin/agri-returns", label: "Returns (Shop se HQ)", icon: Undo2 },
-      { href: "/admin/stock-transfers", label: "Stock Transfers", icon: ArrowLeftRight },
       { href: "/admin/stock-ledger", label: "Stock Ledger", icon: List },
-      { href: "/admin/categories", label: "Categories", icon: Layers },
-      { href: "/admin/brands", label: "Brands", icon: Tag },
-      { href: "/admin/companies", label: "Companies", icon: Building2 },
+      { href: "/admin/stock-transfers", label: "Stock Transfers", icon: ArrowLeftRight },
+      { href: "/admin/agri-returns", label: "Stock Returns", icon: Undo2 },
+      { href: "/admin/stock-count", label: "Maal ki Ginti", icon: ClipboardCheck },
+      { href: "/admin/inventory/warehouses", label: "Warehouses", icon: Building2 },
+      { href: "/admin/inventory/receiving", label: "Receiving", icon: PackageCheck },
+      { href: "/admin/reports/inventory", label: "Inventory Reports", icon: FileBarChart },
     ],
   },
   {

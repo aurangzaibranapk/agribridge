@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { t } from "@/lib/i18n/translations";
 import { QueueClient, type Filter } from "./queue-client";
 
@@ -54,6 +55,7 @@ export default async function SetupQueuePage({ searchParams }: { searchParams?: 
   return (
     <div>
       <PageHeader title={t("pf_sq_title", lang)} description={t("pf_sq_desc", lang)} />
+      <ProductSetupTabs current="queue" lang={lang} />
       <QueueClient
         lang={lang}
         filter={filter}

@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { PendingClient } from "./pending-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 export const dynamic = "force-dynamic";
 export default async function PendingProductsPage() {
   const lang = getLanguageFromCookies("rm");
@@ -24,6 +25,7 @@ export default async function PendingProductsPage() {
   return (
     <div>
       <PageHeader title={t("pd_pending_products", lang)} description="Staff ke proposed products - verify kar ke live karein (Admin ya jinke paas Can Approve permission hai)" />
+      <ProductSetupTabs current="pending" lang={lang} />
       <PendingClient products={products} />
     </div>
   );

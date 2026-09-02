@@ -5,6 +5,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { t } from "@/lib/i18n/translations";
 import { NewBatchForm } from "./new-batch-form";
 
@@ -70,6 +71,7 @@ export default async function IntakePage() {
         title={t("pf_intake_title", lang)}
         description={t("pf_intake_desc", lang)}
       />
+      <ProductSetupTabs current="intake" lang={lang} />
 
       <NewBatchForm warehouses={(warehouses ?? []).map((w) => ({ id: w.id, name: w.name, code: w.code }))} />
 

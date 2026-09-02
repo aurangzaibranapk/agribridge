@@ -47,8 +47,8 @@ nahi.
 | Kahan | Kaun si |
 |---|---|
 | **Live par chal chuki** | 225, **226 se 242** (1 September), aur **243 se 264** (2 September, ~12:50 UTC -- malik ne naya build pehle Start kar diya tha, is liye backup ki tasdeeq ke baghair, paanch batch mein) |
-| **Live par NAHI chalin** | koi nahi |
-| Testing par | 226 se 264 tak sab |
+| **Live par NAHI chalin** | **265** (Inventory menu saaf -- sirf menu ki qatarein, koi table nahi) |
+| Testing par | 226 se 265 tak sab |
 
 **(Ho chuka.) 243–264 chalne se pehle build upload nahi hona chahiye tha.** Warna ye safhe tootenge: products ki fehrist, POS, product
 ka form (naya aur edit), Maal Andar, Bill se Trade Rate, aur CRM mein

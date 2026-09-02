@@ -300,6 +300,19 @@ export const productsFlowDict = {
     ur: "بل پر یہ ریٹ صاف نہیں تھا — خود دیکھ کر لکھیں۔ خالی چھوڑنا صفر لکھنے سے بہتر ہے۔",
   },
   pf_bill_which_product: { en: "Which product of ours", rm: "Hamara kaun sa product", ur: "ہمارا کون سا پروڈکٹ" },
+  // ---- Product Setup workspace (265) ----
+  pf_ps_t_queue: { en: "Setup Queue", rm: "Adhoore", ur: "ادھورے" },
+  pf_ps_t_propose: { en: "New / Propose", rm: "Naya / Tajweez", ur: "نیا / تجویز" },
+  pf_ps_t_pending: { en: "Pending Approval", rm: "Manzoori Baqi", ur: "منظوری باقی" },
+  pf_ps_t_edits: { en: "Pending Edits", rm: "Tabdeeli Baqi", ur: "تبدیلی باقی" },
+  pf_ps_t_intake: { en: "Intake (scan/photo)", rm: "Maal Andar", ur: "مال اندر" },
+  pf_ps_t_bill: { en: "Rate from Bill", rm: "Bill se Rate", ur: "بل سے ریٹ" },
+  pf_ps_t_rates: { en: "Missing Rate", rm: "Rate Baqi", ur: "ریٹ باقی" },
+  pf_ps_t_labels: { en: "Barcode Labels", rm: "Barcode Label", ur: "بارکوڈ لیبل" },
+  pf_ps_t_import: { en: "Import CSV", rm: "CSV se", ur: "CSV سے" },
+  pf_ps_t_export: { en: "Export", rm: "Export", ur: "ایکسپورٹ" },
+  pd_all_categories: { en: "All", rm: "Sab", ur: "سب" },
+
   // ---- Kya mangwana hai (262) ----
   pf_ro_title: { en: "What to Reorder", rm: "Kya Mangwana Hai", ur: "کیا منگوانا ہے" },
   pf_ro_desc: {

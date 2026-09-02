@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { t } from "@/lib/i18n/translations";
 import { RatesClient } from "./rates-client";
 
@@ -48,6 +49,7 @@ export default async function RatesBaqiPage() {
   return (
     <div>
       <PageHeader title={t("pf_rb_title", lang)} description={t("pf_rb_desc", lang)} />
+      <ProductSetupTabs current="rates" lang={lang} />
 
       {(rows ?? []).length === 0 ? (
         <Card>

@@ -32,6 +32,20 @@ export const inventoryDict = {
   inv_value: { en: "Value", rm: "Qeemat", ur: "قیمت" },
   inv_actions: { en: "Actions", rm: "Kaam", ur: "کام" },
   inv_low: { en: "Low", rm: "Kam", ur: "کم" },
+  // Receiving (265)
+  inv_rc_title: { en: "Receiving", rm: "Receiving -- jo maal aana hai", ur: "ریسیونگ -- جو مال آنا ہے" },
+  inv_rc_desc: {
+    en: "One place for stock waiting to be counted in: approved supplier purchases, and shop orders on their way. The counting itself happens on the same GRN screens as before.",
+    rm: "Jo maal ginna baqi hai wo ek jagah: manzoor shuda supplier purchases, aur raaste mein shop ke orders. Ginti wahi purane GRN safhon par hoti hai.",
+    ur: "جو مال گننا باقی ہے وہ ایک جگہ: منظور شدہ سپلائر پرچیز، اور راستے میں شاپ کے آرڈر۔ گنتی وہی پرانے GRN صفحوں پر ہوتی ہے۔",
+  },
+  inv_rc_shop_orders: { en: "Shop orders on the way", rm: "Shop ke orders raaste mein", ur: "شاپ کے آرڈر راستے میں" },
+  inv_rc_shop_orders_hint: { en: "Dispatched or in transit — count them in on the GRN queue.", rm: "Bheje hue ya raaste mein — GRN ki qatar par ginein.", ur: "بھیجے ہوئے یا راستے میں — GRN کی قطار پر گنیں۔" },
+  inv_rc_open_grn: { en: "Open GRN queue", rm: "GRN ki qatar kholein", ur: "GRN کی قطار کھولیں" },
+  inv_rc_purchases: { en: "Supplier purchases ready to count", rm: "Supplier ki purchases, ginne ke liye tayyar", ur: "سپلائر کی پرچیز، گننے کے لیے تیار" },
+  inv_rc_none: { en: "Nothing waiting to be received.", rm: "Abhi kuch aana baqi nahi.", ur: "ابھی کچھ آنا باقی نہیں۔" },
+  inv_rc_waiting: { en: "Not approved yet", rm: "Abhi manzoor nahi", ur: "ابھی منظور نہیں" },
+  inv_rc_waiting_hint: { en: "These cannot be counted in until Owner/Admin approves them on", rm: "Ye tab tak gine nahi ja sakte jab tak Owner/Admin manzoor na karein, yahan:", ur: "یہ تب تک گنے نہیں جا سکتے جب تک Owner/Admin منظور نہ کریں، یہاں:" },
   // Miyaad batch ki (257): sab se qareeb wala batch dikhta hai.
   inv_days: { en: "days", rm: "din", ur: "دن" },
   inv_expired: { en: "expired", rm: "guzar gayi", ur: "گزر گئی" },

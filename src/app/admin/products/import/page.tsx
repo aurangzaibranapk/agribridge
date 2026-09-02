@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { t } from "@/lib/i18n/translations";
 import { ImportClient } from "./import-client";
 
@@ -58,6 +59,7 @@ export default async function ProductsImportPage() {
         title={t("pf_import_title", lang)}
         description={t("pf_import_desc", lang)}
       />
+      <ProductSetupTabs current="import" lang={lang} />
       <ImportClient
         categories={(categories ?? []).map((c) => c.name)}
         brands={(brands ?? []).map((b) => b.name)}

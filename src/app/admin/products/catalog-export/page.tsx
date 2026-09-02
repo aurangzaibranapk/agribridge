@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { CatalogExportClient } from "./catalog-export-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function CatalogExportPage() {
   return (
     <div>
       <PageHeader title={t("pd_catalog_export", lang)} description="Category select karein, fields choose karein, Print/Download/WhatsApp/Email karein" />
+      <ProductSetupTabs current="export" lang={lang} />
       <CatalogExportClient products={products} categories={categories ?? []} />
     </div>
   );

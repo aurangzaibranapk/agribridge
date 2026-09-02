@@ -5,6 +5,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { t } from "@/lib/i18n/translations";
 import { NewBillForm } from "./new-bill-form";
 
@@ -76,6 +77,7 @@ export default async function BillRatesPage() {
         title={t("pf_bill_title", lang)}
         description={t("pf_bill_desc", lang)}
       />
+      <ProductSetupTabs current="bill" lang={lang} />
 
       {(pendingCount ?? 0) > 0 && (
         <Card className="mb-4 border-amber-200 bg-amber-50">
