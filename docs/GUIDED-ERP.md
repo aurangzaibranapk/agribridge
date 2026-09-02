@@ -123,3 +123,33 @@ karega — staff ki feedback se ERP continuously improve bhi hoga."*
 | SaaS: kis feature par sab se zyada shikayat | `feature_key` + `reported_by` — har tajweez feature se juRi hai |
 
 **Guided ERP ab:** 16 nukte + F. 15 poore, 1 adha (video), F poora.
+
+---
+
+## 6. Qadam G — Ijazat ki darkhwast (AI Permission & Access Request) — ✅ (270)
+
+Malik ka usool: *"AI natural-language intent ko permission draft mein
+badalta hai; authorized insaan manzoor karta hai; permission engine
+lagata hai. AI kabhi RBAC, data scope, department hierarchy ya approval
+bypass na kare."*
+
+Naya parallel system nahi bana. Ijazat wahi `user_feature_permissions`
+(104) hai jo `v_user_feature_access` se chalti hai aur `expires_at` par
+khud khatam hoti hai. Sirf darkhwast aur us ka silsila naya hai.
+
+| Malik ne kaha | Bana |
+|---|---|
+| Staff saade lafzon mein maange, technical naam yaad na rakhe | Coach tool `request_access`: feature naam/kaam se milta hai, actions lafzon se (dekhna→view, banana→create...), draft: "Aap X ka VIEW maang rahe hain, edit/approve NAHI" + abhi kya hai + kaun manzoor karega; "haan" par darkhwast |
+| Draft: user, department, feature, actions, scope, wajah, miyaad, kis ne | `access_requests` (ACC-2026-00001), `ai_interpretation` mein AI ka samjha hua |
+| Granular actions | Wohi 8 jo engine mein hain: view, create, edit, verify, approve, reject, export, assign |
+| Department change/addign | `kind = department_assign`: sirf Owner/Admin; approve par us dashboard ke sab features par ijazat + `extra_roles` |
+| Admin apne AI ko command de ("Usman ko Milk mein...") | Wohi tool, `for_user_name`; darkhwast banti hai, Admin `/admin/access-requests` par "Manzoor karein aur lagayein" dabata hai |
+| High-risk AI direct na lagaye | `riskLevel()`: finance approve/verify, users/permissions/security/reversal, department assign, cross-department non-view → sirf Owner/Admin; head/manager ko dikhti bhi nahi |
+| Department Head apni ceiling ke andar | Approve par `capGrant` (delegation.ts) — jo us ke paas nahi wo kat jata hai aur likha jata hai |
+| Immutable audit | `access_request_events` (sirf select/insert), purani → nayi ijazat snapshot, `logAudit` |
+| Temporary: today / 7d / 30d / custom / permanent, expiry par khud hat jaye | `expiryFor()` → `expires_at`; view pehle se expired ko chhoRti hai |
+| Staff AI mein My Access / Request / Pending / Departments | `/admin/my-access` (har staff ko khula), coach box mein 🔑 |
+| Admin AI mein Pending / Who has what / Expiring / Departments | `/admin/access-requests` ke chaar tab |
+
+Jo NAHI hai (saaf): "excessive/conflicting access" ki khud-kar jaanch
+nahi — "Kis ke paas kya" ki fehrist hai, faisla insaan ka.

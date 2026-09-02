@@ -60,7 +60,8 @@ export interface NavResult {
 // Us par kuch chhupane ka khatra bhi nahi: wo safha khud kuch nahi
 // dikhata, sirf wo card dikhata hai jin ki ijazat pehle se hai.
 const ALWAYS = [
-  "/admin/academy","/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
+  "/admin/academy",
+  "/admin/my-access","/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
 
 function fallbackGroups(allowed: Set<string> | null): NavGroupData[] {
   return ADMIN_NAV_GROUPS.map((g) => ({

@@ -9,6 +9,7 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { t } from "@/lib/i18n/translations";
 import { Type, type FunctionDeclaration } from "@google/genai";
 import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool";
+import { ACCESS_TOOL, executeAccessTool } from "@/lib/ai/access-tool";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       model: "gemini-3.6-flash",
       history,
       config: {
-        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS, SUGGESTION_TOOL] }],
+        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS, SUGGESTION_TOOL, ACCESS_TOOL] }],
         systemInstruction,
       },
     });
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
           const toolResult =
             call.name === "submit_suggestion"
               ? await executeSuggestionTool(call.args ?? {}, ctx)
+              : call.name === "request_access"
+                ? await executeAccessTool(call.args ?? {}, ctx)
               : COACH_TOOL_NAMES.has(call.name!)
                 ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
                 : await executeBridgeTool(call.name!, supabase, call.args);

@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_request_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: Json | null
+          event: string
+          id: string
+          request_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          event: string
+          id?: string
+          request_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          event?: string
+          id?: string
+          request_id?: string
+        }
+        Relationships: []
+      }
+      access_requests: {
+        Row: {
+          actions: string[]
+          ai_interpretation: Json | null
+          applied_at: string | null
+          branch_id: string | null
+          created_at: string
+          data_scope: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          department_key: string | null
+          duration: string
+          expires_at: string | null
+          feature_key: string | null
+          id: string
+          kind: string
+          new_permissions: Json | null
+          number: string
+          old_permissions: Json | null
+          reason: string | null
+          requested_by: string
+          requested_for: string
+          risk_level: string
+          starts_at: string | null
+          status: string
+        }
+        Insert: {
+          actions?: string[]
+          ai_interpretation?: Json | null
+          applied_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          data_scope?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          department_key?: string | null
+          duration?: string
+          expires_at?: string | null
+          feature_key?: string | null
+          id?: string
+          kind?: string
+          new_permissions?: Json | null
+          number?: string
+          old_permissions?: Json | null
+          reason?: string | null
+          requested_by: string
+          requested_for: string
+          risk_level?: string
+          starts_at?: string | null
+          status?: string
+        }
+        Update: {
+          actions?: string[]
+          ai_interpretation?: Json | null
+          applied_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          data_scope?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          department_key?: string | null
+          duration?: string
+          expires_at?: string | null
+          feature_key?: string | null
+          id?: string
+          kind?: string
+          new_permissions?: Json | null
+          number?: string
+          old_permissions?: Json | null
+          reason?: string | null
+          requested_by?: string
+          requested_for?: string
+          risk_level?: string
+          starts_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_requested_for_fkey"
+            columns: ["requested_for"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_logs: {
         Row: {
           action: string

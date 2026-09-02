@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Bot, Camera, Send, X, Lightbulb } from "lucide-react";
+import { Bot, Camera, Send, X, Lightbulb, KeyRound } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -89,8 +89,16 @@ export function WorkCoachBox({ placeholder }: { placeholder?: string }) {
         <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t("wc_title", lang)}</h3>
         <button
           type="button"
+          onClick={() => setInput(t("ma_ask_prefill", lang))}
+          className="ml-auto inline-flex items-center gap-1 rounded-full bg-surface-100 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+          title={t("ma_request", lang)}
+        >
+          <KeyRound className="h-3.5 w-3.5" /> {t("ma_request_short", lang)}
+        </button>
+        <button
+          type="button"
           onClick={() => setInput(t("sg_prefill", lang))}
-          className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200"
+          className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200"
           title={t("sg_button_hint", lang)}
         >
           <Lightbulb className="h-3.5 w-3.5" /> {t("sg_button", lang)}
