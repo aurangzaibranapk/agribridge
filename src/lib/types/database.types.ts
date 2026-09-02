@@ -15437,6 +15437,113 @@ export type Database = {
         }
         Relationships: []
       }
+      suggestion_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          suggestion_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          suggestion_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          suggestion_id?: string
+        }
+        Relationships: []
+      }
+      suggestions: {
+        Row: {
+          ai_raw: Json | null
+          category: string
+          created_at: string
+          department_key: string | null
+          duplicate_of: string | null
+          evidence_url: string | null
+          feature_key: string | null
+          id: string
+          implemented_at: string | null
+          implemented_version: string | null
+          improvement: string | null
+          number: string
+          page_route: string | null
+          priority: string
+          problem: string | null
+          related_link: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_by: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_raw?: Json | null
+          category?: string
+          created_at?: string
+          department_key?: string | null
+          duplicate_of?: string | null
+          evidence_url?: string | null
+          feature_key?: string | null
+          id?: string
+          implemented_at?: string | null
+          implemented_version?: string | null
+          improvement?: string | null
+          number?: string
+          page_route?: string | null
+          priority?: string
+          problem?: string | null
+          related_link?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_raw?: Json | null
+          category?: string
+          created_at?: string
+          department_key?: string | null
+          duplicate_of?: string | null
+          evidence_url?: string | null
+          feature_key?: string | null
+          id?: string
+          implemented_at?: string | null
+          implemented_version?: string | null
+          improvement?: string | null
+          number?: string
+          page_route?: string | null
+          priority?: string
+          problem?: string | null
+          related_link?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_bill_files: {
         Row: {
           ai_read_at: string | null
@@ -23153,6 +23260,13 @@ export type Database = {
           warehouse_code: string | null
           warehouse_id: string | null
           warehouse_name: string | null
+        }
+        Relationships: []
+      }
+      v_suggestion_report_counts: {
+        Row: {
+          reported_by: number | null
+          suggestion_id: string | null
         }
         Relationships: []
       }

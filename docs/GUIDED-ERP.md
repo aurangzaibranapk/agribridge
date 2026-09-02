@@ -102,3 +102,24 @@ tayyar karte hain.
 - **Sifar aur "hisaab nahi rakha" ek cheez nahi** -- Needs Attention
   mein bhi: jo ginti kisi ijazat ki wajah se na mile, wahan "—", 0 nahi.
 - Purane safhe mitte nahi; raasta ek hota hai (jaise 265 mein).
+
+---
+
+## 5. Qadam F — Staff ki tajweezein (Improvements Center) — ✅ (269)
+
+Malik ka nukta (2 September, dopahar): *"Staff ERP ko sirf use nahi
+karega — staff ki feedback se ERP continuously improve bhi hoga."*
+
+| Malik ne kaha | Bana |
+|---|---|
+| Staff Work Coach ko masla/tajweez bataye, AI structured draft banaye | Tool `submit_suggestion`: pehle draft (department, feature, qism, masla, behtari, tarjeeh) + milti julti purani tajweezein; staff "haan" kahe tab darj. Coach box mein 💡 button |
+| Categories | new_feature, improvement, process_problem, ui_ux, bug, automation, ai_improvement, report, training_help, other |
+| Unique ID, poori history | `SUG-2026-00001` (sequence), `suggestion_comments` har halat ki tabdeeli aur baat ke sath; kabhi mitta nahi |
+| Admin dashboard: New / Under Review / Accepted / Planned / In Development / Implemented / Rejected / Duplicate | `/admin/improvements` — halat ke tab ginti ke sath, faisla, note, duplicate (asal ka number), implemented version + link |
+| Department head apne department ki, Master Admin sab | RLS: Owner/Admin/Manager sab; baqi apni aur apne department ki (role → department) |
+| Duplicate: "7 logon ne bataya", asal na mite | `duplicate_of` link, `v_suggestion_report_counts`; AI draft par milti julti purani dikhata hai |
+| Status badle to staff ko paighaam; implemented par version/tareekh/link | `notifyUser` har faisle par; `implemented_version`, `implemented_at`, `related_link` |
+| AI sirf capture → structure → classify → duplicate → sifarish; deploy nahi | Tool sirf table mein likhta hai (staff ki haan ke baad); halat sirf reviewer badalta hai |
+| SaaS: kis feature par sab se zyada shikayat | `feature_key` + `reported_by` — har tajweez feature se juRi hai |
+
+**Guided ERP ab:** 16 nukte + F. 15 poore, 1 adha (video), F poora.

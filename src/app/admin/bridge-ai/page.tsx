@@ -87,7 +87,11 @@ export default function BridgeAiPage() {
       const res = await fetch("/api/bridge-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question, image: img ? { mimeType: img.mimeType, data: img.data } : undefined }),
+        body: JSON.stringify({
+          message: question,
+          image: img ? { mimeType: img.mimeType, data: img.data } : undefined,
+          history: messages.slice(-8).map((x) => ({ role: x.role, text: x.text })),
+        }),
       });
       const data = await res.json();
       setMessages((m) => [

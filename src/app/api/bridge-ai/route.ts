@@ -8,6 +8,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { t } from "@/lib/i18n/translations";
 import { Type, type FunctionDeclaration } from "@google/genai";
+import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -37,10 +38,19 @@ export async function POST(request: NextRequest) {
     const ctx = await buildCoachContext(auth.caller.userId, lang);
     const systemInstruction = AGENT_SYSTEM_INSTRUCTIONS[agent] + (ctx ? "\n" + coachInstruction(ctx) : "");
 
+    // Pichhli baat (269): tajweez ka draft -> "haan" -> darj, is ke liye
+    // AI ko pichhle 8 paighaam bhi milte hain.
+    const rawHistory: { role: string; text: string }[] = Array.isArray(body?.history) ? body.history : [];
+    const history = rawHistory
+      .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.text === "string" && h.text.trim())
+      .slice(-8)
+      .map((h) => ({ role: h.role === "user" ? "user" : "model", parts: [{ text: h.text.slice(0, 4000) }] }));
+
     const chat = ai.chats.create({
       model: "gemini-3.6-flash",
+      history,
       config: {
-        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS] }],
+        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS, SUGGESTION_TOOL] }],
         systemInstruction,
       },
     });
@@ -60,9 +70,12 @@ export async function POST(request: NextRequest) {
       const functionResponseParts = await Promise.all(
         functionCalls.map(async (call) => {
           toolsCalled.push(call.name!);
-          const toolResult = COACH_TOOL_NAMES.has(call.name!)
-            ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
-            : await executeBridgeTool(call.name!, supabase, call.args);
+          const toolResult =
+            call.name === "submit_suggestion"
+              ? await executeSuggestionTool(call.args ?? {}, ctx)
+              : COACH_TOOL_NAMES.has(call.name!)
+                ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
+                : await executeBridgeTool(call.name!, supabase, call.args);
           return {
             functionResponse: {
               name: call.name!,
