@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 
 export interface ActionState {
@@ -51,6 +52,11 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     return { error: "Add at least one product line." };
   }
   const totalAmount = items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0);
+
+  // Adaigi ki shartein (255): poora / kuch / udhaar, aur kab tak.
+  const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
+  if ("error" in terms) return { error: terms.error };
+
   const purchaseNumber = `PO-${Date.now()}`;
   const { data: purchase, error: purchaseError } = await supabase
     .from("purchases")
@@ -61,6 +67,9 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       purchase_date: purchaseDate,
       status: "pending",
       total_amount: totalAmount,
+      payment_terms: terms.terms,
+      credit_days: terms.creditDays,
+      due_date: terms.dueDate,
       notes,
       created_by: user?.id ?? null,
     })
@@ -68,6 +77,22 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .single();
   if (purchaseError || !purchase) {
     return { error: purchaseError?.message ?? "Failed to create purchase." };
+  }
+
+  // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
+  // adaigi jati hai (139). Purchase par adad NAHI likha jata; warna
+  // ek din do jagah ka adad alag nikalta hai.
+  if (terms.paidNow > 0) {
+    const { error: payErr } = await supabase.from("supplier_payments").insert({
+      supplier_id: supplierId,
+      purchase_id: purchase.id,
+      amount: terms.paidNow,
+      payment_date: purchaseDate,
+      payment_method: (formData.get("payment_method") as string) || null,
+      notes: `Kharid ${purchaseNumber} ke waqt`,
+      created_by: user?.id ?? null,
+    });
+    if (payErr) return { error: `Purchase ban gayi magar adaigi likhi nahi ja saki: ${payErr.message}` };
   }
   for (const item of items) {
     const batchNumber = item.batch_number?.trim() || `${purchaseNumber}-${item.product_id.slice(0, 8)}`;
@@ -98,6 +123,8 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     }
   }
   revalidatePath("/admin/purchases");
+  revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/finance");
   return { success: true, purchaseId: purchase.id };
 }
 

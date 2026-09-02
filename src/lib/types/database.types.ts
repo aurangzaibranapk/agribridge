@@ -15827,9 +15827,12 @@ export type Database = {
           branch_id: string | null
           created_at: string
           created_by: string | null
+          credit_days: number | null
+          due_date: string | null
           id: string
           notes: string | null
           organization_id: string
+          payment_terms: string
           purchase_date: string
           purchase_number: string
           shop_id: string | null
@@ -15841,9 +15844,12 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           created_by?: string | null
+          credit_days?: number | null
+          due_date?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
+          payment_terms?: string
           purchase_date?: string
           purchase_number: string
           shop_id?: string | null
@@ -15855,9 +15861,12 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           created_by?: string | null
+          credit_days?: number | null
+          due_date?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
+          payment_terms?: string
           purchase_date?: string
           purchase_number?: string
           shop_id?: string | null
@@ -18767,6 +18776,7 @@ export type Database = {
           notes: string | null
           payment_date: string
           payment_method: string | null
+          purchase_id: string | null
           slip_url: string | null
           supplier_id: string
         }
@@ -18778,6 +18788,7 @@ export type Database = {
           notes?: string | null
           payment_date: string
           payment_method?: string | null
+          purchase_id?: string | null
           slip_url?: string | null
           supplier_id: string
         }
@@ -18789,6 +18800,7 @@ export type Database = {
           notes?: string | null
           payment_date?: string
           payment_method?: string | null
+          purchase_id?: string | null
           slip_url?: string | null
           supplier_id?: string
         }
@@ -22843,6 +22855,24 @@ export type Database = {
           din_guzray: number | null
           warehouse_id: string | null
           warehouse_name: string | null
+        }
+        Relationships: []
+      }
+      v_supplier_due_calendar: {
+        Row: {
+          credit_days: number | null
+          days_left: number | null
+          due_date: string | null
+          paid_on_this: number | null
+          payment_terms: string | null
+          purchase_date: string | null
+          purchase_id: string | null
+          purchase_number: string | null
+          status: Database["public"]["Enums"]["purchase_status"] | null
+          supplier_id: string | null
+          supplier_name: string | null
+          supplier_payable: number | null
+          total_amount: number | null
         }
         Relationships: []
       }

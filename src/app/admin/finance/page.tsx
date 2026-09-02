@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { DueSoon } from "@/components/purchases/due-soon";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { FinanceClient } from "@/app/admin/finance/finance-client";
 
@@ -51,6 +52,11 @@ export default async function AdminFinancePage() {
   return (
     <div>
       <PageHeader title={t("fn_title", lang)} description={t("fn_subtitle", lang)} />
+      {/* Supplier ki adaigi ka calendar -- finance ko supplier se phone
+          par poochhna na paRe (255). */}
+      <div className="mb-4">
+        <DueSoon lang={lang} compact />
+      </div>
       <FinanceClient accounts={accounts} transactions={transactions} />
     </div>
   );

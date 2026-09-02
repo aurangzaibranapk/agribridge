@@ -6,6 +6,7 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Plus, Trash2 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { PaymentTermsFields } from "@/components/purchases/payment-terms-fields";
 const initialState: ActionState = {};
 interface Supplier {
   id: string;
@@ -145,6 +146,9 @@ export function PurchaseForm({
           <Label>{t("pu_notes", lang)}</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </div>
+
+        {/* Adaigi ki shartein (255): poora / kuch / udhaar, aur kab tak. */}
+        <PaymentTermsFields />
 
         <div>
           <div className="mb-2 flex items-center justify-between">

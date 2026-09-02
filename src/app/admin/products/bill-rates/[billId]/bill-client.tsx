@@ -14,6 +14,7 @@ import {
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { PaymentTermsFields } from "@/components/purchases/payment-terms-fields";
 
 const initial: BillRateState = {};
 
@@ -505,6 +506,8 @@ export function BillClient({
                   </div>
                 )}
               </div>
+
+              <PaymentTermsFields />
 
               <Submit label={t("pf_po_go", lang)} icon={<ShoppingBag className="h-4 w-4" />} />
             </form>

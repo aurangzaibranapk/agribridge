@@ -99,4 +99,50 @@ export const purchasesDict = {
   su_active: { en: "Active", rm: "Chalu", ur: "چالو" },
   su_inactive: { en: "Inactive", rm: "Band", ur: "بند" },
   su_suspended: { en: "Suspended", rm: "Roka hua", ur: "روکا ہوا" },
+
+  // ---- Adaigi ki shartein (255) ----
+  pu_terms: { en: "Payment", rm: "Adaigi", ur: "ادائیگی" },
+  pu_terms_paid: { en: "Paid in full", rm: "Poora diya", ur: "پورا دیا" },
+  pu_terms_partial: { en: "Partly paid", rm: "Kuch diya", ur: "کچھ دیا" },
+  pu_terms_credit: { en: "On credit", rm: "Udhaar", ur: "ادھار" },
+  pu_paid_now: { en: "Paid now (Rs)", rm: "Abhi diye (Rs)", ur: "ابھی دیے (Rs)" },
+  pu_credit_days: { en: "Credit days", rm: "Kitne din ka udhaar", ur: "کتنے دن کا ادھار" },
+  pu_due_date: { en: "Due date", rm: "Adaigi ki tareekh", ur: "ادائیگی کی تاریخ" },
+  pu_terms_hint: {
+    en: "What you pay now is recorded as a supplier payment — the same place every payment goes. Nothing is written twice.",
+    rm: "Jo abhi diya wo supplier ki adaigi mein likha jata hai — wahi jagah jahan har adaigi jati hai. Kuch do dafa nahi likha jata.",
+    ur: "جو ابھی دیا وہ سپلائر کی ادائیگی میں لکھا جاتا ہے — وہی جگہ جہاں ہر ادائیگی جاتی ہے۔ کچھ دو دفعہ نہیں لکھا جاتا۔",
+  },
+  pu_paid_more_than_total: {
+    en: "Paid now cannot be more than the purchase total.",
+    rm: "Abhi diye hue paise kharid ke kul se zyada nahi ho sakte.",
+    ur: "ابھی دیے ہوئے پیسے خرید کے کل سے زیادہ نہیں ہو سکتے۔",
+  },
+  pu_partial_needs_amount: {
+    en: '"Partly paid" needs an amount above zero.',
+    rm: '"Kuch diya" ke sath adad likhna zaroori hai, sifar nahi.',
+    ur: '"کچھ دیا" کے ساتھ عدد لکھنا ضروری ہے، صفر نہیں۔',
+  },
+
+  sb_due_title: { en: "Payments due", rm: "Adaigi ka calendar", ur: "ادائیگی کا کیلنڈر" },
+  sb_due_7: { en: "Due in the next 7 days", rm: "Agle 7 din mein dena", ur: "اگلے 7 دن میں دینا" },
+  sb_overdue: { en: "Overdue", rm: "Tareekh guzar gayi", ur: "تاریخ گزر گئی" },
+  sb_due_none: {
+    en: "No purchase has a due date in the next 7 days.",
+    rm: "Agle 7 din mein kisi purchase ki adaigi ki tareekh nahi.",
+    ur: "اگلے 7 دن میں کسی پرچیز کی ادائیگی کی تاریخ نہیں۔",
+  },
+  sb_due_purchase: { en: "Purchase", rm: "Purchase", ur: "پرچیز" },
+  sb_due_when: { en: "Due", rm: "Kab tak", ur: "کب تک" },
+  sb_due_days: { en: "{n} days", rm: "{n} din", ur: "{n} دن" },
+  sb_due_today: { en: "today", rm: "aaj", ur: "آج" },
+  sb_due_late: { en: "{n} days late", rm: "{n} din late", ur: "{n} دن لیٹ" },
+  sb_paid_on_this: { en: "Paid on this", rm: "Is par diya", ur: "اس پر دیا" },
+  sb_supplier_total: { en: "Supplier's total payable", rm: "Supplier ka kul dena", ur: "سپلائر کا کل دینا" },
+  sb_not_received: { en: "not received yet", rm: "maal abhi nahi aaya", ur: "مال ابھی نہیں آیا" },
+  sb_due_note: {
+    en: "The amount still owed on one purchase is not shown on purpose: payments sit on the supplier's account, not on one bill. Counting a per-bill balance would invent a number that does not exist.",
+    rm: "Ek purchase ka apna \"baqi\" jaan boojh kar nahi likha: adaigi supplier ke khate par hoti hai, kisi ek bill par nahi. Ek bill ka baqi ginna wo adad banana hai jo asal mein hai hi nahi.",
+    ur: "ایک پرچیز کا اپنا \"باقی\" جان بوجھ کر نہیں لکھا: ادائیگی سپلائر کے کھاتے پر ہوتی ہے، کسی ایک بل پر نہیں۔ ایک بل کا باقی گننا وہ عدد بنانا ہے جو اصل میں ہے ہی نہیں۔",
+  },
 } as const;

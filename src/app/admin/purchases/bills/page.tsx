@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/form";
 import { Wallet, FileText, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { DueSoon } from "@/components/purchases/due-soon";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,9 @@ export default async function SupplierBillsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("sb_title", lang)} description={t("sb_subtitle", lang)} />
+
+      {/* Agle 7 din mein kis ko kitna dena hai (255). */}
+      <DueSoon lang={lang} />
 
       {(mismatch ?? []).length > 0 && (
         <Card className="border-l-4 border-l-red-500 bg-red-50 p-4 dark:bg-red-950/20">

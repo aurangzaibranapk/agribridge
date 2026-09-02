@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
 import { looksBinary, parseDelimited } from "@/lib/csv";
+import { parsePaymentTerms } from "@/lib/purchase-terms";
 
 /**
  * Supplier ke bill se trade rate charhane ka kaam.
@@ -728,6 +729,11 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     (sum, l) => sum + Number(l.qty) * Number(l.applied_rate ?? l.rate ?? 0),
     0
   );
+  const purchaseDate = bill.bill_date ?? new Date().toISOString().slice(0, 10);
+
+  // Adaigi ki shartein (255) -- wohi sawal jo purchases/new par hain.
+  const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
+  if ("error" in terms) return { error: terms.error };
 
   const { data: po, error: poErr } = await supabase
     .from("purchases")
@@ -735,17 +741,34 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       purchase_number: purchaseNumber,
       supplier_id: supplierId,
       branch_id: branchId,
-      purchase_date: bill.bill_date ?? new Date().toISOString().slice(0, 10),
+      purchase_date: purchaseDate,
       // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
       // na stock, na dena.
       status: "pending",
       total_amount: totalAmount,
+      payment_terms: terms.terms,
+      credit_days: terms.creditDays,
+      due_date: terms.dueDate,
       notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
       created_by: user.id,
     })
     .select("id")
     .single();
   if (poErr || !po) return { error: `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}` };
+
+  // Jo abhi diya, supplier_payments mein -- adaigi ka ek hi darwaza (139).
+  if (terms.paidNow > 0) {
+    const { error: payErr } = await supabase.from("supplier_payments").insert({
+      supplier_id: supplierId,
+      purchase_id: po.id,
+      amount: terms.paidNow,
+      payment_date: purchaseDate,
+      payment_method: (formData.get("payment_method") as string) || null,
+      notes: `Kharid ${purchaseNumber} ke waqt (bill se)`,
+      created_by: user.id,
+    });
+    if (payErr) return { error: `Purchase ban gayi magar adaigi likhi nahi ja saki: ${payErr.message}` };
+  }
 
   let made = 0;
   const problems: string[] = [];
@@ -804,6 +827,8 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
 
   paths(billId);
   revalidatePath("/admin/purchases");
+  revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/finance");
 
   return {
     success: true,
