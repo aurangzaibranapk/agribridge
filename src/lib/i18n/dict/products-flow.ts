@@ -492,4 +492,37 @@ export const productsFlowDict = {
     rm: "{created} banenge, {updated} ka rate badlega.",
     ur: "{created} بنیں گے، {updated} کا ریٹ بدلے گا۔",
   },
+
+  // ---- Bill se Purchase (254) ----
+  pf_po_title: { en: "Make a purchase from this bill", rm: "Is bill se Purchase banayein", ur: "اس بل سے پرچیز بنائیں" },
+  pf_po_note: {
+    en: "{n} lines are ready. A purchase (pending) is created with these items and the trade rates are applied. The goods do NOT come in yet — press Receive on the Purchases page; at that moment the stock comes in and the supplier's payable goes up.",
+    rm: "{n} qatarein tayyar hain. In se ek purchase (pending) banegi aur trade rate charh jayenge. Maal ABHI andar nahi aayega — Purchases ke safhe par Receive dabayein; usi waqt stock andar aayega aur supplier ka dena charhega.",
+    ur: "{n} قطاریں تیار ہیں۔ ان سے ایک پرچیز (pending) بنے گی اور ٹریڈ ریٹ چڑھ جائیں گے۔ مال ابھی اندر نہیں آئے گا — پرچیز کے صفحے پر ریسیو دبائیں؛ اسی وقت اسٹاک اندر آئے گا اور سپلائر کا دینا چڑھے گا۔",
+  },
+  pf_po_supplier: { en: "Supplier", rm: "Supplier", ur: "سپلائر" },
+  pf_po_supplier_req: {
+    en: "A purchase needs a supplier — that is whose payable goes up.",
+    rm: "Purchase ke liye supplier zaroori hai — dena usi ka charhta hai.",
+    ur: "پرچیز کے لیے سپلائر ضروری ہے — دینا اسی کا چڑھتا ہے۔",
+  },
+  pf_po_branch: { en: "Branch", rm: "Branch", ur: "برانچ" },
+  pf_po_go: { en: "Make the purchase", rm: "Purchase banayein", ur: "پرچیز بنائیں" },
+  pf_po_rates_only: { en: "Only apply the rates (no purchase)", rm: "Sirf rate charhayein (purchase nahi)", ur: "صرف ریٹ چڑھائیں (پرچیز نہیں)" },
+  pf_po_qty_missing: {
+    en: "These lines have no quantity — a purchase cannot carry a line without one:",
+    rm: "In qataron mein tadad nahi likhi — bina tadad ke qatar purchase par nahi ja sakti:",
+    ur: "ان قطاروں میں تعداد نہیں لکھی — بغیر تعداد کے قطار پرچیز پر نہیں جا سکتی:",
+  },
+  pf_po_made: {
+    en: "Purchase {no} created with {n} lines. Go to Purchases and press Receive when the goods arrive.",
+    rm: "Purchase {no} ban gayi — {n} qatarein. Maal aane par Purchases par ja kar Receive dabayein.",
+    ur: "پرچیز {no} بن گئی — {n} قطاریں۔ مال آنے پر پرچیز پر جا کر ریسیو دبائیں۔",
+  },
+  pf_po_open: { en: "Open the purchase", rm: "Purchase kholein", ur: "پرچیز کھولیں" },
+  pf_po_linked: {
+    en: "A purchase was made from this bill.",
+    rm: "Is bill se purchase ban chuki hai.",
+    ur: "اس بل سے پرچیز بن چکی ہے۔",
+  },
 } as const;

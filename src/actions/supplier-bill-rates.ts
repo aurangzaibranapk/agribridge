@@ -641,3 +641,177 @@ export async function discardBillRead(_prev: BillRateState, formData: FormData):
   paths(billId);
   return { success: true, notice: "Bill chhoR diya gaya." };
 }
+
+// =====================================================================
+// 4) Bill se Purchase (254)
+// =====================================================================
+/**
+ * Malik ke naqshe ka qadam A: bill se seedha purchase ka draft.
+ *
+ * Ab tak bill sirf TRADE RATE charhata tha; purchase alag, haath se
+ * banti thi. Halanke wohi qatarein, wohi milaan, wohi rate -- sab
+ * purchase ke liye bhi kaafi hai.
+ *
+ * Yahan teen kaam ek sath hote hain, aur teenon ka usool pehle se tay
+ * hai:
+ *
+ *   1. purchases (PENDING) + purchase_items + stock_batches -- bilkul
+ *      wahi shakl jo /admin/purchases/new banata hai. Is liye Receive,
+ *      GRN, payable, adaigi -- sab wohi purane raaste chalte hain.
+ *   2. Har qatar ka trade rate fn_apply_bill_line_rate se (248): rate +
+ *      nishan + indraj, teenon ek sath.
+ *   3. Bill par purchase ka link (254) -- ek bill se ek hi purchase.
+ *
+ * Aur ek kaam JAAN BOOJH KAR NAHI hota: stock nahi barhta, dena nahi
+ * charhta. Wo Receive dabne par hota hai -- approval aur warehouse ka
+ * maal do alag baatein hain.
+ */
+export async function createPurchaseFromBill(_prev: BillRateState, formData: FormData): Promise<BillRateState & { purchaseId?: string }> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Purchase banana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+
+  const billId = String(formData.get("bill_id") ?? "");
+  if (!billId) return { error: "Bill saaf nahi." };
+
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("id, status, bill_number, bill_date, supplier_id, purchase_id, source")
+    .eq("id", billId)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+  if (bill.purchase_id) return { error: "Is bill se purchase pehle hi ban chuki hai." };
+  if (bill.status === "applied") return { error: "Is bill ke rate pehle hi charh chuke hain — purchase ab alag se /admin/purchases/new par banayein." };
+
+  // Supplier: bill par ho to wohi, warna form se. Bina supplier ke
+  // purchase nahi banti -- dena kis ka charhega?
+  const supplierId = bill.supplier_id ?? (String(formData.get("supplier_id") ?? "").trim() || null);
+  if (!supplierId) return { error: "Supplier chunein — purchase ke liye zaroori hai, dena usi ka charhta hai." };
+
+  // Branch: wohi qaida jo purchases/new par hai.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, branch_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdminLevel = ["owner", "super_admin", "admin"].includes(profile?.role ?? "");
+  const branchId = isAdminLevel
+    ? String(formData.get("branch_id") ?? "").trim() || profile?.branch_id || null
+    : profile?.branch_id ?? null;
+  if (!branchId) return { error: "Branch chunein — maal kis branch ki kharid hai." };
+
+  const { data: lines } = await supabase
+    .from("supplier_bill_lines")
+    .select("id, item_name, qty, rate, applied_rate, product_id, status")
+    .eq("bill_read_id", billId)
+    .eq("status", "ready");
+
+  const ready = lines ?? [];
+  if (ready.length === 0) {
+    return { error: "Koi qatar tayyar nahi. Har qatar par product chunna aur rate hona zaroori hai." };
+  }
+
+  // Purchase ki qatar bina tadad ke nahi ban sakti. Yahan ruk jana
+  // behtar hai -- aadhi purchase banane se poora hisaab ghalat hota.
+  const noQty = ready.filter((l) => l.qty == null || Number(l.qty) <= 0);
+  if (noQty.length > 0) {
+    return {
+      error: `In qataron mein tadad nahi likhi — bina tadad ke qatar purchase par nahi ja sakti: ${noQty
+        .map((l) => l.item_name ?? "qatar")
+        .slice(0, 6)
+        .join(", ")}`,
+    };
+  }
+
+  const purchaseNumber = `PO-${Date.now()}`;
+  const totalAmount = ready.reduce(
+    (sum, l) => sum + Number(l.qty) * Number(l.applied_rate ?? l.rate ?? 0),
+    0
+  );
+
+  const { data: po, error: poErr } = await supabase
+    .from("purchases")
+    .insert({
+      purchase_number: purchaseNumber,
+      supplier_id: supplierId,
+      branch_id: branchId,
+      purchase_date: bill.bill_date ?? new Date().toISOString().slice(0, 10),
+      // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
+      // na stock, na dena.
+      status: "pending",
+      total_amount: totalAmount,
+      notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (poErr || !po) return { error: `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}` };
+
+  let made = 0;
+  const problems: string[] = [];
+
+  for (const l of ready) {
+    const qty = Number(l.qty);
+    const cost = Number(l.applied_rate ?? l.rate ?? 0);
+
+    const { data: batch } = await supabase
+      .from("stock_batches")
+      .insert({
+        product_id: l.product_id as string,
+        batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}`,
+        initial_quantity: qty,
+      })
+      .select("id")
+      .single();
+
+    const { error: itemErr } = await supabase.from("purchase_items").insert({
+      purchase_id: po.id,
+      product_id: l.product_id as string,
+      batch_id: batch?.id ?? null,
+      quantity: qty,
+      unit_cost: cost,
+      line_total: qty * cost,
+    });
+    if (itemErr) {
+      problems.push(`${l.item_name ?? "qatar"}: ${itemErr.message}`);
+      continue;
+    }
+
+    // Trade rate usi darwaze se (248) -- rate, nishan, indraj.
+    const { error: rateErr } = await supabase.rpc("fn_apply_bill_line_rate", { p_line_id: l.id });
+    if (rateErr) problems.push(`${l.item_name ?? "qatar"} ka rate: ${rateErr.message}`);
+
+    made += 1;
+  }
+
+  await supabase
+    .from("supplier_bill_reads")
+    .update({
+      purchase_id: po.id,
+      status: "applied",
+      applied_at: new Date().toISOString(),
+      applied_by: user.id,
+    })
+    .eq("id", billId);
+
+  await logAudit({
+    actionType: "create",
+    module: "purchases",
+    recordId: po.id,
+    recordLabel: purchaseNumber,
+    description: `Supplier ke bill se purchase bani — ${made} qatarein, Rs ${totalAmount.toLocaleString()}`,
+  });
+
+  paths(billId);
+  revalidatePath("/admin/purchases");
+
+  return {
+    success: true,
+    billId,
+    purchaseId: po.id,
+    applied: made,
+    notice:
+      `Purchase ${purchaseNumber} ban gayi — ${made} qatarein, Rs ${totalAmount.toLocaleString()}. Maal aane par Purchases par ja kar Receive dabayein.` +
+      (problems.length ? ` Masle: ${problems.slice(0, 3).join(" | ")}` : ""),
+  };
+}

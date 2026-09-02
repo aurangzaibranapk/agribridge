@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, CheckCircle2, FileText, Save, Search, Table2, Trash2, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Save, Search, ShoppingBag, Table2, Trash2, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import {
   applyBillRates,
+  createPurchaseFromBill,
   saveBillLine,
   skipBillLine,
   type BillRateState,
 } from "@/actions/supplier-bill-rates";
 import { Card } from "@/components/ui/layout-primitives";
-import { Badge, Button, Input, Label } from "@/components/ui/form";
+import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 
 const initial: BillRateState = {};
@@ -309,6 +311,12 @@ export function BillClient({
   billStatus,
   source,
   files,
+  billSupplierId,
+  purchaseId,
+  suppliers,
+  branches,
+  defaultBranchId,
+  isAdminLevel,
   billTotal,
   linesTotal,
   aiRead,
@@ -320,6 +328,12 @@ export function BillClient({
   billStatus: string;
   source: string;
   files: BillFile[];
+  billSupplierId: string | null;
+  purchaseId: string | null;
+  suppliers: { id: string; name: string }[];
+  branches: { id: string; name: string }[];
+  defaultBranchId: string | null;
+  isAdminLevel: boolean;
   billTotal: number | null;
   linesTotal: number;
   aiRead: boolean;
@@ -327,6 +341,7 @@ export function BillClient({
   products: Product[];
 }) {
   const [applyState, applyAction] = useFormState(applyBillRates, initial);
+  const [poState, poAction] = useFormState(createPurchaseFromBill, initial as BillRateState & { purchaseId?: string });
   const [showBill, setShowBill] = useState(true);
 
   const done = billStatus === "applied";
@@ -447,22 +462,96 @@ export function BillClient({
       )}
 
       {!done && ready > 0 && (
-        <Card className="border-emerald-200 bg-emerald-50">
-          <p className="mb-2 text-sm text-emerald-900">
-            {t("pf_bill_ready_note", lang).replace("{n}", String(ready))}
-          </p>
-          <form action={applyAction}>
-            <input type="hidden" name="bill_id" value={billId} />
-            <Submit label={t("pf_bill_apply_n", lang).replace("{n}", String(ready))} icon={<TrendingUp className="h-4 w-4" />} />
-          </form>
-          <Msg state={applyState} />
-        </Card>
+        <>
+          {/* ---- Pehla raasta: Purchase (malik ke naqshe ka qadam A) ----
+              Wohi qatarein purchase (pending) ban jati hain aur rate bhi
+              charh jate hain. Stock aur dena Receive par -- yahan nahi. */}
+          <Card className="border-brand-200 bg-brand-50">
+            <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-brand-900">
+              <ShoppingBag className="h-4 w-4" /> {t("pf_po_title", lang)}
+            </h3>
+            <p className="mb-3 text-sm text-brand-900">{t("pf_po_note", lang).replace("{n}", String(ready))}</p>
+
+            <form action={poAction} className="space-y-3">
+              <input type="hidden" name="bill_id" value={billId} />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {!billSupplierId && (
+                  <div>
+                    <Label htmlFor="po-sup">{t("pf_po_supplier", lang)}</Label>
+                    <Select id="po-sup" name="supplier_id" defaultValue="" required className="w-full">
+                      <option value="">{t("pf_src_pick_one", lang)}</option>
+                      {suppliers.map((sp) => (
+                        <option key={sp.id} value={sp.id}>
+                          {sp.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="mt-1 text-xs text-brand-800">{t("pf_po_supplier_req", lang)}</p>
+                  </div>
+                )}
+
+                {isAdminLevel && (
+                  <div>
+                    <Label htmlFor="po-br">{t("pf_po_branch", lang)}</Label>
+                    <Select id="po-br" name="branch_id" defaultValue={defaultBranchId ?? ""} required className="w-full">
+                      <option value="">{t("pf_src_pick_one", lang)}</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <Submit label={t("pf_po_go", lang)} icon={<ShoppingBag className="h-4 w-4" />} />
+            </form>
+
+            {poState.error && <p className="mt-2 text-sm text-red-700">{poState.error}</p>}
+            {poState.success && (
+              <p className="mt-2 text-sm text-emerald-800">
+                {poState.notice}{" "}
+                {poState.purchaseId && (
+                  <Link href="/admin/purchases" className="underline">
+                    {t("pf_po_open", lang)}
+                  </Link>
+                )}
+              </p>
+            )}
+          </Card>
+
+          {/* ---- Doosra raasta: sirf rate. Jab bill sirf rate ki
+              tasdeeq ke liye aaya ho, kharid ke liye nahi. ---- */}
+          <Card>
+            <p className="mb-2 text-sm text-surface-600">{t("pf_po_rates_only", lang)}</p>
+            <form action={applyAction}>
+              <input type="hidden" name="bill_id" value={billId} />
+              <Submit
+                label={t("pf_bill_apply_n", lang).replace("{n}", String(ready))}
+                icon={<TrendingUp className="h-4 w-4" />}
+                variant="secondary"
+              />
+            </form>
+            <Msg state={applyState} />
+          </Card>
+        </>
       )}
 
       {done && (
         <Card className="border-emerald-200 bg-emerald-50">
           <p className="text-sm text-emerald-900">
             {t("pf_bill_done", lang).replace("{n}", String(applied))}
+            {purchaseId && (
+              <>
+                {" "}
+                {t("pf_po_linked", lang)}{" "}
+                <Link href="/admin/purchases" className="underline">
+                  {t("pf_po_open", lang)}
+                </Link>
+              </>
+            )}
           </p>
         </Card>
       )}

@@ -15364,6 +15364,7 @@ export type Database = {
           id: string
           image_url: string | null
           notes: string | null
+          purchase_id: string | null
           source: string
           status: string
           supplier_id: string | null
@@ -15382,6 +15383,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           notes?: string | null
+          purchase_id?: string | null
           source?: string
           status?: string
           supplier_id?: string | null
@@ -15400,6 +15402,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           notes?: string | null
+          purchase_id?: string | null
           source?: string
           status?: string
           supplier_id?: string | null

@@ -23,7 +23,7 @@ hain:
 | # | Malik ka hissa | Haalat | Kahan / kya baqi |
 |---|---|---|---|
 | 1 | Bill upload (photo/PDF/kai safhe) → AI parhe | ✅ **Bana hua** | `/admin/products/bill-rates` (248, 251). Photo, PDF, kai file, sheet — chaaron |
-| 1 | …magar us se **Purchase ka draft** bane | ❌ **Baqi** — sab se ahem gap | Aaj bill reader sirf **trade rate** charhata hai. Purchase alag, haath se banti hai (`/admin/purchases/new`) |
+| 1 | …magar us se **Purchase ka draft** bane | ✅ **Ban gaya (254)** | Bill ke safhe par "Purchase banayein": purchase (pending) + items + batch, rate bhi charhta hai. Stock aur dena Receive par |
 | 2 | AI product matching, "95% match / confirm" | 🟡 Adha | Bill ki qatar par naam se apne aap milaan (sirf poora naam), banda chunta hai. **Fuzzy score aur "confirm" ka button baqi** |
 | 3 | Naya product → Pending Products queue | ✅ Bana hua | `/admin/products/propose` + `/admin/products/pending` + `pending-edits`. **Bill se seedha propose hona baqi** |
 | 4 | Bill review: tasveer bayen, AI ka data daayen, ✓/⚠ | 🟡 Adha | Bill-rates ka safha yehi karta hai (qatar + raw_text + photo). **Har khane par confidence ka nishan baqi** |
@@ -48,7 +48,7 @@ hain:
 | 22 | AI orchestrator → permission → draft → human approval → audit | ✅ Usool laga hua | Bridge AI action-requests, `logAudit`, RLS |
 | 23 | AI Reorder ("1.3 din ka stock baqi, 60 bhejo") | ❌ Baqi | Sale velocity ka koi hisaab abhi nahi |
 
-**Ginti:** 23 mein se **10 bane hue**, **8 adhe**, **5 baqi**.
+**Ginti:** 23 mein se **11 bane hue**, **8 adhe**, **4 baqi**.
 
 ---
 
@@ -81,7 +81,7 @@ stock, POS, rate baqi ki fehrist.
 
 | Qadam | Kaam | Kyun pehle | Andaza |
 |---|---|---|---|
-| **A** | **Bill → Purchase draft.** Bill-rates ke safhe par teesra button: "Purchase banayein". Wohi parhi hui qatarein, wohi milaan — magar natija `purchases` (pending) ho, trade rate ke sath. | Naqshe ka sab se bara gap, aur sab kuch (reader, matching, purchases, payable) pehle se maujood — sirf jorna hai | 1 din |
+| **A** | ~~Bill → Purchase draft~~ | ✅ **Ho gaya (254)** | — |
 | **B** | **Payment terms** purchase par: paid / partial / credit, due date. Finance dashboard par "agle 7 din ki adaigi". | #7 — chhota, aur vendor ledger pehle se hai | Aadha din |
 | **C** | **GRN mein short/damage/photo.** Receive par "invoice 50, aaye 48". Short → purchase adjust; damaged → `damaged_out` harkat. | #5 — aaj receive sab-ya-kuch-nahi hai; asal duniya mein kabhi nahi hota | 1 din |
 | **D** | **Batch-level expiry** ko sheet aur Maal Andar mein bhi. `products.expiry_date` sirf dikhane ke liye (nearest batch). | #14 — doosra batch aate hi zaroori | 1 din |

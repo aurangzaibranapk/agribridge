@@ -20,7 +20,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  const { data: me } = await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle();
   if (!me?.is_active || !ALLOWED.includes(me.role)) {
     return (
       <div>
@@ -35,14 +35,18 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   const { data: bill } = await supabase
     .from("supplier_bill_reads")
     .select(
-      "id, bill_number, bill_date, bill_total, supplier_name_raw, image_url, source, status, ai_read_at, created_at, suppliers(name)"
+      "id, bill_number, bill_date, bill_total, supplier_name_raw, supplier_id, purchase_id, image_url, source, status, ai_read_at, created_at, suppliers(name)"
     )
     .eq("id", params.billId)
     .maybeSingle();
 
   if (!bill) notFound();
 
-  const [{ data: lines }, { data: products }, { data: billFiles }] = await Promise.all([
+  // Purchase banane ke liye: supplier (agar bill par na ho) aur branch
+  // (admin chune, staff ki apni). Wohi qaida jo purchases/new par hai.
+  const isAdminLevel = ["owner", "super_admin", "admin"].includes(me.role);
+
+  const [{ data: lines }, { data: products }, { data: billFiles }, { data: suppliers }, { data: branches }] = await Promise.all([
     supabase
       .from("supplier_bill_lines")
       .select("*")
@@ -60,6 +64,10 @@ export default async function BillRatePage({ params }: { params: { billId: strin
       .select("id, file_url, mime_type, page_no, ai_read_at, problem, lines_found")
       .eq("bill_read_id", params.billId)
       .order("page_no"),
+    supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
+    isAdminLevel
+      ? supabase.from("branches").select("id, name").eq("is_active", true).order("name")
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 
   const supplierName = (bill as unknown as { suppliers?: { name?: string } }).suppliers?.name ?? bill.supplier_name_raw;
@@ -97,6 +105,12 @@ export default async function BillRatePage({ params }: { params: { billId: strin
         billId={bill.id}
         billStatus={bill.status}
         source={bill.source}
+        billSupplierId={bill.supplier_id}
+        purchaseId={bill.purchase_id}
+        suppliers={(suppliers ?? []).map((sp) => ({ id: sp.id, name: sp.name }))}
+        branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}
+        defaultBranchId={me.branch_id ?? null}
+        isAdminLevel={isAdminLevel}
         files={(billFiles ?? []).map((f) => ({
           id: f.id,
           url: f.file_url,
