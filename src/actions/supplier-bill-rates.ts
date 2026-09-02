@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
-import { parseDelimited } from "@/lib/csv";
+import { looksBinary, parseDelimited } from "@/lib/csv";
 
 /**
  * Supplier ke bill se trade rate charhane ka kaam.
@@ -302,6 +302,12 @@ export async function createBillFromSheet(_prev: BillRateState, formData: FormDa
 
   const text = String(formData.get("sheet") ?? "");
   if (text.trim().length === 0) return { error: "Sheet khali hai. Excel se khane copy kar ke yahan paste karein." };
+  if (looksBinary(text)) {
+    return {
+      error:
+        "Ye Excel ki asal file lagti hai, matn nahi. Sheet mein khane chun kar copy karein aur yahan paste kar dein.",
+    };
+  }
 
   const table = parseDelimited(text);
   if (table.length < 2) {
@@ -311,10 +317,19 @@ export async function createBillFromSheet(_prev: BillRateState, formData: FormDa
   const norm = (v: string) => v.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
   const header = table[0].map(norm);
 
-  const NAME = ["name", "naam", "product", "product name", "item", "cheez"];
-  const RATE = ["trade rate", "trade", "rate", "purchase price", "purchase", "cost", "lagat"];
+  // Dukan ki sheet haath se banti hai. "prodect" likha hone par bande
+  // ko "naam ka khana nahi mila" kehna us se apni hi sheet theek
+  // karwana hai -- jo us ka kaam nahi.
+  const NAME = [
+    "name", "naam", "product", "product name", "products name", "item", "item name", "cheez",
+    "prodect", "prodcut", "produt", "product naam",
+  ];
+  const RATE = [
+    "trade rate", "trade", "rate", "trade price", "trade pri", "trade rt",
+    "purchase price", "purchase", "cost", "lagat",
+  ];
   const PACK = ["pack", "pack size", "packsize", "size"];
-  const QTY = ["qty", "quantity", "quantati", "tadad", "kitne"];
+  const QTY = ["qty", "quantity", "quantati", "quentety", "quantiti", "tadad", "kitne"];
 
   const findCol = (names: string[]) => header.findIndex((h) => names.includes(h));
   const iName = findCol(NAME);

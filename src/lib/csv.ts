@@ -71,3 +71,37 @@ export function parseDelimited(text: string): string[][] {
 
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
+
+/**
+ * Ye matn CSV hai ya Excel ki asal file?
+ *
+ * Banda "CSV file chunein" dabata hai aur file chunne wale dabbe mein
+ * "All files" kar ke .xlsx chun leta hai -- Excel ki file dekhne mein
+ * wohi sheet hai jo us ke saamne khuli hai, is liye ye bilkul qudrati
+ * ghalti hai.
+ *
+ * .xlsx asal mein ek zip hai. Us ka matn parhne par khana bhar jata hai
+ * ajeeb nishanon se, aur us ke baad jo paighaam aata hai wo "naam ka
+ * khana nahi mila" hota -- jo asal masla batata hi nahi, aur banda
+ * apni sheet ke khanon ke naam theek karta reh jata hai.
+ *
+ * Pehchan: NUL ka nishan, ya bohot saare aise harf jo kisi zaban mein
+ * likhe hi nahi jate.
+ */
+export function looksBinary(text: string): boolean {
+  const head = text.slice(0, 4000);
+  if (head.includes("\u0000")) return true;
+  // .xlsx aur .zip dono "PK" se shuru hote hain.
+  if (head.startsWith("PK\u0003\u0004")) return true;
+  // .xls (purani Excel) aur .doc ka apna nishan.
+  if (head.startsWith("\u00d0\u00cf\u0011\u00e0")) return true;
+
+  let odd = 0;
+  for (let i = 0; i < head.length; i++) {
+    const c = head.charCodeAt(i);
+    // Tab, nayi lakeer aur carriage return chalte hain; baqi control
+    // harf aur replacement character (\uFFFD) nahi.
+    if ((c < 32 && c !== 9 && c !== 10 && c !== 13) || c === 0xfffd) odd += 1;
+  }
+  return head.length > 0 && odd / head.length > 0.05;
+}

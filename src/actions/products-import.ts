@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
-import { parseDelimited } from "@/lib/csv";
+import { looksBinary, parseDelimited } from "@/lib/csv";
 
 /**
  * CSV se products charhana.
@@ -56,10 +56,17 @@ const HR_ROLES = ["owner", "super_admin", "admin"];
 /** Header ke naam: angrezi, Roman Urdu, aur aam ghaltiyan -- sab ek jagah. */
 const HEADER_MAP: Record<string, keyof ImportRow> = {
   name: "name", naam: "name", product: "name", "product name": "name", item: "name",
+  // Asal sheeton mein likhe hue naam -- ghaltiyon samet. Ye jaan boojh
+  // kar shamil hain: dukan ki sheet haath se banti hai, aur "prodect"
+  // likha hone par bande ko "naam ka khana nahi mila" kehna us se
+  // apni hi sheet theek karwana hai, jo us ka kaam nahi.
+  prodect: "name", prodcut: "name", produt: "name", "products name": "name",
+  "product naam": "name", "item name": "name", cheez: "name",
   pack: "packSize", "pack size": "packSize", packsize: "packSize", size: "packSize",
   unit: "unit", ikai: "unit",
   barcode: "barcode", "bar code": "barcode",
   "trade rate": "purchasePrice", trade: "purchasePrice", "purchase price": "purchasePrice",
+  "trade price": "purchasePrice", "trade pri": "purchasePrice", "trade rt": "purchasePrice",
   purchase: "purchasePrice", cost: "purchasePrice", lagat: "purchasePrice",
   "sale rate": "sellingPrice", sale: "sellingPrice", "selling price": "sellingPrice",
   selling: "sellingPrice", price: "sellingPrice", qeemat: "sellingPrice",
@@ -69,8 +76,11 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   "thok rate": "wholesalePrice", bulk: "wholesalePrice",
   retail: "sellingPrice", "retail rate": "sellingPrice", "retail price": "sellingPrice",
   mfg: "manufactureDate", "manufacture date": "manufactureDate",
+  issue: "manufactureDate", "issue date": "manufactureDate",
   "manufacturing date": "manufactureDate", manufacture: "manufactureDate",
   expiry: "expiryDate", "expiry date": "expiryDate", exp: "expiryDate",
+  expairy: "expiryDate", "expairy date": "expiryDate", experi: "expiryDate",
+  "experi date": "expiryDate", expire: "expiryDate", "expire date": "expiryDate",
   "min stock": "minStock", "minimum stock": "minStock", minstock: "minStock",
   category: "categoryName", categories: "categoryName", qism: "categoryName",
   brand: "brandName", brands: "brandName",
@@ -151,6 +161,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
 
   const text = String(formData.get("csv") ?? "");
   if (!text.trim()) return { error: "CSV khali hai. File chunein ya matn yahan paste karein." };
+  if (looksBinary(text)) return { error: "Ye Excel ki asal file lagti hai (.xlsx ya .xls), CSV nahi. Do mein se ek karein: Sheet mein File → Download → Comma Separated Values (.csv) kar ke wo file chunein, ya sheet mein khane chun kar copy karein aur neeche wale khane mein paste kar dein." };
 
   const table = parseDelimited(text);
   if (table.length < 2) {
