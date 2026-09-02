@@ -465,4 +465,31 @@ export const productsFlowDict = {
     rm: "{n} qatarein charhayein",
     ur: "{n} قطاریں چڑھائیں",
   },
+
+  // ---- Maal kahan se aaya (253) ----
+  pf_src_label: { en: "Where did the goods come from?", rm: "Ye maal kahan se aaya?", ur: "یہ مال کہاں سے آیا؟" },
+  pf_src_supplier: { en: "From a supplier", rm: "Supplier se", ur: "سپلائر سے" },
+  pf_src_opening: { en: "Opening stock (no supplier)", rm: "Shuru ka stock (koi supplier nahi)", ur: "شروع کا اسٹاک (کوئی سپلائر نہیں)" },
+  pf_src_supplier_hint: {
+    en: "A purchase is created and it goes to Purchases. The goods do not come in yet — press Receive there, and at that moment the stock comes in and the supplier's payable goes up.",
+    rm: "Ek purchase ban jayegi aur wo Purchases par jayegi. Maal abhi andar nahi aayega — wahan Receive dabayein, usi waqt stock andar aayega aur supplier ka dena bhi charhega.",
+    ur: "ایک پرچیز بن جائے گی اور وہ پرچیز پر جائے گی۔ مال ابھی اندر نہیں آئے گا — وہاں ریسیو دبائیں، اسی وقت اسٹاک اندر آئے گا اور سپلائر کا دینا بھی چڑھے گا۔",
+  },
+  pf_src_opening_hint: {
+    en: "For the first stock-take, when the goods are already lying in the shop. Nobody is owed anything — so no payable is created. The goods come in straight away.",
+    rm: "Pehli ginti ke liye, jab maal pehle se dukan mein para ho. Kisi ka kuch dena nahi banta — is liye koi payable nahi charhta. Maal seedha andar aa jata hai.",
+    ur: "پہلی گنتی کے لیے، جب مال پہلے سے دکان میں پڑا ہو۔ کسی کا کچھ دینا نہیں بنتا — اس لیے کوئی پیبل نہیں چڑھتا۔ مال سیدھا اندر آ جاتا ہے۔",
+  },
+  pf_src_supplier_pick: { en: "Which supplier", rm: "Kaun sa supplier", ur: "کون سا سپلائر" },
+  pf_src_pick_one: { en: "— choose —", rm: "— chunein —", ur: "— چنیں —" },
+  pf_left_out_note: {
+    en: "{skipped} rows will be left out.",
+    rm: "{skipped} qatarein chhoR di jayengi.",
+    ur: "{skipped} قطاریں چھوڑ دی جائیں گی۔",
+  },
+  pf_will_do_note: {
+    en: "{created} will be created, {updated} rates will change.",
+    rm: "{created} banenge, {updated} ka rate badlega.",
+    ur: "{created} بنیں گے، {updated} کا ریٹ بدلے گا۔",
+  },
 } as const;

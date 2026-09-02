@@ -64,18 +64,23 @@ export function ImportClient({
   companies,
   tradeRatePending,
   warehouses,
+  suppliers,
 }: {
   categories: string[];
   brands: string[];
   companies: string[];
   tradeRatePending: number | null;
   warehouses: { id: string; name: string; code: string | null }[];
+  suppliers: { id: string; name: string }[];
 }) {
   const lang: Lang = useLang();
   const [csv, setCsv] = useState("");
   const [edits, setEdits] = useState<Record<number, RowEdit>>({});
   const [skips, setSkips] = useState<number[]>([]);
   const [touched, setTouched] = useState(false);
+  // Maal supplier se aaya ya pehle se dukan mein para tha -- is se tay
+  // hota hai ke kisi ka dena banta hai ya nahi (253).
+  const [stockSource, setStockSource] = useState<"" | "supplier" | "opening">("");
 
   const setCell = (line: number, key: keyof RowEdit, value: string) => {
     setTouched(true);
@@ -338,18 +343,60 @@ export function ImportClient({
             <form action={importAction} className="mt-4 space-y-3 border-t border-surface-200 pt-3">
               {/* Stock ki hamesha ek jagah hoti hai. Bina jagah ke adad
                   hawa mein khaRa rehta hai (253). */}
-              <div className="max-w-sm">
-                <Label htmlFor="wh">{t("pf_wh_label", lang)}</Label>
-                <Select id="wh" name="warehouse_id" defaultValue="" className="w-full">
-                  <option value="">{t("pf_wh_none", lang)}</option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                      {w.code === "MAIN" ? " (Main)" : ""}
-                    </option>
-                  ))}
-                </Select>
-                <p className="mt-1 text-xs text-surface-500">{t("pf_wh_hint", lang)}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="wh">{t("pf_wh_label", lang)}</Label>
+                  <Select id="wh" name="warehouse_id" defaultValue="" className="w-full">
+                    <option value="">{t("pf_wh_none", lang)}</option>
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                        {w.code === "MAIN" ? " (Main)" : ""}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1 text-xs text-surface-500">{t("pf_wh_hint", lang)}</p>
+                </div>
+
+                {/* Maal supplier se aaya ya pehle se para tha -- ye do
+                    bilkul alag baatein hain. Pehli soorat mein kisi ka
+                    dena banta hai, doosri mein nahi. Nizam ye faisla
+                    khud nahi kar sakta. */}
+                <div>
+                  <Label htmlFor="src">{t("pf_src_label", lang)}</Label>
+                  <Select
+                    id="src"
+                    name="stock_source"
+                    value={stockSource}
+                    onChange={(e) => setStockSource(e.target.value as "" | "supplier" | "opening")}
+                    className="w-full"
+                  >
+                    <option value="">{t("pf_src_pick_one", lang)}</option>
+                    <option value="supplier">{t("pf_src_supplier", lang)}</option>
+                    <option value="opening">{t("pf_src_opening", lang)}</option>
+                  </Select>
+
+                  {stockSource === "supplier" && (
+                    <div className="mt-2">
+                      <Label htmlFor="sup">{t("pf_src_supplier_pick", lang)}</Label>
+                      <Select id="sup" name="supplier_id" defaultValue="" className="w-full">
+                        <option value="">{t("pf_src_pick_one", lang)}</option>
+                        {suppliers.map((sp) => (
+                          <option key={sp.id} value={sp.id}>
+                            {sp.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+
+                  {stockSource === "supplier" && (
+                    <p className="mt-1 text-xs text-amber-800">{t("pf_src_supplier_hint", lang)}</p>
+                  )}
+                  {stockSource === "opening" && (
+                    <p className="mt-1 text-xs text-surface-500">{t("pf_src_opening_hint", lang)}</p>
+                  )}
+                </div>
               </div>
 
               {/* Wohi matn dobara jata hai jo dekha gaya. Server usay
@@ -369,13 +416,21 @@ export function ImportClient({
                 }
                 icon={<Upload className="h-4 w-4" />}
               />
-              {s.duplicates + s.errors + s.skipped > 0 && (
-                <p className="mt-1.5 text-xs text-surface-500">
-                  {t("pf_skipped_note", lang)
-                    .replace("{skipped}", String(s.duplicates + s.errors + s.skipped))
-                    .replace("{ready}", String(s.ready))}
-                </p>
-              )}
+              {/* Ginti mein "banenge" aur "rate badlega" DONO aate hain.
+                  Sirf "banenge" likhna us din jhoot ban jata hai jab
+                  saari qatarein purane products par charh rahi hon --
+                  aur banda samajhta hai ke kuch hua hi nahi. */}
+              <p className="mt-1.5 text-xs text-surface-500">
+                {t("pf_will_do_note", lang)
+                  .replace("{created}", String(s.ready))
+                  .replace("{updated}", String(s.updates))}
+                {s.duplicates + s.errors + s.skipped > 0 &&
+                  " " +
+                    t("pf_left_out_note", lang).replace(
+                      "{skipped}",
+                      String(s.duplicates + s.errors + s.skipped)
+                    )}
+              </p>
             </form>
           )}
         </Card>

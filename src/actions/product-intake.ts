@@ -468,25 +468,57 @@ export async function approveIntakeBatch(_prev: IntakeState, formData: FormData)
   // bheji gayi thi, magar naam se milana zyada mehfooz hai.
   const idByName = new Map((created ?? []).map((p) => [key(p.name), p.id]));
 
-  const invRows = toCreate
-    .map((r) => {
-      const pid = idByName.get(key(r.name ?? ""));
-      return pid
-        ? {
-            product_id: pid,
-            warehouse_id: batch.warehouse_id as string,
-            quantity_on_hand: Number(r.opening_qty ?? 0),
-          }
-        : null;
-    })
-    .filter(Boolean) as { product_id: string; warehouse_id: string; quantity_on_hand: number }[];
+  // Ginti SEEDHA nahi likhi jati.
+  //
+  // inventory.quantity_on_hand stock_movements par lage trigger se
+  // badalta hai -- stock ka ek hi malik hai (129). Seedha likhne se maal
+  // to andar aa jata hai magar us ka koi nishan nahi hota: "ye chalees
+  // packet kahan se aaye" ka jawab kahin nahi milta, aur ginti ke din
+  // farq nikalta hai. Is liye qatar SIFAR se banti hai, aur maal us
+  // mein ek harkat ke zariye aata hai.
+  for (const r of toCreate) {
+    const pid = idByName.get(key(r.name ?? ""));
+    if (!pid) continue;
 
-  if (invRows.length > 0) {
-    const { error: invErr } = await supabase.from("inventory").insert(invRows);
-    if (invErr) {
-      return {
-        error: `Products to ban gaye, magar warehouse mein stock ka khana nahi bana: ${invErr.message}. Products ki fehrist dekhein aur stock haath se daalein.`,
-      };
+    const { data: existingInv } = await supabase
+      .from("inventory")
+      .select("id")
+      .eq("product_id", pid)
+      .eq("warehouse_id", batch.warehouse_id as string)
+      .maybeSingle();
+
+    let inventoryId = existingInv?.id ?? null;
+    if (!inventoryId) {
+      const { data: created, error: invErr } = await supabase
+        .from("inventory")
+        .insert({ product_id: pid, warehouse_id: batch.warehouse_id as string })
+        .select("id")
+        .single();
+      if (invErr || !created) {
+        return {
+          error: `Products to ban gaye, magar warehouse mein stock ka khana nahi bana: ${invErr?.message}. Products ki fehrist dekhein aur stock haath se daalein.`,
+        };
+      }
+      inventoryId = created.id;
+    }
+
+    const qty = Number(r.opening_qty ?? 0);
+    if (qty > 0) {
+      const { error: mvErr } = await supabase.from("stock_movements").insert({
+        inventory_id: inventoryId,
+        // Ye kharid nahi -- Maal Andar se kisi supplier ka dena nahi
+        // banta. "purchase_in" likhna jhoot hota.
+        movement_type: "adjustment_increase",
+        quantity: qty,
+        reference_type: "product_intake",
+        reference_id: batchId,
+        created_by: user.id,
+      });
+      if (mvErr) {
+        return {
+          error: `Products ban gaye, magar stock ki harkat nahi likhi ja saki: ${mvErr.message}. Stock haath se daalein.`,
+        };
+      }
     }
   }
 

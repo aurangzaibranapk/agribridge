@@ -639,48 +639,149 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
   // -------------------------------------------------------------------
   // "Kitne aaye" -- sirf tab, jab jagah maloom ho
   // -------------------------------------------------------------------
+  // DO USOOL yahan lagte hain, aur dono is project mein pehle se tay
+  // ho chuke hain:
+  //
+  // 1. STOCK KA EK HI MALIK HAI (129). inventory.quantity_on_hand
+  //    seedha nahi likha jata -- wo stock_movements par lage trigger se
+  //    badalta hai. Seedha likhne se maal to andar aa jata hai magar us
+  //    ka koi nishan nahi hota: "ye chalees packet kahan se aaye" ka
+  //    jawab kahin nahi milta, aur ginti ke din farq nikalta hai.
+  //
+  // 2. SUPPLIER KA DENA khud nahi banta. Supplier ka payable purchases
+  //    (status = received) se banta hai, minus adaigi. Yani maal supplier
+  //    se aaya ho aur purchase na bane, to maal andar aa jata hai aur
+  //    supplier ka dena SIFAR rehta hai -- kitabein wahin se ghalat ho
+  //    jati hain.
+  //
+  // Is liye do alag raaste hain, aur banda khud batata hai kaun sa:
+  //
+  //    supplier se  ->  Purchase (pending) banti hai. Stock ABHI NAHI
+  //                     charhta. /admin/purchases par "Receive" dabate
+  //                     hi maal andar aata hai AUR dena charhta hai.
+  //    shuru ka     ->  Koi supplier nahi, koi dena nahi. Maal seedha
+  //       stock        andar, magar phir bhi ek harkat (adjustment_
+  //                     increase) ke zariye -- taake nishan rahe.
+  const stockSource = String(formData.get("stock_source") ?? "").trim(); // 'supplier' | 'opening' | ''
+  const supplierId = String(formData.get("supplier_id") ?? "").trim() || null;
+
   let stocked = 0;
   let qtyIgnored = 0;
+  let purchaseId: string | null = null;
+  const stockProblems: string[] = [];
 
-  const withQty = [...rows, ...updateRows].filter((r) => (r.openingQty ?? 0) > 0);
+  const idByName = new Map(inserted.map((p) => [norm(p.name), p.id]));
+  const withQty = [...rows, ...updateRows]
+    .filter((r) => (r.openingQty ?? 0) > 0)
+    .map((r) => ({ row: r, pid: r.existingId ?? idByName.get(norm(r.name)) ?? null }))
+    .filter((x) => x.pid) as { row: ImportRow; pid: string }[];
 
   if (withQty.length > 0 && !warehouseId) {
     qtyIgnored = withQty.length;
-  } else if (withQty.length > 0 && warehouseId) {
-    const idByName = new Map(inserted.map((p) => [norm(p.name), p.id]));
+  } else if (withQty.length > 0 && stockSource === "supplier" && supplierId) {
+    // ---- Raasta 1: supplier se aaya maal ----
+    const { data: wh } = await supabase
+      .from("warehouses")
+      .select("branch_id")
+      .eq("id", warehouseId as string)
+      .maybeSingle();
 
-    for (const r of withQty) {
-      const pid = r.existingId ?? idByName.get(norm(r.name));
-      if (!pid) continue;
+    const purchaseNumber = `PO-${Date.now()}`;
+    const totalAmount = withQty.reduce(
+      (sum, x) => sum + Number(x.row.openingQty ?? 0) * Number(x.row.purchasePrice ?? 0),
+      0
+    );
 
-      // batch_id khali wali qatar hi barhti hai. Jis maal ka apna batch
-      // hai us ka hisaab alag rehta hai -- us mein sheet se adad jorhna
-      // do alag cheezon ko mila dena hai.
-      const { data: existingInv } = await supabase
-        .from("inventory")
-        .select("id, quantity_on_hand")
-        .eq("product_id", pid)
-        .eq("warehouse_id", warehouseId)
-        .is("batch_id", null)
-        .maybeSingle();
+    const { data: po, error: poErr } = await supabase
+      .from("purchases")
+      .insert({
+        purchase_number: purchaseNumber,
+        supplier_id: supplierId,
+        branch_id: wh?.branch_id ?? null,
+        purchase_date: new Date().toISOString().slice(0, 10),
+        // "pending" -- yani maal kaghaz par aa gaya, haqeeqat mein
+        // nahi. Receive dabne tak na stock barhta hai na dena.
+        status: "pending",
+        total_amount: totalAmount,
+        notes: "Sheet se charhaya gaya",
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
 
-      const add = Number(r.openingQty ?? 0);
+    if (poErr || !po) {
+      stockProblems.push(`Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}`);
+    } else {
+      purchaseId = po.id;
+      for (const x of withQty) {
+        const qty = Number(x.row.openingQty ?? 0);
+        const cost = Number(x.row.purchasePrice ?? 0);
 
-      if (existingInv) {
-        // Barhta hai, badalta nahi. Sheet kehti hai "itna aaya", ye
-        // nahi ke "ab kul itna hai".
-        const { error: upErr } = await supabase
-          .from("inventory")
-          .update({ quantity_on_hand: Number(existingInv.quantity_on_hand ?? 0) + add })
-          .eq("id", existingInv.id);
-        if (!upErr) stocked += 1;
-      } else {
-        const { error: insErr } = await supabase
-          .from("inventory")
-          .insert({ product_id: pid, warehouse_id: warehouseId, quantity_on_hand: add });
-        if (!insErr) stocked += 1;
+        const { data: batch } = await supabase
+          .from("stock_batches")
+          .insert({
+            product_id: x.pid,
+            batch_number: `${purchaseNumber}-${x.pid.slice(0, 8)}`,
+            manufacture_date: x.row.manufactureDate,
+            expiry_date: x.row.expiryDate,
+            initial_quantity: qty,
+          })
+          .select("id")
+          .single();
+
+        const { error: itemErr } = await supabase.from("purchase_items").insert({
+          purchase_id: po.id,
+          product_id: x.pid,
+          batch_id: batch?.id ?? null,
+          quantity: qty,
+          unit_cost: cost,
+          line_total: qty * cost,
+        });
+        if (itemErr) stockProblems.push(`${x.row.name}: ${itemErr.message}`);
+        else stocked += 1;
       }
     }
+  } else if (withQty.length > 0 && stockSource === "opening") {
+    // ---- Raasta 2: shuru ka stock ----
+    for (const x of withQty) {
+      const { data: existingInv } = await supabase
+        .from("inventory")
+        .select("id")
+        .eq("product_id", x.pid)
+        .eq("warehouse_id", warehouseId as string)
+        .maybeSingle();
+
+      let inventoryId = existingInv?.id ?? null;
+      if (!inventoryId) {
+        // Nayi qatar SIFAR se banti hai. Maal us mein neeche wali
+        // harkat se aata hai -- wohi usool jo purchase ke raaste par
+        // hai (129).
+        const { data: created, error: invErr } = await supabase
+          .from("inventory")
+          .insert({ product_id: x.pid, warehouse_id: warehouseId as string })
+          .select("id")
+          .single();
+        if (invErr || !created) {
+          stockProblems.push(`${x.row.name}: ${invErr?.message ?? "inventory ka khana nahi bana"}`);
+          continue;
+        }
+        inventoryId = created.id;
+      }
+
+      const { error: mvErr } = await supabase.from("stock_movements").insert({
+        inventory_id: inventoryId,
+        // Ye kharid nahi hai -- kisi supplier ka dena is se nahi banta.
+        // Is liye "purchase_in" likhna jhoot hoga.
+        movement_type: "adjustment_increase",
+        quantity: Number(x.row.openingQty ?? 0),
+        reference_type: "opening_stock",
+        created_by: user.id,
+      });
+      if (mvErr) stockProblems.push(`${x.row.name}: ${mvErr.message}`);
+      else stocked += 1;
+    }
+  } else if (withQty.length > 0) {
+    qtyIgnored = withQty.length;
   }
 
   const pending = payload.filter((p) => p.trade_rate_pending).length;
@@ -692,12 +793,13 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     recordLabel: "CSV se products",
     description:
       `${payload.length} products bane, ${updated} purane products ka rate badla` +
-      (stocked ? `, ${stocked} par stock charha` : "") +
+      (purchaseId ? `, ${stocked} qataron ki purchase bani` : stocked ? `, ${stocked} par shuru ka stock charha` : "") +
       (pending ? `, ${pending} ka trade rate baqi` : ""),
     changes: {
       bane: { pehle: 0, ab: payload.length },
       rate_badla: { pehle: 0, ab: updated },
       stock_charha: { pehle: 0, ab: stocked },
+      purchase_bani: { pehle: 0, ab: purchaseId ? 1 : 0 },
       trade_rate_baqi: { pehle: 0, ab: pending },
     },
   });
@@ -711,11 +813,19 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
   if (payload.length) parts.push(`${payload.length} naye products bane.`);
   if (updated) parts.push(`${updated} purane products ka rate badal gaya.`);
   if (stocked) parts.push(`${stocked} par stock charh gaya.`);
+  if (purchaseId) {
+    parts.push(
+      `${stocked} qataron ki ek PURCHASE ban gayi. Maal abhi andar nahi aaya — /admin/purchases par ja kar "Receive" dabayein; usi waqt stock charhega aur supplier ka dena bhi.`
+    );
+  } else if (stocked) {
+    parts.push(`${stocked} par shuru ka stock charh gaya.`);
+  }
   if (qtyIgnored) {
     parts.push(
-      `${qtyIgnored} qataron mein "kitne aaye" likha tha magar warehouse nahi chuna gaya — wo adad nahi charhe.`
+      `${qtyIgnored} qataron mein "kitne aaye" likha tha magar jagah/zaria nahi chuna gaya — wo adad nahi charhe.`
     );
   }
+  if (stockProblems.length) parts.push(`Stock ka masla: ${stockProblems.slice(0, 3).join(" | ")}`);
   if (pending) parts.push(`${pending} ka trade rate abhi baqi hai — un par nishan laga hua hai.`);
   if (updateProblems.length) parts.push(`Kuch rate nahi charhe: ${updateProblems.slice(0, 3).join(" | ")}`);
 
