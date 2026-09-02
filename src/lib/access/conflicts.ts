@@ -253,3 +253,38 @@ export async function listRules() {
   const { data } = await service.from("access_conflict_rules" as never).select("*").order("severity", { ascending: false }).order("code");
   return (data ?? []) as any[];
 }
+
+// ---------------------------------------------------------------------
+// Transaction-level SoD (274): qawaid aur events -- report ke liye
+// ---------------------------------------------------------------------
+export async function loadSodRules() {
+  const service = createServiceClient();
+  const { data } = await service.from("sod_transaction_rules" as never).select("*").order("table_name").order("approver_col");
+  return (data ?? []) as any[];
+}
+
+export async function loadSodEvents(limit = 100) {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("sod_transaction_events" as never)
+    .select("*, profiles!sod_transaction_events_actor_id_fkey(full_name, role)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as any[];
+}
+
+/** Rule ka enforcement / on-off badalna -- sirf Owner/Admin; naye table par trigger khud lag jata hai. */
+export async function updateSodRule(ruleId: string, actorId: string, input: { enforcement?: "block" | "warn"; is_active?: boolean }): Promise<{ ok: boolean; message: string }> {
+  const service = createServiceClient();
+  const { data: me } = await service.from("profiles").select("role, is_active").eq("id", actorId).maybeSingle();
+  if (!me?.is_active || !canOverride(me.role)) return { ok: false, message: "Ye qawaid sirf Owner/Admin badal sakta hai." };
+  const { data: old } = await service.from("sod_transaction_rules" as never).select("*").eq("id", ruleId).maybeSingle();
+  if (!old) return { ok: false, message: "Rule nahi mila." };
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.enforcement) patch.enforcement = input.enforcement;
+  if (input.is_active !== undefined) patch.is_active = input.is_active;
+  const { error } = await service.from("sod_transaction_rules" as never).update(patch as never).eq("id", ruleId);
+  if (error) return { ok: false, message: error.message };
+  await service.from("access_conflict_events" as never).insert({ actor_id: actorId, event: "sod_rule_updated", detail: { rule: `${(old as any).table_name}.${(old as any).approver_col}`, before: { enforcement: (old as any).enforcement, is_active: (old as any).is_active }, after: patch } } as never);
+  return { ok: true, message: "Rule badal gaya -- agli entry se lagega." };
+}

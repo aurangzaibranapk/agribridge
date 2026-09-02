@@ -265,7 +265,7 @@ function NewAccountModal({ onClose }: { onClose: () => void }) {
 function TxnSubmitButton() {
   const lang = useLang();
   const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending} className="w-full">{pending ? t("fn_saving", lang) : t("fn_add_txn", lang)}</Button>;
+  return <Button type="submit" data-guide="finance-add-txn" disabled={pending} className="w-full">{pending ? t("fn_saving", lang) : t("fn_add_txn", lang)}</Button>;
 }
 function TransferSubmitButton() {
   const lang = useLang();

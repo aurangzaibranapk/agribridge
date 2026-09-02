@@ -206,7 +206,7 @@ export function NewReturnForm({ products, orders, warehouseMissing }: { products
 function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button
+    <button data-guide="return-submit"
       type="submit"
       disabled={pending || disabled}
       className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"

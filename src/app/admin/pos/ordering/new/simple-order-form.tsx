@@ -140,7 +140,7 @@ export function SimpleOrderForm({
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
+    <button data-guide="shop-order-submit" type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
       {pending ? "Order Submit Ho Raha Hai..." : "Order Submit Karein"}
     </button>
   );

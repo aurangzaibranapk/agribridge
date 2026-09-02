@@ -17,7 +17,7 @@ function SubmitButton({ blocked, label }: { blocked: boolean; label: string }) {
   const lang = useLang();
   const { pending } = useFormStatus();
   return (
-    <button
+    <button data-guide="cash-close-submit"
       type="submit"
       disabled={pending || blocked}
       className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"

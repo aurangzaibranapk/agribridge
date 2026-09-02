@@ -316,3 +316,16 @@ chalein"; Coach tool `start_guide`. Seed: procurement (5 qadam), warehouse
 `unit_code` khud bhare (intake/import/propose sab raaste). Farmer portal ka
 kg/maund/ton select waise hi (kisan ke liye teen hi kaafi).
 
+## 11. Do chhote hisse (malik: "2 choty hisy")
+
+- **Guide anchors sab 8 modules par** (275): pos-checkout, shop-order-submit,
+  return-submit, cash-close-submit, supplier-pay, finance-add-txn,
+  permissions-save, milk-verify, booking-create, transfer-request (+ pehle
+  ke bill-upload, purchase-review, purchase-receive). Guides: sales 6 qadam,
+  finance 6, admin_office 6, dairy 4, machinery 3, manager 5.
+- **Conflicts tab par transaction-level SoD ki report**: haal ke waqiat
+  (warn / exempt, kaun, kaunsa record) aur 16 qawaid; Owner/Admin wahin
+  block ↔ warn aur on/off kar sakta hai (`saveSodRule`, audit event
+  `sod_rule_updated`). Ruki hui (block) koshishein mehfooz nahi hotin --
+  transaction wapas ho jati hai; banday ko screen par SOD ka paighaam.
+

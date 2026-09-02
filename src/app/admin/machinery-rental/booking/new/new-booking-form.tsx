@@ -1327,7 +1327,7 @@ function AreaPair({
 function SubmitButton({ onCheck }: { onCheck: (e: React.MouseEvent<HTMLButtonElement>) => void }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" onClick={onCheck} disabled={pending} className="w-full">
+    <Button type="submit" data-guide="booking-create" onClick={onCheck} disabled={pending} className="w-full">
       {pending ? "Ban rahi hai..." : "Booking Banayein"}
     </Button>
   );

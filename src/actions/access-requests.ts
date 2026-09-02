@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { decideAccessRequest } from "@/lib/access/access-requests";
-import { runConflictScan, setFindingStatus, updateConflictRule } from "@/lib/access/conflicts";
+import { runConflictScan, setFindingStatus, updateConflictRule, updateSodRule } from "@/lib/access/conflicts";
 
 export interface AccessState {
   error?: string;
@@ -109,6 +109,25 @@ export async function saveConflictRule(_prev: AccessState, formData: FormData): 
     is_active: formData.get("is_active") === "on",
     duties,
     params,
+  });
+  revalidatePath("/admin/access-requests");
+  return res.ok ? { success: true, message: res.message } : { error: res.message };
+}
+
+/** Transaction-level SoD rule: block / warn / off -- Owner/Admin. */
+export async function saveSodRule(_prev: AccessState, formData: FormData): Promise<AccessState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const id = String(formData.get("id") ?? "");
+  const enforcement = String(formData.get("enforcement") ?? "");
+  const active = String(formData.get("is_active") ?? "");
+  if (!id) return { error: "Rule nahi mila." };
+  const res = await updateSodRule(id, user.id, {
+    enforcement: enforcement === "block" || enforcement === "warn" ? enforcement : undefined,
+    is_active: active === "" ? undefined : active === "1",
   });
   revalidatePath("/admin/access-requests");
   return res.ok ? { success: true, message: res.message } : { error: res.message };

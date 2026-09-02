@@ -8,10 +8,11 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { MASTER } from "@/lib/access/access-requests";
 import { loadHeadPower } from "@/lib/access/delegation";
-import { loadFindings, listRules, previewConflicts, SEVERITY_RANK, type Severity, type MatchedDuty } from "@/lib/access/conflicts";
+import { loadFindings, listRules, previewConflicts, loadSodRules, loadSodEvents, SEVERITY_RANK, type Severity, type MatchedDuty } from "@/lib/access/conflicts";
 import { DecideForm, type ConflictGate } from "./decide-form";
 import { ScanButton, FindingActions } from "./conflict-actions";
 import { RuleForm } from "./rule-form";
+import { SodRuleControls } from "./sod-rule-row";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,7 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
   const selectedFinding = searchParams.f ? (findings as any[]).find((f) => f.id === searchParams.f) ?? null : null;
   const { data: findingEvents } = selectedFinding ? await service.from("access_conflict_events" as never).select("event, detail, created_at, profiles(full_name)").eq("finding_id", selectedFinding.id).order("created_at") : { data: [] };
   const rules = tab === "conflicts" && searchParams.rules === "1" ? await listRules() : [];
+  const [sodRules, sodEvents] = tab === "conflicts" ? await Promise.all([loadSodRules(), loadSodEvents(80)]) : [[], []];
   const { data: lastScan } = tab === "conflicts" ? await service.from("access_conflict_scans" as never).select("run_at, trigger, findings, new_findings, resolved, by_severity, profiles(full_name)").order("run_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
 
   const name = (r: any) => (Array.isArray(r.for) ? r.for[0] : r.for)?.full_name ?? "—";
@@ -352,6 +354,52 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
             )}
           </div>
         </div>
+      )}
+
+      {tab === "conflicts" && (
+        <Card className="mt-3">
+          <h3 className="text-sm font-semibold">{t("sod_title", lang)}</h3>
+          <p className="text-xs text-surface-500">{t("sod_desc", lang)}</p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-surface-500">{t("sod_events", lang)}</h4>
+              {sodEvents.length === 0 ? (
+                <p className="text-sm text-surface-500">{t("sod_none", lang)}</p>
+              ) : (
+                <ul className="max-h-96 divide-y divide-surface-100 overflow-auto text-xs dark:divide-surface-800">
+                  {sodEvents.map((e: any) => (
+                    <li key={e.id} className="py-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone={e.event === "self_approval_warned" ? "amber" : "blue"}>{e.event === "self_approval_warned" ? "warn" : "exempt"}</Badge>
+                        <span className="font-medium">{pname(e)}</span>
+                        <span className="text-surface-400">({prole(e)})</span>
+                        <span className="ml-auto text-surface-400">{new Date(e.created_at).toLocaleString("en-GB")}</span>
+                      </div>
+                      <p className="text-surface-600 dark:text-surface-400">{e.detail?.label ?? e.table_name} · <span className="font-mono">{e.table_name}</span>{e.record_id ? ` · ${String(e.record_id).slice(0, 8)}` : ""}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-1 text-[11px] text-surface-400">{t("sod_blocked_note", lang)}</p>
+            </div>
+            <div>
+              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-surface-500">{t("sod_rules", lang)}</h4>
+              <ul className="divide-y divide-surface-100 text-xs dark:divide-surface-800">
+                {sodRules.map((r: any) => (
+                  <li key={r.id} className={`py-1.5 ${r.is_active ? "" : "opacity-50"}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={r.enforcement === "block" ? "red" : "amber"}>{r.enforcement}</Badge>
+                      <span className="font-medium">{r.label}</span>
+                      {!r.is_active && <Badge tone="gray">off</Badge>}
+                    </div>
+                    <p className="font-mono text-[11px] text-surface-400">{r.table_name}: {r.creator_col} → {r.approver_col}</p>
+                    {isMaster && <div className="mt-1"><SodRuleControls lang={lang} rule={r} /></div>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Card>
       )}
 
       {tab === "departments" && (

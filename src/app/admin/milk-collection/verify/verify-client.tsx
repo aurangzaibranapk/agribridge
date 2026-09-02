@@ -166,7 +166,7 @@ function SubmitButton({ ready, decision }: { ready: boolean; decision: string })
   const lang = useLang();
   const { pending } = useFormStatus();
   return (
-    <button
+    <button data-guide="milk-verify"
       type="submit"
       disabled={pending || !ready}
       className="mt-3 w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"

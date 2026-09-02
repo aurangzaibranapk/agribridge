@@ -621,7 +621,7 @@ export function PosClient({
           <Button variant="secondary" className="flex-1" onClick={resetSale} disabled={submitting}>
             {t("pos_clear_cart", lang)}
           </Button>
-          <Button className="flex-1" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
+          <Button data-guide="pos-checkout" className="flex-1" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
             {submitting ? "Processing..." : "Checkout"}
           </Button>
         </div>

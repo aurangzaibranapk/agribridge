@@ -199,5 +199,5 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
 
 function SubmitButton() {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : "Save Karein"}</button>;
+  return <button data-guide="supplier-pay" type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : "Save Karein"}</button>;
 }

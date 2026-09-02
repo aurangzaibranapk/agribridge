@@ -173,7 +173,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   const lang = useLang();
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending || disabled}>
+    <Button type="submit" data-guide="transfer-request" className="w-full" disabled={pending || disabled}>
       {pending ? t("st_submitting", lang) : t("st_submit", lang)}
     </Button>
   );
