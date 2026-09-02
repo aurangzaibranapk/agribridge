@@ -21,10 +21,16 @@ export const MATCH_STRONG = 0.8;
 export const MATCH_GAP = 0.08;
 
 export function matchKey(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "").trim();
+  return tokens(s).join("");
 }
 
-const UNITS: Record<string, string> = {
+/**
+ * Ikai ke lafz ek shakl mein (built-in). Units/Pack Sizes ke masters (273)
+ * se registerAliases() is par aur lafz charhata hai -- "bori" -> bags,
+ * "peti" -> ctn, "5 ltr" -> 5L -- taake bill ke Roman Urdu lafz bhi
+ * catalogue se milein. Masters na milein to yehi fehrist chalti hai.
+ */
+const BUILTIN_UNITS: Record<string, string> = {
   ltr: "l", litre: "l", liter: "l", lt: "l", l: "l",
   kg: "kg", kgs: "kg", kilo: "kg",
   gm: "g", gms: "g", gram: "g", grams: "g", g: "g",
@@ -32,15 +38,49 @@ const UNITS: Record<string, string> = {
   pcs: "pc", pc: "pc", piece: "pc", pieces: "pc",
   pkt: "pkt", packet: "pkt", pack: "pkt",
 };
+/** Master ke unit codes ko built-in shakl par lana (ltr/l, gm/g, pcs/pc). */
+const CODE_CANON: Record<string, string> = { ltr: "l", gm: "g", pcs: "pc" };
+
+let unitAliases: Record<string, string> = { ...BUILTIN_UNITS };
+let packAliases: { re: RegExp; to: string }[] = [];
+
+/**
+ * Masters se aliases: unitMap = { bori: "bags", litre: "ltr" ... },
+ * packMap = { "5 ltr": "5L", "adha kilo": "500g" ... }. Lambi phrases
+ * pehle badalti hain taake "5 ltr" "5" aur "ltr" mein tootne se pehle mil jaye.
+ */
+export function registerAliases(unitMap: Record<string, string>, packMap: Record<string, string>): void {
+  const merged: Record<string, string> = { ...BUILTIN_UNITS };
+  for (const [alias, code] of Object.entries(unitMap)) {
+    const a = alias.toLowerCase().trim();
+    if (!a) continue;
+    merged[a] = CODE_CANON[code] ?? BUILTIN_UNITS[code] ?? code;
+  }
+  unitAliases = merged;
+  packAliases = Object.entries(packMap)
+    .map(([alias, label]) => [alias.toLowerCase().trim(), label.toLowerCase()] as const)
+    .filter(([a]) => a.length > 0)
+    .sort((x, y) => y[0].length - x[0].length)
+    .map(([a, label]) => ({
+      re: new RegExp(`(^|[^a-z0-9])${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[\s-]+/g, "[\\s-]*")}(?=$|[^a-z0-9])`, "g"),
+      to: `$1 ${label} `,
+    }));
+}
+
+/** Pack ke lafz (5 ltr, adha kilo) ko master ke label (5l, 500g) par lana. */
+export function normalizePackText(s: string): string {
+  let out = s.toLowerCase();
+  for (const { re, to } of packAliases) out = out.replace(re, to);
+  return out;
+}
 
 function tokens(s: string): string[] {
-  return s
-    .toLowerCase()
+  return normalizePackText(s)
     .replace(/(\d)([a-z])/g, "$1 $2")
     .replace(/([a-z])(\d)/g, "$1 $2")
     .replace(/[^a-z0-9.]+/g, " ")
     .split(" ")
-    .map((w) => UNITS[w] ?? w)
+    .map((w) => unitAliases[w] ?? w)
     .filter((w) => w.length > 0);
 }
 
@@ -92,7 +132,9 @@ export function scoreMatch(query: string, queryPack: string | null, name: string
   const coverage = tq.length ? covered / tq.length : 0;
   const byToken = tokenDice(tq, tc);
   const byChar = dice(bigrams(matchKey(q)), bigrams(matchKey(c)));
-  let score = 0.5 * coverage + 0.25 * byToken + 0.25 * byChar;
+  // Coverage sab se bhaari: bill ke saare lafz catalogue mein milte hon
+  // (ek bori = 50kg, bori = bags ke baad) to harfon ka farq kam ahem hai.
+  let score = 0.55 * coverage + 0.25 * byToken + 0.2 * byChar;
 
   // Pack ka adad dono taraf ho: alag -> ye wo cheez nahi; wohi -> thora
   // aur yaqeen.

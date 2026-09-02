@@ -1,5 +1,6 @@
 "use server";
 
+import { loadUnitAliases } from "@/lib/units";
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
@@ -307,6 +308,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     if (bc) byBarcodeMap.set(bc, rec);
   }
 
+  await loadUnitAliases();
   const existingList = (existing ?? []).map((p) => ({ id: p.id, name: p.name, pack_size: p.pack_size ?? null }));
   const existingNames = new Set(byNameMap.keys());
   const existingBarcodes = new Set(byBarcodeMap.keys());

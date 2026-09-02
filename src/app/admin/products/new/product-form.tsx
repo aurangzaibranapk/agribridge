@@ -6,6 +6,7 @@ import { createProduct, updateProduct, extractProductFromImageAction, type FormS
 import { type ExtractedProductInfo } from "@/lib/ai/product-extraction-client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { PRODUCT_UNITS } from "@/lib/data/units";
+import type { UnitRow, PackSizeRow } from "@/lib/units";
 import { ProductImageUpload } from "@/app/admin/products/new/product-image-upload";
 import { VoiceDictationButton } from "@/components/admin/voice-dictation-button";
 import { Sparkles, Barcode, Clock } from "lucide-react";
@@ -17,6 +18,7 @@ const initialState: FormState = {};
 interface ExistingProduct {
   id: string;
   name: string;
+  unit_code?: string | null;
   company_id: string | null;
   brand_id: string | null;
   category_id: string | null;
@@ -40,10 +42,13 @@ interface ExistingProduct {
 }
 
 export function ProductForm({
-  companies, brands, categories, product, uiMode = "advanced",
+  companies, brands, categories, product, uiMode = "advanced", units = [], packSizes = [],
 }: {
   companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string; category_kind: string; default_min_stock: number | null }[];
   product?: ExistingProduct;
+  /** Units ka master (273); khali ho to purani built-in fehrist. */
+  units?: UnitRow[];
+  packSizes?: PackSizeRow[];
   /** Simple = zarai/technical khane chhupe (E). Rok wahi rehti hai. */
   uiMode?: "simple" | "advanced";
 }) {
@@ -206,12 +211,21 @@ export function ProductForm({
       <div className="grid grid-cols-3 gap-4">
         <div>
           <Label htmlFor="unit">{t("pf_unit", lang)}</Label>
-          <Select id="unit" name="unit" defaultValue={product?.unit ?? ""}>
+          <Select id="unit" name="unit" defaultValue={product?.unit_code ?? (units.find((u) => u.label === product?.unit)?.code ?? product?.unit ?? "")}>
             <option value="">- select -</option>
-            {PRODUCT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+            {units.length > 0
+              ? units.map((u) => <option key={u.code} value={u.code}>{u.label}</option>)
+              : PRODUCT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </Select>
         </div>
-        <FieldWithMic label={t("c_pack_size", lang)} inputRef={packSizeRef} name="pack_size" placeholder={t("pf_pack_size_eg", lang)} defaultValue={product?.pack_size ?? undefined} />
+        <div>
+          <FieldWithMic label={t("c_pack_size", lang)} inputRef={packSizeRef} name="pack_size" placeholder={t("pf_pack_size_eg", lang)} defaultValue={product?.pack_size ?? undefined} list="pack-size-options" />
+          {packSizes.length > 0 && (
+            <datalist id="pack-size-options">
+              {packSizes.map((p) => <option key={p.id} value={p.label} />)}
+            </datalist>
+          )}
+        </div>
         <div>
           <Label htmlFor="barcode">{t("pf_barcode", lang)}</Label>
           <div className="flex gap-2">
@@ -348,13 +362,13 @@ export function ProductForm({
 }
 
 function FieldWithMic({
-  label, inputRef, name, required, placeholder, defaultValue,
-}: { label: string; inputRef: React.RefObject<HTMLInputElement>; name: string; required?: boolean; placeholder?: string; defaultValue?: string }) {
+  label, inputRef, name, required, placeholder, defaultValue, list,
+}: { label: string; inputRef: React.RefObject<HTMLInputElement>; name: string; required?: boolean; placeholder?: string; defaultValue?: string; list?: string }) {
   return (
     <div>
       <Label htmlFor={name}>{label}</Label>
       <div className="flex gap-2">
-        <Input ref={inputRef} id={name} name={name} required={required} placeholder={placeholder} defaultValue={defaultValue} className="flex-1" />
+        <Input ref={inputRef} id={name} name={name} required={required} placeholder={placeholder} defaultValue={defaultValue} list={list} className="flex-1" />
         <VoiceDictationButton onResult={(text) => { if (inputRef.current) inputRef.current.value = text; }} />
       </div>
     </div>

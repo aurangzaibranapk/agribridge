@@ -5,6 +5,7 @@ import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
+import { loadUnitAliases } from "@/lib/units";
 import { looksBinary, parseDelimited } from "@/lib/csv";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 
@@ -90,6 +91,8 @@ function matchKey(s: string): string {
 type MatchCatalogue = { id: string; name: string; pack_size: string | null }[];
 
 async function matchMap(supabase: ReturnType<typeof createClient>): Promise<MatchCatalogue> {
+  // Units/Pack Sizes ke aliases (273): "bori", "5 ltr" catalogue se milein.
+  await loadUnitAliases();
   const { data: products } = await supabase
     .from("products")
     .select("id, name, pack_size")

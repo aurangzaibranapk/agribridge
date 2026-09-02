@@ -328,6 +328,8 @@ export const adminTailDict = {
   at_categories: { en: "Categories", rm: "Qismein", ur: "قسمیں" },
   at_company: { en: "Company", rm: "Company", ur: "کمپنی" },
   at_companies_brands: { en: "Companies & Brands", rm: "Companies aur brand", ur: "کمپنیاں اور برانڈ" },
+  at_units: { en: "Units", rm: "Ikaiyan (Units)", ur: "اکائیاں" },
+  at_pack_sizes: { en: "Pack Sizes", rm: "Pack Sizes", ur: "پیک سائز" },
   at_company_expenses: { en: "Company Expenses", rm: "Company ke kharche", ur: "کمپنی کے خرچے" },
   at_drivers_vehicles: { en: "Drivers & Vehicles", rm: "Driver aur gaariyan", ur: "ڈرائیور اور گاڑیاں" },
   at_dispatch_delivery: { en: "Dispatch & Delivery", rm: "Rawangi aur pahunchana", ur: "روانگی اور پہنچانا" },

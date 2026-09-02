@@ -250,3 +250,30 @@ count, milk verify, cash handover aur returns par -- database trigger/check
    `expires_at` override ki miyaad se aage na ho.
 5. Head ke login se Takraao tab par "Override" button nazar na aaye.
 
+## 9. Priority 2 — Units / Pack Sizes masters — ✅ (273), aur role split (272)
+
+**272 (role split, malik ka faisla):** finance se submissions approve/reject
+aur cash-handover create hate; finance ko cash-close create mila; hr se
+staff-khata create/edit hata; manager se stock-count approve aur cash-close
+create hate. Testing par scan: 8 takraao khatam (resolved, no_longer_detected),
+2 advisory baqi (SOD-BANK-RECON warning, SENSITIVE-LOAD info). Kisi user ki
+apni ijazat nahi chhui.
+
+**273:** `units` (28 seeded: code, label, qisam, base + factor, aliases jaise
+bori/thaila/peti/dabba/adad) aur `pack_sizes` (16 seeded: 5L, 20kg, 500ml...
+aliases jaise "5 ltr", "adha kilo", "ek bori"). `products.unit_code` (FK)
+backfill se; purana `products.unit` text label ke liye rehta hai.
+`fn_unit_code_for_text()` import/backfill ke liye.
+
+| Jagah | Kya badla |
+|---|---|
+| Product Masters | do naye tab: Units, Pack Sizes (Owner/Admin/staff, `product-masters` feature) |
+| Product form | unit ab master se (code), pack size par standard sizes ka datalist |
+| Bill se Trade Rate, Products CSV import | matching se pehle `loadUnitAliases()` -- "DAP bori 50kg" ab "DAP 50kg Bag" se milta hai |
+| product-match.ts | `registerAliases()` + `normalizePackText()`; built-in fehrist fallback |
+| Help, AI | product-masters ki help, SYSTEM_MAP |
+
+Nahi badla: intake batch form ki chhoti UNITS fehrist (Packet, Bottle...) aur
+farmer portal ka unit select -- wo apni jagah theek hain; masters se jorna
+baad ka kaam.
+

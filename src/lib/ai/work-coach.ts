@@ -45,6 +45,7 @@ export const SYSTEM_MAP = [
   "Stock ka ek hi malik: har tabdeeli stock_movements ki harkat (Stock Ledger /admin/stock-ledger); ginti haath se nahi badalti",
   "Supplier ka dena = received purchases - adaigiyan (/admin/purchases/bills, /admin/suppliers); haath se nahi likha jata",
   "Kya mangwana hai: 30 din ki bikri se (/admin/products/reorder) -> purchase draft -> manzoori",
+  "Product Masters (/admin/products/masters): qismein, brand, companies, Units (/admin/products/masters/units) aur Pack Sizes (/admin/products/masters/pack-sizes); units/pack ke aliases (bori = bag, 5 ltr = 5L) bill aur sheet ki matching mein kaam aate hain",
   "Sifar aur 'hisaab nahi rakha' ek cheez nahi: jahan adad na mile wahan '—' ya NULL, 0 nahi",
   "Ijazat: staff Work Coach se maangta hai -> darkhwast (ACC-...) -> Owner/Admin/head manzoor (/admin/access-requests) -> engine lagata hai; AI kabhi khud nahi lagata",
   "Ijazat ka takraao (Separation of Duties): qawaid access_conflict_rules mein (badalne ke qabil), report /admin/access-requests?tab=conflicts; manzoori se pehle jaanch: advise = batao, override = HIGH/CRITICAL sirf Owner/Admin wajah+miyaad ke sath, block = koi nahi; kuch khud nahi hatta, faisla insaan ka",

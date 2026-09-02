@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      units: {
+        Row: { aliases: string[]; base_code: string | null; code: string; created_at: string; factor: number | null; is_active: boolean; kind: string; label: string; label_en: string | null; sort_order: number }
+        Insert: { aliases?: string[]; base_code?: string | null; code: string; created_at?: string; factor?: number | null; is_active?: boolean; kind?: string; label: string; label_en?: string | null; sort_order?: number }
+        Update: { aliases?: string[]; base_code?: string | null; code?: string; created_at?: string; factor?: number | null; is_active?: boolean; kind?: string; label?: string; label_en?: string | null; sort_order?: number }
+        Relationships: []
+      }
+      pack_sizes: {
+        Row: { aliases: string[]; created_at: string; id: string; is_active: boolean; label: string; quantity: number | null; sort_order: number; unit_code: string | null }
+        Insert: { aliases?: string[]; created_at?: string; id?: string; is_active?: boolean; label: string; quantity?: number | null; sort_order?: number; unit_code?: string | null }
+        Update: { aliases?: string[]; created_at?: string; id?: string; is_active?: boolean; label?: string; quantity?: number | null; sort_order?: number; unit_code?: string | null }
+        Relationships: []
+      }
       access_conflict_events: {
         Row: { actor_id: string | null; created_at: string; detail: Json | null; event: string; finding_id: string | null; id: string; request_id: string | null; scan_id: string | null }
         Insert: { actor_id?: string | null; created_at?: string; detail?: Json | null; event: string; finding_id?: string | null; id?: string; request_id?: string | null; scan_id?: string | null }
@@ -15903,6 +15915,7 @@ export type Database = {
           show_expiry_to_customer: boolean
           trade_rate_pending: boolean
           unit: string | null
+          unit_code: string | null
           updated_at: string
           usage_instructions: string | null
           wholesale_price: number | null
@@ -15941,6 +15954,7 @@ export type Database = {
           show_expiry_to_customer?: boolean
           trade_rate_pending?: boolean
           unit?: string | null
+          unit_code?: string | null
           updated_at?: string
           usage_instructions?: string | null
           wholesale_price?: number | null
@@ -15979,6 +15993,7 @@ export type Database = {
           show_expiry_to_customer?: boolean
           trade_rate_pending?: boolean
           unit?: string | null
+          unit_code?: string | null
           updated_at?: string
           usage_instructions?: string | null
           wholesale_price?: number | null
