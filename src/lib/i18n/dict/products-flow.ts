@@ -411,4 +411,42 @@ export const productsFlowDict = {
     rm: "Ek hi naam kai dafa aaya hai. Sirf pehli wali banti hai — har ek ko apna naam dein (pack size laga dein), ya baqi qatarein chhoR dein.",
     ur: "ایک ہی نام کئی دفعہ آیا ہے۔ صرف پہلی والی بنتی ہے — ہر ایک کو اپنا نام دیں (پیک سائز لگا دیں)، یا باقی قطاریں چھوڑ دیں۔",
   },
+
+  // ---- Rate baqi (252) ----
+  pos_rate_baqi_hidden: {
+    en: "{n} items are not shown here — their sale rate is not filled in yet.",
+    rm: "{n} cheezein yahan nahi dikh rahin — un ka sale rate abhi bhara nahi gaya.",
+    ur: "{n} چیزیں یہاں نہیں دکھ رہیں — ان کا سیل ریٹ ابھی بھرا نہیں گیا۔",
+  },
+  pos_rate_baqi_link: { en: "fill the rates", rm: "rate bhar dein", ur: "ریٹ بھر دیں" },
+
+  pf_rb_title: { en: "Rates Pending", rm: "Rate Baqi", ur: "ریٹ باقی" },
+  pf_rb_desc: {
+    en: "Products that were saved without a rate. Until the sale rate is filled in, they are not sold — a blank rate would otherwise reach the counter as Rs 0.",
+    rm: "Wo products jo bina rate ke mehfooz hue. Jab tak sale rate na bhara jaye, ye bikte nahi — warna khali rate counter par Rs 0 ban kar pahunch jata.",
+    ur: "وہ پروڈکٹ جو بغیر ریٹ کے محفوظ ہوئے۔ جب تک سیل ریٹ نہ بھرا جائے، یہ بکتے نہیں — ورنہ خالی ریٹ کاؤنٹر پر Rs 0 بن کر پہنچ جاتا۔",
+  },
+  pf_rb_none: {
+    en: "Nothing pending — every product has its rate.",
+    rm: "Kuch baqi nahi — har product ka rate maujood hai.",
+    ur: "کچھ باقی نہیں — ہر پروڈکٹ کا ریٹ موجود ہے۔",
+  },
+  pf_rb_sale_missing: { en: "sale rate missing", rm: "sale rate baqi", ur: "سیل ریٹ باقی" },
+  pf_rb_trade_missing: { en: "trade rate missing", rm: "trade rate baqi", ur: "ٹریڈ ریٹ باقی" },
+  pf_rb_not_sold: {
+    en: "not being sold",
+    rm: "bik nahi raha",
+    ur: "بک نہیں رہا",
+  },
+  pf_rb_save: { en: "Save the rates", rm: "Rate mehfooz karein", ur: "ریٹ محفوظ کریں" },
+  pf_rb_saved: {
+    en: "{n} products now have their rate.",
+    rm: "{n} products ka rate charh gaya.",
+    ur: "{n} پروڈکٹ کا ریٹ چڑھ گیا۔",
+  },
+  pf_rb_hint: {
+    en: "Fill in what you know and save. A rate you do not know stays blank — never write 0, because 0 means free.",
+    rm: "Jo maloom hai wo bhar kar mehfooz karein. Jo rate maloom nahi wo khali rehne dein — 0 hargiz na likhein, kyunke 0 ka matlab muft hai.",
+    ur: "جو معلوم ہے وہ بھر کر محفوظ کریں۔ جو ریٹ معلوم نہیں وہ خالی رہنے دیں — 0 ہرگز نہ لکھیں، کیونکہ 0 کا مطلب مفت ہے۔",
+  },
 } as const;

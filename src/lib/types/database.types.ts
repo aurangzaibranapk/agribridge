@@ -15497,6 +15497,7 @@ export type Database = {
           pack_size: string | null
           purchase_price: number
           safety_information: string | null
+          sale_rate_pending: boolean
           selling_price: number
           shop_id: string | null
           show_expiry_to_customer: boolean
@@ -15532,6 +15533,7 @@ export type Database = {
           pack_size?: string | null
           purchase_price?: number
           safety_information?: string | null
+          sale_rate_pending?: boolean
           selling_price?: number
           shop_id?: string | null
           show_expiry_to_customer?: boolean
@@ -15567,6 +15569,7 @@ export type Database = {
           pack_size?: string | null
           purchase_price?: number
           safety_information?: string | null
+          sale_rate_pending?: boolean
           selling_price?: number
           shop_id?: string | null
           show_expiry_to_customer?: boolean
@@ -19797,6 +19800,23 @@ export type Database = {
       }
     }
     Views: {
+      v_products_rate_baqi: {
+        Row: {
+          barcode: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string | null
+          mrp_price: number | null
+          name: string | null
+          pack_size: string | null
+          purchase_price: number | null
+          sale_rate_pending: boolean | null
+          selling_price: number | null
+          trade_rate_pending: boolean | null
+          wholesale_price: number | null
+        }
+        Relationships: []
+      }
       v_bill_lines_baqi: {
         Row: {
           bill_date: string | null

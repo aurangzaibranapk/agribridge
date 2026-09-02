@@ -60,6 +60,10 @@ export default async function PosPage() {
     );
   }
   let rawInventory: any[] | null = null;
+  // Kitni cheezein sirf is liye nahi dikhayi ja rahin ke un ka rate
+  // abhi darj nahi hua. Ye adad chhupaya nahi jata -- warna banda
+  // apna maal dhoondta reh jata hai.
+  let rateBaqiCount = 0;
   let rawCustomers:
     | { id: string; name: string; phone: string | null; isWholesaleShop: boolean }[]
     | null = null;
@@ -84,13 +88,23 @@ export default async function PosPage() {
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, selling_price, wholesale_price)")
+          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, selling_price, wholesale_price, sale_rate_pending)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };
     const aggMap = new Map<string, any>();
+    // Jis cheez ka sale rate abhi darj nahi hua, wo counter par aati hi
+    // nahi. Wajah: us ka selling_price 0 hota hai, aur 0 ko qeemat
+    // samajh kar cheez muft chali jati -- aur ye wo ghalti hai jo
+    // counter par pakRi nahi jati (252). Rok database par bhi lagi hui
+    // hai; ye us ka doosra taala hai, taake banda cheez dekh kar
+    // dabaye hi na.
     (invRows ?? []).forEach((row: any) => {
       const product = Array.isArray(row.products) ? row.products[0] : row.products;
+      if (product?.sale_rate_pending) {
+        rateBaqiCount += 1;
+        return;
+      }
       const cur = aggMap.get(row.product_id) ?? {
         id: row.product_id,
         product_id: row.product_id,
@@ -131,6 +145,7 @@ export default async function PosPage() {
       sellerName={sellerName}
       inventory={inventory}
       customers={rawCustomers ?? []}
+      rateBaqiCount={rateBaqiCount}
     />
   );
 }

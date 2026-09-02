@@ -58,11 +58,18 @@ export function PosClient({
   sellerName,
   inventory,
   customers,
+  rateBaqiCount = 0,
   lang,
 }: {
   sellerName: string;
   inventory: InventoryItem[];
   customers: Customer[];
+  /**
+   * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
+   * darj nahi hua (252). Ye adad chhupaya nahi jata -- warna banda
+   * apna maal dhoondta reh jata hai aur samajhta hai ke stock hi nahi.
+   */
+  rateBaqiCount?: number;
   /**
    * Zaban server se aati hai, yahan cookie parh kar nahi.
    *
@@ -324,6 +331,17 @@ export function PosClient({
             <h1 className="font-display text-xl font-semibold text-surface-900 dark:text-white">
               {sellerName} - POS
             </h1>
+            {/* Jo cheezein rate na hone ki wajah se chhupi hain, un ka
+                adad saamne rehta hai -- warna banda apna maal dhoondta
+                reh jata hai aur samajhta hai ke stock hi nahi. */}
+            {rateBaqiCount > 0 && (
+              <p className="mt-0.5 text-xs text-amber-700">
+                {t("pos_rate_baqi_hidden", lang).replace("{n}", String(rateBaqiCount))}{" "}
+                <Link href="/admin/products/rates-baqi" className="underline">
+                  {t("pos_rate_baqi_link", lang)}
+                </Link>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Link

@@ -336,17 +336,22 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       continue;
     }
 
+    // Sale rate na ho to qatar ROKI nahi jati -- naam, expiry aur
+    // trade rate to maujood hain, aur teen qataron ki wajah se sattaees
+    // ka kaam rok dena ghalat hai. Product ban jata hai, us par nishan
+    // lagta hai, aur wo "Rate Baqi" ki fehrist mein aa jata hai.
+    //
+    // Magar wo BIK nahi sakta: selling_price mein 0 jata hai (khana NOT
+    // NULL hai) aur 0 ko qeemat samajh liya jaye to cheez muft chali
+    // jaye. Rok POS par bhi hai aur database par bhi (252).
     if (sellingPrice === null) {
-      row.status = "error";
-      row.problem = "Sale rate nahi diya. Bina sale rate ke product bik nahi sakta.";
-      rows.push(row);
-      continue;
+      notes.push("Sale rate nahi diya — product ban jayega magar bikega nahi, jab tak rate na bhara jaye.");
     }
 
     // Sale rate trade rate se kam ho to har bikri par nuqsan hota hai.
     // Ye rok nahi, khabardari hai -- kabhi jaan boojh kar bhi aisa hota
     // hai (khatam karne wala maal).
-    if (purchasePrice !== null && sellingPrice < purchasePrice) {
+    if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
       notes.push("Sale rate trade rate se KAM hai — har bikri par nuqsan hoga.");
     }
 
@@ -360,7 +365,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     if (wholesalePrice !== null && purchasePrice !== null && wholesalePrice < purchasePrice) {
       notes.push("Thok ka rate trade rate se KAM hai — thok par nuqsan hoga.");
     }
-    if (wholesalePrice !== null && wholesalePrice > sellingPrice) {
+    if (wholesalePrice !== null && sellingPrice !== null && wholesalePrice > sellingPrice) {
       notes.push("Thok ka rate retail se ZYADA hai — dekh lein, aksar ulta hota hai.");
     }
 
@@ -461,7 +466,10 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     // chup chaap juR jata.
     purchase_price: r.purchasePrice ?? 0,
     trade_rate_pending: r.purchasePrice === null,
+    // Sale rate na ho to bhi sifar jata hai (khana NOT NULL hai) magar
+    // nishan ke sath -- aur nishan par taala hai: bikega nahi (252).
     selling_price: r.sellingPrice ?? 0,
+    sale_rate_pending: r.sellingPrice === null,
     mrp_price: r.mrpPrice,
     // Thok ka rate NULL rehta hai jab tak diya na jaye. Sifar likhne ka
     // matlab "thok par muft" hota.
