@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/form";
 import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
+import { NextStepStrip, purchaseSteps } from "@/components/guided/next-step";
 import { ReviewBadge, ReviewPanel, type PurchaseComment } from "@/app/admin/purchases/review-panel";
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
       )
       .order("created_at", { ascending: false })
       .limit(50),
@@ -60,6 +61,11 @@ export default async function AdminPurchasesPage() {
     total_amount: p.total_amount,
     invoice_total: p.invoice_total as number | null,
     review_status: (p.review_status as string) ?? "approved",
+    // Product setup baqi = is purchase ki koi cheez bina sale rate ke.
+    setupPending: ((p.purchase_items ?? []) as any[]).some((i) => {
+      const rel = Array.isArray(i.products) ? i.products[0] : i.products;
+      return Boolean(rel?.sale_rate_pending);
+    }),
     // Baat ka silsila (259), purane pehle.
     comments: ((p.purchase_comments ?? []) as any[])
       .map((c) => {
@@ -138,6 +144,17 @@ export default async function AdminPurchasesPage() {
                           <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
                           {/* Manzoori ka darja sirf jab abhi receive na hui ho (259). */}
                           {p.status === "pending" && p.review_status !== "approved" && <ReviewBadge status={p.review_status} />}
+                        </div>
+                        {/* Agla qadam -- ek hi shakl har purchase par (Guided ERP, B). */}
+                        <div className="mt-1.5">
+                          <NextStepStrip
+                            compact
+                            steps={purchaseSteps(
+                              p,
+                              { draft: t("ns_p_draft", lang), approval: t("ns_p_approval", lang), receive: t("ns_p_receive", lang), setup: t("ns_p_setup", lang), ready: t("ns_p_ready", lang) },
+                              p.setupPending
+                            )}
+                          />
                         </div>
                       </td>
                       <td className="px-4 py-3">

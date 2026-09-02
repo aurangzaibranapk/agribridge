@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { BillClient } from "./bill-client";
+import { NextStepStrip } from "@/components/guided/next-step";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,20 @@ export default async function BillRatePage({ params }: { params: { billId: strin
             .join(" · ") || t("pf_bill_unread_head", lang)
         }
       />
+
+      {/* Bill ka raasta ek nazar mein (Guided ERP, B). */}
+      <div className="mb-3">
+        <NextStepStrip
+          steps={[
+            { label: t("ns_b_upload", lang), state: "done" },
+            { label: t("ns_b_check", lang), state: bill.ai_read_at || bill.source === "sheet" ? (bill.status === "applied" || bill.purchase_id ? "done" : "current") : "current" },
+            { label: t("ns_b_rates", lang), state: bill.status === "applied" ? "done" : bill.ai_read_at ? "current" : "todo" },
+            { label: t("ns_b_purchase", lang), state: bill.purchase_id ? "done" : bill.status === "applied" ? "current" : "todo" },
+            { label: t("ns_p_approval", lang), state: bill.purchase_id ? "current" : "todo", href: "/admin/purchases" },
+            { label: t("ns_p_receive", lang), state: "todo" },
+          ]}
+        />
+      </div>
 
       <BillClient
         lang={lang}

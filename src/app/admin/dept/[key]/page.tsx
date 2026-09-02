@@ -6,6 +6,8 @@ import { ADMIN_NAV_GROUPS } from "@/components/layout/nav-items";
 import { departmentByKey, departmentForRole, UNRESTRICTED_ROLES } from "@/lib/departments";
 import { effectiveAccess, canOpen } from "@/lib/effective-permissions";
 import { tilesFor } from "@/lib/department-dashboard";
+import { NeedsAttention } from "@/components/guided/needs-attention";
+import { loadNav } from "@/lib/access/nav";
 import { ArrowRight } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -52,6 +54,13 @@ export default async function DepartmentDashboard({ params }: { params: Promise<
     .filter((item) => canOpen(access, item.href));
 
   const tiles = await tilesFor(key, me.branch_id);
+  const nav = await loadNav(user?.id ?? "", me.role, lang);
+  const AREAS: Record<string, ("purchase" | "inventory" | "products" | "sales" | "finance" | "ai")[]> = {
+    purchase: ["purchase", "finance"],
+    inventory: ["inventory", "products", "purchase"],
+    sales: ["sales", "products"],
+    finance: ["finance", "purchase"],
+  };
 
   return (
     <div className="space-y-4">
@@ -79,6 +88,8 @@ export default async function DepartmentDashboard({ params }: { params: Promise<
           })}
         </div>
       )}
+
+      <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} areas={AREAS[key]} />
 
       <Card className="overflow-hidden">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
