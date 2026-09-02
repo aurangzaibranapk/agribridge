@@ -94,3 +94,11 @@ Do baatein aaj ke faislon par asar daalti hain, is liye yahan likhi hain:
 - **19 (security)** — RLS aur `SECURITY DEFINER` ke faisle abhi se soch
   kar karein. `fn_reset_test_financials` jaisa har raasta `is_live` ke
   taale ke peeche hona chahiye.
+
+## Feature kab "poora" hai (malik ka usool, 2 September)
+
+Koi bhi naya feature tab tak poora nahi jab tak paanchon na hon:
+**Code ✓ Permissions ✓ Help (feature_help) ✓ AI Knowledge ✓ Training
+Guide ✓.** Naqsha aur tarteeb `docs/GUIDED-ERP.md` mein hai. Har naye
+safhe ke sath us ki `feature_help` qatar (maqsad, kaun, kab, kaise,
+agla qadam, ghaltiyan) usi commit mein jaye.
