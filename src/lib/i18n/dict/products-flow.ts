@@ -535,6 +535,7 @@ export const productsFlowDict = {
 
   // ---- Needs Attention + Agla Qadam (Guided ERP B) ----
   na_title: { en: "Needs attention", rm: "Aaj kya baqi hai", ur: "آج کیا باقی ہے" },
+  na_see_all: { en: "See all", rm: "Sab dekhein", ur: "سب دیکھیں" },
   na_today: { en: "live counts", rm: "asal ginti", ur: "اصل گنتی" },
   na_clear: { en: "Nothing pending on your pages.", rm: "Aap ke safhon par kuch baqi nahi.", ur: "آپ کے صفحات پر کچھ باقی نہیں۔" },
   na_purchase_approval: { en: "purchases awaiting approval", rm: "purchase manzoori ke intezar mein", ur: "پرچیز منظوری کے انتظار میں" },

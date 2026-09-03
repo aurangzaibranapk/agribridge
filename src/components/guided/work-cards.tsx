@@ -107,7 +107,7 @@ export function WorkCard({
 /** Haal hi mein khole gaye safhe -- isi browser mein, kisi server par nahi. */
 const RECENT_KEY = "agribridge:recent-work";
 
-export function useRecent(): [string[], (href: string) => void] {
+export function useRecent(): [string[], (href: string) => void, () => void] {
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
@@ -132,7 +132,16 @@ export function useRecent(): [string[], (href: string) => void] {
     });
   }
 
-  return [recent, remember];
+  function clear() {
+    setRecent([]);
+    try {
+      localStorage.removeItem(RECENT_KEY);
+    } catch {
+      /* storage band ho to bhi safha chalta rahe */
+    }
+  }
+
+  return [recent, remember, clear];
 }
 
 /** Aakhri khola gaya department -- isi browser mein. */
@@ -151,7 +160,7 @@ export function MyWorkBody({
   defaultDept: string | null;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [recent, remember] = useRecent();
+  const [recent, remember, clearRecent] = useRecent();
 
   // Pehla faisla client par hota hai, server par nahi: aakhri khola gaya
   // department sirf isi browser ko maloom hai. Us ke baghair role ka
@@ -189,9 +198,21 @@ export function MyWorkBody({
     <div className="space-y-7">
       {recentCards.length > 0 && (
         <section>
-          <h2 className="mb-2 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
-            {t("mw_recent", lang)}
-          </h2>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
+              {t("mw_recent", lang)}
+            </h2>
+            {/* Ye fehrist khud banti hai; bande ke paas usay mitane ka
+                raasta hona chahiye -- warna ek dafa khola hua safha
+                hamesha uske saamne rehta hai. */}
+            <button
+              type="button"
+              onClick={clearRecent}
+              className="text-[11px] font-medium text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
+            >
+              {t("mw_recent_clear", lang)}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {recentCards.map((c) => (
               <Link

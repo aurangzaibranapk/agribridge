@@ -70,7 +70,7 @@ const BAND_TONE: Record<string, string> = {
   bronze: "bg-orange-100 text-orange-900 dark:bg-orange-950/40 dark:text-orange-200",
 };
 
-export default async function MyWorkPage() {
+export default async function MyWorkPage({ searchParams }: { searchParams?: { all?: string } }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
@@ -189,7 +189,7 @@ export default async function MyWorkPage() {
             moduleKey={trainingModule?.key ?? null}
           />
         )}
-        <NeedsAttention lang={lang} allowedRoutes={allowed} variant="strip" />
+        <NeedsAttention lang={lang} allowedRoutes={allowed} variant="strip" showAll={searchParams?.all === "1"} allHref="/admin/my-work?all=1" />
       </div>
 
       {model.totalCards === 0 ? (

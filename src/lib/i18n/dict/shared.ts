@@ -56,6 +56,14 @@ export const sharedDict = {
   sh_ask_question: { en: "Ask a question...", rm: "Kuch poochhein...", ur: "کچھ پوچھیں..." },
   sh_no_messages: { en: "No messages yet.", rm: "Koi paighaam nahi hai abhi.", ur: "کوئی پیغام نہیں ہے ابھی۔" },
   sh_no_contact: { en: "No contact found.", rm: "Koi banda nahi mila.", ur: "کوئی بندہ نہیں ملا۔" },
+  at_footer: { en: "AgriBridge ERP · Guided Work System", rm: "AgriBridge ERP · Guided Work System", ur: "ایگری برج ای آر پی" },
+  // Staff ki sidebar (277 reference)
+  ws_quick: { en: "Quick access", rm: "Jaldi ke kaam", ur: "فوری کام" },
+  ws_departments: { en: "Departments", rm: "Department", ur: "شعبے" },
+  ws_reports: { en: "Reports", rm: "Reports", ur: "رپورٹس" },
+  ws_settings: { en: "Settings", rm: "Settings", ur: "ترتیبات" },
+  ws_ai: { en: "AI Assistant", rm: "AI Assistant", ur: "اے آئی اسسٹنٹ" },
+  ws_ai_sub: { en: "Your work, my help", rm: "Aap ka kaam, meri madad", ur: "آپ کا کام، میری مدد" },
   // Assistant panel (276) -- Assistant | Paighaam | Tajaweez
   ap_tab_ai: { en: "Assistant", rm: "Assistant", ur: "اسسٹنٹ" },
   ap_tab_msg: { en: "Messages", rm: "Paighaam", ur: "پیغامات" },

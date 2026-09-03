@@ -41,6 +41,8 @@ export async function NeedsAttention({
   areas,
   compact = false,
   variant = "list",
+  showAll = false,
+  allHref,
 }: {
   lang: Lang;
   allowedRoutes: string[] | null;
@@ -48,6 +50,10 @@ export async function NeedsAttention({
   compact?: boolean;
   /** "strip" = Mera Kaam wali chauRi patti; "list" = purani do-satar fehrist. */
   variant?: "list" | "strip";
+  /** Patti mein chaar ke bajaye saari qatarein. */
+  showAll?: boolean;
+  /** "Sab dekhein" ka raasta -- na ho to link nahi banta. */
+  allHref?: string;
 }) {
   const all = await loadNeedsAttention();
   let items = filterAttention(all, allowedRoutes);
@@ -60,16 +66,20 @@ export async function NeedsAttention({
     // nazar aa jate hain -- yahan sirf sab se ahem chaar. "Aur N" ka
     // koi link nahi banaya: aisa safha hai hi nahi, aur na-maujood
     // darwaza dikhana bande ka waqt zaya karta hai.
-    const top = items.slice(0, 4);
+    const top = showAll ? items : items.slice(0, 4);
     return (
       <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
             <AlertTriangle className="h-4 w-4 text-amber-600" /> {t("na_title", lang)}
           </h3>
-          <span className="text-[11px] text-surface-400">
-            {items.length > top.length ? `${t("na_today", lang)} · +${items.length - top.length}` : t("na_today", lang)}
-          </span>
+          {items.length > top.length && allHref ? (
+            <Link href={allHref} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-300">
+              {t("na_see_all", lang)} <ChevronRight className="h-3 w-3" />
+            </Link>
+          ) : (
+            <span className="text-[11px] text-surface-400">{t("na_today", lang)}</span>
+          )}
         </div>
         {items.length === 0 ? (
           <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">

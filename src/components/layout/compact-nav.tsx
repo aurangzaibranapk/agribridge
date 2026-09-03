@@ -43,10 +43,15 @@ export async function CompactNav({
   } = await supabase.auth.getUser();
 
   let fullName = user?.email ?? "";
+  let branchName: string | null = null;
   let unreadCount = 0;
   if (user) {
-    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("full_name, branch_id").eq("id", user.id).maybeSingle();
     if (profile?.full_name) fullName = profile.full_name;
+    if (profile?.branch_id) {
+      const { data: branch } = await supabase.from("branches").select("name").eq("id", profile.branch_id).maybeSingle();
+      branchName = branch?.name ?? null;
+    }
     const { count } = await supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
@@ -83,10 +88,17 @@ export async function CompactNav({
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />
         <NotificationBell initialCount={unreadCount} href="/admin/contact-messages" />
-        <div className="hidden items-center gap-3 border-l border-surface-200 pl-3 sm:flex dark:border-surface-700">
-          <p className="max-w-[10rem] truncate text-sm font-medium text-surface-800 dark:text-surface-100">
-            {fullName}
-          </p>
+        <div className="hidden items-center gap-2.5 border-l border-surface-200 pl-3 sm:flex dark:border-surface-700">
+          {/* Naam ke sath shaakh -- ek hi banda kai shaakh dekh sakta hai,
+              aur "main abhi kis shaakh mein hoon" har waqt saamne hona
+              chahiye. */}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[13px] font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+            {fullName.trim().charAt(0).toUpperCase() || "?"}
+          </span>
+          <span className="min-w-0">
+            <span className="block max-w-[10rem] truncate text-sm font-medium text-surface-800 dark:text-surface-100">{fullName}</span>
+            {branchName && <span className="block max-w-[10rem] truncate text-[11px] text-surface-400">{branchName}</span>}
+          </span>
           <LogoutButton />
         </div>
         <div className="sm:hidden">

@@ -78,7 +78,7 @@ export interface MyWorkModel {
  * Aur ye fehrist ijazat nahi deti: jo cheez is bande ko khulti hi nahi,
  * wo yahan likhi ho kar bhi nazar nahi aayegi.
  */
-const QUICK_BY_ROLE: Record<string, string[]> = {
+export const QUICK_BY_ROLE: Record<string, string[]> = {
   owner: ["submissions", "access-requests", "reconciliation", "cash-close", "command-center", "stock-count"],
   super_admin: ["submissions", "access-requests", "users", "permissions", "reconciliation"],
   admin: ["submissions", "access-requests", "users", "permissions", "reconciliation"],

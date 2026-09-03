@@ -568,3 +568,32 @@ Aur koi naya safha nahi bana: maujooda `NeedsAttention`, `loadNav`,
 ne khud nuqta 11 mein likha tha ke ise andha-dhund naql na karein aur
 maujooda navigation rehne dein — aam staff ko poora admin sidebar dikhana
 usi soch ke khilaf hai jis par ye safha bana hai.
+
+### 13d. Reference ki naql (malik ki tasheeh, 4 September)
+
+Malik ka aitraaz: "reference ko inspiration ki tarah istemal kiya gaya
+hai; mujhe reproduction chahiye." Un ke kehne par pehle farq likha gaya,
+phir amal:
+
+| Reference mein | Pehle hamare paas | Ab |
+|---|---|---|
+| Baayen sidebar: AgriBridge, Quick Access (adad ke sath), Departments, Reports, Settings, neeche AI Assistant | Staff ko koi sidebar nahi -- sirf upar patti | Nayi `WorkSidebar` -- **poora ERP nahi**, sirf is role ke rozana safhe, us ke apne department, us ki reports, us ka khata |
+| Upar daayen: gol avatar, naam, neeche shaakh | Sirf naam | Avatar + naam + shaakh |
+| "Sab dekhein →" | Kuch nahi tha | `?all=1` -- patti saari qatarein khol deti hai (chaar se ziyada hon tabhi link banta hai) |
+| "Edit" (haal hi mein istemal) | Kuch nahi tha | "Saaf karein" -- fehrist mitane ka asal button |
+| Neeche: "AgriBridge ERP · Guided Work System" | Kuch nahi tha | Laga diya |
+
+**Sidebar ka faisla saaf likha ja raha hai:** malik ka purana lock kiya
+hua usool tha *"staff ko permanent sidebar nahi"*. Naye reference mein
+sidebar hai. Dono ko is tarah mila gaya: sidebar ban gayi, magar wo
+**poora ERP nahi dikhati** -- us ka maal wohi `loadNav` deta hai jo pehle
+se ijazat ke hisaab se banta hai, aur wo `Sidebar` (Owner/Admin wali) se
+alag component hai, us ka chhota roop nahi. Yani shakl reference ki,
+soch purani.
+
+**Sidebar ke adad** `/api/my-work/badges` se aate hain -- wohi "aaj kya
+baqi hai" wali ginti, koi doosra hisaab nahi. Har safhe par bees ginti ki
+query chalane ke bajaye ek dafa browser mein aati hai. Na mile to `—`.
+
+**Sidebar ka AI button** wohi panel kholta hai jo neeche daayen kone mein
+hai (custom event se) -- do alag AI nahi bane.

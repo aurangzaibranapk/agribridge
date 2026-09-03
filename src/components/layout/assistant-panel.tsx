@@ -108,6 +108,14 @@ export function AssistantPanel() {
     loadAll();
   }, []);
 
+  // Sidebar ka "AI Assistant" wala button isi panel ko kholta hai --
+  // do alag AI banane ki zaroorat nahi thi.
+  useEffect(() => {
+    function open() { setOpen(true); setTab("ai"); }
+    document.addEventListener("agribridge:open-assistant", open);
+    return () => document.removeEventListener("agribridge:open-assistant", open);
+  }, []);
+
   useEffect(() => {
     if (!userId) return;
     const gap = open ? 5000 : 30000;
