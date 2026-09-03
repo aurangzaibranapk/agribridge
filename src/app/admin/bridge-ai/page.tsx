@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Send, Sparkles, Camera, X } from "lucide-react";
-import { CoachText } from "@/components/guided/work-coach-box";
+import { CoachMessage } from "@/components/guided/coach-message";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -161,7 +161,7 @@ export default function BridgeAiPage() {
                 }`}
               >
                 {m.image && <img src={m.image} alt="" className="mb-1 max-h-32 rounded border border-white/30" />}
-                {m.role === "assistant" ? <CoachText text={m.text} /> : m.text}
+                {m.role === "assistant" ? <CoachMessage text={m.text} /> : m.text}
               </span>
             </div>
           ))}

@@ -320,6 +320,11 @@ export const productsFlowDict = {
   ar_t_who: { en: "Who has what", rm: "Kis ke paas kya", ur: "کس کے پاس کیا" },
   ar_t_expiring: { en: "Expiring in 7 days", rm: "7 din mein khatam", ur: "7 دن میں ختم" },
   ar_t_departments: { en: "Departments", rm: "Departments", ur: "ڈیپارٹمنٹس" },
+  ar_load_failed: {
+    en: "The list could not be loaded — this is not the same as \"nothing pending\". Please refresh; if it stays, tell the admin.",
+    rm: "Fehrist nahi mil saki -- ye \"kuch baqi nahi\" ka matlab NAHI. Safha dobara kholein; phir bhi yehi rahe to admin ko batayein.",
+    ur: "فہرست نہیں مل سکی — یہ \"کچھ باقی نہیں\" کا مطلب نہیں۔",
+  },
   ar_none: { en: "No pending requests.", rm: "Koi darkhwast baqi nahi.", ur: "کوئی درخواست باقی نہیں۔" },
   ar_decided: { en: "Decided", rm: "Faisle ho chuke", ur: "فیصلے ہو چکے" },
   ar_high_risk: { en: "High risk — Owner/Admin only", rm: "High-risk — sirf Owner/Admin", ur: "ہائی رسک — صرف اونر/ایڈمن" },

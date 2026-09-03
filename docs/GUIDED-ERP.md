@@ -433,3 +433,50 @@ ki qatar mein poori threaded guftagu, aur har card par live raqam (misal
 "Khata: Rs 45,200 dena") — ye aakhri wali soch samajh kar chhoRi: aisi
 raqam ka sahih hona zaroori hai aur us ka apna hisaab chahiye, andaza
 nahi.
+
+## 14. AI ke jawab ka meyaar (malik, 4 September)
+
+Malik ne screenshot par likha: jawab **theek** tha magar developer ka
+output lagta tha -- `###`, `**`, backtick lafzi tor par nazar aa rahe
+the, aur andar `own_branch`, `SENSITIVE-LOAD`, `inventory.receiving`
+aur khule localhost URL.
+
+**Do jagah theek kiya, dono jaan boojh kar:**
+
+1. **AI ko hidayat** (`work-coach.ts` ka "JAWAB KA MEYAAR", har jawab se
+   pehle): zaban wohi jo banday ne chuni hai; teen se paanch qadam;
+   dhancha *kya karna hai -> kya jaanchna hai -> abhi kya halat hai ->
+   agla EK kaam*; markdown ka koi nishan nahi. **Teen darje:** aam staff
+   ko database ke naam, feature ki chaabi, scope ke lafz aur rule code
+   bilkul nahi; manager ko wajah aur manzoori ka asar; Owner/Admin ko
+   tafseel magar jawab ke aakhir mein alag hisse mein.
+2. **Chat ka rendering** (`components/guided/coach-message.tsx`): nishan
+   phir bhi aa jayen to unhen **chhupaya nahi jata** -- un ki asal shakl
+   di jati hai (sarkhi, moti likhai, fehrist). Sirf renderer laga kar
+   masla dhaanpna kaafi nahi hota, magar renderer ke baghair ek dafa ka
+   phisalna bhi bande ko nazar aa jata hai.
+
+**Raasta ab button hai.** AI raasta hi likhta hai (wohi ek cheez hai jo
+wo yaqeen se jaanta hai), magar screen par us ki jagah safhe ka **naam**
+wala button banta hai -- "Maal Aana", "/admin/inventory/receiving" nahi.
+Naam `/api/features/labels` se, chuni hui zaban mein. Naam na mile to
+raasta waise hi rehta hai (ghalat naam likhne se khali chhoRna behtar).
+
+**Dohri tasdeeq khatam.** Banda ek dafa "bhej dein / haan / send" keh de
+to darkhwast foran jati hai aur raseed milti hai (number, kis cheez ke
+liye, halat). Pehle AI draft dikha kar dobara "kya bhej doon?" poochta
+tha.
+
+**Ek aur cheez isi din pakRi gayi:** `/admin/access-requests` par saare
+adad sifar aa rahe the jab ke database mein 1 darkhwast aur 2 khule
+takraao maujood the. Wajah: API ka schema cache purana tha, is liye jin
+query mein `profiles` ka jorR hai wo khali jawab de rahi thin. Cache
+refresh (`notify pgrst, 'reload schema'`) se theek. Sath hi safha ab
+farq karta hai: query hi na chale to "koi darkhwast nahi" ke bajaye saaf
+likha jata hai ke fehrist nahi mil saki -- warna banda intezar karta reh
+jata hai.
+
+**Abhi nahi bana:** structured message components (approval-card,
+success-receipt waghera alag component ki shakl mein). Abhi jawab saaf
+matn hai jo theek shakl mein rendered hota hai; card wala qadam agli
+dafa.

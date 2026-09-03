@@ -1,33 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { Bot, Camera, Send, X, Lightbulb, KeyRound } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { CoachMessage } from "@/components/guided/coach-message";
 
 interface Turn {
   role: "user" | "assistant";
   text: string;
   image?: string;
-}
-
-/** Jawab mein /admin/... raaste link ban jate hain -- "yahan jayein" ek click. */
-export function CoachText({ text }: { text: string }) {
-  const parts = text.split(/(\/admin\/[A-Za-z0-9\-_/?=&.%]+)/g);
-  return (
-    <span className="whitespace-pre-line">
-      {parts.map((p, i) =>
-        p.startsWith("/admin/") ? (
-          <Link key={i} href={p.replace(/[.,)]+$/, "")} className="font-medium text-brand-700 underline dark:text-brand-300">
-            {p}
-          </Link>
-        ) : (
-          <span key={i}>{p}</span>
-        )
-      )}
-    </span>
-  );
 }
 
 /**
@@ -110,7 +92,7 @@ export function WorkCoachBox({ placeholder }: { placeholder?: string }) {
             <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
               {m.image && <img src={m.image} alt="" className="mb-1 ml-auto max-h-24 rounded border border-surface-200" />}
               <span className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-800 dark:bg-surface-800 dark:text-surface-200"}`}>
-                {m.role === "assistant" ? <CoachText text={m.text} /> : m.text}
+                {m.role === "assistant" ? <CoachMessage text={m.text} /> : m.text}
               </span>
             </div>
           ))}

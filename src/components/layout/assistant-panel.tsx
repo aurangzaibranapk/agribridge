@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { CoachText } from "@/components/guided/work-coach-box";
+import { CoachMessage } from "@/components/guided/coach-message";
 
 const initialState: ActionState = {};
 const initialBroadcastState: BroadcastActionState = {};
@@ -252,10 +252,20 @@ function AssistantTab({ pathname }: { pathname: string }) {
   const [input, setInput] = useState("");
   const [image, setImage] = useState<{ mimeType: string; data: string; preview: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  // Raasta -> safhe ka naam. Is ke baghair jawab mein khula URL nazar
+  // aata hai; is ke sath safhe ke naam wala button.
+  const [labels, setLabels] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns.length, loading]);
+
+  useEffect(() => {
+    fetch("/api/features/labels")
+      .then((r) => (r.ok ? r.json() : { labels: {} }))
+      .then((d) => setLabels(d.labels ?? {}))
+      .catch(() => setLabels({}));
+  }, []);
 
   function pickImage(file: File | null) {
     if (!file) return;
@@ -335,7 +345,7 @@ function AssistantTab({ pathname }: { pathname: string }) {
           <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
             {m.image && <img src={m.image} alt="" className="mb-1 ml-auto max-h-24 rounded border border-surface-200" />}
             <span className={`inline-block max-w-[90%] rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-800 dark:bg-surface-800 dark:text-surface-200"}`}>
-              {m.role === "assistant" ? <CoachText text={m.text} /> : m.text}
+              {m.role === "assistant" ? <CoachMessage text={m.text} labels={labels} /> : m.text}
             </span>
           </div>
         ))}

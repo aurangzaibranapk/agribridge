@@ -45,7 +45,7 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
   const now = new Date();
   const in7 = new Date(now.getTime() + 7 * 864e5).toISOString();
 
-  const [{ data: requests }, { data: grants }, { data: people }, openFindings] = await Promise.all([
+  const [{ data: requests, error: reqError }, { data: grants }, { data: people }, openFindings] = await Promise.all([
     service
       .from("access_requests")
       .select("*, for:profiles!access_requests_requested_for_fkey(full_name, role), by:profiles!access_requests_requested_by_fkey(full_name)")
@@ -110,6 +110,16 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
           </Link>
         ))}
       </div>
+
+      {/* Query hi na chali ho to "koi darkhwast nahi" likhna jhoot hai.
+          Khali fehrist ka matlab "dekh liya, kuch nahi" hota hai; yahan
+          asal baat ye hai ke hisaab mila hi nahi -- aur us par banda
+          intezar karta reh jata hai. */}
+      {reqError && (
+        <Card className="mb-3 border-amber-300 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="text-sm text-amber-900 dark:text-amber-200">{t("ar_load_failed", lang)}</p>
+        </Card>
+      )}
 
       {tab === "pending" && (
         <div className="grid gap-3 lg:grid-cols-5">
