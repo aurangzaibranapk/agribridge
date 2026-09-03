@@ -47,8 +47,8 @@ nahi.
 | Kahan | Kaun si |
 |---|---|
 | **Live par chal chuki** | 225, **226 se 242** (1 September), aur **243 se 264** (2 September, ~12:50 UTC -- malik ne naya build pehle Start kar diya tha, is liye backup ki tasdeeq ke baghair, paanch batch mein) |
-| **Live par NAHI chalin** | **265 se 276** -- 276 staff_message_broadcasts (elaan ka audit) + messages ka help; 275 training guides (sirf data); 274 transaction-level SoD triggers (16 tables par; block wale qadam ruk sakte hain jahan ek hi banda banata aur manzoor karta hai -- malik ko pehle batana), finance.reversal feature (finance role ka reversal haq khatam, sirf Owner/Admin ya darkhwast), training guide; 272 role split (finance/hr/manager ki role ijazat, malik ka faisla; Live par lagte hi Finance Team ka submissions approve, Manager ka stock-count approve/cash-close create hat jayega -- malik ko pehle batana); 273 units + pack_sizes + products.unit_code backfill; 271 access_conflict_rules/findings/events/scans + fn_access_conflicts + baseline scan (kuch revoke nahi; Live par baseline report banegi); 265 Inventory menu saaf (sirf menu qatarein); 266 feature_help + 32 help; 267 my-work feature; 268 training_mode / ui_mode / training_modules / staff_training_progress / academy; 269 suggestions + suggestion_comments (Improvements Center); 270 access_requests + access_request_events (AI Access Request). **Naya build (367396f) in ke BAAD upload ho** -- warna My Work, Academy, Improvements, My Access, "?" help panel aur Work Coach ke naye tools tootenge. |
-| Testing par | 226 se 276 tak sab |
+| **Live par NAHI chalin** | **265 se 277** -- 277 features/dashboards ke naam teenon zabanon mein (sirf naam, koi ijazat nahi); 276 staff_message_broadcasts (elaan ka audit) + messages ka help; 275 training guides (sirf data); 274 transaction-level SoD triggers (16 tables par; block wale qadam ruk sakte hain jahan ek hi banda banata aur manzoor karta hai -- malik ko pehle batana), finance.reversal feature (finance role ka reversal haq khatam, sirf Owner/Admin ya darkhwast), training guide; 272 role split (finance/hr/manager ki role ijazat, malik ka faisla; Live par lagte hi Finance Team ka submissions approve, Manager ka stock-count approve/cash-close create hat jayega -- malik ko pehle batana); 273 units + pack_sizes + products.unit_code backfill; 271 access_conflict_rules/findings/events/scans + fn_access_conflicts + baseline scan (kuch revoke nahi; Live par baseline report banegi); 265 Inventory menu saaf (sirf menu qatarein); 266 feature_help + 32 help; 267 my-work feature; 268 training_mode / ui_mode / training_modules / staff_training_progress / academy; 269 suggestions + suggestion_comments (Improvements Center); 270 access_requests + access_request_events (AI Access Request). **Naya build (367396f) in ke BAAD upload ho** -- warna My Work, Academy, Improvements, My Access, "?" help panel aur Work Coach ke naye tools tootenge. |
+| Testing par | 226 se 277 tak sab |
 
 **(Ho chuka.) 243–264 chalne se pehle build upload nahi hona chahiye tha.** Warna ye safhe tootenge: products ki fehrist, POS, product
 ka form (naya aur edit), Maal Andar, Bill se Trade Rate, aur CRM mein
@@ -134,8 +134,8 @@ Malik ka usool: system par na hon to command **hold**. Wo kahein
 "system par aa gaya", tab ye poori fehrist ek sath jayegi.
 
 **P0 rule (malik, 2 September):** Backup verified → pre-migration
-record → migrations 265→276 → verification → naya build upload → smoke
-test → Live accepted. **Backup confirm hone se pehle 265–276 Live par
+record → migrations 265→277 → verification → naya build upload → smoke
+test → Live accepted. **Backup confirm hone se pehle 265–277 Live par
 NAHI chalengi.**
 
 **271 ke liye alag shart (malik, 2 Sep):** Live se pehle Testing par
@@ -149,7 +149,7 @@ Testing Almost Complete, Live Accepted nahi.
    wo khud Supabase Dashboard se lenge; wo string chat mein kabhi nahi
    aani.
 2. **Rukna** — dono file ke size aayen (backup verified), phir
-   pre-migration ginti (section 4 wali), phir main **265–276 Live par
+   pre-migration ginti (section 4 wali), phir main **265–277 Live par
    chalaoon** aur ginti dobara milaoon. (243–264 ho chuki hain.)
 3. **Build + package** — sirf migrations ke BAAD; do command, branch
    `claude/code-load-project-structure-fq91y9` se.
@@ -164,7 +164,7 @@ Testing Almost Complete, Live Accepted nahi.
    sab kuch waise ka waisa milta rahega. Ek staff ke login se ye khud
    dekh lein. Wapas laani ho to ek SQL line kafi hai (BAQI-KAAM section
    2 mein likhi hai) -- naya build nahi chahiye.
-7. **Naye safhe (265-276)** — /admin/products/setup, /admin/products/masters
+7. **Naye safhe (265-277)** — /admin/products/setup, /admin/products/masters
    (Units aur Pack Sizes ke naye tab), /admin/inventory/receiving,
    /admin/my-work, /admin/academy, /admin/improvements,
    /admin/access-requests (Takraao tab), /admin/my-access. Har safhe par

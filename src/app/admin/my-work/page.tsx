@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
-import { pendingByDepartment } from "@/lib/access/pending-counts";
 import { NeedsAttention } from "@/components/guided/needs-attention";
+import { buildMyWork } from "@/lib/access/my-work";
+import { MyWorkBody } from "@/components/guided/work-cards";
+import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -13,7 +14,7 @@ import { t } from "@/lib/i18n/translations";
 export const dynamic = "force-dynamic";
 
 /**
- * Mera Kaam -- staff ka pehla safha.
+ * Mera Kaam -- staff ka pehla safha (Staff Command Center, 277).
  *
  * Malik ka faisla: staff ko 100+ features ka sidebar dene ke bajaye
  * CARDS milein, aur sirf wohi jo usay assign hue hon.
@@ -32,6 +33,20 @@ export const dynamic = "force-dynamic";
  * sirf sarkhi reh gaya hai jis ke neeche wo cards baithe hain. Ijazat
  * ka hisaab wohi purana hai -- loadNav() sirf wohi cheezein deta hai jo
  * is bande ko khulti hain. Yahan koi nayi ijazat nahi banti.
+ *
+ * ---------------------------------------------------------------------
+ * Safha ab lambi fehrist nahi, ek naqsha hai (277)
+ * ---------------------------------------------------------------------
+ * Malik ka aitraaz: Manager ke login par 50 ek jaise safaid dabbe khul
+ * jate the -- har card ki ahmiyat barabar lagti thi, aur wohi feature
+ * chaar department mein dobara nazar aata tha.
+ *
+ *   Kya baqi hai  ->  Aaj ka kaam  ->  Department  ->  us ke auzaar
+ *
+ * Ginti, tarteeb aur "ek feature ek jagah" ka poora hisaab
+ * lib/access/my-work.ts mein hai; kholna/band karna aur haal hi mein
+ * khole gaye safhe components/guided/work-cards.tsx mein. Safha khud
+ * sirf jorta hai.
  *
  * ---------------------------------------------------------------------
  * Score ka chip
@@ -78,9 +93,8 @@ export default async function MyWorkPage() {
     ? await supabase.from("training_modules").select("key, title, steps, try_route").eq("department_key", dept?.key ?? "").eq("is_active", true).maybeSingle()
     : { data: null };
 
-  const [nav, signals, scoreRes] = await Promise.all([
+  const [nav, scoreRes] = await Promise.all([
     loadNav(user.id, me.role, lang),
-    pendingByDepartment(),
     // Apna score. Visibility ka faisla database par hai (fn_score_visible)
     // -- yahan sirf jo aaye wo dikhaya jata hai. Kuch na aaye to chip
     // hi nahi banta.
@@ -89,18 +103,34 @@ export default async function MyWorkPage() {
 
   const scoreRow = (Array.isArray(scoreRes.data) ? scoreRes.data[0] : null) as ScoreChip | null;
 
+  const allowed = nav.unrestricted ? null : nav.allowedRoutes;
   const groups = nav.groups.filter((g) => g.items.length > 0);
-  const totalCards = groups.reduce((n, g) => n + g.items.length, 0);
+  const model = await buildMyWork(groups, allowed, me.role, lang);
+
+  // Upar ka jumla: "aaj kitni cheezein tawajjo maang rahi hain". Jis
+  // qatar ki ginti hi na mili ho us ki wajah se poora adad jhoota ho
+  // jata hai -- is liye us soorat mein adad ke bajaye saaf likha jata
+  // hai ke kuch hisaab nahi mila.
+  const attentionItems = filterAttention(await loadNeedsAttention(), allowed);
+  const unknownCount = attentionItems.some((i) => i.count === null);
+  const needCount = attentionItems.reduce((n, i) => n + (i.count ?? 0), 0);
+
+  const hour = new Date().getHours();
+  const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-surface-100">
-            {t("mw_title", lang)}
+            {t(greetKey, lang)}, {me.full_name}
           </h1>
           <p className="mt-1 text-sm text-surface-500">
-            {me.full_name} — {t("mw_subtitle", lang)}
+            {unknownCount
+              ? t("mw_need_unknown", lang)
+              : needCount > 0
+                ? t("mw_need_you", lang).replace("{n}", String(needCount))
+                : t("mw_need_none", lang)}
           </p>
         </div>
 
@@ -148,7 +178,7 @@ export default async function MyWorkPage() {
         <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} />
       </div>
 
-      {totalCards === 0 ? (
+      {model.totalCards === 0 ? (
         // Ye soorat chhupai nahi jati. Khali safha dekh kar banda samajhta
         // hai ke nizam kharab hai; asal baat ye hoti hai ke usay abhi tak
         // kuch assign hi nahi hua -- aur us ka hal us ke manager ke paas
@@ -159,70 +189,7 @@ export default async function MyWorkPage() {
           <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">{t("mw_nothing_assigned_hint", lang)}</p>
         </div>
       ) : (
-        <div className="space-y-7">
-          {groups.map((group) => {
-            const signal = signals[group.key];
-
-            return (
-              <section key={group.key}>
-                {/* Department ab sarkhi hai, card nahi. Ginti bhi yahin
-                    aati hai -- wo department ki hai, kisi ek safhe ki
-                    nahi, aur usay ek card par chipka dena jhoot hota. */}
-                <div className="mb-2.5 flex flex-wrap items-center gap-2">
-                  <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-surface-500">
-                    {group.label}
-                  </h2>
-                  {signal?.pending ? (
-                    <span className="rounded-full bg-brand-600 px-2 py-0.5 text-xs font-semibold text-white">
-                      {signal.pending} {t("mw_pending", lang)}
-                    </span>
-                  ) : null}
-                  {signal?.alert ? (
-                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                      {signal.alert} {t("mw_alert", lang)}
-                    </span>
-                  ) : null}
-                </div>
-
-                {/* Mobile par ek card, tablet par do, computer par teen --
-                    malik ki apni tajweez. Counter par zyada tar mobile hi
-                    hota hai. */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.items.map((item) => {
-                    const Icon =
-                      (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[
-                        item.icon ?? ""
-                      ] ?? Icons.LayoutGrid;
-
-                    return (
-                      <Link
-                        key={`${group.key}-${item.href}`}
-                        href={item.href}
-                        className="group flex items-start gap-3 rounded-card border border-surface-200 bg-white p-4 shadow-card transition hover:border-brand-400 hover:shadow-lg dark:border-surface-700 dark:bg-surface-900 dark:hover:border-brand-500"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                          <Icon className="h-5 w-5" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-                            {item.label}
-                          </span>
-                          {/* Doosra jumla khali ho sakta hai (250). Us
-                              jagah kuch bana kar likhna is se bura hota
-                              -- ghalat jumla bande ko ghalat safhe par
-                              bhejta hai. */}
-                          {item.description && (
-                            <span className="mt-0.5 block text-sm text-surface-500">{item.description}</span>
-                          )}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        <MyWorkBody lang={lang} quick={model.quick} departments={model.departments} />
       )}
     </div>
   );

@@ -379,3 +379,57 @@ saaf, tsc baseline 73 par.
 **Baqi (malik ke faisle ka hissa, abhi nahi bana):** awaz (🎤) ka button,
 aur department ki qatar mein poori threaded guftagu (abhi department ko
 seedha paighaam bhejne ka pane hai).
+
+## 13. Mera Kaam = Staff Command Center (277) — malik, 3 September
+
+Malik ka aitraaz screenshot par: Manager ke login par safha **50 ek jaise
+safaid dabbon** mein phail jata tha. Har card ki ahmiyat barabar lagti
+thi, `Kisan` chaar department mein dobara aata tha, aur naam adhe English
+adhe Roman the.
+
+**Nayi tarteeb:**
+
+```
+Kya baqi hai  ->  Aaj ka kaam  ->  Department  ->  us ke auzaar
+```
+
+- **Upar salam aur ek jumla:** "Shaam bakhair, Manager — Aaj 5 cheezein
+  aap ki tawajjo maang rahi hain." Jis qatar ki ginti hi na mili ho, us
+  soorat mein adad ke bajaye saaf likha jata hai ke hisaab nahi mila —
+  adhoore hisaab ko poora dikhana jhoot hai.
+- **Aaj ka kaam:** role ki apni fehrist (`QUICK_BY_ROLE`) — Manager ke
+  liye Manzoori Inbox, Ijazat ki Darkhwastein, Maal ki Ginti, Raat ki
+  Cash Ginti, Roz ka Milaan. Jin par abhi kuch baqi hai wo pehle. Chhe se
+  ziyada nahi.
+- **Department ka card:** naam, kitne auzaar, kitne par kaam baqi. Click
+  par usi ke auzaar khulte hain (pehla khud khula rehta hai). Poora safha
+  ek sath nahi phatta.
+- **EK feature EK jagah:** ek cheez kai dashboard par lagi ho sakti hai
+  (ijazat wahan se bhi milti hai), magar is safhe par ek hi dafa — apne
+  asal department mein. "Master Command" ab sirf wo cheezein rakhta hai
+  jo kisi department ki nahi. Baqi jagahon ke naam card par chhote tag ki
+  shakl mein rehte hain.
+- **Card par asal adad:** Manzoori Inbox par baqi ki ginti, POS par aaj
+  ki bikri, Stock par cheezon ki tadaad. Ginti na mile to **"—"**, sifar
+  nahi.
+- **Haal hi mein istemal:** aakhri 4 safhe upar chhoti goliyon mein.
+  `localStorage` mein, sirf usi browser mein — server par kuch nahi jata,
+  aur is se koi ijazat nahi badalti.
+
+**Tarjuma (277):** menu ka naam `features.label` (Roman) se aata hai aur
+English chunne par `label_en` se — magar **104 features ka `label_en`
+khali tha**, is liye English mode mein aadha safha Roman rehta tha. Ab
+har feature ka English naam bhara hua hai (0 khali), aur jin ka Roman ka
+khana dar-asal English tha un ka Roman naam bhi theek kiya
+(`Farmers → Kisan`, `Approval Inbox → Manzoori Inbox`,
+`Stock Returns → Wapsi ka Maal`, `Who Did What → Kis Ne Kya Kiya`).
+Dashboard ke naam bhi (`Sales & Retail → Bikri aur Dukan`).
+
+**Code:** ginti/tarteeb/dedup `lib/access/my-work.ts`; kholna-band aur
+haal hi mein `components/guided/work-cards.tsx`; safha sirf jorta hai.
+
+**Abhi nahi bana (saaf batana zaroori):** awaz (🎤) ka button, department
+ki qatar mein poori threaded guftagu, aur har card par live raqam (misal
+"Khata: Rs 45,200 dena") — ye aakhri wali soch samajh kar chhoRi: aisi
+raqam ka sahih hona zaroori hai aur us ka apna hisaab chahiye, andaza
+nahi.
