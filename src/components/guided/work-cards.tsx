@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import * as Icons from "lucide-react";
-import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, ArrowRight } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 
 /**
@@ -60,7 +60,14 @@ function Badge({ badge }: { badge: CardData["badge"] }) {
   );
 }
 
-export function WorkCard({ card, big = false, onOpen }: { card: CardData; big?: boolean; onOpen?: (href: string) => void }) {
+export function WorkCard({
+  card, big = false, onOpen, openLabel = "",
+}: {
+  card: CardData;
+  big?: boolean;
+  onOpen?: (href: string) => void;
+  openLabel?: string;
+}) {
   return (
     <Link
       href={card.href}
@@ -82,8 +89,17 @@ export function WorkCard({ card, big = false, onOpen }: { card: CardData; big?: 
         {card.description && (
           <span className="mt-0.5 block text-xs leading-relaxed text-surface-500">{card.description}</span>
         )}
+        {big && (
+          // Bare card par teer kaafi nahi -- saaf likha hua qadam chahiye,
+          // taake nazar wahin jaye jahan click karna hai.
+          <span className="mt-2.5 inline-flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 group-hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300">
+            {openLabel} <ArrowRight className="h-3 w-3" />
+          </span>
+        )}
       </span>
-      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-surface-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
+      {!big && (
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-surface-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
+      )}
     </Link>
   );
 }
@@ -217,7 +233,7 @@ export function MyWorkBody({
             }`}
           >
             {quick.map((c) => (
-              <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} />
+              <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} openLabel={t("mw_open_now", lang)} />
             ))}
           </div>
         )}
@@ -249,29 +265,33 @@ export function MyWorkBody({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
-                    <span className="block text-[11px] text-surface-500">
-                      {t("mw_tools_n", lang).replace("{n}", String(d.toolCount))}
-                      {" · "}
-                      {d.attention === null
-                        ? t("mw_count_unknown", lang)
-                        : d.attention > 0
-                          ? t("mw_need_n", lang).replace("{n}", String(d.attention))
-                          : t("mw_all_clear", lang)}
-                    </span>
-                    {/* Band qatar par jhalak -- warna banda har department
-                        khol kar dekhta hai ke andar hai kya. */}
-                    {!isOpen && d.preview.length > 0 && (
-                      <span className="mt-0.5 block truncate text-[11px] text-surface-400">
+                    {/* Jhalak: andar kya hai -- warna banda har department
+                        khol kar dekhta hai. */}
+                    {d.preview.length > 0 && (
+                      <span className="mt-0.5 block truncate text-[11px] text-surface-500">
                         {d.preview.join(", ")}
                         {d.toolCount > d.preview.length ? "…" : ""}
                       </span>
                     )}
                   </span>
-                  {d.attention !== null && d.attention > 0 && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                      {d.attention}
-                    </span>
-                  )}
+                  <span className="hidden shrink-0 rounded-full bg-surface-100 px-2.5 py-1 text-[11px] font-medium tabular-nums text-surface-600 sm:inline-block dark:bg-surface-800 dark:text-surface-300">
+                    {t("mw_tools_n", lang).replace("{n}", String(d.toolCount))}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      d.attention === null
+                        ? "bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400"
+                        : d.attention > 0
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                    }`}
+                  >
+                    {d.attention === null
+                      ? t("mw_count_unknown", lang)
+                      : d.attention > 0
+                        ? t("mw_need_n", lang).replace("{n}", String(d.attention))
+                        : t("mw_all_clear", lang)}
+                  </span>
                   {isOpen ? <ChevronDown className="h-4 w-4 text-surface-400" /> : <ChevronRight className="h-4 w-4 text-surface-400" />}
                 </button>
 

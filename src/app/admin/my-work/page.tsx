@@ -81,7 +81,7 @@ export default async function MyWorkPage() {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, role, training_mode")
+    .select("full_name, role, training_mode, branch_id")
     .eq("id", user.id)
     .maybeSingle();
   if (!me) redirect("/login");
@@ -106,6 +106,19 @@ export default async function MyWorkPage() {
   const groups = nav.groups.filter((g) => g.items.length > 0);
   const model = await buildMyWork(groups, allowed, me.role, lang);
 
+  const { data: branch } = me.branch_id
+    ? await supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
+    : { data: null };
+  const branchName = branch?.name ?? null;
+
+  const now = new Date();
+  const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
+    timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
+  }).format(now);
+  const nowTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Karachi", hour: "2-digit", minute: "2-digit", hour12: true,
+  }).format(now);
+
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
@@ -124,6 +137,16 @@ export default async function MyWorkPage() {
           <p className="mt-1 text-sm text-surface-500">{t("mw_subtitle_new", lang)}</p>
         </div>
 
+        <div className="flex items-center gap-3">
+          {/* Malik ke reference wala khana: shaakh aur waqt. Waqt Pakistan
+              ka -- server kahin bhi ho, banda apni ghari se milata hai. */}
+          <div className="rounded-card border border-surface-200 bg-white px-4 py-2 text-right dark:border-surface-700 dark:bg-surface-900">
+            <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{nowDate}</p>
+            <p className="text-[11px] text-surface-400">
+              {branchName ? `${branchName} · ` : ""}
+              {nowTime}
+            </p>
+          </div>
         {scoreRow && (
           <div className="rounded-card border border-surface-200 bg-white px-4 py-2 text-right dark:border-surface-700 dark:bg-surface-900">
             <p className="text-[11px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
@@ -150,6 +173,7 @@ export default async function MyWorkPage() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Aaj kya baqi hai -- role ke raaston par, click par kaam ke safhe par (B). */}
@@ -165,7 +189,7 @@ export default async function MyWorkPage() {
             moduleKey={trainingModule?.key ?? null}
           />
         )}
-        <NeedsAttention lang={lang} allowedRoutes={nav.unrestricted ? null : nav.allowedRoutes} />
+        <NeedsAttention lang={lang} allowedRoutes={allowed} variant="strip" />
       </div>
 
       {model.totalCards === 0 ? (

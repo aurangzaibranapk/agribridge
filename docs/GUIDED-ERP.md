@@ -542,3 +542,29 @@ kaha tha ke yahan **fixed menu cards nahi**, sirf aaj ke asal kaam. Dono
 ek sath nahi ho sakte, is liye asal ginti wala usool chala: role ki
 fehrist sirf **tarteeb** tay karti hai, aur kuch pending na ho to saaf
 likha jata hai "Aaj koi zaroori kaam baqi nahi."
+
+### 13c. Reference UI ke mutabiq shakl (malik ka mockup, 4 September)
+
+Malik ne do reference tasveerein bhejin. Un ki **shakl** li gayi, **data
+nahi** — safha wohi asal ginti, wohi ijazat, wohi department dikhata hai.
+Aur koi naya safha nahi bana: maujooda `NeedsAttention`, `loadNav`,
+`buildMyWork` aur Assistant panel wahi ke wahi hain, sirf shakl badli.
+
+- **"Aaj kya baqi hai" ab chauRi patti hai** — chaar tak card, har ek
+  par nishan, asal adad, insani naam aur teer. Wohi purani ginti, wohi
+  `—` wala usool. Chaar se ziyada hon to sarkhi par `+N` likha jata hai;
+  us ka **link nahi banaya** — aisa safha hai hi nahi, aur na-maujood
+  darwaza dikhana bande ka waqt zaya karta hai. (`variant="strip"` —
+  purani fehrist wali shakl doosre safhon par waise hi chal rahi hai.)
+- **Salam ke sath shaakh aur waqt** — Pakistan ka waqt, server kahin bhi
+  ho.
+- **"Aaj ka kaam" ke bare card par saaf qadam**: "Abhi dekhein →" — sirf
+  teer kaafi nahi tha.
+- **Department ki qatar**: naam, andar ke auzaar ki jhalak, phir daayen
+  taraf `5 kaam` aur halat ka pill (`2 baqi` narangi / `Sab Theek` sabz /
+  `Ginti nahi mili` khaakistari).
+
+**Reference se jaan boojh kar NAHI liya:** baayen taraf ka sidebar. Malik
+ne khud nuqta 11 mein likha tha ke ise andha-dhund naql na karein aur
+maujooda navigation rehne dein — aam staff ko poora admin sidebar dikhana
+usi soch ke khilaf hai jis par ye safha bana hai.
