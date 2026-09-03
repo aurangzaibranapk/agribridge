@@ -45,26 +45,40 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
   const now = new Date();
   const in7 = new Date(now.getTime() + 7 * 864e5).toISOString();
 
-  const [{ data: requests, error: reqError }, { data: grants }, { data: people }, openFindings] = await Promise.all([
-    service
-      .from("access_requests")
-      .select("*, for:profiles!access_requests_requested_for_fkey(full_name, role), by:profiles!access_requests_requested_by_fkey(full_name)")
-      .order("created_at", { ascending: false })
-      .limit(300),
+  // Naam ALAG query se milaye jate hain, jorR (embed) se nahi.
+  //
+  // Embed API ke schema cache par munhasir hai. Wo cache purana ho to
+  // jawab KHALI aata hai -- ghalti nahi, khali -- aur safhe par wo "koi
+  // darkhwast nahi" ban jata hai. Yehi hua tha: database mein 1 pending
+  // darkhwast aur 2 khule takraao the, safha 0 dikha raha tha. Do saadi
+  // query us poore darje ki kharabi ko khatam kar deti hain.
+  const [{ data: requests, error: reqError }, { data: grants }, { data: allPeople }, openFindings] = await Promise.all([
+    service.from("access_requests").select("*").order("created_at", { ascending: false }).limit(300),
     service
       .from("user_feature_permissions")
-      .select("id, profile_id, feature_key, actions, data_scope, expires_at, reason, granted_by, profiles!user_feature_permissions_profile_id_fkey(full_name, role)")
+      .select("id, profile_id, feature_key, actions, data_scope, expires_at, reason, granted_by")
       .order("expires_at", { ascending: true, nullsFirst: false })
       .limit(500),
-    service.from("profiles").select("id, full_name, role, extra_roles, is_active").eq("is_active", true).order("full_name"),
+    // Naam ke liye sab log chahiyen (chhoRa hua mulazim bhi), magar
+    // department wali fehrist sirf fa'aal logon ki banti hai.
+    service.from("profiles").select("id, full_name, role, extra_roles, is_active").order("full_name"),
     loadFindings({ status: ["open", "acknowledged", "overridden"] }),
   ]);
-  const reqs = (requests ?? []) as any[];
+
+  const personById = new Map(((allPeople ?? []) as any[]).map((p) => [p.id, p]));
+  const people = ((allPeople ?? []) as any[]).filter((p) => p.is_active);
+
+  const reqs = ((requests ?? []) as any[]).map((r) => ({
+    ...r,
+    for: personById.get(r.requested_for) ?? null,
+    by: personById.get(r.requested_by) ?? null,
+  }));
   const pending = reqs.filter((r) => r.status === "pending" && (isMaster || r.risk_level !== "high"));
   const decided = reqs.filter((r) => r.status !== "pending").slice(0, 50);
   const selected = searchParams.id ? reqs.find((r) => r.id === searchParams.id) : null;
   const { data: events } = selected ? await service.from("access_request_events").select("event, detail, created_at, profiles(full_name)").eq("request_id", selected.id).order("created_at") : { data: [] };
-  const expiring = (grants ?? []).filter((g) => g.expires_at && g.expires_at <= in7 && g.expires_at > now.toISOString());
+  const grantRows = ((grants ?? []) as any[]).map((g) => ({ ...g, profiles: personById.get(g.profile_id) ?? null }));
+  const expiring = grantRows.filter((g) => g.expires_at && g.expires_at <= in7 && g.expires_at > now.toISOString());
 
   // Manzoori se pehle ki jaanch (271): "Is permission se ye existing access conflict create hoga"
   let gate: ConflictGate = { level: "none", messages: [] };
@@ -93,10 +107,10 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
 
   const tabs = [
     ["pending", t("ar_t_pending", lang), pending.length],
-    ["who", t("ar_t_who", lang), (grants ?? []).length],
+    ["who", t("ar_t_who", lang), grantRows.length],
     ["expiring", t("ar_t_expiring", lang), expiring.length],
     ["conflicts", t("cfl_t_conflicts", lang), openFindings.length],
-    ["departments", t("ar_t_departments", lang), (people ?? []).length],
+    ["departments", t("ar_t_departments", lang), people.length],
   ] as const;
 
   return (
@@ -219,10 +233,10 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
           <table className="w-full min-w-[48rem] text-sm">
             <thead><tr className="border-b border-surface-200 text-left text-xs uppercase text-surface-500"><th className="py-2">{t("ar_staff", lang)}</th><th className="py-2">Feature</th><th className="py-2">{t("ar_actions", lang)}</th><th className="py-2">{t("ar_scope", lang)}</th><th className="py-2">{t("ar_expires", lang)}</th><th className="py-2">{t("ar_reason", lang)}</th></tr></thead>
             <tbody>
-              {(grants ?? []).map((g: any) => (
+              {grantRows.map((g: any) => (
                 <tr key={g.id} className="border-b border-surface-100"><td className="py-1.5 pr-2 font-medium">{pname(g)}</td><td className="py-1.5 pr-2 font-mono text-xs">{g.feature_key}</td><td className="py-1.5 pr-2">{(g.actions ?? []).join(", ")}</td><td className="py-1.5 pr-2">{g.data_scope}</td><td className="py-1.5 pr-2 text-xs">{g.expires_at ? new Date(g.expires_at).toLocaleDateString("en-GB") : t("ar_permanent", lang)}</td><td className="py-1.5 text-xs text-surface-500">{g.reason ?? ""}</td></tr>
               ))}
-              {(grants ?? []).length === 0 && <tr><td colSpan={6} className="py-4 text-center text-sm text-surface-400">{t("ar_none_grants", lang)}</td></tr>}
+              {grantRows.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-sm text-surface-400">{t("ar_none_grants", lang)}</td></tr>}
             </tbody>
           </table>
           <p className="mt-2 text-[11px] text-surface-400">{t("ar_who_note", lang)}</p>
@@ -417,7 +431,7 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
           <table className="w-full min-w-[36rem] text-sm">
             <thead><tr className="border-b border-surface-200 text-left text-xs uppercase text-surface-500"><th className="py-2">{t("ar_staff", lang)}</th><th className="py-2">Role</th><th className="py-2">{t("ar_extra", lang)}</th></tr></thead>
             <tbody>
-              {(people ?? []).map((p: any) => (
+              {people.map((p: any) => (
                 <tr key={p.id} className="border-b border-surface-100"><td className="py-1.5 pr-2 font-medium">{p.full_name}</td><td className="py-1.5 pr-2">{p.role}</td><td className="py-1.5 text-xs">{((p.extra_roles as string[] | null) ?? []).join(", ") || "—"}</td></tr>
               ))}
             </tbody>

@@ -141,18 +141,38 @@ export function canOverride(role: string): boolean {
   return UNRESTRICTED_ROLES.includes(role);
 }
 
-/** Findings (scan ka nateeja) -- sirf parhne ke liye. */
+/**
+ * Findings (scan ka nateeja) -- sirf parhne ke liye.
+ *
+ * Naam yahan ALAG query se milaye jate hain, jorR (embed) se nahi.
+ * Wajah: embed API ke schema cache par munhasir hai, aur jab wo cache
+ * purana ho to jawab KHALI aata hai -- ghalti nahi, khali. Safhe par wo
+ * "koi takraao nahi" ban jata hai, jo is safhe par sab se khatarnak
+ * jhoot hai. Do saadi query us poore darje ki kharabi ko khatam kar
+ * deti hain.
+ */
 export async function loadFindings(opts?: { status?: string[]; profileId?: string }) {
   const service = createServiceClient();
   let q = service
     .from("access_conflict_findings" as never)
-    .select("*, profiles!access_conflict_findings_profile_id_fkey(full_name, role), by:profiles!access_conflict_findings_status_by_fkey(full_name)")
+    .select("*")
     .order("last_seen_at", { ascending: false })
     .limit(500);
   if (opts?.status?.length) q = q.in("status", opts.status);
   if (opts?.profileId) q = q.eq("profile_id", opts.profileId);
-  const { data } = await q;
-  return (data ?? []) as any[];
+  const { data, error } = await q;
+  if (error) throw new Error(`Takraao ki fehrist nahi mili: ${error.message}`);
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) return rows;
+
+  const ids = [...new Set(rows.flatMap((r) => [r.profile_id, r.status_by]).filter(Boolean))] as string[];
+  const { data: people } = await service.from("profiles").select("id, full_name, role").in("id", ids);
+  const byId = new Map((people ?? []).map((p) => [p.id, p]));
+  return rows.map((r) => ({
+    ...r,
+    profiles: byId.get(r.profile_id) ?? null,
+    by: r.status_by ? (byId.get(r.status_by) ?? null) : null,
+  }));
 }
 
 /** Scan chalao: sirf report banti hai, ijazat nahi badalti. */
@@ -263,14 +283,20 @@ export async function loadSodRules() {
   return (data ?? []) as any[];
 }
 
+/** Naam alag query se -- wajah loadFindings wali (embed = khali jawab ka khatra). */
 export async function loadSodEvents(limit = 100) {
   const service = createServiceClient();
   const { data } = await service
     .from("sod_transaction_events" as never)
-    .select("*, profiles!sod_transaction_events_actor_id_fkey(full_name, role)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
-  return (data ?? []) as any[];
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) return rows;
+  const ids = [...new Set(rows.map((r) => r.actor_id).filter(Boolean))] as string[];
+  const { data: people } = await service.from("profiles").select("id, full_name, role").in("id", ids);
+  const byId = new Map((people ?? []).map((p) => [p.id, p]));
+  return rows.map((r) => ({ ...r, profiles: byId.get(r.actor_id) ?? null }));
 }
 
 /** Rule ka enforcement / on-off badalna -- sirf Owner/Admin; naye table par trigger khud lag jata hai. */
