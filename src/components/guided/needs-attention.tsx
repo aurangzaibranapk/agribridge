@@ -68,7 +68,7 @@ export async function NeedsAttention({
     // darwaza dikhana bande ka waqt zaya karta hai.
     const top = showAll ? items : items.slice(0, 4);
     return (
-      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-[15px] font-semibold text-surface-900 dark:text-white">
             <AlertTriangle className="h-4 w-4 text-amber-600" /> {t("na_title", lang)}

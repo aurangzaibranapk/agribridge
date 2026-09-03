@@ -124,7 +124,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
   return (
-    <div className="w-full max-w-[1000px]">
+    <div className="mx-auto w-full max-w-[1100px]">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-[28px] font-semibold text-surface-900 dark:text-surface-100">

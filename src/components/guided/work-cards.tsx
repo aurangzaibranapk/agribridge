@@ -199,7 +199,7 @@ export function MyWorkBody({
       {/* Ye hissa khali bhi rehta hai to nazar aata hai -- warna safha har
           naye bande ke liye alag shakl ka lagta hai, aur wo samajh nahi
           pata ke yahan aata kya hai. */}
-      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
               {t("mw_recent", lang)}
@@ -238,7 +238,7 @@ export function MyWorkBody({
           )}
         </section>
 
-      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
         <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
           {t("mw_quick", lang)}
         </h2>
@@ -266,7 +266,7 @@ export function MyWorkBody({
         )}
       </section>
 
-      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
         <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
           {t("mw_depts", lang)}
         </h2>
@@ -284,18 +284,18 @@ export function MyWorkBody({
                 <button
                   type="button"
                   onClick={() => toggle(d.key)}
-                  className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left"
+                  className="flex w-full items-center gap-4 px-4 py-4 text-left"
                   aria-expanded={isOpen}
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                    <Icon name={d.icon} className="h-5 w-5" />
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                    <Icon name={d.icon} className="h-[22px] w-[22px]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[15px] font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
+                    <span className="block font-display text-base font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
                     {/* Jhalak: andar kya hai -- warna banda har department
                         khol kar dekhta hai. */}
                     {d.preview.length > 0 && (
-                      <span className="mt-0.5 block truncate text-[12.5px] text-surface-500">
+                      <span className="mt-1 block truncate text-[13px] text-surface-500">
                         {d.preview.join(", ")}
                         {d.toolCount > d.preview.length ? "…" : ""}
                       </span>
