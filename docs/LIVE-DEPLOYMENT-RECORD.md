@@ -47,7 +47,7 @@ nahi.
 | Kahan | Kaun si |
 |---|---|
 | **Live par chal chuki** | 225, **226 se 242** (1 September), aur **243 se 264** (2 September, ~12:50 UTC -- malik ne naya build pehle Start kar diya tha, is liye backup ki tasdeeq ke baghair, paanch batch mein) |
-| **Live par NAHI chalin** | **265 se 275** -- 275 training guides (sirf data); 274 transaction-level SoD triggers (16 tables par; block wale qadam ruk sakte hain jahan ek hi banda banata aur manzoor karta hai -- malik ko pehle batana), finance.reversal feature (finance role ka reversal haq khatam, sirf Owner/Admin ya darkhwast), training guide; 272 role split (finance/hr/manager ki role ijazat, malik ka faisla; Live par lagte hi Finance Team ka submissions approve, Manager ka stock-count approve/cash-close create hat jayega -- malik ko pehle batana); 273 units + pack_sizes + products.unit_code backfill; 271 access_conflict_rules/findings/events/scans + fn_access_conflicts + baseline scan (kuch revoke nahi; Live par baseline report banegi); 265 Inventory menu saaf (sirf menu qatarein); 266 feature_help + 32 help; 267 my-work feature; 268 training_mode / ui_mode / training_modules / staff_training_progress / academy; 269 suggestions + suggestion_comments (Improvements Center); 270 access_requests + access_request_events (AI Access Request). **Naya build (ea693b9) in ke BAAD upload ho** -- warna My Work, Academy, Improvements, My Access, "?" help panel aur Work Coach ke naye tools tootenge. |
+| **Live par NAHI chalin** | **265 se 275** -- 275 training guides (sirf data); 274 transaction-level SoD triggers (16 tables par; block wale qadam ruk sakte hain jahan ek hi banda banata aur manzoor karta hai -- malik ko pehle batana), finance.reversal feature (finance role ka reversal haq khatam, sirf Owner/Admin ya darkhwast), training guide; 272 role split (finance/hr/manager ki role ijazat, malik ka faisla; Live par lagte hi Finance Team ka submissions approve, Manager ka stock-count approve/cash-close create hat jayega -- malik ko pehle batana); 273 units + pack_sizes + products.unit_code backfill; 271 access_conflict_rules/findings/events/scans + fn_access_conflicts + baseline scan (kuch revoke nahi; Live par baseline report banegi); 265 Inventory menu saaf (sirf menu qatarein); 266 feature_help + 32 help; 267 my-work feature; 268 training_mode / ui_mode / training_modules / staff_training_progress / academy; 269 suggestions + suggestion_comments (Improvements Center); 270 access_requests + access_request_events (AI Access Request). **Naya build (367396f) in ke BAAD upload ho** -- warna My Work, Academy, Improvements, My Access, "?" help panel aur Work Coach ke naye tools tootenge. |
 | Testing par | 226 se 275 tak sab |
 
 **(Ho chuka.) 243–264 chalne se pehle build upload nahi hona chahiye tha.** Warna ye safhe tootenge: products ki fehrist, POS, product
@@ -164,7 +164,27 @@ Testing Almost Complete, Live Accepted nahi.
    sab kuch waise ka waisa milta rahega. Ek staff ke login se ye khud
    dekh lein. Wapas laani ho to ek SQL line kafi hai (BAQI-KAAM section
    2 mein likhi hai) -- naya build nahi chahiye.
-7. **Naya safha** — /admin/products/bill-rates. Supplier ke bill ki ek
+7. **Naye safhe (265-275)** — /admin/products/setup, /admin/products/masters
+   (Units aur Pack Sizes ke naye tab), /admin/inventory/receiving,
+   /admin/my-work, /admin/academy, /admin/improvements,
+   /admin/access-requests (Takraao tab), /admin/my-access. Har safhe par
+   upar daayen "? Samjhein" chalna chahiye.
+8. **272 ka asar staff par (pehle bata dein)** — Finance Team se
+   submissions ka approve/reject aur cash-handover create hat jayega
+   (cash close ab finance ke paas), HR se staff-khata create, Manager se
+   stock-count approve aur cash-close create.
+9. **274 ka asar (pehle bata dein)** — jis ne record banaya wohi manzoor,
+   tasdeeq ya receive nahi kar sakta (purchase review, supplier adaigi,
+   stock count post, cash handover receive, POS return, doodh verify,
+   order verify/approve, kharcha, machinery). Owner/Admin par rok nahi.
+   Kisi jagah ye rok mushkil ho to us rule ko /admin/access-requests →
+   Takraao → Qawaid se `warn` kar dein.
+10. **Reversal** — finance role ab entry ulta nahi kar sakta; sirf
+    Owner/Admin ya jise `finance.reversal` ki ijazat di jaye.
+11. **Live par `BRIDGE_AI_GEMINI_API_KEY`** — cPanel → Setup Node.js App →
+    Environment variables. Bina us ke Work Coach, bill reader aur guide ka
+    AI hissa nahi chalega.
+12. **Purana safha** — /admin/products/bill-rates. Supplier ke bill ki ek
    photo laga kar dekhein ke qatarein parhi jati hain ya nahi. Ye AI
    par chalta hai, is liye **GEMINI_API_KEY** Live par laga hona
    chahiye — bina us ke safha khulta hai magar qatarein khali aati

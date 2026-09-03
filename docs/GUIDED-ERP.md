@@ -28,7 +28,7 @@ hota.
 | 7 | Simple vs Advanced mode | ✅ (E: purchase aur product form; baqi safhe pehle se saade) | Profile par koi mode nahi; form sab ke liye ek jaise (purchase form par 15+ khane) |
 | 8 | "Next Step" har process mein | 🟡→✅ (B, purchase aur bill; agri-order par timeline pehle se) | Purchase par darja hai (manzoori baqi → manzoor → maal aa gaya), agri-order par timeline. **Ek jaisi "Agla qadam" patti kahin nahi** |
 | 9 | Dashboard par "Needs Attention" | ✅ (B) | Ginti alag alag jagah: Adhoore Products (258), Due Soon (255), pending-counts. **Ek jagah, role ke hisaab se, click karne layak fehrist nahi** |
-| 10 | Training documentaries | 🟡 (D: har module par video ka khana hai; video malik banayenge) | Ye content malik banayenge (video). System mein video ka khana bhi nahi |
+| 10 | Training documentaries | 🟡 (D: video ka khana hai, video malik banayenge; 274/275 mein qadam ba qadam guide bani — asal button roshan aur "Next") | Ye content malik banayenge (video). System mein video ka khana bhi nahi |
 | 11 | Har feature ki documentation system ke andar | ✅ (266) | `feature_help` table, 33 features likhe (Inventory ke 11, purchase ka raasta, POS, CRM, cash-close, Mera Kaam, Bridge AI); baqi features Owner/Admin `/admin/platform/help` par likhte hain, kaun sa baqi hai wahin dikhta hai |
 | 12 | AI ko system ka asal naqsha pata ho, user ki halat dekh kar jawab de | ✅ (C: SYSTEM_MAP + get_my_work asal ginti se) | AI ke paas naqsha nahi. "Maal aa gaya, ab kya?" par wo purchase ka darja dekh kar nahi bolta |
 | 13 | AI ko pata ho kaun pooch raha hai (role-aware) | ✅ (C) | API route sirf "staff hai" dekhta hai. Role, department, ijazatein AI tak nahi jatin |
@@ -151,16 +151,18 @@ khud khatam hoti hai. Sirf darkhwast aur us ka silsila naya hai.
 | Staff AI mein My Access / Request / Pending / Departments | `/admin/my-access` (har staff ko khula), coach box mein 🔑 |
 | Admin AI mein Pending / Who has what / Expiring / Departments | `/admin/access-requests` ke chaar tab |
 
-Jo NAHI hai (saaf): "excessive/conflicting access" ki khud-kar jaanch
-nahi — "Kis ke paas kya" ki fehrist hai, faisla insaan ka.
+(Us waqt tak) jo NAHI tha: "excessive/conflicting access" ki khud-kar
+jaanch. **Ab bani hai — section 8 (271) aur transaction-level SoD
+section 10 (274).** "Kis ke paas kya" ki fehrist wahi hai; faisla phir
+bhi insaan ka.
 
 ## 7. Baqi teen kaam — malik ki priority (2 September ki report ke baad)
 
 | # | Kaam | Priority | Malik ka maqsad |
 |---|---|---|---|
-| 1 | Excessive / Conflicting Access detection | **High** | Access Requests Live hone ke baad zaroori: ek hi banda Create Payment + Verify Payment + Reverse Payment sab na le le; department scope se faltu access jama na ho. Report `/admin/access-requests` mein tab, jaanch rules table se, faisla insaan ka |
-| 2 | Units / Pack Sizes masters | **Medium/High** | Bag / Bottle / Liter / Kg / Piece / Carton aur 500ml / 1L / 5L / 20kg / 50kg. Product matching aur bill extraction saaf hogi |
-| 3 | Training Mode mein button highlight | **Medium** | AI sirf "Stock par jayein" na kahe, asal Stock button highlight ho aur "Next" aage le jaye |
+| 1 | Excessive / Conflicting Access detection — ✅ bana (271, 274) | **High** | Access Requests Live hone ke baad zaroori: ek hi banda Create Payment + Verify Payment + Reverse Payment sab na le le; department scope se faltu access jama na ho. Report `/admin/access-requests` mein tab, jaanch rules table se, faisla insaan ka |
+| 2 | Units / Pack Sizes masters — ✅ bana (273, 274) | **Medium/High** | Bag / Bottle / Liter / Kg / Piece / Carton aur 500ml / 1L / 5L / 20kg / 50kg. Product matching aur bill extraction saaf hogi |
+| 3 | Training Mode mein button highlight — ✅ bana (274, 275) | **Medium** | AI sirf "Stock par jayein" na kahe, asal Stock button highlight ho aur "Next" aage le jaye |
 
 "100% complete" ka usool ab saat hisson ka hai (CLAUDE.md dekhein):
 Feature + Permission + Help + AI Knowledge + Audit + Simple Staff
