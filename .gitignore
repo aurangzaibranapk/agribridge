@@ -15,3 +15,9 @@ src.backup/
 # Offline test ka bundle -- har dafa naya banta hai
 scripts/offline-test/queue.bundle.js
 scripts/offline-test/phone-profile/
+
+# Live/testing DB backups (kabhi commit na hon)
+live-*.sql
+*-backup-*.sql
+deploy.tar.gz
+build.log
