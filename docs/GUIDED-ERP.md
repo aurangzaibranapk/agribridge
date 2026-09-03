@@ -331,3 +331,51 @@ kg/maund/ton select waise hi (kisan ke liye teen hi kaafi).
   `sod_rule_updated`). Ruki hui (block) koshishein mehfooz nahi hotin --
   transaction wapas ho jati hai; banday ko screen par SOD ka paighaam.
 
+## 12. Assistant + Paighaam ek panel mein (276) — malik, 3 September
+
+Malik ne screenshot dekh kar likha: "My Work" ke upar `What do you want to
+do today?` ka bada box aur neeche daayen kone ka Messages widget **do alag
+tajurbe** lag rahe the. Faisla: dono ko ek panel mein milayein.
+
+**Panel (`AssistantPanel`, admin layout par har safhe par):** teen khane
+`Assistant | Paighaam | Tajaweez`. Assistant default.
+
+- **Assistant** — wahi Work Coach (`/api/bridge-ai`): sawal, screenshot,
+  aur jaldi ke kaam: Ijazat maangein · Tajweez dein · Ye safha samjhayein ·
+  Training. My Work ka purana box hata diya gaya (malik ka kehna) — ab AI
+  **har** safhe par hai, sirf dashboard par nahi.
+- **Paighaam** — dhoondne ki patti, phir `Haal hi mein` / `Department` /
+  `Staff`. Ek banday se WhatsApp jaisi baat cheet (waqt ke sath).
+- **Tajaweez** — apni bheji hui tajaweez aur un ka darja; poori fehrist
+  `/admin/improvements` par.
+
+**Kis ko kya dikhta hai (`/api/messages/contacts`, server par faisla):**
+Owner/Admin/Manager ko saari staff, saare department aur elaan. Aam staff
+ko sirf AI, apna manager/department head, apne department ke sathi, aur jin
+se pehle se baat ho rahi hai. Pehle widget seedha `profiles` se **saari**
+staff utha leta tha — har naye mulazim ko poore idare ki directory nazar
+aati thi.
+
+**Elaan (sab ko paighaam):** pehle **koi bhi** login kiya hua banda "Sab
+Staff Ko Bhejein" daba kar poore idare ko paighaam bhej sakta tha. Ab sirf
+Owner/Admin/Manager, aur bhejne se pehle ginti ki tasdeeq: *"Ye elaan 19
+mulazimeen ko bhej dein?"*. Department wala paighaam sirf usi department
+ko; aam staff sirf apne department ko.
+
+**Audit (276):** `staff_message_broadcasts` — kis ne, kab, kis daire mein
+(all/department), kitnon ko, kya. `staff_messages` mein to 19 alag qatarein
+banti hain; un se ye pata nahi chalta ke wo dar-asal EK elaan tha. Parhna:
+apna bheja hua har koi, sab ka bheja hua sirf `fn_can_review_access()`.
+
+**Architecture rule (malik):** UI ek jagah, **record alag** —
+AI → Work Coach, insani paighaam → `staff_messages`, tajweez →
+`suggestions`, ijazat → `access_requests`. Isi se audit aur ijazat saaf
+rehte hain.
+
+**Testing:** 276 ke teen DB test (department bina key ke ruke, anjaana
+scope ruke, theek qatar bane) — teenon PASS, rollback. `npm run build`
+saaf, tsc baseline 73 par.
+
+**Baqi (malik ke faisle ka hissa, abhi nahi bana):** awaz (🎤) ka button,
+aur department ki qatar mein poori threaded guftagu (abhi department ko
+seedha paighaam bhejne ka pane hai).
