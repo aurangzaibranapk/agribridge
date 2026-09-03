@@ -53,7 +53,7 @@ function Icon({ name, className }: { name: string | null; className?: string }) 
 function Badge({ badge }: { badge: CardData["badge"] }) {
   if (!badge) return null;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${TONE[badge.tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${TONE[badge.tone]}`}>
       {badge.count === null ? "—" : badge.count}
       {badge.label && <span className="font-medium opacity-80">{badge.label}</span>}
     </span>
@@ -76,23 +76,23 @@ export function WorkCard({
         big ? "p-4" : "p-3.5"
       }`}
     >
-      <span className={`flex shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300 ${big ? "h-10 w-10" : "h-9 w-9"}`}>
-        <Icon name={card.icon} className={big ? "h-5 w-5" : "h-4 w-4"} />
+      <span className={`flex shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300 ${big ? "h-11 w-11" : "h-10 w-10"}`}>
+        <Icon name={card.icon} className={big ? "h-5 w-5" : "h-[18px] w-[18px]"} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-start justify-between gap-2">
-          <span className={`font-display font-semibold text-surface-900 dark:text-surface-100 ${big ? "text-[15px]" : "text-sm"}`}>
+          <span className={`font-display font-semibold text-surface-900 dark:text-surface-100 ${big ? "text-base" : "text-[15px]"}`}>
             {card.label}
           </span>
           <Badge badge={card.badge} />
         </span>
         {card.description && (
-          <span className="mt-0.5 block text-xs leading-relaxed text-surface-500">{card.description}</span>
+          <span className="mt-1 block text-[13px] leading-relaxed text-surface-500">{card.description}</span>
         )}
         {big && (
           // Bare card par teer kaafi nahi -- saaf likha hua qadam chahiye,
           // taake nazar wahin jaye jahan click karna hai.
-          <span className="mt-2.5 inline-flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 group-hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300">
+          <span className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 dark:bg-brand-600 ">
             {openLabel} <ArrowRight className="h-3 w-3" />
           </span>
         )}
@@ -195,13 +195,13 @@ export function MyWorkBody({
   const recentCards = recent.map((h) => byHref.get(h)).filter((c): c is CardData => !!c);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       {/* Ye hissa khali bhi rehta hai to nazar aata hai -- warna safha har
           naye bande ke liye alag shakl ka lagta hai, aur wo samajh nahi
           pata ke yahan aata kya hai. */}
-      <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
+      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
               {t("mw_recent", lang)}
             </h2>
             {/* Ye fehrist khud banti hai; bande ke paas usay mitane ka
@@ -238,8 +238,8 @@ export function MyWorkBody({
           )}
         </section>
 
-      <section>
-        <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
+      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
           {t("mw_quick", lang)}
         </h2>
         {quick.length === 0 ? (
@@ -254,12 +254,10 @@ export function MyWorkBody({
           // baayen kone mein chhota na chhoRein -- card poori chauRai
           // mein zyada saaf nazar aata hai.
           <div
-            // Ek hi kaam ho to bhi wo poori chauRai ki qatar na ban
-            // jaye -- warna wo "kaam ka card" nahi, "ittila ki patti"
-            // lagta hai. Isi liye kam se kam do khaane.
-            className={`grid gap-3 ${
-              quick.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            }`}
+            // Khaane hamesha teen. Ek hi kaam ho to wo darmiyane naap ka
+            // card rehta hai -- poori chauRai ki qatar "kaam ka card"
+            // nahi, "ittila ki patti" lagti hai.
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
           >
             {quick.map((c) => (
               <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} openLabel={t("mw_open_now", lang)} />
@@ -268,11 +266,11 @@ export function MyWorkBody({
         )}
       </section>
 
-      <section>
-        <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
+      <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
           {t("mw_depts", lang)}
         </h2>
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {departments.map((d) => {
             const isOpen = !!open[d.key];
             const sections = new Map<string, CardData[]>();
@@ -282,14 +280,14 @@ export function MyWorkBody({
             }
 
             return (
-              <div key={d.key} className="overflow-hidden rounded-xl border border-surface-200 bg-surface-50/60 dark:border-surface-800 dark:bg-surface-900/40">
+              <div key={d.key} className="overflow-hidden rounded-xl border border-surface-200/80 transition hover:border-brand-300 hover:bg-brand-50/30 dark:border-surface-800 dark:hover:bg-brand-950/20">
                 <button
                   type="button"
                   onClick={() => toggle(d.key)}
-                  className="flex w-full items-center gap-3.5 px-4 py-4 text-left hover:bg-surface-100/70 dark:hover:bg-surface-800/50"
+                  className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left"
                   aria-expanded={isOpen}
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-sm dark:bg-surface-800 dark:text-brand-300">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
                     <Icon name={d.icon} className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -325,7 +323,7 @@ export function MyWorkBody({
                 </button>
 
                 {isOpen && (
-                  <div className="space-y-4 border-t border-surface-200 bg-white px-3 py-3 dark:border-surface-800 dark:bg-surface-900">
+                  <div className="space-y-4 border-t border-surface-200 bg-surface-50/60 px-3.5 py-4 dark:border-surface-800 dark:bg-surface-950/40">
                     {[...sections.entries()].map(([section, cards]) => (
                       <div key={section || "_"}>
                         {section && (

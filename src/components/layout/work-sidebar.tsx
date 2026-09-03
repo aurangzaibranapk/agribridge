@@ -112,7 +112,7 @@ export function WorkSidebar({
   }
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
+    <aside className="hidden w-[15rem] shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
       <Link href={homeHref} className="flex items-center gap-2 border-b border-surface-200 px-4 py-4 dark:border-surface-800">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
           <Sprout className="h-5 w-5" />

@@ -80,16 +80,15 @@ export function AssistantPanel() {
     setOpen(want);
   }, []);
 
-  // Safhe ko batana ke daayen taraf jagah ghir chuki hai -- warna maal
-  // panel ke neeche chhup jata hai.
+  // Panel safhe ka teesra khana NAHI hai -- wo neeche daayen kone mein
+  // tairta hua chhota window hai (malik ki tasheeh). Is liye safhe se
+  // jagah nahi maangta; sirf apni halat yaad rakhta hai.
   useEffect(() => {
-    document.body.classList.toggle("assistant-open", open);
     try {
       localStorage.setItem("agribridge:assistant-open", open ? "1" : "0");
     } catch {
       /* yaad na rahe to bhi chalta rahe */
     }
-    return () => document.body.classList.remove("assistant-open");
   }, [open]);
   const [dir, setDir] = useState<Directory | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -199,8 +198,8 @@ export function AssistantPanel() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[560px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-surface-200 bg-white shadow-2xl xl:top-[4.75rem] xl:bottom-6 xl:h-auto xl:w-[22rem] 2xl:w-[24rem] dark:border-surface-800 dark:bg-surface-900">
-          <div className="flex items-center justify-between bg-brand-600 px-3 py-2.5 text-white">
+        <div className="fixed bottom-5 right-5 z-50 flex h-[520px] w-[370px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-surface-200 bg-white shadow-2xl xl:h-[520px] xl:w-[380px] dark:border-surface-800 dark:bg-surface-900">
+          <div className="flex items-center justify-between bg-brand-700 px-3.5 py-3 text-white">
             <div className="flex items-center gap-2">
               {tab === "msg" && inThread && (
                 <button onClick={back} className="rounded p-0.5 hover:bg-white/20" aria-label="back">

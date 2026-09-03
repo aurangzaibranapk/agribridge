@@ -124,10 +124,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-[1000px]">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-surface-100">
+          <h1 className="font-display text-[28px] font-semibold text-surface-900 dark:text-surface-100">
             {t(greetKey, lang)}, {me.full_name}
           </h1>
           {/* Upar hamesha ek hi saada jumla. Ginti ka sach neeche "Aaj kya
@@ -135,7 +135,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               dikhati hai -- malik ka kehna theek tha ke salam ke sath
               "ginti nahi mil saki" likhna banday ko bemani ghabrahat
               deta hai. */}
-          <p className="mt-1 text-sm text-surface-500">{t("mw_subtitle_new", lang)}</p>
+          <p className="mt-1.5 text-[15px] text-surface-500">{t("mw_subtitle_new", lang)}</p>
         </div>
 
         <div className="flex items-center gap-3">

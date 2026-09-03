@@ -29,23 +29,3 @@ body {
     transform: translateX(150%);
   }
 }
-
-/*
- * Assistant khula ho to kaam ka khana daayen se sikuR jata hai.
- *
- * Panel screen par tairta hai (fixed). Us ke baghair safhe ka maal us ke
- * neeche chala jata -- khaas kar wo qatarein jo poori chauRai leti hain.
- * Ye jagah sirf bari screen par chhoRi jati hai; chhoti screen par panel
- * waise bhi band rehta hai.
- */
-@media (min-width: 1280px) {
-  body.assistant-open main {
-    padding-right: 23.5rem;
-  }
-}
-
-@media (min-width: 1536px) {
-  body.assistant-open main {
-    padding-right: 25.5rem;
-  }
-}

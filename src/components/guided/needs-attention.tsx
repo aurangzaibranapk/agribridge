@@ -70,7 +70,7 @@ export async function NeedsAttention({
     return (
       <section className="rounded-card border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
+          <h3 className="flex items-center gap-2 text-[15px] font-semibold text-surface-900 dark:text-white">
             <AlertTriangle className="h-4 w-4 text-amber-600" /> {t("na_title", lang)}
           </h3>
           {items.length > top.length && allHref ? (
@@ -94,16 +94,16 @@ export async function NeedsAttention({
                 <Link
                   key={it.key}
                   href={it.href}
-                  className={`group flex items-center gap-3 rounded-xl border px-3 py-3 transition hover:shadow-sm ${tone.box}`}
+                  className={`group flex items-center gap-3 rounded-xl border px-3.5 py-3.5 transition hover:shadow-sm ${tone.box}`}
                 >
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone.icon}`}>
-                    <Icon className="h-4 w-4" />
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
+                    <Icon className="h-[18px] w-[18px]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={`block text-lg font-semibold leading-none tabular-nums ${tone.num}`}>
+                    <span className={`block text-xl font-bold leading-none tabular-nums ${tone.num}`}>
                       {it.count == null ? "—" : it.count}
                     </span>
-                    <span className="mt-1 block truncate text-[13px] font-medium text-surface-800 dark:text-surface-200">
+                    <span className="mt-1.5 block truncate text-[13.5px] font-medium text-surface-800 dark:text-surface-200">
                       {t(it.label, lang)}
                     </span>
                   </span>
@@ -120,7 +120,7 @@ export async function NeedsAttention({
   return (
     <section className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
       <div className="flex items-center justify-between border-b border-surface-200 px-4 py-2.5 dark:border-surface-800">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-surface-900 dark:text-white">
           <AlertTriangle className="h-4 w-4 text-amber-600" /> {t("na_title", lang)}
         </h3>
         <span className="text-[11px] text-surface-400">{t("na_today", lang)}</span>
