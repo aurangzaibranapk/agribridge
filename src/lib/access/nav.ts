@@ -144,6 +144,32 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
     routes.add(row.route);
   }
 
+  // Ijazat ki darkhwastein (270/271): safha khud Manager aur Department
+  // Head ko khulta hai (fn_can_review_access wahi kehta hai), magar raaste
+  // ki rok sirf feature permission se banti thi -- aur is feature ki
+  // permission kisi role ke paas nahi thi. Nateeja: jis ke liye safha bana
+  // tha wohi wahan pahunch nahi sakta tha, /admin/my-work par wapas phink
+  // diya jata tha. Rok ab wahi shart maanti hai jo safha maanta hai.
+  if (role === "manager") {
+    routes.add("/admin/access-requests");
+    visible.add("access-requests");
+  } else {
+    const { data: headGrant } = await service
+      .from("department_head_grants")
+      .select("starts_at, expires_at")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (headGrant) {
+      const nowMs = Date.now();
+      const started = !headGrant.starts_at || new Date(headGrant.starts_at).getTime() <= nowMs;
+      const alive = !headGrant.expires_at || new Date(headGrant.expires_at).getTime() > nowMs;
+      if (started && alive) {
+        routes.add("/admin/access-requests");
+        visible.add("access-requests");
+      }
+    }
+  }
+
   // Nayi ijazat kahin se bhi na mile to purane raaste par chalte hain --
   // warna wo banda apne hi system se bahar ho jata hai.
   if (visible.size === 0) {
@@ -167,6 +193,8 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
     }
 
     const allowed = new Set([...ALWAYS, ...pages]);
+    // Sahara wale raaste par bhi head/manager ki darkhwastein khuli rahen.
+    if (routes.has("/admin/access-requests")) allowed.add("/admin/access-requests");
     return {
       groups: fallbackGroups(allowed),
       allowedRoutes: [...allowed],
