@@ -3,7 +3,7 @@ import * as Icons from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -189,7 +189,7 @@ export default async function MyWorkPage() {
           <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">{t("mw_nothing_assigned_hint", lang)}</p>
         </div>
       ) : (
-        <MyWorkBody lang={lang} quick={model.quick} departments={model.departments} />
+        <MyWorkBody lang={lang} quick={model.quick} departments={model.departments} defaultDept={defaultDashboardForRole(me.role)} />
       )}
     </div>
   );

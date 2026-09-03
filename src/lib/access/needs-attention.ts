@@ -71,6 +71,8 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     aiRequests,
     accessPending,
     accessConflicts,
+    cashCloseMissing,
+    stockCountOpen,
   ] = await Promise.all([
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "submitted")),
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "sent_back")),
@@ -90,6 +92,11 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     count("bridge_ai_action_requests", (q) => q.eq("status", "pending")),
     count("access_requests", (q) => q.eq("status", "pending")),
     count("access_conflict_findings", (q) => q.eq("status", "open").in("severity", ["high", "critical"])),
+    // Raat ki ginti jin shakhon ki abhi baqi hai. Ye "kaam baqi hai" ki
+    // sab se rozana misal hai, aur pehle sirf department ke adad mein
+    // gini jati thi -- banday ki apni fehrist mein nahi aati thi.
+    countView("v_cash_close_missing", "branch_id", (q) => q),
+    count("stock_counts", (q) => q.eq("status", "counting")),
   ]);
 
   const items: AttentionItem[] = [
@@ -111,6 +118,8 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     { key: "ai_requests", label: "na_ai_requests", count: aiRequests, href: "/admin/bridge-ai/action-requests", tone: "blue", area: "ai" },
     { key: "access_pending", label: "na_access_pending", count: accessPending, href: "/admin/access-requests", tone: "amber", area: "admin" },
     { key: "access_conflicts", label: "na_access_conflicts", count: accessConflicts, href: "/admin/access-requests?tab=conflicts", tone: "red", area: "admin" },
+    { key: "cash_close_missing", label: "na_cash_close_missing", count: cashCloseMissing, href: "/admin/cash-close", tone: "amber", area: "finance" },
+    { key: "stock_count_open", label: "na_stock_count_open", count: stockCountOpen, href: "/admin/stock-count", tone: "blue", area: "inventory" },
   ];
   return items;
 }

@@ -20,6 +20,7 @@ export const myWorkDict = {
   mw_need_you: { en: "{n} things need your attention today.", rm: "Aaj {n} cheezein aap ki tawajjo maang rahi hain.", ur: "آج {n} چیزیں آپ کی توجہ مانگ رہی ہیں۔" },
   mw_need_none: { en: "Nothing is pending on your pages right now.", rm: "Abhi aap ke safhon par kuch baqi nahi.", ur: "ابھی آپ کے صفحوں پر کچھ باقی نہیں۔" },
   mw_need_unknown: { en: "Some counts could not be read — open the pages to check.", rm: "Kuch ginti nahi mil saki -- safhe khol kar dekh lein.", ur: "کچھ گنتی نہیں مل سکی" },
+  mw_quick_clear: { en: "Nothing is pending on your pages right now.", rm: "Abhi aap ke zimme kuch baqi nahi.", ur: "ابھی آپ کے ذمے کچھ باقی نہیں۔" },
   mw_quick: { en: "Today's work", rm: "Aaj ka kaam", ur: "آج کا کام" },
   mw_depts: { en: "Your departments", rm: "Aap ke department", ur: "آپ کے شعبے" },
   mw_tools_n: { en: "{n} tools", rm: "{n} auzaar", ur: "{n} اوزار" },

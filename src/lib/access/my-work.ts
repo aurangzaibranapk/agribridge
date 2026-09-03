@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { loadRegistry } from "@/lib/access/registry";
 import { loadNeedsAttention, filterAttention, type AttentionItem } from "@/lib/access/needs-attention";
 import type { NavGroupData, NavEntry } from "@/lib/access/nav";
 import type { Lang, TranslationKey } from "@/lib/i18n/translations";
@@ -44,8 +45,6 @@ export interface CardBadge {
 
 export interface WorkCard extends NavEntry {
   badge: CardBadge | null;
-  /** Aur kin department mein ye cheez kaam aati hai. */
-  tags: string[];
 }
 
 export interface DeptBlock {
@@ -57,6 +56,8 @@ export interface DeptBlock {
   toolCount: number;
   /** Kitni cheezein tawajjo maang rahi hain (null = hisaab nahi mila). */
   attention: number | null;
+  /** Pehle teen auzaar ke naam -- band qatar par jhalak. */
+  preview: string[];
 }
 
 export interface MyWorkModel {
@@ -66,10 +67,16 @@ export interface MyWorkModel {
 }
 
 /**
- * Har role ka rozana ka kaam -- yehi "Aaj ka kaam" mein upar aata hai.
+ * Har role ka rozana ka kaam -- sirf TARTEEB ke liye.
  *
- * Ye fehrist ijazat nahi deti; sirf tarteeb batati hai. Jo cheez is
- * bande ko khulti hi nahi, wo yahan likhi ho kar bhi nazar nahi aayegi.
+ * Malik ka refinement (4 September): "Aaj ka kaam" mein fixed menu cards
+ * nahi hone chahiyen, sirf wo cheezein jin par WAQAI aaj kuch baqi hai.
+ * Is liye ye fehrist ab ye tay nahi karti ke card aayega ya nahi -- wo
+ * faisla asal ginti karti hai. Ye sirf itna kehti hai ke jab do cheezein
+ * barabar ki hon to is role ke liye kaun si pehle rakhi jaye.
+ *
+ * Aur ye fehrist ijazat nahi deti: jo cheez is bande ko khulti hi nahi,
+ * wo yahan likhi ho kar bhi nazar nahi aayegi.
  */
 const QUICK_BY_ROLE: Record<string, string[]> = {
   owner: ["submissions", "access-requests", "reconciliation", "cash-close", "command-center", "stock-count"],
@@ -85,6 +92,29 @@ const QUICK_BY_ROLE: Record<string, string[]> = {
   machinery: ["machinery-rental", "machinery-rental.dashboard", "machinery-rental.calendar"],
   admin_assistant: ["submissions", "messages", "contact-messages", "notifications"],
 };
+
+/**
+ * Login ke foran baad kaun sa department khula mile.
+ *
+ * Doodh wala banda roz Doodh hi kholta hai -- usay har dafa ek click
+ * karwana bekar hai. Manager/Owner ke liye jaan boojh kar KOI nahi: un
+ * ka kaam kisi ek department mein nahi, aur sab band rahen to nazar
+ * "Aaj ka kaam" par rehti hai.
+ */
+const HOME_DASHBOARD: Record<string, string> = {
+  milk_collection: "milk",
+  sales_staff: "sales",
+  warehouse: "inventory",
+  procurement: "purchase",
+  finance: "finance",
+  hr: "hr",
+  machinery: "machinery",
+  admin_assistant: "admin",
+};
+
+export function defaultDashboardForRole(role: string): string | null {
+  return HOME_DASHBOARD[role] ?? null;
+}
 
 /** Ek se ziyada jagah lagi cheez ka asal ghar -- "master" kabhi nahi. */
 const AGGREGATE_DASHBOARD = "master";
@@ -145,25 +175,22 @@ export async function buildMyWork(
   groups: NavGroupData[],
   allowedRoutes: string[] | null,
   role: string,
-  _lang: Lang
+  lang: Lang
 ): Promise<MyWorkModel> {
-  const [all, info] = await Promise.all([loadNeedsAttention(), infoBadges()]);
+  const [all, info, purposes] = await Promise.all([loadNeedsAttention(), infoBadges(), purposeByRoute(lang)]);
   const mine = filterAttention(all, allowedRoutes);
   const badges = badgesByRoute(mine);
 
-  // Kaun sa feature kis kis dashboard par hai -- tags ke liye.
-  const homesOf = new Map<string, string[]>();
-  for (const g of groups) {
-    for (const item of g.items) {
-      homesOf.set(item.href, [...(homesOf.get(item.href) ?? []), g.label]);
-    }
-  }
-
-  function decorate(item: NavEntry, ownDashboardLabel: string): WorkCard {
+  function decorate(item: NavEntry): WorkCard {
     return {
       ...item,
+      // Card ka doosra jumla: pehle feature ka apna, warna us ki likhi
+      // hui madad ka "maqsad". Dono na hon to KUCH NAHI -- khali jagah
+      // bharne ke liye jumla bana dena bande ko ghalat safhe par bhejta
+      // hai. (Malik ka refinement: yahan pehle "MASTER COMMAND · FINANCE"
+      // jaisi technical mapping aati thi -- wo staff ke kaam ki nahi.)
+      description: item.description ?? purposes.get(item.href) ?? null,
       badge: badges.get(item.href) ?? info.get(item.href) ?? null,
-      tags: (homesOf.get(item.href) ?? []).filter((l) => l !== ownDashboardLabel),
     };
   }
 
@@ -179,7 +206,7 @@ export async function buildMyWork(
     for (const item of g.items) {
       if (placed.has(item.href)) continue;
       placed.add(item.href);
-      tools.push(decorate(item, g.label));
+      tools.push(decorate(item));
     }
     if (tools.length === 0) continue;
 
@@ -200,49 +227,62 @@ export async function buildMyWork(
       tools,
       toolCount: tools.length,
       attention,
+      preview: tools.slice(0, 3).map((c) => c.label),
     });
   }
 
-  // "Aaj ka kaam": pehle role ki apni fehrist, phir jin par abhi kuch
-  // baqi hai. Chhe se ziyada nahi -- warna ye bhi wahi lambi fehrist ban
-  // jayegi jis se bhaag rahe hain.
-  const byKeyGuess = new Map<string, WorkCard>();
-  for (const d of departments) for (const c of d.tools) byKeyGuess.set(c.href, c);
+  // "Aaj ka kaam" -- sirf wo cheezein jin par WAQAI aaj kuch baqi hai.
+  // Fixed menu cards yahan nahi aate (malik ka refinement): agar kuch
+  // pending nahi to ye hissa hi nahi banta aur safha "sab clear" kehta
+  // hai. Ek khali qatar dikhane se behtar hai ke banda dekh le ke aaj
+  // kuch nahi hai.
+  const order = QUICK_BY_ROLE[role] ?? [];
+  const rank = new Map(order.map((k, i) => [`/admin/${k.replace(/\./g, "/")}`, i]));
 
-  const wanted = QUICK_BY_ROLE[role] ?? [];
   const quick: WorkCard[] = [];
-  const seen = new Set<string>();
-
-  for (const key of wanted) {
-    // feature ki chaabi se raasta banana theek nahi (chaabi mein nuqte
-    // hote hain), is liye raaste se milaya jata hai.
-    const guess = `/admin/${key.replace(/\./g, "/")}`;
-    const card = byKeyGuess.get(guess);
-    if (card && !seen.has(card.href)) { seen.add(card.href); quick.push(card); }
-  }
-
-  // Jin par abhi kuch baqi hai wo bhi upar aane chahiyen, chahe role ki
-  // fehrist mein na hon.
   for (const d of departments) {
     for (const c of d.tools) {
-      if (quick.length >= 6) break;
-      if (seen.has(c.href)) continue;
-      if (c.badge && c.badge.tone !== "gray" && (c.badge.count === null || c.badge.count > 0)) {
-        seen.add(c.href);
-        quick.push(c);
-      }
+      if (!c.badge || c.badge.tone === "gray") continue;
+      // null = ginti nahi mili. Ye bhi upar aana chahiye: "—" dekh kar
+      // banda khud kholta hai. Sifar wala card yahan nahi aata.
+      if (c.badge.count !== null && c.badge.count <= 0) continue;
+      quick.push(c);
     }
   }
 
-  // Jin par kaam baqi hai wo pehle.
-  quick.sort((a, b) => {
-    const w = (c: WorkCard) => (c.badge && c.badge.tone === "red" ? 0 : c.badge && c.badge.tone !== "gray" ? 1 : 2);
-    return w(a) - w(b);
-  });
+  const tone = (c: WorkCard) => (c.badge?.tone === "red" ? 0 : c.badge?.tone === "amber" ? 1 : 2);
+  quick.sort((a, b) => tone(a) - tone(b) || (rank.get(a.href) ?? 99) - (rank.get(b.href) ?? 99));
 
   return {
     quick: quick.slice(0, 6),
     departments,
     totalCards: placed.size,
   };
+}
+
+/**
+ * Feature ka "maqsad" -- card ka doosra jumla, chuni hui zaban mein.
+ *
+ * Ye pehle se likha hua hai (feature_help), sirf yahan tak nahi pahunch
+ * raha tha. 183 mein se sirf 25 features ka apna doosra jumla bhara hua
+ * hai; madad ki qatar us kami ka bara hissa poora kar deti hai.
+ */
+async function purposeByRoute(lang: Lang): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    const service = createServiceClient();
+    const registry = await loadRegistry(lang);
+    const { data } = await service
+      .from("feature_help")
+      .select("feature_key, purpose")
+      .eq("lang", lang === "en" ? "en" : "rm");
+    for (const row of data ?? []) {
+      const f = registry.features.get(row.feature_key as string);
+      if (f && row.purpose) out.set(f.route, row.purpose as string);
+    }
+  } catch {
+    // Madad na mile to card sirf naam ke sath aayega -- ye kami hai,
+    // jhoot nahi.
+  }
+  return out;
 }

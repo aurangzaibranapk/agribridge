@@ -480,3 +480,31 @@ jata hai.
 success-receipt waghera alag component ki shakl mein). Abhi jawab saaf
 matn hai jo theek shakl mein rendered hota hai; card wala qadam agli
 dafa.
+
+### 13a. Chaar polish (malik, 4 September — "structure YES, ab polish")
+
+1. **"Aaj ka kaam" ab fixed cards nahi.** Sirf wo cheezein jin par WAQAI
+   aaj kuch baqi hai (asal ginti se). Kuch pending na ho to card ki jagah
+   ek jumla: *"Abhi aap ke zimme kuch baqi nahi."* Role ki fehrist
+   (`QUICK_BY_ROLE`) ab sirf **tarteeb** batati hai — ye nahi ke card
+   aayega ya nahi. Jis card ki ginti na mili ho (`—`) wo bhi upar aata
+   hai: banda khud khol kar dekh leta hai.
+2. **Do nayi qatarein "aaj baqi" mein:** raat ki cash ginti jin shakhon
+   ki baqi hai (`v_cash_close_missing`), aur chalti hui maal ki ginti.
+   Ye rozana ki sab se aam do cheezein thin aur pehle sirf department ke
+   adad mein ginti thin, banday ki apni fehrist mein nahi aati thin.
+3. **Technical mapping hat gayi.** Card ke neeche `MASTER COMMAND ·
+   FINANCE …` nahi. Us ki jagah insani jumla: feature ka apna, warna us
+   ki likhi hui madad ka *maqsad* (`feature_help.purpose`). Dono na hon
+   to **kuch nahi** — khali jagah bharne ke liye jumla bana dena bande ko
+   ghalat safhe par bhejta hai. (183 mein se 25 features ka apna jumla
+   bhara hai; madad ki 39 qatarein us kami ka bara hissa poora karti
+   hain.)
+4. **Department ki qatar zyada batati hai:** auzaar ki tadaad, kitne par
+   kaam baqi, aur band halat mein pehle teen auzaar ke naam ki jhalak.
+5. **Role ke hisaab se khula department:** Doodh wale ko Doodh, Bikri
+   wale ko Bikri aur Dukan, Godam wale ko Stock aur Godam. Manager/Owner
+   ke liye jaan boojh kar **koi nahi** — un ka kaam kisi ek department
+   mein nahi, aur sab band rahen to nazar "Aaj ka kaam" par rehti hai.
+   Aakhri khola gaya department yaad rehta hai (`localStorage`, sirf usi
+   browser mein) aur wo role ke default par ghalib aata hai.

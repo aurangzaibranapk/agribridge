@@ -554,6 +554,8 @@ export const productsFlowDict = {
   na_reorder_urgent: { en: "products out or under 7 days of stock", rm: "cheezein khatam ya 7 din se kam stock", ur: "چیزیں ختم یا 7 دن سے کم اسٹاک" },
   na_ai_requests: { en: "AI proposals to review", rm: "AI ki tajweezein manzoori baqi", ur: "AI کی تجاویز منظوری باقی" },
   na_access_pending: { en: "Access requests pending", rm: "Ijazat ki darkhwastein baqi", ur: "اجازت کی درخواستیں باقی" },
+  na_cash_close_missing: { en: "Cash closing still due", rm: "Raat ki cash ginti baqi", ur: "رات کی کیش گنتی باقی" },
+  na_stock_count_open: { en: "Stock count in progress", rm: "Maal ki ginti chal rahi hai", ur: "مال کی گنتی چل رہی ہے" },
   na_access_conflicts: { en: "High/critical access conflicts", rm: "Ijazat ka takraao (high/critical)", ur: "اجازت کا ٹکراؤ" },
   ns_p_draft: { en: "Draft", rm: "Draft", ur: "ڈرافٹ" },
   ns_p_approval: { en: "Approval", rm: "Manzoori", ur: "منظوری" },

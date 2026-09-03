@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import * as Icons from "lucide-react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 
 /**
@@ -23,7 +23,6 @@ export interface CardData {
   icon: string | null;
   section?: string | null;
   badge: { count: number | null; tone: "red" | "amber" | "blue" | "gray"; label: string | null } | null;
-  tags: string[];
 }
 
 export interface DeptData {
@@ -33,6 +32,7 @@ export interface DeptData {
   tools: CardData[];
   toolCount: number;
   attention: number | null;
+  preview: string[];
 }
 
 const TONE: Record<string, string> = {
@@ -82,11 +82,6 @@ export function WorkCard({ card, big = false, onOpen }: { card: CardData; big?: 
         {card.description && (
           <span className="mt-0.5 block text-xs leading-relaxed text-surface-500">{card.description}</span>
         )}
-        {card.tags.length > 0 && (
-          <span className="mt-1.5 block text-[10px] uppercase tracking-wide text-surface-400">
-            {card.tags.join(" · ")}
-          </span>
-        )}
       </span>
       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-surface-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
     </Link>
@@ -124,11 +119,51 @@ export function useRecent(): [string[], (href: string) => void] {
   return [recent, remember];
 }
 
-export function MyWorkBody({ lang, quick, departments }: { lang: Lang; quick: CardData[]; departments: DeptData[] }) {
-  const [open, setOpen] = useState<Record<string, boolean>>(() =>
-    departments.length ? { [departments[0].key]: true } : {}
-  );
+/** Aakhri khola gaya department -- isi browser mein. */
+const LAST_DEPT_KEY = "agribridge:last-dept";
+
+export function MyWorkBody({
+  lang, quick, departments, defaultDept,
+}: {
+  lang: Lang;
+  quick: CardData[];
+  departments: DeptData[];
+  /**
+   * Role ka apna department -- login ke foran baad wohi khula milta hai.
+   * null (manager/owner) = sab band, taake "Aaj ka kaam" par nazar rahe.
+   */
+  defaultDept: string | null;
+}) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [recent, remember] = useRecent();
+
+  // Pehla faisla client par hota hai, server par nahi: aakhri khola gaya
+  // department sirf isi browser ko maloom hai. Us ke baghair role ka
+  // apna department, aur wo bhi na ho to sab band.
+  useEffect(() => {
+    let key: string | null = null;
+    try {
+      const saved = localStorage.getItem(LAST_DEPT_KEY);
+      if (saved && departments.some((d) => d.key === saved)) key = saved;
+    } catch {
+      /* private window -- role wala default chal jayega */
+    }
+    if (!key && defaultDept && departments.some((d) => d.key === defaultDept)) key = defaultDept;
+    if (key) setOpen({ [key]: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultDept, departments.length]);
+
+  function toggle(key: string) {
+    setOpen((o) => {
+      const next = { ...o, [key]: !o[key] };
+      try {
+        if (next[key]) localStorage.setItem(LAST_DEPT_KEY, key);
+      } catch {
+        /* yaad na rahe to bhi safha chalta rahe */
+      }
+      return next;
+    });
+  }
 
   const byHref = new Map<string, CardData>();
   for (const d of departments) for (const c of d.tools) byHref.set(c.href, c);
@@ -157,18 +192,25 @@ export function MyWorkBody({ lang, quick, departments }: { lang: Lang; quick: Ca
         </section>
       )}
 
-      {quick.length > 0 && (
-        <section>
-          <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
-            {t("mw_quick", lang)}
-          </h2>
+      <section>
+        <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
+          {t("mw_quick", lang)}
+        </h2>
+        {quick.length === 0 ? (
+          // Khali qatar dikhane se behtar hai ke banda ek jumle mein dekh
+          // le ke aaj is ke zimme kuch nahi.
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            {t("mw_quick_clear", lang)}
+          </div>
+        ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {quick.map((c) => (
               <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} />
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       <section>
         <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
@@ -187,7 +229,7 @@ export function MyWorkBody({ lang, quick, departments }: { lang: Lang; quick: Ca
               <div key={d.key} className="overflow-hidden rounded-xl border border-surface-200 bg-surface-50/60 dark:border-surface-800 dark:bg-surface-900/40">
                 <button
                   type="button"
-                  onClick={() => setOpen((o) => ({ ...o, [d.key]: !o[d.key] }))}
+                  onClick={() => toggle(d.key)}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-100/70 dark:hover:bg-surface-800/50"
                   aria-expanded={isOpen}
                 >
@@ -205,6 +247,14 @@ export function MyWorkBody({ lang, quick, departments }: { lang: Lang; quick: Ca
                           ? t("mw_need_n", lang).replace("{n}", String(d.attention))
                           : t("mw_all_clear", lang)}
                     </span>
+                    {/* Band qatar par jhalak -- warna banda har department
+                        khol kar dekhta hai ke andar hai kya. */}
+                    {!isOpen && d.preview.length > 0 && (
+                      <span className="mt-0.5 block truncate text-[11px] text-surface-400">
+                        {d.preview.join(", ")}
+                        {d.toolCount > d.preview.length ? "…" : ""}
+                      </span>
+                    )}
                   </span>
                   {d.attention !== null && d.attention > 0 && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
