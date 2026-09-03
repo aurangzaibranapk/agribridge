@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isStaffRole } from "@/lib/utils/roles";
 import { homePageForRole } from "@/lib/departments";
+import { ACCESS_REVIEW_ROUTE, roleCanReviewAccess, headGrantActive } from "@/lib/access/reviewer-routes";
 
 /** Ye hamesha khulte hain, chahe ijazat mein likhe hon ya na hon. */
 const ALWAYS_OPEN = ["/admin/permissions-denied", "/admin/my-attendance"];
@@ -78,10 +79,27 @@ export async function middleware(request: NextRequest) {
         allowed.push(row.route);
       }
 
+      // Ijazat ki darkhwastein: Manager aur chalta hua Department Head
+      // wahan ja sakte hain, chahe koi feature permission na ho. Shart
+      // wahi hai jo menu (nav.ts) aur safha (page.tsx) parhte hain --
+      // teenon reviewer-routes.ts se. Pehle sirf menu theek kiya gaya
+      // tha aur rok yahan purani reh gayi thi: card nazar aata tha,
+      // click par banda wapas My Work par pahunch jata tha.
+      if (roleCanReviewAccess(profile.role)) {
+        allowed.push(ACCESS_REVIEW_ROUTE);
+      } else {
+        const { data: headGrant } = await supabase
+          .from("department_head_grants")
+          .select("starts_at, expires_at")
+          .eq("profile_id", user.id)
+          .maybeSingle();
+        if (headGrantActive(headGrant)) allowed.push(ACCESS_REVIEW_ROUTE);
+      }
+
       // Nayi ijazat kahin se na mile to purane raaste par -- warna wo
       // banda apne hi system se bahar ho jata hai. Ghalat menu se band
       // system kahin bura hai.
-      if (allowed.length === ALWAYS_OPEN.length + 1) {
+      if (!rows || rows.length === 0) {
         const ownPages = (profile.allowed_pages as string[] | null) ?? null;
         let rolePages: string[] = [];
         if (!ownPages || ownPages.length === 0) {

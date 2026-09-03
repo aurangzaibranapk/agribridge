@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { GuideOverlay } from "@/components/guided/guide-overlay";
 import { CompactNav } from "@/components/layout/compact-nav";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
+import { NavProgress } from "@/components/layout/nav-progress";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { sidebarModeFor } from "@/lib/access/sidebar-free";
@@ -81,6 +82,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         )}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
+      <Suspense fallback={null}><NavProgress /></Suspense>
       {user && <AssistantPanel />}
       {user && (
         <Suspense fallback={null}>

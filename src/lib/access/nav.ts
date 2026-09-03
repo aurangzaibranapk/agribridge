@@ -4,6 +4,7 @@ import type { Lang } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { homePageForRole } from "@/lib/departments";
 import { ADMIN_NAV_GROUPS } from "@/components/layout/nav-items";
+import { ACCESS_REVIEW_ROUTE, roleCanReviewAccess, headGrantActive } from "@/lib/access/reviewer-routes";
 
 /**
  * Menu database se banta hai -- ab code se nahi.
@@ -145,13 +146,12 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
   }
 
   // Ijazat ki darkhwastein (270/271): safha khud Manager aur Department
-  // Head ko khulta hai (fn_can_review_access wahi kehta hai), magar raaste
-  // ki rok sirf feature permission se banti thi -- aur is feature ki
-  // permission kisi role ke paas nahi thi. Nateeja: jis ke liye safha bana
-  // tha wohi wahan pahunch nahi sakta tha, /admin/my-work par wapas phink
-  // diya jata tha. Rok ab wahi shart maanti hai jo safha maanta hai.
-  if (role === "manager") {
-    routes.add("/admin/access-requests");
+  // Head ko khulta hai, magar raaste ki rok sirf feature permission se
+  // banti thi -- aur is feature ki permission kisi role ke paas nahi thi.
+  // Shart ab reviewer-routes.ts mein ek jagah hai (menu, rok aur safha
+  // teenon wahi parhte hain).
+  if (roleCanReviewAccess(role)) {
+    routes.add(ACCESS_REVIEW_ROUTE);
     visible.add("access-requests");
   } else {
     const { data: headGrant } = await service
@@ -159,14 +159,9 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
       .select("starts_at, expires_at")
       .eq("profile_id", profileId)
       .maybeSingle();
-    if (headGrant) {
-      const nowMs = Date.now();
-      const started = !headGrant.starts_at || new Date(headGrant.starts_at).getTime() <= nowMs;
-      const alive = !headGrant.expires_at || new Date(headGrant.expires_at).getTime() > nowMs;
-      if (started && alive) {
-        routes.add("/admin/access-requests");
-        visible.add("access-requests");
-      }
+    if (headGrantActive(headGrant)) {
+      routes.add(ACCESS_REVIEW_ROUTE);
+      visible.add("access-requests");
     }
   }
 
@@ -194,7 +189,7 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
 
     const allowed = new Set([...ALWAYS, ...pages]);
     // Sahara wale raaste par bhi head/manager ki darkhwastein khuli rahen.
-    if (routes.has("/admin/access-requests")) allowed.add("/admin/access-requests");
+    if (routes.has(ACCESS_REVIEW_ROUTE)) allowed.add(ACCESS_REVIEW_ROUTE);
     return {
       groups: fallbackGroups(allowed),
       allowedRoutes: [...allowed],
