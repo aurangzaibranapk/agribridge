@@ -5,7 +5,6 @@ import { loadNav } from "@/lib/access/nav";
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
-import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -107,14 +106,6 @@ export default async function MyWorkPage() {
   const groups = nav.groups.filter((g) => g.items.length > 0);
   const model = await buildMyWork(groups, allowed, me.role, lang);
 
-  // Upar ka jumla: "aaj kitni cheezein tawajjo maang rahi hain". Jis
-  // qatar ki ginti hi na mili ho us ki wajah se poora adad jhoota ho
-  // jata hai -- is liye us soorat mein adad ke bajaye saaf likha jata
-  // hai ke kuch hisaab nahi mila.
-  const attentionItems = filterAttention(await loadNeedsAttention(), allowed);
-  const unknownCount = attentionItems.some((i) => i.count === null);
-  const needCount = attentionItems.reduce((n, i) => n + (i.count ?? 0), 0);
-
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
@@ -125,13 +116,12 @@ export default async function MyWorkPage() {
           <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-surface-100">
             {t(greetKey, lang)}, {me.full_name}
           </h1>
-          <p className="mt-1 text-sm text-surface-500">
-            {unknownCount
-              ? t("mw_need_unknown", lang)
-              : needCount > 0
-                ? t("mw_need_you", lang).replace("{n}", String(needCount))
-                : t("mw_need_none", lang)}
-          </p>
+          {/* Upar hamesha ek hi saada jumla. Ginti ka sach neeche "Aaj kya
+              baqi hai" mein hai, jahan har qatar apna adad ya "—" khud
+              dikhati hai -- malik ka kehna theek tha ke salam ke sath
+              "ginti nahi mil saki" likhna banday ko bemani ghabrahat
+              deta hai. */}
+          <p className="mt-1 text-sm text-surface-500">{t("mw_subtitle_new", lang)}</p>
         </div>
 
         {scoreRow && (

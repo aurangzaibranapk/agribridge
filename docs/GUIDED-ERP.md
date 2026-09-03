@@ -508,3 +508,37 @@ dafa.
    mein nahi, aur sab band rahen to nazar "Aaj ka kaam" par rehti hai.
    Aakhri khola gaya department yaad rehta hai (`localStorage`, sirf usi
    browser mein) aur wo role ke default par ghalib aata hai.
+
+### 13b. Final My Work rule (malik ne lock kiya, 4 September)
+
+```
+Login -> Mera Kaam -> Aaj kya baqi hai -> Aaj ka kaam -> Apna Department -> Feature
+                                                              aur samajh na aaye to: AI Assistant
+```
+
+Tarteeb safhe par isi tarah hai: salam -> **Aaj kya baqi hai** (asal
+ginti) -> **Haal hi mein istemal** (4) -> **Aaj ka kaam** -> **Aap ke
+department** -> neeche daayen kone mein AI.
+
+Is qadam par ye teen cheezein badlin:
+
+- **Salam ke sath technical jumla nahi.** Pehle wahan "kuch ginti nahi
+  mil saki" aa sakta tha; malik ka kehna theek tha ke ye bemani ghabrahat
+  deta hai. Upar ab hamesha ek hi saada jumla; ginti ka sach neeche "Aaj
+  kya baqi hai" mein hai, jahan har qatar apna adad ya `—` khud dikhati
+  hai.
+- **"5 auzaar" -> "5 kaam"** (teenon zabanon mein).
+- **Ek ya do hi kaam** hon to card poori chauRai leta hai -- teen ke
+  khaane mein baayen kone ka chhota card nahi.
+
+**Naya feature aane par:** wo apne department ke andar jayega. Upar wala
+hissa sirf ahmiyat aur aaj ka kaam dikhata hai -- us mein cards bharte
+nahi jana. Ye malik ka lock kiya hua usool hai.
+
+**Ek cheez jaan boojh kar malik ke nuqta 9 se alag rakhi:** wahan har
+role ke liye "Aaj ka kaam" ki muqarrara fehrist likhi thi (Shop staff ->
+POS, Stock Receive...). Magar us se pehle wale usool mein khud malik ne
+kaha tha ke yahan **fixed menu cards nahi**, sirf aaj ke asal kaam. Dono
+ek sath nahi ho sakte, is liye asal ginti wala usool chala: role ki
+fehrist sirf **tarteeb** tay karti hai, aur kuch pending na ho to saaf
+likha jata hai "Aaj koi zaroori kaam baqi nahi."

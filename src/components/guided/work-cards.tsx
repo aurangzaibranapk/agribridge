@@ -204,7 +204,18 @@ export function MyWorkBody({
             {t("mw_quick_clear", lang)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          // Ek ya do hi kaam hon to unhen teen ke khaane mein daal kar
+          // baayen kone mein chhota na chhoRein -- card poori chauRai
+          // mein zyada saaf nazar aata hai.
+          <div
+            className={`grid gap-3 ${
+              quick.length === 1
+                ? "grid-cols-1"
+                : quick.length === 2
+                  ? "grid-cols-1 sm:grid-cols-2"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            }`}
+          >
             {quick.map((c) => (
               <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} />
             ))}
