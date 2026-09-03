@@ -83,20 +83,42 @@ export function AssistantPanel() {
     setMessages(data ?? []);
   }
 
+  async function loadDirectory() {
+    const res = await fetch("/api/messages/contacts");
+    if (res.ok) setDir(await res.json());
+  }
+
   async function loadAll() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
-    const res = await fetch("/api/messages/contacts");
-    if (res.ok) setDir(await res.json());
-    await loadMessages(user.id);
+    await Promise.all([loadDirectory(), loadMessages(user.id)]);
   }
 
+  // Kya kitni dafa poochna hai -- do alag cheezein hain, is liye do alag
+  // hisaab:
+  //
+  //   Paighaam badalte rehte hain -- panel khula ho to 5 second, band ho
+  //   to 30 (band panel par sirf gol button ka hara nishan chahiye).
+  //   Directory (kaun kis se baat kar sakta hai) mahine mein shayad ek
+  //   dafa badalti hai. Pehle wo bhi har 5 second par poori dobara aati
+  //   thi -- har mulazim ki screen se, sara din. Ab sirf shuru mein aur
+  //   panel kholne par.
   useEffect(() => {
     loadAll();
-    const id = setInterval(loadAll, 5000);
-    return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const gap = open ? 5000 : 30000;
+    const id = setInterval(() => loadMessages(userId), gap);
+    return () => clearInterval(id);
+  }, [userId, open]);
+
+  useEffect(() => {
+    if (open) loadDirectory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!userId) return null;
 
@@ -191,7 +213,7 @@ export function AssistantPanel() {
             <GroupSendPane
               kind="all"
               count={dir?.announceCount ?? 0}
-              onDone={() => { back(); loadAll(); }}
+              onDone={() => { back(); loadMessages(userId); }}
             />
           )}
 
@@ -201,7 +223,7 @@ export function AssistantPanel() {
               deptKey={withDept.key}
               deptLabel={withDept.label}
               count={withDept.count}
-              onDone={() => { back(); loadAll(); }}
+              onDone={() => { back(); loadMessages(userId); }}
             />
           )}
 
