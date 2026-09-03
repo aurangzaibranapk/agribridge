@@ -61,8 +61,36 @@ interface Turn { role: "user" | "assistant"; text: string; image?: string }
 export function AssistantPanel() {
   const lang = useLang();
   const pathname = usePathname();
+  // Bare screen par panel khula hi rehta hai (malik ka reference): safha
+  // teen hisson ka ban jata hai -- navigation, kaam, aur AI. Chhoti
+  // screen par wo jagah cheen leta, is liye wahan band. Banda band kar
+  // de to yaad rakha jata hai.
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
+
+  useEffect(() => {
+    let want = window.innerWidth >= 1280;
+    try {
+      const saved = localStorage.getItem("agribridge:assistant-open");
+      if (saved === "0") want = false;
+      if (saved === "1") want = window.innerWidth >= 1024;
+    } catch {
+      /* storage band ho to bhi chalta rahe */
+    }
+    setOpen(want);
+  }, []);
+
+  // Safhe ko batana ke daayen taraf jagah ghir chuki hai -- warna maal
+  // panel ke neeche chhup jata hai.
+  useEffect(() => {
+    document.body.classList.toggle("assistant-open", open);
+    try {
+      localStorage.setItem("agribridge:assistant-open", open ? "1" : "0");
+    } catch {
+      /* yaad na rahe to bhi chalta rahe */
+    }
+    return () => document.body.classList.remove("assistant-open");
+  }, [open]);
   const [dir, setDir] = useState<Directory | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -171,7 +199,7 @@ export function AssistantPanel() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[560px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-surface-200 bg-white shadow-2xl dark:border-surface-800 dark:bg-surface-900">
+        <div className="fixed bottom-5 right-5 z-50 flex h-[560px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-xl border border-surface-200 bg-white shadow-2xl xl:top-[4.75rem] xl:bottom-6 xl:h-auto xl:w-[22rem] 2xl:w-[24rem] dark:border-surface-800 dark:bg-surface-900">
           <div className="flex items-center justify-between bg-brand-600 px-3 py-2.5 text-white">
             <div className="flex items-center gap-2">
               {tab === "msg" && inThread && (

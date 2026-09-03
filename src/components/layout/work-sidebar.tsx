@@ -76,13 +76,13 @@ export function WorkSidebar({
     return (
       <Link
         href={item.href}
-        className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition ${
+        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
           active
             ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-200"
             : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
         }`}
       >
-        <Icon name={item.icon} className="h-4 w-4 shrink-0 text-surface-400" />
+        <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0 text-surface-400" />
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {show && (
           <span
@@ -101,7 +101,7 @@ export function WorkSidebar({
     if (items.length === 0) return null;
     return (
       <div className="mb-4">
-        <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-surface-400">{label}</p>
+        <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-surface-400">{label}</p>
         <div className="space-y-0.5">
           {items.map((i) => (
             <Row key={i.href} item={i} />
@@ -112,12 +112,12 @@ export function WorkSidebar({
   }
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
       <Link href={homeHref} className="flex items-center gap-2 border-b border-surface-200 px-4 py-4 dark:border-surface-800">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-          <Sprout className="h-4.5 w-4.5" />
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
+          <Sprout className="h-5 w-5" />
         </span>
-        <span className="font-display text-[15px] font-semibold text-surface-900 dark:text-white">AgriBridge</span>
+        <span className="font-display text-base font-semibold text-surface-900 dark:text-white">AgriBridge</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
@@ -139,8 +139,8 @@ export function WorkSidebar({
       >
         <Bot className="h-4 w-4 shrink-0 text-brand-600" />
         <span className="min-w-0">
-          <span className="block text-[13px] font-medium text-brand-800 dark:text-brand-200">{t("ws_ai", lang)}</span>
-          <span className="block truncate text-[10px] text-brand-600/80 dark:text-brand-300/70">{t("ws_ai_sub", lang)}</span>
+          <span className="block text-sm font-medium text-brand-800 dark:text-brand-200">{t("ws_ai", lang)}</span>
+          <span className="block truncate text-[11px] text-brand-600/80 dark:text-brand-300/70">{t("ws_ai_sub", lang)}</span>
         </span>
       </button>
     </aside>

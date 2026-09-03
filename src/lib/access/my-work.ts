@@ -2,7 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { loadRegistry } from "@/lib/access/registry";
 import { loadNeedsAttention, filterAttention, type AttentionItem } from "@/lib/access/needs-attention";
 import type { NavGroupData, NavEntry } from "@/lib/access/nav";
-import type { Lang, TranslationKey } from "@/lib/i18n/translations";
+import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 /**
  * "Mera Kaam" ka dhancha -- cards ki fehrist se ek kaam ka naqsha.
@@ -40,7 +40,15 @@ export interface CardBadge {
   /** null = ginti mili hi nahi -- safhe par "—". */
   count: number | null;
   tone: "red" | "amber" | "blue" | "gray";
-  label: TranslationKey | null;
+  /**
+   * Tayyar (tarjuma shuda) naam -- chaabi NAHI.
+   *
+   * Pehle yahan `TranslationKey` jata tha aur card us par seedha likh
+   * deta tha: screen par "1 na_access_pending" nazar aaya. Chaabi code
+   * ki zaban hai; is safhe par sirf wo lafz aane chahiyen jo banda
+   * parh sake.
+   */
+  label: string | null;
 }
 
 export interface WorkCard extends NavEntry {
@@ -124,7 +132,7 @@ const AGGREGATE_DASHBOARD = "master";
  * pehle wala hissa) hai, kyunke attention ki qatarein raaste se milti
  * hain, feature ki chaabi se nahi.
  */
-function badgesByRoute(items: AttentionItem[]): Map<string, CardBadge> {
+function badgesByRoute(items: AttentionItem[], lang: Lang): Map<string, CardBadge> {
   const out = new Map<string, CardBadge>();
   const order = { red: 0, amber: 1, blue: 2, gray: 3 } as const;
   for (const it of items) {
@@ -137,7 +145,7 @@ function badgesByRoute(items: AttentionItem[]): Map<string, CardBadge> {
     const merged: CardBadge = {
       count: prev == null ? it.count : prev.count == null || it.count == null ? null : prev.count + it.count,
       tone: prev && order[prev.tone] <= order[it.tone] ? prev.tone : it.tone,
-      label: prev ? null : it.label,
+      label: prev ? null : t(it.label, lang),
     };
     out.set(path, merged);
   }
@@ -145,7 +153,7 @@ function badgesByRoute(items: AttentionItem[]): Map<string, CardBadge> {
 }
 
 /** Ek aur ginti: kisi safhe par "kitni cheezein hain" (kaam baqi nahi). */
-async function infoBadges(): Promise<Map<string, CardBadge>> {
+async function infoBadges(lang: Lang): Promise<Map<string, CardBadge>> {
   const out = new Map<string, CardBadge>();
   const service = createServiceClient();
 
@@ -166,8 +174,8 @@ async function infoBadges(): Promise<Map<string, CardBadge>> {
 
   // Ye adad "kaam baqi hai" nahi kehte, sirf halat batate hain -- is liye
   // rang neutral hai aur inhen tawajjo wali ginti mein nahi gina jata.
-  if (sales !== null) out.set("/admin/pos", { count: sales, tone: "gray", label: "mw_b_sales_today" });
-  if (products !== null) out.set("/admin/inventory", { count: products, tone: "gray", label: "mw_b_products" });
+  if (sales !== null) out.set("/admin/pos", { count: sales, tone: "gray", label: t("mw_b_sales_today", lang) });
+  if (products !== null) out.set("/admin/inventory", { count: products, tone: "gray", label: t("mw_b_products", lang) });
   return out;
 }
 
@@ -177,9 +185,9 @@ export async function buildMyWork(
   role: string,
   lang: Lang
 ): Promise<MyWorkModel> {
-  const [all, info, purposes] = await Promise.all([loadNeedsAttention(), infoBadges(), purposeByRoute(lang)]);
+  const [all, info, purposes] = await Promise.all([loadNeedsAttention(), infoBadges(lang), purposeByRoute(lang)]);
   const mine = filterAttention(all, allowedRoutes);
-  const badges = badgesByRoute(mine);
+  const badges = badgesByRoute(mine, lang);
 
   function decorate(item: NavEntry): WorkCard {
     return {

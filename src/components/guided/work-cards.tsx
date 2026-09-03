@@ -196,8 +196,10 @@ export function MyWorkBody({
 
   return (
     <div className="space-y-7">
-      {recentCards.length > 0 && (
-        <section>
+      {/* Ye hissa khali bhi rehta hai to nazar aata hai -- warna safha har
+          naye bande ke liye alag shakl ka lagta hai, aur wo samajh nahi
+          pata ke yahan aata kya hai. */}
+      <section>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
               {t("mw_recent", lang)}
@@ -205,29 +207,36 @@ export function MyWorkBody({
             {/* Ye fehrist khud banti hai; bande ke paas usay mitane ka
                 raasta hona chahiye -- warna ek dafa khola hua safha
                 hamesha uske saamne rehta hai. */}
-            <button
-              type="button"
-              onClick={clearRecent}
-              className="text-[11px] font-medium text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
-            >
-              {t("mw_recent_clear", lang)}
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {recentCards.map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                onClick={() => remember(c.href)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-700 hover:border-brand-300 hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
+            {recentCards.length > 0 && (
+              <button
+                type="button"
+                onClick={clearRecent}
+                className="text-[11px] font-medium text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
               >
-                <Icon name={c.icon} className="h-3.5 w-3.5 text-brand-600" />
-                {c.label}
-              </Link>
-            ))}
+                {t("mw_recent_clear", lang)}
+              </button>
+            )}
           </div>
+          {recentCards.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-surface-200 px-4 py-3 text-xs text-surface-400 dark:border-surface-800">
+              {t("mw_recent_empty", lang)}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {recentCards.map((c) => (
+                <Link
+                  key={c.href}
+                  href={c.href}
+                  onClick={() => remember(c.href)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-surface-700 hover:border-brand-300 hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
+                >
+                  <Icon name={c.icon} className="h-4 w-4 text-brand-600" />
+                  {c.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
-      )}
 
       <section>
         <h2 className="mb-2.5 font-display text-xs font-semibold uppercase tracking-wide text-surface-400">
@@ -245,12 +254,11 @@ export function MyWorkBody({
           // baayen kone mein chhota na chhoRein -- card poori chauRai
           // mein zyada saaf nazar aata hai.
           <div
+            // Ek hi kaam ho to bhi wo poori chauRai ki qatar na ban
+            // jaye -- warna wo "kaam ka card" nahi, "ittila ki patti"
+            // lagta hai. Isi liye kam se kam do khaane.
             className={`grid gap-3 ${
-              quick.length === 1
-                ? "grid-cols-1"
-                : quick.length === 2
-                  ? "grid-cols-1 sm:grid-cols-2"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              quick.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
             }`}
           >
             {quick.map((c) => (
@@ -278,28 +286,28 @@ export function MyWorkBody({
                 <button
                   type="button"
                   onClick={() => toggle(d.key)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-100/70 dark:hover:bg-surface-800/50"
+                  className="flex w-full items-center gap-3.5 px-4 py-4 text-left hover:bg-surface-100/70 dark:hover:bg-surface-800/50"
                   aria-expanded={isOpen}
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-600 shadow-sm dark:bg-surface-800 dark:text-brand-300">
-                    <Icon name={d.icon} className="h-4 w-4" />
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-sm dark:bg-surface-800 dark:text-brand-300">
+                    <Icon name={d.icon} className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
+                    <span className="block font-display text-[15px] font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
                     {/* Jhalak: andar kya hai -- warna banda har department
                         khol kar dekhta hai. */}
                     {d.preview.length > 0 && (
-                      <span className="mt-0.5 block truncate text-[11px] text-surface-500">
+                      <span className="mt-0.5 block truncate text-[12.5px] text-surface-500">
                         {d.preview.join(", ")}
                         {d.toolCount > d.preview.length ? "…" : ""}
                       </span>
                     )}
                   </span>
-                  <span className="hidden shrink-0 rounded-full bg-surface-100 px-2.5 py-1 text-[11px] font-medium tabular-nums text-surface-600 sm:inline-block dark:bg-surface-800 dark:text-surface-300">
+                  <span className="hidden shrink-0 rounded-full bg-surface-100 px-3 py-1.5 text-xs font-medium tabular-nums text-surface-600 sm:inline-block dark:bg-surface-800 dark:text-surface-300">
                     {t("mw_tools_n", lang).replace("{n}", String(d.toolCount))}
                   </span>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
                       d.attention === null
                         ? "bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400"
                         : d.attention > 0

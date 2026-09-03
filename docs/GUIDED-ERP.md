@@ -597,3 +597,29 @@ query chalane ke bajaye ek dafa browser mein aati hai. Na mile to `—`.
 
 **Sidebar ka AI button** wohi panel kholta hai jo neeche daayen kone mein
 hai (custom event se) -- do alag AI nahi bane.
+
+### 13e. Visual parity pass (malik, 4 September — "sirf polish, dobara design nahi")
+
+Malik ka faisla: dhancha ab lock hai; sirf shakl ka farq mitana hai.
+Reference → hamare paas → tabdeeli:
+
+| Reference | Pehle | Ab |
+|---|---|---|
+| Teen hisse: navigation, kaam, AI | AI sirf gol button; daayen taraf bara khali | AI panel bari screen (1280px+) par **khula** rehta hai; `main` ka daayen kinara us ke liye jagah chhoR deta hai (`body.assistant-open`) |
+| Kaam ka khana poori chauRai | `max-w-5xl` -- beech mein patli qatar | Poori chauRai, sidebar aur AI panel ke darmiyan |
+| Haal hi mein istemal hamesha nazar | Khali ho to poora hissa gayab | Hissa hamesha, khali halat mein: "Jo safhe aap kholenge wo yahan aa jayenge" |
+| Department ki qatar mein saans | Bohot dabi hui | Oonchi qatar, bara nishan (44px), parhne wali likhai |
+| Sidebar padhne ke qabil | Chhoti aur halki | 64 chauRi, bari likhai aur nishan |
+| Salam ke sath tareekh ka khana | Chhota dabba | Bara khana: tareekh, shaakh, waqt aur "Pakistan Standard Time" |
+| Kaam ka card | Ek kaam poori chauRai le leta tha | Kam se kam do khaane -- card "kaam" lagta hai, "ittila ki patti" nahi |
+
+**Ek asal bug bhi isi mein pakRa gaya:** card par `1 na_access_pending`
+likha aa raha tha -- yani tarjume ki **chaabi** screen par leak ho rahi
+thi. `CardBadge.label` ab chaabi nahi, tayyar (tarjuma shuda) lafz rakhta
+hai. Chaabi code ki zaban hai; is safhe par sirf wo lafz aane chahiyen jo
+banda parh sake.
+
+**Jo nahi badla:** asal ginti, ijazat, department ki assignment aur
+karobari qawaid -- kisi ko haath nahi lagaya. Reference ke adad (2
+conflicts, 3 approvals...) naql nahi kiye: shakl reference ki, adad
+apne.

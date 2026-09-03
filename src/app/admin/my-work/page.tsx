@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { NeedsAttention } from "@/components/guided/needs-attention";
@@ -123,7 +124,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="w-full">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-surface-100">
@@ -140,12 +141,16 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         <div className="flex items-center gap-3">
           {/* Malik ke reference wala khana: shaakh aur waqt. Waqt Pakistan
               ka -- server kahin bhi ho, banda apni ghari se milata hai. */}
-          <div className="rounded-card border border-surface-200 bg-white px-4 py-2 text-right dark:border-surface-700 dark:bg-surface-900">
-            <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{nowDate}</p>
-            <p className="text-[11px] text-surface-400">
-              {branchName ? `${branchName} · ` : ""}
-              {nowTime}
-            </p>
+          <div className="flex items-center gap-4 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
+            <CalendarDays className="h-5 w-5 shrink-0 text-surface-400" />
+            <div>
+              <p className="text-[15px] font-semibold leading-tight text-surface-900 dark:text-surface-100">{nowDate}</p>
+              {branchName && <p className="mt-0.5 text-xs text-surface-400">{branchName}</p>}
+            </div>
+            <div className="border-l border-surface-200 pl-4 dark:border-surface-700">
+              <p className="text-[15px] font-semibold leading-tight text-surface-900 dark:text-surface-100">{nowTime}</p>
+              <p className="mt-0.5 text-xs text-surface-400">Pakistan Standard Time</p>
+            </div>
           </div>
         {scoreRow && (
           <div className="rounded-card border border-surface-200 bg-white px-4 py-2 text-right dark:border-surface-700 dark:bg-surface-900">

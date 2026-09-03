@@ -34,6 +34,7 @@ export const myWorkDict = {
   mw_count_unknown: { en: "Count not available", rm: "Ginti nahi mili", ur: "گنتی نہیں ملی" },
   mw_open_now: { en: "Open now", rm: "Abhi dekhein", ur: "ابھی دیکھیں" },
   mw_open: { en: "Open", rm: "Kholein", ur: "کھولیں" },
+  mw_recent_empty: { en: "Pages you open will show up here.", rm: "Jo safhe aap kholenge wo yahan aa jayenge.", ur: "جو صفحے آپ کھولیں گے وہ یہاں آ جائیں گے۔" },
   mw_recent_clear: { en: "Clear", rm: "Saaf karein", ur: "صاف کریں" },
   mw_recent: { en: "Recently used", rm: "Haal hi mein istemal", ur: "حال ہی میں استعمال" },
   mw_show_tools: { en: "Show tools", rm: "Auzaar dikhayein", ur: "اوزار دکھائیں" },
