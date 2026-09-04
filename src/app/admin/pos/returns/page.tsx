@@ -37,7 +37,9 @@ export default async function PosReturnsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [{ data: returns }, { data: attempts }, { data: hasCode }] = await Promise.all([
+  const canSetWindow = ["owner", "super_admin", "admin"].includes(me.role);
+
+  const [{ data: returns }, { data: attempts }, { data: hasCode }, { data: policy }] = await Promise.all([
     supabase
       .from("v_pos_returns_today")
       .select("*")
@@ -52,6 +54,9 @@ export default async function PosReturnsPage() {
     canHoldCode
       ? supabase.rpc("fn_has_auth_code" as never)
       : Promise.resolve({ data: null }),
+    // Miyaad na mile to NULL -- safhe par "—" jayega, sifar nahi.
+    // Sifar ka matlab "wapsi bilkul band" hota, jo alag baat hai.
+    supabase.from("pos_return_policy").select("window_days").eq("id", 1).maybeSingle(),
   ]);
 
   const rows = (returns ?? []).map((r: any) => ({
@@ -77,7 +82,15 @@ export default async function PosReturnsPage() {
       />
 
       <div className="space-y-4">
-        <ReturnsClient canHoldCode={canHoldCode} hasCode={Boolean(hasCode)} myName={me.full_name ?? ""} myId={me.id} lang={lang} />
+        <ReturnsClient
+          canHoldCode={canHoldCode}
+          hasCode={Boolean(hasCode)}
+          myName={me.full_name ?? ""}
+          myId={me.id}
+          canSetWindow={canSetWindow}
+          windowDays={policy?.window_days === undefined || policy?.window_days === null ? null : Number(policy.window_days)}
+          lang={lang}
+        />
 
         {/* Sham ki fehrist */}
         <Card className="space-y-3">

@@ -111,6 +111,19 @@ export const posDict = {
     ur: "عملہ بھرتا ہے، منیجر کا کوڈ بھیجتا ہے۔ پیسہ اور مال اسی وقت واپس۔",
   },
   pos_return_do: { en: "Make a return", rm: "Wapsi karein", ur: "واپسی کریں" },
+  pos_window_title: { en: "Return window", rm: "Wapsi ki miyaad", ur: "واپسی کی میعاد" },
+  pos_window_explain: {
+    en: "How many days after a sale a return is still allowed. Beyond this the system refuses — the rule sits in the database, not on this page.",
+    rm: "Bikri ke kitne din baad tak wapsi ho sakti hai. Us ke baad nizam khud mana kar deta hai — ye rok database ke andar hai, is safhe par nahi.",
+    ur: "بکری کے کتنے دن بعد تک واپسی ہو سکتی ہے۔ اس کے بعد نظام خود منع کر دیتا ہے۔",
+  },
+  pos_window_days: { en: "Days", rm: "Din", ur: "دن" },
+  pos_window_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  pos_window_unknown: {
+    en: "the current window could not be read",
+    rm: "abhi ki miyaad padhi nahi ja saki",
+    ur: "ابھی کی میعاد پڑھی نہیں جا سکی",
+  },
   pos_receipt_number: { en: "Receipt number", rm: "Raseed ka number", ur: "رسید کا نمبر" },
   pos_receipt_number_hint: {
     en: "the number printed on the receipt",

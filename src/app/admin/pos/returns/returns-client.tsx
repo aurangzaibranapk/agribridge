@@ -2,9 +2,9 @@
 import { useState, useTransition } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useFormState } from "react-dom";
-import { Search, RotateCcw, KeyRound } from "lucide-react";
+import { Search, RotateCcw, KeyRound, CalendarClock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { returnPosSale, setAuthCode, type ReturnState } from "@/actions/pos-returns";
+import { returnPosSale, setAuthCode, setReturnWindow, type ReturnState } from "@/actions/pos-returns";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Textarea } from "@/components/ui/form";
 
@@ -25,17 +25,24 @@ export function ReturnsClient({
   hasCode,
   myName,
   myId,
+  canSetWindow,
+  windowDays,
   lang,
 }: {
   canHoldCode: boolean;
   hasCode: boolean;
   myName: string;
   myId: string;
+  /** Miyaad badalna sirf malik/admin ka kaam -- ye paise ka control hai. */
+  canSetWindow: boolean;
+  /** null = policy ki qatar mil hi nahi saki. Sifar se ALAG. */
+  windowDays: number | null;
   /** Zaban server se aati hai -- dekhein pos-client.tsx ka note. */
   lang: Lang;
 }) {
   const [state, formAction] = useFormState(returnPosSale, initialState);
   const [codeState, codeAction] = useFormState(setAuthCode, initialState);
+  const [winState, winAction] = useFormState(setReturnWindow, initialState);
 
   const [query, setQuery] = useState("");
   const [sale, setSale] = useState<FoundSale | null>(null);
@@ -118,6 +125,42 @@ export function ReturnsClient({
             <Button type="submit" variant="secondary" size="sm">
               {hasCode ? t("pos_change_code", lang) : t("pos_set_code", lang)}
             </Button>
+          </form>
+        </Card>
+      )}
+
+      {/* Wapsi ki miyaad. Rok database ke andar hai (300); yahan sirf wo
+          adad badalta hai jise wo rok padhti hai. */}
+      {canSetWindow && (
+        <Card className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 text-brand-600" />
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              {t("pos_window_title", lang)}
+            </h2>
+          </div>
+          <p className="text-sm text-surface-600 dark:text-surface-300">{t("pos_window_explain", lang)}</p>
+          {winState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{winState.error}</p>}
+          {winState.notice && (
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{winState.notice}</p>
+          )}
+          <form action={winAction} className="flex flex-wrap items-end gap-3">
+            <div>
+              <Label>{t("pos_window_days", lang)}</Label>
+              <Input
+                name="window_days"
+                type="number"
+                min={0}
+                max={30}
+                defaultValue={windowDays ?? ""}
+                placeholder={windowDays === null ? "—" : undefined}
+                className="w-24"
+              />
+            </div>
+            <Button type="submit" variant="secondary" size="sm">
+              {t("pos_window_save", lang)}
+            </Button>
+            {windowDays === null && <span className="text-xs text-amber-600">{t("pos_window_unknown", lang)}</span>}
           </form>
         </Card>
       )}

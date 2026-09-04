@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
 import type { Json } from "@/lib/types/database.types";
+import { logAudit } from "@/lib/audit";
 
 export interface ReturnState {
   error?: string;
@@ -248,4 +249,53 @@ export async function setAuthCode(_prev: ReturnState, formData: FormData): Promi
 
   revalidatePath("/admin/pos/returns");
   return { success: true, notice: "Code lag gaya. Ise kisi ko na batayein — har wapsi aap ke naam par darj hoti hai." };
+}
+
+/**
+ * Wapsi ki miyaad (kitne din tak wapsi ho sakti hai).
+ *
+ * Ye paise ka control hai, saada setting nahi: miyaad barhane ka matlab
+ * hai ke purani bikri par bhi wapsi khul jaye. Is liye sirf malik aur
+ * admin ke haath mein hai, aur har tabdeeli audit par jati hai.
+ *
+ * Rok khud database ke andar hai (fn_pos_return_lines, 300) -- ye safha
+ * sirf us adad ko badalta hai jise wo rok padhti hai.
+ */
+export async function setReturnWindow(_prev: ReturnState, formData: FormData): Promise<ReturnState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(me.role)) {
+    return { error: "Wapsi ki miyaad sirf malik ya admin badal sakte hain." };
+  }
+
+  const din = Math.round(Number(formData.get("window_days") ?? -1));
+  if (!Number.isFinite(din) || din < 0 || din > 30) {
+    return { error: "Miyaad 0 se 30 din ke darmiyan likhein. Is se zyada rakhne ka matlab hai ke purani bikri par bhi wapsi khuli rahegi." };
+  }
+
+  const service = createServiceClient();
+  const { data: pehle } = await service.from("pos_return_policy").select("window_days").eq("id", 1).maybeSingle();
+
+  const { error } = await service
+    .from("pos_return_policy")
+    .upsert({ id: 1, window_days: din, updated_at: new Date().toISOString(), updated_by: user.id });
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "pos",
+    recordId: "pos_return_policy",
+    recordLabel: `${din} din`,
+    description: `Wapsi ki miyaad badli: ${pehle?.window_days ?? "—"} din se ${din} din`,
+    changes: { window_days: { pehle: pehle?.window_days ?? null, ab: din } },
+  });
+
+  revalidatePath("/admin/pos/returns");
+  revalidatePath("/admin/pos");
+  return { success: true, notice: `Ab wapsi ${din} din ke andar ho sakegi. Is se purani bikri par wapsi nahi hogi.` };
 }
