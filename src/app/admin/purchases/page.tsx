@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -54,6 +55,31 @@ export default async function AdminPurchasesPage() {
       ? supabase.from("branches").select("id, name").eq("is_active", true).order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
+
+  // Kaam kis ke haath mein gaya -- isi safhe par sabz patti ke liye
+  // (290). Ek hi sawal se sab purchases ka; har qatar par alag sawal
+  // chalane se safha bhaari ho jata hai.
+  const purchaseIds = (purchases ?? []).map((p: any) => p.id as string);
+  const { data: handoffRows } = purchaseIds.length
+    ? await supabase
+        .from("work_handoffs")
+        .select("record_id, to_route, title, message, to_roles")
+        .eq("record_table", "purchases")
+        .eq("status", "open")
+        .in("record_id", purchaseIds)
+    : { data: [] as any[] };
+
+  const handoffByPurchase = new Map<string, { route: string; title: string; message: string; roles: string[] }>();
+  for (const h of handoffRows ?? []) {
+    const id = String(h.record_id ?? "");
+    if (!id || handoffByPurchase.has(id)) continue;
+    handoffByPurchase.set(id, {
+      route: String(h.to_route ?? ""),
+      title: String(h.title ?? ""),
+      message: String(h.message ?? ""),
+      roles: (h.to_roles ?? []) as string[],
+    });
+  }
 
   const normalizedPurchases = (purchases ?? []).map((p: any) => ({
     id: p.id,
@@ -135,7 +161,7 @@ export default async function AdminPurchasesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {normalizedPurchases.map((p) => (
+                  {normalizedPurchases.map((p) => [
                     <tr key={p.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                       <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{p.purchase_number}</td>
                       <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{p.supplier_name ?? "-"}</td>
@@ -188,8 +214,37 @@ export default async function AdminPurchasesPage() {
                           <DeletePurchaseButton purchaseId={p.id} purchaseNumber={p.purchase_number} />
                         </td>
                       )}
-                    </tr>
-                  ))}
+                    </tr>,
+                    // Sabz patti: kaam poora hua, aur ab kis ke paas hai.
+                    // Do sawal jo har staff roz poochta hai -- "mera kaam
+                    // ho gaya?" aur "ab kis ki baari hai?" -- dono ka
+                    // jawab usi jagah, bina kisi se poochhe.
+                    handoffByPurchase.has(p.id) ? (
+                      <tr key={`${p.id}-handoff`} className="bg-emerald-50/60 dark:bg-emerald-950/20">
+                        <td colSpan={isAdminLevel ? 7 : 6} className="border-l-4 border-l-emerald-600 px-4 py-2">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                            <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                              {handoffByPurchase.get(p.id)!.title}
+                            </span>
+                            <span className="text-xs text-emerald-800 dark:text-emerald-300">
+                              {handoffByPurchase.get(p.id)!.message}
+                            </span>
+                            <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                              · {t("wd_sent_to", lang)}: {handoffByPurchase.get(p.id)!.roles.join(", ") || "—"}
+                            </span>
+                            <Link
+                              href={handoffByPurchase.get(p.id)!.route}
+                              className="ml-auto inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                            >
+                              {t("wd_open", lang)}
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null,
+                  ]).flat()}
                 </tbody>
               </table>
             </div>

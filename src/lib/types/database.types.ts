@@ -14394,6 +14394,66 @@ export type Database = {
         }
         Relationships: []
       }
+      work_handoffs: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          done_at: string | null
+          done_by: string | null
+          from_feature: string | null
+          id: string
+          message: string
+          record_id: string | null
+          record_label: string | null
+          record_table: string | null
+          status: string
+          title: string
+          to_feature: string
+          to_profile_id: string | null
+          to_roles: string[]
+          to_route: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          from_feature?: string | null
+          id?: string
+          message: string
+          record_id?: string | null
+          record_label?: string | null
+          record_table?: string | null
+          status?: string
+          title: string
+          to_feature: string
+          to_profile_id?: string | null
+          to_roles?: string[]
+          to_route: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          from_feature?: string | null
+          id?: string
+          message?: string
+          record_id?: string | null
+          record_label?: string | null
+          record_table?: string | null
+          status?: string
+          title?: string
+          to_feature?: string
+          to_profile_id?: string | null
+          to_roles?: string[]
+          to_route?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -20330,6 +20390,24 @@ export type Database = {
       }
     }
     Views: {
+      v_my_handoffs: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          feature_label: string | null
+          from_feature: string | null
+          id: string | null
+          mere_naam: boolean | null
+          message: string | null
+          record_id: string | null
+          record_label: string | null
+          record_table: string | null
+          title: string | null
+          to_feature: string | null
+          to_route: string | null
+        }
+        Relationships: []
+      }
       v_products_rate_baqi: {
         Row: {
           barcode: string | null

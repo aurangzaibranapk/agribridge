@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
@@ -47,6 +48,46 @@ async function countView(view: string, column: string, apply: Q): Promise<number
     return n ?? 0;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Jo kaam KHAAS is bande ke zimme aaya.
+ *
+ * Baqi saari qatarein poore idare ki hain -- "das purchase manzoori ke
+ * muntazir hain" har us bande ko dikhta hai jis ke paas wo safha hai.
+ * Handoff us se alag cheez hai: wo kisi ne aap ke haath mein diya hai.
+ * Is liye ye alag se jama hoti hai, aur usi bande ke apne RLS se --
+ * service client se laane par har banda har kisi ka kaam dekh leta
+ * (279 ka sabaq).
+ */
+async function handoffItems(): Promise<AttentionItem[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("v_my_handoffs").select("to_route, to_feature");
+    if (error || !data || data.length === 0) return [];
+
+    // Ek safhe par kai kaam ho sakte hain -- sidebar par ek hi adad
+    // chahiye, har kaam ki apni qatar nahi.
+    const byRoute = new Map<string, number>();
+    for (const r of data) {
+      const route = String(r.to_route ?? "");
+      if (!route) continue;
+      byRoute.set(route, (byRoute.get(route) ?? 0) + 1);
+    }
+
+    return Array.from(byRoute.entries()).map(([route, n]) => ({
+      key: `handoff:${route}`,
+      label: "wd_my_work" as TranslationKey,
+      count: n,
+      href: route,
+      // Ye laal nahi -- ye ghalti nahi, kaam hai. Har cheez laal karne
+      // se laal ka matlab khatam ho jata hai.
+      tone: "blue" as const,
+      area: "admin" as const,
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -121,7 +162,15 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     { key: "cash_close_missing", label: "na_cash_close_missing", count: cashCloseMissing, href: "/admin/cash-close", tone: "amber", area: "finance" },
     { key: "stock_count_open", label: "na_stock_count_open", count: stockCountOpen, href: "/admin/stock-count", tone: "blue", area: "inventory" },
   ];
-  return items;
+
+  // Jo kaam kisi ne KHAAS is bande ke haath mein diya, wo sab se upar.
+  // Idare ki aam qatar aur "aap ke zimme" ek jaisi cheezein nahi.
+  //
+  // Yahan koi user id nahi bheji jati: v_my_handoffs khud us bande tak
+  // mehdood hai jo poochh raha hai (security_invoker). Id haath se
+  // bhejna wo raasta banata hai jahan koi jagah usay bhejna bhool jaye
+  // aur wahan har kisi ka kaam nazar aane lage.
+  return [...(await handoffItems()), ...items];
 }
 
 /** Sirf wo qatarein jo is banday ke raaston par khulti hain, aur jin mein kuch hai (ya ginti hi nahi mil saki). */

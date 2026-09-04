@@ -42,6 +42,13 @@ export const ownerToolsDict = {
   cc_insight: { en: "AgriBridge AI Insight", rm: "AgriBridge AI ki raye", ur: "ایگری برج AI کی رائے" },
   cc_incomplete: { en: "Data incomplete", rm: "Hisaab adhoora", ur: "حساب ادھورا" },
   cc_untracked: { en: "Not tracked", rm: "Track nahi hoti", ur: "ٹریک نہیں ہوتی" },
+  // ---- Kaam ka haath badalna ----
+  wd_sent_to: { en: "Sent to", rm: "Khabar gayi", ur: "خبر گئی" },
+  wd_open: { en: "Open", rm: "Kholein", ur: "کھولیں" },
+  wd_my_work: { en: "Work waiting for you", rm: "Aap ke zimme kaam", ur: "آپ کے ذمے کام" },
+  wd_my_name: { en: "Your name is on it", rm: "Aap ka naam laga hai", ur: "آپ کا نام لگا ہے" },
+  wd_none: { en: "Nothing has been handed to you.", rm: "Aap ke zimme abhi koi kaam nahi.", ur: "آپ کے ذمے ابھی کوئی کام نہیں۔" },
+
   // ---- Ghanti (notification bell) ----
   nbell_title: { en: "Notifications", rm: "Ittila-aat", ur: "اطلاعات" },
   nbell_unread: { en: "New", rm: "Nayi", ur: "نئی" },

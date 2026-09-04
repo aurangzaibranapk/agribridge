@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
+import { closeHandoff, createHandoff } from "@/lib/work-handoff";
 
 export interface ActionState {
   error?: string;
@@ -166,7 +167,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, status, branch_id, total_amount, invoice_total, review_status")
+    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
@@ -353,10 +354,61 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     })
     .eq("id", purchaseId);
   if (statusError) return { error: statusError.message };
+
+  // Godam ka kaam yahan khatam hua.
+  await closeHandoff("inventory.receiving", "purchases", purchaseId, user?.id ?? null);
+
+  // Ab do kaam aage jate hain, aur dono alag logon ke hain.
+  //
+  // 1. Jo cheezein andar aayin, un mein se kuch ka SALE RATE nahi hota
+  //    -- wo POS par nazar hi nahi aatin. Maal godam mein para rehta
+  //    hai aur dukan wala samajhta hai ke stock khatam hai. Is liye
+  //    khabar sirf tab jati hai jab waqai koi cheez adhoori ho.
+  const productIds = Array.from(new Set(rows.map((r) => r.product_id)));
+  const { data: adhoore } = await supabase
+    .from("products")
+    .select("id")
+    .in("id", productIds)
+    .or("sale_rate_pending.eq.true,selling_price.is.null");
+
+  if ((adhoore ?? []).length > 0) {
+    await createHandoff({
+      from: "inventory.receiving",
+      to: "products.rates_baqi",
+      route: "/admin/products/rates-baqi",
+      roles: ["warehouse", "manager", "admin", "owner", "super_admin"],
+      recordTable: "purchases",
+      recordId: purchaseId,
+      recordLabel: purchase.purchase_number ?? null,
+      branchId: purchase.branch_id ?? null,
+      title: `${(adhoore ?? []).length} cheezon ka sale rate baqi hai`,
+      message:
+        "Maal andar aa gaya, magar jin ka sale rate nahi wo POS par nazar nahi aatin. Rate bharte hi bikne lagengi.",
+      byProfileId: user?.id ?? null,
+    });
+  }
+
+  // 2. Maal aa gaya to dena bhi ban gaya. Adaigi ka faisla Finance ka
+  //    kaam hai, godam ka nahi -- is liye ye khabar alag jati hai.
+  await createHandoff({
+    from: "inventory.receiving",
+    to: "purchases.bills",
+    route: "/admin/purchases/bills",
+    roles: ["finance", "manager", "admin", "owner", "super_admin"],
+    recordTable: "purchases",
+    recordId: purchaseId,
+    recordLabel: purchase.purchase_number ?? null,
+    branchId: purchase.branch_id ?? null,
+    title: `Maal aa gaya — ab dena bana`,
+    message: `Rs ${Math.round(acceptedTotal).toLocaleString()} ka maal wusool hua. Supplier ka dena ab is raqam ka hai.`,
+    byProfileId: user?.id ?? null,
+  });
+
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory");
+  revalidatePath("/admin/inventory/receiving");
   return { success: true, grn: { received: totalReceived, damaged: totalDamaged, short: totalShort } };
 }
 
@@ -455,7 +507,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, review_status")
+    .select("id, purchase_number, status, review_status, branch_id, total_amount")
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
@@ -494,9 +546,37 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
           : `Purchase radd hui: ${comment}`,
   });
 
+  // Manzoori ke baad kaam GODAM ka ho jata hai. Pehle ye baat sirf
+  // manzoor karne wale ko maloom hoti thi -- warehouse wala tab tak
+  // intezar karta jab tak koi usay phone na kare. Ab khabar khud
+  // jati hai: sidebar, dashboard aur ghanti, teenon par.
+  if (decision === "approve") {
+    await createHandoff({
+      from: "purchases",
+      to: "inventory.receiving",
+      route: "/admin/inventory/receiving",
+      roles: ["warehouse", "manager", "admin", "owner", "super_admin"],
+      recordTable: "purchases",
+      recordId: purchaseId,
+      recordLabel: purchase.purchase_number,
+      branchId: purchase.branch_id ?? null,
+      title: `Kharid manzoor hui — ${purchase.purchase_number}`,
+      message: `Ab maal ginna baqi hai. Receiving par "Maal Aa Gaya" karne se hi stock charhega aur supplier ka dena banega.`,
+      byProfileId: user.id,
+    });
+  }
+
+  // Radd ya wapas bheji gayi purchase ka godam wala kaam khatam.
+  // Khuli qatar band na karne se sidebar ki ginti barhti rehti hai aur
+  // banda us par bharosa karna chhoR deta hai.
+  if (decision === "reject") {
+    await closeHandoff("inventory.receiving", "purchases", purchaseId, user.id);
+  }
+
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/inventory/receiving");
   return { success: true };
 }
 
