@@ -367,4 +367,21 @@ export const financeReportsDict = {
     rm: "Sirf wo maal ginta hai jo waqai aaya -- order ki hui magar na aayi cheez ki koi lagat nahi hoti. Bara farq do baaton mein se ek kehta hai: ya koi rate ghalat charha, ya rate waqai badal chuka. Ye safha kuch badalta nahi; rate cheez ke apne safhe se badalta hai, jahan har tabdeeli darj hoti hai.",
     ur: "صرف وہ مال گنتا ہے جو واقعی آیا۔ بڑا فرق یا تو غلط ریٹ بتاتا ہے یا واقعی بدلا ہوا ریٹ۔ یہ صفحہ کچھ بدلتا نہیں۔",
   },
+
+  rat_title: { en: "When to warn about a rate change", rm: "Rate badalne par tanbeeh kab jaye", ur: "ریٹ بدلنے پر تنبیہ کب جائے" },
+  rat_explain: {
+    en: "Below the tolerance nothing is sent — a rupee or half a percent moves every day, and warning on that teaches people to ignore warnings. Above the big-change line the manager is told, with the margin.",
+    rm: "Hadd se chhote farq par kuch nahi jata — Rs 1 ya aadha fisad ka farq roz hota hai, aur us par har dafa ittila bhejne se log ittila parhna hi chhoR dete hain. Bare farq par manager ko jata hai, nafe ke sath.",
+    ur: "حد سے چھوٹے فرق پر کچھ نہیں جاتا۔ بڑے فرق پر مینیجر کو جاتا ہے، نفع کے ساتھ۔",
+  },
+  rat_tol_amt: { en: "Tolerance Rs", rm: "Hadd (Rs)", ur: "حد (روپے)" },
+  rat_tol_pct: { en: "Tolerance %", rm: "Hadd (%)", ur: "حد (%)" },
+  rat_big_amt: { en: "Big change Rs", rm: "Bara farq (Rs)", ur: "بڑا فرق (روپے)" },
+  rat_big_pct: { en: "Big change %", rm: "Bara farq (%)", ur: "بڑا فرق (%)" },
+  rat_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  rat_unknown: {
+    en: "the current rules could not be read — the boxes below are empty, not zero",
+    rm: "abhi ke qawaid padhe nahi ja sake — neeche ke khane KHALI hain, sifar nahi",
+    ur: "ابھی کے قواعد پڑھے نہیں جا سکے — نیچے کے خانے خالی ہیں، صفر نہیں",
+  },
 } as const;

@@ -5,6 +5,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { ArrowLeft } from "lucide-react";
+import { RateAlertCard } from "./rate-alert-card";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,10 @@ export default async function CostingPage() {
   }
 
   const service = createServiceClient();
-  const { data: rows, error } = await service.from("v_product_costing").select("*").limit(500);
+  const [{ data: rows, error }, { data: cfg }] = await Promise.all([
+    service.from("v_product_costing").select("*").limit(500),
+    service.from("rate_alert_config").select("*").eq("id", 1).maybeSingle(),
+  ]);
 
   if (error) {
     return (
@@ -81,6 +85,22 @@ export default async function CostingPage() {
           </Link>
         }
       />
+
+      {["owner", "super_admin", "admin"].includes(me.role) && (
+        <RateAlertCard
+          lang={lang}
+          config={
+            cfg
+              ? {
+                  tolAmt: Number(cfg.tolerance_amount),
+                  tolPct: Number(cfg.tolerance_pct),
+                  bigAmt: Number(cfg.big_change_amount),
+                  bigPct: Number(cfg.big_change_pct),
+                }
+              : null
+          }
+        />
+      )}
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full text-sm">
