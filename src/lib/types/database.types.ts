@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      payment_terms: {
+        Row: { created_at: string; days: number; id: string; is_active: boolean; is_default: boolean; name: string }
+        Insert: { created_at?: string; days: number; id?: string; is_active?: boolean; is_default?: boolean; name: string }
+        Update: { created_at?: string; days?: number; id?: string; is_active?: boolean; is_default?: boolean; name?: string }
+        Relationships: []
+      }
+      recurring_journals: {
+        Row: { created_at: string; created_by: string | null; day_of_month: number; description: string; id: string; is_active: boolean; last_posted_period: string | null; name: string; note: string | null }
+        Insert: { created_at?: string; created_by?: string | null; day_of_month?: number; description: string; id?: string; is_active?: boolean; last_posted_period?: string | null; name: string; note?: string | null }
+        Update: { created_at?: string; created_by?: string | null; day_of_month?: number; description?: string; id?: string; is_active?: boolean; last_posted_period?: string | null; name?: string; note?: string | null }
+        Relationships: []
+      }
+      recurring_journal_lines: {
+        Row: { account_code: string; credit: number; debit: number; id: string; line_order: number; memo: string | null; recurring_id: string }
+        Insert: { account_code: string; credit?: number; debit?: number; id?: string; line_order?: number; memo?: string | null; recurring_id: string }
+        Update: { account_code?: string; credit?: number; debit?: number; id?: string; line_order?: number; memo?: string | null; recurring_id?: string }
+        Relationships: []
+      }
+      recurring_journal_runs: {
+        Row: { entry_id: string; id: string; period: string; posted_at: string; posted_by: string | null; recurring_id: string }
+        Insert: { entry_id: string; id?: string; period: string; posted_at?: string; posted_by?: string | null; recurring_id: string }
+        Update: { entry_id?: string; id?: string; period?: string; posted_at?: string; posted_by?: string | null; recurring_id?: string }
+        Relationships: []
+      }
       cheque_books: {
         Row: { book_name: string; created_at: string; created_by: string | null; finance_account_id: string; first_number: number; id: string; last_number: number; note: string | null; prefix: string | null; status: string }
         Insert: { book_name: string; created_at?: string; created_by?: string | null; finance_account_id: string; first_number: number; id?: string; last_number: number; note?: string | null; prefix?: string | null; status?: string }
@@ -19678,6 +19702,7 @@ export type Database = {
           ntn_document_url: string | null
           ntn_number: string | null
           organization_id: string
+          payment_term_id: string | null
           phone_number: string | null
           status: string
           tax_status: string | null
@@ -19703,6 +19728,7 @@ export type Database = {
           ntn_document_url?: string | null
           ntn_number?: string | null
           organization_id?: string
+          payment_term_id?: string | null
           phone_number?: string | null
           status?: string
           tax_status?: string | null
@@ -19728,6 +19754,7 @@ export type Database = {
           ntn_document_url?: string | null
           ntn_number?: string | null
           organization_id?: string
+          payment_term_id?: string | null
           phone_number?: string | null
           status?: string
           tax_status?: string | null
