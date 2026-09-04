@@ -11,6 +11,7 @@ import {
   Trash2,
   RotateCcw,
   ArrowLeft,
+  ChevronRight,
   Search,
   ScanLine,
   Camera,
@@ -550,7 +551,17 @@ export function PosClient({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden">
+    /* Tafseel khulte hi cheezon ka khana chhota hota hai, GAYAB nahi
+       hota -- malik ka reference isi tarah hai, aur wajah bhi saaf hai:
+       counter par banda tafseel dekhte hue agli cheez bhi dhoondta rehta
+       hai. Band karte hi jagah wapas cheezon ko mil jati hai. */
+    <div
+      className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${
+        selectedLine && selectedItem
+          ? "lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_22rem]"
+          : "lg:grid-cols-[minmax(0,1fr)_23rem]"
+      }`}
+    >
       {/* ================= BAAYIN TARAF: cheezein ================= */}
       <section className="flex flex-col lg:min-h-0">
         {/* ---- Ek hi patti: naam, scan, talash, qism, ordering ----
@@ -656,7 +667,13 @@ export function PosClient({
               tasveer ka hai aur neeche sirf do line: naam aur qeemat.
               Baqi tafseel yahan nahi -- wo cart se cheez chun kar saamne
               khulti hai. */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div
+            className={
+              selectedLine && selectedItem
+                ? "grid grid-cols-2 gap-2 lg:grid-cols-1"
+                : "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+            }
+          >
             {filteredInventory.map((item) => {
               const inCart = cart.some((l) => l.product_id === item.product_id);
               const p = item.products;
@@ -698,9 +715,17 @@ export function PosClient({
                     </span>
                   </div>
 
-                  <div className="border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
-                    <p className="truncate text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">
-                      {p?.name}
+                  <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
+                    {/* Naam do line tak. Ek line par kaTne se "Cooking Oil
+                        5 Litre" aur "Cooking Oil 1 Litre" bilkul ek jaise
+                        nazar aate hain -- aur counter par ghalat dabba
+                        chala jata hai.
+
+                        Naam na aa sake to khali qatar nahi chhoRi jati:
+                        khali khana banda "koi cheez nahi" samajh kar
+                        chhoR deta hai, jab ke maal maujood hota hai. */}
+                    <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">
+                      {p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}
                       {p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}
                     </p>
                     <p className="mt-0.5 flex items-baseline justify-between gap-2">
@@ -737,15 +762,26 @@ export function PosClient({
           hai, aur band karte hi jagah wapas cheezon ko mil jati hai. */}
       {selectedLine && selectedItem && (
         <>
-          {/* Chhoti screen par peeche ka hissa dhak jata hai; baRi screen
-              par nahi -- wahan cart saath hi khula rehta hai taake banda
-              tafseel dekhte hue bill bhi dekh sake. */}
+          {/* Peeche ka hissa halka dhak jata hai -- har screen par.
+              Pehle ye khana screen ki chauRai naap kar ek khaas jagah par
+              rakha gaya tha (cart ke bilkul baayein). Us ka nateeja ye
+              nikla ke chhoti ya zoom ki hui screen par wo cart ke peeche
+              chala jata tha: banda cart ki qatar dabata tha, kuch khulta
+              hua nazar nahi aata tha, aur wo samajhta tha ke qatar
+              dabti hi nahi.
+
+              Ab ye hamesha daayin taraf se khulta hai, sab se ooper. Jo
+              cheez khud ko screen par jagah dhoondti ho, wo kisi na kisi
+              screen par gum ho jati hai. */}
+          {/* Chhoti screen par teen khane nahi baithte -- wahan ye ooper
+              se khulta hai. BaRi screen par ye beech ka khana ban jata
+              hai aur peeche kuch dhakta nahi. */}
           <div
-            className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/30 lg:hidden"
             onClick={() => setSelectedId(null)}
             aria-hidden
           />
-          <aside className="fixed inset-0 z-40 overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:inset-x-auto lg:bottom-4 lg:right-[24.5rem] lg:top-[7.5rem] lg:w-[21rem] lg:rounded-card lg:border">
+          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-full lg:min-h-0 lg:w-auto lg:max-w-none lg:rounded-card lg:border lg:shadow-card">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
                 {t("pos_details", lang)}
@@ -826,8 +862,16 @@ export function PosClient({
                     )}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                  Rs {(line.quantity * line.unit_price).toLocaleString()}
+                <span className="shrink-0 text-right">
+                  <span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                    Rs {(line.quantity * line.unit_price).toLocaleString()}
+                  </span>
+                  {/* Qatar khud button hai -- magar bina nishaan ke ye baat
+                      nazar nahi aati, aur banda tafseel dhoondta reh jata
+                      hai. */}
+                  <span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">
+                    {t("pos_details", lang)} <ChevronRight className="h-3 w-3" />
+                  </span>
                 </span>
               </button>
             );

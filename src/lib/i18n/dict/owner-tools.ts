@@ -99,6 +99,7 @@ export const ownerToolsDict = {
   pos_stock_out: { en: "Finished", rm: "Khatam", ur: "ختم" },
   pos_categories: { en: "Categories", rm: "Qismein", ur: "قسمیں" },
   pos_all_items: { en: "All items", rm: "Sab cheezein", ur: "سب چیزیں" },
+  pos_no_name: { en: "name missing", rm: "naam nahi aaya", ur: "نام نہیں آیا" },
   pos_subtotal: { en: "Subtotal", rm: "Jama", ur: "جمع" },
   pos_paid: { en: "Paid", rm: "Diya gaya", ur: "دیا گیا" },
   pos_wholesale_needs_shop: {
