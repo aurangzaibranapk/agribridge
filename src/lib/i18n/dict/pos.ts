@@ -275,4 +275,16 @@ export const posDict = {
   ret_stock_back: { en: "Items back in", rm: "Maal wapas aaya", ur: "مال واپس آیا" },
   ret_new_sale: { en: "New sale", rm: "Nayi bikri", ur: "نئی بکری" },
   ret_another: { en: "Another return", rm: "Ek aur wapsi", ur: "ایک اور واپسی" },
+  ret_sales_title: { en: "Sales — pick one to return", rm: "Bikri — wapsi ke liye ek chunein", ur: "بکری — واپسی کے لیے ایک چنیں" },
+  ret_from: { en: "From", rm: "Is din se", ur: "اس دن سے" },
+  ret_to: { en: "To", rm: "Is din tak", ur: "اس دن تک" },
+  ret_bills: { en: "Bills", rm: "Bill", ur: "بل" },
+  ret_total_sale: { en: "Total sale", rm: "Kul bikri", ur: "کل بکری" },
+  ret_list_failed: { en: "The sales list could not be loaded:", rm: "Bikri ki fehrist nahi aa saki:", ur: "بکری کی فہرست نہیں آ سکی:" },
+  ret_window_note: {
+    en: "A return is possible within {n} days of the sale. Older bills cannot be returned.",
+    rm: "Wapsi bikri ke {n} din ke andar ho sakti hai. Us se purani wapas nahi hoti.",
+    ur: "واپسی بکری کے {n} دن کے اندر ہو سکتی ہے۔ اس سے پرانی واپس نہیں ہوتی۔",
+  },
+  ret_too_old: { en: "past the return window", rm: "wapsi ki miyaad guzar gayi", ur: "واپسی کی میعاد گزر گئی" },
 };

@@ -16081,6 +16081,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_return_policy: {
+        Row: {
+          id: number
+          updated_at: string
+          updated_by: string | null
+          window_days: number
+        }
+        Insert: {
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          window_days?: number
+        }
+        Update: {
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          window_days?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           barcode_source: string | null

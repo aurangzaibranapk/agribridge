@@ -67,15 +67,6 @@ interface Customer {
   /** Wo dukan jise hum maal dete hain -- us par thok ka rate lagta hai (246). */
   isWholesaleShop: boolean;
 }
-export interface RecentSale {
-  id: string;
-  created_at: string;
-  total_amount: number;
-  status: string;
-  payment_mode: string;
-  customer_name: string | null;
-}
-
 interface CartLine {
   product_id: string;
   name: string;
@@ -134,7 +125,7 @@ export function PosClient({
   inventory,
   groups = [],
   customers,
-  recentSales = [],
+  branchId = null,
   rateBaqiCount = 0,
   perms,
   lang,
@@ -151,10 +142,9 @@ export function PosClient({
   groups?: { name: string; count: number }[];
   customers: Customer[];
   /**
-   * Haal ki bikriyaan -- wapsi ke liye. Wapsi hamesha ASAL BILL se shuru
-   * hoti hai; cheez chun kar wapsi ka koi raasta yahan hai hi nahi.
+   * Kis shaakh ka counter hai -- wapsi ki fehrist isi se chhanti hai.
    */
-  recentSales?: RecentSale[];
+  branchId?: string | null;
   /**
    * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
    * darj nahi hua (252). Ye adad chhupaya nahi jata -- warna banda
@@ -545,7 +535,7 @@ export function PosClient({
             <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
           </span>
         </div>
-        <PosReturn lang={lang} recentSales={recentSales} onDone={() => setMode("sale")} />
+        <PosReturn lang={lang} branchId={branchId} onDone={() => setMode("sale")} />
       </div>
     );
   }

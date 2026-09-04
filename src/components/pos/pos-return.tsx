@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
 import { Button, Input, Select, Label } from "@/components/ui/form";
@@ -54,15 +54,30 @@ type Condition = (typeof CONDITIONS)[number];
 
 export function PosReturn({
   lang,
-  recentSales,
+  branchId,
   onDone,
 }: {
   lang: Lang;
-  recentSales: SaleRow[];
+  branchId: string | null;
   onDone: () => void;
 }) {
   const supabase = createClient();
   const [query, setQuery] = useState("");
+  // Tareekh ka chhanta -- malik ka kehna (5 September): "jis din, jab tak
+  // dekhna ho, sale is page par dekh sakein." Default aaj se saat din
+  // peeche: wapsi ki miyaad do din hai, magar bikri dekhne ke liye us se
+  // zyada arsa chahiye hota hai.
+  const aaj = new Date().toISOString().slice(0, 10);
+  const haftaPehle = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const [from, setFrom] = useState(haftaPehle);
+  const [to, setTo] = useState(aaj);
+  const [sales, setSales] = useState<SaleRow[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  // Wapsi kitne din ke andar ho sakti hai. Ye adad database se aata hai,
+  // yahan likha hua nahi -- warna kisi din safha kuch aur kehta aur rok
+  // kuch aur lagti.
+  const [windowDays, setWindowDays] = useState<number | null>(null);
   const [sale, setSale] = useState<SaleRow | null>(null);
   const [lines, setLines] = useState<ReturnableLine[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,18 +92,97 @@ export function PosReturn({
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [done, setDone] = useState<{ number: string; amount: number; qty: number } | null>(null);
 
+  // Bikri ki fehrist yahin se aati hai, safhe se nahi -- taake tareekh
+  // badalne par poora POS dobara na khule.
+  //
+  // Jawab na mile to KHALI fehrist nahi dikhayi jati, ghalti likhi jati
+  // hai. Khali fehrist kehti hai "us din koi bikri hui hi nahi" -- aur
+  // wo jhoot us din bohat mehnga parta hai jab bikriyaan hui hon.
+  const loadSales = useCallback(async () => {
+    setListLoading(true);
+    setListError(null);
+
+    let q = supabase
+      .from("pos_sales")
+      .select("id, created_at, total_amount, status, payment_mode, customer_id")
+      .in("status", ["completed", "partially_returned"])
+      .gte("created_at", `${from}T00:00:00`)
+      .lte("created_at", `${to}T23:59:59`)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (branchId) q = q.eq("branch_id", branchId);
+
+    const { data, error } = await q;
+    if (error) {
+      setListError(error.message);
+      setSales([]);
+      setListLoading(false);
+      return;
+    }
+
+    // Gahak ka naam alag sawal se -- embed nakaam ho to wo khali lauta
+    // deta hai aur poori fehrist gayab ho jati.
+    const ids = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
+    const { data: custs } = ids.length
+      ? await supabase.from("customers").select("id, name").in("id", ids)
+      : { data: [] as any[] };
+    const nameById = new Map((custs ?? []).map((c: any) => [c.id, c.name]));
+
+    setSales(
+      (data ?? []).map((r: any) => ({
+        id: r.id,
+        created_at: r.created_at,
+        total_amount: Number(r.total_amount ?? 0),
+        status: r.status,
+        payment_mode: r.payment_mode,
+        customer_name: r.customer_id ? nameById.get(r.customer_id) ?? null : null,
+      }))
+    );
+    setListLoading(false);
+  }, [supabase, branchId, from, to]);
+
+  useEffect(() => {
+    loadSales();
+  }, [loadSales]);
+
+  useEffect(() => {
+    supabase
+      .from("pos_return_policy")
+      .select("window_days")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => setWindowDays(data?.window_days ?? null));
+  }, [supabase]);
+
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return recentSales.slice(0, 12);
-    return recentSales
-      .filter(
-        (s) =>
-          s.id.toLowerCase().startsWith(q) ||
-          (s.customer_name ?? "").toLowerCase().includes(q) ||
-          String(s.total_amount).includes(q)
-      )
-      .slice(0, 12);
-  }, [recentSales, query]);
+    if (!q) return sales;
+    return sales.filter(
+      (s) =>
+        s.id.toLowerCase().startsWith(q) ||
+        (s.customer_name ?? "").toLowerCase().includes(q) ||
+        String(s.total_amount).includes(q)
+    );
+  }, [sales, query]);
+
+  /** Is arse ki kul bikri -- jo qatarein saamne hain, unhi ka jama. */
+  const kulBikri = matches.reduce((s, r) => s + r.total_amount, 0);
+
+  /**
+   * Miyaad guzar to nahi gayi.
+   *
+   * Ye sirf safhe ki baat hai -- asal rok database par lagi hui hai (300).
+   * Yahan is liye dikhayi jati hai ke banda gahak ke saamne khaRa ho kar
+   * bill kholne ke baad na rukе: "nahi ho sakti" pehle hi nazar aa jaye.
+   *
+   * Miyaad maloom hi na ho to kisi bikri par "nahi ho sakti" ka nishaan
+   * nahi lagta -- na-maloom ko "nahi" samajh lena us se bura hai.
+   */
+  function miyaadGuzri(s: SaleRow): boolean {
+    if (windowDays == null) return false;
+    const din = Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000);
+    return din > windowDays;
+  }
 
   async function openSale(s: SaleRow) {
     setSale(s);
@@ -247,52 +341,102 @@ export function PosReturn({
   // ---- Qadam 1: asal bill dhoondein ----
   if (!sale) {
     return (
-      <Card className="mx-auto max-w-2xl space-y-3">
+      <Card className="mx-auto max-w-3xl space-y-3">
         <div>
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">
-            {t("ret_find_sale", lang)}
+            {t("ret_sales_title", lang)}
           </h2>
           {/* Bill ke baghair wapsi ka koi raasta nahi. Ye rok hi wo cheez
               hai jo tadaad aur rate dono ko sach par rakhti hai. */}
           <p className="mt-0.5 text-xs text-surface-500">{t("ret_find_note", lang)}</p>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("ret_search", lang)}
-            className="h-11 pl-9"
-            autoFocus
-          />
+
+        {/* Tareekh ka chhanta: jis din, jab tak. */}
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs text-surface-500">
+            {t("ret_from", lang)}
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1 h-10 w-40" />
+          </label>
+          <label className="text-xs text-surface-500">
+            {t("ret_to", lang)}
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 h-10 w-40" />
+          </label>
+          <div className="relative min-w-[14rem] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("ret_search", lang)}
+              className="h-10 pl-9"
+            />
+          </div>
         </div>
 
+        {/* Is arse ki kul bikri -- wohi jo neeche qataron mein nazar aa
+            rahi hai. Adad aur fehrist do alag jagah se ginne par wo kisi
+            din alag alag kehne lagte hain. */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
+          <span className="text-surface-600 dark:text-surface-300">
+            {t("ret_bills", lang)}: <span className="font-semibold tabular-nums">{matches.length}</span>
+          </span>
+          <span className="text-surface-600 dark:text-surface-300">
+            {t("ret_total_sale", lang)}:{" "}
+            <span className="font-display text-base font-bold tabular-nums text-brand-700 dark:text-brand-300">
+              Rs {kulBikri.toLocaleString()}
+            </span>
+          </span>
+        </div>
+
+        {windowDays != null && (
+          <p className="text-xs text-amber-700">
+            {t("ret_window_note", lang).replace("{n}", String(windowDays))}
+          </p>
+        )}
+
         <div className="divide-y divide-surface-100 rounded-lg border border-surface-200 dark:divide-surface-800 dark:border-surface-700">
-          {matches.length === 0 ? (
+          {listError ? (
+            <p className="px-3 py-6 text-center text-sm text-red-600">
+              {t("ret_list_failed", lang)} {listError}
+            </p>
+          ) : listLoading ? (
+            <p className="px-3 py-6 text-center text-sm text-surface-400">…</p>
+          ) : matches.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-surface-400">{t("ret_no_sale", lang)}</p>
           ) : (
-            matches.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => openSale(s)}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-surface-50 dark:hover:bg-surface-800"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
-                    {s.customer_name ?? t("ret_walkin", lang)}
+            matches.map((s) => {
+              const guzri = miyaadGuzri(s);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={guzri}
+                  onClick={() => openSale(s)}
+                  className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left ${
+                    guzri
+                      ? "cursor-not-allowed opacity-50"
+                      : "hover:bg-surface-50 dark:hover:bg-surface-800"
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
+                      {s.customer_name ?? t("ret_walkin", lang)}
+                    </span>
+                    <span className="block text-xs text-surface-500">
+                      {new Date(s.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
+                      {s.payment_mode}
+                      {s.status === "partially_returned" ? ` · ${t("ret_partly", lang)}` : ""}
+                      {/* Miyaad guzar chuki ho to wajah wahin likhi jati
+                          hai. Bina wajah ke band qatar bande ko safhe ki
+                          kharabi lagti hai. */}
+                      {guzri && <span className="ml-1 text-amber-700">· {t("ret_too_old", lang)}</span>}
+                    </span>
                   </span>
-                  <span className="block text-xs text-surface-500">
-                    {new Date(s.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
-                    {s.payment_mode}
-                    {s.status === "partially_returned" ? ` · ${t("ret_partly", lang)}` : ""}
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                    Rs {Number(s.total_amount).toLocaleString()}
                   </span>
-                </span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                  Rs {Number(s.total_amount).toLocaleString()}
-                </span>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </Card>
