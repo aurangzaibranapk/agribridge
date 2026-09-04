@@ -120,6 +120,10 @@ export default async function FinanceCenterPage() {
       icon: <BarChart3 className="h-5 w-5" />,
       tone: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
       items: [
+        { href: "/admin/finance/reports?view=cashflow", label: t("fr_v_cashflow", lang), hint: t("fr_desc", lang) },
+        { href: "/admin/finance/reports?view=working", label: t("fr_v_working", lang) },
+        { href: "/admin/finance/reports?view=party", label: t("fr_v_party", lang) },
+        { href: "/admin/finance/reports?view=branch", label: t("fr_v_branch", lang) },
         { href: "/admin/finance/statements?view=trial", label: t("fc_trial", lang) },
         { href: "/admin/finance/statements?view=pnl", label: t("fc_pnl", lang) },
         { href: "/admin/finance/statements?view=bs", label: t("fc_bs", lang) },
@@ -131,7 +135,7 @@ export default async function FinanceCenterPage() {
         { href: "/admin/reports/audit", label: t("fc_audit_report", lang) },
         { href: "/admin/anomalies", label: t("fc_anomalies", lang) },
       ],
-      baqi: [t("fc_b_cashflow", lang), t("fc_b_working", lang), t("fc_b_receivable", lang), t("fc_b_branch_pnl", lang)],
+      baqi: [],
     },
   ];
 

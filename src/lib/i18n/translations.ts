@@ -8,6 +8,7 @@ import { milkDispatchDict } from "./dict/milk-dispatch";
 import { milkDict, milkPageDict, milkFuelDict, milkOpsDict } from "./dict/milk";
 import { financeDict } from "./dict/finance";
 import { assetsDict } from "./dict/assets";
+import { financeReportsDict } from "./dict/finance-reports";
 import { cashCloseDict } from "./dict/cash-close";
 import { cashHandoverDict } from "./dict/cash-handover";
 import { hrDict, attendanceLogDict } from "./dict/hr";
@@ -91,6 +92,7 @@ const dict = {
   ...milkPageDict,
   ...financeDict,
   ...assetsDict,
+  ...financeReportsDict,
   ...cashCloseDict,
   ...cashHandoverDict,
   ...hrDict,
