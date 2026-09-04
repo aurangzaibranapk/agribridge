@@ -678,6 +678,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
   //                     increase) ke zariye -- taake nishan rahe.
   const stockSource = String(formData.get("stock_source") ?? "").trim(); // 'supplier' | 'opening' | ''
   const supplierId = String(formData.get("supplier_id") ?? "").trim() || null;
+  const billNo = String(formData.get("supplier_bill_no") ?? "").trim();
 
   let stocked = 0;
   let qtyIgnored = 0;
@@ -692,6 +693,16 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
 
   if (withQty.length > 0 && !warehouseId) {
     qtyIgnored = withQty.length;
+  } else if (withQty.length > 0 && stockSource === "supplier" && supplierId && !billNo) {
+    // Bill ka number na ho to charhne hi nahi dena. 4 September ko ek
+    // hi sheet teen dafa charhi aur teen purchase ban gayin -- supplier
+    // ka dena teen guna. Wo ghalti khamosh hoti hai: har purchase apni
+    // jagah bilkul theek nazar aati hai, farq sirf statement par
+    // nikalta hai, aur wahan tak adaigi ho chuki hoti hai.
+    stockProblems.push(
+      "Supplier ke bill ka number likhna zaroori hai -- us ke baghair ek hi bill do dafa charh sakta hai."
+    );
+    qtyIgnored = withQty.length;
   } else if (withQty.length > 0 && stockSource === "supplier" && supplierId) {
     // ---- Raasta 1: supplier se aaya maal ----
     const { data: wh } = await supabase
@@ -699,6 +710,29 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       .select("branch_id")
       .eq("id", warehouseId as string)
       .maybeSingle();
+
+    // Yehi bill pehle to nahi charh chuka? Ye jaanch code mein is liye
+    // hai ke banday ko saaf paighaam mile. Asal taala database par hai
+    // (289) -- kyunke sirf code ki rok us waqt kaam nahi karti jab do
+    // bande ek hi lamhe mein charhayein.
+    const { data: pehle } = await supabase
+      .from("purchases")
+      .select("purchase_number")
+      .eq("supplier_id", supplierId)
+      .neq("status", "cancelled")
+      .ilike("supplier_bill_no", billNo)
+      .limit(1)
+      .maybeSingle();
+
+    if (pehle) {
+      // Products aur rate charh chuke hain -- un mein koi kharabi nahi.
+      // Sirf stock aur dena wala hissa rukta hai, kyunke wo pehle se
+      // charh chuka hai.
+      stockProblems.push(
+        `Bill ${billNo} is supplier ka pehle hi charh chuka hai (${pehle.purchase_number}). Nayi purchase nahi banayi gayi.`
+      );
+      qtyIgnored = withQty.length;
+    } else {
 
     const purchaseNumber = `PO-${Date.now()}`;
     const totalAmount = withQty.reduce(
@@ -710,6 +744,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       .from("purchases")
       .insert({
         purchase_number: purchaseNumber,
+        supplier_bill_no: billNo,
         supplier_id: supplierId,
         branch_id: wh?.branch_id ?? null,
         purchase_date: new Date().toISOString().slice(0, 10),
@@ -726,7 +761,14 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       .single();
 
     if (poErr || !po) {
-      stockProblems.push(`Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}`);
+      // Database ka taala (289) lagne par paighaam banday ki zaban mein
+      // ho, postgres ki nahi.
+      const dupli = (poErr?.message ?? "").includes("ux_purchases_supplier_bill_no");
+      stockProblems.push(
+        dupli
+          ? `Bill ${billNo} is supplier ka pehle hi charh chuka hai. Nayi purchase nahi banayi gayi.`
+          : `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}`
+      );
     } else {
       purchaseId = po.id;
       for (const x of withQty) {
@@ -756,6 +798,8 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         if (itemErr) stockProblems.push(`${x.row.name}: ${itemErr.message}`);
         else stocked += 1;
       }
+    }
+
     }
   } else if (withQty.length > 0 && stockSource === "opening") {
     // ---- Raasta 2: shuru ka stock ----

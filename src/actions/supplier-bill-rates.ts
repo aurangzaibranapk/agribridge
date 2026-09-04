@@ -767,6 +767,10 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       payment_terms: terms.terms,
       credit_days: terms.creditDays,
       due_date: terms.dueDate,
+      // Bill ka number khane mein bhi jata hai, sirf note mein nahi --
+      // note par koi taala nahi lagta. Isi khane par 289 ka taala hai
+      // jo ek bill se do purchase banne se rokta hai.
+      supplier_bill_no: bill.bill_number || null,
       notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
       created_by: user.id,
     })

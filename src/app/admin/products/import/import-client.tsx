@@ -390,6 +390,18 @@ export function ImportClient({
                     </div>
                   )}
 
+                  {/* Supplier ke bill ka number -- yehi wo cheez hai jo
+                      ek hi sheet ko do dafa charhne se rokti hai. Bina
+                      is ke har dafa nayi purchase ban jati thi aur
+                      supplier ka dena barhta chala jata tha. */}
+                  {stockSource === "supplier" && (
+                    <div className="mt-2">
+                      <Label htmlFor="billno">{t("pf_bill_no_label", lang)}</Label>
+                      <Input id="billno" name="supplier_bill_no" required className="w-full" />
+                      <p className="mt-1 text-xs text-surface-500">{t("pf_bill_no_hint", lang)}</p>
+                    </div>
+                  )}
+
                   {stockSource === "supplier" && (
                     <p className="mt-1 text-xs text-amber-800">{t("pf_src_supplier_hint", lang)}</p>
                   )}
