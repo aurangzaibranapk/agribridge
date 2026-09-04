@@ -440,10 +440,76 @@ ka dawa). Rok theek thi, jumla ghalat tha. Ab dono halaton ka apna
 jumla hai, aur tasdeeq wale mein Kaam ke Dawe ka safha bhi likha hai.
 Live par MB-2026-00006 aur MB-2026-00005 dono isi halat mein hain.
 
+## 5h. Finance ka baqi poora naqsha (303–309) — Testing par chal chuka, **Live par baqi**
+
+Malik ka hukm (5 September, raat): *"finance k jitna baqi kam hy wo
+sara krin ... sobha tk sb final hona chiaye phir sb k backup krin gy or
+live build bhi krin gy"*. Us ke baad ka kaam:
+
+**303 — Kaam ke dawe par naap ka farq.** Do qism ('dono') wali booking
+par raqba theek karne ka koi raasta hi nahi tha: database ki rok aati
+thi kyunki sabit/kutra ka batwara purana reh jata tha. Ab batware ke
+khane wahin hain aur jaanch database se PEHLE hoti hai, us zaban mein
+jo safhe par nazar aa rahi hai. `v_machinery_work_claims` mein teen
+khane jure.
+
+**304 — Maali reports** (`/admin/finance/reports`): cash flow (seedha
+tareeqa), chalta sarmaya, khaton ka opening/harkat/closing, aaya-gaya,
+kis se lena kis ko dena, aur shaakh shaakh ka nafa nuqsan. Sab
+`journal_lines` se.
+
+**305 — Hisaab ke arse.** Har mahina khula ya band; band arse mein entry
+DATABASE se rukti hai. Mahina band karne se pehle Trial Balance barabar
+hona zaroori. Saal band karne par nafa nuqsan ke khate ek entry se
+sarmaye (3200) mein.
+
+**306 — Budget** (saalana adad per khata) aur us ke saamne asal kharcha.
+
+**307 — Cheque.** Diye aur mile hue, cheque book, aur do naye khate:
+1180 (cheque mile hue) aur 2050 (cheque diye hue). Cheque milte hi
+bande ka khata saaf, magar raqam BANK mein nahi — wo guzarne par jati
+hai. Bounce par pehli entry ulti.
+
+**308 — Adaigi ki shartein + har mahine wali entry.** Shart supplier par
+lagti hai aur naye purchase par khud utar aati hai (Live par abhi ek
+purchase bina due_date ke para hai — wo isi kami ki misal hai). Har
+mahine wali entry ka khaka ek dafa, entry har mahine EK DABAO par.
+
+**309 — Cheez ki lagat** (ausat kharid rate vs aaj ka rate) aur khaton
+ki fehrist par "baqi doosre khate mein le jayein".
+
+### Rollback test (Testing) — sab paas
+
+- 305: band mahine mein entry roki, khule mahine mein chali, band mahine
+  ki tareekh badalna roka, dobara kholne par chhoti wajah roki.
+- 307: ek number do dafa roka, ulti tareekh roki, guzra hua cheque
+  mitana roka, guzre hue ko wapas "intezar" mein le jana roka, bina
+  wajah bounce roka.
+- 302: entry wale khate ki qism badalna roka, raqam wala khata band
+  karna roka, khali khata band hua, naam badalna chala, teen hindson ka
+  code roka.
+- 301: seedhi ghisai 3 mahine 6,000; ghatti hui qeemat 2,000; dobara
+  chalana roka; hadd toRna roka; kitabi qeemat 114,000.
+
+### Ek baat jo malik ko tay karni hai
+
+308 mein default adaigi ki shart **"Haath ke haath (0 din)"** rakhi gayi
+hai. Iska matlab: jis supplier par shart nahi lagi, us ke naye bill ki
+tareekh usi din ki banegi. Ye jaan boojh kar hai — bina tareekh wala
+bill kisi fehrist mein nazar hi nahi aata. Agar aam shart 15 ya 30 din
+honi chahiye to `/admin/finance/terms` par badal di jaye.
+
 ### Live par chalane ki tarteeb (P0 rule)
 
 Backup verified (file ka size chat mein) -> pre-migration ginti ->
-301, 302 -> ginti dobara -> naya build upload -> smoke test.
+301, 302, 303, 304, 305, 306, 307, 308, 309 (isi tarteeb mein) ->
+ginti dobara -> naya build upload -> smoke test.
+
+### Pre-migration ginti (Live, 5 September raat)
+
+products 265, stock ki qatarein 62, movements 70, journal entries 14,
+journal lines 39, **Dr = Cr = 244,502**, gl khate 45 (sab chaar hindson
+ke), supplier 1, bina due_date wale purchase 1.
 
 Live par abhi **kuch nahi** chala.
 
