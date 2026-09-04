@@ -275,39 +275,90 @@ dikhegi. Malik se poochh kar bharni hai.
 
 ---
 
-## 5c. Teesra deployment — INTEZAR MEIN (291-292)
+## 5c. Teesra deployment — 4-5 September, raat (291-299)
 
-Ye kaam ho chuka hai aur git par charh chuka hai, magar **Live par abhi
-nahi gaya**. Live is waqt **290** par hai.
+**Backup:** `live-full-20260905.sql` — 3.3M, malik ki apni machine par,
+migrations se PEHLE. (P0 usool: backup ki tasdeeq ke baghair koi migration
+Live par nahi.)
 
-**Migrations (Testing par chal chuki hain, rollback test pass):**
-- **291** — `shops.status` (active / inactive / suspended), rokne ki
-  wajah aur kis ne roki; `is_active` ab halat se khud banta hai; aur
-  **dukan mitane par taala**: jis dukan ke godam mein maal ho, jis par
-  bikri ho chuki ho, ya jis par mulazim lage hon, wo mit hi nahi sakti.
-- **292** — dukanon ke safhe ki `feature_help` (band bmuqable roki gayi
-  ka farq, aur maal wali dukan kyun nahi mitti).
+**Ginti migrations se pehle aur baad — bilkul barabar:**
+products 265, maal 2293, stock ki harkatein 66, purchases 1, godam 3,
+dukanein 2, profiles 19.
 
-**Code mein kya jayega:**
-1. POS: cheezon ki tasveerein ya do harf ke tile, maal ka rang wala
-   nishaan, `Rs 580 / PCS`, qism ka chhanta, aur gahak ki talash — naam
-   ya phone se, chunte hi us ka baqi saamne.
-2. Sheet se products charhne par har naam ka pehla harf baRa.
-3. Dukanon ka safha: tafseel badalna, band karna, rok dena (wajah ke
-   sath), aur mitana — mitana sirf Owner/Admin, aur wo bhi tab jab dukan
-   par kuch bhi na ho.
+### Live par chal chuki migrations
 
-**Ek ruka hua faisla:** Live par 265 products ke naam chhote harfon mein
-hain (wo purane code se charhe). Naya code sirf aage aane walon ko
-theek karta hai. Purane 265 theek karne hain ya nahi — malik ka faisla
-baqi hai.
+| # | Kya | Halat |
+|---|---|---|
+| 291 | `shops.status` (chal rahi / band / roki gayi) + mitane par taala | ✅ |
+| 292 | Dukanon ke safhe ki madad | ✅ |
+| 293 | Cheez ka maujooda hawala rate, rate ki tareekh, aur khabar | ✅ |
+| 294 | `products` par likhne ki ijazat mein `owner` shamil | ✅ |
+| 295 | Ek ek cheez ki wapsi, asal bill se + kharab maal ka alag godam | ✅ |
+| 296 | Tasveer ka source + AI ke masode | ✅ |
+| 297 | Tasveeron ka feature, ijazat aur madad | ✅ |
+| 298 | **`pos_sales` par staff ki ijazat** — neeche dekhein | ✅ |
+| 299 | Maali gosharay ke feature, ijazat, menu aur madad | ✅ |
 
-**Jo abhi bhi baqi hai (record ke liye):** `PO-1788537423737` ke
-`credit_days` aur `due_date` khali; Live par kisi cheez par barcode
-nahi; naye build ke baad purane chunk ka masla `Ctrl+Shift+R` se hatta
-hai, us ka mustaqil hal abhi nahi laga.
+### 298 — wo kharabi jo chhupi hui thi
+
+Malik ne Rs 20 ki bikri ki, phir wapsi karne gaye: "koi bikri nahi mili".
+Bikri maujood thi.
+
+`pos_sales` aur `pos_sale_items` par RLS lagi hui thi magar policy sirf
+DEALER ke liye. Dukan ke staff, manager, admin ya khud malik ke liye koi
+policy thi hi nahi -- aur RLS ka usool ye hai ke jis ke liye policy na ho
+us ke liye jawab KHALI hota hai, ghalti nahi.
+
+Bikri is liye ho rahi thi ke `create_pos_sale` SECURITY DEFINER hai. Yani
+LIKHNA chal raha tha aur PARHNA band tha. Ye mahinon chhup sakta tha:
+Command Center par adad aate rehte (wo doosre raaste se aata hai) aur har
+wo safha jo seedha bikri parhta khali nazar aata.
+
+**Sabaq:** jab bhi koi fehrist khali dikhe, pehla sawal ye hona chahiye
+ke us table par is bande ke liye policy hai bhi ya nahi.
+
+### Code jo isi build mein gaya
+
+1. Dukanon ke chaar control (badalna, band, rok, mitana) + mitane par
+   database ka taala
+2. POS ka naya naqsha: tasveer wale khane, ek line ki toolbar, cart ki
+   qatar se tafseel (khulte hi cheezein chhoti, band karte hi wapas
+   poori chauRai), gahak ki teen qismein
+3. Lagat aur rate ki dono rokein SERVER par (safhe par nahi)
+4. Cheez ka maujooda rate maal wusool hote hi, rate ki tareekh, aur
+   khabar (manager ko tafseel, counter wale ko sirf naya bikri ka rate)
+5. Ek ek cheez ki wapsi, asal bill ke rate par
+6. Cheezon ki tasveerein AI se -- masoda, phir manzoori
+7. Maali gosharay: Trial Balance, Nafa Nuqsan, Balance Sheet, poora
+   Journal, haath se journal entry, aur Finance ka markaz
+
+### Live ke ledger ki tasdeeq (5 September)
+
+Debit 212,464 = Credit 212,464. Asaasay 107,126 = zimme 96,550 + is saal
+ka nafa 10,576. Yani Balance Sheet Live par barabar hai.
+
+### Abhi bhi baqi
+
+- **Fixed Assets ka poora hissa** (register, qismein, depreciation,
+  farokht, dobara qeemat, asset ledger) -- bana hi nahi
+- Post-dated cheques, recurring journals, budgets, period closing, item
+  costing run
+- Chart of Accounts ka safha, payment terms, cheque book, accounting
+  periods, khate milana
+- Cash Flow, Working Capital, Budget vs Actual, Farmer/Supplier/Dealer ka
+  lena-dena, shaakh shaakh ka nafa nuqsan
+- POS mein discount ka koi khana nahi (is liye "Discount Rs 0" ki qatar
+  jaan boojh kar nahi lagayi)
+- AI se tasveer BANNE ka hissa Live par chala kar dekha nahi gaya --
+  chabi is machine par nahi thi. Nakaami par safha asal ghalti likhta
+  hai; model ka naam `GEMINI_IMAGE_MODEL` se badla ja sakta hai
+- `PO-1788537423737` ke `credit_days` aur `due_date` khali
+- Live par kisi cheez par barcode nahi
+- 250 cheezon ki tasveer nahi (12 naam wali -- un ki ASAL tasveer haath
+  se charhani chahiye)
 
 ---
+
 
 ## 6. Purani fehrist — 4 September se pehle ka intezar (record ke liye)
 
