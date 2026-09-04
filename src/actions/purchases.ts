@@ -167,7 +167,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status")
+    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status, supplier_id")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
@@ -354,6 +354,44 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     })
     .eq("id", purchaseId);
   if (statusError) return { error: statusError.message };
+
+  // ===== Cheez ka MAUJOODA hawala rate =====
+  //
+  // Malik ka usool (4 September): "Agar aaj same product Rs100 purchase
+  // rate par aaya aur kal Rs110 par, to current rate Rs110 ho jaye.
+  // Lekin purane purchase records Rs110 mein overwrite nahi hone
+  // chahiyen."
+  //
+  // Is liye yahan SIRF cheez ka apna hawala rate badla jata hai. Us
+  // purchase ki qatarein, us ka batch, us ka GRN aur us ka hisaab jyun
+  // ka tyun rehta hai -- wo us din ki sachchai hai, aur supplier ko us
+  // bill par utna hi diya gaya tha.
+  //
+  // Rate ka source sirf ye raasta hai: MANZOOR SHUDA purchase, aur wohi
+  // maal jo waqai andar aaya. Draft bill, AI ka parha hua bill, ya
+  // rukka hua/mansookh order -- in mein se kisi se rate nahi charhta.
+  // Rate ka ghalat hona baad mein har cheez ka munafa ghalat kar deta
+  // hai, aur us ka pata mahinon nahi chalta.
+  //
+  // Tareekh aur khabar yahan se nahi bhejni parti: wo cheez par lage
+  // trigger (293) se khud banti hai, chahe rate kisi bhi raaste se
+  // badle.
+  for (const row of rows) {
+    if (row.received <= 0) continue;
+    const { error: rateErr } = await supabase
+      .from("products")
+      .update({
+        purchase_price: row.unit_cost,
+        latest_purchase_rate_at: new Date().toISOString(),
+        latest_purchase_id: purchaseId,
+        latest_supplier_id: purchase.supplier_id ?? null,
+      })
+      .eq("id", row.product_id);
+    // Rate na charh sake to maal wapas nahi hota -- wo andar aa chuka
+    // hai. Magar chup bhi nahi raha jata: agla rate purana hi rahega
+    // aur us par munafa ghalat ginta rahega.
+    if (rateErr) console.error(`rate nahi charha (${row.name}):`, rateErr.message);
+  }
 
   // Godam ka kaam yahan khatam hua.
   await closeHandoff("inventory.receiving", "purchases", purchaseId, user?.id ?? null);

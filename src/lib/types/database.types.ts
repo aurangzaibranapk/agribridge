@@ -15955,6 +15955,84 @@ export type Database = {
         }
         Relationships: []
       }
+      product_rate_history: {
+        Row: {
+          batch_id: string | null
+          branch_id: string | null
+          changed_at: string
+          changed_by: string | null
+          diff_amount: number | null
+          diff_pct: number | null
+          id: string
+          new_rate: number
+          old_rate: number | null
+          product_id: string
+          purchase_id: string | null
+          rate_kind: string
+          source: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          branch_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          diff_amount?: number | null
+          diff_pct?: number | null
+          id?: string
+          new_rate: number
+          old_rate?: number | null
+          product_id: string
+          purchase_id?: string | null
+          rate_kind: string
+          source?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          branch_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          diff_amount?: number | null
+          diff_pct?: number | null
+          id?: string
+          new_rate?: number
+          old_rate?: number | null
+          product_id?: string
+          purchase_id?: string | null
+          rate_kind?: string
+          source?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: []
+      }
+      rate_alert_config: {
+        Row: {
+          big_change_amount: number
+          big_change_pct: number
+          id: number
+          tolerance_amount: number
+          tolerance_pct: number
+          updated_at: string
+        }
+        Insert: {
+          big_change_amount?: number
+          big_change_pct?: number
+          id?: number
+          tolerance_amount?: number
+          tolerance_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          big_change_amount?: number
+          big_change_pct?: number
+          id?: number
+          tolerance_amount?: number
+          tolerance_pct?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           barcode_source: string | null
@@ -15976,6 +16054,9 @@ export type Database = {
           is_available: boolean
           is_deleted: boolean
           is_verified: boolean
+          latest_purchase_id: string | null
+          latest_purchase_rate_at: string | null
+          latest_supplier_id: string | null
           manufacture_date: string | null
           min_stock_threshold: number | null
           mrp_price: number | null
@@ -16015,6 +16096,9 @@ export type Database = {
           is_available?: boolean
           is_deleted?: boolean
           is_verified?: boolean
+          latest_purchase_id?: string | null
+          latest_purchase_rate_at?: string | null
+          latest_supplier_id?: string | null
           manufacture_date?: string | null
           min_stock_threshold?: number | null
           mrp_price?: number | null
@@ -16054,6 +16138,9 @@ export type Database = {
           is_available?: boolean
           is_deleted?: boolean
           is_verified?: boolean
+          latest_purchase_id?: string | null
+          latest_purchase_rate_at?: string | null
+          latest_supplier_id?: string | null
           manufacture_date?: string | null
           min_stock_threshold?: number | null
           mrp_price?: number | null

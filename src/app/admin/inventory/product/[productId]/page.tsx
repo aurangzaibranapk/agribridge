@@ -21,7 +21,13 @@ export default async function ProductCardPage({ params }: { params: { productId:
   const lang = getLanguageFromCookies("rm");
 
   const [{ data: product }, { data: cards }, { data: batches }, { data: invRows }] = await Promise.all([
-    supabase.from("products").select("id, name, pack_size, barcode, internal_barcode, expiry_date, min_stock_threshold").eq("id", params.productId).maybeSingle(),
+    supabase
+      .from("products")
+      .select(
+        "id, name, pack_size, barcode, internal_barcode, expiry_date, min_stock_threshold, purchase_price, selling_price, latest_purchase_rate_at"
+      )
+      .eq("id", params.productId)
+      .maybeSingle(),
     supabase.from("v_warehouse_product_card").select("*").eq("product_id", params.productId).order("warehouse_name"),
     supabase.from("v_product_batches").select("*").eq("product_id", params.productId).order("expiry_date", { ascending: true, nullsFirst: false }),
     supabase.from("inventory").select("id, warehouse_id, warehouses(name)").eq("product_id", params.productId),
@@ -37,6 +43,31 @@ export default async function ProductCardPage({ params }: { params: { productId:
         .in("inventory_id", invIds)
         .order("created_at", { ascending: false })
         .limit(20)
+    : { data: [] as any[] };
+
+  // ---- Rate ki tareekh (293) ----
+  //
+  // Ye hissa SAFHE PAR hi chhup jata hai, sirf khali qatarein dikha kar
+  // nahi. RLS un rolon ke haath mein sifar qatarein laata hai jinhen
+  // lagat dekhne ki ijazat nahi -- aur khali fehrist parh kar banda
+  // samajhta hai "is cheez ka rate kabhi badla hi nahi". Wo jhoot hai.
+  // Is liye pehle ye tay hota hai ke banda dekh bhi sakta hai ya nahi.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const RATE_ROLES = ["owner", "super_admin", "admin", "manager", "procurement", "warehouse", "finance"];
+  const rateDekhSakta = !!me?.is_active && RATE_ROLES.includes(me.role);
+
+  const { data: rateHistory } = rateDekhSakta
+    ? await supabase
+        .from("product_rate_history")
+        .select("id, rate_kind, old_rate, new_rate, diff_amount, diff_pct, source, changed_at")
+        .eq("product_id", params.productId)
+        .order("changed_at", { ascending: false })
+        .limit(15)
     : { data: [] as any[] };
 
   const totalOnHand = (cards ?? []).reduce((s, c) => s + Number(c.on_hand ?? 0), 0);
@@ -174,6 +205,70 @@ export default async function ProductCardPage({ params }: { params: { productId:
           </table>
         )}
       </Card>
+
+      {/* Rate ki tareekh: purana bill kabhi nahi badalta, magar cheez ka
+          maujooda hawala rate badalta rehta hai. Dono ek sath dikhte
+          hain, warna banda ye samajh nahi pata ke aaj ka rate kis din
+          se chala. */}
+      {rateDekhSakta && (
+        <Card className="overflow-x-auto">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-medium text-surface-800 dark:text-surface-200">{t("prh_title", lang)}</p>
+            <p className="text-xs text-surface-500">
+              {t("prh_current", lang)}:{" "}
+              <span className="font-semibold text-surface-800 dark:text-surface-200">
+                {product.purchase_price != null && Number(product.purchase_price) > 0
+                  ? `Rs ${Number(product.purchase_price).toLocaleString()}`
+                  : "—"}
+              </span>
+              {product.latest_purchase_rate_at && (
+                <span className="ml-1 text-surface-400">
+                  ({new Date(product.latest_purchase_rate_at).toLocaleDateString("en-GB")})
+                </span>
+              )}
+            </p>
+          </div>
+          <p className="mb-3 text-xs text-surface-400">{t("prh_note", lang)}</p>
+          {(rateHistory ?? []).length === 0 ? (
+            <p className="text-sm text-surface-400">{t("prh_none", lang)}</p>
+          ) : (
+            <table className="w-full min-w-[560px] text-sm">
+              <tbody>
+                {(rateHistory ?? []).map((h: any) => {
+                  const upar = Number(h.diff_amount ?? 0) > 0;
+                  return (
+                    <tr key={h.id} className="border-b border-surface-100 dark:border-surface-800">
+                      <td className="py-2 text-xs text-surface-500">
+                        {new Date(h.changed_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="py-2 text-xs">
+                        {h.rate_kind === "purchase" ? t("prh_kind_purchase", lang) : t("prh_kind_selling", lang)}
+                      </td>
+                      <td className="py-2 text-xs tabular-nums text-surface-600 dark:text-surface-300">
+                        {/* Pehli dafa rate lagne par purana "—" -- sifar
+                            likh dena "pehle muft aati thi" kehna hai. */}
+                        {h.old_rate == null ? "—" : `Rs ${Number(h.old_rate).toLocaleString()}`} →{" "}
+                        <span className="font-medium text-surface-900 dark:text-surface-100">
+                          Rs {Number(h.new_rate).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className={`py-2 text-right text-xs font-medium tabular-nums ${h.diff_amount == null ? "text-surface-400" : upar ? "text-red-600" : "text-emerald-700"}`}>
+                        {h.diff_amount == null
+                          ? "—"
+                          : `${upar ? "+" : "−"}Rs ${Math.abs(Number(h.diff_amount)).toLocaleString()}`}
+                      </td>
+                      <td className={`py-2 text-right text-xs tabular-nums ${h.diff_pct == null ? "text-surface-400" : upar ? "text-red-600" : "text-emerald-700"}`}>
+                        {h.diff_pct == null ? "" : `${upar ? "+" : ""}${Number(h.diff_pct)}%`}
+                      </td>
+                      <td className="py-2 pl-3 text-right text-[11px] text-surface-400">{h.source ?? ""}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

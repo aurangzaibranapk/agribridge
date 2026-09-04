@@ -96,6 +96,22 @@ export const inventoryDict = {
   inv_pc_nearest: { en: "Nearest expiry", rm: "Qareeb miyaad", ur: "قریب میعاد" },
   inv_pc_last_move: { en: "Last movement", rm: "Aakhri harkat", ur: "آخری حرکت" },
   inv_pc_movements: { en: "Recent movements", rm: "Haal ki harkatein", ur: "حال کی حرکتیں" },
+
+  // ---- Rate ki tareekh (293) ----
+  prh_title: { en: "Rate history", rm: "Rate ki tareekh", ur: "ریٹ کی تاریخ" },
+  prh_current: { en: "Current purchase rate", rm: "Maujooda kharid ka rate", ur: "موجودہ خرید کا ریٹ" },
+  prh_note: {
+    en: "The current rate follows the latest approved purchase. Old bills, GRNs and batches keep the rate they were made at — they never change.",
+    rm: "Maujooda rate aakhri manzoor shuda kharid par chalta hai. Purane bill, GRN aur batch usi rate par rehte hain jis par bane the — wo kabhi nahi badalte.",
+    ur: "موجودہ ریٹ آخری منظور شدہ خرید پر چلتا ہے۔ پرانے بل، GRN اور بیچ اسی ریٹ پر رہتے ہیں جس پر بنے تھے — وہ کبھی نہیں بدلتے۔",
+  },
+  prh_none: {
+    en: "No rate change recorded for this item yet.",
+    rm: "Is cheez ka rate abhi tak ek dafa bhi badla hua darj nahi.",
+    ur: "اس چیز کا ریٹ ابھی تک ایک دفعہ بھی بدلا ہوا درج نہیں۔",
+  },
+  prh_kind_purchase: { en: "Purchase", rm: "Kharid", ur: "خرید" },
+  prh_kind_selling: { en: "Selling", rm: "Bikri", ur: "بکری" },
   inv_pc_no_stock: { en: "No stock row in any warehouse yet.", rm: "Abhi kisi godam mein is ka khana nahi.", ur: "ابھی کسی گودام میں اس کا خانہ نہیں۔" },
   inv_pc_back: { en: "Back to inventory", rm: "Stock ki fehrist par wapas", ur: "اسٹاک کی فہرست پر واپس" },
 } as const;
