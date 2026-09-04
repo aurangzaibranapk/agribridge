@@ -10,32 +10,75 @@ import { quantityReport } from "@/lib/ledger/quantity-money";
  * ghalat adad likhna khali khane se kahin bura hota: khali khana sawal
  * paida karta hai, ghalat adad faisla badal deta hai.
  *
- * Isi wajah se har department ka wohi paimana liya gaya hai jo us ke
- * apne khaton mein waqai maujood hai:
+ * Isi wajah se har department ka hisaab USI kitab se liya gaya hai jo
+ * us department ka apna safha dikhata hai. Do jagah do qaide rakhne se
+ * kisi din do alag adad nikal aate hain, aur phir ye sawal khatam nahi
+ * hota ke sach kaunsa hai:
  *
- *   Retail    -- pos_sales mein nafa khud likha hota hai
- *   Grain     -- grain_sales mein nafa aur lagat dono maujood hain
- *   Machinery -- booking par commission, diesel aur vendor ka hissa
- *   Milk      -- doodh KHAREEDA jata hai, is liye ye kharcha hai;
- *                us ki bikri alag khane mein hai jo abhi khali hai
+ *   Milk      -- Company Billing aur P&L wali policy: aamdani service
+ *                rate (fi litre) se banti hai; kisan ka doodh guzarne
+ *                wali raqam hai, is P&L ka hissa nahi.
+ *   Grain     -- grain_sales: total_cogs sirf BIKE hue maal ki lagat
+ *                hai. Is mahine ki KHAREED us ke muqable mein rakhna
+ *                godam ko nuqsan bana deta hai -- wo nuqsan nahi, maal
+ *                hai.
+ *   Machinery -- v_machinery_pnl_booking: hamari aamdani commission
+ *                hai, gross billing nahi; aur sirf WO diesel kharcha
+ *                hai jo hamara apna tha. Wapas aane wala diesel kharcha
+ *                nahi -- usay kharcha likhna jhoota nuqsan banata hai.
+ *   Retail    -- pos_sales: nafa aur lagat dono pehle se likhe hote
+ *                hain.
+ *
+ * Aur ek usool poore safhe par lagta hai: **Rs 0 ka matlab hai "dekh
+ * liya, kuch nahi hua". Jis cheez ka indraj hi nahi hota us ke saamne
+ * "—" aata hai, sifar nahi.** Dono ko kabhi mila kar nahi dikhaya jata.
  */
+
+/**
+ * Kisi khane ki halat:
+ *   ok         -- adad asal record se aaya, us par bharosa kiya ja sakta hai
+ *   incomplete -- kaam to hua hai magar us ka koi khana abhi khali hai
+ *   untracked  -- ye cheez is department ke liye rakhi hi nahi jati
+ */
+export type DataState = "ok" | "incomplete" | "untracked";
 
 export interface DeptKpi {
   key: string;
   label: string;
+  /** Row par click karne se kahan jana hai. */
+  href: string;
+  /** Kaam ke chhote tukre: "Kharida 1,200 kg", "Bika 400 kg", "Godam 800 kg". */
+  work: string[];
   /** Aamdani -- na nikal sake to null. */
   revenue: number | null;
-  /** Kharcha ya lagat. */
-  cost: number | null;
+  /** Seedhi lagat: jo cheez bechi ya kaam kiya, us ki apni lagat. */
+  directCost: number | null;
+  /** Baqi kharcha: chalane ka kharcha (tankhwah, bijli, marammat...). */
+  otherExpense: number | null;
   /** Nafa -- sirf tab jab dono asal mein maujood hon. */
   profit: number | null;
-  /** Ek line mein wo cheez jo is department ko sab se zyada bayan karti hai. */
-  volumeLabel: string;
-  volume: string;
+  /** Margin -- sirf tab jab aamdani sifar se zyada ho. */
+  margin: number | null;
   /** Jo kaam pare hue hain. */
   pending: number;
-  /** Wo cheez jo abhi is khane se nahi nikalti. */
+  /** Pending kis wajah se hai -- adad ke sath wajah bhi nazar aani chahiye. */
+  pendingReason: string | null;
+  pendingHref: string | null;
+  /** Is department ke maali khane ki halat. */
+  state: DataState;
+  /** Wo cheez jo abhi is khane se nahi nikalti, ya jo policy samjhani zaroori hai. */
   note: string | null;
+}
+
+export interface DeptTotals {
+  revenue: number;
+  cost: number;
+  net: number;
+  /** Kitne department poore hisaab ke sath shaamil hue. */
+  included: number;
+  /** Jin ka hisaab adhoora hone ki wajah se shaamil nahi kiya gaya. */
+  excluded: string[];
+  attention: number;
 }
 
 export interface MoneyToday {
@@ -111,97 +154,289 @@ export async function loadMoneyToday(): Promise<MoneyToday> {
   };
 }
 
+/** Mahine ka aakhri din -- YYYY-MM-DD. */
+function monthEnd(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+}
+
+function fmtQty(value: number, unit: string): string {
+  return `${Math.round(value).toLocaleString()} ${unit}`;
+}
+
 export async function loadDeptKpis(): Promise<DeptKpi[]> {
   const service = createServiceClient();
   const from = monthStart();
+  const to = monthEnd();
 
   const [
-    { data: pos },
-    { data: grain },
-    { data: grainBuy },
-    { data: machinery },
-    { data: milk },
+    { data: pos, error: posErr },
+    { data: grain, error: grainErr },
+    { data: grainBuy, error: grainBuyErr },
+    { data: grainStock, error: grainStockErr },
+    { data: bookings, error: bookingsErr },
+    { data: machPnl, error: machPnlErr },
+    { data: milk, error: milkErr },
+    { data: billingSettings },
+    { data: salaries, error: salariesErr },
+    { data: fuel, error: fuelErr },
+    { data: generator, error: generatorErr },
+    { data: maintenance, error: maintenanceErr },
+    { data: monthlyExp, error: monthlyExpErr },
+    { data: routes, error: routesErr },
+    { data: rateSettings },
     { data: pendingSubs },
     { data: pendingReturns },
     { data: pendingFat },
   ] = await Promise.all([
     service.from("pos_sales").select("total_amount, profit, total_cogs").gte("created_at", from),
-    service.from("grain_sales").select("total_amount, profit, total_cogs, quantity_kg").gte("sale_date", from),
-    service.from("grain_procurement_entries").select("total_amount, weight_kg").gte("entry_date", from),
     service
-      .from("machinery_bookings")
-      .select("total_amount, vendor_payable, diesel_amount, commission_amount")
+      .from("grain_sales")
+      .select("total_amount, profit, total_cogs, quantity_kg, bardana_cost, mazdoori_cost")
+      .gte("sale_date", from),
+    service.from("grain_procurement_entries").select("total_amount, weight_kg").gte("entry_date", from),
+    service.from("v_grain_warehouse_stock").select("maujood_kg"),
+    service
+      .from("v_machinery_control")
+      .select("booking_id, raw_status, kaam_mukammal, harvest_area, bill_number")
       .gte("booking_date", from),
+    // Machinery ka nafa nuqsan wahi view deta hai jo /admin/machinery-rental/pnl
+    // dikhata hai -- commission, hamara diesel aur munafa sab wahan se.
+    // Hisaab ki bunyaad BILL ki tareekh hai (malik ka faisla), is liye
+    // jo kaam abhi bill nahi hua wo aamdani mein nahi ginta.
+    service
+      .from("v_machinery_pnl_booking")
+      .select("acre, hamari_aamdani, diesel_hamara_kharcha, munafa, gross_billing")
+      .gte("bill_date", from),
     service
       .from("milk_entries")
-      .select("quantity_liters, total_amount")
+      .select("quantity_liters, adjusted_volume, total_amount")
       .gte("entry_date", from)
       .neq("status", "rejected"),
+    service.from("company_billing_settings").select("service_rate_per_liter").limit(1).maybeSingle(),
+    service.from("salary_payments").select("net_salary").eq("pay_month", new Date().getMonth() + 1).eq("pay_year", new Date().getFullYear()),
+    service.from("fuel_logs").select("fuel_cost").gte("log_date", from).lte("log_date", to),
+    service.from("generator_logs").select("diesel_cost").gte("log_date", from).lte("log_date", to),
+    service.from("maintenance_logs").select("cost").gte("service_date", from).lte("service_date", to),
+    service
+      .from("monthly_expenses")
+      .select("category, amount")
+      .eq("expense_month", new Date().getMonth() + 1)
+      .eq("expense_year", new Date().getFullYear()),
+    service.from("milk_route_collections").select("shortage_liters").gte("collection_date", from).lte("collection_date", to),
+    service.from("milk_rate_settings").select("standard_rate").limit(1).maybeSingle(),
     service.from("whatsapp_submissions").select("id").eq("status", "pending"),
     service.from("agri_order_returns").select("id").eq("status", "pending"),
     service.from("milk_entries").select("id").eq("status", "pending_fat"),
   ]);
 
-  const machineryRevenue = sumOf(machinery, "total_amount");
-  const machineryCost = sumOf(machinery, "vendor_payable") + sumOf(machinery, "diesel_amount");
+  // ---------- Sawal nakaam to nahi hua? ----------
+  //
+  // Ye hissa sab se ahem hai. PostgREST ka nakaam sawal `data: null`
+  // deta hai, aur null ko jama karne par SIFAR nikalta hai -- yani
+  // safha bilkul theek nazar aata hai aur adad khamoshi se ghalat hota
+  // hai. Yahi ghalti pehle Access Requests par ho chuki hai (58 tables
+  // par GRANT ki kami se har adad sifar aa raha tha) aur wo tab tak
+  // pakri nahi gayi jab tak safhe ne sach bolna shuru nahi kiya.
+  //
+  // Is liye: sawal nakaam ho to us department ka hisaab "adhoora" hai,
+  // sifar nahi.
+  const failed = (...errors: ({ message: string } | null)[]): string | null => {
+    const first = errors.find((e) => e);
+    return first ? first.message : null;
+  };
+
+  const milkFail = failed(milkErr, salariesErr, fuelErr, generatorErr, maintenanceErr, monthlyExpErr, routesErr);
+  const grainFail = failed(grainErr, grainBuyErr, grainStockErr);
+  const machFail = failed(machPnlErr, bookingsErr);
+  const retailFail = failed(posErr);
+
+  // ---------- Milk ----------
+  // Policy wahi jo /admin/milk-collection/billing aur Master Dashboard
+  // par chalti hai: aamdani = adjusted volume x service rate.
+  const milkLiters = (milk ?? []).reduce((total, e) => total + n(e.adjusted_volume ?? e.quantity_liters), 0);
+  const milkFarmerPayable = sumOf(milk, "total_amount");
+  const serviceRate = billingSettings ? n(billingSettings.service_rate_per_liter) : null;
+
+  const milkFuel = sumOf(fuel, "fuel_cost");
+  const milkGenerator = sumOf(generator, "diesel_cost");
+  const milkMaintenance = sumOf(maintenance, "cost");
+  const milkSalaries = sumOf(salaries, "net_salary");
+  const expenseMap = new Map((monthlyExp ?? []).map((e) => [e.category as string, n(e.amount)]));
+  const milkElectricity = expenseMap.get("electricity") ?? 0;
+  const milkChiller = expenseMap.get("chiller_maintenance") ?? 0;
+  const standardRate = rateSettings ? n(rateSettings.standard_rate) : 0;
+  const shortageLiters = (routes ?? []).reduce((total, r) => total + Math.max(0, n(r.shortage_liters)), 0);
+  const shortageLoss = shortageLiters * standardRate;
+
+  const milkRevenue = serviceRate != null && serviceRate > 0 ? milkLiters * serviceRate : null;
+  const milkDirect = milkFuel + milkGenerator + shortageLoss;
+  const milkOther = milkSalaries + milkElectricity + milkChiller + milkMaintenance;
+  const milkProfit = milkRevenue == null ? null : milkRevenue - milkDirect - milkOther;
+
+  const milkWork = [`Jama ${fmtQty(milkLiters, "L")}`];
+  if (shortageLiters > 0) milkWork.push(`Kami ${fmtQty(shortageLiters, "L")}`);
+  if (milkFarmerPayable > 0) milkWork.push(`Kisan ko dena Rs ${Math.round(milkFarmerPayable).toLocaleString()}`);
+
+  // ---------- Grain ----------
+  const grainRevenue = sumOf(grain, "total_amount");
+  const grainCogs = sumOf(grain, "total_cogs");
+  const grainOther = sumOf(grain, "bardana_cost") + sumOf(grain, "mazdoori_cost");
+  const grainProfit = sumOf(grain, "profit");
+  const grainBought = sumOf(grainBuy, "weight_kg");
+  const grainSold = sumOf(grain, "quantity_kg");
+  const grainInStock = sumOf(grainStock, "maujood_kg");
+  const grainBuyValue = sumOf(grainBuy, "total_amount");
+
+  // ---------- Machinery ----------
+  const machRevenue = sumOf(machPnl, "hamari_aamdani");
+  const machDirect = sumOf(machPnl, "diesel_hamara_kharcha");
+  const machProfit = sumOf(machPnl, "munafa");
+  const machAcres = sumOf(machPnl, "acre");
+  const liveBookings = (bookings ?? []).filter((b) => b.raw_status !== "cancelled");
+  const completed = liveBookings.filter((b) => b.kaam_mukammal === true).length;
+  const bookedAcres = liveBookings.reduce((total, b) => total + n(b.harvest_area), 0);
+  // Mukammal kaam jis ka bill abhi nahi bana -- ye aamdani abhi gini
+  // nahi jati. Bina is nishan ke owner samjhta hai machinery ne kam
+  // kamaya, jab ke asal mein bill hi nahi bana.
+  const unbilled = liveBookings.filter((b) => b.kaam_mukammal === true && !b.bill_number).length;
+
+  // ---------- Retail ----------
+  const retailRevenue = sumOf(pos, "total_amount");
+  const retailCogs = sumOf(pos, "total_cogs");
+  const retailProfit = sumOf(pos, "profit");
+
+  const margin = (profit: number | null, revenue: number | null) =>
+    profit != null && revenue != null && revenue > 0 ? (profit / revenue) * 100 : null;
 
   return [
     {
       key: "milk",
       label: "Milk",
-      revenue: null,
-      cost: sumOf(milk, "total_amount"),
-      profit: null,
-      volumeLabel: "Doodh",
-      volume: `${Math.round(sumOf(milk, "quantity_liters"))} L`,
+      href: "/admin/milk-collection/billing",
+      work: milkWork,
+      revenue: milkRevenue,
+      directCost: milkDirect,
+      otherExpense: milkOther,
+      profit: milkProfit,
+      margin: margin(milkProfit, milkRevenue),
       pending: (pendingFat ?? []).length,
-      note: "Doodh khareeda jata hai — bikri ka khana abhi khali hai, is liye nafa nahi nikalta.",
+      pendingReason:
+        (pendingFat ?? []).length > 0 ? `${(pendingFat ?? []).length} entry FAT ki tasdeeq ke intezar mein` : null,
+      pendingHref: "/admin/milk-collection/verify",
+      state: milkFail || milkRevenue == null ? "incomplete" : "ok",
+      note: milkFail
+        ? `Doodh ka record is waqt parha nahi ja saka (${milkFail}). Ye adad adhoore hain -- inhen sahi na samjhein.`
+        : milkRevenue == null
+          ? "Company billing ka service rate abhi set nahi -- us ke baghair doodh ki aamdani nahi banti."
+          : "Aamdani service rate (fi litre) se banti hai. Kisan ka doodh guzarne wali raqam hai, is nafa nuqsan ka hissa nahi.",
     },
     {
       key: "grain",
       label: "Grain",
-      revenue: sumOf(grain, "total_amount"),
-      cost: sumOf(grainBuy, "total_amount"),
-      profit: sumOf(grain, "profit"),
-      volumeLabel: "Bika",
-      volume: `${Math.round(sumOf(grain, "quantity_kg"))} kg`,
+      href: "/admin/grain-procurement/dashboard",
+      work: [
+        `Kharida ${fmtQty(grainBought, "kg")}`,
+        `Bika ${fmtQty(grainSold, "kg")}`,
+        `Godam ${fmtQty(grainInStock, "kg")}`,
+      ],
+      revenue: grainRevenue,
+      directCost: grainCogs,
+      otherExpense: grainOther,
+      profit: grainProfit,
+      margin: margin(grainProfit, grainRevenue),
       pending: 0,
-      note: null,
+      pendingReason: null,
+      pendingHref: null,
+      state: grainFail ? "incomplete" : "ok",
+      note: grainFail
+        ? `Anaj ka record is waqt parha nahi ja saka (${grainFail}).`
+        : grainBought > 0 && grainSold === 0
+          ? `Is mahine Rs ${Math.round(grainBuyValue).toLocaleString()} ka anaj khareeda gaya magar bika nahi -- wo godam mein hai, nuqsan nahi.`
+          : "Lagat sirf BIKE hue maal ki hai; jo godam mein para hai wo abhi lagat nahi bana.",
     },
     {
       key: "machinery",
       label: "Machinery",
-      revenue: machineryRevenue,
-      cost: machineryCost,
-      profit: machineryRevenue - machineryCost,
-      volumeLabel: "Booking",
-      volume: String((machinery ?? []).length),
-      pending: 0,
-      note: null,
+      href: "/admin/machinery-rental/pnl",
+      work: [
+        `Booking ${liveBookings.length}`,
+        `Mukammal ${completed}`,
+        `Acre ${machAcres > 0 ? machAcres.toFixed(1) : bookedAcres.toFixed(1)}`,
+      ],
+      revenue: machRevenue,
+      directCost: machDirect,
+      otherExpense: null,
+      profit: machProfit,
+      margin: margin(machProfit, machRevenue),
+      pending: unbilled,
+      pendingReason: unbilled > 0 ? `${unbilled} mukammal booking ka bill abhi nahi bana` : null,
+      pendingHref: "/admin/machinery-rental/billing",
+      state: machFail ? "incomplete" : "ok",
+      note: machFail
+        ? `Machinery ka record is waqt parha nahi ja saka (${machFail}).`
+        : "Hamari aamdani commission hai, gross billing nahi. Diesel mein sirf hamara apna kharcha gina gaya -- wapas aane wala diesel kharcha nahi.",
     },
     {
       key: "retail",
       label: "Retail",
-      revenue: sumOf(pos, "total_amount"),
-      cost: sumOf(pos, "total_cogs"),
-      profit: sumOf(pos, "profit"),
-      volumeLabel: "Bikri",
-      volume: String((pos ?? []).length),
+      href: "/admin/reports/pnl",
+      work: [`Bikri ${(pos ?? []).length}`],
+      revenue: retailRevenue,
+      directCost: retailCogs,
+      otherExpense: null,
+      profit: retailProfit,
+      margin: margin(retailProfit, retailRevenue),
       pending: (pendingReturns ?? []).length,
-      note: null,
+      pendingReason:
+        (pendingReturns ?? []).length > 0 ? `${(pendingReturns ?? []).length} wapsi faisle ke intezar mein` : null,
+      pendingHref: "/admin/agri-returns",
+      state: retailFail ? "incomplete" : "ok",
+      note: retailFail
+        ? `Bikri ka record is waqt parha nahi ja saka (${retailFail}).`
+        : "Kharche department ke hisaab se alag nahi rakhe jate, is liye baqi kharcha yahan track nahi hota.",
     },
     {
       key: "approvals",
       label: "Approval",
+      href: "/admin/submissions",
+      work: [`Intezar mein ${(pendingSubs ?? []).length}`],
       revenue: null,
-      cost: null,
+      directCost: null,
+      otherExpense: null,
       profit: null,
-      volumeLabel: "Intezar mein",
-      volume: String((pendingSubs ?? []).length),
+      margin: null,
       pending: (pendingSubs ?? []).length,
-      note: null,
+      pendingReason:
+        (pendingSubs ?? []).length > 0 ? `${(pendingSubs ?? []).length} entry manzoori ke intezar mein` : null,
+      pendingHref: "/admin/submissions",
+      state: "untracked",
+      note: "Ye department paisa nahi kamata -- ye qatar hai. Is ka koi nafa nuqsan nahi hota.",
     },
   ];
+}
+
+/**
+ * Upar ke chaar card.
+ *
+ * Sirf wo department jama kiye jate hain jin ka maali hisaab POORA hai.
+ * Adhoore department ko chup chaap sifar maan lena sab se aam dashboard
+ * ki ghalti hai: kul adad theek nazar aata hai aur kisi ko pata nahi
+ * chalta ke us mein ek poora karobar shaamil hi nahi.
+ */
+export function deptTotals(depts: DeptKpi[]): DeptTotals {
+  const money = depts.filter((d) => d.revenue != null || d.directCost != null);
+  const complete = money.filter((d) => d.state === "ok");
+  const excluded = money.filter((d) => d.state !== "ok").map((d) => d.label);
+
+  return {
+    revenue: complete.reduce((total, d) => total + (d.revenue ?? 0), 0),
+    cost: complete.reduce((total, d) => total + (d.directCost ?? 0) + (d.otherExpense ?? 0), 0),
+    net: complete.reduce((total, d) => total + (d.profit ?? 0), 0),
+    included: complete.length,
+    excluded,
+    attention: depts.reduce((total, d) => total + d.pending, 0),
+  };
 }
 
 export async function loadAlerts(): Promise<Alert[]> {
@@ -475,38 +710,54 @@ export async function loadAlerts(): Promise<Alert[]> {
  * khatra barhta hai ke wo koi aisi baat keh de jo aankron mein hai hi
  * nahi. Dashboard par likhi baat par faisla hota hai, is liye us ka har
  * lafz kisi khane se nikalna chahiye.
+ *
+ * Tarteeb bhi maayne rakhti hai: pehle wo baatein jo GHALAT PARHI JA
+ * SAKTI HAIN (adhoora hisaab, godam mein para maal), phir moqabla, phir
+ * ruka hua kaam. Agar adhoore hisaab ki baat neeche chali jaye to
+ * upar wala moqabla poora sach lagne lagta hai.
  */
 export function conclude(depts: DeptKpi[]): string[] {
-  const withProfit = depts.filter((d) => d.profit != null && (d.revenue ?? 0) > 0);
-  if (withProfit.length === 0) {
-    return ["Is mahine abhi itna kaam nahi hua ke departments ka moqabla kiya ja sake."];
-  }
-
-  const sorted = [...withProfit].sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0));
-  const best = sorted[0];
-  const worst = sorted[sorted.length - 1];
-
   const lines: string[] = [];
-  lines.push(
-    `Sab se behtar: **${best.label}** — Rs ${Math.round(best.profit ?? 0).toLocaleString()} nafa, ` +
-      `Rs ${Math.round(best.revenue ?? 0).toLocaleString()} ki aamdani par.`
-  );
 
-  if (sorted.length > 1 && worst.key !== best.key) {
-    const margin = (worst.revenue ?? 0) > 0 ? ((worst.profit ?? 0) / (worst.revenue ?? 1)) * 100 : 0;
+  // 1. Jin ka hisaab adhoora hai -- ye sab se pehle, warna neeche wala
+  //    moqabla poora sach lagta hai.
+  for (const d of depts.filter((x) => x.state === "incomplete")) {
+    lines.push(`**${d.label}** ka nafa nahi nikal raha: ${d.note ?? "us ka koi khana abhi khali hai."}`);
+  }
+
+  // 2. Wo baat jo nuqsan lagti hai magar nuqsan hai nahi.
+  for (const d of depts.filter((x) => x.state === "ok" && x.note && x.key === "grain")) {
+    if ((d.profit ?? 0) <= 0 && d.note) lines.push(`**${d.label}**: ${d.note}`);
+  }
+
+  // 3. Moqabla -- sirf un mein jin ka hisaab poora hai aur jinhon ne
+  //    is mahine waqai kuch kamaya.
+  const withProfit = depts.filter((d) => d.state === "ok" && d.profit != null && (d.revenue ?? 0) > 0);
+  if (withProfit.length === 0) {
+    lines.push("Is mahine abhi itna kaam nahi hua ke departments ka moqabla kiya ja sake.");
+  } else {
+    const sorted = [...withProfit].sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0));
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+
     lines.push(
-      `Sab se kam: **${worst.label}** — margin ${margin.toFixed(1)}%. ` +
-        `Lagat Rs ${Math.round(worst.cost ?? 0).toLocaleString()} hai; nafa isi se dabta hai.`
+      `Sab se behtar: **${best.label}** — Rs ${Math.round(best.profit ?? 0).toLocaleString()} nafa, ` +
+        `Rs ${Math.round(best.revenue ?? 0).toLocaleString()} ki aamdani par` +
+        (best.margin != null ? ` (margin ${best.margin.toFixed(1)}%).` : ".")
     );
+
+    if (sorted.length > 1 && worst.key !== best.key) {
+      lines.push(
+        `Sab se kam: **${worst.label}** — margin ${worst.margin != null ? worst.margin.toFixed(1) : "—"}%. ` +
+          `Lagat Rs ${Math.round((worst.directCost ?? 0) + (worst.otherExpense ?? 0)).toLocaleString()} hai; nafa isi se dabta hai.`
+      );
+    }
   }
 
-  const pending = depts.reduce((total, d) => total + d.pending, 0);
-  if (pending > 0) {
-    lines.push(`${pending} kaam faisle ke intezar mein pare hain — jab tak faisla nahi hota, hisaab adhoora rehta hai.`);
+  // 4. Ruka hua kaam -- wajah ke sath, sirf adad nahi.
+  for (const d of depts.filter((x) => x.pending > 0 && x.pendingReason)) {
+    lines.push(`**${d.label}**: ${d.pendingReason}.`);
   }
-
-  const noted = depts.filter((d) => d.note);
-  for (const d of noted) lines.push(`${d.label}: ${d.note}`);
 
   return lines;
 }

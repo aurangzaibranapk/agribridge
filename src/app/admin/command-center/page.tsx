@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude } from "@/lib/command-center";
-import { AlertTriangle, CheckCircle2, ArrowRight, TrendingUp } from "lucide-react";
+import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals } from "@/lib/command-center";
+import { AlertTriangle, CheckCircle2, ArrowRight, TrendingUp, Sparkles } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
@@ -10,9 +10,21 @@ export const dynamic = "force-dynamic";
 
 const OWNER_ROLES = ["owner", "super_admin", "admin"];
 
+/**
+ * Rs 0 aur "—" ek cheez nahi.
+ *
+ * Rs 0 kehta hai "dekh liya, kuch nahi hua". "—" kehta hai "is ka
+ * hisaab hi nahi rakha jata". Is project mein ye farq teen dafa ghalat
+ * adad de chuka hai, is liye yahan sirf ek jagah tay hota hai.
+ */
 function rs(value: number | null): string {
   if (value == null) return "—";
   return `Rs ${Math.round(value).toLocaleString()}`;
+}
+
+function pct(value: number | null): string {
+  if (value == null) return "—";
+  return `${value.toFixed(1)}%`;
 }
 
 /** **bold** wale hisse ko asal bold mein badal deta hai. */
@@ -44,6 +56,7 @@ export default async function CommandCenterPage() {
 
   const [money, depts, alerts] = await Promise.all([loadMoneyToday(), loadDeptKpis(), loadAlerts()]);
   const lines = conclude(depts);
+  const totals = deptTotals(depts);
 
   const moneyTiles = [
     { label: "Aaj ki bikri", value: rs(money.revenue), href: "/admin/pos" },
@@ -88,59 +101,139 @@ export default async function CommandCenterPage() {
       {/* ---- Departments ---- */}
       <div>
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_dept_this_month", lang)}</h2>
+
+        {/* Chaar card -- sirf un departments se jin ka hisaab poora hai. */}
+        <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Card className="p-4">
+            <p className="text-xs text-surface-500">{t("cc_total_revenue", lang)}</p>
+            <p className="mt-1 text-xl font-semibold text-surface-900 dark:text-white">{rs(totals.revenue)}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-surface-500">{t("cc_total_cost", lang)}</p>
+            <p className="mt-1 text-xl font-semibold text-surface-900 dark:text-white">{rs(totals.cost)}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-surface-500">{t("cc_net", lang)}</p>
+            <p
+              className={`mt-1 text-xl font-semibold ${
+                totals.net < 0 ? "text-red-600" : "text-green-700 dark:text-green-400"
+              }`}
+            >
+              {rs(totals.net)}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-surface-500">{t("cc_needs_attention_count", lang)}</p>
+            <p
+              className={`mt-1 text-xl font-semibold ${
+                totals.attention > 0 ? "text-amber-600" : "text-surface-900 dark:text-white"
+              }`}
+            >
+              {totals.attention}
+            </p>
+          </Card>
+        </div>
+
+        {/* Adhoore department chup chaap sifar nahi ginte -- saaf likha jata
+            hai ke wo in totals mein hain hi nahi. */}
+        <p className="mb-2 px-1 text-xs text-surface-400">
+          {t("cc_only_complete", lang)}
+          {totals.excluded.length > 0 && (
+            <span className="text-amber-700 dark:text-amber-500">
+              {" "}
+              {totals.excluded.join(", ")} shaamil nahi — un ka hisaab adhoora hai.
+            </span>
+          )}
+        </p>
+
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
               <tr>
                 <th className="px-4 py-2 font-medium">{t("c_department", lang)}</th>
                 <th className="px-4 py-2 font-medium">{t("cc_work", lang)}</th>
                 <th className="px-4 py-2 text-right font-medium">{t("cc_income", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_cost", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_profit", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("c_pending", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_direct_cost", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_other_expense", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_profit_loss", lang)}</th>
+                <th className="px-4 py-2 text-right font-medium">{t("cc_margin", lang)}</th>
+                <th className="px-4 py-2 font-medium">{t("cc_attention_col", lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
-              {depts.map((d) => {
-                const margin = d.profit != null && (d.revenue ?? 0) > 0 ? ((d.profit / (d.revenue ?? 1)) * 100) : null;
-                return (
-                  <tr key={d.key}>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-surface-900 dark:text-white">{d.label}</p>
-                      {d.note && <p className="mt-0.5 max-w-xs text-xs text-surface-400">{d.note}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-surface-600 dark:text-surface-400">
-                      <span className="text-xs text-surface-400">{d.volumeLabel}: </span>
-                      {d.volume}
-                    </td>
-                    <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">{rs(d.revenue)}</td>
-                    <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">{rs(d.cost)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span
-                        className={`font-semibold ${
-                          d.profit == null
-                            ? "text-surface-400"
-                            : d.profit < 0
-                              ? "text-red-600"
-                              : "text-green-700 dark:text-green-400"
-                        }`}
-                      >
-                        {rs(d.profit)}
+              {depts.map((d) => (
+                <tr key={d.key} className="transition hover:bg-brand-25 dark:hover:bg-surface-900/40">
+                  <td className="px-4 py-3 align-top">
+                    <Link href={d.href} className="font-medium text-surface-900 hover:underline dark:text-white">
+                      {d.label}
+                    </Link>
+                    {d.state === "incomplete" && (
+                      <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30">
+                        {t("cc_incomplete", lang)}
                       </span>
-                      {margin != null && <span className="block text-xs text-surface-400">{margin.toFixed(1)}%</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {d.pending > 0 ? (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/30">
-                          {d.pending}
+                    )}
+                    {d.note && <p className="mt-0.5 max-w-sm text-xs text-surface-400">{d.note}</p>}
+                  </td>
+
+                  <td className="px-4 py-3 align-top text-surface-600 dark:text-surface-400">
+                    <div className="flex flex-wrap gap-1">
+                      {d.work.map((chip) => (
+                        <span
+                          key={chip}
+                          className="rounded-full bg-surface-100 px-2 py-0.5 text-xs dark:bg-surface-800"
+                        >
+                          {chip}
                         </span>
-                      ) : (
-                        <span className="text-xs text-surface-300">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      ))}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
+                    {rs(d.revenue)}
+                  </td>
+                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
+                    {rs(d.directCost)}
+                  </td>
+                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
+                    {d.otherExpense == null ? (
+                      <span className="text-surface-300" title={t("cc_untracked", lang)}>
+                        —
+                      </span>
+                    ) : (
+                      rs(d.otherExpense)
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 text-right align-top">
+                    <span
+                      className={`font-semibold tabular-nums ${
+                        d.profit == null
+                          ? "text-surface-400"
+                          : d.profit < 0
+                            ? "text-red-600"
+                            : "text-green-700 dark:text-green-400"
+                      }`}
+                    >
+                      {rs(d.profit)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-500">{pct(d.margin)}</td>
+
+                  <td className="px-4 py-3 align-top">
+                    {d.pending > 0 ? (
+                      <Link
+                        href={d.pendingHref ?? d.href}
+                        className="inline-flex items-start gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800 hover:underline dark:bg-amber-950/30 dark:text-amber-400"
+                      >
+                        <span className="font-semibold">{d.pending}</span>
+                        <span className="max-w-[13rem]">{d.pendingReason}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-surface-300">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Card>
@@ -148,7 +241,10 @@ export default async function CommandCenterPage() {
 
       {/* ---- Nateeja ---- */}
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_result", lang)}</h2>
+        <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
+          <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+          {t("cc_insight", lang)}
+        </h2>
         <Card className="p-4">
           <ul className="space-y-2">
             {lines.map((line, i) => (

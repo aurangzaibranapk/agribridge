@@ -30,6 +30,23 @@ export const ownerToolsDict = {
   cc_attention: { en: "Needs attention", rm: "Tawajjah chahiye", ur: "توجہ چاہیے" },
   cc_dept_this_month: { en: "Department — this month", rm: "Department -- is mahine", ur: "شعبہ — اس مہینے" },
   cc_shop_pl: { en: "Shop-wise P&L", rm: "Dukan dukan ka nafa nuqsan", ur: "دکان دکان کا نفع نقصان" },
+  cc_direct_cost: { en: "Direct cost", rm: "Seedhi lagat", ur: "سیدھی لاگت" },
+  cc_other_expense: { en: "Other expense", rm: "Baqi kharcha", ur: "باقی خرچہ" },
+  cc_profit_loss: { en: "Profit / Loss", rm: "Nafa / nuqsan", ur: "نفع / نقصان" },
+  cc_margin: { en: "Margin %", rm: "Margin %", ur: "مارجن %" },
+  cc_attention_col: { en: "Pending / Attention", rm: "Baqi / tawajjah", ur: "باقی / توجہ" },
+  cc_total_revenue: { en: "Total revenue", rm: "Kul aamdani", ur: "کل آمدنی" },
+  cc_total_cost: { en: "Total cost", rm: "Kul lagat", ur: "کل لاگت" },
+  cc_net: { en: "Net profit / loss", rm: "Saaf nafa / nuqsan", ur: "صاف نفع / نقصان" },
+  cc_needs_attention_count: { en: "Needs attention", rm: "Tawajjah chahiye", ur: "توجہ چاہیے" },
+  cc_insight: { en: "AgriBridge AI Insight", rm: "AgriBridge AI ki raye", ur: "ایگری برج AI کی رائے" },
+  cc_incomplete: { en: "Data incomplete", rm: "Hisaab adhoora", ur: "حساب ادھورا" },
+  cc_untracked: { en: "Not tracked", rm: "Track nahi hoti", ur: "ٹریک نہیں ہوتی" },
+  cc_only_complete: {
+    en: "Totals include only departments whose financial data is complete.",
+    rm: "In totals mein sirf wo departments hain jin ka maali hisaab poora hai.",
+    ur: "ان ٹوٹلز میں صرف وہ شعبے ہیں جن کا مالی حساب پورا ہے۔",
+  },
 
   // ---- Audit trail ----
   at_title: { en: "Who Did What", rm: "Kis ne kya kiya", ur: "کس نے کیا کیا" },
