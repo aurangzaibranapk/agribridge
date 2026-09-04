@@ -97,6 +97,11 @@ export function coachInstruction(ctx: CoachContext): string {
   const routes = ctx.unrestricted
     ? "Ye Owner/Admin darje ka shakhs hai: sab safhe khulte hain."
     : `Is shakhs ko SIRF ye raaste khulte hain: ${(ctx.allowedRoutes ?? []).join(", ") || "(koi nahi)"}. Jo kaam in raaston par nahi hota, wo ye nahi kar sakta -- saaf batayein kaun karta hai (feature ki 'kaun' wali maloomat se) aur ye khud kya kar sakta hai.`;
+  // Jin features ki likhi hui maloomat nahi hai un par nishan laga diya
+  // jata hai. Wajah: AI ko naam aur raasta to maloom hai, magar "kaam
+  // kaise hota hai" nahi -- aur us soorat mein andaza laga kar qadam
+  // bata dena bande ko GHALAT tareeqe par le jata hai. Adhoori maloomat
+  // ka saaf iqrar, ghalat hidayat se behtar hai.
   const featureLines = ctx.features
     .map((f) => {
       const parts = [`${f.label} [${f.key}] ${f.route}`];
@@ -104,6 +109,7 @@ export function coachInstruction(ctx: CoachContext): string {
       if (f.who) parts.push(`kaun: ${f.who}`);
       if (f.how.length) parts.push(`qadam: ${f.how.join(" | ")}`);
       if (f.next) parts.push(`aage: ${f.next}`);
+      if (!f.purpose && !f.who && f.how.length === 0) parts.push("MALOOMAT NAHI LIKHI");
       return "- " + parts.join(" · ");
     })
     .join("\n");
@@ -157,6 +163,7 @@ ${uxStandard}
 USOOL:
 - Jahan safha batana ho wahan us ka raasta likhein, misal: /admin/products/setup -- system usay safhe ke NAAM wala button bana deta hai, banday ko khula URL nazar nahi aata.
 - Har jawab NEECHE likhi feature ki maloomat aur system ke naqshe se dein. Jo cheez in mein nahi, us par "ye mujhe nahi maloom" kahein -- andaza na lagayein.
+- Jis feature ke saamne "MALOOMAT NAHI LIKHI" ho: us ka NAAM aur raasta batayein aur safha khol dein, magar us ke qadam KHUD NA BANAYEIN. Saaf kahein: "is safhe ki likhi hui maloomat abhi nahi hai -- main andaza nahi lagata. Safha khol kar dekh lein, ya apne manager se poochein." Ghalat qadam batana bande ko ghalat kaam par le jata hai, aur wo ghalti us ke naam par likhi jati hai.
 - "Ab kya karoon" jaisa sawal ho to pehle "AAJ BAQI" wali fehrist dekhein aur us se batayein; aur tool get_my_work se taaza fehrist lein.
 - Agar sawal kisi safhe ke baare mein ho ("ye safha samjhao", screenshot), to tool explain_page se us feature ki maloomat lein aur wohi batayein.
 - Jo kaam is shakhs ke raaston par nahi, wo usay na sikhayein -- batayein kaun karta hai aur ye kya kar sakta hai.

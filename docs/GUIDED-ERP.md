@@ -745,3 +745,40 @@ par khulta hai aur `/admin/stock-transfers/suggested` transfers ki.
 
 **Help (281):** `purchases` aur `stock-transfers` dono ki `feature_help`
 qatarein likh di gayin -- malik ke 7-nuqta usool ke mutabiq.
+
+## 16. AI ko har feature ka ilm (malik, 4 September)
+
+Malik ne audit ki qatar ka screenshot bhej kar do baatein kahin: "ye
+message professional hona chahiye", aur "har feature AI assistant ko
+maloom hona chahiye."
+
+**Audit ki zaban** -- pehli baat theek thi. Wahan poora JSON chhap raha
+tha (`{"note":null,"applied":[{"scope":"own_branch",...}]}`). Audit
+parhne wala aksar malik ya manager hota hai, developer nahi -- aur jo
+cheez parhi na ja sake wo audit nahi rehti, sirf record reh jati hai. Ab
+har qatar insani jumlon mein hai; kachcha JSON "Technical tafseel" ke
+andar chala gaya aur wo bhi sirf Owner/Admin ko.
+
+**AI ka ilm -- asal ginti:** 183 features mein se sirf **39** ka help
+likha hua tha. AI ko baqi 144 ka naam aur raasta to maloom tha, magar
+"kis liye hai, kaun chalata hai, kya qadam hain" nahi.
+
+Do kaam kiye:
+
+1. **14 rozana ke safhon ka help likha (282):** manzoori ki qatar, cash
+   book, cash handover, roz ka milaan, bank milaan, khata, staff khata,
+   shop order, kisan, doodh jama, doodh ki tasdeeq, audit trail, hazri ka
+   record, meri hazri. Ab 53/183.
+
+2. **Baqi 130 par AI ko jhoot bolne se roka:** jis feature ka help nahi,
+   us ke saamne AI ko `MALOOMAT NAHI LIKHI` ka nishan jata hai, aur
+   hidayat ye hai ke us ke qadam **khud na banaye** -- saaf kahe ke "is
+   safhe ki likhi hui maloomat abhi nahi hai, main andaza nahi lagata."
+
+**Baqi 130 jaan boojh kar khali hain.** Un ka amal andaze se likhna sab
+se bura raasta hota: ghalat qadam bande ko ghalat kaam par le jate hain,
+aur wo ghalti us ke naam par likhi jati hai. Likhne ki jagah pehle se
+maujood hai -- `/admin/platform/help`, jahan har feature ke saamne likha
+hai ke us ka help hai ya nahi. Jo safha bhi malik/manager rozana chalate
+hain, us ka help wahan se bharte jayen (ya mujhe bata dein, main us ka
+amal code se parh kar likh doonga).
