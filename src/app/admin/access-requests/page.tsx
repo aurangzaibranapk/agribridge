@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { t } from "@/lib/i18n/translations";
+import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 import { MASTER } from "@/lib/access/access-requests";
 import { loadHeadPower } from "@/lib/access/delegation";
 import { loadFindings, listRules, previewConflicts, loadSodRules, loadSodEvents, SEVERITY_RANK, type Severity, type MatchedDuty } from "@/lib/access/conflicts";
@@ -19,6 +19,69 @@ export const dynamic = "force-dynamic";
 const SEV_TONE: Record<string, "red" | "amber" | "blue" | "gray"> = { critical: "red", high: "red", warning: "amber", info: "blue" };
 
 /** Ijazat ki darkhwastein (270): Pending | Kis ke paas kya | Khatam ho rahi | Takraao (271) | Departments. */
+
+/**
+ * Audit ki qatar insani zaban mein.
+ *
+ * Pehle yahan poora JSON chhap jata tha: {"note":null,"applied":[{"scope":
+ * "own_branch",...}]}. Wo code ki zaban hai. Audit parhne wala aksar
+ * malik ya manager hota hai, koi developer nahi -- aur jo cheez parhi na
+ * ja sake, wo audit nahi rehti, sirf record reh jati hai.
+ *
+ * Kachcha JSON gaya nahi -- "technical" ke andar chala gaya, aur wo bhi
+ * sirf Owner/Admin ko.
+ */
+function eventLabel(event: string, lang: Lang): string {
+  const key = `ar_ev_${event}` as TranslationKey;
+  const label = t(key, lang);
+  // Chaabi hi wapas aa jaye to koi naya event hai jis ka tarjuma nahi --
+  // us soorat mein chaabi ke bajaye us ka saada roop dikhayein.
+  return label === key ? event.replace(/_/g, " ") : label;
+}
+
+/** "2 high, 1 warning" -- JSON ki jagah. */
+function severityLine(bySeverity: unknown, lang: Lang): string {
+  if (!bySeverity || typeof bySeverity !== "object") return "";
+  const d = bySeverity as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const level of ["critical", "high", "warning", "info"]) {
+    const n = Number(d[level] ?? 0);
+    if (n > 0) parts.push(`${n} ${t(`cfl_sev_${level}` as TranslationKey, lang)}`);
+  }
+  return parts.join(", ");
+}
+
+function eventLines(detail: unknown, lang: Lang): string[] {
+  if (!detail || typeof detail !== "object") return [];
+  const d = detail as Record<string, any>;
+  const out: string[] = [];
+
+  const applied = Array.isArray(d.applied) ? d.applied : [];
+  for (const a of applied) {
+    const actions = Array.isArray(a.actions) ? a.actions.join(", ") : "";
+    out.push(t("ar_ev_applied_line", lang).replace("{f}", String(a.feature_key ?? "—")).replace("{a}", actions));
+  }
+
+  const refused = Array.isArray(d.refused) ? d.refused : [];
+  if (refused.length) {
+    out.push(t("ar_ev_refused_line", lang).replace("{n}", String(refused.length)));
+  }
+
+  if (Array.isArray(d.conflicts) && d.conflicts.length) {
+    out.push(t("ar_ev_conflict_line", lang).replace("{n}", String(d.conflicts.length)));
+  }
+
+  if (d.expires_at) {
+    out.push(t("ar_ev_expires_line", lang).replace("{d}", new Date(String(d.expires_at)).toLocaleString("en-GB")));
+  }
+
+  if (typeof d.note === "string" && d.note.trim()) {
+    out.push(t("ar_ev_note_line", lang).replace("{t}", d.note.trim()));
+  }
+
+  return out;
+}
+
 export default async function AccessRequestsPage({ searchParams }: { searchParams: { tab?: string; id?: string; f?: string; show?: string; rules?: string } }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
@@ -198,13 +261,13 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
                     <strong>{t("cfl_overridden_by", lang)}:</strong> {selected.override_reason} · {selected.override_at ? new Date(selected.override_at).toLocaleString("en-GB") : ""}{selected.override_expires_at ? ` · ${t("cfl_until", lang)} ${new Date(selected.override_expires_at).toLocaleString("en-GB")}` : ""}
                   </div>
                 )}
-                {selected.ai_interpretation && (
+                {selected.ai_interpretation && isMaster && (
                   <details className="mt-2 text-xs text-surface-500">
                     <summary>{t("ar_ai_read", lang)}</summary>
                     <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-50 p-2 text-[11px] dark:bg-surface-800">{JSON.stringify((selected.ai_interpretation as any).draft ?? selected.ai_interpretation, null, 2)}</pre>
                   </details>
                 )}
-                {selected.status === "approved" && (
+                {selected.status === "approved" && isMaster && (
                   <details className="mt-2 text-xs text-surface-500">
                     <summary>{t("ar_old_new", lang)}</summary>
                     <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-50 p-2 text-[11px] dark:bg-surface-800">{JSON.stringify({ old: selected.old_permissions, new: selected.new_permissions, conflicts: selected.conflict_check }, null, 2)}</pre>
@@ -214,13 +277,33 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
               {selected.status === "pending" && (isMaster || selected.risk_level !== "high") && <DecideForm lang={lang} id={selected.id} isHead={!isMaster} isMaster={isMaster} gate={gate} />}
               <Card>
                 <h3 className="mb-2 text-sm font-semibold">{t("ar_trail", lang)}</h3>
-                <ul className="space-y-1 text-xs">
-                  {(events ?? []).map((e: any, i: number) => (
-                    <li key={i} className="rounded bg-surface-50 px-2 py-1 dark:bg-surface-800">
-                      <span className="text-surface-400">{new Date(e.created_at).toLocaleString("en-GB")} · {(Array.isArray(e.profiles) ? e.profiles[0] : e.profiles)?.full_name ?? "—"}</span> · <strong>{e.event}</strong>
-                      {e.detail && <span className="block truncate text-surface-500">{JSON.stringify(e.detail).slice(0, 240)}</span>}
-                    </li>
-                  ))}
+                <ul className="space-y-1.5 text-xs">
+                  {(events ?? []).map((e: any, i: number) => {
+                    const who = (Array.isArray(e.profiles) ? e.profiles[0] : e.profiles)?.full_name ?? "—";
+                    return (
+                      <li key={i} className="rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-800">
+                        <p className="text-surface-800 dark:text-surface-200">
+                          <strong className="font-semibold">{eventLabel(e.event, lang)}</strong>
+                          {" — "}
+                          {who}
+                        </p>
+                        <p className="mt-0.5 text-surface-400">{new Date(e.created_at).toLocaleString("en-GB")}</p>
+                        {/* Tafseel insani jumlon mein. Kachcha JSON sirf
+                            "technical" ke andar, aur wo bhi Owner/Admin ke
+                            liye -- code ki zaban screen par nahi aani
+                            chahiye. */}
+                        {eventLines(e.detail, lang).map((line, k) => (
+                          <p key={k} className="mt-0.5 text-surface-600 dark:text-surface-300">{line}</p>
+                        ))}
+                        {isMaster && e.detail && (
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-[11px] text-surface-400">{t("ar_tech", lang)}</summary>
+                            <pre className="mt-1 max-h-40 overflow-auto rounded bg-white p-2 text-[10px] dark:bg-surface-900">{JSON.stringify(e.detail, null, 2)}</pre>
+                          </details>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </Card>
             </div>
@@ -265,7 +348,8 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
                 <p className="text-xs text-surface-500">{t("cfl_desc", lang)}</p>
                 {lastScan && (
                   <p className="mt-1 text-[11px] text-surface-400">
-                    {t("cfl_last_scan", lang)}: {new Date((lastScan as any).run_at).toLocaleString("en-GB")} · {(lastScan as any).trigger} · {(lastScan as any).findings ?? "—"} {t("cfl_found", lang)} · {JSON.stringify((lastScan as any).by_severity ?? {})}
+                    {t("cfl_last_scan", lang)}: {new Date((lastScan as any).run_at).toLocaleString("en-GB")} · {(lastScan as any).trigger} · {(lastScan as any).findings ?? "—"} {t("cfl_found", lang)}
+                    {severityLine((lastScan as any).by_severity, lang) && ` · ${severityLine((lastScan as any).by_severity, lang)}`}
                   </p>
                 )}
               </div>
@@ -366,12 +450,28 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
                 <Card>
                   <h3 className="mb-2 text-sm font-semibold">{t("ar_trail", lang)}</h3>
                   <ul className="space-y-1 text-xs">
-                    {((findingEvents ?? []) as any[]).map((e: any, i: number) => (
-                      <li key={i} className="rounded bg-surface-50 px-2 py-1 dark:bg-surface-800">
-                        <span className="text-surface-400">{new Date(e.created_at).toLocaleString("en-GB")} · {(Array.isArray(e.profiles) ? e.profiles[0] : e.profiles)?.full_name ?? "system"}</span> · <strong>{e.event}</strong>
-                        {e.detail && <span className="block truncate text-surface-500">{JSON.stringify(e.detail).slice(0, 240)}</span>}
-                      </li>
-                    ))}
+                    {((findingEvents ?? []) as any[]).map((e: any, i: number) => {
+                      const who = (Array.isArray(e.profiles) ? e.profiles[0] : e.profiles)?.full_name ?? t("ar_ev_system", lang);
+                      return (
+                        <li key={i} className="rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-800">
+                          <p className="text-surface-800 dark:text-surface-200">
+                            <strong className="font-semibold">{eventLabel(e.event, lang)}</strong>
+                            {" — "}
+                            {who}
+                          </p>
+                          <p className="mt-0.5 text-surface-400">{new Date(e.created_at).toLocaleString("en-GB")}</p>
+                          {eventLines(e.detail, lang).map((line, k) => (
+                            <p key={k} className="mt-0.5 text-surface-600 dark:text-surface-300">{line}</p>
+                          ))}
+                          {isMaster && e.detail && (
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-[11px] text-surface-400">{t("ar_tech", lang)}</summary>
+                              <pre className="mt-1 max-h-40 overflow-auto rounded bg-white p-2 text-[10px] dark:bg-surface-900">{JSON.stringify(e.detail, null, 2)}</pre>
+                            </details>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </Card>
               </div>
