@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { BINA_QISM } from "@/lib/pos/constants";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { posCheckout } from "@/actions/pos";
@@ -256,7 +257,13 @@ export function PosClient({
   const filteredInventory = useMemo(() => {
     const q = search.trim().toLowerCase();
     return inventory.filter((item) => {
-      if (group && item.products?.category_name !== group) return false;
+      if (group === BINA_QISM) {
+        // "Qism nahi lagi" -- yahi wo cheezein hain jo qism ki fehrist
+        // se bahar reh jati thin.
+        if (item.products?.category_name) return false;
+      } else if (group && item.products?.category_name !== group) {
+        return false;
+      }
       if (!q) return true;
       // Naam se bhi, aur barcode se bhi -- counter par banda dono
       // tarah dhoondta hai.
@@ -618,7 +625,7 @@ export function PosClient({
               <option value="">{t("pos_all_groups", lang)}</option>
               {groups.map((g) => (
                 <option key={g.name} value={g.name}>
-                  {g.name} ({g.count})
+                  {g.name === BINA_QISM ? t("pos_no_group", lang) : g.name} ({g.count})
                 </option>
               ))}
             </Select>

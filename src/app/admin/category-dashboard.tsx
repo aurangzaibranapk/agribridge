@@ -35,31 +35,56 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
     .in("category_id", categoryIds)
     .eq("is_deleted", false);
   const productIds = (products ?? []).map((p) => p.id);
-  const { data: rawInventory } = productIds.length
-    ? await supabase
-        .from("inventory")
-        .select("product_id, quantity_on_hand, stock_batches(expiry_date)")
-        .in("product_id", productIds)
-    : { data: [] };
+  // Stock aur miyaad DO alag sawal se aate hain, ek nested embed se
+  // nahi. Is project mein nested embed nakaam ho kar KHALI lauta deta
+  // hai -- aur khali ka matlab yahan "kuch nahi hai" ban jata, jo jhoot
+  // hota. Miyaad ke liye batch alag se poochhe ja rahe hain.
+  const { data: rawInventory, error: invError } = productIds.length
+    ? await supabase.from("inventory").select("product_id, quantity_on_hand, batch_id").in("product_id", productIds)
+    : { data: [], error: null };
   const stockByProduct: Record<string, number> = {};
   (rawInventory ?? []).forEach((row: any) => {
     stockByProduct[row.product_id] = (stockByProduct[row.product_id] ?? 0) + Number(row.quantity_on_hand);
   });
+
+  const batchIds = Array.from(new Set((rawInventory ?? []).map((r: any) => r.batch_id).filter(Boolean)));
+  const { data: batchRows } = batchIds.length
+    ? await supabase.from("stock_batches").select("id, expiry_date").in("id", batchIds)
+    : { data: [] as { id: string; expiry_date: string | null }[] };
+  const expiryByBatch = new Map((batchRows ?? []).map((b: any) => [b.id as string, b.expiry_date as string | null]));
   const totalStockValue = (products ?? []).reduce(
     (sum, p) => sum + (stockByProduct[p.id] ?? 0) * Number(p.purchase_price),
     0
   );
-  const lowStockProducts = (products ?? []).filter(
-    (p) => Number(p.min_stock_threshold) > 0 && (stockByProduct[p.id] ?? 0) <= Number(p.min_stock_threshold)
-  );
+  // "Kam stock" ka jawab tabhi maani rakhta hai jab kisi cheez par hadd
+  // (min_stock_threshold) lagi ho. Ek bhi hadd na lagi ho to "0 cheezein
+  // kam hain" kehna jhoot hai -- sach ye hai ke ye HISAAB HI NAHI RAKHA
+  // JA RAHA. Is liye aisi surat mein "—" jata hai, sifar nahi.
+  const haddWali = (products ?? []).filter((p) => Number(p.min_stock_threshold) > 0);
+  const lowStockProducts = haddWali.filter((p) => (stockByProduct[p.id] ?? 0) <= Number(p.min_stock_threshold));
+  const lowStockCount: number | null = haddWali.length === 0 ? null : lowStockProducts.length;
   const now = new Date();
   const sixtyDaysOut = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
   const expiringBatches = (rawInventory ?? []).filter((row: any) => {
-    const batch = Array.isArray(row.stock_batches) ? row.stock_batches[0] : row.stock_batches;
-    if (!batch?.expiry_date) return false;
-    const exp = new Date(batch.expiry_date);
+    const expiry = row.batch_id ? expiryByBatch.get(row.batch_id) : null;
+    if (!expiry) return false;
+    const exp = new Date(expiry);
     return exp <= sixtyDaysOut && exp >= now;
   });
+
+  // Fehrist wo tarteeb mein jo counter par kaam aati hai: jis cheez ka
+  // maal para hai wo pehle. Pehle fehrist database ki apni tarteeb mein
+  // aati thi, aur us mein sab se upar wali qatarein aksar sifar wali
+  // hoti thin -- 146 cheezon ke safhe par sirf sifar nazar aate the,
+  // aur us se ye lagta tha ke dukan khali hai (malik ne 5 September ko
+  // yehi poocha).
+  const sortedProducts = [...(products ?? [])].sort((a, b) => {
+    const sa = stockByProduct[a.id] ?? 0;
+    const sb = stockByProduct[b.id] ?? 0;
+    if (sa !== sb) return sb - sa;
+    return String(a.name).localeCompare(String(b.name));
+  });
+  const stockWali = sortedProducts.filter((p) => (stockByProduct[p.id] ?? 0) > 0).length;
   const { data: recentPurchases } = productIds.length
     ? await supabase
         .from("purchase_items")
@@ -79,6 +104,11 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
           </Link>
         }
       />
+      {invError && (
+        <Card className="mb-4 border-rose-200 bg-rose-50 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+          {t("cd_stock_error", lang)}: {invError.message}
+        </Card>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <div className="flex items-center gap-2 text-surface-500">
@@ -104,8 +134,11 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
             <span className="text-xs font-medium uppercase tracking-wide">{t("cd_low_stock", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-red-700 dark:text-red-300">
-            {lowStockProducts.length}
+            {lowStockCount === null ? "—" : lowStockCount}
           </p>
+          {lowStockCount === null && (
+            <p className="mt-1 text-[11px] text-red-700/70 dark:text-red-300/70">{t("cd_no_threshold", lang)}</p>
+          )}
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
           <div className="flex items-center gap-2 text-amber-600">
@@ -119,7 +152,12 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("cd_products_in_stock", lang)}</h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+            {t("cd_products_in_stock", lang)}{" "}
+            <span className="font-normal text-surface-500">
+              — {t("cd_with_stock", lang).replace("{n}", String(stockWali)).replace("{kul}", String(products?.length ?? 0))}
+            </span>
+          </h2>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
@@ -130,7 +168,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
                 </tr>
               </thead>
               <tbody>
-                {(products ?? []).map((p) => {
+                {sortedProducts.map((p) => {
                   const stock = stockByProduct[p.id] ?? 0;
                   const isLow = Number(p.min_stock_threshold) > 0 && stock <= Number(p.min_stock_threshold);
                   return (

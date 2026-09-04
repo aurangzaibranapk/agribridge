@@ -3014,7 +3014,7 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
 
   const { data: work } = await supabase
     .from("machinery_work_records")
-    .select("id, booking_id, actual_area, verification_status")
+    .select("id, booking_id, actual_area, verification_status, sabit_area, kutra_area")
     .eq("id", workId)
     .maybeSingle();
   if (!work) return { error: "Indraj nahi mila." };
@@ -3050,6 +3050,49 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
   const acres = num(formData, "actual_area_acres");
   const kanal = num(formData, "actual_area_kanal");
   const corrected = toAcres(acres, kanal) > 0;
+  const total = toAcres(acres, kanal);
+
+  // DO QISM ('dono') wali booking par batwara bhi sath badalna parta
+  // hai.
+  //
+  // Sabit aur kutra ka RATE ALAG hota hai -- is liye raqba theek kar ke
+  // batwara purana chhor dena bill ko ghalat banata hai. Database (176)
+  // is par rokta hai, magar us ki rok ka jumla tasdeeq karne wale ke
+  // saamne bemani tha: wo Sabit aur Kutra ke un adadon ki baat karta
+  // tha jo us ke saamne kisi khane mein the hi nahi. Nateeja ye ke do
+  // qism wali booking par naap theek karne ka koi raasta hi nahi tha
+  // (malik ne 5 September ko yehi pakRa).
+  //
+  // Ab batwara yahin maanga jata hai, aur us ki jaanch DATABASE SE
+  // PEHLE yahan hoti hai -- taake jumla us zaban mein ho jo safhe par
+  // nazar aa rahi hai.
+  let split: { sabit_area: number; kutra_area: number } | null = null;
+  if (corrected) {
+    const { data: booking } = await supabase
+      .from("machinery_bookings")
+      .select("harvest_type")
+      .eq("id", work.booking_id)
+      .maybeSingle();
+
+    if (booking?.harvest_type === "dono") {
+      const sabit = num(formData, "sabit_area");
+      const kutra = num(formData, "kutra_area");
+      if (sabit === null && kutra === null) {
+        return {
+          error: `Ye booking DO QISM ki hai (sabit aur kutra). Raqba badalne par ye bhi likhna hoga ke naye ${total} acre mein se kitna sabit hai aur kitna kutra — dono ka rate alag hai.`,
+        };
+      }
+      const s = sabit ?? 0;
+      const k = kutra ?? 0;
+      if (s < 0 || k < 0) return { error: "Raqba manfi nahi ho sakta." };
+      if (Math.round((s + k) * 10000) !== Math.round(total * 10000)) {
+        return {
+          error: `Sabit (${s}) aur Kutra (${k}) ka jor ${Math.round((s + k) * 10000) / 10000} banta hai, magar naya raqba ${total} acre hai. Dono barabar hone chahiyen.`,
+        };
+      }
+      split = { sabit_area: s, kutra_area: k };
+    }
+  }
 
   const { error } = await supabase
     .from("machinery_work_records")
@@ -3058,6 +3101,7 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
       verified_by: actorId,
       verified_at: new Date().toISOString(),
       ...(corrected ? { actual_area_acres: acres, actual_area_kanal: kanal } : {}),
+      ...(split ?? {}),
     })
     .eq("id", workId);
   if (error) return { error: error.message };

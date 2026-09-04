@@ -256,6 +256,15 @@ export const machineryDict = {
   vc_received: { en: "Vendor handed the cash over", rm: "Vendor ne paisa de diya", ur: "وینڈر نے پیسہ دے دیا" },
 
   // Vendor ke bheje hue kaam ki tasdeeq
+  wc_acre: { en: "Acre", rm: "Acre", ur: "ایکڑ" },
+  wc_kanal: { en: "Kanal (8 kanal = 1 acre)", rm: "Kanal (8 kanal = 1 acre)", ur: "کنال (8 کنال = 1 ایکڑ)" },
+  wc_sabit: { en: "Sabit", rm: "Sabit", ur: "ثابت" },
+  wc_kutra: { en: "Kutra", rm: "Kutra", ur: "کترا" },
+  wc_dono_hint: {
+    en: "This booking has both kinds. If you change the area, also say how much of it is sabit and how much kutra — the two are billed at different rates.",
+    rm: "Ye booking DO QISM ki hai. Raqba badlein to ye bhi likhein ke us mein se kitna sabit hai aur kitna kutra — dono ka rate alag hai.",
+    ur: "یہ بکنگ دو قسم کی ہے۔ رقبہ بدلیں تو یہ بھی لکھیں کہ اس میں سے کتنا ثابت ہے اور کتنا کترا — دونوں کا ریٹ الگ ہے۔",
+  },
   wcl_title: { en: "Vendor Work", rm: "Vendor ka Kaam", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u0627\u0645" },
   wc_subtitle: {
     en: "What the machine owners recorded from the field. Until someone here checks it, none of this counts in a bill.",

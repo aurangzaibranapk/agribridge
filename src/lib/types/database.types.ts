@@ -23430,6 +23430,11 @@ export type Database = {
       v_machinery_work_claims: {
         Row: {
           actual_area: number | null
+          actual_area_acres: number | null
+          actual_area_kanal: number | null
+          harvest_type: string | null
+          sabit_area: number | null
+          kutra_area: number | null
           booking_id: string | null
           booking_number: string | null
           completion_photo_url: string | null

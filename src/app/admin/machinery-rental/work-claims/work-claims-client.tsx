@@ -10,6 +10,10 @@ const initialState: ActionState = {};
 
 interface Claim {
   workId: string;
+  /** 'sabit' | 'kutra' | 'dono' -- 'dono' par batwara bhi chahiye. */
+  harvestType?: string | null;
+  sabit?: number | null;
+  kutra?: number | null;
   bookingId: string;
   bookingNumber: string;
   farmerName: string;
@@ -429,17 +433,47 @@ function ClaimCard({ claim }: { claim: Claim }) {
                   type="number"
                   step="0.01"
                   name="actual_area_acres"
-                  placeholder={`${t("mc_actual_area", lang)} (${claim.area})`}
+                  placeholder={`${t("wc_acre", lang)} (${claim.area})`}
                   className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 />
                 <input
                   type="number"
                   step="0.01"
                   name="actual_area_kanal"
-                  placeholder={t("mc_kanal", lang)}
+                  placeholder={t("wc_kanal", lang)}
                   className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 />
               </div>
+
+              {/* Do qism wali booking par batwara bhi yahin.
+                  Sabit aur kutra ka rate ALAG hai -- raqba theek kar ke
+                  batwara purana chhor dena bill ko ghalat banata hai.
+                  Pehle ye khane the hi nahi, is liye aisi booking par
+                  naap theek karne ka koi raasta nahi tha. */}
+              {claim.harvestType === "dono" && (
+                <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-900/40 dark:bg-amber-950/20">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    {t("wc_dono_hint", lang)} — {t("wc_sabit", lang)} {claim.sabit ?? "—"} · {t("wc_kutra", lang)}{" "}
+                    {claim.kutra ?? "—"}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="sabit_area"
+                      placeholder={t("wc_sabit", lang)}
+                      className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="kutra_area"
+                      placeholder={t("wc_kutra", lang)}
+                      className="rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                    />
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Submit label={t("ac_confirm", lang)} />
                 <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">

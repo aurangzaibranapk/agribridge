@@ -97,7 +97,22 @@ export const opsExtraDict = {
   rt_will_do: { en: "will do.", rm: "kar dega.", ur: "کر دے گا۔" },
 
   // ---- Qism ka dashboard ----
-  cd_products_in_stock: { en: "Products in Stock", rm: "Stock mein cheezein", ur: "اسٹاک میں چیزیں" },
+  cd_products_in_stock: { en: "Products and their stock", rm: "Cheezein aur un ka stock", ur: "چیزیں اور ان کا اسٹاک" },
+  cd_with_stock: {
+    en: "{n} of {kul} have stock",
+    rm: "{kul} mein se {n} par stock hai",
+    ur: "{kul} میں سے {n} پر اسٹاک ہے",
+  },
+  cd_no_threshold: {
+    en: "no minimum set on any product — so this is not being tracked",
+    rm: "kisi cheez par hadd nahi lagi — is liye ye hisaab rakha hi nahi ja raha",
+    ur: "کسی چیز پر حد نہیں لگی — اس لیے یہ حساب رکھا ہی نہیں جا رہا",
+  },
+  cd_stock_error: {
+    en: "Stock could not be read — the numbers below are incomplete",
+    rm: "Stock nahi mil saka — neeche ke adad adhoore hain",
+    ur: "اسٹاک نہیں مل سکا — نیچے کے اعداد ادھورے ہیں",
+  },
   cd_stock_value: { en: "Stock Value", rm: "Stock ki qeemat", ur: "اسٹاک کی قیمت" },
   cd_low_stock: { en: "Low Stock", rm: "Stock kam", ur: "اسٹاک کم" },
   cd_expiring_60: { en: "Expiring (60 days)", rm: "Saath din mein khatam", ur: "ساٹھ دن میں ختم" },

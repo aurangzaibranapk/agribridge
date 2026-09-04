@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { BINA_QISM } from "@/lib/pos/constants";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -192,13 +193,28 @@ export default async function PosPage() {
   }
 
   const ginti = new Map<string, number>();
+  let beghair = 0;
   for (const it of inventory as any[]) {
     const n = it.products?.category_name;
     if (n) ginti.set(n, (ginti.get(n) ?? 0) + 1);
+    else beghair++;
   }
   const groups = Array.from(ginti.keys())
     .sort((a, b) => a.localeCompare(b))
     .map((name) => ({ name, count: ginti.get(name) ?? 0 }));
+
+  // Jin cheezon par qism lagi hi nahi, un ka apna khana.
+  //
+  // Malik ne 5 September ko poocha ke karyana ki saari qismein kyun
+  // nahi aa rahin. Fehrist theek thi -- 54 mein se sirf 2 cheezon par
+  // qism lagi hui thi, baqi 52 par koi qism nahi. Wo 52 cheezein is
+  // fehrist se chup chaap bahar reh rahi thin, aur us se ye lagta tha
+  // ke qismein "gum" hain.
+  //
+  // Ab wo apne naam ke sath nazar aati hain. Yehi is project ka usool
+  // hai: jo cheez darj nahi, us ka na hona DIKHNA chahiye -- chhupna
+  // nahi. Chhup jane par koi usay theek bhi nahi karta.
+  if (beghair > 0) groups.push({ name: BINA_QISM, count: beghair });
 
   // ---- Batch aur miyaad ----
   // Miyaad counter ka asal sawal hai: "ye cheez kab tak theek hai".
