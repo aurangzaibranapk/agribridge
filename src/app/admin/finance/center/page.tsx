@@ -72,9 +72,10 @@ export default async function FinanceCenterPage() {
         { href: "/admin/bank-reconcile", label: t("fc_bank_recon", lang) },
         { href: "/admin/reconciliation", label: t("fc_daily_recon", lang) },
         { href: "/admin/finance/budget", label: t("bg_title", lang), hint: t("bg_desc", lang) },
+        { href: "/admin/finance/cheques", label: t("chq_title", lang), hint: t("chq_desc", lang) },
         { href: "/admin/audit-trail", label: t("fc_reversal", lang), hint: t("fc_reversal_hint", lang) },
       ],
-      baqi: [t("fc_b_pdc", lang), t("fc_b_recurring", lang), t("fc_b_costing", lang)],
+      baqi: [t("fc_b_recurring", lang), t("fc_b_costing", lang)],
     },
     {
       key: "pay",
@@ -102,7 +103,7 @@ export default async function FinanceCenterPage() {
         { href: "/admin/finance/banks", label: t("fc_banks", lang) },
         { href: "/admin/finance/payment-mapping", label: t("fc_pay_map", lang), hint: t("fc_pay_map_hint", lang) },
       ],
-      baqi: [t("fc_b_terms", lang), t("fc_b_cheque", lang), t("fc_b_merge", lang)],
+      baqi: [t("fc_b_terms", lang), t("fc_b_merge", lang)],
     },
     {
       key: "assets",

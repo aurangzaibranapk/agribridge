@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      cheque_books: {
+        Row: { book_name: string; created_at: string; created_by: string | null; finance_account_id: string; first_number: number; id: string; last_number: number; note: string | null; prefix: string | null; status: string }
+        Insert: { book_name: string; created_at?: string; created_by?: string | null; finance_account_id: string; first_number: number; id?: string; last_number: number; note?: string | null; prefix?: string | null; status?: string }
+        Update: { book_name?: string; created_at?: string; created_by?: string | null; finance_account_id?: string; first_number?: number; id?: string; last_number?: number; note?: string | null; prefix?: string | null; status?: string }
+        Relationships: []
+      }
+      cheques: {
+        Row: { amount: number; bounce_reason: string | null; book_id: string | null; cheque_number: string; cleared_on: string | null; counter_account: string; created_at: string; created_by: string | null; direction: string; due_date: string; entry_id: string | null; finance_account_id: string; id: string; issue_date: string; note: string | null; party_id: string | null; party_name: string | null; party_type: string | null; settle_entry_id: string | null; status: string; updated_at: string }
+        Insert: { amount: number; bounce_reason?: string | null; book_id?: string | null; cheque_number: string; cleared_on?: string | null; counter_account: string; created_at?: string; created_by?: string | null; direction: string; due_date: string; entry_id?: string | null; finance_account_id: string; id?: string; issue_date: string; note?: string | null; party_id?: string | null; party_name?: string | null; party_type?: string | null; settle_entry_id?: string | null; status?: string; updated_at?: string }
+        Update: { amount?: number; bounce_reason?: string | null; book_id?: string | null; cheque_number?: string; cleared_on?: string | null; counter_account?: string; created_at?: string; created_by?: string | null; direction?: string; due_date?: string; entry_id?: string | null; finance_account_id?: string; id?: string; issue_date?: string; note?: string | null; party_id?: string | null; party_name?: string | null; party_type?: string | null; settle_entry_id?: string | null; status?: string; updated_at?: string }
+        Relationships: []
+      }
       budgets: {
         Row: { created_at: string; created_by: string | null; id: string; name: string; note: string | null; status: string; year: number }
         Insert: { created_at?: string; created_by?: string | null; id?: string; name?: string; note?: string | null; status?: string; year: number }
