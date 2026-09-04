@@ -60,6 +60,75 @@ export const ownerToolsDict = {
     ur: "عام گاہک ہو تو خالی چھوڑ دیں۔",
   },
 
+  // ---- Counter ka naya naqsha (cheez ki tafseel) ----
+  pos_details: { en: "Item Details", rm: "Cheez ki tafseel", ur: "چیز کی تفصیل" },
+  pos_pick_from_cart: {
+    en: "Tap an item in the cart to see its details.",
+    rm: "Tafseel dekhne ke liye cart se cheez par dabayein.",
+    ur: "تفصیل دیکھنے کے لیے کارٹ سے چیز پر دبائیں۔",
+  },
+  pos_cart_empty_hint: {
+    en: "Pick a product or scan a barcode.",
+    rm: "Cheez chunein ya barcode scan karein.",
+    ur: "چیز چنیں یا بارکوڈ اسکین کریں۔",
+  },
+  pos_sell_rate: { en: "Selling rate", rm: "Bikri ka rate", ur: "بکری کا ریٹ" },
+  pos_mrp: { en: "MRP", rm: "MRP", ur: "MRP" },
+  // Thok ka rate = jis par THOK WALI DUKAN ko bikta hai. Ye "trade
+  // rate" ka wo matlab nahi jo bill par kharid ke rate ke liye chalta
+  // hai -- wo alag khana hai (kharid ka rate) aur alag ijazat maangta
+  // hai. Do alag cheezon ka ek naam rakhne se counter par ghalat adad
+  // parha jata hai.
+  pos_wholesale_rate: { en: "Wholesale rate", rm: "Thok ka rate", ur: "تھوک کا ریٹ" },
+  pos_cost_rate: { en: "Purchase rate", rm: "Kharid ka rate", ur: "خرید کا ریٹ" },
+  pos_shop_stock: { en: "Shop stock", rm: "Dukan par maal", ur: "دکان پر مال" },
+  pos_wh_stock: { en: "Warehouse stock", rm: "Godam mein maal", ur: "گودام میں مال" },
+  pos_barcode: { en: "Barcode", rm: "Barcode", ur: "بارکوڈ" },
+  pos_batch: { en: "Batch", rm: "Batch", ur: "بیچ" },
+  pos_batch_many: { en: "{n} batches together", rm: "{n} batch mile hue", ur: "{n} بیچ ملے ہوئے" },
+  pos_expiry: { en: "Expiry", rm: "Miyaad", ur: "میعاد" },
+  pos_line_total: { en: "Line total", rm: "Is qatar ka jama", ur: "اس قطار کا جمع" },
+  pos_remove_item: { en: "Remove item", rm: "Ye cheez hatayein", ur: "یہ چیز ہٹائیں" },
+  pos_rate_locked: {
+    en: "You are not allowed to change the rate.",
+    rm: "Rate badalne ki ijazat aap ke paas nahi.",
+    ur: "ریٹ بدلنے کی اجازت آپ کے پاس نہیں۔",
+  },
+  pos_not_tracked: { en: "not tracked", rm: "hisaab nahi rakha jata", ur: "حساب نہیں رکھا جاتا" },
+  pos_no_barcode: { en: "no barcode yet", rm: "barcode abhi nahi laga", ur: "بارکوڈ ابھی نہیں لگا" },
+  pos_stock_out: { en: "Finished", rm: "Khatam", ur: "ختم" },
+
+  // ---- Gahak ki teen qismein, aur udhaar ka usool ----
+  pos_walkin: { en: "Walk-in", rm: "Chalta gahak", ur: "چلتا گاہک" },
+  pos_regular: { en: "Regular Customer", rm: "Darj shuda gahak", ur: "درج شدہ گاہک" },
+  pos_wholesale: { en: "Wholesale / Shop", rm: "Thok / dukan", ur: "تھوک / دکان" },
+  pos_walkin_note: {
+    en: "Cash customer — no customer record needed.",
+    rm: "Naqad gahak — naam likhne ki zaroorat nahi.",
+    ur: "نقد گاہک — نام لکھنے کی ضرورت نہیں۔",
+  },
+  pos_walkin_no_credit: {
+    en: "Walk-in sales cannot go on khata.",
+    rm: "Chalte gahak par khata nahi chalta.",
+    ur: "چلتے گاہک پر کھاتہ نہیں چلتا۔",
+  },
+  pos_credit_needs_customer: {
+    en: "Select a registered customer for a credit sale.",
+    rm: "Udhaar sale ke liye darj shuda gahak chunein.",
+    ur: "ادھار سیل کے لیے درج شدہ گاہک چنیں۔",
+  },
+  pos_credit_limit: { en: "Credit limit", rm: "Udhaar ki hadd", ur: "ادھار کی حد" },
+  pos_shop_search: {
+    en: "Search shop, dealer, mobile or ID",
+    rm: "Dukan, dealer, phone ya ID se dhoondein",
+    ur: "دکان، ڈیلر، فون یا آئی ڈی سے ڈھونڈیں",
+  },
+  pos_credit_over_limit: {
+    en: "This would cross the customer's credit limit.",
+    rm: "Is se gahak ki udhaar ki hadd tuT jayegi.",
+    ur: "اس سے گاہک کی ادھار کی حد ٹوٹ جائے گی۔",
+  },
+
   // ---- Ghanti (notification bell) ----
   nbell_title: { en: "Notifications", rm: "Ittila-aat", ur: "اطلاعات" },
   nbell_unread: { en: "New", rm: "Nayi", ur: "نئی" },

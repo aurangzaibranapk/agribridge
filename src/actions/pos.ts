@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
 import type { Json } from "@/lib/types/database.types";
+import { loadPosPermissions } from "@/lib/pos/permissions";
 
 export interface PosCheckoutState {
   error?: string;
@@ -59,6 +60,25 @@ export async function posCheckout(input: {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Rate ki rok -- safhe par nahi, YAHAN.
+  //
+  // Rate browser se aata hai. Safhe par khana band kar dena us bande ko
+  // nahi rokta jo seedha ye request bhej de -- aur counter par paise ka
+  // faisla isi ek adad par hota hai. Is liye jis ke paas rate badalne ki
+  // ijazat nahi, us ka bheja hua rate manzoor nahi hota: server khud
+  // apna rate nikalta hai aur farq par bikri rok deta hai.
+  const rateGhalat = await checkRates(input, user?.id ?? null);
+  if (rateGhalat) return { error: rateGhalat };
+
+  // Bina naam ka udhaar kabhi nahi.
+  //
+  // Malik ka usool (4 September): "Cash mein customer optional, Udhar
+  // mein customer mandatory." Jo raqam kisi ke zimme nahi likhi gayi, wo
+  // kisi se maangi bhi nahi ja sakti -- aur mahine baad wo sirf golak ke
+  // farq ki soorat mein nazar aati hai, jahan us ka koi ilaj nahi hota.
+  const udhaarGhalat = await checkCredit(input);
+  if (udhaarGhalat) return { error: udhaarGhalat };
+
   const { data: saleIdRaw, error } = await supabase.rpc("create_pos_sale", {
     p_customer_id: input.customerId as string,
     p_payment_mode: input.paymentMode,
@@ -80,6 +100,118 @@ export async function posCheckout(input: {
   if (posted) return { saleId, notice: posted };
 
   return { saleId };
+}
+
+/**
+ * Bheja hua rate wohi hai jo hona chahiye?
+ *
+ * Jis ke paas rate badalne ki ijazat hai, us par koi rok nahi -- wo
+ * faisla us ka hai aur bikri par likha bhi jata hai.
+ *
+ * Baqi sab ke liye rate server khud nikalta hai: thok wali dukan ho AUR
+ * us cheez ka thok ka rate darj ho to thok, warna retail. Yehi hisaab
+ * safhe par bhi chalta hai, is liye theek chalne wale counter par ye rok
+ * kabhi saamne nahi aayegi -- ye sirf us raaste par khaRi hai jo safhe
+ * se nahi guzarta.
+ *
+ * Ek paisa tak ka farq nahi pakaRa jata (0.01), warna gol karne se hi
+ * bikri ruk jati.
+ */
+async function checkRates(
+  input: { customerId: string | null; items: PosCartItem[] },
+  userId: string | null
+): Promise<string | null> {
+  const { canEditRate } = await loadPosPermissions(userId);
+  if (canEditRate) return null;
+  if (input.items.length === 0) return null;
+
+  const service = createServiceClient();
+
+  let thok = false;
+  if (input.customerId) {
+    const { data: cust } = await service
+      .from("customers")
+      .select("customer_type")
+      .eq("id", input.customerId)
+      .maybeSingle();
+    thok = cust?.customer_type === "wholesale_shop";
+  }
+
+  const ids = Array.from(new Set(input.items.map((i) => i.product_id)));
+  const { data: products, error } = await service
+    .from("products")
+    .select("id, name, selling_price, wholesale_price")
+    .in("id", ids);
+
+  // Jawab hi na mile to bikri rok di jati hai. "Poochha nahi ja saka" ko
+  // "sab theek hai" samajh lena wo ghalti hai jo sirf us din nazar aati
+  // hai jab koi jaan boojh kar faida uthhata hai.
+  if (error) return "Rate ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+
+  const byId = new Map((products ?? []).map((p) => [p.id, p]));
+
+  for (const item of input.items) {
+    const p = byId.get(item.product_id);
+    if (!p) return "Is cheez ka rate nahi mila, bikri rok di gayi.";
+
+    const chahiye = thok && p.wholesale_price != null ? Number(p.wholesale_price) : Number(p.selling_price);
+    if (Math.abs(Number(item.unit_price) - chahiye) > 0.01) {
+      return `"${p.name}" ka rate Rs ${chahiye.toLocaleString()} hai. Rate badalne ki ijazat aap ke paas nahi -- Admin se kehein.`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Udhaar ka gahak maujood hai, aur hadd ke andar hai?
+ *
+ * DO alag jaanchein:
+ *
+ * 1. Khate par raqam ja rahi ho to gahak ka naam LAZMI. Safhe par bhi
+ *    rok hai, magar safha ek darwaza hai -- ye rok us raaste par bhi
+ *    khaRi hai jo safhe se nahi guzarta.
+ *
+ * 2. Udhaar ki hadd. Hadd DARJ HO (sifar se zyada) tabhi lagti hai.
+ *    Khali ya sifar hadd ka matlab "hadd tay hi nahi hui" liya jata hai,
+ *    "is ko udhaar bilkul nahi" nahi -- kyunke wo faisla kisi ne kiya hi
+ *    nahi hota, aur us maan par har purana gahak aaj se ruk jata.
+ */
+async function checkCredit(input: {
+  customerId: string | null;
+  khataAmount: number;
+}): Promise<string | null> {
+  const khata = Number(input.khataAmount ?? 0);
+  if (khata <= 0) return null;
+
+  if (!input.customerId) {
+    return "Udhaar sale ke liye darj shuda gahak chunein. Bina naam ke udhaar darj nahi hota.";
+  }
+
+  const service = createServiceClient();
+  const { data: cust, error } = await service
+    .from("customers")
+    .select("name, current_balance, credit_limit")
+    .eq("id", input.customerId)
+    .maybeSingle();
+
+  // Jawab na mile to bikri rok di jati hai. "Poochha nahi ja saka" ko
+  // "sab theek hai" samajh lena wohi ghalti hai jo baad mein wasooli ke
+  // waqt pakRi jati hai.
+  if (error) return "Gahak ka khata nahi dekha ja saka, is liye udhaar rok diya gaya. Dobara koshish karein.";
+  if (!cust) return "Gahak ka record nahi mila -- udhaar darj nahi ho sakta.";
+
+  const hadd = cust.credit_limit == null ? 0 : Number(cust.credit_limit);
+  if (hadd > 0) {
+    const abTak = cust.current_balance == null ? 0 : Number(cust.current_balance);
+    if (abTak + khata > hadd) {
+      return `"${cust.name}" ki udhaar ki hadd Rs ${hadd.toLocaleString()} hai aur us par pehle hi Rs ${Math.round(
+        abTak
+      ).toLocaleString()} baqi hai. Ye bikri us hadd se aage nikal rahi hai -- Admin se manzoori lein.`;
+    }
+  }
+
+  return null;
 }
 
 /**

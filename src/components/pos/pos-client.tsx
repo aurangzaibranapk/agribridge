@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import Link from "next/link";
@@ -6,9 +6,37 @@ import { createClient } from "@/lib/supabase/client";
 import { posCheckout } from "@/actions/pos";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { ShoppingCart, Trash2, Search, ScanLine, Camera, Plus, X, PackagePlus, Paperclip, Check } from "lucide-react";
+import {
+  ShoppingCart,
+  Trash2,
+  Search,
+  ScanLine,
+  Camera,
+  Plus,
+  Minus,
+  X,
+  PackagePlus,
+  Paperclip,
+  Check,
+  Package,
+  Lock,
+} from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
+import type { PosPermissions } from "@/lib/pos/permissions";
+
+interface PosProduct {
+  name: string;
+  pack_size: string | null;
+  barcode: string | null;
+  internal_barcode?: string | null;
+  image_url?: string | null;
+  unit_code?: string | null;
+  category_name?: string | null;
+  mrp_price?: number | null;
+  /** Sirf us ke paas aata hai jise lagat dekhne ki ijazat hai. */
+  purchase_price?: number | null;
+}
 
 interface InventoryItem {
   id: string;
@@ -17,7 +45,12 @@ interface InventoryItem {
   selling_price: number;
   /** NULL = is par thok ka rate nahi (retail lagega). Sifar se ALAG hai. */
   wholesale_price: number | null;
-  products: { name: string; pack_size: string | null; barcode: string | null; internal_barcode?: string | null; image_url?: string | null; unit_code?: string | null; category_name?: string | null } | null;
+  /** Godam mein aur kitna. NULL = ginti nahi ho saki, sifar se ALAG. */
+  warehouse_stock?: number | null;
+  batch_number?: string | null;
+  batch_count?: number;
+  expiry_date?: string | null;
+  products: PosProduct | null;
 }
 interface Customer {
   id: string;
@@ -25,6 +58,8 @@ interface Customer {
   phone: string | null;
   /** Us par kitna baqi hai. NULL = maloom nahi, sifar se ALAG. */
   balance?: number | null;
+  /** Udhaar ki hadd. NULL = hadd darj hi nahi (sifar hadd se ALAG). */
+  creditLimit?: number | null;
   /** Wo dukan jise hum maal dete hain -- us par thok ka rate lagta hai (246). */
   isWholesaleShop: boolean;
 }
@@ -46,6 +81,16 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "khata", label: "Khata" },
 ];
 
+/**
+ * Gahak ki teen qismein -- malik ka usool (4 September).
+ *
+ * Ye sirf naam ka farq nahi. Poora maali usool inhi teen par khaRa hai:
+ * NAQAD par gahak marzi ki baat hai, UDHAAR par gahak LAZMI hai. Bina
+ * naam ke udhaar wo raqam hai jo kisi ke zimme nahi -- aur wo kabhi
+ * wapas nahi aati.
+ */
+type CustomerMode = "walkin" | "regular" | "wholesale";
+
 interface PaymentLine {
   id: string;
   method: PaymentMethod;
@@ -56,18 +101,40 @@ interface PaymentLine {
   uploading: boolean;
 }
 
+/** Maal ka rang: khatam ke qareeb / thora / theek. */
+function stockTone(qty: number): string {
+  if (qty <= 5) return "bg-red-500";
+  if (qty <= 20) return "bg-amber-500";
+  return "bg-emerald-500";
+}
+
+/** "Dec 2026" -- counter par poori tareekh ki zaroorat nahi hoti. */
+function shortDate(d: string | null | undefined): string | null {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
 export function PosClient({
   sellerName,
   inventory,
   groups = [],
   customers,
   rateBaqiCount = 0,
+  perms,
   lang,
 }: {
   sellerName: string;
   inventory: InventoryItem[];
-  /** Qismein -- counter par chhantne ke liye. */
-  groups?: string[];
+  /**
+   * Qismein -- counter par chhantne ke liye. SAARI aati hain, sirf wo
+   * nahi jin par is waqt maal para hai; saath us qism par mojood cheezon
+   * ki ginti. Khali qism chhupa dene se banda samajhta hai qism bani hi
+   * nahi, aur nayi bana deta hai -- isi se ek cheez ki do qismein ban
+   * jati hain.
+   */
+  groups?: { name: string; count: number }[];
   customers: Customer[];
   /**
    * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
@@ -75,6 +142,13 @@ export function PosClient({
    * apna maal dhoondta reh jata hai aur samajhta hai ke stock hi nahi.
    */
   rateBaqiCount?: number;
+  /**
+   * Kaun kya dekh sakta hai. Ye safhe ka faisla nahi -- server se aata
+   * hai, aur wohi fehrist checkout ke andar dobara parhi jati hai. Yahan
+   * jo chhupa hai wo bheja hi nahi gaya, is liye browser ke andar se bhi
+   * nahi nikalta.
+   */
+  perms: PosPermissions;
   /**
    * Zaban server se aati hai, yahan cookie parh kar nahi.
    *
@@ -88,18 +162,20 @@ export function PosClient({
   const supabase = createClient();
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
-  // Gahak ka search: naam ya phone se. CNIC ka khana is nizam mein hai
-  // hi nahi -- is liye us ka dawa bhi nahi kiya jata. Jo cheez maujood
-  // nahi, us ka naam likh dena bande ko dhoondwata rehta hai.
+  // Gahak ka search: naam, phone ya us ke record ki shanakht se.
   const [custQuery, setCustQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
+  // Cart mein jis cheez par banda khaRa hai -- us ki tafseel saamne
+  // wale khane mein khulti hai. "View Details" ka koi button nahi:
+  // qatar KHUD button hai (malik ka usool, 4 September).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string>("");
-  // "Thok" par click karte hi neeche sirf wo dukanein khulti hain jinhen
-  // hum maal dete hain. Aam gahak ki fehrist us waqt dikhti hi nahi --
-  // warna galti se aam aadmi par thok ka rate lag sakta hai.
-  const [wholesaleMode, setWholesaleMode] = useState(false);
+  // Teen alag darwaze, jaan boojh kar. Ek hi fehrist mein aam gahak aur
+  // thok wali dukanein mila dene par galti se aam aadmi par thok ka rate
+  // lag jata hai -- aur us ka pata mahine baad munafa ginte waqt chalta
+  // hai.
+  const [custMode, setCustMode] = useState<CustomerMode>("walkin");
 
-  const wholesaleShops = customers.filter((c) => c.isWholesaleShop);
   const chosenCustomer = customers.find((c) => c.id === customerId) ?? null;
   const wholesaleOn = chosenCustomer?.isWholesaleShop === true;
 
@@ -147,6 +223,24 @@ export function PosClient({
     barcodeRef.current?.focus();
   }, []);
 
+  /**
+   * Gahak ka darwaza badalna.
+   *
+   * Chalta-phirta gahak par udhaar ka koi raasta nahi. Is liye darwaza
+   * badalte hi khate wali qataarein naqad par aa jati hain -- warna
+   * khana chhup jata hai magar raqam us mein baithi reh jati, aur
+   * checkout par wo baat "Khata" ke naam se aati jo screen par kahin
+   * likhi hi nahi.
+   */
+  function switchCustomerMode(mode: CustomerMode) {
+    setCustMode(mode);
+    setCustQuery("");
+    applyCustomer("");
+    if (mode === "walkin") {
+      setPaymentLines((prev) => prev.map((l) => (l.method === "khata" ? { ...l, method: "cash" } : l)));
+    }
+  }
+
   const filteredInventory = useMemo(() => {
     const q = search.trim().toLowerCase();
     return inventory.filter((item) => {
@@ -163,15 +257,28 @@ export function PosClient({
     });
   }, [inventory, search, group]);
 
-  /** Gahak ki chhoti fehrist -- naam ya phone se. */
+  /**
+   * Gahak ki chhoti fehrist.
+   *
+   * Naam, phone, aur us ke record ki shanakht -- teenon se. Alag "Farmer
+   * ID" ka khana is nizam ke gahak wale khaate mein maujood nahi, is
+   * liye us ka dawa bhi nahi kiya jata: jo cheez hai hi nahi, us ka naam
+   * likh dena bande ko dhoondwata rehta hai.
+   */
   const custMatches = useMemo(() => {
+    const wantWholesale = custMode === "wholesale";
+    const pool = customers.filter((c) => c.isWholesaleShop === wantWholesale);
     const q = custQuery.trim().toLowerCase();
-    const pool = customers.filter((c) => c.isWholesaleShop === wholesaleMode);
     if (!q) return pool.slice(0, 8);
     return pool
-      .filter((c) => c.name.toLowerCase().includes(q) || (c.phone ?? "").toLowerCase().includes(q))
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.phone ?? "").toLowerCase().includes(q) ||
+          c.id.toLowerCase().startsWith(q)
+      )
       .slice(0, 8);
-  }, [customers, custQuery, wholesaleMode]);
+  }, [customers, custQuery, custMode]);
 
   const total = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0),
@@ -184,6 +291,12 @@ export function PosClient({
   );
   const remaining = total - totalAllocated;
   const khataTotal = paymentLines.filter((l) => l.method === "khata").reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+
+  const selectedLine = cart.find((l) => l.product_id === selectedId) ?? null;
+  const selectedItem = selectedId ? inventory.find((i) => i.product_id === selectedId) ?? null : null;
+
+  // Chalta-phirta gahak par khata ka khana khulta hi nahi.
+  const payMethods = custMode === "walkin" ? PAYMENT_METHODS.filter((m) => m.key !== "khata") : PAYMENT_METHODS;
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
@@ -204,6 +317,9 @@ export function PosClient({
         },
       ];
     });
+    // Jo abhi daali, wohi saamne khul jaye -- banda usi ki tadaad ya
+    // rate theek karna chahta hai.
+    setSelectedId(item.product_id);
   }
 
   function findByBarcode(code: string): InventoryItem | undefined {
@@ -239,20 +355,40 @@ export function PosClient({
 
   function updateQuantity(product_id: string, quantity: number) {
     if (quantity <= 0) {
-      setCart((prev) => prev.filter((l) => l.product_id !== product_id));
+      removeLine(product_id);
       return;
     }
     setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity } : l)));
   }
 
+  /**
+   * Bikri ka rate badalna -- sirf jis ke paas ijazat ho.
+   *
+   * Yahan rok lagana kaafi nahi samjha gaya: yehi jaanch checkout ke
+   * andar bhi hai. Safhe ka khana band kar dena us bande ko nahi rokta
+   * jo seedha request bhej de.
+   */
+  function updateRate(product_id: string, rate: number) {
+    if (!perms.canEditRate) return;
+    setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, unit_price: rate } : l)));
+  }
+
   function removeLine(product_id: string) {
-    setCart((prev) => prev.filter((l) => l.product_id !== product_id));
+    setCart((prev) => {
+      const next = prev.filter((l) => l.product_id !== product_id);
+      // Jo cheez hat gayi us ki tafseel khuli na reh jaye -- warna banda
+      // us cheez ka rate dekh raha hota hai jo bill mein hai hi nahi.
+      if (product_id === selectedId) setSelectedId(next.length ? next[0].product_id : null);
+      return next;
+    });
   }
 
   function resetSale() {
     setCart([]);
+    setSelectedId(null);
     setCustomerId("");
-    setWholesaleMode(false);
+    setCustMode("walkin");
+    setCustQuery("");
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
     barcodeRef.current?.focus();
   }
@@ -294,8 +430,13 @@ export function PosClient({
       setMessage({ type: "error", text: t("pos_cart_empty_error", lang) });
       return;
     }
+    // ===== Bina naam ka udhaar kabhi nahi =====
+    // Ye is safhe ka sab se ahem maali usool hai. Naqad par gahak ka naam
+    // marzi ki baat hai; udhaar par LAZMI. Bina naam ki baqi raqam kisi
+    // ke zimme nahi hoti, aur jo kisi ke zimme nahi wo kabhi wapas nahi
+    // aati. Yehi rok checkout ke andar (server par) bhi lagi hui hai.
     if (khataTotal > 0 && !customerId) {
-      setMessage({ type: "error", text: t("pos_khata_needs_customer", lang) });
+      setMessage({ type: "error", text: t("pos_credit_needs_customer", lang) });
       return;
     }
     if (Math.abs(remaining) > 0.5) {
@@ -355,146 +496,160 @@ export function PosClient({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[1fr_380px] lg:overflow-hidden">
-      <div className="flex flex-col lg:min-h-0">
-        <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
-          <div>
-            <h1 className="font-display text-xl font-semibold text-surface-900 dark:text-white">
-              {sellerName} - POS
-            </h1>
-            {/* Jo cheezein rate na hone ki wajah se chhupi hain, un ka
-                adad saamne rehta hai -- warna banda apna maal dhoondta
-                reh jata hai aur samajhta hai ke stock hi nahi. */}
-            {rateBaqiCount > 0 && (
-              <p className="mt-0.5 text-xs text-amber-700">
-                {t("pos_rate_baqi_hidden", lang).replace("{n}", String(rateBaqiCount))}{" "}
-                <Link href="/admin/products/rates-baqi" className="underline">
-                  {t("pos_rate_baqi_link", lang)}
-                </Link>
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/pos/ordering"
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300"
-            >
-              <PackagePlus className="h-4 w-4" /> {t("pos_karyana_ordering", lang)}
-            </Link>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_19rem_23rem] xl:grid-rows-[minmax(0,1fr)]">
+      {/* ================= BAAYIN TARAF: cheezein ================= */}
+      <section className="flex flex-col lg:row-span-2 lg:min-h-0 xl:row-span-1">
+        {/* ---- Ek hi patti: naam, scan, talash, qism, ordering ----
+            Malik ka kehna (4 September): barcode ke liye alag poori line
+            na ho. Wajah saaf hai -- upar jo jagah jati hai wo cheezon ke
+            khanon se katti hai, aur counter par nazar cheez par honi
+            chahiye. Tarteeb bhi soch kar hai: SCAN pehle, talash baad
+            mein. Tez tareen raasta scan se cart tak hai; naam se dhoondna
+            us waqt hota hai jab barcode na ho.
+
+            Sab khane ek hi oonchai (h-11) par, warna patti ooper neeche
+            hilti nazar aati hai. */}
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2.5">
+          <h1 className="w-[11rem] shrink-0 truncate font-display text-lg font-semibold leading-tight text-surface-900 dark:text-white">
+            {sellerName} - POS
+          </h1>
+
+          <form onSubmit={handleBarcodeSubmit} className="flex items-center gap-2">
+            <div className="relative w-[20rem] max-w-[60vw]">
+              <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
               <Input
-                placeholder={t("pos_search_products", lang)}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
+                ref={barcodeRef}
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                placeholder={t("pos_scan_hint", lang)}
+                className="h-11 pl-9"
               />
             </div>
-            {/* Qism ka filter -- 265 cheezon mein se dhoondna naam se
-                mushkil hai, magar "Grocery" chun kar fehrist chhoti ho
-                jati hai. Qism na ho to ye khana nazar hi nahi aata. */}
-            {groups.length > 0 && (
-              <Select value={group} onChange={(e) => setGroup(e.target.value)} className="w-44">
-                <option value="">{t("pos_all_groups", lang)}</option>
-                {groups.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </div>
-        </div>
+            <button
+              type="button"
+              onClick={() => setShowCameraModal(true)}
+              aria-label="Camera"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+          </form>
 
-        <form onSubmit={handleBarcodeSubmit} className="mb-4 flex shrink-0 gap-2">
-          <div className="relative flex-1">
-            <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
+          <div className="relative w-[15rem] max-w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
             <Input
-              ref={barcodeRef}
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              placeholder={t("pos_scan_hint", lang)}
-              className="pl-9"
+              placeholder={t("pos_search_products", lang)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-11 pl-9"
             />
           </div>
-          <Button type="button" variant="secondary" onClick={() => setShowCameraModal(true)}>
-            <Camera className="h-4 w-4" />
-          </Button>
-        </form>
-        {barcodeError && (
-          <p className="-mt-3 mb-4 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>
+
+          {/* Qism ka filter -- 265 cheezon mein se dhoondna naam se
+              mushkil hai, magar "Grocery" chun kar fehrist chhoti ho jati
+              hai. Qismein database se aati hain, yahan likhi hui nahi --
+              warna nayi qism kabhi is fehrist mein na aati. */}
+          {groups.length > 0 && (
+            <Select value={group} onChange={(e) => setGroup(e.target.value)} className="h-11 w-[10rem]">
+              <option value="">{t("pos_all_groups", lang)}</option>
+              {groups.map((g) => (
+                <option key={g.name} value={g.name}>
+                  {g.name} ({g.count})
+                </option>
+              ))}
+            </Select>
+          )}
+
+          <Link
+            href="/admin/pos/ordering"
+            className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300"
+          >
+            <PackagePlus className="h-4 w-4" /> {t("pos_karyana_ordering", lang)}
+          </Link>
+        </div>
+
+        {/* Jo cheezein rate na hone ki wajah se chhupi hain, un ka adad
+            saamne rehta hai -- warna banda apna maal dhoondta reh jata
+            hai aur samajhta hai ke stock hi nahi. Patti se bahar, taake
+            wo har roz jagah na ghere. */}
+        {rateBaqiCount > 0 && (
+          <p className="-mt-1 mb-2 shrink-0 text-xs text-amber-700">
+            {t("pos_rate_baqi_hidden", lang).replace("{n}", String(rateBaqiCount))}{" "}
+            <Link href="/admin/products/rates-baqi" className="underline">
+              {t("pos_rate_baqi_link", lang)}
+            </Link>
+          </p>
         )}
+        {barcodeError && <p className="-mt-1 mb-3 shrink-0 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>}
 
         <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-          {/* Counter par cheez ki TASVEER sab se tez pehchan hai.
-              Jab tak barcode nahi lagte, banda dabba dekh kar pehchanta
-              hai -- naam parh kar nahi. Isi liye khana bara hua aur
-              tasveer ko sab se upar jagah mili. Jis ka na ho, us par
-              naam ka pehla harf aata hai: khali dabba us se bura lagta
-              hai. */}
+          {/* Counter par cheez ki TASVEER sab se tez pehchan hai. Jab tak
+              barcode nahi lagte, banda dabba dekh kar pehchanta hai --
+              naam parh kar nahi. Isi liye khane ka teen chauthai hissa
+              tasveer ka hai aur neeche sirf do line: naam aur qeemat.
+              Baqi tafseel yahan nahi -- wo cart se cheez chun kar saamne
+              khulti hai. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {filteredInventory.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => addToCart(item)}
-                className="overflow-hidden rounded-card border border-surface-200 bg-white text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
-              >
-                <div className="relative flex h-28 items-center justify-center bg-surface-100 dark:bg-surface-800">
-                  {item.products?.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.products.image_url}
-                      alt={item.products?.name ?? ""}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="font-display text-3xl font-semibold tracking-wide text-surface-400 dark:text-surface-500">
-                      {(item.products?.name ?? "?")
-                        .trim()
-                        .split(/\s+/)
-                        .slice(0, 2)
-                        .map((w) => w.charAt(0))
-                        .join("")
-                        .toUpperCase() || "?"}
-                    </span>
-                  )}
-                  {/* Stock upar daayen, rang wale nuqte ke sath. Adad
-                      akela kuch nahi batata -- 8 kisi cheez ke liye
-                      bohat hai aur kisi ke liye khatam hone ke barabar.
-                      Rang wo faisla ek nazar mein de deta hai. */}
-                  <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        item.stock_quantity <= 5
-                          ? "bg-red-500"
-                          : item.stock_quantity <= 20
-                            ? "bg-amber-500"
-                            : "bg-emerald-500"
-                      }`}
-                    />
-                    {item.stock_quantity}
-                  </span>
-                </div>
-
-                <div className="p-3">
-                  <p className="text-sm font-medium leading-snug text-surface-900 line-clamp-2 dark:text-surface-100">
-                    {item.products?.name}
-                  </p>
-                  {item.products?.pack_size && (
-                    <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
-                  )}
-                  <p className="mt-1.5 font-display text-base font-semibold text-brand-700 dark:text-brand-300">
-                    Rs {item.selling_price.toLocaleString()}
-                    {item.products?.unit_code && (
-                      <span className="ml-1 text-xs font-normal text-surface-400">
-                        / {item.products.unit_code}
-                      </span>
+            {filteredInventory.map((item) => {
+              const inCart = cart.some((l) => l.product_id === item.product_id);
+              const p = item.products;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => addToCart(item)}
+                  className={`overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${
+                    inCart
+                      ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50"
+                      : "border-surface-200 hover:border-brand-400 dark:border-surface-800"
+                  }`}
+                >
+                  <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
+                    {p?.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        className="h-full w-full object-contain p-2"
+                        loading="lazy"
+                      />
+                    ) : (
+                      // Tasveer na ho to saaf khali nishaan -- naam ka
+                      // bara harf nahi. Bare harf ko banda door se
+                      // tasveer samajh leta hai aur ghalat dabba uthha
+                      // leta hai.
+                      <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600">
+                        <Package className="h-8 w-8" strokeWidth={1.25} />
+                      </div>
                     )}
-                  </p>
-                </div>
-              </button>
-            ))}
+                    {/* Maal upar daayen, chhota nishaan. Adad akela kuch
+                        nahi batata -- 8 kisi cheez ke liye bohat hai aur
+                        kisi ke liye khatam hone ke barabar. Rang wo
+                        faisla ek nazar mein de deta hai. */}
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200">
+                      <span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />
+                      {item.stock_quantity}
+                    </span>
+                  </div>
+
+                  <div className="border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
+                    <p className="truncate text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">
+                      {p?.name}
+                      {p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}
+                    </p>
+                    <p className="mt-0.5 flex items-baseline justify-between gap-2">
+                      <span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">
+                        Rs {item.selling_price.toLocaleString()}
+                      </span>
+                      {p?.mrp_price != null && p.mrp_price > 0 && (
+                        <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">
+                          {t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
             {filteredInventory.length === 0 && (
               <p className="col-span-full py-10 text-center text-sm text-surface-400">
                 {t("pos_no_products", lang)}
@@ -502,9 +657,31 @@ export function PosClient({
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      <Card className="flex h-fit flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      {/* ============ DARMIYAN: chuni hui cheez ki tafseel ============ */}
+      <Card className="order-3 flex flex-col gap-3 lg:order-none lg:h-fit lg:max-h-full lg:overflow-y-auto xl:h-full xl:min-h-0">
+        <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
+          {t("pos_details", lang)}
+        </h2>
+
+        {!selectedLine || !selectedItem ? (
+          <p className="py-8 text-center text-sm text-surface-400">{t("pos_pick_from_cart", lang)}</p>
+        ) : (
+          <ItemDetails
+            line={selectedLine}
+            item={selectedItem}
+            lang={lang}
+            perms={perms}
+            onQty={(q) => updateQuantity(selectedLine.product_id, q)}
+            onRate={(r) => updateRate(selectedLine.product_id, r)}
+            onRemove={() => removeLine(selectedLine.product_id)}
+          />
+        )}
+      </Card>
+
+      {/* ============ DAAYIN TARAF: gahak, cart, adaigi ============ */}
+      <Card className="order-2 flex flex-col gap-4 lg:order-none lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2>
@@ -512,173 +689,182 @@ export function PosClient({
 
         <div className="max-h-64 space-y-2 overflow-y-auto">
           {cart.length === 0 && (
-            <p className="py-6 text-center text-sm text-surface-400">{t("pos_cart_empty", lang)}</p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p>
+              <p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p>
+            </div>
           )}
-          {cart.map((line) => (
-            <div key={line.product_id} className="flex items-center gap-2 rounded-lg border border-surface-100 p-2 dark:border-surface-800">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</p>
-                <p className="text-xs text-surface-400">
-                  Rs {line.unit_price.toLocaleString()} each
-                  {/* Thok chalu ho magar is cheez par rate na ho to saaf
-                      likha jata hai -- warna dukandar samajhta hai ke
-                      usay thok mila hai. */}
-                  {wholesaleOn &&
-                    inventory.find((i) => i.product_id === line.product_id)?.wholesale_price == null && (
+          {/* Qatar KHUD button hai. "View Details" ka alag button nahi --
+              wo ek zyada qadam hai, aur counter par har zyada qadam ek
+              der hai. */}
+          {cart.map((line) => {
+            const item = inventory.find((i) => i.product_id === line.product_id);
+            const active = line.product_id === selectedId;
+            return (
+              <button
+                key={line.product_id}
+                type="button"
+                onClick={() => setSelectedId(line.product_id)}
+                className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${
+                  active
+                    ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30"
+                    : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"
+                }`}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">
+                  {item?.products?.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" />
+                  ) : (
+                    <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">
+                    {line.name}
+                  </span>
+                  <span className="block text-xs text-surface-400">
+                    {line.quantity} × Rs {line.unit_price.toLocaleString()}
+                    {/* Thok chalu ho magar is cheez par rate na ho to saaf
+                        likha jata hai -- warna dukandar samajhta hai ke
+                        usay thok mila hai. */}
+                    {wholesaleOn && item?.wholesale_price == null && (
                       <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>
                     )}
-                </p>
-              </div>
-              <Input
-                type="number"
-                min={1}
-                value={line.quantity}
-                onChange={(e) => updateQuantity(line.product_id, parseInt(e.target.value) || 0)}
-                className="h-8 w-16 text-center"
-              />
-              <button onClick={() => removeLine(line.product_id)} className="text-surface-400 hover:text-red-600">
-                <Trash2 className="h-4 w-4" />
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                  Rs {(line.quantity * line.unit_price).toLocaleString()}
+                </span>
               </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
-          <Label>Customer {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
+          <Label>
+            {t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}
+          </Label>
 
-          {/* Do alag darwaze, jaan boojh kar. Ek hi fehrist mein aam
-              gahak aur thok wali dukanein mila dene par galti se aam
-              aadmi par thok ka rate lag jata hai -- aur us ka pata
-              mahine baad munafa ginte waqt chalta hai. */}
-          <div className="mb-2 flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setWholesaleMode(false);
-                applyCustomer("");
-              }}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                !wholesaleMode
-                  ? "border-brand-500 bg-brand-50 text-brand-800"
-                  : "border-surface-300 text-surface-600"
-              }`}
-            >
-              {t("pf_pos_retail_customer", lang)}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setWholesaleMode(true);
-                applyCustomer("");
-              }}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-                wholesaleMode
-                  ? "border-amber-500 bg-amber-50 text-amber-900"
-                  : "border-surface-300 text-surface-600"
-              }`}
-            >
-              {t("pf_pos_wholesale_shop", lang)}
-            </button>
+          {/* Teen darwaze, saaf naam ke sath. "Regular" ka lafz pehle
+              chalte-phirte gahak par bhi lag raha tha -- aur usi dhundle
+              lafz ke peeche bina naam ka udhaar chhup sakta hai. */}
+          <div className="mb-2 grid grid-cols-3 gap-1.5">
+            {(
+              [
+                ["walkin", t("pos_walkin", lang)],
+                ["regular", t("pos_regular", lang)],
+                ["wholesale", t("pos_wholesale", lang)],
+              ] as [CustomerMode, string][]
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => switchCustomerMode(mode)}
+                className={`rounded-lg border px-2 py-1.5 text-xs font-medium ${
+                  custMode === mode
+                    ? mode === "wholesale"
+                      ? "border-amber-500 bg-amber-50 text-amber-900"
+                      : "border-brand-500 bg-brand-50 text-brand-800"
+                    : "border-surface-300 text-surface-600 dark:border-surface-700 dark:text-surface-400"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {wholesaleMode ? (
-            wholesaleShops.length === 0 ? (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                {t("pf_pos_no_shops", lang)}
-              </p>
-            ) : (
-              <Select value={customerId} onChange={(e) => applyCustomer(e.target.value)}>
-                <option value="">{t("pf_pos_pick_shop", lang)}</option>
-                {wholesaleShops.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.phone ? ` - ${c.phone}` : ""}
-                  </option>
-                ))}
-              </Select>
-            )
-          ) : (
-            <div>
-              {/* Chuna hua gahak: naam, phone aur us ka BAQI. Baqi
-                  yahan is liye hai ke naya udhaar dene ka faisla usi
-                  waqt hota hai -- baad mein khata kholne par wo faisla
-                  ho chuka hota hai. */}
-              {chosenCustomer ? (
-                <div className="flex items-start gap-2 rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">
-                      {chosenCustomer.name}
-                    </p>
-                    {chosenCustomer.phone && (
-                      <p className="text-xs text-surface-500">{chosenCustomer.phone}</p>
-                    )}
-                    <p className="mt-0.5 text-xs">
-                      <span className="text-surface-500">{t("pos_cust_balance", lang)}: </span>
-                      {chosenCustomer.balance == null ? (
-                        <span className="text-surface-400">—</span>
-                      ) : (
-                        <span
-                          className={
-                            chosenCustomer.balance > 0
-                              ? "font-semibold text-red-600"
-                              : "font-semibold text-emerald-700"
-                          }
-                        >
-                          Rs {Math.round(chosenCustomer.balance).toLocaleString()}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      applyCustomer("");
-                      setCustQuery("");
-                    }}
-                    className="shrink-0 rounded-md px-1.5 text-surface-400 hover:text-surface-700"
-                    aria-label={t("pos_walk_in", lang)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <Input
-                    value={custQuery}
-                    onChange={(e) => setCustQuery(e.target.value)}
-                    placeholder={t("pos_cust_search", lang)}
-                  />
-                  {custQuery.trim() !== "" && (
-                    <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
-                      {custMatches.length === 0 ? (
-                        <p className="px-3 py-2 text-xs text-surface-400">{t("pos_cust_none", lang)}</p>
-                      ) : (
-                        custMatches.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              applyCustomer(c.id);
-                              setCustQuery("");
-                            }}
-                            className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"
-                          >
-                            <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.name}</p>
-                            <p className="text-xs text-surface-500">
-                              {c.phone ?? "—"}
-                              {c.balance != null && c.balance > 0
-                                ? ` · Rs ${Math.round(c.balance).toLocaleString()}`
-                                : ""}
-                            </p>
-                          </button>
-                        ))
-                      )}
-                    </div>
+          {custMode === "walkin" ? (
+            <p className="rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
+              {t("pos_walkin_note", lang)}
+            </p>
+          ) : chosenCustomer ? (
+            // Chuna hua gahak: naam, phone aur us ka BAQI. Baqi yahan is
+            // liye hai ke naya udhaar dene ka faisla usi waqt hota hai --
+            // baad mein khata kholne par wo faisla ho chuka hota hai.
+            <div className="flex items-start gap-2 rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">
+                  {chosenCustomer.name}
+                </p>
+                {chosenCustomer.phone && <p className="text-xs text-surface-500">{chosenCustomer.phone}</p>}
+                <p className="mt-0.5 text-xs">
+                  <span className="text-surface-500">{t("pos_cust_balance", lang)}: </span>
+                  {chosenCustomer.balance == null ? (
+                    <span className="text-surface-400">—</span>
+                  ) : (
+                    <span
+                      className={
+                        chosenCustomer.balance > 0
+                          ? "font-semibold text-red-600"
+                          : "font-semibold text-emerald-700"
+                      }
+                    >
+                      Rs {Math.round(chosenCustomer.balance).toLocaleString()}
+                    </span>
                   )}
-                  <p className="mt-1 text-xs text-surface-400">{t("pos_walk_in_hint", lang)}</p>
-                </>
-              )}
+                </p>
+                {/* Udhaar ki hadd. Darj hi na ho to "—" -- sifar likh
+                    dena "is ko udhaar bilkul nahi" kehne ke barabar hai,
+                    aur wo faisla kisi ne kiya hi nahi. */}
+                <p className="text-xs">
+                  <span className="text-surface-500">{t("pos_credit_limit", lang)}: </span>
+                  {chosenCustomer.creditLimit == null || chosenCustomer.creditLimit === 0 ? (
+                    <span className="text-surface-400">—</span>
+                  ) : (
+                    <span className="font-medium text-surface-700 dark:text-surface-200">
+                      Rs {Math.round(chosenCustomer.creditLimit).toLocaleString()}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  applyCustomer("");
+                  setCustQuery("");
+                }}
+                className="shrink-0 rounded-md px-1.5 text-surface-400 hover:text-surface-700"
+                aria-label={t("pos_walk_in", lang)}
+              >
+                ✕
+              </button>
             </div>
+          ) : (
+            <>
+              <Input
+                value={custQuery}
+                onChange={(e) => setCustQuery(e.target.value)}
+                placeholder={custMode === "wholesale" ? t("pos_shop_search", lang) : t("pos_cust_search", lang)}
+              />
+              <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
+                {custMatches.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-surface-400">
+                    {custMode === "wholesale" ? t("pf_pos_no_shops", lang) : t("pos_cust_none", lang)}
+                  </p>
+                ) : (
+                  custMatches.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        applyCustomer(c.id);
+                        setCustQuery("");
+                      }}
+                      className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"
+                    >
+                      <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.name}</p>
+                      <p className="text-xs text-surface-500">
+                        {c.phone ?? "—"}
+                        {c.balance != null && c.balance > 0
+                          ? ` · Rs ${Math.round(c.balance).toLocaleString()}`
+                          : ""}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
           )}
 
           {wholesaleOn && (
@@ -695,12 +881,15 @@ export function PosClient({
               <Plus className="h-3 w-3" /> {t("pos_add_split", lang)}
             </button>
           </div>
+          {custMode === "walkin" && (
+            <p className="mb-1.5 text-[11px] text-surface-400">{t("pos_walkin_no_credit", lang)}</p>
+          )}
           <div className="space-y-2">
             {paymentLines.map((line) => (
               <div key={line.id} className="rounded-lg border border-surface-200 p-2 dark:border-surface-700">
                 <div className="flex items-center gap-1.5">
                   <Select value={line.method} onChange={(e) => updatePaymentLine(line.id, "method", e.target.value)} className="flex-1 text-xs">
-                    {PAYMENT_METHODS.map((m) => (
+                    {payMethods.map((m) => (
                       <option key={m.key} value={m.key}>{m.label}</option>
                     ))}
                   </Select>
@@ -754,19 +943,19 @@ export function PosClient({
 
         <div className="flex items-center justify-between border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
           <span className="text-surface-500">{t("pos_total_quantity", lang)}</span>
-          <span className="font-medium text-surface-900 dark:text-surface-100">
+          <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
             {cart.reduce((s, l) => s + l.quantity, 0)}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span>
-          <span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">
+          <span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">
             Rs {total.toLocaleString()}
           </span>
         </div>
         <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}>
           <span>{remaining > 0 ? "Baaqi Rakam" : remaining < 0 ? "Zyada Amount" : "Poora Paid"}</span>
-          <span className="font-semibold">Rs {Math.abs(remaining).toLocaleString()}</span>
+          <span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span>
         </div>
 
         {message && (
@@ -780,11 +969,19 @@ export function PosClient({
             {message.text}
           </div>
         )}
+        {/* Checkout hi asal kaam hai -- wo bara aur sabz. Cart khali karna
+            us ke barabar nazar nahi aana chahiye, warna kisi din wo ghalti
+            se dab jayega. */}
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={resetSale} disabled={submitting}>
+          <button
+            type="button"
+            onClick={resetSale}
+            disabled={submitting || cart.length === 0}
+            className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800"
+          >
             {t("pos_clear_cart", lang)}
-          </Button>
-          <Button data-guide="pos-checkout" className="flex-1" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
+          </button>
+          <Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
             {submitting ? "Processing..." : "Checkout"}
           </Button>
         </div>
@@ -799,6 +996,188 @@ export function PosClient({
           lang={lang}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Chuni hui cheez ki tafseel.
+ *
+ * Yahan wohi cheezein hain jin par counter par faisla hota hai: tadaad,
+ * rate, kitna maal para hai, aur miyaad. Jo adad maujood na ho us ke
+ * saamne "—" aata hai, sifar nahi -- sifar kehta hai "dekh liya, kuch
+ * nahi hai", aur usi bharose par banda maal bech deta hai.
+ *
+ * Lagat (trade / kharid ka rate) yahan tabhi aati hai jab us ka khana
+ * server se aaya ho. Bina ijazat wale ko wo bheja hi nahi jata.
+ */
+function ItemDetails({
+  line,
+  item,
+  lang,
+  perms,
+  onQty,
+  onRate,
+  onRemove,
+}: {
+  line: CartLine;
+  item: InventoryItem;
+  lang: Lang;
+  perms: PosPermissions;
+  onQty: (q: number) => void;
+  onRate: (r: number) => void;
+  onRemove: () => void;
+}) {
+  const p = item.products;
+  const expiry = shortDate(item.expiry_date);
+  const barcode = p?.barcode || p?.internal_barcode || null;
+  const nishaan = <span className="text-surface-400">—</span>;
+
+  const row = (label: React.ReactNode, value: React.ReactNode) => (
+    <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
+      <span className="text-surface-500">{label}</span>
+      <span className="text-right font-medium tabular-nums text-surface-900 dark:text-surface-100">{value}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex h-32 items-center justify-center overflow-hidden rounded-lg bg-surface-50 dark:bg-surface-800">
+        {p?.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" />
+        ) : (
+          <Package className="h-10 w-10 text-surface-300 dark:text-surface-600" strokeWidth={1.25} />
+        )}
+      </div>
+
+      <div>
+        <p className="font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">
+          {line.name}
+        </p>
+        <p className="mt-0.5 text-xs text-surface-500">
+          {[p?.pack_size, p?.unit_code].filter(Boolean).join(" / ") || "—"}
+        </p>
+      </div>
+
+      {/* Tadaad: do bare button. Counter par ungli se dabana keyboard se
+          tez hai, magar seedha likhna bhi khula hai -- barah dane ginte
+          waqt barah dafa dabana bewaqoofi hai. */}
+      <div>
+        <Label>{t("pos_qty", lang)}</Label>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onQty(line.quantity - 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            aria-label="-"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <Input
+            type="number"
+            min={1}
+            value={line.quantity}
+            onChange={(e) => onQty(parseInt(e.target.value) || 0)}
+            className="h-9 flex-1 text-center"
+          />
+          <button
+            type="button"
+            onClick={() => onQty(line.quantity + 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            aria-label="+"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Bikri ka rate. Ijazat na ho to khana khulta hi nahi -- aadha
+          khula khana banda dabata rehta hai aur samajhta hai safha kharab
+          hai. */}
+      <div>
+        <Label>{t("pos_sell_rate", lang)}</Label>
+        {perms.canEditRate ? (
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={line.unit_price}
+            onChange={(e) => onRate(parseFloat(e.target.value) || 0)}
+            className="mt-1 h-9"
+          />
+        ) : (
+          <div className="mt-1 flex items-center gap-1.5 rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-800">
+            <span className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+              Rs {line.unit_price.toLocaleString()}
+            </span>
+            <Lock className="h-3 w-3 text-surface-400" />
+            <span className="ml-auto text-right text-[11px] text-surface-400">{t("pos_rate_locked", lang)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="divide-y divide-surface-100 border-t border-surface-100 pt-1 dark:divide-surface-800 dark:border-surface-800">
+        {row(
+          t("pos_mrp", lang),
+          p?.mrp_price != null && p.mrp_price > 0 ? `Rs ${Number(p.mrp_price).toLocaleString()}` : nishaan
+        )}
+        {/* Lagat sirf ijazat walon ko. Bina ijazat wale ke liye ye khana
+            server se aaya hi nahi hota. */}
+        {perms.canSeeCost &&
+          row(
+            t("pos_cost_rate", lang),
+            p?.purchase_price != null && p.purchase_price > 0
+              ? `Rs ${Number(p.purchase_price).toLocaleString()}`
+              : nishaan
+          )}
+        {perms.canSeeCost &&
+          row(
+            t("pos_wholesale_rate", lang),
+            item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan
+          )}
+        {row(
+          t("pos_shop_stock", lang),
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />
+            {item.stock_quantity}
+          </span>
+        )}
+        {/* Godam ki ginti na ho saki to "—". Sifar likh dena "godam khali
+            hai" ka jhoot hai, aur usi par maal mangwana rukta hai. */}
+        {row(t("pos_wh_stock", lang), item.warehouse_stock == null ? nishaan : item.warehouse_stock)}
+        {row(
+          t("pos_barcode", lang),
+          barcode ? (
+            <span className="font-mono text-xs">{barcode}</span>
+          ) : (
+            <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>
+          )
+        )}
+        {row(
+          t("pos_batch", lang),
+          item.batch_number
+            ? item.batch_number
+            : (item.batch_count ?? 0) > 1
+              ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count))
+              : nishaan
+        )}
+        {row(t("pos_expiry", lang), expiry ?? nishaan)}
+        {row(
+          <span className="font-semibold text-surface-800 dark:text-surface-200">{t("pos_line_total", lang)}</span>,
+          <span className="font-display text-base font-bold text-brand-700 dark:text-brand-300">
+            Rs {(line.quantity * line.unit_price).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+      >
+        <Trash2 className="h-4 w-4" /> {t("pos_remove_item", lang)}
+      </button>
     </div>
   );
 }

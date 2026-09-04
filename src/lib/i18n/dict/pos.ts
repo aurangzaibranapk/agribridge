@@ -17,10 +17,13 @@ export const posDict = {
   // --- Cheezein dhoondna ---
   pos_search_products: { en: "Search products...", rm: "Cheez dhoondein...", ur: "چیز تلاش کریں..." },
   pos_no_products: { en: "No products found.", rm: "Koi cheez nahi mili.", ur: "کوئی چیز نہیں ملی۔" },
+  // Chhota rakha gaya (4 September): ye khana ab toolbar ki ek hi line
+  // mein baithta hai. Lamba jumla wahan kat kar aadha nazar aata tha,
+  // aur adhoora jumla parhne wale ko rok deta hai.
   pos_scan_hint: {
-    en: "Scan barcode with scanner, or type and press Enter",
-    rm: "Barcode scan karein, ya likh kar Enter dabayein",
-    ur: "بارکوڈ اسکین کریں، یا لکھ کر Enter دبائیں",
+    en: "Scan barcode / Enter code",
+    rm: "Barcode scan karein / code likhein",
+    ur: "بارکوڈ اسکین کریں / کوڈ لکھیں",
   },
   pos_scan_barcode: { en: "Scan Barcode", rm: "Barcode scan karein", ur: "بارکوڈ اسکین کریں" },
   pos_scan_camera_hint: {

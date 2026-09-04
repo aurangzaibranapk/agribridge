@@ -1,7 +1,8 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 export const dynamic = "force-dynamic";
 export default async function PosPage() {
@@ -13,6 +14,11 @@ export default async function PosPage() {
   if (!user) {
     redirect("/login");
   }
+
+  // Kaun kya dekh sakta hai aur kya badal sakta hai. Yehi fehrist
+  // checkout ke andar bhi parhi jati hai -- safha aur server ek hi
+  // jagah se poochte hain.
+  const perms = await loadPosPermissions(user.id);
   const { data: dealer } = await supabase
     .from("dealers")
     .select("id, business_name")
@@ -65,13 +71,20 @@ export default async function PosPage() {
   // apna maal dhoondta reh jata hai.
   let rateBaqiCount = 0;
   let rawCustomers:
-    | { id: string; name: string; phone: string | null; balance?: number | null; isWholesaleShop: boolean }[]
+    | {
+        id: string;
+        name: string;
+        phone: string | null;
+        balance?: number | null;
+        creditLimit?: number | null;
+        isWholesaleShop: boolean;
+      }[]
     | null = null;
   if (dealer) {
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase
@@ -88,7 +101,7 @@ export default async function PosPage() {
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };
@@ -113,20 +126,25 @@ export default async function PosPage() {
         // NULL rehta hai jab thok ka rate darj hi nahi -- sifar nahi.
         // Sifar ka matlab "thok par muft" hota (245).
         wholesale_price: product?.wholesale_price == null ? null : Number(product.wholesale_price),
+        batch_ids: [] as string[],
         products: product,
       };
       cur.stock_quantity += Number(row.quantity_on_hand);
+      if (row.batch_id) cur.batch_ids.push(row.batch_id);
       aggMap.set(row.product_id, cur);
     });
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
-      .select("id, name, phone_number, customer_type, current_balance")
+      .select("id, name, phone_number, customer_type, current_balance, credit_limit")
       .order("name");
     rawCustomers = (cust ?? []).map((c: any) => ({
       id: c.id,
       name: c.name,
       phone: c.phone_number,
+      // Hadd darj hi na ho to NULL. Sifar likh dena "is ko udhaar bilkul
+      // nahi" kehna hai -- aur wo faisla kisi ne kiya hi nahi.
+      creditLimit: c.credit_limit == null ? null : Number(c.credit_limit),
       // Gahak chunte hi us ka baqi saamne. Khata wale gahak par yehi
       // wo adad hai jo counter par faisla badalta hai -- aur us ke
       // baghair banda naya udhaar de deta hai.
@@ -140,6 +158,7 @@ export default async function PosPage() {
     stock_quantity: item.stock_quantity,
     selling_price: item.selling_price,
     wholesale_price: item.wholesale_price ?? null,
+    batch_ids: item.batch_ids ?? [],
     products: Array.isArray(item.products) ? item.products[0] ?? null : item.products ?? null,
   }));
 
@@ -147,26 +166,117 @@ export default async function PosPage() {
   // to wo KHALI lauta deta hai -- aur us soorat mein poori products ki
   // fehrist gayab ho jati, yani counter band. Counter par ye khatra
   // mol nahi liya ja sakta.
-  const catIds = Array.from(
-    new Set((inventory.map((i: any) => i.products?.category_id).filter(Boolean) as string[]))
-  );
-  const { data: cats } = catIds.length
-    ? await supabase.from("categories").select("id, name").in("id", catIds)
-    : { data: [] as { id: string; name: string }[] };
+  //
+  // Qismein SAARI aati hain -- sirf wo nahi jin par is waqt maal para
+  // hai. Malik ka kehna (4 September): "sari category bhi aani chahiye,
+  // beshak products na hon abhi." Wajah waajib hai: counter par khaRa
+  // banda jab "Grocery" dhoondta hai aur wo fehrist mein hai hi nahi, to
+  // wo samajhta hai qism BANI hi nahi -- aur nayi qism bana deta hai. Isi
+  // se ek hi cheez ki do qismein ban jati hain.
+  //
+  // Har qism ke saamne us par mojood cheezon ki ginti likhi jati hai,
+  // taake khali qism dhoka na de.
+  const { data: cats } = await supabase.from("categories").select("id, name").order("name");
   const catName = new Map((cats ?? []).map((c) => [c.id, c.name]));
-  const groups = Array.from(new Set((cats ?? []).map((c) => c.name))).sort();
   for (const it of inventory as any[]) {
     if (it.products) it.products.category_name = catName.get(it.products.category_id) ?? null;
   }
+
+  const ginti = new Map<string, number>();
+  for (const it of inventory as any[]) {
+    const n = it.products?.category_name;
+    if (n) ginti.set(n, (ginti.get(n) ?? 0) + 1);
+  }
+  // Ek hi naam ki do qismein (jo is nizam mein maujood hain) yahan ek
+  // hi khane mein aa jati hain -- chhantna naam par hota hai, id par
+  // nahi.
+  const groups = Array.from(new Set((cats ?? []).map((c) => c.name)))
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ name, count: ginti.get(name) ?? 0 }));
+
+  // ---- Batch aur miyaad ----
+  // Miyaad counter ka asal sawal hai: "ye cheez kab tak theek hai".
+  // Jahan maal batch ke sath aaya, wahin se aati hai; warna cheez ke
+  // apne khane se. Dono na hon to KHALI rehti hai -- aaj ki tareekh
+  // likh dena us se bura hota.
+  const batchIds = Array.from(new Set((inventory as any[]).flatMap((i) => i.batch_ids as string[])));
+  if (batchIds.length) {
+    const { data: batches } = await supabase
+      .from("stock_batches")
+      .select("id, batch_number, expiry_date")
+      .in("id", batchIds);
+    const byId = new Map((batches ?? []).map((b) => [b.id, b]));
+    for (const it of inventory as any[]) {
+      const rows = (it.batch_ids as string[]).map((id) => byId.get(id)).filter(Boolean) as any[];
+      if (rows.length === 0) continue;
+      // Ek hi batch ho to us ka number; kai hon to number likhna ghalat
+      // hoga -- gahak ke haath mein kaunsa jayega, ye counter par tay
+      // hi nahi hota.
+      it.batch_number = rows.length === 1 ? rows[0].batch_number ?? null : null;
+      it.batch_count = rows.length;
+      const dates = rows.map((r) => r.expiry_date).filter(Boolean).sort();
+      // Sab se pehle khatam hone wali miyaad -- counter par wohi maayne
+      // rakhti hai.
+      if (dates.length) it.expiry_date = dates[0];
+    }
+  }
+  for (const it of inventory as any[]) {
+    if (!it.expiry_date && it.products?.expiry_date) it.expiry_date = it.products.expiry_date;
+  }
+
+  // ---- Godam mein aur kitna para hai ----
+  // Dukan par khatam ho raha ho to agla sawal yehi hota hai. Jawab na
+  // mil sake to NULL rehta hai aur safha "—" likhta hai -- sifar likh
+  // dena "godam khali hai" ka jhoot hai.
+  const godamStock = new Map<string, number>();
+  let godamMaloom = false;
+  if (!dealer && branch && inventory.length) {
+    const { data: otherWh, error: whErr } = await supabase
+      .from("warehouses")
+      .select("id")
+      .eq("branch_id", branch.id);
+    const otherIds = (otherWh ?? []).map((w) => w.id).filter((id) => id !== warehouseId);
+    if (!whErr) {
+      if (otherIds.length === 0) {
+        godamMaloom = true; // dekh liya: koi doosra godam hai hi nahi
+      } else {
+        const { data: rows, error: invErr } = await supabase
+          .from("inventory")
+          .select("product_id, quantity_on_hand")
+          .in("warehouse_id", otherIds)
+          .in("product_id", inventory.map((i: any) => i.product_id));
+        if (!invErr) {
+          godamMaloom = true;
+          for (const r of rows ?? []) {
+            godamStock.set(r.product_id, (godamStock.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0));
+          }
+        }
+      }
+    }
+  }
+  for (const it of inventory as any[]) {
+    it.warehouse_stock = godamMaloom ? godamStock.get(it.product_id) ?? 0 : null;
+  }
+
+  // Lagat sirf us ke liye jise dekhne ki ijazat hai. Chhupana safhe par
+  // nahi -- yahan, server par. Jo bheja hi nahi gaya wo browser ke andar
+  // se bhi nahi nikalta.
+  if (!perms.canSeeCost) {
+    for (const it of inventory as any[]) {
+      if (it.products) delete it.products.purchase_price;
+    }
+  }
+
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
   return (
     <PosClient
-      lang={getLanguageFromCookies("rm")}
+      lang={lang}
       sellerName={sellerName}
       inventory={inventory}
       groups={groups}
       customers={rawCustomers ?? []}
       rateBaqiCount={rateBaqiCount}
+      perms={perms}
     />
   );
 }
