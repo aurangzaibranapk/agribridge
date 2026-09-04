@@ -697,5 +697,51 @@ hai.** Jo mila:
 5. **AI Reorder ka button** -- tajweez hai, magar us par se seedha stock
    request ka draft banane wala button nahi.
 
-Ye paanch cheezein banni hain -- baqi bara hissa maujood hai aur usay
-dobara banana duplicate hoga (malik ka apna usool).
+### 15a. Tasheeh: paanch mein se teen pehle se maujood theen
+
+Malik ke "ye paanch kaam kar do" ke baad har ek ko kholne par pata chala
+ke **teen ka andaza ghalat tha** -- wo pehle se bane hue hain. Ye likhna
+zaroori hai, warna kal koi phir se banane baithe ga:
+
+- **Adaigi ki shart** (#2) -- pehle se hai: `purchases.payment_terms /
+  credit_days / due_date`, `lib/purchase-terms.ts` ka
+  `parsePaymentTerms`, aur form mein `PaymentTermsFields` -- purchase
+  aur bill-rates dono raaston par.
+- **Apna barcode aur label** (#3) -- pehle se hai:
+  `/admin/products/labels`, EAN-13 (200 se shuru) aur label chhapna.
+- **"Products Need Attention"** (#4) -- pehle se hai: Product Setup ka
+  safha wahi chhe ginti (`v_product_setup_counts`) dikhata hai: rate,
+  barcode, tasveer, expiry, manzoori, intake.
+
+**Sirf do cheezein waqai nahi thin, aur wohi banayi gayin:**
+
+1. **`/admin/purchases/new` -- ek darwaza.** Teenon raaste pehle se the
+   magar teen alag safhon par; naye bande ko pata hi nahi chalta tha ke
+   shuru kahan se ho. Safha koi naya kaam nahi karta: sirf wohi raaste
+   dikhata hai jo is bande ko khulte hain (AI se bill / AI ko bol kar /
+   haath se). "AI ko bol kar" koi naya safha nahi -- wohi panel kholta
+   hai jo har safhe par hai.
+
+2. **`/admin/stock-transfers/suggested` + `v_shop_replenishment` (280) --
+   shop ko kya chahiye.** Ye `v_reorder_suggestions` se ALAG sawal hai:
+   wo supplier se kharid ka hai aur poore idare ki ek ginti rakhta hai;
+   is mein shop ka khana hai. 30 din ki bikri se roz ki raftaar, kitne
+   din ka maal baqi, godam mein kitna hai, aur do hafte ka kitna bhejna
+   chahiye.
+
+   - `days_cover` **NULL** rehta hai jab 30 din mein bikri hi na hui ho.
+     Sifar likhna jhoot hota: sifar kehta "aaj khatam", jab ke asal baat
+     ye hai ke raftaar maloom nahi. Aisi qatar ka darja `idle` -- wo
+     tawajjo wali fehrist mein aati hi nahi.
+   - Button wahi purana `requestInternalTransfer` chalata hai jo shop
+     staff khud istemal karta hai -- yani darkhwast usi qatar, usi
+     manzoori aur usi dispatch se guzarti hai. Naya raasta banate to ek
+     din do fehristein alag alag chalne lagtin.
+   - Ek darkhwast ek hi dukan ki.
+
+**Ijazat:** koi nayi permission nahi bani. Rok ka usool "sab se lamba
+milta hua raasta" hai, is liye `/admin/purchases/new` purchases ki ijazat
+par khulta hai aur `/admin/stock-transfers/suggested` transfers ki.
+
+**Help (281):** `purchases` aur `stock-transfers` dono ki `feature_help`
+qatarein likh di gayin -- malik ke 7-nuqta usool ke mutabiq.

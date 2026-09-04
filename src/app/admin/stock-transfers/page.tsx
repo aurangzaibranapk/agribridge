@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -144,6 +145,13 @@ export default async function AdminStockTransfersPage() {
   return (
     <div>
       <PageHeader title={t("st_title", lang)} description={t("st_subtitle", lang)} />
+      {/* Tajweez wala safha (280): 30 din ki bikri se kya kam paR raha hai. */}
+      <Link
+        href="/admin/stock-transfers/suggested"
+        className="mb-4 inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-200"
+      >
+        {t("sr_title", lang)} →
+      </Link>
 
       {canRequest && (
         <div className="mt-4">

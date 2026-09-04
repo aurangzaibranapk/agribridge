@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -105,6 +106,14 @@ export default async function AdminPurchasesPage() {
   return (
     <div>
       <PageHeader title={t("pu_title", lang)} description={t("pu_subtitle", lang)} />
+      {/* Andar aane ke teenon raaste ek jagah (naqsha 4 September) --
+          yahan sirf link hai, kaam wahi purana. */}
+      <Link
+        href="/admin/purchases/new"
+        className="mb-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+      >
+        + {t("np_title", lang)}
+      </Link>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
