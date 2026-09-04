@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/layout-primitives";
 import {
   ShoppingCart,
   Trash2,
+  RotateCcw,
+  ArrowLeft,
   Search,
   ScanLine,
   Camera,
@@ -23,6 +25,7 @@ import {
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
+import { PosReturn } from "@/components/pos/pos-return";
 import type { PosPermissions } from "@/lib/pos/permissions";
 
 interface PosProduct {
@@ -63,6 +66,15 @@ interface Customer {
   /** Wo dukan jise hum maal dete hain -- us par thok ka rate lagta hai (246). */
   isWholesaleShop: boolean;
 }
+export interface RecentSale {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  status: string;
+  payment_mode: string;
+  customer_name: string | null;
+}
+
 interface CartLine {
   product_id: string;
   name: string;
@@ -121,6 +133,7 @@ export function PosClient({
   inventory,
   groups = [],
   customers,
+  recentSales = [],
   rateBaqiCount = 0,
   perms,
   lang,
@@ -136,6 +149,11 @@ export function PosClient({
    */
   groups?: { name: string; count: number }[];
   customers: Customer[];
+  /**
+   * Haal ki bikriyaan -- wapsi ke liye. Wapsi hamesha ASAL BILL se shuru
+   * hoti hai; cheez chun kar wapsi ka koi raasta yahan hai hi nahi.
+   */
+  recentSales?: RecentSale[];
   /**
    * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
    * darj nahi hua (252). Ye adad chhupaya nahi jata -- warna banda
@@ -175,6 +193,9 @@ export function PosClient({
   // lag jata hai -- aur us ka pata mahine baad munafa ginte waqt chalta
   // hai.
   const [custMode, setCustMode] = useState<CustomerMode>("walkin");
+  // Bikri ya wapsi -- ek hi counter, ek hi shakl. Malik ka kehna: staff
+  // ko alag safhe par na bhejein.
+  const [mode, setMode] = useState<"sale" | "return">("sale");
 
   const chosenCustomer = customers.find((c) => c.id === customerId) ?? null;
   const wholesaleOn = chosenCustomer?.isWholesaleShop === true;
@@ -317,9 +338,11 @@ export function PosClient({
         },
       ];
     });
-    // Jo abhi daali, wohi saamne khul jaye -- banda usi ki tadaad ya
-    // rate theek karna chahta hai.
-    setSelectedId(item.product_id);
+    // Yahan tafseel ka khana jaan boojh kar NAHI kholte. Har cheez
+    // daalte hi wo khana khul jaye to cheezon ki jagah har dafa dhak
+    // jati hai -- aur counter par sab se zyada dohraya jane wala kaam
+    // yehi hai: cheez dhoondo, dabao, agli cheez. Tafseel tab khulti
+    // hai jab banda cart ki qatar par ungli rakhta hai.
   }
 
   function findByBarcode(code: string): InventoryItem | undefined {
@@ -495,10 +518,33 @@ export function PosClient({
     setSubmitting(false);
   }
 
+  // ===== Wapsi ka darwaza =====
+  // Alag safha nahi -- wohi counter, wohi shakl. Malik ka kehna (5
+  // September): "Staff ko alag complicated Return page par na bhejein."
+  if (mode === "return") {
+    return (
+      <div className="space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setMode("sale")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200"
+          >
+            <ArrowLeft className="h-4 w-4" /> {t("pos_mode_sale", lang)}
+          </button>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 dark:bg-amber-900/30 dark:text-amber-300">
+            <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
+          </span>
+        </div>
+        <PosReturn lang={lang} recentSales={recentSales} onDone={() => setMode("sale")} />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_19rem_23rem] xl:grid-rows-[minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden">
       {/* ================= BAAYIN TARAF: cheezein ================= */}
-      <section className="flex flex-col lg:row-span-2 lg:min-h-0 xl:row-span-1">
+      <section className="flex flex-col lg:min-h-0">
         {/* ---- Ek hi patti: naam, scan, talash, qism, ordering ----
             Malik ka kehna (4 September): barcode ke liye alag poori line
             na ho. Wajah saaf hai -- upar jo jagah jati hai wo cheezon ke
@@ -559,6 +605,14 @@ export function PosClient({
               ))}
             </Select>
           )}
+
+          <button
+            type="button"
+            onClick={() => setMode("return")}
+            className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-surface-200 px-3 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
+          </button>
 
           <Link
             href="/admin/pos/ordering"
@@ -659,29 +713,54 @@ export function PosClient({
         </div>
       </section>
 
-      {/* ============ DARMIYAN: chuni hui cheez ki tafseel ============ */}
-      <Card className="order-3 flex flex-col gap-3 lg:order-none lg:h-fit lg:max-h-full lg:overflow-y-auto xl:h-full xl:min-h-0">
-        <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
-          {t("pos_details", lang)}
-        </h2>
-
-        {!selectedLine || !selectedItem ? (
-          <p className="py-8 text-center text-sm text-surface-400">{t("pos_pick_from_cart", lang)}</p>
-        ) : (
-          <ItemDetails
-            line={selectedLine}
-            item={selectedItem}
-            lang={lang}
-            perms={perms}
-            onQty={(q) => updateQuantity(selectedLine.product_id, q)}
-            onRate={(r) => updateRate(selectedLine.product_id, r)}
-            onRemove={() => removeLine(selectedLine.product_id)}
+      {/* ===== Cheez ki tafseel: khulne wala khana, hamesha ka nahi =====
+          Malik ki hidayat (5 September): "Item Details default permanent
+          column nahi rehna chahiye... close karne par product area wapas
+          full width ho jaye."
+          Wajah waajib hai: counter par asal kaam cheez pehchan kar cart
+          mein daalna hai. Wo jagah kisi aise khane ko de dena jo aksar
+          khali para rehta hai, har bande ka har bill dheema kar deta
+          hai. Ye khana tab aata hai jab cart ki qatar par ungli lagti
+          hai, aur band karte hi jagah wapas cheezon ko mil jati hai. */}
+      {selectedLine && selectedItem && (
+        <>
+          {/* Chhoti screen par peeche ka hissa dhak jata hai; baRi screen
+              par nahi -- wahan cart saath hi khula rehta hai taake banda
+              tafseel dekhte hue bill bhi dekh sake. */}
+          <div
+            className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+            onClick={() => setSelectedId(null)}
+            aria-hidden
           />
-        )}
-      </Card>
+          <aside className="fixed inset-0 z-40 overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:inset-x-auto lg:bottom-4 lg:right-[24.5rem] lg:top-[7.5rem] lg:w-[21rem] lg:rounded-card lg:border">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
+                {t("pos_details", lang)}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="rounded-md p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-700 dark:hover:bg-surface-800"
+                aria-label={t("sh_cancel", lang)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ItemDetails
+              line={selectedLine}
+              item={selectedItem}
+              lang={lang}
+              perms={perms}
+              onQty={(q) => updateQuantity(selectedLine.product_id, q)}
+              onRate={(r) => updateRate(selectedLine.product_id, r)}
+              onRemove={() => removeLine(selectedLine.product_id)}
+            />
+          </aside>
+        </>
+      )}
 
       {/* ============ DAAYIN TARAF: gahak, cart, adaigi ============ */}
-      <Card className="order-2 flex flex-col gap-4 lg:order-none lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      <Card className="flex flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2>

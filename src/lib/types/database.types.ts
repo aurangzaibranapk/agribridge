@@ -20489,6 +20489,19 @@ export type Database = {
       }
     }
     Views: {
+      v_pos_sale_returnable: {
+        Row: {
+          original_cogs: number | null
+          original_rate: number | null
+          product_id: string | null
+          returnable_qty: number | null
+          returned_qty: number | null
+          sale_id: string | null
+          sale_item_id: string | null
+          sold_qty: number | null
+        }
+        Relationships: []
+      }
       v_my_handoffs: {
         Row: {
           branch_id: string | null
@@ -24025,6 +24038,18 @@ export type Database = {
       fn_phone_key: { Args: { p_phone: string }; Returns: string }
       fn_pos_return: {
         Args: { p_manager_code: string; p_reason: string; p_sale_id: string }
+        Returns: string
+      }
+      fn_pos_return_lines: {
+        Args: {
+          p_lines: Json
+          p_manager_code: string
+          p_note: string | null
+          p_reason: string
+          p_reason_code: string | null
+          p_refund_method: string
+          p_sale_id: string
+        }
         Returns: string
       }
       fn_recalc_score: {

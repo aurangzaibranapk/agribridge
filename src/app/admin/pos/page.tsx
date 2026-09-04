@@ -267,6 +267,41 @@ export default async function PosPage() {
     }
   }
 
+  // ---- Haal ki bikriyaan (wapsi ke liye) ----
+  //
+  // Wapsi hamesha ASAL BILL se shuru hoti hai. Cheez chun kar wapsi ka
+  // koi raasta nahi -- warna kal rate barh jane par wapsi naye rate par
+  // hoti, aur wo farq kisi hisaab mein nazar nahi aata.
+  //
+  // Sirf wo bikriyaan jin par wapsi mumkin hai: mukammal, ya wo jin par
+  // pehle kuch wapas ho chuka hai magar sab nahi.
+  const { data: saleRows } = branch
+    ? await supabase
+        .from("pos_sales")
+        .select("id, created_at, total_amount, status, payment_mode, customer_id")
+        .eq("branch_id", branch.id)
+        .in("status", ["completed", "partially_returned"])
+        .order("created_at", { ascending: false })
+        .limit(40)
+    : { data: [] as any[] };
+
+  // Gahak ka naam alag sawal se, embed se nahi -- embed nakaam ho to wo
+  // KHALI lauta deta hai aur poori fehrist gayab ho jati.
+  const custIds = Array.from(new Set((saleRows ?? []).map((r: any) => r.customer_id).filter(Boolean)));
+  const { data: custRows } = custIds.length
+    ? await supabase.from("customers").select("id, name").in("id", custIds)
+    : { data: [] as { id: string; name: string }[] };
+  const custName = new Map((custRows ?? []).map((c) => [c.id, c.name]));
+
+  const recentSales = (saleRows ?? []).map((r: any) => ({
+    id: r.id,
+    created_at: r.created_at,
+    total_amount: Number(r.total_amount ?? 0),
+    status: r.status,
+    payment_mode: r.payment_mode,
+    customer_name: r.customer_id ? custName.get(r.customer_id) ?? null : null,
+  }));
+
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
   return (
     <PosClient
@@ -275,6 +310,7 @@ export default async function PosPage() {
       inventory={inventory}
       groups={groups}
       customers={rawCustomers ?? []}
+      recentSales={recentSales}
       rateBaqiCount={rateBaqiCount}
       perms={perms}
     />
