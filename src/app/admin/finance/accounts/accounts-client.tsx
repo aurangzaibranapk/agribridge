@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { saveGlAccount, toggleGlAccount, type GlAccountState } from "@/actions/gl-accounts";
+import { saveGlAccount, toggleGlAccount, transferAccountBalance, type GlAccountState } from "@/actions/gl-accounts";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Select, Label, Button } from "@/components/ui/form";
 import { AlertTriangle, Check, Pencil, Plus, X } from "lucide-react";
@@ -32,6 +32,8 @@ const GROUPS: { key: string; labelKey: "coa_g_asset" | "coa_g_liability" | "coa_
 export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdit: boolean; accounts: Acc[] }) {
   const [state, formAction] = useFormState(saveGlAccount, initial);
   const [toggleState, toggleAction] = useFormState(toggleGlAccount, initial);
+  const [moveState, moveAction] = useFormState(transferAccountBalance, initial);
+  const [moving, setMoving] = useState(false);
   const [editing, setEditing] = useState<Acc | null>(null);
   const [creating, setCreating] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
@@ -41,16 +43,16 @@ export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdi
 
   return (
     <div className="space-y-4">
-      {(state.error || toggleState.error) && (
+      {(state.error || toggleState.error || moveState.error) && (
         <Card className="flex items-start gap-2 border-rose-200 bg-rose-50 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{state.error ?? toggleState.error}</span>
+          <span>{state.error ?? toggleState.error ?? moveState.error}</span>
         </Card>
       )}
-      {(state.success || toggleState.success) && (
+      {(state.success || toggleState.success || moveState.success) && (
         <Card className="flex items-start gap-2 border-emerald-200 bg-emerald-50 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
           <Check className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{state.message ?? toggleState.message}</span>
+          <span>{state.message ?? toggleState.message ?? moveState.message}</span>
         </Card>
       )}
 
@@ -66,11 +68,67 @@ export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdi
             <Plus className="h-4 w-4" /> {t("coa_new", lang)}
           </Button>
         )}
+        {canEdit && !moving && (
+          <Button variant="secondary" onClick={() => setMoving(true)}>
+            {t("coa_move", lang)}
+          </Button>
+        )}
         <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
           <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
           {t("coa_show_closed", lang)}
         </label>
       </div>
+
+      {/* Khate "milana" -- magar purani qatarein utha kar nahi. Tafseel
+          actions/gl-accounts.ts mein. */}
+      {moving && (
+        <Card className="space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-display text-lg font-semibold text-surface-900 dark:text-white">{t("coa_move", lang)}</p>
+              <p className="mt-0.5 text-xs text-surface-500">{t("coa_move_hint", lang)}</p>
+            </div>
+            <button type="button" onClick={() => setMoving(false)} className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <form action={moveAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Label htmlFor="from_code">{t("coa_move_from", lang)}</Label>
+              <Select id="from_code" name="from_code" required>
+                <option value="">—</option>
+                {accounts.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.code} · {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="to_code">{t("coa_move_to", lang)}</Label>
+              <Select id="to_code" name="to_code" required>
+                <option value="">—</option>
+                {accounts.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.code} · {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="move_reason">{t("coa_move_reason", lang)}</Label>
+              <Input id="move_reason" name="reason" required minLength={10} />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-200">
+                <input type="checkbox" name="close_source" />
+                {t("coa_move_close", lang)}
+              </label>
+              <SaveButton lang={lang} />
+            </div>
+          </form>
+        </Card>
+      )}
 
       {open && (
         <Card className="space-y-4">

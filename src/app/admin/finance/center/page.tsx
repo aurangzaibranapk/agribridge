@@ -74,9 +74,10 @@ export default async function FinanceCenterPage() {
         { href: "/admin/finance/budget", label: t("bg_title", lang), hint: t("bg_desc", lang) },
         { href: "/admin/finance/cheques", label: t("chq_title", lang), hint: t("chq_desc", lang) },
         { href: "/admin/finance/recurring", label: t("rec_title", lang), hint: t("rec_desc", lang) },
+        { href: "/admin/finance/costing", label: t("cst_title", lang), hint: t("cst_desc", lang) },
         { href: "/admin/audit-trail", label: t("fc_reversal", lang), hint: t("fc_reversal_hint", lang) },
       ],
-      baqi: [t("fc_b_costing", lang)],
+      baqi: [],
     },
     {
       key: "pay",
@@ -89,9 +90,9 @@ export default async function FinanceCenterPage() {
         { href: "/admin/cash-custody", label: t("fc_cash_custody", lang) },
         { href: "/admin/cash-handover", label: t("fc_handover", lang), hint: t("fc_handover_hint", lang) },
         { href: "/admin/cash-close", label: t("fc_cash_close", lang) },
-        { href: "/admin/staff-khata", label: t("fc_staff_khata", lang) },
+        { href: "/admin/staff-khata", label: t("fc_staff_khata", lang), hint: t("fc_staff_hint", lang) },
       ],
-      baqi: [t("fc_b_advance", lang), t("fc_b_loan", lang)],
+      baqi: [t("fc_b_loan", lang)],
     },
     {
       key: "system",
@@ -105,7 +106,7 @@ export default async function FinanceCenterPage() {
         { href: "/admin/finance/banks", label: t("fc_banks", lang) },
         { href: "/admin/finance/payment-mapping", label: t("fc_pay_map", lang), hint: t("fc_pay_map_hint", lang) },
       ],
-      baqi: [t("fc_b_merge", lang)],
+      baqi: [],
     },
     {
       key: "assets",

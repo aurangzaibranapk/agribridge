@@ -20663,6 +20663,10 @@ export type Database = {
       }
     }
     Views: {
+      v_product_costing: {
+        Row: { last_purchase_date: string | null; name: string | null; pack_size: string | null; product_id: string | null; purchase_count: number | null; reference_rate: number | null; selling_price: number | null; total_cost: number | null; total_qty: number | null; weighted_avg: number | null }
+        Relationships: []
+      }
       v_fixed_assets: {
         Row: { accum_account: string | null; accumulated_depreciation: number | null; acquired_on: string | null; asset_account: string | null; book_value: number | null; branch_id: string | null; category_id: string | null; category_name: string | null; code: string | null; cost: number | null; dep_rate: number | null; depreciated_upto: string | null; disposed_on: string | null; expense_account: string | null; gross_value: number | null; id: string | null; in_service_on: string | null; life_months: number | null; location: string | null; method: string | null; name: string | null; notes: string | null; revaluation_adjustment: number | null; salvage_value: number | null; serial_no: string | null; status: string | null }
         Relationships: []

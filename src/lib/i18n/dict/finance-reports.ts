@@ -333,4 +333,38 @@ export const financeReportsDict = {
     rm: "Shart NAYE purchase par lagti hai. Purane bill par jo tareekh likhi ja chuki wo wohi rehti hai — warna shart badalne se purane bill ki tareekh chup chaap aage khisak jati.",
     ur: "شرط نئے پرچیز پر لگتی ہے۔ پرانے بل پر جو تاریخ لکھی جا چکی وہ وہی رہتی ہے۔",
   },
+
+  // ---------------------------------------------------------------
+  // Cheez ki lagat
+  // ---------------------------------------------------------------
+  cst_title: { en: "Item Costing", rm: "Cheez ki Lagat", ur: "چیز کی لاگت" },
+  cst_desc: {
+    en: "Average buying rate per item — on the goods that actually arrived — next to today's reference rate.",
+    rm: "Har cheez ka ausat kharid rate -- us maal par jo waqai aaya -- aur us ke saamne aaj ka reference rate.",
+    ur: "ہر چیز کا اوسط خرید ریٹ — اس مال پر جو واقعی آیا — اور اس کے سامنے آج کا ریٹ۔",
+  },
+  cst_only_finance: {
+    en: "This page is for Owner, Admin, Manager and Finance.",
+    rm: "Ye safha Owner, Admin, Manager aur Finance ke liye hai.",
+    ur: "یہ صفحہ اونر، ایڈمن، مینیجر اور فنانس کے لیے ہے۔",
+  },
+  cst_back: { en: "Finance", rm: "Maali markaz", ur: "مالی مرکز" },
+  cst_load_error: { en: "Could not load", rm: "Fehrist nahi mili", ur: "فہرست نہیں ملی" },
+  cst_product: { en: "Item", rm: "Cheez", ur: "چیز" },
+  cst_qty: { en: "Received", rm: "Aaya", ur: "آیا" },
+  cst_purchases: { en: "Purchases", rm: "Kharidein", ur: "خریدیں" },
+  cst_avg: { en: "Average", rm: "Ausat", ur: "اوسط" },
+  cst_ref: { en: "Today's rate", rm: "Aaj ka rate", ur: "آج کا ریٹ" },
+  cst_diff: { en: "Difference", rm: "Farq", ur: "فرق" },
+  cst_last: { en: "Last bought", rm: "Aakhri kharid", ur: "آخری خرید" },
+  cst_empty: {
+    en: "Nothing has been received yet, so there is no cost to average.",
+    rm: "Abhi koi maal aaya hi nahi, is liye ausat banane ko kuch nahi.",
+    ur: "ابھی کوئی مال آیا ہی نہیں، اس لیے اوسط بنانے کو کچھ نہیں۔",
+  },
+  cst_note: {
+    en: "Only goods that actually arrived are counted — ordered but undelivered items have no cost. A large gap means either a rate was entered wrong, or the rate has genuinely moved. This page changes nothing; the rate is changed on the item's own page, where every change is recorded.",
+    rm: "Sirf wo maal ginta hai jo waqai aaya -- order ki hui magar na aayi cheez ki koi lagat nahi hoti. Bara farq do baaton mein se ek kehta hai: ya koi rate ghalat charha, ya rate waqai badal chuka. Ye safha kuch badalta nahi; rate cheez ke apne safhe se badalta hai, jahan har tabdeeli darj hoti hai.",
+    ur: "صرف وہ مال گنتا ہے جو واقعی آیا۔ بڑا فرق یا تو غلط ریٹ بتاتا ہے یا واقعی بدلا ہوا ریٹ۔ یہ صفحہ کچھ بدلتا نہیں۔",
+  },
 } as const;

@@ -217,6 +217,21 @@ export const assetsDict = {
   // ---------------------------------------------------------------
   // Khaton ki fehrist (Chart of Accounts)
   // ---------------------------------------------------------------
+  fc_staff_hint: {
+    en: "Advances given to staff and what they still owe",
+    rm: "Staff ko diye hue advance aur un ka baqi",
+    ur: "عملے کو دیے ہوئے ایڈوانس اور ان کا باقی",
+  },
+  coa_move: { en: "Move a balance", rm: "Baqi doosre khate mein le jayein", ur: "باقی دوسرے کھاتے میں لے جائیں" },
+  coa_move_hint: {
+    en: "Old entries are never rewritten. A new entry moves the balance, and both stay visible.",
+    rm: "Purani qatarein kabhi dobara nahi likhi jatin. Ek NAYI entry se baqi le jaya jata hai, aur dono nazar mein rehti hain.",
+    ur: "پرانی قطاریں کبھی دوبارہ نہیں لکھی جاتیں۔ ایک نئی انٹری سے باقی لے جایا جاتا ہے۔",
+  },
+  coa_move_from: { en: "From account", rm: "Kis khate se", ur: "کس کھاتے سے" },
+  coa_move_to: { en: "To account", rm: "Kis khate mein", ur: "کس کھاتے میں" },
+  coa_move_reason: { en: "Reason (at least 10 letters)", rm: "Wajah (kam az kam das harf)", ur: "وجہ (کم از کم دس حرف)" },
+  coa_move_close: { en: "Close the old account afterwards", rm: "Us ke baad purana khata band kar dein", ur: "اس کے بعد پرانا کھاتہ بند کر دیں" },
   coa_title: { en: "Chart of Accounts", rm: "Khaton ki Fehrist", ur: "کھاتوں کی فہرست" },
   coa_desc: {
     en: "Every account in the system, and how much is sitting in each.",

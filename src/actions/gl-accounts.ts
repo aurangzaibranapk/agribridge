@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { postJournal } from "@/lib/ledger/post";
+import { trialBalance } from "@/lib/ledger/statements";
 
 /**
  * Khaton ki fehrist (Chart of Accounts).
@@ -145,4 +147,84 @@ export async function toggleGlAccount(_prev: GlAccountState, formData: FormData)
 
   revalidatePath("/admin/finance/accounts");
   return { success: true, message: active ? "Khata dobara khul gaya." : "Khata band ho gaya." };
+}
+
+/**
+ * Khate ka baqi doosre khate mein le jana ("account merge").
+ *
+ * Asli merge -- yani purani qatarein utha kar doosre khate mein likh
+ * dena -- ye nizam JAAN BOOJH KAR nahi karta. Us ka matlab hota hai ke
+ * pichhle saal ka har goshara chup chaap badal jaye, aur jo kaghaz
+ * pehle nikala ja chuka wo aaj ke nizam se mail khana band kar de.
+ *
+ * Is ki jagah wohi hota hai jo hisaab mein hamesha hota aaya hai: ek
+ * NAYI entry se baqi ek khate se doosre mein le jaya jata hai. Purani
+ * qatarein apni jagah rehti hain, nayi entry apni jagah -- aur dono
+ * nazar aati hain.
+ */
+export async function transferAccountBalance(_prev: GlAccountState, formData: FormData): Promise<GlAccountState> {
+  const g = await gate();
+  if (!g.ok) return { error: g.error };
+
+  const from = String(formData.get("from_code") ?? "").trim();
+  const to = String(formData.get("to_code") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const closeIt = String(formData.get("close_source") ?? "") === "on";
+
+  if (!from || !to) return { error: "Dono khate chunein." };
+  if (from === to) return { error: "Ek hi khate se usi khate mein raqam nahi jati." };
+  if (reason.length < 10) return { error: "Wajah likhein — kam az kam das harf. Ye wajah hamesha darj rahegi." };
+
+  const aaj = new Date().toISOString().slice(0, 10);
+  const tb = await trialBalance("1900-01-01", aaj);
+  if (tb.error) return { error: `Baqi nahi gina ja saka: ${tb.error}` };
+
+  const row = tb.rows.find((r) => r.code === from);
+  if (!row || Math.abs(row.balance) < 0.005) {
+    return { error: "Is khate mein kuch para hi nahi — le jane ko koi raqam nahi." };
+  }
+
+  // Baqi apne rukh par hai. Debit rukh wale khate ka musbat baqi ka
+  // matlab hai wahan debit para hai -- usay khatam karne ke liye credit
+  // karna parta hai.
+  const rakam = Math.abs(row.balance);
+  const sourceKoCredit = row.normal_side === "debit" ? row.balance > 0 : row.balance < 0;
+
+  const posted = await postJournal({
+    description: `Khate ka baqi ${from} se ${to} mein: ${reason}`,
+    sourceModule: "account_transfer",
+    entryDate: aaj,
+    createdBy: g.userId,
+    lines: sourceKoCredit
+      ? [
+          { account: to, debit: rakam, memo: reason },
+          { account: from, credit: rakam, memo: reason },
+        ]
+      : [
+          { account: from, debit: rakam, memo: reason },
+          { account: to, credit: rakam, memo: reason },
+        ],
+  });
+  if ("error" in posted) return { error: `Entry nahi bani: ${posted.error}` };
+
+  const service = createServiceClient();
+  if (closeIt) {
+    // Ab baqi sifar hai, is liye database ki rok is ko rokegi nahi.
+    await service.from("gl_accounts").update({ is_active: false }).eq("code", from);
+  }
+
+  await logAudit({
+    actionType: "update",
+    module: "finance",
+    recordId: from,
+    recordLabel: `${from} -> ${to}`,
+    description: `Khate ka baqi le jaya gaya: ${from} se ${to}, Rs ${Math.round(rakam).toLocaleString()} — wajah: ${reason} (${posted.entryNumber})${closeIt ? " — purana khata band" : ""}`,
+  });
+
+  revalidatePath("/admin/finance/accounts");
+  revalidatePath("/admin/finance/statements");
+  return {
+    success: true,
+    message: `Rs ${Math.round(rakam).toLocaleString()} ${from} se ${to} mein chali gayi (${posted.entryNumber}).${closeIt ? " Purana khata band kar diya gaya." : ""}`,
+  };
 }
