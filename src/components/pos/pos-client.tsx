@@ -564,13 +564,22 @@ export function PosClient({
 
             Sab khane ek hi oonchai (h-11) par, warna patti ooper neeche
             hilti nazar aati hai. */}
-        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2.5">
-          <h1 className="w-[11rem] shrink-0 truncate font-display text-lg font-semibold leading-tight text-surface-900 dark:text-white">
+        {/* Sab kuch EK line mein -- malik ka kehna (5 September):
+            "karyana order bhi usi bar mein aana chahiye jahan scan,
+            search wagera hain."
+
+            Pehle har khane ki chauRai pakki thi, is liye jagah kam parte
+            hi aakhri button neeche gir jata tha. Ab talash aur scan wale
+            khane simat jate hain aur button apni jagah par rehte hain --
+            button ka neeche girna banda dekhta hai to samajhta hai wo
+            kisi aur cheez ka hissa hai. */}
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
+          <h1 className="max-w-[11rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">
             {sellerName} - POS
           </h1>
 
-          <form onSubmit={handleBarcodeSubmit} className="flex items-center gap-2">
-            <div className="relative w-[20rem] max-w-[60vw]">
+          <form onSubmit={handleBarcodeSubmit} className="flex min-w-0 flex-[2] items-center gap-2">
+            <div className="relative min-w-0 flex-1">
               <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
               <Input
                 ref={barcodeRef}
@@ -590,7 +599,7 @@ export function PosClient({
             </button>
           </form>
 
-          <div className="relative w-[15rem] max-w-full">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
             <Input
               placeholder={t("pos_search_products", lang)}
@@ -605,7 +614,7 @@ export function PosClient({
               hai. Qismein database se aati hain, yahan likhi hui nahi --
               warna nayi qism kabhi is fehrist mein na aati. */}
           {groups.length > 0 && (
-            <Select value={group} onChange={(e) => setGroup(e.target.value)} className="h-11 w-[10rem]">
+            <Select value={group} onChange={(e) => setGroup(e.target.value)} className="h-11 w-[9rem] shrink-0">
               <option value="">{t("pos_all_groups", lang)}</option>
               {groups.map((g) => (
                 <option key={g.name} value={g.name}>
