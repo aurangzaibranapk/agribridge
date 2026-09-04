@@ -136,4 +136,47 @@ export const financeReportsDict = {
     rm: "Band karne se kuch mitta nahi — sirf naye indraj ka darwaza band hota hai. Band mahina dobara khola ja sakta hai, magar us ki wajah darj hoti hai aur audit par nazar aati hai.",
     ur: "بند کرنے سے کچھ مٹتا نہیں — صرف نئے اندراج کا دروازہ بند ہوتا ہے۔ بند مہینہ دوبارہ کھولا جا سکتا ہے، مگر اس کی وجہ درج ہوتی ہے۔",
   },
+
+  // ---------------------------------------------------------------
+  // Budget
+  // ---------------------------------------------------------------
+  bg_title: { en: "Budget", rm: "Budget", ur: "بجٹ" },
+  bg_desc: {
+    en: "A yearly figure per account, and the real spend next to it.",
+    rm: "Har khate ka saalana adad, aur us ke saamne asal kharcha.",
+    ur: "ہر کھاتے کا سالانہ عدد، اور اس کے سامنے اصل خرچہ۔",
+  },
+  bg_only_finance: {
+    en: "This page is for Owner, Admin, Manager and Finance.",
+    rm: "Ye safha Owner, Admin, Manager aur Finance ke liye hai.",
+    ur: "یہ صفحہ اونر، ایڈمن، مینیجر اور فنانس کے لیے ہے۔",
+  },
+  bg_back: { en: "Finance", rm: "Maali markaz", ur: "مالی مرکز" },
+  bg_error: { en: "Could not load", rm: "Jawab nahi mil saka", ur: "جواب نہیں مل سکا" },
+  bg_year: { en: "Year", rm: "Saal", ur: "سال" },
+  bg_months: {
+    en: "{n} months of this year counted so far",
+    rm: "Is saal ke {n} mahine gine gaye hain",
+    ur: "اس سال کے {n} مہینے گنے گئے ہیں",
+  },
+  bg_account: { en: "Account", rm: "Khata", ur: "کھاتہ" },
+  bg_annual: { en: "Yearly budget", rm: "Saalana budget", ur: "سالانہ بجٹ" },
+  bg_expected: { en: "Expected by now", rm: "Ab tak hona chahiye tha", ur: "اب تک ہونا چاہیے تھا" },
+  bg_actual: { en: "Actual", rm: "Asal", ur: "اصل" },
+  bg_diff: { en: "Difference", rm: "Farq", ur: "فرق" },
+  bg_expenses: { en: "Expenses", rm: "Kharche", ur: "خرچے" },
+  bg_income: { en: "Income", rm: "Aamdani", ur: "آمدنی" },
+  bg_edit: { en: "Write budget", rm: "Budget likhein", ur: "بجٹ لکھیں" },
+  bg_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  bg_saving: { en: "Saving…", rm: "Mehfooz ho raha…", ur: "محفوظ ہو رہا…" },
+  bg_blank_hint: {
+    en: "Leave a box empty to have no budget on that account — an empty box is not a zero.",
+    rm: "Jis khate par budget nahi rakhna, us ka khana KHALI chhoR dein — khali khana sifar nahi hota.",
+    ur: "جس کھاتے پر بجٹ نہیں رکھنا، اس کا خانہ خالی چھوڑ دیں — خالی خانہ صفر نہیں ہوتا۔",
+  },
+  bg_note: {
+    en: "The yearly figure is spread evenly over the months, so 'expected by now' is an approximation — real spending rises and falls with the season. The budget stops nothing; it only tells you.",
+    rm: "Saalana adad barabar mahinon mein baanta jata hai, is liye 'ab tak hona chahiye tha' TAKREEBAN hai — asal kharcha mausam ke sath uupar neeche hota hai. Budget kisi cheez ko rokta nahi, sirf batata hai.",
+    ur: "سالانہ عدد برابر مہینوں میں بانٹا جاتا ہے، اس لیے 'اب تک ہونا چاہیے تھا' تقریباً ہے۔ بجٹ کسی چیز کو روکتا نہیں، صرف بتاتا ہے۔",
+  },
 } as const;

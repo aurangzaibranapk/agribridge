@@ -71,9 +71,10 @@ export default async function FinanceCenterPage() {
         { href: "/admin/finance", label: t("fc_cashbook", lang) },
         { href: "/admin/bank-reconcile", label: t("fc_bank_recon", lang) },
         { href: "/admin/reconciliation", label: t("fc_daily_recon", lang) },
+        { href: "/admin/finance/budget", label: t("bg_title", lang), hint: t("bg_desc", lang) },
         { href: "/admin/audit-trail", label: t("fc_reversal", lang), hint: t("fc_reversal_hint", lang) },
       ],
-      baqi: [t("fc_b_pdc", lang), t("fc_b_recurring", lang), t("fc_b_budget", lang), t("fc_b_costing", lang)],
+      baqi: [t("fc_b_pdc", lang), t("fc_b_recurring", lang), t("fc_b_costing", lang)],
     },
     {
       key: "pay",

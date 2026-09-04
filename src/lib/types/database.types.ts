@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      budgets: {
+        Row: { created_at: string; created_by: string | null; id: string; name: string; note: string | null; status: string; year: number }
+        Insert: { created_at?: string; created_by?: string | null; id?: string; name?: string; note?: string | null; status?: string; year: number }
+        Update: { created_at?: string; created_by?: string | null; id?: string; name?: string; note?: string | null; status?: string; year?: number }
+        Relationships: []
+      }
+      budget_lines: {
+        Row: { account_code: string; annual_amount: number; budget_id: string; id: string; note: string | null; updated_at: string }
+        Insert: { account_code: string; annual_amount: number; budget_id: string; id?: string; note?: string | null; updated_at?: string }
+        Update: { account_code?: string; annual_amount?: number; budget_id?: string; id?: string; note?: string | null; updated_at?: string }
+        Relationships: []
+      }
       accounting_periods: {
         Row: { closed_at: string | null; closed_by: string | null; closing_entry_id: string | null; created_at: string; id: string; note: string | null; period: string; reopen_reason: string | null; reopened_at: string | null; reopened_by: string | null; status: string }
         Insert: { closed_at?: string | null; closed_by?: string | null; closing_entry_id?: string | null; created_at?: string; id?: string; note?: string | null; period: string; reopen_reason?: string | null; reopened_at?: string | null; reopened_by?: string | null; status?: string }
