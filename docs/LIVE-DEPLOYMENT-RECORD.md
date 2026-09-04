@@ -231,6 +231,49 @@ kar sakta (Owner/Admin par ye rok nahi).
 
 ---
 
+## 5b. Doosra deployment — 4 September 2026, raat (289-290)
+
+Pehle deployment ke baad malik ne Live par kaam karte hue kai cheezein
+pakRin. Un ki durusti ka ye doosra chakkar hai. **Live 288 par hai;
+289 aur 290 chalni baqi hain.**
+
+**Backup pehle wala kaam NAHI karega.** Wo 19:00-19:21 ka hai, aur us
+ke BAAD Live par bohat kuch hua: migrations 265-288, 265 products, ek
+supplier, ek purchase, aur 66 stock ki harkatein. Us purane backup par
+wapas jane ka matlab raat ka saara kaam kho dena hai. **Naya backup
+lazmi.**
+
+**Migrations:**
+- **289** — `purchases.supplier_bill_no` aur us par unique index. Ek
+  supplier ka ek bill sirf ek dafa. Ye us ghalti ki rok hai jo aaj
+  hui: ek sheet teen dafa charhi, teen purchase banin, supplier ka
+  dena Rs 315,914 ho gaya jab ke asal ek tihai tha.
+- **290** — `work_handoffs`: kaam ek safhe se doosre par jane ka
+  record, us ka notification trigger, aur `v_my_handoffs`.
+
+**Code mein kya jayega (saat commit):**
+1. Command Center ki zaban (en/rm/ur), AI ke jawab mein safhe ka naam,
+   notification ki ghanti (click par khulti hai, bina parhi pehle)
+2. Missing Rate par naam badalna + AI ki naam ki tajweez
+3. Nakaam bill hatana (Owner/Admin/Manager)
+4. Ek chabi ke do naam khatam: `GEMINI_API_KEY` na mile to code khud
+   `BRIDGE_AI_GEMINI_API_KEY` uthha leta hai. **Is ke baad Live par wo
+   doosra variable alag se lagane ki zaroorat nahi rahegi.**
+5. Ek bill ek purchase (289 ke sath)
+6. Sheet se kharid par adaigi ke sawal (poora diya / kuch diya /
+   udhaar, kitne din, kab dena hai)
+7. Kaam ka haath badalna (290 ke sath): sabz patti, sidebar, dashboard
+   aur ghanti
+
+**Live par ek adhoora record:** `PO-1788537423737` ke `credit_days`
+aur `due_date` khali hain (wo purchase naye code se pehle bani).
+Us ka matlab ye hai ke wo raqam "Bill aur Dena" par kabhi due nahi
+dikhegi. Malik se poochh kar bharni hai.
+
+**Nishan:** deploy ke baad `live-2026-09-04b` tag lagana hai.
+
+---
+
 ## 6. Purani fehrist — 4 September se pehle ka intezar (record ke liye)
 
  (ho chuke)
