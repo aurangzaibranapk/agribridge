@@ -231,11 +231,12 @@ kar sakta (Owner/Admin par ye rok nahi).
 
 ---
 
-## 5b. Doosra deployment — 4 September 2026, raat (289-290)
+## 5b. Doosra deployment — 4 September 2026, raat (289-290) — MUKAMMAL
 
 Pehle deployment ke baad malik ne Live par kaam karte hue kai cheezein
-pakRin. Un ki durusti ka ye doosra chakkar hai. **Live 288 par hai;
-289 aur 290 chalni baqi hain.**
+pakRin. Un ki durusti ka ye doosra chakkar tha. **289 aur 290 dono Live
+par chal chuki hain (tasdeeq shuda: `purchases.supplier_bill_no` aur
+`work_handoffs` maujood).**
 
 **Backup pehle wala kaam NAHI karega.** Wo 19:00-19:21 ka hai, aur us
 ke BAAD Live par bohat kuch hua: migrations 265-288, 265 products, ek
@@ -271,6 +272,40 @@ Us ka matlab ye hai ke wo raqam "Bill aur Dena" par kabhi due nahi
 dikhegi. Malik se poochh kar bharni hai.
 
 **Nishan:** deploy ke baad `live-2026-09-04b` tag lagana hai.
+
+---
+
+## 5c. Teesra deployment — INTEZAR MEIN (291-292)
+
+Ye kaam ho chuka hai aur git par charh chuka hai, magar **Live par abhi
+nahi gaya**. Live is waqt **290** par hai.
+
+**Migrations (Testing par chal chuki hain, rollback test pass):**
+- **291** — `shops.status` (active / inactive / suspended), rokne ki
+  wajah aur kis ne roki; `is_active` ab halat se khud banta hai; aur
+  **dukan mitane par taala**: jis dukan ke godam mein maal ho, jis par
+  bikri ho chuki ho, ya jis par mulazim lage hon, wo mit hi nahi sakti.
+- **292** — dukanon ke safhe ki `feature_help` (band bmuqable roki gayi
+  ka farq, aur maal wali dukan kyun nahi mitti).
+
+**Code mein kya jayega:**
+1. POS: cheezon ki tasveerein ya do harf ke tile, maal ka rang wala
+   nishaan, `Rs 580 / PCS`, qism ka chhanta, aur gahak ki talash — naam
+   ya phone se, chunte hi us ka baqi saamne.
+2. Sheet se products charhne par har naam ka pehla harf baRa.
+3. Dukanon ka safha: tafseel badalna, band karna, rok dena (wajah ke
+   sath), aur mitana — mitana sirf Owner/Admin, aur wo bhi tab jab dukan
+   par kuch bhi na ho.
+
+**Ek ruka hua faisla:** Live par 265 products ke naam chhote harfon mein
+hain (wo purane code se charhe). Naya code sirf aage aane walon ko
+theek karta hai. Purane 265 theek karne hain ya nahi — malik ka faisla
+baqi hai.
+
+**Jo abhi bhi baqi hai (record ke liye):** `PO-1788537423737` ke
+`credit_days` aur `due_date` khali; Live par kisi cheez par barcode
+nahi; naye build ke baad purane chunk ka masla `Ctrl+Shift+R` se hatta
+hai, us ka mustaqil hal abhi nahi laga.
 
 ---
 
