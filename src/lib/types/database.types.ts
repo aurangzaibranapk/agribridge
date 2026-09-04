@@ -17851,6 +17851,10 @@ export type Database = {
           name: string
           organization_id: string | null
           owner_id: string | null
+          status: string
+          suspend_reason: string | null
+          suspended_at: string | null
+          suspended_by: string | null
           updated_at: string
         }
         Insert: {
@@ -17864,6 +17868,10 @@ export type Database = {
           name: string
           organization_id?: string | null
           owner_id?: string | null
+          status?: string
+          suspend_reason?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -17877,6 +17885,10 @@ export type Database = {
           name?: string
           organization_id?: string | null
           owner_id?: string | null
+          status?: string
+          suspend_reason?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
           updated_at?: string
         }
         Relationships: [

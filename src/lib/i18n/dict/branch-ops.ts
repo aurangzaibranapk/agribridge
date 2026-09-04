@@ -46,6 +46,37 @@ export const branchOpsDict = {
   sh_machinery: { en: "Machinery & Fleet", rm: "Machinery aur gaariyan", ur: "مشینری اور گاڑیاں" },
   sh_agri_inputs: { en: "Agri Inputs (fertilizer / pesticide / feed)", rm: "Kheti ka saman (khaad / zehr / wanda)", ur: "کھیتی کا سامان (کھاد / زہر / ونڈا)" },
 
+  // Dukan ki tafseel badalna, halat, aur mitana (291)
+  sh_edit: { en: "Edit", rm: "Tafseel badlein", ur: "تفصیل بدلیں" },
+  sh_edit_title: { en: "Edit the Shop", rm: "Dukan ki tafseel", ur: "دکان کی تفصیل" },
+  sh_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  sh_cancel: { en: "Cancel", rm: "Rehne dein", ur: "رہنے دیں" },
+  sh_status: { en: "Status", rm: "Halat", ur: "حالت" },
+  sh_active: { en: "Running", rm: "Chal rahi hai", ur: "چل رہی ہے" },
+  sh_inactive: { en: "Closed", rm: "Band hai", ur: "بند ہے" },
+  sh_suspended: { en: "Suspended", rm: "Roki gayi hai", ur: "روکی گئی ہے" },
+  sh_make_active: { en: "Reopen", rm: "Chalu karein", ur: "چالو کریں" },
+  sh_make_inactive: { en: "Close", rm: "Band karein", ur: "بند کریں" },
+  sh_suspend: { en: "Suspend", rm: "Rok dein", ur: "روک دیں" },
+  sh_suspend_title: { en: "Suspend this Shop", rm: "Dukan rok dein", ur: "دکان روک دیں" },
+  sh_suspend_reason: { en: "Why is it being suspended?", rm: "Rokne ki wajah kya hai?", ur: "روکنے کی وجہ کیا ہے؟" },
+  sh_suspend_reason_eg: {
+    en: "e.g. licence expired / stock audit under way",
+    rm: "misal: licence khatam / maal ki ginti ho rahi hai",
+    ur: "مثال: لائسنس ختم / مال کی گنتی ہو رہی ہے",
+  },
+  sh_suspend_note: {
+    en: "A closed shop is closed by choice; a suspended shop is stopped by a decision — so the reason is recorded.",
+    rm: "Band dukan apni marzi se band hai; roki hui dukan kisi faisle se ruki hai — is liye wajah likhi jati hai.",
+    ur: "بند دکان اپنی مرضی سے بند ہے؛ روکی ہوئی دکان کسی فیصلے سے رکی ہے — اس لیے وجہ لکھی جاتی ہے۔",
+  },
+  sh_suspended_since: { en: "Suspended since", rm: "Roki gayi", ur: "روکی گئی" },
+  sh_delete_locked: {
+    en: "A shop holding stock, sales or staff cannot be deleted — close or suspend it instead.",
+    rm: "Jis dukan par maal, bikri ya mulazim hon wo nahi mitti — usay band ya roki hui kar dein.",
+    ur: "جس دکان پر مال، بکری یا ملازم ہوں وہ نہیں مٹتی — اسے بند یا روکی ہوئی کر دیں۔",
+  },
+
   // ---- Dukan ka kiraya (baqi) ----
   sr_none_yet: { en: "No rent agreement made yet.", rm: "Abhi koi kiraya agreement nahi bani.", ur: "ابھی کوئی کرایہ ایگریمنٹ نہیں بنی۔" },
   sr_make_agreement: { en: "Create a Rent Agreement", rm: "Kiraya agreement banayein", ur: "کرایہ ایگریمنٹ بنائیں" },
