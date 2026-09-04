@@ -935,6 +935,34 @@ export const productsFlowDict = {
     ur: "بک نہیں رہا",
   },
   pf_rb_save: { en: "Save the rates", rm: "Rate mehfooz karein", ur: "ریٹ محفوظ کریں" },
+  pf_bill_del: { en: "Remove this bill", rm: "Ye bill hata dein", ur: "یہ بل ہٹا دیں" },
+  pf_bill_del_confirm: {
+    en: "Remove this bill and its lines? The bill photo stays on record.",
+    rm: "Ye bill aur us ki qatarein hata dein? Bill ki tasveer record mein rehti hai.",
+    ur: "یہ بل اور اس کی قطاریں ہٹا دیں؟ بل کی تصویر ریکارڈ میں رہتی ہے۔",
+  },
+  pf_rb_ai_ask: { en: "Ask AI for correct names", rm: "AI se durust naam poochein", ur: "AI سے درست نام پوچھیں" },
+  pf_rb_ai_busy: { en: "Asking…", rm: "Pooch raha hai…", ur: "پوچھ رہا ہے…" },
+  pf_rb_ai_accept: {
+    en: "Click to accept this name",
+    rm: "Ye naam qabool karne ke liye click karein",
+    ur: "یہ نام قبول کرنے کے لیے کلک کریں",
+  },
+  pf_rb_ai_hint: {
+    en: "Click a suggestion to use it. Nothing is saved until you press Save.",
+    rm: "Tajweez par click karein to wo naam lag jata hai. Mehfooz tab hi hota hai jab aap Save dabayein.",
+    ur: "تجویز پر کلک کریں تو وہ نام لگ جاتا ہے۔ محفوظ تب ہی ہوتا ہے جب آپ سیو دبائیں۔",
+  },
+  pf_rb_ai_none: {
+    en: "AI found nothing to correct in these names.",
+    rm: "AI ko in naamon mein theek karne wali koi cheez nahi mili.",
+    ur: "AI کو ان ناموں میں ٹھیک کرنے والی کوئی چیز نہیں ملی۔",
+  },
+  pf_rb_ai_off: {
+    en: "AI is not available right now (GEMINI_API_KEY may not be set). Names can still be typed by hand.",
+    rm: "AI abhi maujood nahi (ho sakta hai GEMINI_API_KEY na laga ho). Naam haath se likhe ja sakte hain.",
+    ur: "AI ابھی موجود نہیں (ہو سکتا ہے GEMINI_API_KEY نہ لگا ہو)۔ نام ہاتھ سے لکھے جا سکتے ہیں۔",
+  },
   pf_rb_saved: {
     en: "{n} products now have their rate.",
     rm: "{n} products ka rate charh gaya.",

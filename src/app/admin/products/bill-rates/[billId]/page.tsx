@@ -46,6 +46,8 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   // Purchase banane ke liye: supplier (agar bill par na ho) aur branch
   // (admin chune, staff ki apni). Wohi qaida jo purchases/new par hai.
   const isAdminLevel = ["owner", "super_admin", "admin"].includes(me.role);
+  // Bill hatana rate charhane se bara faisla hai -- Manager tak, warehouse nahi.
+  const canDelete = ["owner", "super_admin", "admin", "manager"].includes(me.role);
 
   const [{ data: lines }, { data: products }, { data: billFiles }, { data: suppliers }, { data: branches }] = await Promise.all([
     supabase
@@ -126,6 +128,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
         branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}
         defaultBranchId={me.branch_id ?? null}
         isAdminLevel={isAdminLevel}
+        canDelete={canDelete}
         files={(billFiles ?? []).map((f) => ({
           id: f.id,
           url: f.file_url,

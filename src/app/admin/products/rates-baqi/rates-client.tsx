@@ -1,7 +1,8 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, Save } from "lucide-react";
+import { AlertTriangle, Save, Sparkles, Check } from "lucide-react";
 import { saveMissingRates, type RateState } from "@/actions/product-rates";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input } from "@/components/ui/form";
@@ -42,6 +43,50 @@ function Submit({ label }: { label: string }) {
 export function RatesClient({ lang, rows }: { lang: Lang; rows: Row[] }) {
   const [state, action] = useFormState(saveMissingRates, initial);
 
+  // AI ki tajweez -- asal naam se durust naam.
+  //
+  // Tajweez khud kabhi nahi lagti. Wo saamne aati hai aur banda us par
+  // click kar ke qabool karta hai. Product ka naam har raseed aur
+  // counter par jata hai; usay AI ke haath mein dena us jagah khatarnak
+  // hai jahan sab se zyada nazar paRti hai.
+  const [suggest, setSuggest] = useState<Record<string, string>>({});
+  const [aiState, setAiState] = useState<"idle" | "busy" | "none" | "off">("idle");
+  const nameRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  async function askAi() {
+    setAiState("busy");
+    try {
+      const res = await fetch("/api/products/name-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Wohi naam bhejein jo is waqt khane mein likha hai -- banda
+        // pehle se kuch theek kar chuka ho to us par dobara tajweez
+        // maangna us ka kaam ulta deta hai.
+        body: JSON.stringify({ names: rows.map((r) => nameRefs.current[r.id]?.value?.trim() || r.name) }),
+      });
+      if (!res.ok) {
+        setAiState("off");
+        return;
+      }
+      const data = (await res.json()) as { suggestions?: Record<string, string> };
+      const got = data.suggestions ?? {};
+      setSuggest(got);
+      setAiState(Object.keys(got).length === 0 ? "none" : "idle");
+    } catch {
+      setAiState("off");
+    }
+  }
+
+  function accept(id: string, name: string, asal: string) {
+    const el = nameRefs.current[id];
+    if (el) el.value = name;
+    setSuggest((cur) => {
+      const next = { ...cur };
+      delete next[asal];
+      return next;
+    });
+  }
+
   return (
     <form action={action} className="space-y-3">
       <Card>
@@ -80,10 +125,33 @@ export function RatesClient({ lang, rows }: { lang: Lang; rows: Row[] }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-surface-100 align-top">
-                  <td className="py-2 pr-2 font-medium">
+                  <td className="py-2 pr-2">
                     <input type="hidden" name="id" value={r.id} />
-                    {r.name}
-                    {r.barcode && <span className="ml-1.5 font-mono text-xs text-surface-400">{r.barcode}</span>}
+                    {/* Naam bhi yahin theek hota hai. Jo cheez banday ke
+                        saamne ghalat likhi hai, us ko doosre safhe par
+                        bhejna wo ghalti wahin chhoR deta hai -- aur
+                        ghalat naam counter par bhi wohi rehta hai. */}
+                    <Input
+                      ref={(el) => {
+                        nameRefs.current[r.id] = el;
+                      }}
+                      name={`name_${r.id}`}
+                      defaultValue={r.name}
+                      className="h-8 font-medium"
+                      aria-label={t("pf_th_name", lang)}
+                    />
+                    {suggest[r.name] && (
+                      <button
+                        type="button"
+                        onClick={() => accept(r.id, suggest[r.name], r.name)}
+                        className="mt-1 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300"
+                        title={t("pf_rb_ai_accept", lang)}
+                      >
+                        <Check className="h-3 w-3" />
+                        {suggest[r.name]}
+                      </button>
+                    )}
+                    {r.barcode && <span className="mt-0.5 block font-mono text-xs text-surface-400">{r.barcode}</span>}
                   </td>
                   <td className="py-2 pr-2 text-surface-600">{r.packSize ?? "—"}</td>
                   <td className="py-2 pr-2 text-right tabular-nums text-surface-500">
@@ -125,8 +193,25 @@ export function RatesClient({ lang, rows }: { lang: Lang; rows: Row[] }) {
           </table>
         </div>
 
-        <div className="mt-3 border-t border-surface-200 pt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-surface-200 pt-3">
           <Submit label={t("pf_rb_save", lang)} />
+
+          <button
+            type="button"
+            onClick={() => void askAi()}
+            disabled={aiState === "busy"}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-sm text-surface-600 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          >
+            <Sparkles className="h-4 w-4 text-brand-600" />
+            {aiState === "busy" ? t("pf_rb_ai_busy", lang) : t("pf_rb_ai_ask", lang)}
+          </button>
+
+          {/* Khali jawab aur "AI hai hi nahi" do alag baatein hain. */}
+          {aiState === "none" && <span className="text-xs text-surface-500">{t("pf_rb_ai_none", lang)}</span>}
+          {aiState === "off" && <span className="text-xs text-amber-700">{t("pf_rb_ai_off", lang)}</span>}
+          {Object.keys(suggest).length > 0 && (
+            <span className="text-xs text-surface-500">{t("pf_rb_ai_hint", lang)}</span>
+          )}
         </div>
       </Card>
     </form>

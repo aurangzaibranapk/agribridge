@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   applyBillRates,
   createPurchaseFromBill,
+  deleteSupplierBill,
   saveBillLine,
   skipBillLine,
   type BillRateState,
@@ -350,6 +351,54 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
   );
 }
 
+/**
+ * Bill hatane ka button.
+ *
+ * Ye alag component is liye hai ke us ka apna form aur apni halat hai.
+ * Poochhe baghair nahi mitta -- ek click se mit jane wali cheez wo hai
+ * jise banda ghalti se daba deta hai.
+ */
+function DeleteBill({ lang, billId }: { lang: Lang; billId: string }) {
+  const [state, action] = useFormState(deleteSupplierBill, initial);
+  const { pending } = useFormStatus();
+
+  if (state.success) {
+    return (
+      <Card className="border-emerald-200 bg-emerald-50">
+        <p className="text-sm text-emerald-900">
+          {state.notice}{" "}
+          <Link href="/admin/products/bill-rates" className="underline">
+            {t("pf_bill_all", lang)}
+          </Link>
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!confirm(t("pf_bill_del_confirm", lang))) e.preventDefault();
+      }}
+    >
+      <input type="hidden" name="id" value={billId} />
+      {state.error && (
+        <Card className="mb-2 border-red-200 bg-red-50">
+          <p className="text-sm text-red-800">{state.error}</p>
+        </Card>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+      >
+        <Trash2 className="h-3.5 w-3.5" /> {t("pf_bill_del", lang)}
+      </button>
+    </form>
+  );
+}
+
 export function BillClient({
   lang,
   billId,
@@ -362,6 +411,7 @@ export function BillClient({
   branches,
   defaultBranchId,
   isAdminLevel,
+  canDelete,
   billTotal,
   linesTotal,
   aiRead,
@@ -379,6 +429,7 @@ export function BillClient({
   branches: { id: string; name: string }[];
   defaultBranchId: string | null;
   isAdminLevel: boolean;
+  canDelete: boolean;
   billTotal: number | null;
   linesTotal: number;
   aiRead: boolean;
@@ -405,11 +456,15 @@ export function BillClient({
     <div className="space-y-4">
       {!aiRead && (
         <Card className="border-amber-200 bg-amber-50">
-          <p className="text-sm text-amber-900">
-            {t("pf_bill_ai_off", lang)}
-          </p>
+          <p className="text-sm text-amber-900">{t("pf_bill_ai_off", lang)}</p>
         </Card>
       )}
+
+      {/* Jo bill kisi kaam ka na nikla, us ko qatar mein khara rehne dena
+          sirf shor barhata hai. Magar jis se purchase ban chuki ho wo
+          nahi mitta -- us ki rok action mein hai, yahan sirf button
+          chhupa dena kaafi nahi hota. */}
+      {canDelete && !purchaseId && !done && <DeleteBill lang={lang} billId={billId} />}
 
       {mismatch != null && (
         <Card className="border-amber-200 bg-amber-50">

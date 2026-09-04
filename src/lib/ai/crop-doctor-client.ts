@@ -1,4 +1,5 @@
-﻿// Gemini-powered crop disease diagnosis from a photo. Reads a photo of
+﻿import { geminiApiKey } from "@/lib/ai/gemini-key";
+// Gemini-powered crop disease diagnosis from a photo. Reads a photo of
 // a crop, leaf, or plant and identifies likely disease, severity, and
 // a treatment plan. This is a free public demo tool - diagnoses are
 // AI-generated and should be confirmed by an agronomist before
@@ -15,7 +16,7 @@ export async function diagnoseCropFromImage(
   base64Image: string,
   mimeType: string
 ): Promise<CropDiagnosis | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   if (!apiKey) {
     // Not configured - normal expected state until the Gemini API key
     // is set, not an error.

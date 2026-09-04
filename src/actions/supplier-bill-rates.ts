@@ -858,3 +858,76 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       (problems.length ? ` Masle: ${problems.slice(0, 3).join(" | ")}` : ""),
   };
 }
+
+/**
+ * Nakaam ya ghalat bill ko khatam karna.
+ *
+ * Malik ka kehna (4 September): jo bill parha hi nahi gaya, wo qatar
+ * mein khara rehta hai aur us ka koi faida nahi -- Admin ya Manager ke
+ * paas usay hatane ka raasta hona chahiye.
+ *
+ * EK ROK JO NAHI HAT SAKTI: jis bill se purchase ban chuki hai, wo
+ * bill nahi mitta. Purchase supplier ka dena banati hai aur stock
+ * charhati hai; us ka bunyadi kaghaz mita dena ek aisi raqam chhoR
+ * deta hai jis ke peeche koi saboot na ho. Aisi soorat mein purchase
+ * ko us ke apne raaste se radd karna sahi kaam hai, bill mitana nahi.
+ *
+ * Bill ki tasveer storage mein rehti hai. Usay yahan se nahi mitaya
+ * jata -- qatarein aur milaan chale jate hain, magar asal kaghaz ka
+ * nishan baqi rehta hai. Kaghaz mita dena wo cheez khatam kar deta hai
+ * jis se baad mein tehqeeq hoti hai.
+ */
+export async function deleteSupplierBill(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Manager bhi kar sakta hai -- warehouse nahi. Bill hatana rate
+  // charhane se bara faisla hai.
+  const CAN_DELETE = ["owner", "super_admin", "admin", "manager"];
+  if (!me?.is_active || !CAN_DELETE.includes(me.role)) {
+    return { error: "Bill hatana sirf Owner, Admin ya Manager ka kaam hai." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "Bill nahi mila." };
+
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("id, bill_number, purchase_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+
+  if (bill.purchase_id) {
+    return {
+      error:
+        "Is bill se purchase ban chuki hai, is liye bill nahi hataya ja sakta. " +
+        "Pehle us purchase ko us ke apne safhe se radd karein.",
+    };
+  }
+
+  await supabase.from("supplier_bill_lines").delete().eq("bill_read_id", id);
+  await supabase.from("supplier_bill_files").delete().eq("bill_read_id", id);
+  const { error } = await supabase.from("supplier_bill_reads").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "delete",
+    module: "purchases",
+    recordId: id,
+    recordLabel: bill.bill_number ? `Bill ${bill.bill_number}` : "Supplier ka bill",
+    description: `Supplier ka bill hataya gaya (halat: ${bill.status ?? "—"})`,
+  });
+
+  revalidatePath("/admin/products/bill-rates");
+  return { success: true, notice: "Bill hata diya gaya." };
+}

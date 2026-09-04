@@ -1,3 +1,4 @@
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 /**
  * Bill aur cash parchi parhne wala AI.
  *
@@ -46,7 +47,7 @@ function cleanText(value: unknown, max: number): string | null {
 }
 
 export async function readBillOrCashPhoto(base64Image: string, mimeType: string): Promise<BillCashReading | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   // Key set na ho to ye ghalti nahi — bas AI band hai. Submission phir
   // bhi banti hai, manager khud parh kar bhar dega.
   if (!apiKey) return null;

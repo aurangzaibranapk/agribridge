@@ -1,3 +1,4 @@
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 /**
  * Gaari se juri tasveerein parhne wala AI.
  *
@@ -40,7 +41,7 @@ function cleanNumber(value: unknown): number | null {
 }
 
 export async function readVehiclePhoto(base64Image: string, mimeType: string): Promise<VehiclePhotoReading | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   // Key set na ho to ye ghalti nahi — bas AI band hai. Submission phir
   // bhi banti hai, manager khud parh kar bhar dega.
   if (!apiKey) return null;

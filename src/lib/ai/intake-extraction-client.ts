@@ -1,3 +1,4 @@
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 /**
  * Dabbe ki tasveer se product ke khane nikalne wala.
  *
@@ -77,7 +78,7 @@ function cleanText(v: unknown): string | undefined {
 }
 
 export async function readProductPhoto(imageUrl: string): Promise<IntakeReading | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   if (!apiKey) return null;
 
   try {

@@ -1,3 +1,4 @@
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 /**
  * Supplier ke bill ki ek ek qatar parhne wala AI.
  *
@@ -128,7 +129,7 @@ function usableLine(line: BillLineReading): boolean {
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
 
 export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesReading | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   // Key na ho to ye ghalti nahi -- bas AI band hai. Bill phir bhi
   // charhta hai, banda qatarein khud likh sakta hai.
   if (!apiKey) return null;

@@ -1,8 +1,9 @@
-﻿// Shared Gemini text-generation helper — used by the chatbot fallback
+﻿import { geminiApiKey } from "@/lib/ai/gemini-key";
+// Shared Gemini text-generation helper — used by the chatbot fallback
 // and (future) content-generation features. Returns null when the
 // Gemini API key isn't configured, so callers can fall back gracefully.
 export async function generateGeminiText(prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   if (!apiKey) return null;
   try {
     const response = await fetch(
