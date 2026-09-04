@@ -2,6 +2,7 @@
 
 import { loadUnitAliases } from "@/lib/units";
 import { revalidatePath } from "next/cache";
+import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import { looksBinary, parseDelimited } from "@/lib/csv";
@@ -735,10 +736,22 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     } else {
 
     const purchaseNumber = `PO-${Date.now()}`;
+    const purchaseDate = new Date().toISOString().slice(0, 10);
     const totalAmount = withQty.reduce(
       (sum, x) => sum + Number(x.row.openingQty ?? 0) * Number(x.row.purchasePrice ?? 0),
       0
     );
+
+    // Adaigi ki shartein wahi jo haath se banne wali purchase par hain
+    // -- ek hi hisaab, ek hi jagah (lib/purchase-terms). Sheet ka
+    // raasta pehle ye sawal poochhta hi nahi tha aur "udhaar" khud
+    // maan leta tha; due date khali reh jati thi aur wo raqam yaad
+    // dilane wale nizam se bahar ho jati thi.
+    const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
+    if ("error" in terms) {
+      stockProblems.push(terms.error);
+      qtyIgnored = withQty.length;
+    } else {
 
     const { data: po, error: poErr } = await supabase
       .from("purchases")
@@ -747,13 +760,16 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         supplier_bill_no: billNo,
         supplier_id: supplierId,
         branch_id: wh?.branch_id ?? null,
-        purchase_date: new Date().toISOString().slice(0, 10),
+        purchase_date: purchaseDate,
         // "pending" -- yani maal kaghaz par aa gaya, haqeeqat mein
         // nahi. Receive dabne tak na stock barhta hai na dena.
         status: "pending",
         // Sheet ka draft: manzoori ke baghair receive nahi (259).
         review_status: "submitted",
         total_amount: totalAmount,
+        payment_terms: terms.terms,
+        credit_days: terms.creditDays,
+        due_date: terms.dueDate,
         notes: "Sheet se charhaya gaya",
         created_by: user.id,
       })
@@ -771,6 +787,23 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       );
     } else {
       purchaseId = po.id;
+
+      // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
+      // adaigi jati hai (139). Purchase par adad NAHI likha jata;
+      // warna ek din do jagah ka adad alag nikalta hai.
+      if (terms.paidNow > 0) {
+        const { error: payErr } = await supabase.from("supplier_payments").insert({
+          supplier_id: supplierId,
+          purchase_id: po.id,
+          amount: terms.paidNow,
+          payment_date: purchaseDate,
+          payment_method: (formData.get("payment_method") as string) || null,
+          notes: `Sheet se kharid ${purchaseNumber} ke waqt`,
+          created_by: user.id,
+        });
+        if (payErr) stockProblems.push(`Adaigi likhi nahi ja saki: ${payErr.message}`);
+      }
+
       for (const x of withQty) {
         const qty = Number(x.row.openingQty ?? 0);
         const cost = Number(x.row.purchasePrice ?? 0);
@@ -800,6 +833,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       }
     }
 
+    }
     }
   } else if (withQty.length > 0 && stockSource === "opening") {
     // ---- Raasta 2: shuru ka stock ----

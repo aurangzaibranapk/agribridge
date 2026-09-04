@@ -941,6 +941,11 @@ export const productsFlowDict = {
     rm: "Ye bill aur us ki qatarein hata dein? Bill ki tasveer record mein rehti hai.",
     ur: "یہ بل اور اس کی قطاریں ہٹا دیں؟ بل کی تصویر ریکارڈ میں رہتی ہے۔",
   },
+  pf_terms_heading: {
+    en: "Payment: how much now, how much on credit, and when is it due",
+    rm: "Adaigi: abhi kitna diya, kitna udhaar, aur kab dena hai",
+    ur: "ادائیگی: ابھی کتنا دیا، کتنا ادھار، اور کب دینا ہے",
+  },
   pf_bill_no_label: { en: "Supplier's bill number *", rm: "Supplier ke bill ka number *", ur: "سپلائر کے بل کا نمبر *" },
   pf_bill_no_hint: {
     en: "Required. The same bill cannot be loaded twice — that is what stops a duplicate purchase and a doubled payable.",

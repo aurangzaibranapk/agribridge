@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, FileUp, RotateCcw, Trash2, Upload } from "
 import { importProductsCsv, previewProductsCsv, type ImportRow, type ImportState } from "@/actions/products-import";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
+import { PaymentTermsFields } from "@/components/purchases/payment-terms-fields";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -410,6 +411,22 @@ export function ImportClient({
                   )}
                 </div>
               </div>
+
+              {/* Adaigi ka sawal sheet wale raaste par bhi (4 September).
+                  Pehle sirf haath se banne wali purchase poochhti thi;
+                  sheet chup chaap "udhaar" maan leti thi aur "kab dena
+                  hai" khali chhoR deti thi. Us khali khane ka matlab ye
+                  hai ke wo raqam "Bill aur Dena" par kabhi due nahi
+                  dikhti -- yani wo yaad dilane wale nizam se hi bahar
+                  ho jati hai. Dena maujood, magar kisi ko yaad nahi. */}
+              {stockSource === "supplier" && (
+                <div>
+                  <p className="mb-1 text-sm font-medium text-surface-700 dark:text-surface-300">
+                    {t("pf_terms_heading", lang)}
+                  </p>
+                  <PaymentTermsFields />
+                </div>
+              )}
 
               {/* Wohi matn dobara jata hai jo dekha gaya. Server usay
                   khud dobara parhta hai -- browser ka bheja hua natija
