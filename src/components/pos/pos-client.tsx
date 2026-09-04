@@ -1198,45 +1198,77 @@ function ItemDetails({
   const p = item.products;
   const expiry = shortDate(item.expiry_date);
   const barcode = p?.barcode || p?.internal_barcode || null;
-  const nishaan = <span className="text-surface-400">—</span>;
 
-  const row = (label: React.ReactNode, value: React.ReactNode) => (
-    <div className="flex items-baseline justify-between gap-2 py-1 text-sm">
-      <span className="text-surface-500">{label}</span>
-      <span className="text-right font-medium tabular-nums text-surface-900 dark:text-surface-100">{value}</span>
+  /**
+   * Ek khana: ooper chhota label, neeche adad.
+   *
+   * Sab khane ek hi shakl ke hain -- parhne wali cheez hamesha ek hi
+   * jagah par milti hai, aur nazar ko har khane par naya naqsha samajhna
+   * nahi parta.
+   *
+   * Jo cheez maloom na ho us par "—" aata hai, sifar nahi. Sifar kehta
+   * hai "dekh liya, kuch nahi"; "—" kehta hai "pata nahi". Counter par
+   * in dono par faisla alag hota hai.
+   */
+  const Field = ({
+    label,
+    value,
+    strong,
+  }: {
+    label: string;
+    value: React.ReactNode;
+    strong?: boolean;
+  }) => (
+    <div>
+      <p className="mb-0.5 text-[11px] text-surface-500">{label}</p>
+      <div
+        className={`rounded-lg border border-surface-200 bg-surface-50 px-2.5 py-1.5 text-sm tabular-nums dark:border-surface-700 dark:bg-surface-800 ${
+          strong ? "font-semibold text-surface-900 dark:text-white" : "text-surface-700 dark:text-surface-200"
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 
+  const nishaan = <span className="text-surface-400">—</span>;
+
   return (
     <div className="space-y-3">
-      <div className="flex h-32 items-center justify-center overflow-hidden rounded-lg bg-surface-50 dark:bg-surface-800">
-        {p?.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" />
-        ) : (
-          <Package className="h-10 w-10 text-surface-300 dark:text-surface-600" strokeWidth={1.25} />
-        )}
-      </div>
-
-      <div>
-        <p className="font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">
-          {line.name}
-        </p>
-        <p className="mt-0.5 text-xs text-surface-500">
-          {[p?.pack_size, p?.unit_code].filter(Boolean).join(" / ") || "—"}
-        </p>
+      {/* Naam bara, tasveer chhoti aur daayein -- Waseela wale naqshe ki
+          tarah. Tasveer ko poora khana de dene se baqi sab neeche chala
+          jata hai aur banda scroll karta reh jata hai. */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold leading-tight text-surface-900 dark:text-white">
+            {line.name}
+          </p>
+          <p className="mt-0.5 text-xs text-surface-500">
+            {[p?.pack_size, p?.unit_code].filter(Boolean).join(" / ") || "—"}
+          </p>
+          <p className="mt-1 font-display text-lg font-bold text-brand-700 dark:text-brand-300">
+            Rs {line.unit_price.toLocaleString()}
+          </p>
+        </div>
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-50 dark:bg-surface-800">
+          {p?.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" />
+          ) : (
+            <Package className="h-7 w-7 text-surface-300 dark:text-surface-600" strokeWidth={1.25} />
+          )}
+        </div>
       </div>
 
       {/* Tadaad: do bare button. Counter par ungli se dabana keyboard se
-          tez hai, magar seedha likhna bhi khula hai -- barah dane ginte
-          waqt barah dafa dabana bewaqoofi hai. */}
+          tez hai, magar seedha likhna bhi khula hai. */}
       <div>
-        <Label>{t("pos_qty", lang)}</Label>
-        <div className="mt-1 flex items-center gap-2">
+        <p className="mb-0.5 text-[11px] text-surface-500">{t("pos_qty", lang)}</p>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onQty(line.quantity - 1)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
             aria-label="-"
           >
             <Minus className="h-4 w-4" />
@@ -1251,7 +1283,7 @@ function ItemDetails({
           <button
             type="button"
             onClick={() => onQty(line.quantity + 1)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
             aria-label="+"
           >
             <Plus className="h-4 w-4" />
@@ -1259,90 +1291,116 @@ function ItemDetails({
         </div>
       </div>
 
-      {/* Bikri ka rate. Ijazat na ho to khana khulta hi nahi -- aadha
-          khula khana banda dabata rehta hai aur samajhta hai safha kharab
-          hai. */}
-      <div>
-        <Label>{t("pos_sell_rate", lang)}</Label>
+      {/* Do khanon mein -- saari tafseel ek nazar mein, scroll ke baghair. */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Bikri ka rate. Ijazat na ho to khana khulta hi nahi -- aadha
+            khula khana banda dabata rehta hai aur samajhta hai safha
+            kharab hai. */}
         {perms.canEditRate ? (
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            value={line.unit_price}
-            onChange={(e) => onRate(parseFloat(e.target.value) || 0)}
-            className="mt-1 h-9"
-          />
-        ) : (
-          <div className="mt-1 flex items-center gap-1.5 rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-800">
-            <span className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-              Rs {line.unit_price.toLocaleString()}
-            </span>
-            <Lock className="h-3 w-3 text-surface-400" />
-            <span className="ml-auto text-right text-[11px] text-surface-400">{t("pos_rate_locked", lang)}</span>
+          <div>
+            <p className="mb-0.5 text-[11px] text-surface-500">{t("pos_sell_rate", lang)}</p>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={line.unit_price}
+              onChange={(e) => onRate(parseFloat(e.target.value) || 0)}
+              className="h-9"
+            />
           </div>
+        ) : (
+          <Field
+            label={t("pos_sell_rate", lang)}
+            strong
+            value={
+              <span className="flex items-center gap-1.5">
+                Rs {line.unit_price.toLocaleString()}
+                <Lock className="h-3 w-3 text-surface-400" />
+              </span>
+            }
+          />
         )}
-      </div>
 
-      <div className="divide-y divide-surface-100 border-t border-surface-100 pt-1 dark:divide-surface-800 dark:border-surface-800">
-        {row(
-          t("pos_mrp", lang),
-          p?.mrp_price != null && p.mrp_price > 0 ? `Rs ${Number(p.mrp_price).toLocaleString()}` : nishaan
-        )}
-        {/* Lagat sirf ijazat walon ko. Bina ijazat wale ke liye ye khana
+        <Field
+          label={t("pos_mrp", lang)}
+          value={p?.mrp_price != null && p.mrp_price > 0 ? `Rs ${Number(p.mrp_price).toLocaleString()}` : nishaan}
+        />
+
+        {/* Lagat sirf ijazat walon ko -- bina ijazat wale ke liye ye khana
             server se aaya hi nahi hota. */}
-        {perms.canSeeCost &&
-          row(
-            t("pos_cost_rate", lang),
-            p?.purchase_price != null && p.purchase_price > 0
-              ? `Rs ${Number(p.purchase_price).toLocaleString()}`
-              : nishaan
-          )}
-        {perms.canSeeCost &&
-          row(
-            t("pos_wholesale_rate", lang),
-            item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan
-          )}
-        {row(
-          t("pos_shop_stock", lang),
-          <span className="inline-flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />
-            {item.stock_quantity}
-          </span>
+        {perms.canSeeCost && (
+          <Field
+            label={t("pos_cost_rate", lang)}
+            value={
+              p?.purchase_price != null && p.purchase_price > 0
+                ? `Rs ${Number(p.purchase_price).toLocaleString()}`
+                : nishaan
+            }
+          />
         )}
+        {perms.canSeeCost && (
+          <Field
+            label={t("pos_wholesale_rate", lang)}
+            value={item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan}
+          />
+        )}
+
+        <Field
+          label={t("pos_shop_stock", lang)}
+          value={
+            <span className="inline-flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />
+              {item.stock_quantity}
+            </span>
+          }
+        />
         {/* Godam ki ginti na ho saki to "—". Sifar likh dena "godam khali
             hai" ka jhoot hai, aur usi par maal mangwana rukta hai. */}
-        {row(t("pos_wh_stock", lang), item.warehouse_stock == null ? nishaan : item.warehouse_stock)}
-        {row(
-          t("pos_barcode", lang),
-          barcode ? (
-            <span className="font-mono text-xs">{barcode}</span>
-          ) : (
-            <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>
-          )
-        )}
-        {row(
-          t("pos_batch", lang),
-          item.batch_number
-            ? item.batch_number
-            : (item.batch_count ?? 0) > 1
-              ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count))
-              : nishaan
-        )}
-        {row(t("pos_expiry", lang), expiry ?? nishaan)}
-        {row(
-          <span className="font-semibold text-surface-800 dark:text-surface-200">{t("pos_line_total", lang)}</span>,
-          <span className="font-display text-base font-bold text-brand-700 dark:text-brand-300">
-            Rs {(line.quantity * line.unit_price).toLocaleString()}
-          </span>
-        )}
+        <Field
+          label={t("pos_wh_stock", lang)}
+          value={item.warehouse_stock == null ? nishaan : item.warehouse_stock}
+        />
+
+        <Field
+          label={t("pos_barcode", lang)}
+          value={
+            barcode ? (
+              <span className="font-mono text-xs">{barcode}</span>
+            ) : (
+              <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>
+            )
+          }
+        />
+        <Field
+          label={t("pos_batch", lang)}
+          value={
+            item.batch_number
+              ? item.batch_number
+              : (item.batch_count ?? 0) > 1
+                ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count))
+                : nishaan
+          }
+        />
+
+        <Field label={t("pos_expiry", lang)} value={expiry ?? nishaan} />
+        <Field
+          label={t("pos_line_total", lang)}
+          strong
+          value={
+            <span className="text-brand-700 dark:text-brand-300">
+              Rs {(line.quantity * line.unit_price).toLocaleString()}
+            </span>
+          }
+        />
       </div>
 
-      {/* Tabdeeli usi waqt lag jati hai -- "mehfooz karein" ka koi
-          alag qadam nahi. Is liye ye button sirf khana band karta hai,
-          aur uska naam bhi wohi hai jo wo karta hai. Aisa button jo
-          kehta kuch ho aur karta kuch, bande ka bharosa khatam kar deta
-          hai. */}
+      {!perms.canEditRate && (
+        <p className="text-[11px] text-surface-400">{t("pos_rate_locked", lang)}</p>
+      )}
+
+      {/* Tabdeeli usi waqt lag jati hai -- "mehfooz karein" ka koi alag
+          qadam nahi. Is liye ye button sirf khana band karta hai, aur us
+          ka naam bhi wohi hai jo wo karta hai. */}
       <div className="flex gap-2">
         <button
           type="button"
