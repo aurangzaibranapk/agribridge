@@ -97,6 +97,17 @@ export const ownerToolsDict = {
   pos_not_tracked: { en: "not tracked", rm: "hisaab nahi rakha jata", ur: "حساب نہیں رکھا جاتا" },
   pos_no_barcode: { en: "no barcode yet", rm: "barcode abhi nahi laga", ur: "بارکوڈ ابھی نہیں لگا" },
   pos_stock_out: { en: "Finished", rm: "Khatam", ur: "ختم" },
+  pos_categories: { en: "Categories", rm: "Qismein", ur: "قسمیں" },
+  pos_all_items: { en: "All items", rm: "Sab cheezein", ur: "سب چیزیں" },
+  pos_subtotal: { en: "Subtotal", rm: "Jama", ur: "جمع" },
+  pos_paid: { en: "Paid", rm: "Diya gaya", ur: "دیا گیا" },
+  pos_wholesale_needs_shop: {
+    en: "Pick the registered shop or dealer for a wholesale sale.",
+    rm: "Thok ki bikri par darj shuda dukan ya dealer chunein.",
+    ur: "تھوک کی بکری پر درج شدہ دکان یا ڈیلر چنیں۔",
+  },
+  pos_credit_left: { en: "Credit still open", rm: "Udhaar abhi khula", ur: "ادھار ابھی کھلا" },
+  pos_details_done: { en: "Done", rm: "Theek hai", ur: "ٹھیک ہے" },
 
   // ---- Gahak ki teen qismein, aur udhaar ka usool ----
   pos_walkin: { en: "Walk-in", rm: "Chalta gahak", ur: "چلتا گاہک" },

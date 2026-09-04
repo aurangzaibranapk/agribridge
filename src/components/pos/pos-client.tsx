@@ -462,6 +462,14 @@ export function PosClient({
       setMessage({ type: "error", text: t("pos_credit_needs_customer", lang) });
       return;
     }
+    // Thok wali bikri bina dukan ke naam ke nahi hoti -- chahe poora
+    // paisa naqad hi kyun na aa jaye. Thok ka rate kisi EK dukan ke liye
+    // hota hai; bina naam ke wo rate kisi ke bhi haath lag sakta hai,
+    // aur baad mein ye sawal ka jawab nahi milta ke ye maal gaya kahan.
+    if (custMode === "wholesale" && !customerId) {
+      setMessage({ type: "error", text: t("pos_wholesale_needs_shop", lang) });
+      return;
+    }
     if (Math.abs(remaining) > 0.5) {
       setMessage({ type: "error", text: `Payment poora nahi hai. Baaqi: Rs ${remaining.toLocaleString()}` });
       return;
@@ -542,8 +550,51 @@ export function PosClient({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden">
-      {/* ================= BAAYIN TARAF: cheezein ================= */}
+    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden xl:grid-cols-[11rem_minmax(0,1fr)_23rem]">
+      {/* ===== Qismon ki patti -- sirf baRi screen par =====
+          Chhoti screen par ye patti cheezon ki jagah kha jati hai, aur
+          wahan toolbar ka chhanta pehle se maujood hai. Do jagah ek hi
+          kaam dena tab tak theek hai jab tak wo kisi se jagah na
+          chheene. */}
+      <aside className="hidden xl:flex xl:min-h-0 xl:flex-col">
+        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
+          {t("pos_categories", lang)}
+        </p>
+        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
+          <button
+            type="button"
+            onClick={() => setGroup("")}
+            className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
+              group === ""
+                ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-300"
+                : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
+            }`}
+          >
+            <span className="truncate">{t("pos_all_items", lang)}</span>
+            <span className="shrink-0 text-xs tabular-nums text-surface-400">{inventory.length}</span>
+          </button>
+          {groups.map((g) => (
+            <button
+              key={g.name}
+              type="button"
+              onClick={() => setGroup(g.name)}
+              className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
+                group === g.name
+                  ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-300"
+                  : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
+              }`}
+            >
+              <span className="truncate">{g.name}</span>
+              {/* Khali qism chhupayi nahi jati -- sirf us par sifar likha
+                  hota hai. Chhupa dene se banda samajhta hai qism bani hi
+                  nahi aur nayi bana deta hai. */}
+              <span className="shrink-0 text-xs tabular-nums text-surface-400">{g.count}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* ================= DARMIYAN: cheezein ================= */}
       <section className="flex flex-col lg:min-h-0">
         {/* ---- Ek hi patti: naam, scan, talash, qism, ordering ----
             Malik ka kehna (4 September): barcode ke liye alag poori line
@@ -635,6 +686,11 @@ export function PosClient({
           </p>
         )}
         {barcodeError && <p className="-mt-1 mb-3 shrink-0 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>}
+
+        <p className="mb-2 shrink-0 text-sm font-semibold text-surface-800 dark:text-surface-200">
+          {group || t("pos_all_items", lang)}{" "}
+          <span className="font-normal text-surface-400">({filteredInventory.length})</span>
+        </p>
 
         <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
           {/* Counter par cheez ki TASVEER sab se tez pehchan hai. Jab tak
@@ -754,6 +810,7 @@ export function PosClient({
               onQty={(q) => updateQuantity(selectedLine.product_id, q)}
               onRate={(r) => updateRate(selectedLine.product_id, r)}
               onRemove={() => removeLine(selectedLine.product_id)}
+              onClose={() => setSelectedId(null)}
             />
           </aside>
         </>
@@ -883,9 +940,12 @@ export function PosClient({
                     </span>
                   )}
                 </p>
-                {/* Udhaar ki hadd. Darj hi na ho to "—" -- sifar likh
-                    dena "is ko udhaar bilkul nahi" kehne ke barabar hai,
-                    aur wo faisla kisi ne kiya hi nahi. */}
+                {/* Udhaar ki hadd aur us mein se kitna khula hai. Hadd
+                    darj hi na ho to "—" -- sifar likh dena "is ko udhaar
+                    bilkul nahi" kehne ke barabar hai, aur wo faisla kisi
+                    ne kiya hi nahi. Khula udhaar bhi tabhi likha jata hai
+                    jab hadd aur baqi DONO maloom hon; ek bhi na ho to
+                    jawab "maloom nahi" hai, sifar nahi. */}
                 <p className="text-xs">
                   <span className="text-surface-500">{t("pos_credit_limit", lang)}: </span>
                   {chosenCustomer.creditLimit == null || chosenCustomer.creditLimit === 0 ? (
@@ -893,6 +953,24 @@ export function PosClient({
                   ) : (
                     <span className="font-medium text-surface-700 dark:text-surface-200">
                       Rs {Math.round(chosenCustomer.creditLimit).toLocaleString()}
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs">
+                  <span className="text-surface-500">{t("pos_credit_left", lang)}: </span>
+                  {chosenCustomer.creditLimit == null ||
+                  chosenCustomer.creditLimit === 0 ||
+                  chosenCustomer.balance == null ? (
+                    <span className="text-surface-400">—</span>
+                  ) : (
+                    <span
+                      className={
+                        chosenCustomer.creditLimit - chosenCustomer.balance <= 0
+                          ? "font-semibold text-red-600"
+                          : "font-semibold text-emerald-700"
+                      }
+                    >
+                      Rs {Math.round(chosenCustomer.creditLimit - chosenCustomer.balance).toLocaleString()}
                     </span>
                   )}
                 </p>
@@ -1020,11 +1098,28 @@ export function PosClient({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
-          <span className="text-surface-500">{t("pos_total_quantity", lang)}</span>
-          <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
-            {cart.reduce((s, l) => s + l.quantity, 0)}
-          </span>
+        {/* Kul raqam sab se numaayan. Discount ki qatar yahan nahi hai --
+            is nizam mein discount ka koi khana hai hi nahi, aur "Rs 0"
+            likh dena us cheez ka wada hai jo hoti nahi. */}
+        <div className="space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
+          <div className="flex items-center justify-between">
+            <span className="text-surface-500">{t("pos_total_quantity", lang)}</span>
+            <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
+              {cart.reduce((s, l) => s + l.quantity, 0)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-surface-500">{t("pos_subtotal", lang)}</span>
+            <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
+              Rs {total.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-surface-500">{t("pos_paid", lang)}</span>
+            <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
+              Rs {totalAllocated.toLocaleString()}
+            </span>
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span>
@@ -1098,6 +1193,7 @@ function ItemDetails({
   onQty,
   onRate,
   onRemove,
+  onClose,
 }: {
   line: CartLine;
   item: InventoryItem;
@@ -1106,6 +1202,7 @@ function ItemDetails({
   onQty: (q: number) => void;
   onRate: (r: number) => void;
   onRemove: () => void;
+  onClose: () => void;
 }) {
   const p = item.products;
   const expiry = shortDate(item.expiry_date);
@@ -1250,13 +1347,27 @@ function ItemDetails({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={onRemove}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
-      >
-        <Trash2 className="h-4 w-4" /> {t("pos_remove_item", lang)}
-      </button>
+      {/* Tabdeeli usi waqt lag jati hai -- "mehfooz karein" ka koi
+          alag qadam nahi. Is liye ye button sirf khana band karta hai,
+          aur uska naam bhi wohi hai jo wo karta hai. Aisa button jo
+          kehta kuch ho aur karta kuch, bande ka bharosa khatam kar deta
+          hai. */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
+        >
+          <Trash2 className="h-4 w-4" /> {t("pos_remove_item", lang)}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          {t("pos_details_done", lang)}
+        </button>
+      </div>
     </div>
   );
 }
