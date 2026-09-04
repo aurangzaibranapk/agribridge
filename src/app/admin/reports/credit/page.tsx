@@ -92,7 +92,7 @@ export default async function CreditReportPage({
 
   return (
     <div>
-      <PageHeader title={t("rc_title", lang)} description="Farmer credit given, repaid, and outstanding" />
+      <PageHeader title={t("crd_title", lang)} description="Farmer credit given, repaid, and outstanding" />
 
       <div className="mt-4">
         <DateRangeFilter current={range} />
@@ -114,7 +114,7 @@ export default async function CreditReportPage({
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("rc_by_category", lang)}</h2>
           {categoryBreakdown.length === 0 ? (
-            <p className="text-sm text-surface-400">{t("rc_none_yet", lang)}</p>
+            <p className="text-sm text-surface-400">{t("crd_none_yet", lang)}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {categoryBreakdown.map(([cat, amount]) => (

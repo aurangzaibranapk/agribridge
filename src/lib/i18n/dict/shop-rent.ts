@@ -73,7 +73,7 @@ export const shopRentDict = {
   sr_create_agreement: { en: "Create Agreement", rm: "Agreement banayein", ur: "ایگریمنٹ بنائیں" },
 
   // ---- Utility bill ----
-  sr_add_bill: { en: "Add Shop Bill", rm: "Dukan ka bill shamil karein", ur: "دکان کا بل شامل کریں" },
+  srent_add_bill: { en: "Add Shop Bill", rm: "Dukan ka bill shamil karein", ur: "دکان کا بل شامل کریں" },
   sr_bill_added: { en: "Bill added.", rm: "Bill shamil ho gaya.", ur: "بل شامل ہو گیا۔" },
   sr_gas: { en: "Gas", rm: "Gas", ur: "گیس" },
   sr_water: { en: "Water", rm: "Paani", ur: "پانی" },

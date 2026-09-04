@@ -39,7 +39,7 @@ export default async function AttendanceLogPage() {
   return (
     <div>
       <PageHeader
-        title={t("al_title", lang)}
+        title={t("atl_title", lang)}
         description={t("al_subtitle", lang)}
       />
 
@@ -60,7 +60,7 @@ export default async function AttendanceLogPage() {
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title={t("al_none_yet", lang)} />
+        <EmptyState title={t("atl_none_yet", lang)} />
       ) : (
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">

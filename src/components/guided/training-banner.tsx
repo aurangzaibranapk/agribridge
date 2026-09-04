@@ -77,7 +77,7 @@ export function TrainingBanner({
           </Link>
         )}
         <Link href="/admin/academy" className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-sm font-medium text-brand-800 dark:border-brand-800 dark:text-brand-200">
-          <GraduationCap className="h-4 w-4" /> {moduleTitle ? `${t("ac_title", lang)}: ${moduleTitle}` : t("ac_title", lang)}
+          <GraduationCap className="h-4 w-4" /> {moduleTitle ? `${t("acad_title", lang)}: ${moduleTitle}` : t("acad_title", lang)}
         </Link>
       </div>
     </section>

@@ -206,7 +206,7 @@ function SubscriptionsList({ subscriptions }: { subscriptions: Subscription[] })
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card">
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900">{t("sb_payment_history", lang)}</h2>
       {subscriptions.length === 0 ? (
-        <p className="text-sm text-surface-400">{t("sb_none_yet", lang)}</p>
+        <p className="text-sm text-surface-400">{t("sub_none_yet", lang)}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

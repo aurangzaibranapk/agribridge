@@ -110,7 +110,7 @@ export function CatalogExportClient({ products, categories }: { products: Produc
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="">{t("pd_all_categories", lang)}</option>
+          <option value="">{t("cx_all_categories", lang)}</option>
           {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />

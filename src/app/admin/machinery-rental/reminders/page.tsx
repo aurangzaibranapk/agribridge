@@ -45,7 +45,7 @@ export default async function PaymentRemindersPage() {
           ← {t("mc_back", lang)}
         </Link>
         <h1 className="mt-1 font-display text-xl font-semibold text-surface-900 dark:text-white">
-          {t("mr_title", lang)}
+          {t("mrec_title", lang)}
         </h1>
         <p className="text-sm text-surface-500">{t("mr_subtitle", lang)}</p>
       </div>

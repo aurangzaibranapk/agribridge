@@ -75,8 +75,8 @@ export default async function CashClosePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={t("cc_title", lang)}
-        description={t("cc_subtitle", lang)}
+        title={t("ccash_title", lang)}
+        description={t("ccash_subtitle", lang)}
       />
 
       {/* ---- Aaj ki haalat ---- */}

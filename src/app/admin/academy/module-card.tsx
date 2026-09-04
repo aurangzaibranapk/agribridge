@@ -53,7 +53,7 @@ export function ModuleCard({
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{title}</h3>
           {summary && <p className="mt-0.5 text-sm text-surface-500">{summary}</p>}
         </div>
-        {done ? <Badge tone="green">{t("ac_done", lang)}</Badge> : status === "in_progress" ? <Badge tone="amber">{t("ac_in_progress", lang)}</Badge> : <Badge tone="gray">{t("ac_not_started", lang)}</Badge>}
+        {done ? <Badge tone="green">{t("acad_done", lang)}</Badge> : status === "in_progress" ? <Badge tone="amber">{t("ac_in_progress", lang)}</Badge> : <Badge tone="gray">{t("ac_not_started", lang)}</Badge>}
       </div>
       {compact && (
         <button type="button" onClick={() => setOpen((o) => !o)} className="mt-2 inline-flex items-center gap-1 text-xs text-brand-600">

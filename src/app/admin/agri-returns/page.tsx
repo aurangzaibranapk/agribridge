@@ -45,7 +45,7 @@ export default async function AgriReturnsPage() {
   return (
     <div>
       <PageHeader
-        title={t("ar_title", lang)}
+        title={t("agr_title", lang)}
         description="Shop maal wapas bhejti hai, HQ receive kar ke khate se kam karta hai."
         actions={
           <Link href="/admin/agri-returns/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
@@ -71,7 +71,7 @@ export default async function AgriReturnsPage() {
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title={t("ar_none_yet", lang)} description="Shop jab maal wapas bhejegi to yahan nazar aayega." />
+        <EmptyState title={t("agr_none_yet", lang)} description="Shop jab maal wapas bhejegi to yahan nazar aayega." />
       ) : (
         <Card className="overflow-hidden">
           <table className="w-full text-sm">

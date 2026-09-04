@@ -56,7 +56,7 @@ export default async function LiftersPage() {
   return (
     <div>
       <PageHeader
-        title={t("ar_title", lang)}
+        title={t("cl_title", lang)}
         description={t("ar_subtitle", lang)}
       />
 

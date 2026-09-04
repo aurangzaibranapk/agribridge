@@ -49,7 +49,7 @@ export const catalogUsersDict = {
   pd_image: { en: "Product Image", rm: "Cheez ki tasveer", ur: "چیز کی تصویر" },
   pd_remove_image: { en: "Remove image", rm: "Tasveer hatayein", ur: "تصویر ہٹائیں" },
   pd_catalog_export: { en: "Product Catalog Export", rm: "Cheezon ki fehrist nikaalein", ur: "چیزوں کی فہرست نکالیں" },
-  pd_all_categories: { en: "All Categories", rm: "Sab qismein", ur: "سب قسمیں" },
+  cx_all_categories: { en: "All Categories", rm: "Sab qismein", ur: "سب قسمیں" },
   pd_search_short: { en: "Search product", rm: "Cheez dhoondein", ur: "چیز تلاش کریں" },
   pd_select_fields: { en: "Select Fields", rm: "Kaun se khane chahiye", ur: "کون سے خانے چاہیے" },
 

@@ -11,8 +11,8 @@
  * karne se khate ka naam badal jata, is liye jyon ka tyon rakha gaya.
  */
 export const cashCloseDict = {
-  cc_title: { en: "Nightly Cash Count", rm: "Raat ki Cash Ginti", ur: "رات کی کیش گنتی" },
-  cc_subtitle: {
+  ccash_title: { en: "Nightly Cash Count", rm: "Raat ki Cash Ginti", ur: "رات کی کیش گنتی" },
+  ccash_subtitle: {
     en: "The ledger says how much there should be. The count says how much there is. The difference is recorded right there — it does not get hidden.",
     rm: "Ledger batata hai kitna hona chahiye. Ginti batati hai kitna hai. Farq wahin darj hota hai — chhupta nahi.",
     ur: "لیجر بتاتا ہے کتنا ہونا چاہیے۔ گنتی بتاتی ہے کتنا ہے۔ فرق وہیں درج ہوتا ہے — چھپتا نہیں۔",

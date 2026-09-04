@@ -96,7 +96,7 @@ function TagForm({
           </Select>
         </div>
         <div>
-          <Label htmlFor="notes">{t("ar_note", lang)}</Label>
+          <Label htmlFor="notes">{t("cl_note", lang)}</Label>
           <Input id="notes" name="notes" placeholder={t("ar_eg_note", lang)} />
         </div>
       </div>

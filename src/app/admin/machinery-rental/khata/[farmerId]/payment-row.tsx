@@ -61,7 +61,7 @@ export function KhataPaymentRow({
             onClick={() => setOpen((v) => !v)}
             className="flex items-center gap-1 rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-800"
           >
-            {t("mk_record_payment", lang)}
+            {t("mkh_record_payment", lang)}
             {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
         </div>

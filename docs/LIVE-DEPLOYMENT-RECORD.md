@@ -393,10 +393,57 @@ JAMA kar deti -- yani har asaase ki ghisai do dafa gini jati aur asaasay
 utne hi bare nazar aate. Ab `balanceSheet` aise khate ka baqi minus
 karti hai aur safhe par bhi wo (bracket) mein nazar aata hai.
 
+## 5e. Khaton ki fehrist (302) — Testing par chal chuki, **Live par baqi**
+
+`gl_accounts` pehle din se maujood tha magar us ka koi safha nahi tha:
+naya khata banane ke liye SQL likhni parti thi. Ab
+`/admin/finance/accounts` par poori fehrist hai, har khate ka baqi us
+Trial Balance se jo gosharay banata hai (alag ginti nahi).
+
+Do rokein database mein lagi hain (`fn_gl_account_guard`):
+
+- Jis khate mein entry ja chuki, us ki QISM ya RUKH nahi badalta. Warna
+  pichhle saal ka har goshara chup chaap badal jata aur kisi ko pata
+  nahi chalta.
+- Jis khate mein raqam pari ho wo BAND nahi hota -- band khate ka paisa
+  kisi goshare mein nazar nahi aata, hota wahin hai.
+
+Aur khate ka code ab chaar hindson ka hona lazmi hai.
+
+Rollback test (Testing): qism badalna roka, raqam wala khata band karna
+roka, khali khata band hua, naam badalna chala, teen hindson ka code
+roka. Poora test rollback.
+
+## 5f. Ek chaabi do jagah — bees safhon ka unwan ghalat tha
+
+Malik ne 5 September ko screenshot bheja: Machinery ki "Advance
+Tasdeeq" par unwan "AgriBridge Academy" likha aa raha tha.
+
+Wajah: saari dictionaries ek hi object mein girti hain, is liye ek hi
+chaabi do jagah likhi ho to BAAD wali pehli ko kha jati hai. Aisi 20
+chaabiyan thin -- yani bees jagah safhe par kisi doosre safhe ka jumla
+nazar aa raha tha (cash-close par "Owner Command Center", doodh ki
+rawangi par "Master Dashboard", machinery reminders par "Doodh jama
+karne ki report", waghera).
+
+Sab theek kar di gayin, aur `npm run check:i18n` ab is ki jaanch karta
+hai -- takraao aur gum chaabi dono par. Ye jaanch build se pehle
+chalani chahiye.
+
+## 5g. Machinery: bill ka jumla ulta tha
+
+Booking par "1.25 acre kaam poora" likha hota, aur neeche bill ke
+qadam par "Pehle asal kaam darj karein" -- banda wahin ruk jata.
+
+Asal baat ye thi ke kaam DARJ tha magar us ki TASDEEQ baqi thi (vendor
+ka dawa). Rok theek thi, jumla ghalat tha. Ab dono halaton ka apna
+jumla hai, aur tasdeeq wale mein Kaam ke Dawe ka safha bhi likha hai.
+Live par MB-2026-00006 aur MB-2026-00005 dono isi halat mein hain.
+
 ### Live par chalane ki tarteeb (P0 rule)
 
 Backup verified (file ka size chat mein) -> pre-migration ginti ->
-301 -> ginti dobara -> naya build upload -> smoke test.
+301, 302 -> ginti dobara -> naya build upload -> smoke test.
 
 Live par abhi **kuch nahi** chala.
 

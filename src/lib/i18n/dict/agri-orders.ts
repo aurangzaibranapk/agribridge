@@ -223,10 +223,10 @@ export const agriOrdersMoreDict = {
     rm: "Ye khata kisi shakh se nahi juRa. Admin se raabta karein.",
     ur: "یہ کھاتہ کسی شاخ سے نہیں جڑا۔ ایڈمن سے رابطہ کریں۔",
   },
-  ar_title: { en: "Returns (branch to HQ)", rm: "Wapsi (shakh se HQ)", ur: "واپسی (شاخ سے HQ)" },
+  agr_title: { en: "Returns (branch to HQ)", rm: "Wapsi (shakh se HQ)", ur: "واپسی (شاخ سے HQ)" },
   ar_waiting_hq: { en: "Waiting for HQ", rm: "HQ ke intezar mein", ur: "HQ کے انتظار میں" },
   ar_received_done: { en: "Received", rm: "Mil chuke", ur: "مل چکے" },
   ar_rejected_done: { en: "Rejected", rm: "Rad huye", ur: "رد ہوئے" },
-  ar_none_yet: { en: "No returns yet.", rm: "Abhi tak koi wapsi nahi.", ur: "ابھی تک کوئی واپسی نہیں۔" },
+  agr_none_yet: { en: "No returns yet.", rm: "Abhi tak koi wapsi nahi.", ur: "ابھی تک کوئی واپسی نہیں۔" },
   ar_return_no: { en: "Return No.", rm: "Wapsi number", ur: "واپسی نمبر" },
 } as const;

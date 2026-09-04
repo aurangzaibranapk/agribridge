@@ -108,7 +108,7 @@ export const subscriptionDict = {
   sb_card: { en: "Credit / Debit Card", rm: "Credit / Debit card", ur: "کریڈٹ / ڈیبٹ کارڈ" },
   sb_payment_proof: { en: "Payment Proof / Receipt (photo)", rm: "Adaigi ka saboot / raseed (tasveer)", ur: "ادائیگی کا ثبوت / رسید (تصویر)" },
   sb_payment_history: { en: "Payment History", rm: "Adaigi ki tafseel", ur: "ادائیگی کی تفصیل" },
-  sb_none_yet: { en: "No subscription yet.", rm: "Abhi koi subscription nahi.", ur: "ابھی کوئی سبسکرپشن نہیں۔" },
+  sub_none_yet: { en: "No subscription yet.", rm: "Abhi koi subscription nahi.", ur: "ابھی کوئی سبسکرپشن نہیں۔" },
   sb_when_paid: { en: "When Paid", rm: "Kab aaya", ur: "کب آیا" },
   sb_valid_till: { en: "Valid Till", rm: "Kab tak", ur: "کب تک" },
   sb_proof: { en: "Proof", rm: "Saboot", ur: "ثبوت" },

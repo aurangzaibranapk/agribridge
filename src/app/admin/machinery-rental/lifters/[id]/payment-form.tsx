@@ -107,7 +107,7 @@ export function LifterPaymentForm({
       </div>
 
       <div>
-        <Label htmlFor="notes">{t("ar_note", lang)}</Label>
+        <Label htmlFor="notes">{t("cl_note", lang)}</Label>
         <Textarea id="notes" name="notes" rows={2} />
       </div>
 

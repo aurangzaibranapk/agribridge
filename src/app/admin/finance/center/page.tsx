@@ -96,10 +96,11 @@ export default async function FinanceCenterPage() {
       icon: <Settings2 className="h-5 w-5" />,
       tone: "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
       items: [
+        { href: "/admin/finance/accounts", label: t("coa_title", lang), hint: t("coa_desc", lang) },
         { href: "/admin/finance/banks", label: t("fc_banks", lang) },
         { href: "/admin/finance/payment-mapping", label: t("fc_pay_map", lang), hint: t("fc_pay_map_hint", lang) },
       ],
-      baqi: [t("fc_b_coa", lang), t("fc_b_terms", lang), t("fc_b_cheque", lang), t("fc_b_periods", lang), t("fc_b_merge", lang)],
+      baqi: [t("fc_b_terms", lang), t("fc_b_cheque", lang), t("fc_b_periods", lang), t("fc_b_merge", lang)],
     },
     {
       key: "assets",

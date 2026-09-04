@@ -14,7 +14,7 @@
  */
 export const arhtiDict = {
   // ---- Fehrist ka safha ----
-  ar_title: { en: "Crop Lifters", rm: "Fasal Uthane Wale", ur: "فصل اٹھانے والے" },
+  cl_title: { en: "Crop Lifters", rm: "Fasal Uthane Wale", ur: "فصل اٹھانے والے" },
   ar_subtitle: {
     en: "Arhtis and traders who lift the farmer's crop. The harvesting balance and the farmer's older dues move onto them.",
     rm: "Arhti aur beopari — jo kisan ki fasal uthate hain. Kattai ka baqi aur kisan ka purana udhaar in ke zimme jata hai.",
@@ -28,7 +28,7 @@ export const arhtiDict = {
   ar_active: { en: "Active", rm: "Chalu", ur: "چالو" },
   ar_to_collect: { en: "To collect from them", rm: "In se lena", ur: "اِن سے لینا" },
   ar_lifted_bookings: { en: "Bookings lifted", rm: "Uthai hui bookings", ur: "اٹھائی ہوئی بکنگز" },
-  ar_none_yet: { en: "No crop lifter recorded yet.", rm: "Abhi koi uthane wala darj nahi.", ur: "ابھی کوئی اٹھانے والا درج نہیں۔" },
+  cl_none_yet: { en: "No crop lifter recorded yet.", rm: "Abhi koi uthane wala darj nahi.", ur: "ابھی کوئی اٹھانے والا درج نہیں۔" },
   ar_new: { en: "New crop lifter", rm: "Naya uthane wala", ur: "نیا اٹھانے والا" },
   ar_closed: { en: "Closed", rm: "Band", ur: "بند" },
   ar_edit: { en: "Edit", rm: "Theek karein", ur: "ٹھیک کریں" },
@@ -52,7 +52,7 @@ export const arhtiDict = {
   ar_cnic: { en: "CNIC", rm: "CNIC", ur: "شناختی کارڈ" },
   ar_village: { en: "Village", rm: "Gaon", ur: "گاؤں" },
   ar_address: { en: "Address", rm: "Pata", ur: "پتہ" },
-  ar_note: { en: "Note", rm: "Note", ur: "نوٹ" },
+  cl_note: { en: "Note", rm: "Note", ur: "نوٹ" },
   ar_eg_name: { en: "e.g. Haji Ashraf Arhti", rm: "Misal: Haji Ashraf Arhti", ur: "مثال: حاجی اشرف آڑھتی" },
   ar_rate_req: { en: "Our commission (%) *", rm: "Hamara commission (%) *", ur: "ہمارا کمیشن (%) *" },
   ar_rate_note: {

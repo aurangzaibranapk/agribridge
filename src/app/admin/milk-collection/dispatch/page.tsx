@@ -33,7 +33,7 @@ export default async function MilkDispatchPage() {
 
   return (
     <div>
-      <PageHeader title={t("md_title", lang)} description={t("md_subtitle", lang)} />
+      <PageHeader title={t("mdp_title", lang)} description={t("md_subtitle", lang)} />
       <DispatchClient
         lang={lang}
         branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}

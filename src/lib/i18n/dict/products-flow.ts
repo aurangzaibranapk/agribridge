@@ -526,7 +526,7 @@ export const productsFlowDict = {
   sg_my_dept: { en: "Your department", rm: "Aap ka department", ur: "آپ کا ڈیپارٹمنٹ" },
 
   // ---- Academy, Training Mode, Simple/Advanced (Guided ERP D, E) ----
-  ac_title: { en: "AgriBridge Academy", rm: "AgriBridge Academy", ur: "اکیڈمی" },
+  acad_title: { en: "AgriBridge Academy", rm: "AgriBridge Academy", ur: "اکیڈمی" },
   ac_desc: { en: "{done} of {total} modules done. Watch, try the demo, ask AI, mark complete.", rm: "{total} mein se {done} module poore. Video dekhein, demo try karein, AI se poochein, poora likhein.", ur: "{total} میں سے {done} ماڈیول پورے۔" },
   ac_team: { en: "Team progress", rm: "Team ki training", ur: "ٹیم کی ٹریننگ" },
   ac_team_desc: { en: "Who has completed which module. ✓ done, … started, · not started.", rm: "Kis ne kaun sa module poora kiya. ✓ poora, … shuru, · nahi.", ur: "کس نے کون سا ماڈیول پورا کیا۔" },
@@ -535,7 +535,7 @@ export const productsFlowDict = {
   ac_yours: { en: "Your department", rm: "Aap ka department", ur: "آپ کا ڈیپارٹمنٹ" },
   ac_all: { en: "All modules", rm: "Sab module", ur: "سب ماڈیول" },
   ac_none: { en: "No modules yet.", rm: "Abhi koi module nahi.", ur: "ابھی کوئی ماڈیول نہیں۔" },
-  ac_done: { en: "Done", rm: "Poora", ur: "پورا" },
+  acad_done: { en: "Done", rm: "Poora", ur: "پورا" },
   ac_in_progress: { en: "Started", rm: "Shuru", ur: "شروع" },
   ac_not_started: { en: "Not started", rm: "Baqi", ur: "باقی" },
   ac_more: { en: "Show steps", rm: "Qadam dikhayein", ur: "قدم دکھائیں" },

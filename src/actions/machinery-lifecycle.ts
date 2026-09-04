@@ -1974,13 +1974,35 @@ async function buildFinalBill(
   // Sirf tasdeeq shuda kaam. Vendor ka dawa jab tak dekha na jaye,
   // bill ka hissa nahi banta -- wo apne hi paise ka adad likh raha
   // hota hai (150).
-  const { data: workRows } = await supabase
+  //
+  // Saari qatarein laate hain, sirf tasdeeq shuda nahi -- WAJAH SIRF
+  // PAIGHAAM HAI. Pehle yahan seedha `verification_status = verified`
+  // ki chhanti hoti thi, aur us se ek aisa jumla nikalta tha jo safhe
+  // par ULTA nazar aata: booking par "1.25 acre kaam poora" likha hota
+  // aur neeche likha aata "pehle asal kaam darj karein". Banda wahin
+  // ruk jata hai -- kaam to us ke saamne darj hai, phir kya karay?
+  //
+  // Ab dono halaton ka apna jumla hai: kaam hai hi nahi, ya kaam hai
+  // magar us ki tasdeeq baqi hai. Bill dono surat mein nahi banta (wo
+  // rok theek hai -- vendor apne hi paise ka adad likh raha hota hai),
+  // magar ab ye maloom hota hai ke agla qadam kaunsa hai.
+  const { data: allWork } = await supabase
     .from("machinery_work_records")
-    .select("actual_area, is_final")
-    .eq("booking_id", bookingId)
-    .eq("verification_status", "verified");
+    .select("actual_area, is_final, verification_status")
+    .eq("booking_id", bookingId);
 
-  if (!workRows || workRows.length === 0) {
+  const workRows = (allWork ?? []).filter((w) => w.verification_status === "verified");
+
+  if (workRows.length === 0) {
+    const claimed = (allWork ?? []).filter((w) => w.verification_status !== "verified");
+    if (claimed.length > 0) {
+      const rakba = claimed.reduce((s, w) => s + Number(w.actual_area ?? 0), 0);
+      return {
+        error:
+          `Kaam darj hai (${rakba} acre) magar us ki TASDEEQ baqi hai. Vendor ka dawa jab tak koi dekh na le, bill ka hissa nahi banta. ` +
+          `Kaam ke Dawe (/admin/machinery-rental/work-claims) par ja kar tasdeeq karein — us ke baad bill yahin se ban jayega.`,
+      };
+    }
     return { error: "Pehle asal kaam darj karein (kitne acre waqai kaate gaye)." };
   }
   if (!workRows.some((w) => w.is_final)) {

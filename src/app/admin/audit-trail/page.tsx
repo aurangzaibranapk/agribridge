@@ -40,7 +40,7 @@ export default async function AuditTrailPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={t("at_title", lang)}
+        title={t("aud_title", lang)}
         description="Purani tareekh ki entry aur reversal — dono jaiz kaam hain. Inhen roka nahi jata, nazar mein rakha jata hai."
       />
 

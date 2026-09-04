@@ -38,7 +38,7 @@ export default async function WorkClaimsPage() {
           ← {t("fm_back", lang)}
         </Link>
         <h1 className="mt-1 font-display text-xl font-semibold text-surface-900 dark:text-white">
-          {t("wc_title", lang)}
+          {t("wcl_title", lang)}
         </h1>
         <p className="text-sm text-surface-500">{t("wc_subtitle", lang)}</p>
       </div>

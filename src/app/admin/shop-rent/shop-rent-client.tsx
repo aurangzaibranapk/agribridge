@@ -84,7 +84,7 @@ export function ShopRentClient({
         <button onClick={() => setShowStamp(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
           <Stamp className="h-4 w-4" />{t("sr_company_stamp_short", lang)}</button>
         <button onClick={() => setShowAddBill(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
-          <Zap className="h-4 w-4" />{t("sr_add_bill", lang)}</button>
+          <Zap className="h-4 w-4" />{t("srent_add_bill", lang)}</button>
         <button onClick={() => setShowAddAgreement(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
           <Plus className="h-4 w-4" />{t("sr_make_agreement", lang)}</button>
       </div>
@@ -342,7 +342,7 @@ function AddBillModal({ branches, onClose }: { branches: Branch[]; onClose: () =
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">{t("sr_add_bill", lang)}</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("srent_add_bill", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}

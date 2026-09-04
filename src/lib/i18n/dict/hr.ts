@@ -108,7 +108,7 @@ export const hrDict = {
  * ghera jis ke andar khare ho kar hazri lagana durust mana jata hai.
  */
 export const attendanceLogDict = {
-  al_title: { en: "Attendance Log (with location)", rm: "Hazri ka Record (Location ke sath)", ur: "حاضری کا ریکارڈ (لوکیشن کے ساتھ)" },
+  atl_title: { en: "Attendance Log (with location)", rm: "Hazri ka Record (Location ke sath)", ur: "حاضری کا ریکارڈ (لوکیشن کے ساتھ)" },
   al_subtitle: {
     en: "Who is marking attendance from where — inside the circle or outside it.",
     rm: "Kaun kahan se hazri laga raha hai — daire ke andar ya bahar.",
@@ -122,7 +122,7 @@ export const attendanceLogDict = {
     rm: "Location nahi bheji, ya branch ki jagah darj nahi",
     ur: "لوکیشن نہیں بھیجی، یا شاخ کی جگہ درج نہیں",
   },
-  al_none_yet: { en: "No attendance has been marked yet.", rm: "Abhi tak koi hazri nahi lagi.", ur: "ابھی تک کوئی حاضری نہیں لگی۔" },
+  atl_none_yet: { en: "No attendance has been marked yet.", rm: "Abhi tak koi hazri nahi lagi.", ur: "ابھی تک کوئی حاضری نہیں لگی۔" },
   al_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
   al_name: { en: "Name", rm: "Naam", ur: "نام" },
   al_in: { en: "In", rm: "Aaya", ur: "آیا" },

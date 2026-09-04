@@ -275,7 +275,7 @@ export const ownerToolsDict = {
   },
 
   // ---- Audit trail ----
-  at_title: { en: "Who Did What", rm: "Kis ne kya kiya", ur: "کس نے کیا کیا" },
+  aud_title: { en: "Who Did What", rm: "Kis ne kya kiya", ur: "کس نے کیا کیا" },
   at_recent: { en: "Recent entries", rm: "Haal ki qatarein", ur: "حال کی قطاریں" },
   at_other_actions: { en: "Record of other actions", rm: "Baqi kaamon ka record", ur: "باقی کاموں کا ریکارڈ" },
   at_no_entry: { en: "No entries yet.", rm: "Abhi koi qatar nahi.", ur: "ابھی کوئی قطار نہیں۔" },

@@ -41,7 +41,7 @@ export default async function AcademyPage() {
   return (
     <div>
       <PageHeader
-        title={t("ac_title", lang)}
+        title={t("acad_title", lang)}
         description={t("ac_desc", lang).replace("{done}", String(done)).replace("{total}", String((modules ?? []).length))}
         actions={canSeeTeam ? <Link href="/admin/academy/team" className="text-sm font-medium text-brand-600 underline">{t("ac_team", lang)}</Link> : undefined}
       />

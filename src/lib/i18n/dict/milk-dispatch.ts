@@ -8,7 +8,7 @@
  * hone chahiyen.
  */
 export const milkDispatchDict = {
-  md_title: { en: "Milk Dispatch", rm: "Doodh ki Rawangi", ur: "دودھ کی روانگی" },
+  mdp_title: { en: "Milk Dispatch", rm: "Doodh ki Rawangi", ur: "دودھ کی روانگی" },
   md_subtitle: {
     en: "From the chiller to the company — how much went, and how much they acknowledged",
     rm: "Chiller se company tak — kitna gaya, aur company ne kitna mana",

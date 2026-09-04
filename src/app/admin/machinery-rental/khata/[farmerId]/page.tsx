@@ -240,7 +240,7 @@ export default async function FarmerMachineryKhataPage({ params }: { params: { f
 
       <div className="mt-5 overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
         <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-b border-surface-200 px-3 py-2 text-xs font-medium uppercase tracking-wide text-surface-500 dark:border-surface-800">
-          <span>{t("mk_entries", lang)}</span>
+          <span>{t("mkh_entries", lang)}</span>
           <span className="text-right">{t("mk_charged", lang)}</span>
           <span className="text-right">{t("mk_received", lang)}</span>
         </div>

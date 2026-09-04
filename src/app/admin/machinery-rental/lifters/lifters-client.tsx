@@ -85,7 +85,7 @@ export function LiftersClient({ rows, lang }: { rows: Row[]; lang: Lang }) {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-surface-400">{t("ar_none_yet", lang)}</td>
+                <td colSpan={8} className="px-3 py-8 text-center text-surface-400">{t("cl_none_yet", lang)}</td>
               </tr>
             )}
             {rows.map((r) => (
@@ -218,7 +218,7 @@ function LifterForm({ row, onDone }: { row: Row | null; onDone: () => void }) {
       </div>
 
       <div>
-        <Label htmlFor="notes">{t("ar_note", lang)}</Label>
+        <Label htmlFor="notes">{t("cl_note", lang)}</Label>
         <Textarea id="notes" name="notes" rows={2} defaultValue={row?.notes ?? ""} />
       </div>
 

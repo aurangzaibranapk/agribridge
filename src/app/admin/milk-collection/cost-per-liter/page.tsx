@@ -83,7 +83,7 @@ export default async function CostPerLiterPage({
               defaultValue={branchId ?? ""}
               className="mt-1 rounded-lg border border-surface-200 p-2 text-sm"
             >
-              <option value="">{t("pd_all_categories", lang)}</option>
+              <option value="">{t("cx_all_categories", lang)}</option>
               {(branches ?? []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}

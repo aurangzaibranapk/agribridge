@@ -256,7 +256,7 @@ export const machineryDict = {
   vc_received: { en: "Vendor handed the cash over", rm: "Vendor ne paisa de diya", ur: "وینڈر نے پیسہ دے دیا" },
 
   // Vendor ke bheje hue kaam ki tasdeeq
-  wc_title: { en: "Vendor Work", rm: "Vendor ka Kaam", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u0627\u0645" },
+  wcl_title: { en: "Vendor Work", rm: "Vendor ka Kaam", ur: "\u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u06a9\u0627\u0645" },
   wc_subtitle: {
     en: "What the machine owners recorded from the field. Until someone here checks it, none of this counts in a bill.",
     rm: "Jo machine walon ne maidan se darj kiya. Jab tak koi yahan dekh na le, ye kisi bill mein nahi ginta.",
@@ -522,7 +522,7 @@ export const machineryDict = {
     rm: "Ye manfi baqi nahi hai. Ye wo raqam hai jo wapas karni hai ya agle kaam mein lagani hai.",
     ur: "یہ منفی باقی نہیں ہے۔ یہ وہ رقم ہے جو واپس کرنی ہے یا اگلے کام میں لگانی ہے۔",
   },
-  mk_entries: { en: "Entries", rm: "Qatarein", ur: "قطاریں" },
+  mkh_entries: { en: "Entries", rm: "Qatarein", ur: "قطاریں" },
   mk_charged: { en: "Charged", rm: "Zimme laga", ur: "ذمے لگا" },
   mk_received: { en: "Received", rm: "Mila", ur: "ملا" },
   mk_balance_then: { en: "Balance", rm: "Us waqt baqi", ur: "اس وقت باقی" },
@@ -542,7 +542,7 @@ export const machineryDict = {
   },
   mk_open_bookings: { en: "Bookings with a balance", rm: "Jin par abhi baqi hai", ur: "جن پر ابھی باقی ہے" },
   mk_open_booking: { en: "Open the booking", rm: "Booking kholein", ur: "بکنگ کھولیں" },
-  mk_record_payment: { en: "Record payment", rm: "Adaigi darj karein", ur: "ادائیگی درج کریں" },
+  mkh_record_payment: { en: "Record payment", rm: "Adaigi darj karein", ur: "ادائیگی درج کریں" },
   mk_open: { en: "Khata", rm: "Khata", ur: "کھاتہ" },
   ml_location: { en: "Location", rm: "Jagah", ur: "جگہ" },
   ml_pinned: { en: "pinned", rm: "pin lagi hai", ur: "پن لگی ہے" },
@@ -905,7 +905,7 @@ export const machineryDict = {
     ur: "\u0646\u06c1\u06cc\u06ba \u062f\u06cc \u2014 \u067e\u0648\u0686\u06be\u06cc\u06ba \u06a9\u0628 \u062f\u06d2 \u06af\u0627",
   },
   // --- Payment ki yaad dahani ---
-  mr_title: {
+  mrec_title: {
     en: "Payment Recovery",
     rm: "Raqam Wasooli",
     ur: "\u0631\u0642\u0645 \u0648\u0635\u0648\u0644\u06cc",

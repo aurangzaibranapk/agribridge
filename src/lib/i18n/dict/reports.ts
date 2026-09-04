@@ -145,9 +145,9 @@ export const reportsMoreDict = {
   rv_none_yet: { en: "No permission has been granted yet.", rm: "Abhi tak kisi ko ijazat nahi di gayi.", ur: "ابھی تک کسی کو اجازت نہیں دی گئی۔" },
 
   // ---- Udhaar ki report ----
-  rc_title: { en: "Credit Report", rm: "Udhaar ki report", ur: "ادھار کی رپورٹ" },
+  crd_title: { en: "Credit Report", rm: "Udhaar ki report", ur: "ادھار کی رپورٹ" },
   rc_by_category: { en: "Credit by Category", rm: "Qism ke hisaab se udhaar", ur: "قسم کے حساب سے ادھار" },
-  rc_none_yet: { en: "No credit given yet.", rm: "Abhi koi udhaar nahi diya gaya.", ur: "ابھی کوئی ادھار نہیں دیا گیا۔" },
+  crd_none_yet: { en: "No credit given yet.", rm: "Abhi koi udhaar nahi diya gaya.", ur: "ابھی کوئی ادھار نہیں دیا گیا۔" },
   rc_no_overdue: { en: "No overdue pending requests.", rm: "Koi darkhwast waqt se ziyada nahi rukI.", ur: "کوئی درخواست وقت سے زیادہ نہیں رکی۔" },
 
   // ---- Finance report ----
