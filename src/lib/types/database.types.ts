@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_categories: {
+        Row: { accum_account: string; asset_account: string; created_at: string; default_life_months: number; default_method: string; default_rate: number | null; expense_account: string; id: string; is_active: boolean; name: string }
+        Insert: { accum_account: string; asset_account: string; created_at?: string; default_life_months?: number; default_method?: string; default_rate?: number | null; expense_account: string; id?: string; is_active?: boolean; name: string }
+        Update: { accum_account?: string; asset_account?: string; created_at?: string; default_life_months?: number; default_method?: string; default_rate?: number | null; expense_account?: string; id?: string; is_active?: boolean; name?: string }
+        Relationships: []
+      }
+      fixed_assets: {
+        Row: { accumulated_depreciation: number; acquired_on: string; branch_id: string | null; category_id: string; code: string; cost: number; created_at: string; created_by: string | null; dep_rate: number | null; depreciated_upto: string | null; disposed_on: string | null; id: string; in_service_on: string; life_months: number; location: string | null; method: string; name: string; notes: string | null; revaluation_adjustment: number; salvage_value: number; serial_no: string | null; status: string; supplier_id: string | null; updated_at: string }
+        Insert: { accumulated_depreciation?: number; acquired_on: string; branch_id?: string | null; category_id: string; code: string; cost: number; created_at?: string; created_by?: string | null; dep_rate?: number | null; depreciated_upto?: string | null; disposed_on?: string | null; id?: string; in_service_on: string; life_months: number; location?: string | null; method?: string; name: string; notes?: string | null; revaluation_adjustment?: number; salvage_value?: number; serial_no?: string | null; status?: string; supplier_id?: string | null; updated_at?: string }
+        Update: { accumulated_depreciation?: number; acquired_on?: string; branch_id?: string | null; category_id?: string; code?: string; cost?: number; created_at?: string; created_by?: string | null; dep_rate?: number | null; depreciated_upto?: string | null; disposed_on?: string | null; id?: string; in_service_on?: string; life_months?: number; location?: string | null; method?: string; name?: string; notes?: string | null; revaluation_adjustment?: number; salvage_value?: number; serial_no?: string | null; status?: string; supplier_id?: string | null; updated_at?: string }
+        Relationships: []
+      }
+      fixed_asset_counter: {
+        Row: { id: number; last_number: number }
+        Insert: { id?: number; last_number?: number }
+        Update: { id?: number; last_number?: number }
+        Relationships: []
+      }
+      asset_depreciation_runs: {
+        Row: { computed_at: string; computed_by: string | null; entry_id: string | null; id: string; period: string; posted_at: string | null; posted_by: string | null; status: string; total_amount: number }
+        Insert: { computed_at?: string; computed_by?: string | null; entry_id?: string | null; id?: string; period: string; posted_at?: string | null; posted_by?: string | null; status?: string; total_amount?: number }
+        Update: { computed_at?: string; computed_by?: string | null; entry_id?: string | null; id?: string; period?: string; posted_at?: string | null; posted_by?: string | null; status?: string; total_amount?: number }
+        Relationships: []
+      }
+      asset_depreciation_lines: {
+        Row: { accum_account: string; amount: number; asset_id: string; closing_book: number; expense_account: string; id: string; months: number; opening_book: number; run_id: string }
+        Insert: { accum_account: string; amount: number; asset_id: string; closing_book: number; expense_account: string; id?: string; months?: number; opening_book: number; run_id: string }
+        Update: { accum_account?: string; amount?: number; asset_id?: string; closing_book?: number; expense_account?: string; id?: string; months?: number; opening_book?: number; run_id?: string }
+        Relationships: []
+      }
+      asset_disposals: {
+        Row: { accum_at_disposal: number; asset_id: string; book_value: number; buyer_name: string | null; cost_at_disposal: number; created_at: string; created_by: string | null; disposal_type: string; disposed_on: string; entry_id: string | null; finance_account_id: string | null; gain_loss: number; id: string; proceeds: number; reason: string | null }
+        Insert: { accum_at_disposal: number; asset_id: string; book_value: number; buyer_name?: string | null; cost_at_disposal: number; created_at?: string; created_by?: string | null; disposal_type?: string; disposed_on: string; entry_id?: string | null; finance_account_id?: string | null; gain_loss: number; id?: string; proceeds?: number; reason?: string | null }
+        Update: { accum_at_disposal?: number; asset_id?: string; book_value?: number; buyer_name?: string | null; cost_at_disposal?: number; created_at?: string; created_by?: string | null; disposal_type?: string; disposed_on?: string; entry_id?: string | null; finance_account_id?: string | null; gain_loss?: number; id?: string; proceeds?: number; reason?: string | null }
+        Relationships: []
+      }
+      asset_revaluations: {
+        Row: { asset_id: string; created_at: string; created_by: string | null; difference: number; entry_id: string | null; expense_part: number; id: string; new_carrying: number; old_carrying: number; reason: string; revalued_on: string; surplus_part: number }
+        Insert: { asset_id: string; created_at?: string; created_by?: string | null; difference: number; entry_id?: string | null; expense_part?: number; id?: string; new_carrying: number; old_carrying: number; reason: string; revalued_on: string; surplus_part?: number }
+        Update: { asset_id?: string; created_at?: string; created_by?: string | null; difference?: number; entry_id?: string | null; expense_part?: number; id?: string; new_carrying?: number; old_carrying?: number; reason?: string; revalued_on?: string; surplus_part?: number }
+        Relationships: []
+      }
       sod_transaction_rules: {
         Row: { approver_col: string; created_at: string; creator_col: string; enforcement: string; exempt_roles: string[]; id: string; is_active: boolean; label: string; table_name: string; updated_at: string }
         Insert: { approver_col: string; created_at?: string; creator_col: string; enforcement?: string; exempt_roles?: string[]; id?: string; is_active?: boolean; label: string; table_name: string; updated_at?: string }
@@ -8012,6 +8054,7 @@ export type Database = {
           code: string
           created_at: string
           is_active: boolean
+          is_contra: boolean
           name: string
           normal_side: string
           sort_order: number
@@ -8021,6 +8064,7 @@ export type Database = {
           code: string
           created_at?: string
           is_active?: boolean
+          is_contra?: boolean
           name: string
           normal_side: string
           sort_order?: number
@@ -8030,6 +8074,7 @@ export type Database = {
           code?: string
           created_at?: string
           is_active?: boolean
+          is_contra?: boolean
           name?: string
           normal_side?: string
           sort_order?: number
@@ -20561,6 +20606,14 @@ export type Database = {
       }
     }
     Views: {
+      v_fixed_assets: {
+        Row: { accum_account: string | null; accumulated_depreciation: number | null; acquired_on: string | null; asset_account: string | null; book_value: number | null; branch_id: string | null; category_id: string | null; category_name: string | null; code: string | null; cost: number | null; dep_rate: number | null; depreciated_upto: string | null; disposed_on: string | null; expense_account: string | null; gross_value: number | null; id: string | null; in_service_on: string | null; life_months: number | null; location: string | null; method: string | null; name: string | null; notes: string | null; revaluation_adjustment: number | null; salvage_value: number | null; serial_no: string | null; status: string | null }
+        Relationships: []
+      }
+      v_fixed_asset_ledger: {
+        Row: { amount: number | null; asset_id: string | null; created_at: string | null; entry_id: string | null; event_date: string | null; event_type: string | null; label: string | null; running_carrying: number | null }
+        Relationships: []
+      }
       v_products_missing_image: {
         Row: {
           brand_id: string | null
@@ -23840,6 +23893,9 @@ export type Database = {
       }
     }
     Functions: {
+      fn_next_asset_code: { Args: never; Returns: string }
+      fn_asset_dep_compute: { Args: { p_period: string; p_user?: string }; Returns: string }
+      fn_asset_dep_mark_posted: { Args: { p_entry_id: string; p_run_id: string; p_user?: string }; Returns: number }
       create_pos_sale: {
         Args: {
           p_cash_paid: number

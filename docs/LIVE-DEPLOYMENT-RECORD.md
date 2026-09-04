@@ -339,8 +339,6 @@ ka nafa 10,576. Yani Balance Sheet Live par barabar hai.
 
 ### Abhi bhi baqi
 
-- **Fixed Assets ka poora hissa** (register, qismein, depreciation,
-  farokht, dobara qeemat, asset ledger) -- bana hi nahi
 - Post-dated cheques, recurring journals, budgets, period closing, item
   costing run
 - Chart of Accounts ka safha, payment terms, cheque book, accounting
@@ -356,6 +354,51 @@ ka nafa 10,576. Yani Balance Sheet Live par barabar hai.
 - Live par kisi cheez par barcode nahi
 - 250 cheezon ki tasveer nahi (12 naam wali -- un ki ASAL tasveer haath
   se charhani chahiye)
+
+---
+
+
+## 5d. Mustaqil Asaasay (301) — Testing par chal chuki, **Live par baqi**
+
+Malik ka group 4 (Fixed Assets) ab bana hua hai: register, qismein,
+depreciation ka hisaab aur ledger, farokht/kharij, dobara qeemat, aur
+har asaase ka apna ledger.
+
+### Testing par kya chala (301)
+
+`asset_categories`, `fixed_assets`, `fixed_asset_counter`,
+`asset_depreciation_runs`, `asset_depreciation_lines`,
+`asset_disposals`, `asset_revaluations`; do views
+(`v_fixed_assets`, `v_fixed_asset_ledger`); teen functions
+(`fn_next_asset_code`, `fn_asset_dep_compute`,
+`fn_asset_dep_mark_posted`); gyarah naye khate (1300–1340, 1390, 3300,
+4095, 6200, 6210, 6220) aur `gl_accounts.is_contra`.
+
+### Rollback test ka natija (Testing, 5 September)
+
+Seedha khat: 3 mahine Rs 6,000 (chahiye tha 6,000). Ghatti hui qeemat:
+Rs 2,000 (chahiye tha 2,000). Post ke baad jama shuda ghisai 6,000,
+cursor Aug-2026. Usi mahine ka dobara hisaab **roka gaya**. Jama shuda
+ghisai qeemat se upar le jane ki koshish **roki gayi**. Post ho chuka
+run mitane ki koshish **roki gayi**. Agle mahine sirf ek mahine ki
+ghisai (Rs 2,000). Kitabi qeemat 114,000 (chahiye thi 114,000). Poora
+test rollback hua -- Testing par koi qatar nahi bachi.
+
+### Ek cheez jo saath theek karni paRi
+
+`gl_accounts` mein `is_contra` ka khana pehle nahi tha. Jama shuda
+depreciation ulte rukh ka khata hai: hai asaason ke sath, magar asaason
+ko GHATATA hai. Balance sheet is ke baghair us raqam ko asaason mein
+JAMA kar deti -- yani har asaase ki ghisai do dafa gini jati aur asaasay
+utne hi bare nazar aate. Ab `balanceSheet` aise khate ka baqi minus
+karti hai aur safhe par bhi wo (bracket) mein nazar aata hai.
+
+### Live par chalane ki tarteeb (P0 rule)
+
+Backup verified (file ka size chat mein) -> pre-migration ginti ->
+301 -> ginti dobara -> naya build upload -> smoke test.
+
+Live par abhi **kuch nahi** chala.
 
 ---
 

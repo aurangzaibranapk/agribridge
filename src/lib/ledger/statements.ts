@@ -39,6 +39,13 @@ export interface GlAccount {
   account_type: AccountType;
   normal_side: "debit" | "credit";
   sort_order: number;
+  /**
+   * Ulte rukh ka khata -- jaise jama shuda depreciation. Hai to asaason
+   * ke sath, magar wo asaason ko GHATATA hai. Balance sheet is ka baqi
+   * jama nahi karti, minus karti hai; na kare to har asaase ki ghisai
+   * asaason mein DOBARA jama ho kar unhen do guna dikha deti hai.
+   */
+  is_contra: boolean;
 }
 
 export interface TrialRow extends GlAccount {
@@ -90,7 +97,7 @@ async function accounts(): Promise<{ list: GlAccount[]; error: string | null }> 
   const service = createServiceClient();
   const { data, error } = await service
     .from("gl_accounts")
-    .select("code, name, account_type, normal_side, sort_order")
+    .select("code, name, account_type, normal_side, sort_order, is_contra")
     .eq("is_active", true)
     .order("sort_order");
   if (error) return { list: [], error: error.message };
@@ -223,8 +230,14 @@ export async function balanceSheet(
     };
   }
 
+  // Ulte rukh ke khate (jama shuda depreciation) apne group ko ghatate
+  // hain. Un ka baqi yahan manfi kar diya jata hai taake safhe par bhi
+  // wohi nazar aaye jo jama mein gina gaya -- warna qatar musbat dikhti
+  // hai aur total us se mail nahi khata.
   const pick = (type: AccountType): BsSection => {
-    const rows = tb.rows.filter((r) => r.account_type === type);
+    const rows = tb.rows
+      .filter((r) => r.account_type === type)
+      .map((r) => (r.is_contra ? { ...r, balance: -r.balance } : r));
     return { rows, total: rows.reduce((s, r) => s + r.balance, 0) };
   };
 

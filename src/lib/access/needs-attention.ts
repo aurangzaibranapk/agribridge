@@ -93,6 +93,10 @@ async function handoffItems(): Promise<AttentionItem[]> {
 
 export async function loadNeedsAttention(): Promise<AttentionItem[]> {
   const today = new Date().toISOString().slice(0, 10);
+  // Pichhla mahina -- ghisai hamesha guzre hue mahine ki chalti hai.
+  const ab = new Date();
+  const pichhlaMahinaShuru = new Date(Date.UTC(ab.getUTCFullYear(), ab.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
+  const pichhlaMahinaAakhir = new Date(Date.UTC(ab.getUTCFullYear(), ab.getUTCMonth(), 0)).toISOString().slice(0, 10);
   const [
     purchaseApproval,
     purchaseSentBack,
@@ -114,6 +118,7 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     accessConflicts,
     cashCloseMissing,
     stockCountOpen,
+    depreciationDue,
   ] = await Promise.all([
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "submitted")),
     count("purchases", (q) => q.eq("status", "pending").eq("review_status", "sent_back")),
@@ -138,6 +143,16 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     // gini jati thi -- banday ki apni fehrist mein nahi aati thi.
     countView("v_cash_close_missing", "branch_id", (q) => q),
     count("stock_counts", (q) => q.eq("status", "counting")),
+    // Pichhle mahine ki ghisai jin asaason par abhi charhni baqi hai.
+    // Ye kaam mahine mein ek dafa hota hai, aur bhoolne par sab se der
+    // se pakRa jata hai: kharcha kam, nafa zyada -- aur dono theek
+    // lagte hain jab tak koi asaason ki fehrist na khole.
+    count("fixed_assets", (q) =>
+      q
+        .eq("status", "active")
+        .lte("in_service_on", pichhlaMahinaAakhir)
+        .or(`depreciated_upto.is.null,depreciated_upto.lt.${pichhlaMahinaShuru}`)
+    ),
   ]);
 
   const items: AttentionItem[] = [
@@ -160,6 +175,7 @@ export async function loadNeedsAttention(): Promise<AttentionItem[]> {
     { key: "access_pending", label: "na_access_pending", count: accessPending, href: "/admin/access-requests", tone: "amber", area: "admin" },
     { key: "access_conflicts", label: "na_access_conflicts", count: accessConflicts, href: "/admin/access-requests?tab=conflicts", tone: "red", area: "admin" },
     { key: "cash_close_missing", label: "na_cash_close_missing", count: cashCloseMissing, href: "/admin/cash-close", tone: "amber", area: "finance" },
+    { key: "depreciation_due", label: "na_depreciation_due", count: depreciationDue, href: "/admin/finance/assets/depreciation", tone: "amber", area: "finance" },
     { key: "stock_count_open", label: "na_stock_count_open", count: stockCountOpen, href: "/admin/stock-count", tone: "blue", area: "inventory" },
   ];
 

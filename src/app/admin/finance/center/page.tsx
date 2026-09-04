@@ -106,8 +106,12 @@ export default async function FinanceCenterPage() {
       title: t("fc_g4", lang),
       icon: <Building2 className="h-5 w-5" />,
       tone: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-      items: [],
-      baqi: [t("fc_b_assets", lang)],
+      items: [
+        { href: "/admin/finance/assets", label: t("fc_assets_register", lang), hint: t("fc_assets_hint", lang) },
+        { href: "/admin/finance/assets/depreciation", label: t("fc_assets_dep", lang) },
+        { href: "/admin/finance/assets/categories", label: t("fc_assets_cats", lang) },
+      ],
+      baqi: [],
     },
     {
       key: "reports",
