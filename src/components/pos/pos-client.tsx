@@ -550,51 +550,8 @@ export function PosClient({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden xl:grid-cols-[11rem_minmax(0,1fr)_23rem]">
-      {/* ===== Qismon ki patti -- sirf baRi screen par =====
-          Chhoti screen par ye patti cheezon ki jagah kha jati hai, aur
-          wahan toolbar ka chhanta pehle se maujood hai. Do jagah ek hi
-          kaam dena tab tak theek hai jab tak wo kisi se jagah na
-          chheene. */}
-      <aside className="hidden xl:flex xl:min-h-0 xl:flex-col">
-        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
-          {t("pos_categories", lang)}
-        </p>
-        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
-          <button
-            type="button"
-            onClick={() => setGroup("")}
-            className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
-              group === ""
-                ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-300"
-                : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
-            }`}
-          >
-            <span className="truncate">{t("pos_all_items", lang)}</span>
-            <span className="shrink-0 text-xs tabular-nums text-surface-400">{inventory.length}</span>
-          </button>
-          {groups.map((g) => (
-            <button
-              key={g.name}
-              type="button"
-              onClick={() => setGroup(g.name)}
-              className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${
-                group === g.name
-                  ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-300"
-                  : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
-              }`}
-            >
-              <span className="truncate">{g.name}</span>
-              {/* Khali qism chhupayi nahi jati -- sirf us par sifar likha
-                  hota hai. Chhupa dene se banda samajhta hai qism bani hi
-                  nahi aur nayi bana deta hai. */}
-              <span className="shrink-0 text-xs tabular-nums text-surface-400">{g.count}</span>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      {/* ================= DARMIYAN: cheezein ================= */}
+    <div className="grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:grid-cols-[minmax(0,1fr)_23rem] lg:overflow-hidden">
+      {/* ================= BAAYIN TARAF: cheezein ================= */}
       <section className="flex flex-col lg:min-h-0">
         {/* ---- Ek hi patti: naam, scan, talash, qism, ordering ----
             Malik ka kehna (4 September): barcode ke liye alag poori line

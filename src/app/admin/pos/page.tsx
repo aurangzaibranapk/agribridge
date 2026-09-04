@@ -167,16 +167,25 @@ export default async function PosPage() {
   // fehrist gayab ho jati, yani counter band. Counter par ye khatra
   // mol nahi liya ja sakta.
   //
-  // Qismein SAARI aati hain -- sirf wo nahi jin par is waqt maal para
-  // hai. Malik ka kehna (4 September): "sari category bhi aani chahiye,
-  // beshak products na hon abhi." Wajah waajib hai: counter par khaRa
-  // banda jab "Grocery" dhoondta hai aur wo fehrist mein hai hi nahi, to
-  // wo samajhta hai qism BANI hi nahi -- aur nayi qism bana deta hai. Isi
-  // se ek hi cheez ki do qismein ban jati hain.
+  // Qismein SIRF ISI DUKAN KI. Malik ka faisla (5 September, POS par
+  // dekhne ke baad): "karyana men sirf karyana item he ana chiay,
+  // category sirf karyana ki ani chiay."
   //
-  // Har qism ke saamne us par mojood cheezon ki ginti likhi jati hai,
-  // taake khali qism dhoka na de.
-  const { data: cats } = await supabase.from("categories").select("id, name").order("name");
+  // Pehle saari qismein aa rahi thin -- khaad, beej, zehr bhi -- aur
+  // karyana ki dukan par un ka koi kaam nahi. Wo fehrist itni lambi ho
+  // gayi thi ke us mein se apni qism dhoondna khud ek kaam ban gaya tha.
+  //
+  // "Isi dukan ki qism" ka matlab yahan wo qism hai jis ka maal is
+  // dukan ke godam mein para hai. Ye tay karne ka koi aur khana nizam
+  // mein maujood nahi (qismon par dukan ka nishaan nahi lagta), aur
+  // maujood cheez se jawab lena us se behtar hai ke naya khana bana kar
+  // usay bharne ka intezar kiya jaye.
+  const catIds = Array.from(
+    new Set(inventory.map((i: any) => i.products?.category_id).filter(Boolean) as string[])
+  );
+  const { data: cats } = catIds.length
+    ? await supabase.from("categories").select("id, name").in("id", catIds)
+    : { data: [] as { id: string; name: string }[] };
   const catName = new Map((cats ?? []).map((c) => [c.id, c.name]));
   for (const it of inventory as any[]) {
     if (it.products) it.products.category_name = catName.get(it.products.category_id) ?? null;
@@ -187,10 +196,7 @@ export default async function PosPage() {
     const n = it.products?.category_name;
     if (n) ginti.set(n, (ginti.get(n) ?? 0) + 1);
   }
-  // Ek hi naam ki do qismein (jo is nizam mein maujood hain) yahan ek
-  // hi khane mein aa jati hain -- chhantna naam par hota hai, id par
-  // nahi.
-  const groups = Array.from(new Set((cats ?? []).map((c) => c.name)))
+  const groups = Array.from(ginti.keys())
     .sort((a, b) => a.localeCompare(b))
     .map((name) => ({ name, count: ginti.get(name) ?? 0 }));
 
