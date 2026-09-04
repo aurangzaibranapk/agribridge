@@ -128,7 +128,112 @@ sirf barh sakti hai, ghat nahi sakti.
 
 ---
 
-## 5. Rokay hue qadam — malik ke system par aane ka intezar
+## 5. Deployment — 4 September 2026, MUKAMMAL
+
+Malik apne system par the; poori tarteeb un ke saath chali. **P0 rule ki
+har shart poori hui, usi tarteeb mein.**
+
+**Backup (verified).** Live ka apna `pg_dump`, PostgreSQL 17.11 se (Live
+17.6 hai -- 18 jaan boojh kar istemal nahi kiya: 18 ka bana dump PG 17
+par wapas na daala ja sake to wo backup nahi rehta):
+
+| File | Size |
+|---|---|
+| `live-schema-20260904.sql` | 1.2 MB |
+| `live-data-20260904.sql` | 1.5 MB |
+| `live-full-20260904.sql` | 2.6 MB |
+
+Yahan ek baat pakRi gayi jo likhni zaroori hai: **3 September ka data
+dump adhoora tha.** Us din schema 1.2M, data 314K aur full 2.6M tha --
+1.2 + 0.3 kabhi 2.6 nahi banta. 4 September ke adad aapas mein milte
+hain (1.2 + 1.5 ≈ 2.6). Aage se backup ki tasdeeq mein sirf "file bani"
+kaafi nahi -- **schema + data ka jama full ke qareeb hona chahiye**,
+warna backup hai magar poora nahi.
+
+**Ginti (pehle → baad).** Kuch zaya nahi hua:
+
+| Cheez | Pehle | Baad |
+|---|---|---|
+| Staff | 19 | 19 |
+| Kisan | 7 | 7 |
+| Products | 205 | 205 |
+| Dukanein / Shaakhein | 8 / 5 | 8 / 5 |
+| Machinery bookings | 8 | 8 |
+| Finance qatarein | 3 | 3 |
+| Role ki ijazat | 183 | 183 |
+| POS / Kharid / Stock / Doodh | 0 | 0 |
+| Tables | 262 | **278** |
+| Views | 76 | **78** |
+| feature_help (rm) | — | **183** |
+| Help baqi | — | **0** |
+
+**Migrations 265–288 -- sab chal gayin.** 265 MCP se; 266–288 malik ki
+apni machine se `psql` ke zariye, seedha repo ki file se:
+
+```
+export PGCLIENTENCODING=UTF8
+for f in $(ls supabase/migrations | awk -F_ '$1>=266 && $1<=288' | sort -n); do
+  echo "=== $f"
+  psql "$LIVEURL" -v ON_ERROR_STOP=1 -q -1 -f "supabase/migrations/$f" || { echo ">>> RUK GAYA: $f"; break; }
+done
+```
+
+Ye tareeqa jaan boojh kar chuna gaya. Pehle main har migration ki SQL
+haath se dobara likh kar bhej raha tha -- 240 KB. **Us mein ek harf ki
+ghalti bhi asal database mein ja sakti thi.** File seedha chalane mein
+likhai ka koi mauqa hi nahi rehta. `ON_ERROR_STOP=1` aur `-1` (har file
+apne transaction mein) se ghalti par wo file poori wapas hoti aur loop
+wahin ruk jata -- aage ki file nahi chalti.
+
+`psql` migration ka register khud nahi likhta, is liye
+`supabase_migrations.schema_migrations` mein 23 qatarein baad mein
+daali gayin.
+
+**Nateeje jo chalte waqt nazar aaye:** 274 ne 13 tables par khud-manzoori
+ki rok lagayi (`fn_sod_attach_triggers = 13`); 271/272 ka access
+conflict scan chala. Baqi sab paighaam NOTICE the (`drop ... if exists`),
+ghalti ek bhi nahi.
+
+**Build aur upload.** `npm run build` → `deploy.tar.gz` → cPanel Stop →
+upload (overwrite) → Extract → Start. `BRIDGE_AI_GEMINI_API_KEY` pehle
+se laga hua tha.
+
+**Smoke test (paanch safhe, sab theek):** `/admin/command-center` (naye
+chaar card aur nafa nuqsan ka table), `/admin/access-requests`
+(**Conflicts 2 -- sifar nahi**, yani 279 ke GRANT kaam kar rahe hain),
+Conflicts tab (scan aur SoD ke qawaid), "? Samjhein" ka panel (183 mein
+se ek), aur Bridge AI ka jawab.
+
+**Jo scan ne pehli hi dafa pakRa (bug nahi, asal karobari baat):**
+Finance Team ke paas `finance.banks[create/edit]` aur
+`bank-reconcile[edit]` **dono** hain -- yani jo bank entry banata hai
+wohi usay bank se mila kar theek keh deta hai. Doosra: Finance Team ke
+paas hassas features zaroorat se zyada hain. Ye sirf raye hai; kuch khud
+nahi hataya gaya. Faisla malik ka, aur qawaid Rules se badle ja sakte
+hain.
+
+**Nishan:** `live-2026-09-04` tag us commit par lag chuka hai jo Live par
+gaya. Wapas jane ka raasta ab maujood hai -- is se pehle repo mein ek bhi
+tag nahi tha.
+
+**Do cheezein jo abhi adhoori hain** (kaam nahi rokta, magar likh dena
+zaroori hai):
+1. Command Center ke jumle sirf Roman mein hain -- zaban EN par ho tab
+   bhi Roman dikhte hain.
+2. AI ke jawab mein safhe ka naam nahi, kachcha raasta (`/admin/...`)
+   aata hai. Malik ka apna usool ye tha ke aam staff ko raasta nahi,
+   naam dikhna chahiye.
+
+**Staff ko batana hai:** 272 ne Finance se `submissions` ka approve aur
+Manager se `stock-count` approve / `cash-close` create hata diya; 274 ke
+baad jis ne record banaya wo khud us ko manzoor, tasdeeq ya receive nahi
+kar sakta (Owner/Admin par ye rok nahi).
+
+---
+
+## 6. Purani fehrist — 4 September se pehle ka intezar (record ke liye)
+
+ (ho chuke)
 
 Malik ka usool: system par na hon to command **hold**. Wo kahein
 "system par aa gaya", tab ye poori fehrist ek sath jayegi.

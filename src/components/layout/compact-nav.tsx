@@ -87,7 +87,7 @@ export async function CompactNav({
         <HelpButton compact />
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />
-        <NotificationBell initialCount={unreadCount} href="/admin/contact-messages" />
+        <NotificationBell initialCount={unreadCount} href="/admin/notifications" />
         <div className="hidden items-center gap-2.5 border-l border-surface-200 pl-3 sm:flex dark:border-surface-700">
           {/* Naam ke sath shaakh -- ek hi banda kai shaakh dekh sakta hai,
               aur "main abhi kis shaakh mein hoon" har waqt saamne hona

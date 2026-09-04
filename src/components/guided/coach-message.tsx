@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 
 /**
@@ -22,7 +23,56 @@ import { ArrowUpRight } from "lucide-react";
  * Aur raasta (/admin/...) ab khula URL nahi -- safhe ke NAAM wala button
  * ban jata hai. Naam `labels` se aata hai; na mile to raasta waise hi
  * rehta hai (ghalat naam likhne se khali chhoRna behtar hai).
+ *
+ * Naam khud yahin se mangwaya jata hai (4 September). Pehle `labels` ek
+ * prop tha jo sirf Assistant panel bharta tha -- Bridge AI aur My Work
+ * ka coach box khali chhoR dete the, aur wahan bande ko phir wohi
+ * kachcha raasta nazar aata tha. Ek jagah likhi hui cheez ka teen jagah
+ * se aana hi wo soorat hai jahan do jagah theek aur teesri ghalat reh
+ * jati hai. Ab fehrist yahin, ek dafa, aa jati hai aur teenon jagah
+ * saanjhi rehti hai.
  */
+
+/** Poore safhe mein ek hi dafa -- teenon jagah wohi fehrist istemal karti hain. */
+let routeLabelCache: Record<string, string> | null = null;
+let routeLabelInflight: Promise<Record<string, string>> | null = null;
+
+function loadRouteLabels(): Promise<Record<string, string>> {
+  if (routeLabelCache) return Promise.resolve(routeLabelCache);
+  if (!routeLabelInflight) {
+    routeLabelInflight = fetch("/api/features/labels")
+      .then((r) => (r.ok ? r.json() : { labels: {} }))
+      .then((d) => {
+        routeLabelCache = (d.labels ?? {}) as Record<string, string>;
+        return routeLabelCache;
+      })
+      // Naam na mile to raasta waise hi rehta hai -- jawab phir bhi
+      // parha ja sakta hai. Is par jawab rokna zyada bura hota.
+      .catch(() => ({}) as Record<string, string>)
+      .finally(() => {
+        routeLabelInflight = null;
+      });
+  }
+  return routeLabelInflight;
+}
+
+function useRouteLabels(provided: Record<string, string>): Record<string, string> {
+  const given = Object.keys(provided).length > 0;
+  const [fetched, setFetched] = useState<Record<string, string>>(routeLabelCache ?? {});
+
+  useEffect(() => {
+    if (given) return;
+    let alive = true;
+    loadRouteLabels().then((l) => {
+      if (alive) setFetched(l);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [given]);
+
+  return given ? provided : fetched;
+}
 
 function stripMarks(s: string): string {
   return s
@@ -67,7 +117,8 @@ function Inline({ text, labels }: { text: string; labels: Record<string, string>
   );
 }
 
-export function CoachMessage({ text, labels = {} }: { text: string; labels?: Record<string, string> }) {
+export function CoachMessage({ text, labels: given = {} }: { text: string; labels?: Record<string, string> }) {
+  const labels = useRouteLabels(given);
   const lines = text.split("\n");
   const out: React.ReactNode[] = [];
   let bullets: string[] = [];

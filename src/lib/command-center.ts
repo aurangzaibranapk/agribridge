@@ -1,4 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { t } from "@/lib/i18n/translations";
+import type { Lang } from "@/lib/i18n/translations";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
 import { quantityReport } from "@/lib/ledger/quantity-money";
 
@@ -105,6 +107,18 @@ function sumOf<T extends Record<string, unknown>>(rows: T[] | null, column: keyo
   return (rows ?? []).reduce((total, row) => total + n(row[column]), 0);
 }
 
+/**
+ * Jumle mein khane bharna.
+ *
+ * `t()` khud khane nahi bharta, is liye ye chhota sa kaam yahan hota
+ * hai. Faida ye hai ke jumla poora ka poora zaban ki file mein rehta
+ * hai -- tukron mein jorne se har zaban ka apna qaida toot jata hai
+ * (Urdu mein adad aur lafz ki tarteeb English jaisi nahi).
+ */
+function fill(text: string, vars: Record<string, string>): string {
+  return text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
 function monthStart(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
@@ -164,7 +178,7 @@ function fmtQty(value: number, unit: string): string {
   return `${Math.round(value).toLocaleString()} ${unit}`;
 }
 
-export async function loadDeptKpis(): Promise<DeptKpi[]> {
+export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
   const service = createServiceClient();
   const from = monthStart();
   const to = monthEnd();
@@ -274,9 +288,10 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
   const milkOther = milkSalaries + milkElectricity + milkChiller + milkMaintenance;
   const milkProfit = milkRevenue == null ? null : milkRevenue - milkDirect - milkOther;
 
-  const milkWork = [`Jama ${fmtQty(milkLiters, "L")}`];
-  if (shortageLiters > 0) milkWork.push(`Kami ${fmtQty(shortageLiters, "L")}`);
-  if (milkFarmerPayable > 0) milkWork.push(`Kisan ko dena Rs ${Math.round(milkFarmerPayable).toLocaleString()}`);
+  const milkWork = [`${t("cc_w_collected", lang)} ${fmtQty(milkLiters, "L")}`];
+  if (shortageLiters > 0) milkWork.push(`${t("cc_w_shortage", lang)} ${fmtQty(shortageLiters, "L")}`);
+  if (milkFarmerPayable > 0)
+    milkWork.push(`${t("cc_w_farmer_payable", lang)} Rs ${Math.round(milkFarmerPayable).toLocaleString()}`);
 
   // ---------- Grain ----------
   const grainRevenue = sumOf(grain, "total_amount");
@@ -322,23 +337,23 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
       margin: margin(milkProfit, milkRevenue),
       pending: (pendingFat ?? []).length,
       pendingReason:
-        (pendingFat ?? []).length > 0 ? `${(pendingFat ?? []).length} entry FAT ki tasdeeq ke intezar mein` : null,
+        (pendingFat ?? []).length > 0 ? `${(pendingFat ?? []).length} ${t("cc_p_fat", lang)}` : null,
       pendingHref: "/admin/milk-collection/verify",
       state: milkFail || milkRevenue == null ? "incomplete" : "ok",
       note: milkFail
-        ? `Doodh ka record is waqt parha nahi ja saka (${milkFail}). Ye adad adhoore hain -- inhen sahi na samjhein.`
+        ? fill(t("cc_n_read_failed", lang), { err: milkFail })
         : milkRevenue == null
-          ? "Company billing ka service rate abhi set nahi -- us ke baghair doodh ki aamdani nahi banti."
-          : "Aamdani service rate (fi litre) se banti hai. Kisan ka doodh guzarne wali raqam hai, is nafa nuqsan ka hissa nahi.",
+          ? t("cc_n_milk_no_rate", lang)
+          : t("cc_n_milk", lang),
     },
     {
       key: "grain",
       label: "Grain",
       href: "/admin/grain-procurement/dashboard",
       work: [
-        `Kharida ${fmtQty(grainBought, "kg")}`,
-        `Bika ${fmtQty(grainSold, "kg")}`,
-        `Godam ${fmtQty(grainInStock, "kg")}`,
+        `${t("cc_w_bought", lang)} ${fmtQty(grainBought, "kg")}`,
+        `${t("cc_w_sold", lang)} ${fmtQty(grainSold, "kg")}`,
+        `${t("cc_w_in_store", lang)} ${fmtQty(grainInStock, "kg")}`,
       ],
       revenue: grainRevenue,
       directCost: grainCogs,
@@ -350,19 +365,19 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
       pendingHref: null,
       state: grainFail ? "incomplete" : "ok",
       note: grainFail
-        ? `Anaj ka record is waqt parha nahi ja saka (${grainFail}).`
+        ? fill(t("cc_n_read_failed", lang), { err: grainFail })
         : grainBought > 0 && grainSold === 0
-          ? `Is mahine Rs ${Math.round(grainBuyValue).toLocaleString()} ka anaj khareeda gaya magar bika nahi -- wo godam mein hai, nuqsan nahi.`
-          : "Lagat sirf BIKE hue maal ki hai; jo godam mein para hai wo abhi lagat nahi bana.",
+          ? t("cc_n_grain_unsold", lang)
+          : t("cc_n_grain", lang),
     },
     {
       key: "machinery",
       label: "Machinery",
       href: "/admin/machinery-rental/pnl",
       work: [
-        `Booking ${liveBookings.length}`,
-        `Mukammal ${completed}`,
-        `Acre ${machAcres > 0 ? machAcres.toFixed(1) : bookedAcres.toFixed(1)}`,
+        `${t("cc_w_bookings", lang)} ${liveBookings.length}`,
+        `${t("cc_w_completed", lang)} ${completed}`,
+        `${t("cc_w_acres", lang)} ${machAcres > 0 ? machAcres.toFixed(1) : bookedAcres.toFixed(1)}`,
       ],
       revenue: machRevenue,
       directCost: machDirect,
@@ -370,18 +385,16 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
       profit: machProfit,
       margin: margin(machProfit, machRevenue),
       pending: unbilled,
-      pendingReason: unbilled > 0 ? `${unbilled} mukammal booking ka bill abhi nahi bana` : null,
+      pendingReason: unbilled > 0 ? `${unbilled} ${t("cc_p_unbilled", lang)}` : null,
       pendingHref: "/admin/machinery-rental/billing",
       state: machFail ? "incomplete" : "ok",
-      note: machFail
-        ? `Machinery ka record is waqt parha nahi ja saka (${machFail}).`
-        : "Hamari aamdani commission hai, gross billing nahi. Diesel mein sirf hamara apna kharcha gina gaya -- wapas aane wala diesel kharcha nahi.",
+      note: machFail ? fill(t("cc_n_read_failed", lang), { err: machFail }) : t("cc_n_machinery", lang),
     },
     {
       key: "retail",
       label: "Retail",
       href: "/admin/reports/pnl",
-      work: [`Bikri ${(pos ?? []).length}`],
+      work: [`${t("cc_w_sales", lang)} ${(pos ?? []).length}`],
       revenue: retailRevenue,
       directCost: retailCogs,
       otherExpense: null,
@@ -389,18 +402,16 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
       margin: margin(retailProfit, retailRevenue),
       pending: (pendingReturns ?? []).length,
       pendingReason:
-        (pendingReturns ?? []).length > 0 ? `${(pendingReturns ?? []).length} wapsi faisle ke intezar mein` : null,
+        (pendingReturns ?? []).length > 0 ? `${(pendingReturns ?? []).length} ${t("cc_p_returns", lang)}` : null,
       pendingHref: "/admin/agri-returns",
       state: retailFail ? "incomplete" : "ok",
-      note: retailFail
-        ? `Bikri ka record is waqt parha nahi ja saka (${retailFail}).`
-        : "Kharche department ke hisaab se alag nahi rakhe jate, is liye baqi kharcha yahan track nahi hota.",
+      note: retailFail ? fill(t("cc_n_read_failed", lang), { err: retailFail }) : t("cc_n_retail", lang),
     },
     {
       key: "approvals",
       label: "Approval",
       href: "/admin/submissions",
-      work: [`Intezar mein ${(pendingSubs ?? []).length}`],
+      work: [`${t("cc_w_waiting", lang)} ${(pendingSubs ?? []).length}`],
       revenue: null,
       directCost: null,
       otherExpense: null,
@@ -408,10 +419,10 @@ export async function loadDeptKpis(): Promise<DeptKpi[]> {
       margin: null,
       pending: (pendingSubs ?? []).length,
       pendingReason:
-        (pendingSubs ?? []).length > 0 ? `${(pendingSubs ?? []).length} entry manzoori ke intezar mein` : null,
+        (pendingSubs ?? []).length > 0 ? `${(pendingSubs ?? []).length} ${t("cc_p_approvals", lang)}` : null,
       pendingHref: "/admin/submissions",
       state: "untracked",
-      note: "Ye department paisa nahi kamata -- ye qatar hai. Is ka koi nafa nuqsan nahi hota.",
+      note: t("cc_n_approval", lang),
     },
   ];
 }
@@ -716,47 +727,53 @@ export async function loadAlerts(): Promise<Alert[]> {
  * ruka hua kaam. Agar adhoore hisaab ki baat neeche chali jaye to
  * upar wala moqabla poora sach lagne lagta hai.
  */
-export function conclude(depts: DeptKpi[]): string[] {
+export function conclude(depts: DeptKpi[], lang: Lang = "rm"): string[] {
   const lines: string[] = [];
 
   // 1. Jin ka hisaab adhoora hai -- ye sab se pehle, warna neeche wala
   //    moqabla poora sach lagta hai.
   for (const d of depts.filter((x) => x.state === "incomplete")) {
-    lines.push(`**${d.label}** ka nafa nahi nikal raha: ${d.note ?? "us ka koi khana abhi khali hai."}`);
+    lines.push(fill(t("cc_i_incomplete", lang), { dept: d.label, why: d.note ?? "" }));
   }
 
   // 2. Wo baat jo nuqsan lagti hai magar nuqsan hai nahi.
   for (const d of depts.filter((x) => x.state === "ok" && x.note && x.key === "grain")) {
-    if ((d.profit ?? 0) <= 0 && d.note) lines.push(`**${d.label}**: ${d.note}`);
+    if ((d.profit ?? 0) <= 0 && d.note) lines.push(fill(t("cc_i_note", lang), { dept: d.label, why: d.note }));
   }
 
   // 3. Moqabla -- sirf un mein jin ka hisaab poora hai aur jinhon ne
   //    is mahine waqai kuch kamaya.
   const withProfit = depts.filter((d) => d.state === "ok" && d.profit != null && (d.revenue ?? 0) > 0);
   if (withProfit.length === 0) {
-    lines.push("Is mahine abhi itna kaam nahi hua ke departments ka moqabla kiya ja sake.");
+    lines.push(t("cc_i_too_early", lang));
   } else {
     const sorted = [...withProfit].sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0));
     const best = sorted[0];
     const worst = sorted[sorted.length - 1];
 
     lines.push(
-      `Sab se behtar: **${best.label}** — Rs ${Math.round(best.profit ?? 0).toLocaleString()} nafa, ` +
-        `Rs ${Math.round(best.revenue ?? 0).toLocaleString()} ki aamdani par` +
-        (best.margin != null ? ` (margin ${best.margin.toFixed(1)}%).` : ".")
+      fill(t("cc_i_best", lang), {
+        dept: best.label,
+        profit: `Rs ${Math.round(best.profit ?? 0).toLocaleString()}`,
+        revenue: `Rs ${Math.round(best.revenue ?? 0).toLocaleString()}`,
+        margin: best.margin != null ? ` (${best.margin.toFixed(1)}%)` : "",
+      })
     );
 
     if (sorted.length > 1 && worst.key !== best.key) {
       lines.push(
-        `Sab se kam: **${worst.label}** — margin ${worst.margin != null ? worst.margin.toFixed(1) : "—"}%. ` +
-          `Lagat Rs ${Math.round((worst.directCost ?? 0) + (worst.otherExpense ?? 0)).toLocaleString()} hai; nafa isi se dabta hai.`
+        fill(t("cc_i_worst", lang), {
+          dept: worst.label,
+          margin: worst.margin != null ? `${worst.margin.toFixed(1)}%` : "—",
+          cost: `Rs ${Math.round((worst.directCost ?? 0) + (worst.otherExpense ?? 0)).toLocaleString()}`,
+        })
       );
     }
   }
 
   // 4. Ruka hua kaam -- wajah ke sath, sirf adad nahi.
   for (const d of depts.filter((x) => x.pending > 0 && x.pendingReason)) {
-    lines.push(`**${d.label}**: ${d.pendingReason}.`);
+    lines.push(fill(t("cc_i_pending", lang), { dept: d.label, why: d.pendingReason ?? "" }));
   }
 
   return lines;

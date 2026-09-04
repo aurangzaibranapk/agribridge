@@ -54,23 +54,23 @@ export default async function CommandCenterPage() {
     return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
 
-  const [money, depts, alerts] = await Promise.all([loadMoneyToday(), loadDeptKpis(), loadAlerts()]);
-  const lines = conclude(depts);
+  const [money, depts, alerts] = await Promise.all([loadMoneyToday(), loadDeptKpis(lang), loadAlerts()]);
+  const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
 
   const moneyTiles = [
-    { label: "Aaj ki bikri", value: rs(money.revenue), href: "/admin/pos" },
-    { label: "Aaj ke kharche", value: rs(money.expenses), href: "/admin/company-expenses" },
-    { label: "Aaj ka nafa", value: rs(money.net), href: "/admin/reports/pnl", tone: money.net < 0 ? "red" : "green" },
-    { label: "Khaton mein maujood", value: rs(money.cash), href: "/admin/finance" },
-    { label: "Wusool karna hai", value: rs(money.receivable), href: "/admin/branch-credit" },
+    { label: t("cc_t_sales", lang), value: rs(money.revenue), href: "/admin/pos" },
+    { label: t("cc_t_expenses", lang), value: rs(money.expenses), href: "/admin/company-expenses" },
+    { label: t("cc_t_profit", lang), value: rs(money.net), href: "/admin/reports/pnl", tone: money.net < 0 ? "red" : "green" },
+    { label: t("cc_t_cash", lang), value: rs(money.cash), href: "/admin/finance" },
+    { label: t("cc_t_receivable", lang), value: rs(money.receivable), href: "/admin/branch-credit" },
   ];
 
   return (
     <div className="space-y-5">
       <PageHeader
         title={t("cc_title", lang)}
-        description="Aaj ka paisa, har department ka moqabla, aur wo cheezein jo tawajjah mangti hain."
+        description={t("cc_subtitle", lang)}
       />
 
       {/* ---- Aaj ---- */}
@@ -141,7 +141,7 @@ export default async function CommandCenterPage() {
           {totals.excluded.length > 0 && (
             <span className="text-amber-700 dark:text-amber-500">
               {" "}
-              {totals.excluded.join(", ")} shaamil nahi — un ka hisaab adhoora hai.
+              {t("cc_excluded", lang).replace("{names}", totals.excluded.join(", "))}
             </span>
           )}
         </p>
@@ -255,8 +255,7 @@ export default async function CommandCenterPage() {
             ))}
           </ul>
           <p className="mt-3 border-t border-surface-200 pt-2 text-xs text-surface-400 dark:border-surface-800">
-            Ye nateeja aap ke apne khaton se ginam kar nikala gaya hai — koi andaza nahi. Jo baat khaton
-            se nahi nikalti, wo yahan likhi bhi nahi jati.
+            {t("cc_from_books", lang)}
           </p>
         </Card>
       </div>
