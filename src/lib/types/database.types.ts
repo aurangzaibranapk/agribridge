@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_periods: {
+        Row: { closed_at: string | null; closed_by: string | null; closing_entry_id: string | null; created_at: string; id: string; note: string | null; period: string; reopen_reason: string | null; reopened_at: string | null; reopened_by: string | null; status: string }
+        Insert: { closed_at?: string | null; closed_by?: string | null; closing_entry_id?: string | null; created_at?: string; id?: string; note?: string | null; period: string; reopen_reason?: string | null; reopened_at?: string | null; reopened_by?: string | null; status?: string }
+        Update: { closed_at?: string | null; closed_by?: string | null; closing_entry_id?: string | null; created_at?: string; id?: string; note?: string | null; period?: string; reopen_reason?: string | null; reopened_at?: string | null; reopened_by?: string | null; status?: string }
+        Relationships: []
+      }
       asset_categories: {
         Row: { accum_account: string; asset_account: string; created_at: string; default_life_months: number; default_method: string; default_rate: number | null; expense_account: string; id: string; is_active: boolean; name: string }
         Insert: { accum_account: string; asset_account: string; created_at?: string; default_life_months?: number; default_method?: string; default_rate?: number | null; expense_account: string; id?: string; is_active?: boolean; name: string }

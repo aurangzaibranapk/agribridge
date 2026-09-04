@@ -84,4 +84,56 @@ export const financeReportsDict = {
   fr_cogs: { en: "Cost of goods", rm: "Maal ki lagat", ur: "مال کی لاگت" },
   fr_expense: { en: "Expenses", rm: "Kharche", ur: "خرچے" },
   fr_profit: { en: "Profit", rm: "Nafa", ur: "نفع" },
+
+  // ---------------------------------------------------------------
+  // Hisaab ke arse (accounting periods)
+  // ---------------------------------------------------------------
+  per_title: { en: "Accounting Periods", rm: "Hisaab ke Arse", ur: "حساب کے عرصے" },
+  per_desc: {
+    en: "Each month is open or closed. Nothing new can be posted into a closed month.",
+    rm: "Har mahina khula hai ya band. Band mahine mein koi nayi entry nahi jati.",
+    ur: "ہر مہینہ کھلا ہے یا بند۔ بند مہینے میں کوئی نئی انٹری نہیں جاتی۔",
+  },
+  per_only_finance: {
+    en: "This page is for Owner, Admin, Manager and Finance.",
+    rm: "Ye safha Owner, Admin, Manager aur Finance ke liye hai.",
+    ur: "یہ صفحہ اونر، ایڈمن، مینیجر اور فنانس کے لیے ہے۔",
+  },
+  per_back: { en: "Finance", rm: "Maali markaz", ur: "مالی مرکز" },
+  per_load_error: { en: "Could not load", rm: "Fehrist nahi mili", ur: "فہرست نہیں ملی" },
+  per_month: { en: "Month", rm: "Mahina", ur: "مہینہ" },
+  per_entries: { en: "Entries", rm: "Entries", ur: "انٹریاں" },
+  per_status: { en: "Status", rm: "Halat", ur: "حالت" },
+  per_open: { en: "Open", rm: "Khula", ur: "کھلا" },
+  per_closed: { en: "Closed", rm: "Band", ur: "بند" },
+  per_close: { en: "Close", rm: "Band karein", ur: "بند کریں" },
+  per_reopen: { en: "Reopen", rm: "Dobara kholein", ur: "دوبارہ کھولیں" },
+  per_reopened: { en: "was reopened", rm: "dobara khola gaya tha", ur: "دوبارہ کھولا گیا تھا" },
+  per_cancel: { en: "Cancel", rm: "Rehne dein", ur: "رہنے دیں" },
+  per_reopen_reason: {
+    en: "Why is it being reopened? (at least 10 letters)",
+    rm: "Dobara kyun khol rahe hain? (kam az kam das harf)",
+    ur: "دوبارہ کیوں کھول رہے ہیں؟ (کم از کم دس حرف)",
+  },
+  per_running: { en: "running", rm: "chalta hua", ur: "چلتا ہوا" },
+  per_running_note: {
+    en: "still running",
+    rm: "abhi chal raha hai",
+    ur: "ابھی چل رہا ہے",
+  },
+  per_working: { en: "Working…", rm: "Ho raha…", ur: "ہو رہا…" },
+  per_year_close: { en: "Close the year", rm: "Saal band karein", ur: "سال بند کریں" },
+  per_year_close_btn: { en: "Close year", rm: "Saal band karein", ur: "سال بند کریں" },
+  per_year: { en: "Year", rm: "Saal", ur: "سال" },
+  per_year_closed: { en: "year closed", rm: "saal band", ur: "سال بند" },
+  per_year_hint: {
+    en: "Income and expense accounts belong to one year only. Closing the year moves their balance into capital and starts them from zero — otherwise next year's profit still carries this year's inside it.",
+    rm: "Aamdani aur kharche ke khate sirf EK saal ke hote hain. Saal band karne se un ka baqi sarmaye mein chala jata hai aur wo sifar se shuru hote hain — warna agle saal ka nafa is saal ka nafa bhi apne andar rakhta hai.",
+    ur: "آمدنی اور خرچے کے کھاتے صرف ایک سال کے ہوتے ہیں۔ سال بند کرنے سے ان کا باقی سرمائے میں چلا جاتا ہے اور وہ صفر سے شروع ہوتے ہیں۔",
+  },
+  per_note: {
+    en: "Closing does not delete anything — it only shuts the door on new entries. A closed month can be reopened, but the reason is recorded and shows on the audit trail.",
+    rm: "Band karne se kuch mitta nahi — sirf naye indraj ka darwaza band hota hai. Band mahina dobara khola ja sakta hai, magar us ki wajah darj hoti hai aur audit par nazar aati hai.",
+    ur: "بند کرنے سے کچھ مٹتا نہیں — صرف نئے اندراج کا دروازہ بند ہوتا ہے۔ بند مہینہ دوبارہ کھولا جا سکتا ہے، مگر اس کی وجہ درج ہوتی ہے۔",
+  },
 } as const;

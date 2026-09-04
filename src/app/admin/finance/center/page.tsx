@@ -73,7 +73,7 @@ export default async function FinanceCenterPage() {
         { href: "/admin/reconciliation", label: t("fc_daily_recon", lang) },
         { href: "/admin/audit-trail", label: t("fc_reversal", lang), hint: t("fc_reversal_hint", lang) },
       ],
-      baqi: [t("fc_b_pdc", lang), t("fc_b_recurring", lang), t("fc_b_budget", lang), t("fc_b_closing", lang), t("fc_b_costing", lang)],
+      baqi: [t("fc_b_pdc", lang), t("fc_b_recurring", lang), t("fc_b_budget", lang), t("fc_b_costing", lang)],
     },
     {
       key: "pay",
@@ -97,10 +97,11 @@ export default async function FinanceCenterPage() {
       tone: "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
       items: [
         { href: "/admin/finance/accounts", label: t("coa_title", lang), hint: t("coa_desc", lang) },
+        { href: "/admin/finance/periods", label: t("per_title", lang), hint: t("per_desc", lang) },
         { href: "/admin/finance/banks", label: t("fc_banks", lang) },
         { href: "/admin/finance/payment-mapping", label: t("fc_pay_map", lang), hint: t("fc_pay_map_hint", lang) },
       ],
-      baqi: [t("fc_b_terms", lang), t("fc_b_cheque", lang), t("fc_b_periods", lang), t("fc_b_merge", lang)],
+      baqi: [t("fc_b_terms", lang), t("fc_b_cheque", lang), t("fc_b_merge", lang)],
     },
     {
       key: "assets",
