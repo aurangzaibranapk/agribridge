@@ -17,12 +17,14 @@ interface InventoryItem {
   selling_price: number;
   /** NULL = is par thok ka rate nahi (retail lagega). Sifar se ALAG hai. */
   wholesale_price: number | null;
-  products: { name: string; pack_size: string | null; barcode: string | null; internal_barcode?: string | null } | null;
+  products: { name: string; pack_size: string | null; barcode: string | null; internal_barcode?: string | null; image_url?: string | null; unit_code?: string | null; category_name?: string | null } | null;
 }
 interface Customer {
   id: string;
   name: string;
   phone: string | null;
+  /** Us par kitna baqi hai. NULL = maloom nahi, sifar se ALAG. */
+  balance?: number | null;
   /** Wo dukan jise hum maal dete hain -- us par thok ka rate lagta hai (246). */
   isWholesaleShop: boolean;
 }
@@ -57,12 +59,15 @@ interface PaymentLine {
 export function PosClient({
   sellerName,
   inventory,
+  groups = [],
   customers,
   rateBaqiCount = 0,
   lang,
 }: {
   sellerName: string;
   inventory: InventoryItem[];
+  /** Qismein -- counter par chhantne ke liye. */
+  groups?: string[];
   customers: Customer[];
   /**
    * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
@@ -82,6 +87,11 @@ export function PosClient({
 }) {
   const supabase = createClient();
   const [search, setSearch] = useState("");
+  const [group, setGroup] = useState("");
+  // Gahak ka search: naam ya phone se. CNIC ka khana is nizam mein hai
+  // hi nahi -- is liye us ka dawa bhi nahi kiya jata. Jo cheez maujood
+  // nahi, us ka naam likh dena bande ko dhoondwata rehta hai.
+  const [custQuery, setCustQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   // "Thok" par click karte hi neeche sirf wo dukanein khulti hain jinhen
@@ -139,9 +149,29 @@ export function PosClient({
 
   const filteredInventory = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return inventory;
-    return inventory.filter((item) => item.products?.name?.toLowerCase().includes(q));
-  }, [inventory, search]);
+    return inventory.filter((item) => {
+      if (group && item.products?.category_name !== group) return false;
+      if (!q) return true;
+      // Naam se bhi, aur barcode se bhi -- counter par banda dono
+      // tarah dhoondta hai.
+      const p = item.products;
+      return (
+        p?.name?.toLowerCase().includes(q) ||
+        p?.barcode?.toLowerCase().includes(q) ||
+        p?.internal_barcode?.toLowerCase().includes(q)
+      );
+    });
+  }, [inventory, search, group]);
+
+  /** Gahak ki chhoti fehrist -- naam ya phone se. */
+  const custMatches = useMemo(() => {
+    const q = custQuery.trim().toLowerCase();
+    const pool = customers.filter((c) => c.isWholesaleShop === wholesaleMode);
+    if (!q) return pool.slice(0, 8);
+    return pool
+      .filter((c) => c.name.toLowerCase().includes(q) || (c.phone ?? "").toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [customers, custQuery, wholesaleMode]);
 
   const total = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0),
@@ -360,6 +390,19 @@ export function PosClient({
                 className="pl-9"
               />
             </div>
+            {/* Qism ka filter -- 265 cheezon mein se dhoondna naam se
+                mushkil hai, magar "Grocery" chun kar fehrist chhoti ho
+                jati hai. Qism na ho to ye khana nazar hi nahi aata. */}
+            {groups.length > 0 && (
+              <Select value={group} onChange={(e) => setGroup(e.target.value)} className="w-44">
+                <option value="">{t("pos_all_groups", lang)}</option>
+                {groups.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
         </div>
 
@@ -383,23 +426,73 @@ export function PosClient({
         )}
 
         <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          {/* Counter par cheez ki TASVEER sab se tez pehchan hai.
+              Jab tak barcode nahi lagte, banda dabba dekh kar pehchanta
+              hai -- naam parh kar nahi. Isi liye khana bara hua aur
+              tasveer ko sab se upar jagah mili. Jis ka na ho, us par
+              naam ka pehla harf aata hai: khali dabba us se bura lagta
+              hai. */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {filteredInventory.map((item) => (
               <button
                 key={item.id}
                 onClick={() => addToCart(item)}
-                className="rounded-card border border-surface-200 bg-white p-3 text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
+                className="overflow-hidden rounded-card border border-surface-200 bg-white text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
               >
-                <p className="text-sm font-medium text-surface-900 dark:text-surface-100 line-clamp-2">
-                  {item.products?.name}
-                </p>
-                {item.products?.pack_size && (
-                  <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
-                )}
-                <p className="mt-2 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
-                  Rs {item.selling_price.toLocaleString()}
-                </p>
-                <p className="mt-1 text-xs text-surface-400">Stock: {item.stock_quantity}</p>
+                <div className="relative flex h-28 items-center justify-center bg-surface-100 dark:bg-surface-800">
+                  {item.products?.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.products.image_url}
+                      alt={item.products?.name ?? ""}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="font-display text-3xl font-semibold tracking-wide text-surface-400 dark:text-surface-500">
+                      {(item.products?.name ?? "?")
+                        .trim()
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((w) => w.charAt(0))
+                        .join("")
+                        .toUpperCase() || "?"}
+                    </span>
+                  )}
+                  {/* Stock upar daayen, rang wale nuqte ke sath. Adad
+                      akela kuch nahi batata -- 8 kisi cheez ke liye
+                      bohat hai aur kisi ke liye khatam hone ke barabar.
+                      Rang wo faisla ek nazar mein de deta hai. */}
+                  <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        item.stock_quantity <= 5
+                          ? "bg-red-500"
+                          : item.stock_quantity <= 20
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                      }`}
+                    />
+                    {item.stock_quantity}
+                  </span>
+                </div>
+
+                <div className="p-3">
+                  <p className="text-sm font-medium leading-snug text-surface-900 line-clamp-2 dark:text-surface-100">
+                    {item.products?.name}
+                  </p>
+                  {item.products?.pack_size && (
+                    <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
+                  )}
+                  <p className="mt-1.5 font-display text-base font-semibold text-brand-700 dark:text-brand-300">
+                    Rs {item.selling_price.toLocaleString()}
+                    {item.products?.unit_code && (
+                      <span className="ml-1 text-xs font-normal text-surface-400">
+                        / {item.products.unit_code}
+                      </span>
+                    )}
+                  </p>
+                </div>
               </button>
             ))}
             {filteredInventory.length === 0 && (
@@ -505,17 +598,87 @@ export function PosClient({
               </Select>
             )
           ) : (
-            <Select value={customerId} onChange={(e) => applyCustomer(e.target.value)}>
-              <option value="">{t("pos_walk_in", lang)}</option>
-              {customers
-                .filter((c) => !c.isWholesaleShop)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.phone ? ` - ${c.phone}` : ""}
-                  </option>
-                ))}
-            </Select>
+            <div>
+              {/* Chuna hua gahak: naam, phone aur us ka BAQI. Baqi
+                  yahan is liye hai ke naya udhaar dene ka faisla usi
+                  waqt hota hai -- baad mein khata kholne par wo faisla
+                  ho chuka hota hai. */}
+              {chosenCustomer ? (
+                <div className="flex items-start gap-2 rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">
+                      {chosenCustomer.name}
+                    </p>
+                    {chosenCustomer.phone && (
+                      <p className="text-xs text-surface-500">{chosenCustomer.phone}</p>
+                    )}
+                    <p className="mt-0.5 text-xs">
+                      <span className="text-surface-500">{t("pos_cust_balance", lang)}: </span>
+                      {chosenCustomer.balance == null ? (
+                        <span className="text-surface-400">—</span>
+                      ) : (
+                        <span
+                          className={
+                            chosenCustomer.balance > 0
+                              ? "font-semibold text-red-600"
+                              : "font-semibold text-emerald-700"
+                          }
+                        >
+                          Rs {Math.round(chosenCustomer.balance).toLocaleString()}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyCustomer("");
+                      setCustQuery("");
+                    }}
+                    className="shrink-0 rounded-md px-1.5 text-surface-400 hover:text-surface-700"
+                    aria-label={t("pos_walk_in", lang)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    value={custQuery}
+                    onChange={(e) => setCustQuery(e.target.value)}
+                    placeholder={t("pos_cust_search", lang)}
+                  />
+                  {custQuery.trim() !== "" && (
+                    <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
+                      {custMatches.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-surface-400">{t("pos_cust_none", lang)}</p>
+                      ) : (
+                        custMatches.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              applyCustomer(c.id);
+                              setCustQuery("");
+                            }}
+                            className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"
+                          >
+                            <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.name}</p>
+                            <p className="text-xs text-surface-500">
+                              {c.phone ?? "—"}
+                              {c.balance != null && c.balance > 0
+                                ? ` · Rs ${Math.round(c.balance).toLocaleString()}`
+                                : ""}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <p className="mt-1 text-xs text-surface-400">{t("pos_walk_in_hint", lang)}</p>
+                </>
+              )}
+            </div>
           )}
 
           {wholesaleOn && (

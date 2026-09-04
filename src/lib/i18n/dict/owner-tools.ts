@@ -49,6 +49,17 @@ export const ownerToolsDict = {
   wd_my_name: { en: "Your name is on it", rm: "Aap ka naam laga hai", ur: "آپ کا نام لگا ہے" },
   wd_none: { en: "Nothing has been handed to you.", rm: "Aap ke zimme abhi koi kaam nahi.", ur: "آپ کے ذمے ابھی کوئی کام نہیں۔" },
 
+  // ---- POS counter ----
+  pos_all_groups: { en: "All groups", rm: "Sab qismein", ur: "سب قسمیں" },
+  pos_cust_search: { en: "Search by name or phone", rm: "Naam ya phone se dhoondein", ur: "نام یا فون سے ڈھونڈیں" },
+  pos_cust_none: { en: "No customer found by that name or phone.", rm: "Is naam ya phone se koi gahak nahi mila.", ur: "اس نام یا فون سے کوئی گاہک نہیں ملا۔" },
+  pos_cust_balance: { en: "Balance", rm: "Us par baqi", ur: "اس پر باقی" },
+  pos_walk_in_hint: {
+    en: "Leave empty for a walk-in customer.",
+    rm: "Aam gahak ho to khali chhoR dein.",
+    ur: "عام گاہک ہو تو خالی چھوڑ دیں۔",
+  },
+
   // ---- Ghanti (notification bell) ----
   nbell_title: { en: "Notifications", rm: "Ittila-aat", ur: "اطلاعات" },
   nbell_unread: { en: "New", rm: "Nayi", ur: "نئی" },

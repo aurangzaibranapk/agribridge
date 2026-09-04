@@ -65,13 +65,13 @@ export default async function PosPage() {
   // apna maal dhoondta reh jata hai.
   let rateBaqiCount = 0;
   let rawCustomers:
-    | { id: string; name: string; phone: string | null; isWholesaleShop: boolean }[]
+    | { id: string; name: string; phone: string | null; balance?: number | null; isWholesaleShop: boolean }[]
     | null = null;
   if (dealer) {
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase
@@ -88,7 +88,7 @@ export default async function PosPage() {
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, selling_price, wholesale_price, sale_rate_pending)")
+          .select("product_id, quantity_on_hand, products(name, pack_size, barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };
@@ -121,12 +121,16 @@ export default async function PosPage() {
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
-      .select("id, name, phone_number, customer_type")
+      .select("id, name, phone_number, customer_type, current_balance")
       .order("name");
     rawCustomers = (cust ?? []).map((c: any) => ({
       id: c.id,
       name: c.name,
       phone: c.phone_number,
+      // Gahak chunte hi us ka baqi saamne. Khata wale gahak par yehi
+      // wo adad hai jo counter par faisla badalta hai -- aur us ke
+      // baghair banda naya udhaar de deta hai.
+      balance: c.current_balance == null ? null : Number(c.current_balance),
       isWholesaleShop: c.customer_type === "wholesale_shop",
     }));
   }
@@ -138,12 +142,29 @@ export default async function PosPage() {
     wholesale_price: item.wholesale_price ?? null,
     products: Array.isArray(item.products) ? item.products[0] ?? null : item.products ?? null,
   }));
+
+  // Qism ka naam alag sawal se, nested embed se nahi. Embed nakaam ho
+  // to wo KHALI lauta deta hai -- aur us soorat mein poori products ki
+  // fehrist gayab ho jati, yani counter band. Counter par ye khatra
+  // mol nahi liya ja sakta.
+  const catIds = Array.from(
+    new Set((inventory.map((i: any) => i.products?.category_id).filter(Boolean) as string[]))
+  );
+  const { data: cats } = catIds.length
+    ? await supabase.from("categories").select("id, name").in("id", catIds)
+    : { data: [] as { id: string; name: string }[] };
+  const catName = new Map((cats ?? []).map((c) => [c.id, c.name]));
+  const groups = Array.from(new Set((cats ?? []).map((c) => c.name))).sort();
+  for (const it of inventory as any[]) {
+    if (it.products) it.products.category_name = catName.get(it.products.category_id) ?? null;
+  }
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
   return (
     <PosClient
       lang={getLanguageFromCookies("rm")}
       sellerName={sellerName}
       inventory={inventory}
+      groups={groups}
       customers={rawCustomers ?? []}
       rateBaqiCount={rateBaqiCount}
     />

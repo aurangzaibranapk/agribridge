@@ -116,6 +116,28 @@ function toNumber(raw: string | undefined): number | null {
  * hota hai, 9 May nahi. Ye ek harf ka farq mahine bhar ki expiry ghalat
  * kar deta hai, is liye din pehle parha jata hai.
  */
+/**
+ * Naam ka pehla harf bara.
+ *
+ * Sheet se naam chhote harfon mein aate hain ("prince", "surfexcel"),
+ * aur counter par wo bhaddey lagte hain -- khaas kar jab barcode na ho
+ * aur banda naam hi parh kar cheez pehchan raha ho.
+ *
+ * Magar ye kaam poore naam par nahi hota: JO LAFZ PEHLE SE BARE HARFON
+ * MEIN HO USAY HAATH NAHI LAGAYA JATA. Warna "DAP" -> "Dap" aur "NPK"
+ * -> "Npk" ho jata, aur wo naam theek karna nahi, naam bigarna hai.
+ * Adad aur pack size ("1kg", "5L") khud ba khud bach jate hain, kyunke
+ * un ka pehla harf harf hai hi nahi.
+ */
+function tidyName(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((w) => (w === w.toLowerCase() ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 function toDate(raw: string | undefined): string | null {
   if (!raw) return null;
   const s = raw.trim();
@@ -333,7 +355,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       return v !== undefined ? v.trim() : at(r, k);
     };
 
-    const name = (pick("name") ?? "").trim();
+    const name = tidyName(pick("name") ?? "");
     const notes: string[] = [];
 
     const barcode = (pick("barcode") ?? "").trim() || null;
