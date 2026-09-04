@@ -16033,6 +16033,54 @@ export type Database = {
         }
         Relationships: []
       }
+      product_image_drafts: {
+        Row: {
+          generated_at: string
+          generated_by: string | null
+          id: string
+          image_url: string
+          is_branded: boolean
+          model: string | null
+          note: string | null
+          product_id: string
+          prompt: string | null
+          replaced_image_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          image_url: string
+          is_branded?: boolean
+          model?: string | null
+          note?: string | null
+          product_id: string
+          prompt?: string | null
+          replaced_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          image_url?: string
+          is_branded?: boolean
+          model?: string | null
+          note?: string | null
+          product_id?: string
+          prompt?: string | null
+          replaced_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           barcode_source: string | null
@@ -16051,6 +16099,7 @@ export type Database = {
           expiry_date: string | null
           id: string
           image_url: string | null
+          image_source: string | null
           is_available: boolean
           is_deleted: boolean
           is_verified: boolean
@@ -16093,6 +16142,7 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           image_url?: string | null
+          image_source?: string | null
           is_available?: boolean
           is_deleted?: boolean
           is_verified?: boolean
@@ -16135,6 +16185,7 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           image_url?: string | null
+          image_source?: string | null
           is_available?: boolean
           is_deleted?: boolean
           is_verified?: boolean
@@ -20489,6 +20540,20 @@ export type Database = {
       }
     }
     Views: {
+      v_products_missing_image: {
+        Row: {
+          brand_id: string | null
+          category_id: string | null
+          company_id: string | null
+          is_branded: boolean | null
+          name: string | null
+          open_draft_id: string | null
+          pack_size: string | null
+          product_id: string | null
+          unit_code: string | null
+        }
+        Relationships: []
+      }
       v_pos_sale_returnable: {
         Row: {
           original_cogs: number | null

@@ -114,6 +114,62 @@ export const inventoryDict = {
   prh_kind_selling: { en: "Selling", rm: "Bikri", ur: "بکری" },
   inv_pc_no_stock: { en: "No stock row in any warehouse yet.", rm: "Abhi kisi godam mein is ka khana nahi.", ur: "ابھی کسی گودام میں اس کا خانہ نہیں۔" },
   inv_pc_back: { en: "Back to inventory", rm: "Stock ki fehrist par wapas", ur: "اسٹاک کی فہرست پر واپس" },
+
+  // ---- Cheezon ki tasveerein, AI se masoda (296) ----
+  pi_title: { en: "Product images", rm: "Cheezon ki tasveerein", ur: "چیزوں کی تصویریں" },
+  pi_desc: {
+    en: "Where an item has no picture, AI can draft one. It goes live only after a person has looked at it.",
+    rm: "Jis cheez ki tasveer na ho, us ka masoda AI bana deta hai. Lagti wo aadmi ke dekhne ke baad hai.",
+    ur: "جس چیز کی تصویر نہ ہو، اس کا مسودہ AI بنا دیتا ہے۔ لگتی وہ آدمی کے دیکھنے کے بعد ہے۔",
+  },
+  pi_only_admin: {
+    en: "This page is for the Owner, Admin or Manager.",
+    rm: "Ye safha Owner, Admin ya Manager ke liye hai.",
+    ur: "یہ صفحہ مالک، ایڈمن یا مینیجر کے لیے ہے۔",
+  },
+  pi_missing: { en: "Images missing", rm: "Tasveer baqi", ur: "تصویر باقی" },
+  pi_drafts_open: { en: "Drafts to review", rm: "Masode dekhne baqi", ur: "مسودے دیکھنے باقی" },
+  pi_bulk: { en: "Make drafts", rm: "Masode banayein", ur: "مسودے بنائیں" },
+  pi_generate: { en: "Generate", rm: "Banayein", ur: "بنائیں" },
+  pi_generate_one: { en: "Make a draft", rm: "Masoda banayein", ur: "مسودہ بنائیں" },
+  pi_working: { en: "Working…", rm: "Ban raha hai…", ur: "بن رہا ہے…" },
+  pi_review: { en: "Drafts waiting for you", rm: "Aap ke dekhne ke liye masode", ur: "آپ کے دیکھنے کے لیے مسودے" },
+  pi_review_note: {
+    en: "Nothing goes onto a product until you approve it here.",
+    rm: "Jab tak aap yahan manzoor na karein, kisi cheez par kuch nahi lagta.",
+    ur: "جب تک آپ یہاں منظور نہ کریں، کسی چیز پر کچھ نہیں لگتا۔",
+  },
+  pi_no_drafts: { en: "No drafts waiting.", rm: "Koi masoda baqi nahi.", ur: "کوئی مسودہ باقی نہیں۔" },
+  pi_list: { en: "Items with no picture", rm: "Jin cheezon ki tasveer nahi", ur: "جن چیزوں کی تصویر نہیں" },
+  pi_list_note: {
+    en: "Sixty at a time. Make drafts, look at them, then approve.",
+    rm: "Ek dafa mein saath. Masode banayein, dekhein, phir manzoor karein.",
+    ur: "ایک دفعہ میں ساٹھ۔ مسودے بنائیں، دیکھیں، پھر منظور کریں۔",
+  },
+  pi_none_missing: {
+    en: "Every item has a picture.",
+    rm: "Har cheez ki tasveer lagi hui hai.",
+    ur: "ہر چیز کی تصویر لگی ہوئی ہے۔",
+  },
+  pi_has_draft: { en: "draft ready", rm: "masoda tayyar", ur: "مسودہ تیار" },
+  pi_ai_made: { en: "AI draft", rm: "AI ka masoda", ur: "AI کا مسودہ" },
+  pi_branded: {
+    en: "Named brand — AI will not draw the real pack",
+    rm: "Naam wali cheez — AI asal dabba nahi banayega",
+    ur: "نام والی چیز — AI اصل ڈبہ نہیں بنائے گا",
+  },
+  pi_branded_warn: {
+    en: "This is a named brand. What you see is a plain placeholder, not a photo of the real pack — the real pack photo should be uploaded.",
+    rm: "Ye naam wali cheez hai. Jo dikh raha hai wo saada nishaan hai, asal dabbe ki tasveer nahi — asal tasveer charhayi jani chahiye.",
+    ur: "یہ نام والی چیز ہے۔ جو دکھ رہا ہے وہ سادہ نشان ہے، اصل ڈبے کی تصویر نہیں — اصل تصویر چڑھائی جانی چاہیے۔",
+  },
+  pi_replace_real: {
+    en: "This item already has a REAL picture. Tick this only if you truly want the AI draft to take its place.",
+    rm: "Is cheez par pehle se ASAL tasveer lagi hui hai. Tick sirf tab karein jab waqai AI wali us ki jagah lagani ho.",
+    ur: "اس چیز پر پہلے سے اصل تصویر لگی ہوئی ہے۔ ٹک صرف تب کریں جب واقعی AI والی اس کی جگہ لگانی ہو۔",
+  },
+  pi_approve: { en: "Approve", rm: "Manzoor", ur: "منظور" },
+  pi_reject: { en: "Reject", rm: "Radd", ur: "رد" },
 } as const;
 
 /**
@@ -284,4 +340,5 @@ export const stockTransferDict = {
   st_total: { en: "Total", rm: "Kul", ur: "کل" },
   st_submit: { en: "Send the Request", rm: "Darkhwast Bhejein", ur: "درخواست بھیجیں" },
   st_submitting: { en: "Sending...", rm: "Ja rahi hai...", ur: "جا رہی ہے..." },
+
 } as const;

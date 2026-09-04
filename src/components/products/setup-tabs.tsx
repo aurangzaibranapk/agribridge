@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 export type SetupTab =
-  | "queue" | "propose" | "pending" | "edits" | "intake" | "bill" | "rates" | "labels" | "import" | "export";
+  | "queue" | "propose" | "pending" | "edits" | "intake" | "bill" | "rates" | "labels" | "images" | "import" | "export";
 
 const TABS: { key: SetupTab; href: string; label: TranslationKey }[] = [
   { key: "queue", href: "/admin/products/setup", label: "pf_ps_t_queue" },
@@ -14,6 +14,7 @@ const TABS: { key: SetupTab; href: string; label: TranslationKey }[] = [
   { key: "bill", href: "/admin/products/bill-rates", label: "pf_ps_t_bill" },
   { key: "rates", href: "/admin/products/rates-baqi", label: "pf_ps_t_rates" },
   { key: "labels", href: "/admin/products/labels", label: "pf_ps_t_labels" },
+  { key: "images", href: "/admin/products/images", label: "pf_ps_t_images" },
   { key: "import", href: "/admin/products/import", label: "pf_ps_t_import" },
   { key: "export", href: "/admin/products/catalog-export", label: "pf_ps_t_export" },
 ];
@@ -25,11 +26,15 @@ const TABS: { key: SetupTab; href: string; label: TranslationKey }[] = [
  */
 export async function ProductSetupTabs({ current, lang }: { current: SetupTab; lang: Lang }) {
   const supabase = createClient();
-  const [{ data: counts }, { count: pending }, { count: edits }, { count: bills }] = await Promise.all([
+  const [{ data: counts }, { count: pending }, { count: edits }, { count: bills }, { count: noImage }] = await Promise.all([
     supabase.from("v_product_setup_counts").select("*").maybeSingle(),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_deleted", false).eq("is_verified", false),
     supabase.from("product_edit_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("supplier_bill_reads").select("id", { count: "exact", head: true }).eq("status", "draft"),
+    // Jin cheezon ki tasveer nahi lagi (296). Ginti usi khane se aati
+    // hai jahan se safha khud parhta hai -- do jagah ginne se do adad
+    // ban jate hain.
+    supabase.from("v_products_missing_image").select("product_id", { count: "exact", head: true }),
   ]);
   const badge: Partial<Record<SetupTab, number>> = {
     queue: Number(counts?.total_products ?? 0),
@@ -39,6 +44,7 @@ export async function ProductSetupTabs({ current, lang }: { current: SetupTab; l
     bill: bills ?? 0,
     rates: Number(counts?.rate_pending ?? 0),
     labels: Number(counts?.barcode_missing ?? 0),
+    images: noImage ?? 0,
   };
 
   return (
