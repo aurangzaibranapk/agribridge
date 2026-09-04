@@ -132,21 +132,53 @@ export async function loadMoneyToday(): Promise<MoneyToday> {
   const service = createServiceClient();
   const t = today();
 
-  const [{ data: sales }, { data: grainSales }, { data: expenses }, { data: accounts }, { data: credit }] =
-    await Promise.all([
+  const [
+    { data: sales },
+    { data: posRet },
+    { data: posRetItems },
+    { data: grainSales },
+    { data: expenses },
+    { data: accounts },
+    { data: credit },
+  ] = await Promise.all([
       service.from("pos_sales").select("total_amount, profit").gte("created_at", t),
+      // Aaj ki wapsiyaan. Bikri se ghatani parti hain -- warna wapas hui
+      // cheez bhi aamdani mein ginti rehti hai.
+      service.from("pos_returns").select("total_amount").gte("created_at", t),
+      // Wapas aaye maal ki lagat -- nafa theek karne ke liye. Sirf raqam
+      // ghatane se nafa ghalat rehta: cheez ke sath us ki lagat bhi wapas
+      // aati hai.
+      service
+        .from("pos_return_items")
+        .select("line_cogs, pos_returns!inner(created_at)")
+        .gte("pos_returns.created_at", t),
       service.from("grain_sales").select("total_amount, profit").eq("sale_date", t),
       service.from("company_expense_requests").select("amount").eq("status", "approved").gte("created_at", t),
       service.from("finance_accounts").select("current_balance").eq("is_active", true),
       service.from("branch_credit_transactions").select("transaction_type, amount"),
     ]);
 
-  const revenue = sumOf(sales, "total_amount") + sumOf(grainSales, "total_amount");
+  // Wapsi bikri se GHATTI hai.
+  //
+  // 5 September ko malik ne do cheezein bech kar dono wapas lin, aur
+  // safha phir bhi Rs 30 bikri aur Rs 2 nafa dikhata raha. Wajah ye thi
+  // ke yahan sirf pos_sales parhi jati thi -- aur wapas hui bikri par
+  // sirf ek nishaan lagta hai, wo qatar mitti nahi (aur mitni bhi nahi
+  // chahiye: us din bikri waqai hui thi).
+  //
+  // Is liye ab wapsi alag se ghatai jati hai. Bikri ki qatar apni jagah
+  // sachchi rehti hai, aur adad bhi sacha ho jata hai.
+  const posReturned = sumOf(posRet, "total_amount");
+  const posReturnedCogs = sumOf(posRetItems as { line_cogs: number }[] | null, "line_cogs");
+  const revenue = sumOf(sales, "total_amount") - posReturned + sumOf(grainSales, "total_amount");
   const spent = sumOf(expenses, "amount");
   // Nafa wahan se liya jata hai jahan wo pehle se gina hua hai, dobara
   // nahi ginte -- COGS ka hisaab har jagah thora alag hota hai aur do
-  // jagah ginne se do alag adad nikal aate hain.
-  const grossProfit = sumOf(sales, "profit") + sumOf(grainSales, "profit");
+  // jagah ginne se do alag adad nikal aate hain. Wapsi ka nafa alag se
+  // ghatana parta hai (neeche mahine wale hisaab mein poora kiya gaya
+  // hai; yahan aaj ke tile par bikri ki raqam ghata di gayi hai).
+  const grossProfit =
+    sumOf(sales, "profit") - (posReturned - posReturnedCogs) + sumOf(grainSales, "profit");
 
   // Shop ka bojh: charge barhata hai, adaigi ghatati hai. Wahi usool jo
   // /admin/branch-credit dikhata hai.
@@ -185,6 +217,8 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
 
   const [
     { data: pos, error: posErr },
+    { data: posRet, error: posRetErr },
+    { data: posRetItems, error: posRetItemsErr },
     { data: grain, error: grainErr },
     { data: grainBuy, error: grainBuyErr },
     { data: grainStock, error: grainStockErr },
@@ -204,6 +238,14 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
     { data: pendingFat },
   ] = await Promise.all([
     service.from("pos_sales").select("total_amount, profit, total_cogs").gte("created_at", from),
+    // Wapsiyaan aur wapas aaye maal ki lagat -- dono bikri se ghatti
+    // hain. Bikri ki qatar mitti nahi (us din bikri waqai hui thi), is
+    // liye ghatana yahan hota hai.
+    service.from("pos_returns").select("total_amount").gte("created_at", from),
+    service
+      .from("pos_return_items")
+      .select("line_cogs, pos_returns!inner(created_at)")
+      .gte("pos_returns.created_at", from),
     service
       .from("grain_sales")
       .select("total_amount, profit, total_cogs, quantity_kg, bardana_cost, mazdoori_cost")
@@ -263,7 +305,7 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
   const milkFail = failed(milkErr, salariesErr, fuelErr, generatorErr, maintenanceErr, monthlyExpErr, routesErr);
   const grainFail = failed(grainErr, grainBuyErr, grainStockErr);
   const machFail = failed(machPnlErr, bookingsErr);
-  const retailFail = failed(posErr);
+  const retailFail = failed(posErr, posRetErr, posRetItemsErr);
 
   // ---------- Milk ----------
   // Policy wahi jo /admin/milk-collection/billing aur Master Dashboard
@@ -317,9 +359,24 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
   const unbilled = liveBookings.filter((b) => b.kaam_mukammal === true && !b.bill_number).length;
 
   // ---------- Retail ----------
-  const retailRevenue = sumOf(pos, "total_amount");
-  const retailCogs = sumOf(pos, "total_cogs");
-  const retailProfit = sumOf(pos, "profit");
+  //
+  // WAPSI BIKRI SE GHATTI HAI.
+  //
+  // 5 September ko malik ne do cheezein bech kar dono wapas lin, aur
+  // safha phir bhi Rs 30 bikri aur Rs 2 nafa dikhata raha. Wajah: yahan
+  // sirf pos_sales parhi jati thi. Wapas hui bikri par sirf ek nishaan
+  // lagta hai -- wo qatar mitti nahi, aur mitni bhi nahi chahiye: us din
+  // bikri waqai hui thi, aur us din ka hisaab jhoota nahi kiya jata.
+  //
+  // Is liye wapsi ALAG SE ghatai jati hai: raqam bhi aur us maal ki
+  // lagat bhi. Sirf raqam ghatane se nafa ghalat reh jata -- cheez ke
+  // sath us ki lagat bhi wapas aati hai.
+  const retReturned = sumOf(posRet, "total_amount");
+  const retReturnedCogs = sumOf(posRetItems as { line_cogs: number }[] | null, "line_cogs");
+
+  const retailRevenue = sumOf(pos, "total_amount") - retReturned;
+  const retailCogs = sumOf(pos, "total_cogs") - retReturnedCogs;
+  const retailProfit = retailRevenue - retailCogs;
 
   const margin = (profit: number | null, revenue: number | null) =>
     profit != null && revenue != null && revenue > 0 ? (profit / revenue) * 100 : null;
@@ -394,7 +451,12 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
       key: "retail",
       label: "Retail",
       href: "/admin/reports/pnl",
-      work: [`${t("cc_w_sales", lang)} ${(pos ?? []).length}`],
+      // Bikri aur wapsi dono nazar mein. Sirf bikri ka adad dikhane se
+      // ye baat chhup jati hai ke un mein se kitni wapas aa gayi.
+      work: [
+        `${t("cc_w_sales", lang)} ${(pos ?? []).length}`,
+        ...((posRet ?? []).length > 0 ? [`${t("cc_w_returns", lang)} ${(posRet ?? []).length}`] : []),
+      ],
       revenue: retailRevenue,
       directCost: retailCogs,
       otherExpense: null,

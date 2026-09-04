@@ -163,6 +163,7 @@ export const ownerToolsDict = {
   cc_w_completed: { en: "Completed", rm: "Mukammal", ur: "مکمل" },
   cc_w_acres: { en: "Acres", rm: "Acre", ur: "ایکڑ" },
   cc_w_sales: { en: "Sales", rm: "Bikri", ur: "بکری" },
+  cc_w_returns: { en: "Returned", rm: "Wapsi", ur: "واپسی" },
   cc_w_waiting: { en: "Waiting", rm: "Intezar mein", ur: "انتظار میں" },
 
   // ---- Command Center: har department ke neeche wali baat ----

@@ -548,7 +548,7 @@ export function PosClient({
     <div
       className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${
         selectedLine && selectedItem
-          ? "lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_22rem]"
+          ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]"
           : "lg:grid-cols-[minmax(0,1fr)_23rem]"
       }`}
     >
@@ -659,8 +659,12 @@ export function PosClient({
               khulti hai. */}
           <div
             className={
+              // Tafseel khuli ho to cheezon ka khana thora tang hota hai,
+              // magar cheezein phir bhi do se teen qatar mein rehti hain
+              // -- ek qatar par aa jane se banda scroll karta reh jata
+              // hai aur agli cheez dhoondna dushwar ho jata hai.
               selectedLine && selectedItem
-                ? "grid grid-cols-2 gap-2 lg:grid-cols-1"
+                ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3"
                 : "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
             }
           >
@@ -771,7 +775,7 @@ export function PosClient({
             onClick={() => setSelectedId(null)}
             aria-hidden
           />
-          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-full lg:min-h-0 lg:w-auto lg:max-w-none lg:rounded-card lg:border lg:shadow-card">
+          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-fit lg:max-h-full lg:w-auto lg:max-w-none lg:overflow-y-auto lg:rounded-card lg:border lg:shadow-card">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
                 {t("pos_details", lang)}
