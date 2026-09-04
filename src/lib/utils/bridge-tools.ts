@@ -563,6 +563,24 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
       "Kya mangwana chahiye: pichhle 30 din ki bikri ki raftaar se har product ka kitne din ka stock baqi hai aur kitna mangwana chahiye (7 din raasta + 14 din ka stock). Jab user pooche 'kya mangwana hai', 'kaun si cheez khatam ho rahi hai', 'stock kitne din chalega'.",
   },
   {
+    name: "get_supplier_dues",
+    description:
+      "Supplier ko kitna dena hai: har supplier ka baqi, jin ki tareekh guzar chuki (overdue) aur jo agle N din mein deni hain. Naam diya jaye to sirf usi supplier ka. Jab user pooche 'ABC ko kitne dene hain', 'kis supplier ki adaigi baqi hai', 'agle 7 din mein kitni adaigi hai', 'kaun si payment overdue hai'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        supplier_name: {
+          type: Type.STRING,
+          description: "Supplier ka naam ya us ka hissa. Khali chhoR dein to sab suppliers.",
+        },
+        days: {
+          type: Type.NUMBER,
+          description: "Agle kitne din ki adaigi dekhni hai (default 7).",
+        },
+      },
+    },
+  },
+  {
     name: "propose_action",
     description:
       "Jab user AI se koi kaam karne ko kahe jo database change kare (jaise purchase order banana, task banana, ya kisi cheez ki sifarish), to ye tool use karein. Ye seedha koi change nahi karta - sirf ek proposal banata hai jo admin ko review/approve karna hoga. Agar ye ek purchase/stock-order type ki sifarish hai, to product_name aur suggested_quantity bhi zaroor bhrein taake admin approve karte waqt seedha purchase order bana sake.",
@@ -637,6 +655,71 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
 ];
 
 // ===== API route isi ek function ko call karega =====
+
+/**
+ * Supplier ko kitna dena hai.
+ *
+ * Ye adad kisi jagah haath se nahi likha jata: `v_supplier_due_calendar`
+ * received purchases mein se adaigiyan minus kar ke banata hai -- wohi
+ * hisaab jo /admin/purchases/bills par nazar aata hai. AI apna alag
+ * hisaab nahi lagata, warna do jagah do adad ho jate.
+ *
+ * Ginti na mile to `null` -- sifar NAHI. Sifar kehta hai "dena kuch
+ * nahi"; ye us se bilkul alag baat hai.
+ */
+async function getSupplierDues(
+  supabase: ReturnType<typeof createClient>,
+  args: Record<string, any>
+) {
+  const days = Number(args.days ?? 7);
+  const name = typeof args.supplier_name === "string" ? args.supplier_name.trim() : "";
+  const today = new Date().toISOString().slice(0, 10);
+
+  let q = supabase
+    .from("v_supplier_due_calendar")
+    .select("supplier_id, supplier_name, purchase_number, due_date, days_left, supplier_payable")
+    .gt("supplier_payable", 0)
+    .order("due_date", { ascending: true })
+    .limit(500);
+  if (name) q = q.ilike("supplier_name", `%${name}%`);
+
+  const { data, error } = await q;
+  if (error) {
+    // Ghalti ko "kuch dena nahi" mat banao -- saaf batao ke hisaab nahi mila.
+    return { error: "Supplier ke dene ka hisaab nahi mil saka.", total_due: null };
+  }
+
+  const rows = (data ?? []) as any[];
+  if (name && rows.length === 0) {
+    return { supplier: name, found: false, note: `"${name}" naam ka koi supplier nahi mila jis ka dena baqi ho.` };
+  }
+
+  const bySupplier = new Map<string, { name: string; due: number; overdue: number; soon: number }>();
+  for (const r of rows) {
+    const key = String(r.supplier_id ?? r.supplier_name ?? "?");
+    const cur = bySupplier.get(key) ?? { name: r.supplier_name ?? "—", due: 0, overdue: 0, soon: 0 };
+    const amt = Number(r.supplier_payable ?? 0);
+    cur.due += amt;
+    if (r.due_date && String(r.due_date) < today) cur.overdue += amt;
+    else if (Number(r.days_left ?? 999) <= days) cur.soon += amt;
+    bySupplier.set(key, cur);
+  }
+
+  const list = [...bySupplier.values()].sort((a, b) => b.due - a.due);
+  return {
+    total_due: list.reduce((n, s) => n + s.due, 0),
+    total_overdue: list.reduce((n, s) => n + s.overdue, 0),
+    due_in_days: days,
+    total_due_soon: list.reduce((n, s) => n + s.soon, 0),
+    suppliers: list.slice(0, 15).map((s) => ({
+      name: s.name,
+      baqi: Math.round(s.due),
+      overdue: Math.round(s.overdue),
+      agle_dinon_mein: Math.round(s.soon),
+    })),
+  };
+}
+
 export async function executeBridgeTool(
   name: string,
   supabase: ReturnType<typeof createClient>,
@@ -665,6 +748,8 @@ export async function executeBridgeTool(
       return draftShopOrder(supabase, args ?? {});
     case "get_reorder_suggestions":
       return getReorderSuggestions(supabase);
+    case "get_supplier_dues":
+      return getSupplierDues(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -673,13 +758,13 @@ export async function executeBridgeTool(
 // ===== Specialized Agent System Instructions =====
 export const AGENT_SYSTEM_INSTRUCTIONS: Record<string, string> = {
   crop:
-    "Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
+    "Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi.",
   livestock:
-    "Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
+    "Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi.",
   finance:
-    "Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
+    "Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi.",
   general:
-    "Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein.",
+    "Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi.",
 };
 
 // Simple keyword-based router - koi extra AI call nahi lagti, turant

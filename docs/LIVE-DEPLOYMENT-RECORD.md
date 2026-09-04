@@ -134,8 +134,8 @@ Malik ka usool: system par na hon to command **hold**. Wo kahein
 "system par aa gaya", tab ye poori fehrist ek sath jayegi.
 
 **P0 rule (malik, 2 September):** Backup verified → pre-migration
-record → migrations 265→277 → verification → naya build upload → smoke
-test → Live accepted. **Backup confirm hone se pehle 265–277 Live par
+record → migrations 265→287 → verification → naya build upload → smoke
+test → Live accepted. **Backup confirm hone se pehle 265–287 Live par
 NAHI chalengi.**
 
 **271 ke liye alag shart (malik, 2 Sep):** Live se pehle Testing par
@@ -149,7 +149,7 @@ Testing Almost Complete, Live Accepted nahi.
    wo khud Supabase Dashboard se lenge; wo string chat mein kabhi nahi
    aani.
 2. **Rukna** — dono file ke size aayen (backup verified), phir
-   pre-migration ginti (section 4 wali), phir main **265–277 Live par
+   pre-migration ginti (section 4 wali), phir main **265–287 Live par
    chalaoon** aur ginti dobara milaoon. (243–264 ho chuki hain.)
 3. **Build + package** — sirf migrations ke BAAD; do command, branch
    `claude/code-load-project-structure-fq91y9` se.
@@ -164,27 +164,35 @@ Testing Almost Complete, Live Accepted nahi.
    sab kuch waise ka waisa milta rahega. Ek staff ke login se ye khud
    dekh lein. Wapas laani ho to ek SQL line kafi hai (BAQI-KAAM section
    2 mein likhi hai) -- naya build nahi chahiye.
-7. **Naye safhe (265-277)** — /admin/products/setup, /admin/products/masters
+7. **Naye safhe (265-287)** — /admin/products/setup, /admin/products/masters
    (Units aur Pack Sizes ke naye tab), /admin/inventory/receiving,
    /admin/my-work, /admin/academy, /admin/improvements,
    /admin/access-requests (Takraao tab), /admin/my-access. Har safhe par
    upar daayen "? Samjhein" chalna chahiye.
-8. **272 ka asar staff par (pehle bata dein)** — Finance Team se
+8. **278-287 kya karti hain** — 278 PostgREST ka schema cache dobara
+   parhwati hai; 279 un 58 tables/views par GRANT deti hai jin ki kami
+   se Access Requests ke adad sifar aa rahe the (aur views par
+   `security_invoker` lagati hai, taake view bhi us bande ke RLS ke
+   mutabiq chale jo poochh raha hai); 280 `v_shop_replenishment` banati
+   hai; 281–287 sirf `feature_help` ki qatarein hain — 183 mein se 183
+   feature ka help. Kisi mein koi cheez mitane wali nahi.
+
+9. **272 ka asar staff par (pehle bata dein)** — Finance Team se
    submissions ka approve/reject aur cash-handover create hat jayega
    (cash close ab finance ke paas), HR se staff-khata create, Manager se
    stock-count approve aur cash-close create.
-9. **274 ka asar (pehle bata dein)** — jis ne record banaya wohi manzoor,
+10. **274 ka asar (pehle bata dein)** — jis ne record banaya wohi manzoor,
    tasdeeq ya receive nahi kar sakta (purchase review, supplier adaigi,
    stock count post, cash handover receive, POS return, doodh verify,
    order verify/approve, kharcha, machinery). Owner/Admin par rok nahi.
    Kisi jagah ye rok mushkil ho to us rule ko /admin/access-requests →
    Takraao → Qawaid se `warn` kar dein.
-10. **Reversal** — finance role ab entry ulta nahi kar sakta; sirf
+11. **Reversal** — finance role ab entry ulta nahi kar sakta; sirf
     Owner/Admin ya jise `finance.reversal` ki ijazat di jaye.
-11. **Live par `BRIDGE_AI_GEMINI_API_KEY`** — cPanel → Setup Node.js App →
+12. **Live par `BRIDGE_AI_GEMINI_API_KEY`** — cPanel → Setup Node.js App →
     Environment variables. Bina us ke Work Coach, bill reader aur guide ka
     AI hissa nahi chalega.
-12. **Purana safha** — /admin/products/bill-rates. Supplier ke bill ki ek
+13. **Purana safha** — /admin/products/bill-rates. Supplier ke bill ki ek
    photo laga kar dekhein ke qatarein parhi jati hain ya nahi. Ye AI
    par chalta hai, is liye **GEMINI_API_KEY** Live par laga hona
    chahiye — bina us ke safha khulta hai magar qatarein khali aati
