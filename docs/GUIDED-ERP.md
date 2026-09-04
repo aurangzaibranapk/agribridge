@@ -651,3 +651,51 @@ bhi usi khandan ka lage, thanda neela na lage.
 Inbox" neela aur "Maal ki Ginti" jamni hai. Un ka faisla: **hara hi
 primary rahe**, neela/jamni sirf halke se qism ka farq batayein -- warna
 har module apna alag software lagne lagta hai.
+
+## 15. AI Purchase & Stock Control Pipeline (malik ka naqsha, 4 September)
+
+Malik ne poora naqsha diya: bill upload -> AI parhe -> product milaye ->
+draft bane -> insaan manzoor kare -> godam mein ginti (GRN) -> rate/setup
+-> SALE READY -> shop ki darkhwast -> dispatch -> shop GRN.
+
+**Pehla kaam naya banana nahi, ginti karna tha: is mein se kya pehle se
+hai.** Jo mila:
+
+| Naqshe ka qadam | Halat |
+|---|---|
+| Bill upload + AI reader | ✅ `/admin/products/bill-rates` (`supplier_bill_reads/lines`) |
+| Product matching (score ke sath) | ✅ `lib/product-match.ts` -- token + Dice, STRONG 0.8 / GAP 0.08, aliases DB se |
+| Naye product ki qatar | ✅ `/admin/products/pending` |
+| Purchase draft + manzoori | ✅ `/admin/purchases` (submitted / approved / sent_back) |
+| **Manzoori ≠ stock** (do marhale ka GRN) | ✅ `/admin/inventory/receiving`, `/admin/purchases/grn` -- theek/toota/kam |
+| Batch aur expiry batch ki satah par | ✅ `stock_batches`, `v_product_batches`, `v_warehouse_product_card` (nearest_expiry) |
+| **FEFO** | ✅ `lib/stock-movement.ts` -- expiry ascending |
+| Supplier ka dena + due calendar | ✅ `v_supplier_due_calendar`, `/admin/purchases/bills`, `/admin/suppliers` |
+| Supplier ki adaigi ek jagah se | ✅ `supplier_payment_requests` + cash book |
+| Product Setup Queue (kya kam hai) | ✅ `/admin/products/setup`, `v_product_setup_queue/counts` |
+| Rate ke baghair POS par nahi | ✅ database ki rok (`sale_rate_pending`) |
+| Shop ki stock darkhwast | ✅ `/admin/stock-transfers`, `/admin/agri-orders` |
+| Dispatch -> in transit -> shop GRN | ✅ `createDispatch` + `agri_grns` |
+| AI se stock request ka draft | ✅ Work Coach ka `draft_shop_order` |
+| Reorder ki tajweez | ✅ `v_reorder_suggestions`, `/admin/products/reorder` |
+| AI kabhi khud mehfooz na kare | ✅ poore nizam ka usool |
+
+**Jo waqai nahi hai (asal khali jagahein):**
+
+1. **Ek darwaza** -- "+ Nayi Kharid" par teen raaste (AI bill / AI
+   hukm / haath se). Abhi teenon alag safhon par bikhre hain, aur naye
+   bande ko pata hi nahi chalta ke shuru kahan se karna hai.
+2. **Purchase banate waqt adaigi ki shart** -- Paid / Partially Paid /
+   Credit + kitne din. Abhi dena bill se banta hai, magar shart darj
+   karne ki jagah nahi.
+3. **Apna barcode banana aur label chhapna** -- barcode parhna aur
+   dhoondna to hai, magar jis cheez par company ka barcode nahi us ke
+   liye apna banana/chhapna nahi.
+4. **"Products Need Attention" ka ek dashboard** -- ginti to
+   `v_product_setup_counts` mein hai, magar ek jagah "12 rate baqi, 4
+   barcode baqi..." wala safha nahi.
+5. **AI Reorder ka button** -- tajweez hai, magar us par se seedha stock
+   request ka draft banane wala button nahi.
+
+Ye paanch cheezein banni hain -- baqi bara hissa maujood hai aur usay
+dobara banana duplicate hoga (malik ka apna usool).
