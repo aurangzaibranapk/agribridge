@@ -78,11 +78,11 @@ export function WorkSidebar({
         href={item.href}
         className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
           active
-            ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/40 dark:text-brand-200"
+            ? "bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/40 dark:text-brand-200"
             : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
         }`}
       >
-        <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0 text-surface-400" />
+        <Icon name={item.icon} className={`h-[18px] w-[18px] shrink-0 ${active ? "text-brand-700 dark:text-brand-300" : "text-surface-400"}`} />
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {show && (
           <span

@@ -20,7 +20,7 @@ const STRIP_TONE: Record<AttentionItem["tone"], { box: string; icon: string; num
   red: { box: "border-red-200 bg-red-50/70 dark:border-red-900/40 dark:bg-red-950/20", icon: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300", num: "text-red-700 dark:text-red-300" },
   amber: { box: "border-amber-200 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/20", icon: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", num: "text-amber-800 dark:text-amber-300" },
   blue: { box: "border-blue-200 bg-blue-50/70 dark:border-blue-900/40 dark:bg-blue-950/20", icon: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", num: "text-blue-800 dark:text-blue-300" },
-  gray: { box: "border-surface-200 bg-surface-50 dark:border-surface-800 dark:bg-surface-900", icon: "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300", num: "text-surface-800 dark:text-surface-200" },
+  gray: { box: "border-surface-200 bg-brand-25 dark:border-surface-800 dark:bg-surface-900", icon: "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300", num: "text-surface-800 dark:text-surface-200" },
 };
 
 const STRIP_ICON: Record<AttentionItem["tone"], typeof AlertTriangle> = {

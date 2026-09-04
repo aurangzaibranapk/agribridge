@@ -323,7 +323,7 @@ export function MyWorkBody({
                 </button>
 
                 {isOpen && (
-                  <div className="space-y-4 border-t border-surface-200 bg-surface-50/60 px-3.5 py-4 dark:border-surface-800 dark:bg-surface-950/40">
+                  <div className="space-y-4 border-t border-surface-200 bg-brand-25 px-3.5 py-4 dark:border-surface-800 dark:bg-surface-950/40">
                     {[...sections.entries()].map(([section, cards]) => (
                       <div key={section || "_"}>
                         {section && (

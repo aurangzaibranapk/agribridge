@@ -623,3 +623,31 @@ banda parh sake.
 karobari qawaid -- kisi ko haath nahi lagaya. Reference ke adad (2
 conflicts, 3 approvals...) naql nahi kiye: shakl reference ki, adad
 apne.
+
+### 13f. Rang ka nizam lock (malik, 4 September)
+
+Malik ne reference ko final maan kar rang ke tokens diye. Ye ab **ek hi
+jagah** hain -- `tailwind.config.ts` -- safhon ke andar nahi:
+
+| Kaam | Rang |
+|---|---|
+| Brand (button, nishan) | Deep Green `#1F6B3A` (`brand-600`) |
+| Gehra (AI header, hover) | Dark Green `#174D2B` (`brand-700`) |
+| Nishan ke peeche | Light Green `#EAF5EC` (`brand-50`) |
+| Halka pas-manzar | Soft Green `#F3F9F4` (`brand-25`) |
+| Doosre darje ka nishan | Gold `#D9A62E` (`wheat-500`), Soft `#FFF4D6` |
+| Safha | `#F7F8F5` (`surface-50`), card safaid |
+| Likhai | `#17221A` (`surface-900`), doosri `#68736B` |
+| Lakeer | `#E2E8E3` (`surface-200`) |
+| Khatra | `#D64545` (`danger-500`) |
+
+Pehla masla yehi tha: har safha apna hara chunta tha aur nateeja ye ke
+screen safaid-khaki lagti thi, brand nazar hi nahi aata tha. Ab rang
+badalna ho to sirf yahan badle -- poore nizam par khud lag jata hai.
+Surface ke rang mein halka sabz-mail rakha gaya hai taake safaid khana
+bhi usi khandan ka lage, thanda neela na lage.
+
+**Malik ki ek tabdeeli reference se bhi:** reference mein "Manzoori
+Inbox" neela aur "Maal ki Ginti" jamni hai. Un ka faisla: **hara hi
+primary rahe**, neela/jamni sirf halke se qism ka farq batayein -- warna
+har module apna alag software lagne lagta hai.
