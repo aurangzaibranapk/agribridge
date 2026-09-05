@@ -9,7 +9,7 @@ import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { NavProgress } from "@/components/layout/nav-progress";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
-import { sidebarModeFor } from "@/lib/access/sidebar-free";
+import { sidebarModeFor, type SidebarKind } from "@/lib/access/sidebar-free";
 import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
@@ -29,6 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // (250). Setting na mile to sidebar rehti hai: navigation ka ghayab
   // ho jana poore daftar ko rok deta hai.
   let showSidebar = true;
+  /** "work" = staff wali chhoti sidebar, "none" = sirf cards. */
+  let sidebarKind: SidebarKind = "full";
   let showPos = false;
   let navGroups: { key: string; label: string; icon?: string | null; items: { href: string; label: string; icon: string | null }[] }[] = [];
   if (user) {
@@ -41,8 +43,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     navGroups = nav.groups;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
 
-    const mode = await sidebarModeFor(role);
+    // Sidebar ka faisla ijazat ki GINTI par hai (malik ka usool, 5
+    // September). Ginti wahi hai jo neeche cards banati hai -- ek hi
+    // fehrist se, taake sidebar aur cards kabhi alag alag hisaab na
+    // lagayen.
+    const kitne = new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href))).size;
+    const mode = await sidebarModeFor(role, kitne);
     showSidebar = mode.showSidebar;
+    sidebarKind = mode.kind;
     // Patti par POS ka raasta bhi usi ijazat par lagta hai jis par
     // menu lagta hai -- do jagah alag hisaab hota to banda patti par
     // POS dekhta aur khol na pata.
@@ -77,7 +85,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <LangProvider lang={lang}>
     <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
-      {!showSidebar && user && (
+      {/* Chhoti sidebar sirf us bande ko jise das se ZYADA safhe khulte
+          hain. Us se kam par safha sirf cards ka rehta hai -- malik ka
+          usool. */}
+      {sidebarKind === "work" && user && (
         <WorkSidebar
           lang={lang}
           homeHref={homePageForRole(role)}

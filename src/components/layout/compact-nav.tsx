@@ -44,10 +44,19 @@ export async function CompactNav({
 
   let fullName = user?.email ?? "";
   let branchName: string | null = null;
+  let roleLabel: string | null = null;
   let unreadCount = 0;
   if (user) {
-    const { data: profile } = await supabase.from("profiles").select("full_name, branch_id").eq("id", user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("full_name, role, branch_id").eq("id", user.id).maybeSingle();
     if (profile?.full_name) fullName = profile.full_name;
+    // Laqab bande ki zaban mein -- database ka "sales_staff" safhe par
+    // ajnabi lagta hai.
+    if (profile?.role) {
+      roleLabel = profile.role
+        .split("_")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
     if (profile?.branch_id) {
       const { data: branch } = await supabase.from("branches").select("name").eq("id", profile.branch_id).maybeSingle();
       branchName = branch?.name ?? null;
@@ -97,7 +106,13 @@ export async function CompactNav({
           </span>
           <span className="min-w-0">
             <span className="block max-w-[10rem] truncate text-sm font-medium text-surface-800 dark:text-surface-100">{fullName}</span>
-            {branchName && <span className="block max-w-[10rem] truncate text-[11px] text-surface-400">{branchName}</span>}
+            {/* Laqab aur shaakh -- dono wohi jo maloom hon. Jo na mile wo
+                likha hi nahi jata. */}
+            {(roleLabel || branchName) && (
+              <span className="block max-w-[10rem] truncate text-[11px] text-surface-400">
+                {[roleLabel, branchName].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </span>
           <LogoutButton />
         </div>

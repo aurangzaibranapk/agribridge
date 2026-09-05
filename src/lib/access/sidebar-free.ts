@@ -27,14 +27,38 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 const DEFAULT_MASTER_ROLES = ["owner", "super_admin", "admin"];
 
+/**
+ * Is se ZYADA safhe hon to chhoti sidebar khud aa jati hai.
+ *
+ * Malik ka usool (5 September): "1-10 permissions: isi clean card
+ * dashboard se kaam kare, sidebar nahi. 10 se zyada permissions:
+ * dashboard same rahe, lekin us staff ke authorized modules ka dynamic
+ * sidebar automatically activate ho jaye."
+ *
+ * Wajah saaf hai: paanch cheezon ke liye sidebar sirf jagah khaati hai
+ * -- cards saamne hain, do click ki zaroorat nahi. Magar bees cheezon
+ * par card ka safha khud ek fehrist ban jata hai, aur us mein se apna
+ * kaam dhoondna wohi mushkil hai jis se bachne ke liye cards banaye
+ * gaye the.
+ */
+export const SIDEBAR_MIN_ITEMS = 10;
+
+/** Kaunsi sidebar: poori ERP, staff wali chhoti, ya koi nahi. */
+export type SidebarKind = "full" | "work" | "none";
+
 export interface SidebarMode {
-  /** Is bande ko poori sidebar milti hai ya nahi. */
+  kind: SidebarKind;
+  /** Purane bulane walon ke liye -- poori ERP sidebar. */
   showSidebar: boolean;
   /** Ye banda Master Admin hai (poori ERP navigation ka haqdar). */
   isMaster: boolean;
 }
 
-export async function sidebarModeFor(role: string): Promise<SidebarMode> {
+/**
+ * @param itemCount Is bande ko kitne SAFHE khulte hain (ijazat ki ginti).
+ *   Master ke liye ye bemani hai -- usay hamesha poori sidebar milti hai.
+ */
+export async function sidebarModeFor(role: string, itemCount = 0): Promise<SidebarMode> {
   const isMasterByDefault = DEFAULT_MASTER_ROLES.includes(role);
 
   try {
@@ -47,7 +71,7 @@ export async function sidebarModeFor(role: string): Promise<SidebarMode> {
 
     const value = (data?.value ?? null) as { enabled?: unknown; master_roles?: unknown } | null;
     if (!value || value.enabled !== true) {
-      return { showSidebar: true, isMaster: isMasterByDefault };
+      return { kind: "full", showSidebar: true, isMaster: isMasterByDefault };
     }
 
     const roles = Array.isArray(value.master_roles)
@@ -55,8 +79,16 @@ export async function sidebarModeFor(role: string): Promise<SidebarMode> {
       : DEFAULT_MASTER_ROLES;
 
     const isMaster = roles.includes(role);
-    return { showSidebar: isMaster, isMaster };
+    if (isMaster) return { kind: "full", showSidebar: true, isMaster: true };
+
+    // Ginti ijazat se aati hai, role se nahi. Isi liye do bande ek hi
+    // role par alag alag safha dekh sakte hain -- aur yehi theek hai:
+    // sidebar us ke apne kaam ke hisaab se aati hai, us ke laqab ke
+    // hisaab se nahi.
+    return { kind: itemCount > SIDEBAR_MIN_ITEMS ? "work" : "none", showSidebar: false, isMaster: false };
   } catch {
-    return { showSidebar: true, isMaster: isMasterByDefault };
+    // Setting na mile to purani sidebar chalti hai -- navigation ka
+    // ghayab ho jana poore daftar ko rok deta hai.
+    return { kind: "full", showSidebar: true, isMaster: isMasterByDefault };
   }
 }

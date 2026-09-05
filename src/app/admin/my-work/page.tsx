@@ -89,6 +89,16 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   // Training Mode (D): apne department ka module -- pehle N kaam.
   const dept = departmentForRole(me.role);
+
+  // Role ka naam bande ki zaban mein. Database mein wo "sales_staff"
+  // jaisa likha hota hai -- wo nizam ke liye theek hai, magar safhe par
+  // wohi likh dena us bande ko apna hi laqab ajnabi lagta hai.
+  const roleLabel = me.role
+    ? me.role
+        .split("_")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ")
+    : null;
   const { data: trainingModule } = me.training_mode
     ? await supabase.from("training_modules").select("key, title, steps, try_route").eq("department_key", dept?.key ?? "").eq("is_active", true).maybeSingle()
     : { data: null };
@@ -135,7 +145,17 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               dikhati hai -- malik ka kehna theek tha ke salam ke sath
               "ginti nahi mil saki" likhna banday ko bemani ghabrahat
               deta hai. */}
-          <p className="mt-1.5 text-[15px] text-surface-500">{t("mw_subtitle_new", lang)}</p>
+          {/* Naam ke neeche: banda kaun hai, kis department mein hai, aur
+              kis shaakh par. Malik ka usool (5 September): "Neeche uska
+              Role + Department + Branch."
+
+              Jo hissa maloom na ho wo LIKHA HI NAHI jata -- khali jagah
+              bhar dene ke liye "—" ya koi bana hua naam daal dena us
+              bande ko ghalat maloomat deta hai. */}
+          <p className="mt-1.5 text-[15px] text-surface-500">
+            {[roleLabel, dept?.label ?? null, branchName].filter(Boolean).join(" · ")}
+          </p>
+          <p className="mt-0.5 text-[13px] text-surface-400">{t("mw_subtitle_new", lang)}</p>
         </div>
 
         <div className="flex items-center gap-3">
