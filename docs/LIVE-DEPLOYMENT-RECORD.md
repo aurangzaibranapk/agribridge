@@ -635,6 +635,7 @@ migrations → verification → build upload → smoke test**.
 | **312** | Vendor ko hisse se ZYADA diya hua naqad settlement ke safhe par ek alag khane mein (`zyada_diya`) — ledger se, kisi booking se nahi. |
 | **313** | (a) Diesel ki qatar ab **mansookh** ho sakti hai (`cancelled`) — wajah ke sath, aur har hisaab se nikal jati hai magar safhe par nazar aati rehti hai. (b) Jo paisa vendor ne kisan se khud le kar **apne hisse mein rakh liya** (`vendor_settlement = 'kept'`) wo ab "vendor ko mil gaya" mein ginta hai, "ART ke paas jama" mein nahi. Us ne apne hisse se zyada rakh liya ho to wo farq apne khane mein: `vendor_ne_zyada_rakha`. |
 | **314** | Khate ki poori pehchaan: `bank_name`, `account_title` (+ pehle se maujood `account_number`). |
+| **315** | **AgriBridge Inbox** — `/admin/inbox` ko features + Master Command menu + `feature_help` mein daalti hai. Koi nayi table nahi, koi data nahi hilta. |
 
 313 dono view (`v_machinery_vendor_booking_settlement` aur
 `v_machinery_vendor_settlement`) **gira kar dobara banati hai** — khanon
