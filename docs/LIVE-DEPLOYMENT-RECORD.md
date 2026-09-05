@@ -768,3 +768,66 @@ us ka hisse se zyada hissa apne alag khane mein.
 2. **"Al Rana Traders (kisan dukan)"** — purane build se bana, is liye us
    ka shuruati balance sirf `opening_balance` ke khane mein baitha hai
    aur ledger ko khabar nahi. Us ka milan karna hai.
+
+---
+
+## 5k. Vendor ka diesel — asal ghalti (5 September, malik ki ijazat se)
+
+Duplicate hatane ke baad malik ne kaha:
+
+> "Maine to diesel sirf 1 baar diya hai. Ek baar vendor ne khud diesel
+> daala hai... check karo kahin vendor ka diesel likha hai."
+
+Aur wahi asal masla nikla. Poore system mein diesel ke sirf teen indraj
+the, aur **teenon par `paid_by = company` likha tha** — yani teenon
+"hamare khate se nikla". Vendor ka apna diesel kahin darj tha hi nahi.
+
+Malik ne saaf kiya: **379 wala unka tha, 376 wala vendor ne khud liya**
+(Ali Raza Qadi ki kattai ke waqt).
+
+### Ek ghalti, do jagah ghalat adad
+
+`MB-2026-00008` ka Rs 11,280 aise darj tha:
+
+- "ART ne diya" → **cash box se Rs 11,280 nikla** likha gaya (nikla hi nahi tha)
+- "vendor se wapas lena hai" → wohi raqam **Farman Ali ke zimme** charhi
+
+Ye duplicate se bara masla tha: duplicate ek hi adad do dafa ginta tha,
+ye ek adad **do alag jaghon par** ghalat daal raha tha.
+
+### Kya kiya (mitaya kuch nahi)
+
+1. **TXN-26-000025** — TXN-26-000008 ka reversal. Cash book bhi sath ulti
+   (`journal_entry_sources` se maloom tha ke us entry ne kis qatar par
+   daawa kiya tha).
+2. Diesel ki purani qatar **`cancelled`**, poori wajah ke sath.
+3. **Nayi qatar**: wohi 30 litre × 376, magar `paid_by = vendor`,
+   `vendor_recoverable = false`, khata khali. Machine diesel par chali
+   thi — us ka indraj rehna chahiye, magar sahi naam ke sath.
+
+### Nateeja
+
+| Khana | Pehle | Ab |
+|---|---|---|
+| **Dr / Cr** | 499,226 | **510,506 / 510,506** (barabar) |
+| Safha: ART ka diesel | 22,650 | **11,370** |
+| Ledger khata 1120 | 22,650 | **11,370** ✓ |
+| Cash in Hand | −11,280 | **0** |
+| Kul balance | −22,650 | **−9,340** |
+| **Farman Ali ko abhi dena** | 0 | **Rs 8,790** |
+
+Rs 8,790 = hamare paas jama 24,000 − ART ka diesel 11,370 − us ke paas
+para hamara commission 3,840.
+
+Baqi manfi (UBL −11,370) asal ghalti nahi — wo diesel waqai UBL se
+nikla tha; UBL ka **shuruati balance** darj nahi, isi liye manfi dikhta
+hai. Wo naye build ke form se theek hoga.
+
+### Sabaq
+
+Diesel ka form pehle se poochta hai ke kis ne diya (ART / vendor /
+kisan), magar staff ne teenon dafa "ART" chuna. Us ek khane ka jawab
+**do** kitabon mein jata hai — cash aur vendor ka khata — is liye us ka
+ghalat hona sab se mehnga parta hai. Aage is khane par form mein ek
+saaf jumla chahiye: *"ART ne paisa diya? Nahi to khata khali rahega aur
+vendor se kuch wapas nahi liya jayega."*
