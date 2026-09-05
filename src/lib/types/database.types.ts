@@ -23959,6 +23959,7 @@ export type Database = {
       }
     }
     Functions: {
+      fn_next_machinery_number: { Args: { p_kind: string }; Returns: string }
       fn_next_asset_code: { Args: never; Returns: string }
       fn_asset_dep_compute: { Args: { p_period: string; p_user?: string }; Returns: string }
       fn_asset_dep_mark_posted: { Args: { p_entry_id: string; p_run_id: string; p_user?: string }; Returns: number }

@@ -129,20 +129,34 @@ async function logEvent(args: {
  * (migration 116). Warna number aage na barhta aur agli booking wahi
  * number maangti.
  */
-async function nextNumber(
-  supabase: Client,
-  table: "machinery_booking_counters" | "machinery_bill_counters" | "machinery_receipt_counters",
-  prefix: string
-): Promise<string> {
-  const year = new Date().getFullYear();
-  const { data: existing } = await supabase.from(table).select("last_number").eq("year", year).maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await supabase.from(table).update({ last_number: next }).eq("year", year);
-  } else {
-    await supabase.from(table).insert({ year, last_number: next });
+/**
+ * Number ab DATABASE ke andar banta hai (311).
+ *
+ * Pehle ye yahin banta tha: pehle counter parho, phir ek barha kar likho.
+ * Us mein do kharabiyan thin, aur dono chup thin --
+ *
+ *   1. `machinery_receipt_counters` par se authenticated ki ijazat le li
+ *      gayi thi (171). Bande ke apne client se us table ko parhne par
+ *      KHALI jawab aata tha -- ghalti nahi, khali. Code us khali ko
+ *      "abhi koi raseed nahi bani" samajhta tha aur har dafa number 1
+ *      banata tha; likhne ki koshish bhi chup chaap nakaam hoti thi.
+ *      Nateeja: pehli adaigi ke baad HAR adaigi ruk gayi --
+ *      "duplicate key ... uq_machinery_payment_receipt" (malik ne 5
+ *      September ko pakRa: Rs 24,000 ki adaigi darj hi nahi ho rahi thi).
+ *
+ *   2. Parhne aur likhne ke darmiyan ka waqfa. Do bande ek hi lamhe mein
+ *      adaigi darj karte to dono ko wohi number milta.
+ *
+ * Ab dono khatam: function SECURITY DEFINER hai (ijazat ka masla nahi),
+ * aur number ek hi hukm mein barhta hai (waqfa nahi). Nakami ab chhupti
+ * bhi nahi -- yahan se ghalti bulane wale tak jati hai.
+ */
+async function nextNumber(supabase: Client, kind: "booking" | "bill" | "receipt"): Promise<string> {
+  const { data, error } = await supabase.rpc("fn_next_machinery_number", { p_kind: kind });
+  if (error || !data) {
+    throw new Error(`Number nahi ban saka (${kind}): ${error?.message ?? "maloom nahi"}`);
   }
-  return `${prefix}-${year}-${String(next).padStart(5, "0")}`;
+  return data as string;
 }
 
 function revalidateAll(bookingId?: string) {
@@ -334,7 +348,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
         : null
       : cardFor(harvestType === "kutra" ? "kutra" : "sabit"));
 
-  const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
+  const bookingNumber = await nextNumber(supabase, "booking");
 
   const { data: booking, error } = await supabase
     .from("machinery_bookings")
@@ -568,7 +582,7 @@ async function saveAdvance(args: {
   const inCustody = method === "cash" && Boolean(args.actorId);
   if (!inCustody && !args.accountId) return "Advance kis khate mein aaya, wo select karein.";
 
-  const receiptNumber = await nextNumber(args.supabase, "machinery_receipt_counters", "MR");
+  const receiptNumber = await nextNumber(args.supabase, "receipt");
 
   const { data: payment, error } = await args.supabase
     .from("machinery_payments")
@@ -2068,7 +2082,7 @@ async function buildFinalBill(
   // database ne likhe, aur ledger unhi se banta hai -- taake bill aur
   // ledger kabhi alag na keh saken.
 
-  const billNumber = await nextNumber(supabase, "machinery_bill_counters", "MBL");
+  const billNumber = await nextNumber(supabase, "bill");
 
   const { data: bill, error } = await supabase
     .from("machinery_bills")
@@ -2448,7 +2462,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
     // bande ki jeb mein hai.
     const inCustody = line.method === "cash";
 
-    const receiptNumber = await nextNumber(supabase, "machinery_receipt_counters", "MR");
+    const receiptNumber = await nextNumber(supabase, "receipt");
 
     const { data: payment, error } = await supabase
       .from("machinery_payments")
@@ -3515,7 +3529,7 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
     }
   }
 
-  const bookingNumber = await nextNumber(supabase, "machinery_booking_counters", "MB");
+  const bookingNumber = await nextNumber(supabase, "booking");
 
   const { data: booking, error } = await supabase
     .from("machinery_bookings")
