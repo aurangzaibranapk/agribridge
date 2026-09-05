@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BINA_QISM } from "@/lib/pos/constants";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
+import { CounterTabs } from "@/components/pos/counter-tabs";
+import { loadUserAccess, can } from "@/lib/access/permissions";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
@@ -290,16 +292,27 @@ export default async function PosPage() {
   }
 
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
+  // Counter ke teen kaam upar. Load/Bill ka khana sirf us bande ko
+  // dikhta hai jise wo safha khulta hai -- warna wo ek aisa darwaza dekh
+  // raha hota jo us ke liye band hai, aur har dafa dabane par inkaar
+  // milta. Ijazat wahin se poochi jati hai jahan se baqi poora menu
+  // banta hai, warna do jagah do jawab ban jate.
+  const access = await loadUserAccess(user.id);
+  const loadBillAllowed = access ? can(access, "load-bill", "view") : false;
+
   return (
-    <PosClient
-      lang={lang}
-      sellerName={sellerName}
-      inventory={inventory}
-      groups={groups}
-      customers={rawCustomers ?? []}
-      branchId={branch?.id ?? null}
-      rateBaqiCount={rateBaqiCount}
-      perms={perms}
-    />
+    <>
+      {loadBillAllowed && <CounterTabs active="products" />}
+      <PosClient
+        lang={lang}
+        sellerName={sellerName}
+        inventory={inventory}
+        groups={groups}
+        customers={rawCustomers ?? []}
+        branchId={branch?.id ?? null}
+        rateBaqiCount={rateBaqiCount}
+        perms={perms}
+      />
+    </>
   );
 }

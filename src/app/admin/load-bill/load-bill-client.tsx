@@ -64,19 +64,22 @@ function Submit({ label }: { label: string }) {
 }
 
 export function LoadBillClient({
+  shuruKind,
   providers,
   accounts,
   financeAccounts,
   today,
   canReverse,
 }: {
+  /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
+  shuruKind: "load" | "bill";
   providers: Provider[];
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
   today: Txn[];
   canReverse: boolean;
 }) {
-  const [kind, setKind] = useState<"load" | "bill">("load");
+  const [kind, setKind] = useState<"load" | "bill">(shuruKind);
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
   const [settleState, settleAction] = useFormState(settleBill, initial);

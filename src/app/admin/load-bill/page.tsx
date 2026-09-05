@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { LoadBillClient } from "./load-bill-client";
+import { CounterTabs } from "@/components/pos/counter-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,11 @@ const FLOAT_ROLES = ["owner", "super_admin", "admin", "finance", "manager"];
  * wo commission jo company baad mein degi -- magar commission tab tak
  * "muntazir" rehti hai jab tak statement us ki tasdeeq na kar de.
  */
-export default async function LoadBillPage() {
+export default async function LoadBillPage({
+  searchParams,
+}: {
+  searchParams: { kind?: string };
+}) {
   const supabase = createClient();
 
   const {
@@ -90,8 +95,13 @@ export default async function LoadBillPage() {
 
   const providerName = new Map((providers ?? []).map((p) => [p.id as string, p.name as string]));
 
+  // Counter par aane wala banda POS se yahan aata hai, is liye wohi teen
+  // khane yahan bhi -- taake wo apni jagah pehchanta rahe.
+  const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
+
   return (
     <div>
+      <CounterTabs active={shuruKind} />
       <PageHeader
         title="Load & Bill"
         description="Mobile load aur customer ke bill — float ke hisaab ke sath"
@@ -132,6 +142,7 @@ export default async function LoadBillPage() {
         </Card>
       ) : (
         <LoadBillClient
+          shuruKind={shuruKind}
           providers={(providers ?? []).map((p) => ({
             id: p.id as string,
             name: p.name as string,

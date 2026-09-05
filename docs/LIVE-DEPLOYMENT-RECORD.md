@@ -1373,3 +1373,95 @@ gaya.
 ### Live par abhi NAHI chali
 
 **326 Testing par hai, Live par nahi.**
+
+---
+
+## 5t. Rokay hua kaam — 327 (Franchise dashboard aur menu ki safai)
+
+Malik ka kehna: *"HR mein sirf HR se related hon, Finance se related
+Finance, aur franchise ya branches ka ek alag dashboard banao -- us mein
+shop aayengi, shop agreement, bill waghera."*
+
+Adad us baat ki tasdeeq karte hain: **Finance par 54 safhe the**, aur un
+mein se **13 ka Finance se koi taluq nahi tha** -- paanch machinery ke,
+do doodh ke, shop ka kiraya, stock ki ginti, rate master, agri orders,
+investors, submissions.
+
+Aisa dashboard sirf bhara hua nahi hota -- wo **nakaara** ho jata hai.
+Jis fehrist mein 54 naam hon, us mein banda dhoondhta nahi, apni yaad se
+chalta hai; aur jo cheez us ki yaad mein nahi, wo us ke liye maujood hi
+nahi rehti.
+
+### Nayi ginti
+
+| Dashboard | Pehle | Ab |
+|---|---|---|
+| Finance | 54 | **41** |
+| Staff (HR) | 20 | **19** |
+| Franchise aur Shops | — | **6** (naya) |
+| Stock aur Godam | 13 | **27** (neeche dekhein) |
+
+Franchise par: Dukanein, Shaakhein, Shaakh ki jagah, Dukan ka kiraya aur
+bill, Shop ka udhaar, aur Shop ko maal bhejna.
+
+### Hatane ka usool
+
+**Hatane se pehle dekha gaya ke wo cheez apne ghar par maujood hai.**
+Kisi safhe ko dashboard se hatana us ka raasta band kar dena hai (ijazat
+rehti hai, magar jo menu mein na ho us tak koi pahunchta nahi). Har us
+feature ki jaanch hui jise Finance se hataya -- machinery wale paanchon
+machinery par pehle se the, doodh wale doodh par, waghera. **Ek bhi aisa
+nahi hataya gaya jo hatane ke baad kahin nazar na aata.**
+
+Aur ek cheez do jagah bhi ho sakti hai: `branch-credit` Finance par bhi
+hai aur Franchise par bhi -- Finance ke liye wo "lena baqi" hai,
+Franchise ke liye "is shop ka haal".
+
+### SATTARAH SAFHE JO BANE HUE THE MAGAR KISI MENU PAR NAHI THE
+
+Safai karte waqt ye jaancha gaya ke koi feature aisa to nahi jo kisi bhi
+dashboard par na ho. **Sattarah nikle.** Un mein rozana ke kaam ke safhe
+the:
+
+```
+/admin/products/setup-queue   naye product ki qatar
+/admin/products/labels        barcode ke labels
+/admin/products/bill-rates    bill se rate charhana
+/admin/products/images        tasveerein
+/admin/brands  /admin/categories  /admin/companies
+... aur baqi
+```
+
+Ye sab ban chuke the, ijazat bhi thi, magar **menu mein kahin nahi the**.
+Un tak pahunchne ka ek hi raasta tha: kisi ko raasta yaad ho aur wo pata
+bar mein likh de. **Bane hue safhe ka menu mein na hona us safhe ka na
+hona hi hai** -- farq sirf itna hai ke mehnat zaya ho chuki hoti hai.
+
+Chaudah ko Inventory par **section ke saath** rakha gaya ("Maal ka
+record" aur "Rate, barcode aur tasveer") -- seedhi qatar mein daal dene
+se Inventory bhi wohi bhari hui fehrist ban jata jis se Finance ko abhi
+bachaya.
+
+Baqi teen (my-access, my-work, my-attendance) har bande ko waise hi
+khulte hain -- wo code ki ALWAYS fehrist mein hain.
+
+**Jaanch ka natija: ab be-ghar safhe = 0.**
+
+### Counter ke teen khane (POS ka naqsha)
+
+Malik ke bheje karyana naqshe ke mutabiq POS ke upar teen khane:
+**Products | Mobile Load | Bill Payment**.
+
+Ye teen ALAG SAFHE hain, ek safhe ke teen tab nahi -- jaan boojh kar. Ek
+hi safhe par teenon daalne ka matlab hota ke bikri ka poora checkout aur
+load/bill ka darj karna ek hi component mein rehte. Wo checkout is nizam
+ka sab se hassas raasta hai (stock ghatta hai, khata barhta hai, ledger
+banti hai) aur us ke aas paas ka har badlav khatra hai. Dekhne wale ke
+liye farq koi nahi -- teen khane, ek click -- magar kharabi ki soorat
+mein ek kaam doosre ko nahi le doobta.
+
+Load/Bill ka khana sirf usay dikhta hai jise wo safha khulta hai.
+
+### Live par abhi NAHI chali
+
+**327 Testing par hai, Live par nahi.**
