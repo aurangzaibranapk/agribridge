@@ -23425,6 +23425,7 @@ export type Database = {
       v_machinery_vendor_settlement: {
         Row: {
           art_diesel_advance: number | null
+          zyada_diya: number | null
           art_ke_paas_jama: number | null
           kisan_ke_paas: number | null
           kitni_bookings: number | null

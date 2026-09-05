@@ -41,10 +41,11 @@ export default async function VendorSettlementPage() {
         <p className="text-sm text-surface-500">{t("vs_subtitle", lang)}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Tile label={t("vs_with_art", lang)} value={tot("art_ke_paas_jama")} tone="brand" />
         <Tile label={t("vs_with_farmer", lang)} value={tot("kisan_ke_paas")} tone="amber" />
         <Tile label={t("vs_diesel_advance", lang)} value={tot("art_diesel_advance")} tone="red" />
+        <Tile label={t("vs_extra_given", lang)} value={tot("zyada_diya")} tone="red" />
         <Tile label={t("vs_net_now", lang)} value={tot("net_abhi_dena")} tone="brand" />
       </div>
 
@@ -62,6 +63,11 @@ export default async function VendorSettlementPage() {
                   <Th right>{t("vs_with_art", lang)}</Th>
                   <Th right>{t("vs_with_farmer", lang)}</Th>
                   <Th right>{t("vs_diesel_advance", lang)}</Th>
+                  {/* Hisse se zyada diya hua paisa. Ye kisi booking ka
+                      kharcha nahi -- wo vendor ke paas hamara paisa hai,
+                      jo agli booking par katega. Chhupa dene se hisaab
+                      ke waqt yaad hi nahi rehta. */}
+                  <Th right>{t("vs_extra_given", lang)}</Th>
                   <Th right>{t("vs_net_now", lang)}</Th>
                 </tr>
               </thead>
@@ -79,6 +85,7 @@ export default async function VendorSettlementPage() {
                     <Td value={n(v.art_ke_paas_jama)} tone="text-brand-700 dark:text-brand-300" />
                     <Td value={n(v.kisan_ke_paas)} tone="text-amber-700 dark:text-amber-300" />
                     <Td value={n(v.art_diesel_advance)} tone="text-red-600 dark:text-red-400" />
+                    <Td value={n(v.zyada_diya)} tone="text-red-600 dark:text-red-400" />
                     <td className="px-3 py-2 text-right font-display font-semibold text-brand-700 dark:text-brand-300">
                       Rs {n(v.net_abhi_dena).toLocaleString()}
                     </td>

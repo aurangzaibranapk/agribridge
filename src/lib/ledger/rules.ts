@@ -1262,6 +1262,17 @@ export async function postMachineryVendorPayout(args: {
   bookingId: string;
   vendorId?: string | null;
   amount: number;
+  /**
+   * Jitna is booking ke hisse se ZYADA diya gaya.
+   *
+   * Wo raqam is booking ka kharcha nahi -- wo vendor ke paas hamara
+   * paisa hai, jo us ki agli booking par katega. Is liye wo "Supplier
+   * ko advance" (1120) mein jati hai, "Supplier ko dena" (2000) mein
+   * nahi. Dono ko ek hi jagah likh dene se ye booking apne hisse se
+   * zyada mehngi nazar aane lagti aur vendor ke paas para hua paisa
+   * kabhi wapas na maanga jata.
+   */
+  advance?: number;
   /** ART ka diya hua diesel jo isi adaigi mein wapas aa raha hai. */
   dieselRecovered?: number;
   accountId?: string | null;
@@ -1271,16 +1282,30 @@ export async function postMachineryVendorPayout(args: {
   const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
   const diesel = Math.round((args.dieselRecovered ?? 0) * 100) / 100;
   const cash = Math.round((args.amount - diesel) * 100) / 100;
+  const advance = Math.round((args.advance ?? 0) * 100) / 100;
+  const payable = Math.round((args.amount - advance) * 100) / 100;
 
-  const lines: JournalLine[] = [
-    {
+  const lines: JournalLine[] = [];
+
+  if (payable > 0) {
+    lines.push({
       account: ACC.supplierPayable,
-      debit: args.amount,
+      debit: payable,
       partyType: "machinery_vendor",
       partyId: args.vendorId ?? null,
       memo: args.description,
-    },
-  ];
+    });
+  }
+
+  if (advance > 0) {
+    lines.push({
+      account: ACC.supplierAdvance,
+      debit: advance,
+      partyType: "machinery_vendor",
+      partyId: args.vendorId ?? null,
+      memo: `${args.description} — hisse se zyada, vendor ke khate mein advance`,
+    });
+  }
 
   if (diesel > 0) {
     lines.push({

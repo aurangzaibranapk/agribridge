@@ -1162,6 +1162,7 @@ export const machineryDict = {
     rm: "ART ka diesel (wapas aana hai)",
     ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0688\u06cc\u0632\u0644 (\u0648\u0627\u067e\u0633)",
   },
+  vs_extra_given: { en: "Given over his share", rm: "Hisse se zyada diya", ur: "حصے سے زیادہ دیا" },
   vs_net_now: {
     en: "Payable now",
     rm: "Ab dena banta hai",

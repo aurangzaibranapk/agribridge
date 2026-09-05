@@ -7,6 +7,8 @@ import { postMachineryVendorPayout, failed } from "@/lib/ledger/rules";
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Kaam ho gaya, magar us mein ek baat batane wali hai. */
+  notice?: string;
 }
 
 // Purana booking form aur us ka action hata diya gaya.
@@ -230,8 +232,24 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
 
   const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number, vendor_id").eq("id", bookingId).single();
   if (!booking) return { error: "Booking nahi mili." };
-  const remaining = Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor);
-  if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} Vendor ko dena baaqi hai.` };
+  const remaining = Math.max(0, Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor));
+
+  // Is booking par jitna dena tha us se ZYADA bhi diya ja sakta hai.
+  //
+  // Malik ka aitraaz (5 September): "vendor ko 30 hazar pay kiya hai to
+  // hona chahiye, bhaley us ka 24,750 banta hai -- baqi raqam bhi to
+  // mere paas hai na us ki." Baat theek hai: paisa waqai haath se nikal
+  // chuka, aur jo cheez waqai ho chuki ho usay darj hone se rokna cash
+  // book ko jhoota kar deta hai (kaghaz par to wo raqam nikli hui hai
+  // hi).
+  //
+  // Magar us zyada raqam ko IS BOOKING ka kharcha likh dena bhi ghalat
+  // hai -- is booking par vendor ka hissa utna hi hai jitna bana. Is
+  // liye zyada raqam vendor ke khate mein ADVANCE ban jati hai (1120):
+  // wo us se agli booking par kat jayegi, aur tab tak nazar mein rehti
+  // hai ke us ke paas hamara itna paisa para hai.
+  const payableSettled = Math.min(amount, remaining);
+  const advance = Math.round((amount - payableSettled) * 100) / 100;
 
   // ART ne is booking par vendor ke liye jo diesel diya, wo isi
   // adaigi mein wapas aata hai (170).
@@ -294,6 +312,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     bookingId,
     vendorId: booking.vendor_id,
     amount,
+    advance,
     dieselRecovered,
     accountId,
     description:
@@ -310,15 +329,25 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }
 
+  // Booking par sirf US BOOKING ka hissa charhta hai. Zyada raqam yahan
+  // jorne se booking par "diya hua" us se bara nazar aata jitna is
+  // booking par banta tha -- aur wo adad har report mein galat chala
+  // jata.
   await supabase
     .from("machinery_bookings")
-    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + amount })
+    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + payableSettled })
     .eq("id", bookingId);
 
   revalidatePath("/admin/machinery-rental");
   revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
   revalidatePath("/admin/finance");
-  return { success: true };
+  return {
+    success: true,
+    notice:
+      advance > 0
+        ? `Rs ${payableSettled.toLocaleString()} is booking ka hissa, aur Rs ${advance.toLocaleString()} vendor ke khate mein ADVANCE — wo us ki agli booking par kat jayega.`
+        : undefined,
+  };
 }
 
 export async function emailMachineryBookingSlip(_prev: ActionState, formData: FormData): Promise<ActionState> {
