@@ -1248,3 +1248,55 @@ opening balance sirf khane mein para reh gaya tha aur do adad ban gaye.
 **323 aur 324 dono Testing par hain, Live par nahi.** Live par jane se
 pehle wohi tarteeb: backup verified → ginti → migrations → ginti dobara
 → build upload → smoke test.
+
+---
+
+## 5r. Rokay hua kaam — 325 (Categories ki safai)
+
+Testing par 42 categories thin aur un mein kai ek hi cheez ke do do naam:
+
+| Ek naam | Doosra naam |
+|---|---|
+| Cooking Oil & Ghee (5) | Ghee & Cooking Oil (4) |
+| Soap & Detergent (4) | Soap, Detergent & Personal Care (22) |
+| Spices & Masala (6) | Spices, Masale & Grocery Items (12) |
+| Pesticide (0) | Pesticides (1) |
+| Tea & Beverages (4) | Tea & Health Products (8) |
+
+Ye sirf badsoorti nahi. Jab ek hi cheez do jagah baithi ho to dukan par
+banda dono jagah dhoondhta hai, stock ki qeemat do hisson mein bat jati
+hai, aur "is category mein kitna maal hai" ka jawab **hamesha kam aata
+hai** -- bina kisi ko pata chale ke kam kyun hai.
+
+### Do faisle
+
+**Safha faisla nahi karta.** Wo sirf jodiyan saamne rakhta hai: ye do
+naam bohot milte hain, aur har ek mein itna maal hai. Kaunsi kis mein
+milani hai, malik tay karte hain. Milte julte naam ka matlab hamesha
+"ek hi cheez" nahi hota -- *Poultry Feed* aur *Cattle/Dairy Feed* ke
+aadhe lafz ek hain magar wo do alag cheezein hain, aur unhen mila dena
+poultry ka stock hamesha ke liye cattle mein daal dega.
+
+**Mili hui category ka nishan rehta hai.** Merge ke baad purani category
+mit jati hai. Us ka record na ho to agle mahine ye sawal be-jawab reh
+jata hai ke "Ghee & Cooking Oil kahan gayi -- kisi ne mita di, ya wo
+kabhi thi hi nahi?" Is liye `category_merges` mein likha jata hai: kya
+kis mein gaya, kitne product hile, kis ne kiya, aur kyun.
+
+### Teen rokein (database mein, safhe par nahi)
+
+1. Category apne aap mein nahi mil sakti.
+2. Maa apni hi aulad mein nahi mil sakti -- warna darakht mein halqa
+   (cycle) ban jata hai aur har fehrist jam jati.
+3. Sirf Owner/Admin, aur **wajah ke baghair nahi** -- ye kaam ulta nahi
+   hota.
+
+### Testing par rollback test
+
+Do product aur ek sub-category hili, purani category miti, nishan bana,
+aur halqa ki jaanch ne sub-category ko maa ke neeche pakRa (yani rok lag
+jati). Sab ulta diya gaya.
+
+### Live par abhi NAHI chali
+
+**325 Testing par hai, Live par nahi.**

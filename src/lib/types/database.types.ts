@@ -10143,6 +10143,45 @@ export type Database = {
         }
         Relationships: []
       }
+      category_merges: {
+        Row: {
+          children_moved: number
+          from_id: string
+          from_name: string
+          id: string
+          into_id: string
+          into_name: string
+          merged_at: string
+          merged_by: string | null
+          products_moved: number
+          reason: string | null
+        }
+        Insert: {
+          children_moved?: number
+          from_id: string
+          from_name: string
+          id?: string
+          into_id: string
+          into_name: string
+          merged_at?: string
+          merged_by?: string | null
+          products_moved?: number
+          reason?: string | null
+        }
+        Update: {
+          children_moved?: number
+          from_id?: string
+          from_name?: string
+          id?: string
+          into_id?: string
+          into_name?: string
+          merged_at?: string
+          merged_by?: string | null
+          products_moved?: number
+          reason?: string | null
+        }
+        Relationships: []
+      }
       load_accounts: {
         Row: {
           account_ref: string | null
@@ -24562,6 +24601,10 @@ export type Database = {
           shift_start: string
           weekly_off_days: number[]
         }[]
+      }
+      fn_merge_categories: {
+        Args: { p_from: string; p_into: string; p_reason: string }
+        Returns: Json
       }
       fn_load_day_summary: {
         Args: { p_account: string; p_date: string }
