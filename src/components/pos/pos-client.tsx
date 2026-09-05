@@ -304,11 +304,26 @@ export function PosClient({
     [cart]
   );
 
+  // Discount -- bill par, kisi ek cheez par nahi.
+  //
+  // Ye khana hone aur na hone ka farq bara hai. Jab tak ye nahi tha,
+  // "paanchas rupay chhoR do" ka ek hi raasta tha: rate gira do. Us se
+  // discount khatam nahi hota -- wo CHUP jata hai, aur nuqsan us cheez
+  // ke rate mein hamesha ke liye baith jata hai.
+  const [discount, setDiscount] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
+
+  // Bill se zyada discount nahi. Ye rok yahan sirf safhe ke liye hai --
+  // asal rok server aur database dono mein alag se lagi hui hai.
+  const chhoot = Math.min(Math.max(parseFloat(discount) || 0, 0), total);
+  /** Gahak ne jo dena hai -- yani discount ke BAAD wali raqam. */
+  const deyRaqam = Math.round((total - chhoot) * 100) / 100;
+
   const totalAllocated = useMemo(
     () => paymentLines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
     [paymentLines]
   );
-  const remaining = total - totalAllocated;
+  const remaining = deyRaqam - totalAllocated;
   const khataTotal = paymentLines.filter((l) => l.method === "khata").reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
 
   const selectedLine = cart.find((l) => l.product_id === selectedId) ?? null;
@@ -411,6 +426,11 @@ export function PosClient({
     setCustMode("walkin");
     setCustQuery("");
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
+    // Discount agle bill par apne aap nahi chalta. Wo pichhle gahak ka
+    // faisla tha -- agar wo yahan reh jaye to agla banda bina kuch kahe
+    // wohi riayat le kar chala jayega.
+    setDiscount("");
+    setDiscountReason("");
     barcodeRef.current?.focus();
   }
 
@@ -464,6 +484,14 @@ export function PosClient({
     // paisa naqad hi kyun na aa jaye. Thok ka rate kisi EK dukan ke liye
     // hota hai; bina naam ke wo rate kisi ke bhi haath lag sakta hai,
     // aur baad mein ye sawal ka jawab nahi milta ke ye maal gaya kahan.
+    // Discount bina wajah ke nahi. Ye paisa hai jo hum de rahe hain --
+    // aur jis raqam ke saath us ki wajah na likhi jaye, wo mahine baad
+    // sirf "munafa kam kyun hai" ki soorat mein saamne aati hai, jahan
+    // us ka koi ilaj nahi hota. Yehi rok server par bhi lagi hui hai.
+    if (chhoot > 0 && discountReason.trim().length < 3) {
+      setMessage({ type: "error", text: "Discount ki wajah likhein." });
+      return;
+    }
     if (custMode === "wholesale" && !customerId) {
       setMessage({ type: "error", text: t("pos_wholesale_needs_shop", lang) });
       return;
@@ -473,7 +501,7 @@ export function PosClient({
       return;
     }
 
-    const cashCollected = total - khataTotal;
+    const cashCollected = deyRaqam - khataTotal;
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
     setSubmitting(true);
@@ -495,6 +523,8 @@ export function PosClient({
       paymentLines: paymentLines
         .filter((l) => (parseFloat(l.amount) || 0) > 0)
         .map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
+      discount: chhoot,
+      discountReason: discountReason.trim(),
     });
 
     const data = result.saleId;
@@ -1109,9 +1139,10 @@ export function PosClient({
           </div>
         </div>
 
-        {/* Kul raqam sab se numaayan. Discount ki qatar yahan nahi hai --
-            is nizam mein discount ka koi khana hai hi nahi, aur "Rs 0"
-            likh dena us cheez ka wada hai jo hoti nahi. */}
+        {/* Kul raqam sab se numaayan. Discount ki qatar sirf us bande ko
+            dikhti hai jise dene ki ijazat hai -- baqi ke liye wo khana
+            hai hi nahi. Aur jab discount diya na jaye to "Rs 0" ki qatar
+            bhi nahi aati: sifar ka discount hota hi nahi. */}
         <div className="space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
           <div className="flex items-center justify-between">
             <span className="text-surface-500">{t("pos_total_quantity", lang)}</span>
@@ -1125,6 +1156,37 @@ export function PosClient({
               Rs {total.toLocaleString()}
             </span>
           </div>
+
+          {perms.canGiveDiscount && cart.length > 0 && (
+            <div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="pos-discount" className="text-surface-500">
+                  Discount
+                </label>
+                <input
+                  id="pos-discount"
+                  inputMode="decimal"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0"
+                  className="h-8 w-24 rounded-md border border-surface-200 bg-white px-2 text-right text-sm tabular-nums dark:border-surface-700 dark:bg-surface-900"
+                />
+              </div>
+              {chhoot > 0 && (
+                <input
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
+                  placeholder="Wajah — jaise: purana gahak"
+                  className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900"
+                />
+              )}
+              {chhoot > 0 && discountReason.trim().length < 3 && (
+                <p className="mt-1 text-[11px] text-amber-600">
+                  Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-surface-500">{t("pos_paid", lang)}</span>
             <span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">
@@ -1135,7 +1197,7 @@ export function PosClient({
         <div className="flex items-center justify-between">
           <span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span>
           <span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">
-            Rs {total.toLocaleString()}
+            Rs {deyRaqam.toLocaleString()}
           </span>
         </div>
         <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}>

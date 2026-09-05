@@ -15515,6 +15515,9 @@ export type Database = {
           branch_id: string | null
           cash_paid: number
           created_at: string
+          discount_reason: string | null
+          discount_amount: number | null
+          gross_amount: number | null
           created_by: string | null
           crm_customer_id: string | null
           customer_id: string | null
@@ -15532,6 +15535,9 @@ export type Database = {
           branch_id?: string | null
           cash_paid?: number
           created_at?: string
+          discount_reason?: string | null
+          discount_amount?: number | null
+          gross_amount?: number | null
           created_by?: string | null
           crm_customer_id?: string | null
           customer_id?: string | null
@@ -15549,6 +15555,9 @@ export type Database = {
           branch_id?: string | null
           cash_paid?: number
           created_at?: string
+          discount_reason?: string | null
+          discount_amount?: number | null
+          gross_amount?: number | null
           created_by?: string | null
           crm_customer_id?: string | null
           customer_id?: string | null
@@ -24470,6 +24479,8 @@ export type Database = {
           p_items: Json
           p_khata_amount: number
           p_payment_lines?: Json
+          p_discount?: number
+          p_discount_reason?: string | null
           p_payment_mode: string
         }
         Returns: string

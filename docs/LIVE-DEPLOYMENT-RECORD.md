@@ -1300,3 +1300,76 @@ jati). Sab ulta diya gaya.
 ### Live par abhi NAHI chali
 
 **325 Testing par hai, Live par nahi.**
+
+---
+
+## 5s. Rokay hua kaam — 326 (POS par discount)
+
+POS mein discount ka koi khana tha hi nahi. Safhe par likha hua tha:
+*"Discount ki qatar yahan nahi hai -- is nizam mein discount ka koi khana
+hai hi nahi, aur 'Rs 0' likh dena us cheez ka wada hai jo hoti nahi."*
+
+Wo us waqt theek tha. Magar dukan par discount **hota hai** -- "paanchas
+rupay chhoR do" roz ki baat hai. Aur jab nizam mein us ka khana na ho to
+banda rate gira deta hai, aur phir us cheez ka bikri ka rate hamesha ke
+liye ghalat ho jata hai. Yani discount khatam nahi hota -- sirf **chup**
+jata hai, aur nuqsan rate master mein baith jata hai.
+
+### Bikri poori raqam par, discount alag khate mein
+
+Aasan raasta ye hota ke bikri seedhi kam raqam par likh dete. Kitab
+barabar rehti, kaam chalta -- magar ye sawal kabhi jawab na paata:
+**"is mahine hum ne kitna discount diya?"**
+
+```
+Dr  cash / khata        950     (jo waqai aaya)
+Dr  discount diya        50     (jo hum ne chhoRa)      4099
+    Cr  dukan ki bikri  1,000   (jo maal ki qeemat thi) 4000
+```
+
+Khata **4099** contra-income hai (`is_contra`): aamdani ka khata magar
+ulta chalta hai. Nafa nuqsan par wo bikri ke saath minus ho kar dikhta
+hai, kisi kharche mein chhup kar nahi.
+
+### Khane
+
+| Khana | Matlab |
+|---|---|
+| `total_amount` | gahak ne jo dena hai (discount ke **baad**) — is ka matlab badla nahi, is liye har purana hisaab waisa hi chalta hai |
+| `gross_amount` | discount se pehle ki raqam. Purane bill par NULL |
+| `discount_amount` | jo chhoRa. **KHALI = discount diya hi nahi.** Sifar par rok hai |
+| `discount_reason` | bina wajah discount nahi lagta |
+
+Munafa **net** par ginta hai -- discount waqai munafa kam karta hai; use
+gross par ginna har bill ko us se behtar dikhata jitna wo tha.
+
+### Ek galti jo Testing par pakRi gayi
+
+`create or replace function` ne purana 6-khanon wala function hataya
+NAHI -- naye ke aakhri do khane (discount) ke default hain, is liye 6
+khanon wala bulawa **dono** par utarta hai aur Postgres "function is not
+unique" keh kar **bikri hi rok deta**. Yani purana function chhorna safai
+ka masla nahi tha: use chhorte hi counter band ho jata.
+Migration mein ab `drop function` pehle likha hua hai.
+
+### Ijazat
+
+Discount wohi de sakta hai jo rate badal sakta hai (`pos.edit`). Do alag
+ijazatein banane se ek hi taqat do jagah tay hoti aur ek din wo alag ho
+jatin -- rate girana aur discount dena, dono ka natija ek hai.
+
+Rok teen jagah: safhe par (khana dikhta hi nahi), server par
+(`posCheckout`), aur database mein (`create_pos_sale` + check
+constraint).
+
+### Testing par rollback test — aath baatein
+
+Bina discount ka bill (gross aur discount dono khali) **bana**; wajah ke
+saath discount **laga**; bina wajah **ruka**; sifar ka discount **ruka**;
+bill se zyada **ruka**; bina gross ke **ruka**; `create_pos_sale` ka
+sirf **ek** roop bacha; khata 4099 contra-income **hai**. Sab ulta diya
+gaya.
+
+### Live par abhi NAHI chali
+
+**326 Testing par hai, Live par nahi.**

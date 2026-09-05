@@ -54,6 +54,9 @@ export async function posCheckout(input: {
   khataAmount: number;
   items: PosCartItem[];
   paymentLines: PosPaymentLine[];
+  /** Bill par chhoRi hui raqam. 0 = discount diya hi nahi. */
+  discount?: number;
+  discountReason?: string;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
@@ -79,6 +82,23 @@ export async function posCheckout(input: {
   const udhaarGhalat = await checkCredit(input);
   if (udhaarGhalat) return { error: udhaarGhalat };
 
+  // Discount ki rok bhi YAHAN, safhe par nahi -- wohi wajah jo rate ki
+  // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath
+  // mein discount dena bhi wohi taqat hai: maal us qeemat par chala
+  // jata hai jo malik ne tay nahi ki.
+  const discount = Math.round((input.discount ?? 0) * 100) / 100;
+  const discountReason = (input.discountReason ?? "").trim();
+  if (discount < 0) return { error: "Discount manfi nahi hota." };
+  if (discount > 0) {
+    const { canGiveDiscount } = await loadPosPermissions(user?.id ?? null);
+    if (!canGiveDiscount) {
+      return { error: "Discount dene ki ijazat aap ke paas nahi. Manager se kehein." };
+    }
+    if (discountReason.length < 3) {
+      return { error: "Discount ki wajah likhein — jo raqam bina wajah ke di jaye us ka hisaab kabhi nahi milta." };
+    }
+  }
+
   const { data: saleIdRaw, error } = await supabase.rpc("create_pos_sale", {
     p_customer_id: input.customerId as string,
     p_payment_mode: input.paymentMode,
@@ -86,6 +106,8 @@ export async function posCheckout(input: {
     p_khata_amount: input.khataAmount,
     p_items: input.items as unknown as Json,
     p_payment_lines: input.paymentLines as unknown as Json,
+    p_discount: discount,
+    p_discount_reason: discount > 0 ? discountReason : null,
   });
 
   const saleId = saleIdRaw as string | null;
@@ -232,7 +254,7 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
 
   const { data: sale } = await service
     .from("pos_sales")
-    .select("id, total_amount, khata_amount, total_cogs, branch_id, created_at")
+    .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, created_at")
     .eq("id", saleId)
     .maybeSingle();
   if (!sale) return "Bikri ka record nahi mila, ledger mein nahi ja saki.";
@@ -283,7 +305,18 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   const khata = Number(sale.khata_amount ?? 0);
   if (khata > 0) lines.push({ account: ACC.customerDue, debit: khata, memo: "POS — khata" });
 
-  lines.push({ account: ACC.salesShop, credit: Number(sale.total_amount) });
+  // Bikri POORI raqam par likhi jati hai, aur jo chhoRa gaya wo apne
+  // khate mein. Seedha kam raqam likh dene se kitab to barabar rehti,
+  // magar ye sawal kabhi jawab na paata: "is mahine hum ne kitna
+  // discount diya?"
+  const discount = Number(sale.discount_amount ?? 0);
+  if (discount > 0) {
+    lines.push({ account: ACC.salesDiscount, debit: discount, memo: "POS — discount diya" });
+  }
+  lines.push({
+    account: ACC.salesShop,
+    credit: Number(sale.gross_amount ?? sale.total_amount),
+  });
 
   const cogs = Number(sale.total_cogs ?? 0);
   if (cogs > 0) {

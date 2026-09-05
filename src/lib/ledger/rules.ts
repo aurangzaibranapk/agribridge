@@ -91,6 +91,10 @@ export const ACC = {
   loadServiceCharge: "4050",
   loadCommission: "4055",
   otherIncome: "4090",
+  // Contra-income: aamdani ka khata hai magar ULTA chalta hai. Bikri
+  // poori raqam par likhi jati hai aur jo chhoRa gaya wo yahan -- warna
+  // "is mahine kitna discount diya" ka jawab kahin se nahi milta.
+  salesDiscount: "4099",
   assetSaleGain: "4095",
   cogs: "5000",
   milkPurchase: "5010",

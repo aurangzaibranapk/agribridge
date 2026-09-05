@@ -31,9 +31,18 @@ export interface PosPermissions {
   canSeeCost: boolean;
   /** Counter par bikri ka rate badal sakta hai? */
   canEditRate: boolean;
+  /**
+   * Bill par discount de sakta hai?
+   *
+   * Ye rate badalne wali hi taqat hai, doosri shakal mein: rate girana
+   * aur discount dena dono ka natija ek hai -- maal us qeemat par jata
+   * hai jo malik ne tay nahi ki. Do alag ijazatein banane se ek hi cheez
+   * do jagah tay hoti, aur ek din wo alag ho jatin.
+   */
+  canGiveDiscount: boolean;
 }
 
-export const POS_PERMS_NONE: PosPermissions = { canSeeCost: false, canEditRate: false };
+export const POS_PERMS_NONE: PosPermissions = { canSeeCost: false, canEditRate: false, canGiveDiscount: false };
 
 export async function loadPosPermissions(userId: string | null | undefined): Promise<PosPermissions> {
   if (!userId) return POS_PERMS_NONE;
@@ -52,5 +61,5 @@ export async function loadPosPermissions(userId: string | null | undefined): Pro
   // baghair.
   const canEditRate = access.unrestricted || can(access, "pos", "edit");
 
-  return { canSeeCost, canEditRate };
+  return { canSeeCost, canEditRate, canGiveDiscount: canEditRate };
 }
