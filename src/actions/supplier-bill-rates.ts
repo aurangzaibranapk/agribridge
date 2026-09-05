@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
@@ -459,6 +460,10 @@ export async function saveBillLine(_prev: BillRateState, formData: FormData): Pr
   const productId = chosen || null;
   const rate = num("rate");
   const qty = num("qty");
+  // Khali = "ye rate mat chhuo". Sifar alag baat hai (wo "muft" ka
+  // matlab deta hai) -- is liye sifar yahan qabool nahi hota.
+  const wholesaleRaw = num("wholesale_rate");
+  const wholesale = wholesaleRaw && wholesaleRaw > 0 ? wholesaleRaw : null;
 
   // "Ready" ka matlab: ye qatar charhne layak hai. Bina product ya
   // bina rate ke wo dawa jhooti hai -- database bhi yahi kehta hai.
@@ -470,6 +475,7 @@ export async function saveBillLine(_prev: BillRateState, formData: FormData): Pr
       item_name: String(formData.get("item_name") ?? "").trim() || null,
       qty,
       rate,
+      wholesale_rate: wholesale,
       product_id: productId,
       // Andaze wala milaan Save par "confirmed" ho jata hai -- banda dekh
       // kar aage barha, yehi tasdeeq hai (H).
@@ -933,5 +939,15 @@ export async function deleteSupplierBill(_prev: BillRateState, formData: FormDat
   });
 
   revalidatePath("/admin/products/bill-rates");
-  return { success: true, notice: "Bill hata diya gaya." };
+
+  // Banda aksar BILL KE APNE SAFHE se delete dabata hai. Bill hat gaya
+  // magar browser wahin khaRa rehta tha -- aur wo safha ab maujood hi
+  // nahi, is liye seedha "404 This page could not be found" khul jata
+  // tha (malik, 5 September). Kaam theek hua tha, magar nazar aane wali
+  // aakhri cheez ek ghalti thi.
+  //
+  // `redirect` yahan se wapas nahi aata, is liye is ke baad kuch nahi.
+  // Fehrist ke safhe se dabaya gaya ho to bhi ye theek hai -- wahi safha
+  // dobara khulta hai.
+  redirect("/admin/products/bill-rates");
 }

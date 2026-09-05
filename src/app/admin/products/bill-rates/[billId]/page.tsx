@@ -157,6 +157,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
           status: l.status,
           problem: l.problem,
           appliedRate: l.applied_rate == null ? null : Number(l.applied_rate),
+          wholesaleRate: l.wholesale_rate == null ? null : Number(l.wholesale_rate),
         }))}
         products={(products ?? []).map((p) => ({
           id: p.id,

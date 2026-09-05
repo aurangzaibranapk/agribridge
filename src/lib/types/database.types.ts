@@ -16003,6 +16003,11 @@ export type Database = {
           bill_date: string | null
           bill_number: string | null
           bill_total: number | null
+          discount_amount: number | null
+          tax_amount: number | null
+          tax_label: string | null
+          tax_rate: number | null
+          other_charges: number | null
           created_at: string
           created_by: string | null
           id: string
@@ -16022,6 +16027,11 @@ export type Database = {
           bill_date?: string | null
           bill_number?: string | null
           bill_total?: number | null
+          discount_amount?: number | null
+          tax_amount?: number | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          other_charges?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -16041,6 +16051,11 @@ export type Database = {
           bill_date?: string | null
           bill_number?: string | null
           bill_total?: number | null
+          discount_amount?: number | null
+          tax_amount?: number | null
+          tax_label?: string | null
+          tax_rate?: number | null
+          other_charges?: number | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -16059,6 +16074,7 @@ export type Database = {
           confidence: string | null
           applied_at: string | null
           applied_rate: number | null
+          wholesale_rate: number | null
           bill_read_id: string
           created_at: string
           id: string
@@ -16080,6 +16096,7 @@ export type Database = {
           confidence?: string | null
           applied_at?: string | null
           applied_rate?: number | null
+          wholesale_rate?: number | null
           bill_read_id: string
           created_at?: string
           id?: string
@@ -16101,6 +16118,7 @@ export type Database = {
           confidence?: string | null
           applied_at?: string | null
           applied_rate?: number | null
+          wholesale_rate?: number | null
           bill_read_id?: string
           created_at?: string
           id?: string

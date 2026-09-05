@@ -55,6 +55,26 @@ export interface BillLinesReading {
   supplierName: string | null;
   billNumber: string | null;
   billDate: string | null;
+  /**
+   * Bill ke NEECHE ke adad.
+   *
+   * Malik ne 5 September ko asal bill par ye pakRa: qatarein
+   * Rs 64,533.54 banti thin, bill par Rs 63,033.45 likha tha, aur safha
+   * kehta tha "shayad koi qatar nahi paRhi gayi". Magar hisaab poora
+   * milta tha -- 64,533.54 minus 1,822.76 (discount) plus 322.67
+   * (advance tax) = 63,033.45. Qatarein sab theek thin; DISCOUNT AUR TAX
+   * ke khane hi nahi the.
+   *
+   * `billTotal` wo raqam hai jo WAQAI DENI HAI (grand total), aur
+   * `subTotal` qataron ka jama (invoice total). Do alag adad hain aur
+   * unhen ek maan lena hi wo ghalti thi.
+   */
+  subTotal: number | null;
+  discountTotal: number | null;
+  taxAmount: number | null;
+  /** Tax ka naam JAISA BILL PAR LIKHA HAI -- "Advance Tax", "GST". */
+  taxLabel: string | null;
+  otherCharges: number | null;
   billTotal: number | null;
   lines: BillLineReading[];
   confidence: "low" | "medium" | "high";
@@ -70,7 +90,12 @@ Respond with ONLY a JSON object with these exact keys:
 - supplierName: the supplier / distributor / company name printed on the bill, exactly as written, or null
 - billNumber: the invoice or bill number, or null
 - billDate: the bill date in YYYY-MM-DD format, or null
-- billTotal: the grand total printed at the bottom as a plain number, or null
+- subTotal: the sub-total / "invoice total" — the sum of the item lines BEFORE discount and tax, as printed, or null
+- discountTotal: the total discount printed at the bottom (e.g. "TOTAL DISCOUNT"), as a POSITIVE plain number, or null
+- taxAmount: the tax printed at the bottom, as a POSITIVE plain number, or null
+- taxLabel: the tax's name EXACTLY as printed — e.g. "Advance Tax", "GST", "Sales Tax", "Further Tax" — or null. Do NOT guess or normalise it; in Pakistan advance tax and sales tax are completely different things.
+- otherCharges: freight / labour / delivery charges printed at the bottom, as a positive plain number, or null
+- billTotal: the FINAL amount payable — the "Grand Total" / "Net Total" at the very bottom, after discount and tax — as a plain number, or null
 - lines: an array, one entry per item line on the bill, in the order they appear. Each entry has:
     - rawText: the whole line copied exactly as it appears on the bill, including any codes
     - itemName: just the item description, or null
@@ -89,6 +114,8 @@ CRITICAL RULES:
 4. Do NOT include discount rows, tax rows, freight rows, "previous balance" rows or the total row as item lines. Those are not products.
 5. Do NOT try to match items to any product catalogue, and do not rename or expand item descriptions. Copy what is written.
 6. Do NOT return a barcode.
+7. Bills often print BOTH an "Invoice Total" (before discount/tax) and a "Grand Total" (after). Put the first in subTotal and the LAST one in billTotal. If only one total is printed, put it in billTotal and leave subTotal null.
+8. Report discount and tax as POSITIVE numbers even though the bill may print them with a minus sign. Never fold them into the line amounts or into billTotal.
 
 No text outside the JSON object.`;
 
@@ -197,6 +224,11 @@ export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesR
       supplierName: cleanText(raw.supplierName, 160),
       billNumber: cleanText(raw.billNumber, 60),
       billDate: billDate && /^\d{4}-\d{2}-\d{2}$/.test(billDate) ? billDate : null,
+      subTotal: cleanNumber(raw.subTotal),
+      discountTotal: cleanNumber(raw.discountTotal),
+      taxAmount: cleanNumber(raw.taxAmount),
+      taxLabel: cleanText(raw.taxLabel, 60),
+      otherCharges: cleanNumber(raw.otherCharges),
       billTotal: cleanNumber(raw.billTotal),
       lines,
       confidence:

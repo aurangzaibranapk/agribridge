@@ -45,6 +45,8 @@ interface Line {
   status: string;
   problem: string | null;
   appliedRate: number | null;
+  /** Bill se wholesale rate bhi (319). Khali = ye rate mat chhuo. */
+  wholesaleRate: number | null;
 }
 
 /**
@@ -309,6 +311,28 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
                   .replace("{total}", (line.lineTotal ?? 0).toLocaleString())}
               </p>
             )}
+          </div>
+          {/* Wholesale rate yahin -- bill charhte waqt sath hi lag jata
+              hai (319). Pehle is ke liye har cheez alag se kholni parti
+              thi; 14 qataron wale bill par 14 dafa. Wohi kaam jo koi
+              nahi karta, aur phir wholesale rate purana hi chalta rehta
+              hai (malik, 5 September). */}
+          <div>
+            <Label htmlFor={`ws-${line.id}`}>Wholesale rate</Label>
+            <Input
+              id={`ws-${line.id}`}
+              name="wholesale_rate"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={line.wholesaleRate ?? ""}
+              disabled={locked}
+              placeholder="khali chhorein to na badle"
+              className="text-base"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Khali chhor dein to is cheez ka purana wholesale rate waisa hi rahega.
+            </p>
           </div>
         </div>
 

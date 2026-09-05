@@ -911,3 +911,82 @@ abhi baqi hain.
 Qatarein banin, ghalat `kind` **ruki**, mahine ka hisaab theek: tasveer 1,
 token 1,500 (sirf jahan ginti mili), aur `token_na_mile` = 2. Sab ulta
 diya gaya.
+
+---
+
+## 5n. Rokay hua kaam — 318 aur 319 (supplier ke bill)
+
+### 318 — Bill par tax aur discount ka apna khana
+
+Malik ne asal bill (JX FSD-Jhang-Hamid Traders) par ye pakRa. Safha keh
+raha tha: qatarein Rs 64,533.54 banti hain, bill par Rs 63,033.45 likha
+hai, **Rs 1,500.09 ka farq -- shayad koi qatar nahi paRhi gayi.**
+
+Magar bill par likha tha:
+
+```
+INVOICE TOTAL:   64,533.54
+TOTAL DISCOUNT:   1,822.76
+ADVANCE TAX:        322.67
+GRAND TOTAL:     63,033.45
+```
+
+64,533.54 − 1,822.76 + 322.67 = **63,033.45** -- farq SIFAR. AI ne saari
+qatarein theek paRhi thin; **discount aur tax ke khane hi nahi the**, aur
+jis cheez ka khana na ho us ka adad kahin nahi ja sakta. Safha us kami ko
+"qatar chhoot gayi" samajh raha tha.
+
+Ab `supplier_bill_reads` par: `discount_amount`, `tax_amount`,
+`tax_label`, `tax_rate`, `other_charges`. Sath `v_supplier_bill_milan`
+-- milan ka hisaab ab ek hi jagah:
+
+    qatarein − discount + tax + baqi kharche = bill ka total
+
+**`tax_label` ki wajah:** bill par "ADVANCE TAX" likha hai, GST nahi. FBR
+ke liye ye DO ALAG cheezein hain (236G/236H rok kar jama hota hai aur
+aage adjust hota hai; sales tax ka raasta bilkul aur). Dono ko ek "tax"
+ke khane mein daal dena aaj to chal jata, magar us din nahi chalta jis
+din FBR ko dena ho. Is liye tax ke sath us ka NAAM bhi wohi rakha jata
+hai jo bill par likha ho.
+
+AI ka prompt bhi badla: ab `subTotal`, `discountTotal`, `taxAmount`,
+`taxLabel`, `otherCharges` alag maangta hai, aur `billTotal` mein wo
+raqam jo WAQAI deni hai (grand total).
+
+### 319 — Bill se wholesale rate bhi
+
+Malik: *"jab hum ye products add kar rahe hon, next page par in ke
+wholesale rate update ki jagah honi chahiye."*
+
+Ab tak bill se sirf KHARID ka rate charhta tha. Wholesale ke liye har
+cheez alag se kholni parti thi -- 14 qataron wale bill par 14 dafa. Wohi
+kaam jo koi nahi karta.
+
+`supplier_bill_lines.wholesale_rate` juRa, aur
+`fn_apply_bill_line_rate` ab `wholesale_price` bhi lagata hai --
+**sirf jab qatar par likha ho** (`coalesce(v_line.wholesale_rate,
+wholesale_price)`). Khali khana kuch nahi badalta; warna har bill purana
+wholesale rate mita deta.
+
+### Ek bug (migration nahi -- code)
+
+Bill delete karne par browser BILL KE APNE SAFHE par khaRa reh jata tha,
+aur wo safha ab maujood nahi -- seedha "404 This page could not be found"
+khul jata tha. Kaam theek hota tha, magar nazar aane wali aakhri cheez ek
+ghalti thi. Ab delete ke baad fehrist par bhej diya jata hai.
+
+### Malik ka sawal: pehle se maujood stock aur paid bill
+
+*"mere paas pehle se stock available hai, to kya main wo update kar sakta
+hoon? Bill us ke already paid hain."*
+
+**Haan.** `fn_apply_bill_line_rate` khol kar dekha: wo SIRF
+`products.purchase_price` (aur ab `wholesale_price`) badalta hai aur
+history likhta hai. **Stock ko haath nahi lagata aur koi adaigi nahi
+banata.**
+
+Dhyan sirf ek baat ka: usi safhe par **"Purchase banayein"**
+(`createPurchaseFromBill`) alag button hai -- **wo** stock barhata hai
+aur payable banata hai. Jo bill pehle se paid hai aur maal pehle se stock
+mein hai, us par wo button nahi dabana -- warna stock do guna aur adaigi
+jhooti.
