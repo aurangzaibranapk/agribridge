@@ -990,3 +990,64 @@ Dhyan sirf ek baat ka: usi safhe par **"Purchase banayein"**
 aur payable banata hai. Jo bill pehle se paid hai aur maal pehle se stock
 mein hai, us par wo button nahi dabana -- warna stock do guna aur adaigi
 jhooti.
+
+---
+
+## 5o. Rokay hua kaam — migration 320 (Kharabiyon ka khata)
+
+Malik ka kehna (5 September):
+
+> "Mujhe ERP system par koi aisa function laga dein: kahin bhi koi error
+> aaye to mujhe pata chal jaye -- is cheez ka error hai, code mein ya
+> kisi aur jagah, bill duplicating mein, POS, inventory, kahin bhi ho --
+> mujhe ek page par pata chal jaye, taake developer ko asani se wo khatam
+> kar sake."
+
+Aaj tak kharabi ka pata chalne ka **ek hi raasta tha: koi banda
+screenshot bheje.** Isi session mein us ki teen misalein saamne aayin,
+aur teenon ek hi shakal ke the -- kharabi hui, aur us ka naam kisi jagah
+likha nahi gaya:
+
+| Kharabi | Asal wajah | Kahan likhi thi |
+|---|---|---|
+| "Kuch masla ho gaya" (Assistant) | Chaabi ke do naamon ka farq | Sirf server ke log mein |
+| Machinery ki adaigi ruk gayi | `uq_machinery_payment_receipt` par duplicate | Kahin nahi |
+| Tasveer ka 404 | Model ka naam maujood hi nahi tha | Sirf us waqt jab malik ne dekha |
+
+**320** `error_log` banati hai, `v_error_summary` (jama shuda), aur safha
+`/admin/errors` (Intezamia ke neeche, sirf Owner/Admin).
+
+### Teen usool
+
+1. **Khata likhna kabhi kaam nahi rokta.** `recordError` khamoshi se
+   nakaam ho jata hai. Hisaab rakhne wali cheez ka asal kaam rok dena us
+   se bura hai ke hisaab na rakha jaye.
+
+2. **Ek jaisi kharabi ek qatar mein.** `fingerprint` un cheezon ko nikal
+   deta hai jo har dafa badalti hain (uuid, `MR-2026-00001` jaise number,
+   tareekh, adad). Warna ek hi masla chalees dafa "nayi kharabi" ban jata
+   aur safha parhne ke qabil na rehta -- aur jo safha parha na jaye wo
+   bhi utna hi bekaar hai jitna koi safha na hona.
+
+3. **Hal shuda kharabi mitai nahi jati** -- nishan lagta hai, wajah ke
+   sath (kam az kam teen harf, database par bhi rok hai). Mita dene se ye
+   sawal kabhi jawab nahi paata ke ye masla pehle bhi aaya tha ya nahi.
+
+### Abhi kaunse raaste khate mein aate hain
+
+- **Kisi bhi admin safhe ka toot jana** -- `error.tsx` khud
+  `/api/log-error` par khabar bhejta hai (`keepalive` ke sath, kyunki
+  banda aksar usi lamhe safha band kar deta hai). Client par honay wali
+  kharabi server ke log mein jati hi nahi thi.
+- **Bridge AI ki nakaami**
+- **Tasveer na banna** (model ka naam sath)
+- **Machinery ka number na banna** -- wohi jagah jahan adaigi ruki thi
+
+`/api/log-error` sirf login shuda bande se qabool karta hai -- khula
+chhorna wo darwaza hai jahan se koi bhi khata bhar sakta hai.
+
+### Testing par rollback test
+
+Do alag raseed numbers wali ek jaisi kharabi **ek hi qatar** mein jama
+hui (`kitni_dafa = 2`); bina wajah "hal ho gayi" **ruki**; wajah ke sath
+chali; ghalat `severity` **ruki**. Sab ulta diya gaya.

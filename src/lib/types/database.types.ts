@@ -7049,6 +7049,54 @@ export type Database = {
           },
         ]
       }
+      error_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: string | null
+          digest: string | null
+          fingerprint: string
+          id: string
+          message: string
+          module: string
+          resolve_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          route: string | null
+          severity: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          digest?: string | null
+          fingerprint: string
+          id?: string
+          message: string
+          module: string
+          resolve_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          route?: string | null
+          severity?: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          digest?: string | null
+          fingerprint?: string
+          id?: string
+          message?: string
+          module?: string
+          resolve_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          route?: string | null
+          severity?: string
+        }
+        Relationships: []
+      }
       farmers: {
         Row: {
           address: string | null
@@ -23864,6 +23912,23 @@ export type Database = {
           tasveerein: number | null
           token: number | null
           token_na_mile: number | null
+        }
+        Relationships: []
+      }
+      v_error_summary: {
+        Row: {
+          aakhri_dafa: string | null
+          detail: string | null
+          digest: string | null
+          fingerprint: string | null
+          hal_hui: string | null
+          khuli: number | null
+          kitni_dafa: number | null
+          message: string | null
+          module: string | null
+          pehli_dafa: string | null
+          route: string | null
+          severity: string | null
         }
         Relationships: []
       }

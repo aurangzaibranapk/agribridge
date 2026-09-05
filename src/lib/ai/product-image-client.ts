@@ -1,6 +1,7 @@
 import { geminiApiKey } from "@/lib/ai/gemini-key";
 import { resolveImageModel } from "@/lib/ai/gemini-models";
 import { recordAiUsage } from "@/lib/ai/usage";
+import { recordError } from "@/lib/errors/record";
 
 /**
  * Cheez ki tasveer AI se.
@@ -127,6 +128,13 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
       await recordAiUsage({
         feature: "tasveer", kind: "tasveer", model, ok: false,
         error: `${res.status}: ${body}`, ms: Date.now() - shuru,
+      });
+      await recordError({
+        module: "ai",
+        severity: "ghalti",
+        message: `Tasveer nahi bani (${res.status})`,
+        route: "/admin/products/images",
+        detail: `model: ${model}\n${body}`,
       });
       // Asal ghalti aage bheji jati hai. "Tasveer nahi bani" likh kar
       // wajah chhupa dena bande ko us masle par bithha deta hai jo wo

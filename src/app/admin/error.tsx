@@ -33,6 +33,32 @@ export default function AdminError({
   useEffect(() => {
     // Browser ke console mein bhi -- jahan poora stack milta hai.
     console.error("Admin safhe par kharabi:", error);
+
+    // ...aur khate mein bhi (320). Client par honay wali kharabi server
+    // ke log mein nahi jati -- yani wo sirf us waqt maujood hoti thi jab
+    // koi us ki tasveer bhej de. Ab wo khud "Kharabiyan" ke safhe par
+    // pahunch jati hai.
+    //
+    // `keepalive` is liye ke banda aksar isi lamhe safha band kar deta
+    // hai; us ke baghair khabar raaste mein hi mar jati.
+    try {
+      fetch("/api/log-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          module: "code",
+          severity: "rukawat",
+          message: error.message || "Safhe par kuch toot gaya",
+          route: typeof window !== "undefined" ? window.location.pathname : null,
+          digest: error.digest ?? null,
+          detail: error.stack ?? null,
+        }),
+      }).catch(() => {});
+    } catch {
+      // Khabar na ja sake to bhi safha wohi rehta hai jo bande ko
+      // dikhna chahiye.
+    }
   }, [error]);
 
   return (

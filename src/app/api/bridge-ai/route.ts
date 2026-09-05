@@ -13,6 +13,7 @@ import { ACCESS_TOOL, CONFLICT_TOOL, executeAccessTool, executeConflictTool } fr
 import { createServiceClient } from "@/lib/supabase/service";
 import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 import { recordAiUsage } from "@/lib/ai/usage";
+import { recordError } from "@/lib/errors/record";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -137,6 +138,15 @@ export async function POST(request: NextRequest) {
     // Poora stack log mein, aur bande ke saamne wo jumla jis se agla
     // qadam maloom ho.
     console.error("Bridge AI error:", error);
+    // Kharabi ka khata (320) -- taake ye masla safhe par nazar aaye,
+    // sirf server ke log mein na pare rahe.
+    await recordError({
+      module: "ai",
+      severity: "rukawat",
+      message: error instanceof Error ? error.message : String(error),
+      route: "/api/bridge-ai",
+      detail: error instanceof Error ? error.stack ?? null : null,
+    });
     await recordAiUsage({
       feature: "chat",
       kind: "likhai",

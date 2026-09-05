@@ -6,6 +6,7 @@ import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/ident
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
+import { recordError } from "@/lib/errors/record";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import { reverseJournal } from "@/lib/ledger/post";
@@ -154,6 +155,17 @@ async function logEvent(args: {
 async function nextNumber(supabase: Client, kind: "booking" | "bill" | "receipt"): Promise<string> {
   const { data, error } = await supabase.rpc("fn_next_machinery_number", { p_kind: kind });
   if (error || !data) {
+    // Yehi wo jagah hai jahan 5 September ko adaigi ruk gayi thi:
+    // counter par ijazat nahi thi, is liye har raseed ka number wohi
+    // purana bana aur `uq_machinery_payment_receipt` ne rok diya. Us
+    // waqt wajah kisi safhe par nazar nahi aati thi -- ab aati hai (320).
+    await recordError({
+      module: "machinery",
+      severity: "rukawat",
+      message: `Machinery ka number nahi ban saka (${kind})`,
+      route: "/admin/machinery-rental",
+      detail: error?.message ?? "RPC ne khali jawab diya",
+    });
     throw new Error(`Number nahi ban saka (${kind}): ${error?.message ?? "maloom nahi"}`);
   }
   return data as string;
