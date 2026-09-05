@@ -619,3 +619,70 @@ Testing Almost Complete, Live Accepted nahi.
 
 Is fehrist mein jo bhi naya kaam hota rahe, wo yahin juRta rahe — taake
 un ke aane par ek bhi qadam chhoot na jaye.
+
+---
+
+## 5i. Rokay hue kaam — 5 September (dopahar ke baad)
+
+Ye sab **Testing par chal chuka aur test ho chuka**. Live par abhi baqi
+hai. Tarteeb wohi P0 wali: **backup verified → pre-migration ginti →
+migrations → verification → build upload → smoke test**.
+
+### Migrations jo Live par jani hain
+
+| # | Kya karti hai |
+|---|---|
+| **312** | Vendor ko hisse se ZYADA diya hua naqad settlement ke safhe par ek alag khane mein (`zyada_diya`) — ledger se, kisi booking se nahi. |
+| **313** | (a) Diesel ki qatar ab **mansookh** ho sakti hai (`cancelled`) — wajah ke sath, aur har hisaab se nikal jati hai magar safhe par nazar aati rehti hai. (b) Jo paisa vendor ne kisan se khud le kar **apne hisse mein rakh liya** (`vendor_settlement = 'kept'`) wo ab "vendor ko mil gaya" mein ginta hai, "ART ke paas jama" mein nahi. Us ne apne hisse se zyada rakh liya ho to wo farq apne khane mein: `vendor_ne_zyada_rakha`. |
+| **314** | Khate ki poori pehchaan: `bank_name`, `account_title` (+ pehle se maujood `account_number`). |
+
+313 dono view (`v_machinery_vendor_booking_settlement` aur
+`v_machinery_vendor_settlement`) **gira kar dobara banati hai** — khanon
+ki tarteeb badalni thi aur `create or replace` wo hone nahi deta. 312 ka
+`zyada_diya` khana 313 ke andar hi shaamil hai, is liye **312 pehle, phir
+313** — ya sirf 313 (wo 312 ka kaam bhi kar deti hai). Live par 312 abhi
+gayi hi nahi, is liye seedha 313 chalana kaafi hai.
+
+### Rollback test (Testing par ho chuka)
+
+- Diesel: bina wajah mansookhi **rukti hai**; `rejected` ka purana raasta
+  **abhi bhi band hai**; wajah ke sath mansookhi **chalti hai**;
+  `cancelled_at` khud lagta hai; mansookh qatar **dobara zinda nahi
+  hoti**. Mansookhi ke baad us booking ka diesel `11,280 → 0`.
+- Vendor: `kept` wali soorat — hissa 28,160, khud rakha 32,000 → **mila
+  32,000, baqi 0, zyada rakha 3,840, ART ke paas jama 0**.
+- Purana aam raasta (kisan ne ART ko naqad diya) aur `handed_over`
+  (vendor ke haath mein hamara paisa) — **dono jyon ke tyon**.
+
+### Live par jo DATA theek karna hai (migration ke baad)
+
+1. **Duplicate diesel** — MB-2026-00008 par 4 September ko 23 sekind ke
+   faasle se do dafa 30 litre × Rs 376 darj hua. Ledger wali ghalti
+   pehle hi reverse ho chuki (TXN-26-000009 → TXN-26-000021); qatar abhi
+   `verified` pari hai. Malik ki ijazat mil chuki ("duplicate khatam kar
+   do haan"). 313 ke baad **booking ke safhe par "mansookh karein"**
+   se — hath se SQL ki zaroorat nahi.
+   Us ke baad Farman Ali ka `art_diesel_advance` `33,930 → 22,650` par
+   aa jayega, jo ledger (khata 1120) se **poora milta hai**.
+
+2. **Shuruati balance** — charon khate (UBL, Alfalah, HBL, Cash in Hand)
+   sifar par bane the, is liye Cash Book par Rs -22,650 likha aa raha
+   tha. Naye build ke baad **Finance → Cash Book** par peela form aayega;
+   har khate ka asal shuruati balance malik khud daalenge. Wo raqam Cash
+   Book aur ledger **dono** mein jayegi ("Malik ka sarmaya" 3200 ke
+   saamne).
+
+3. **"Al Rana Traders (kisan dukan)"** — ye khata purane build se bana
+   tha, is liye us ka shuruati balance sirf `opening_balance` ke khane
+   mein baitha hai, ledger ko us ki khabar nahi. Naye build ke baad us ka
+   milan karna hai: ya to us khane ko sifar kar ke form se dobara darj
+   karein, ya us ke barabar ki ek journal entry banayein.
+
+### Baqi (abhi bana nahi)
+
+- **Role sirf poori profile wale bande ko** — malik ka kehna: "admin ka
+  role hum kis ko dein, manager ka kis ko, jis jis ko dena hai us ki
+  fully profile bani hui honi chahiye tab hi." Abhi Staff WhatsApp wale
+  safhe par gyarah aise khate hain jo kisi bande ke nahi, sirf role ka
+  naam hain (admin, Manager, HR Department, Finance Team…).
+- Staff ka qarza (installments) — malik ke qawaid ka intezar.
