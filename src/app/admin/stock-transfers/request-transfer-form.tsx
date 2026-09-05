@@ -134,6 +134,21 @@ export function RequestTransferForm({
             <Label>{t("st_to_destination", lang)}</Label>
             <Select value={toLocation} onChange={(e) => setToLocation(e.target.value)} required>
               <option value="">{t("st_pick_shop", lang)}</option>
+              {/* Central Warehouse pehle sirf BHEJNE wali jagah tha,
+                  lene wali nahi -- form us ko destination mein dikhata
+                  hi nahi tha. Malik ko 5 September ko dukan ke godam se
+                  Central (HQ) mein maal bhejna tha aur raasta band mila.
+
+                  Server ye pehle se kar sakta tha (`resolveWarehouseId`
+                  "central" ko dono taraf samajhta hai) -- kami sirf is
+                  fehrist mein thi.
+
+                  Sirf Admin ke liye: dukan wala banda apni hi dukan se
+                  bhejta hai, aur us ke liye HQ ki taraf bhejna alag
+                  faisla hai. */}
+              {isAdminLevel && fromLocation !== "central" && (
+                <option value="central">{t("st_central_warehouse", lang)}</option>
+              )}
               {shops.filter((s) => s.id !== fromLocation).map((s) => (
                 <option key={s.id} value={s.id}>{shopLabel(s)}</option>
               ))}
