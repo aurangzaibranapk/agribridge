@@ -29,6 +29,8 @@ export interface ImageState {
   success?: boolean;
   bane?: number;
   nakaam?: number;
+  /** Is chaabi par kaunse model maujood hain -- jaanchne ke liye. */
+  models?: { tasveerWale: string[]; baqi: string[] };
 }
 
 const CAN_GENERATE = ["owner", "super_admin", "admin", "manager"];
@@ -282,4 +284,37 @@ export async function rejectImageDraft(_prev: ImageState, formData: FormData): P
 
   paths();
   return { success: true, notice: "Masoda radd kar diya gaya." };
+}
+
+
+/**
+ * "Kaunse model chalte hain?" -- jaanchne ka raasta.
+ *
+ * 5 September ko safha 404 de raha tha kyunki model ka naam code mein
+ * haath se likha hua tha aur us chaabi par maujood nahi tha. Us waqt ye
+ * sawal ka jawab kahin nahi milta tha -- Google ke paighaam mein likha
+ * to tha ("Call ModelService.ListModels"), magar wo command server par
+ * chalani parti thi.
+ *
+ * Ab wo jawab safhe par hai. Kuch badalta nahi, sirf batata hai.
+ */
+export async function checkImageModels(_prev: ImageState, _formData: FormData): Promise<ImageState> {
+  const { ok } = await gate(CAN_GENERATE);
+  if (!ok) return { error: "Ye jaanch sirf Owner, Admin ya Manager kar sakta hai." };
+
+  const { listGeminiModels, imageCapable } = await import("@/lib/ai/gemini-models");
+  const models = await listGeminiModels(true);
+  if ("error" in models) return { error: models.error };
+
+  const tasveerWale = imageCapable(models).map((m) => m.name);
+  const baqi = models
+    .filter((m) => m.methods.includes("generateContent") && !tasveerWale.includes(m.name))
+    .map((m) => m.name);
+
+  return {
+    notice: tasveerWale.length
+      ? `${tasveerWale.length} model tasveer bana sakte hain. Safha khud se pehla wala chalayega.`
+      : "Is chaabi par tasveer banane wala koi model nahi mila.",
+    models: { tasveerWale, baqi },
+  };
 }

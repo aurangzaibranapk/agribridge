@@ -1,4 +1,5 @@
 import { geminiApiKey } from "@/lib/ai/gemini-key";
+import { resolveImageModel } from "@/lib/ai/gemini-models";
 
 /**
  * Cheez ki tasveer AI se.
@@ -21,8 +22,6 @@ import { geminiApiKey } from "@/lib/ai/gemini-key";
  * Ye faisla yahan (banane ki jagah) hota hai, safhe par nahi. Safhe par
  * likha hua sirf batata hai; yahan likha hua rokta hai.
  */
-
-const DEFAULT_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-3.6-flash-image";
 
 export interface ProductImageInput {
   name: string;
@@ -89,7 +88,22 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
   }
 
   const prompt = buildPrompt(input);
-  const model = DEFAULT_MODEL;
+
+  // Model ka naam ab yahan HAATH SE nahi likha. Pehle "gemini-3.6-flash-image"
+  // likha hua tha aur Google ne 404 diya -- kyunki wo naam is chaabi par
+  // maujood hi nahi tha. Ab Google se poochh kar tay hota hai
+  // (`gemini-models.ts`), aur malik `GEMINI_IMAGE_MODEL` daal dein to
+  // wohi chalta hai.
+  const chuna = await resolveImageModel();
+  if ("error" in chuna) {
+    return {
+      error: chuna.maujood?.length
+        ? `${chuna.error} Is chaabi par ye model maujood hain: ${chuna.maujood.join(", ")}`
+        : chuna.error,
+      prompt,
+    };
+  }
+  const model = chuna.model;
 
   try {
     const res = await fetch(

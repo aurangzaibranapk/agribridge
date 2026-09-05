@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
+  checkImageModels,
   generateImageDraft,
   generateMissingImages,
   approveImageDraft,
@@ -154,7 +155,56 @@ function BulkCard({ lang }: { lang: Lang }) {
       </form>
       {state.error && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
       {state.notice && <p className="mt-2 text-xs text-emerald-700">{state.notice}</p>}
+
+      {/* Model ka naam pehle code mein haath se likha hua tha aur us
+          chaabi par maujood nahi tha -- safha 404 deta raha. Google ke
+          paighaam mein hi hal likha tha ("Call ModelService.ListModels"),
+          magar wo sawal safhe par poocha hi nahi ja sakta tha. Ab poocha
+          ja sakta hai. */}
+      <ModelCheck />
     </Card>
+  );
+}
+
+/** Kaunse model is chaabi par waqai maujood hain. Kuch badalta nahi. */
+function ModelCheck() {
+  const [state, formAction] = useFormState(checkImageModels, initial);
+  return (
+    <div className="mt-3 border-t border-surface-100 pt-2 dark:border-surface-800">
+      <form action={formAction}>
+        <CheckButton />
+      </form>
+      {state.error && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
+      {state.notice && <p className="mt-2 text-xs text-surface-600 dark:text-surface-400">{state.notice}</p>}
+      {state.models && (
+        <div className="mt-2 space-y-1">
+          {state.models.tasveerWale.length > 0 && (
+            <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-300">
+              <strong>Tasveer bana sakte hain:</strong> {state.models.tasveerWale.join(", ")}
+            </p>
+          )}
+          {state.models.baqi.length > 0 && (
+            <p className="text-[11px] leading-relaxed text-surface-500">
+              <strong>Baqi model (sirf likhai):</strong> {state.models.baqi.slice(0, 25).join(", ")}
+              {state.models.baqi.length > 25 ? " …" : ""}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CheckButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="text-[11px] font-medium text-brand-700 hover:underline disabled:opacity-60 dark:text-brand-300"
+    >
+      {pending ? "poochh raha hoon…" : "Kaunse model chalte hain? (jaanchein)"}
+    </button>
   );
 }
 
