@@ -9,7 +9,7 @@ import { loadNav } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { AttendanceCalendar } from "./attendance-calendar";
-import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck } from "lucide-react";
+import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck, Network } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +31,9 @@ export const dynamic = "force-dynamic";
  * JO CHEEZ NAHI HAI, US KA KHANA BHI NAHI BANAYA.
  *
  * Us app par "Request Travel", "Work From Home", "Browse Policies",
- * "Organogram" aur "Submit Resignation" ke box the. Hamare yahan wo
- * nizam abhi bane hi nahi. Khali box laga dena -- jo dabane par kuch na
+ * "Organogram" aur "Submit Resignation" ke box the. In mein se
+ * Organogram 5 September ko ban gaya (Team ka Darakht); baqi ka nizam
+ * abhi bana hi nahi. Khali box laga dena -- jo dabane par kuch na
  * kare -- us se bura hai ke box hi na ho: banda us par bharosa kar ke
  * intezar karta hai, aur us ki darkhwast kahin jati hi nahi.
  *
@@ -263,6 +264,7 @@ export default async function MyHrPage() {
               <Users className="h-4 w-4 text-brand-600" /> Meri team
             </p>
             <Action href="/admin/hr/team" icon={<Users className="h-4 w-4" />} label="Team aur reporting" />
+            <Action href="/admin/hr/team/tree" icon={<Network className="h-4 w-4" />} label="Team ka darakht — kaun kis ke ooper" />
           </Card>
 
           {/* Jo abhi nahi bana, us ka box bhi nahi -- magar baat chhupai
@@ -271,8 +273,8 @@ export default async function MyHrPage() {
           <Card className="border-surface-200 dark:border-surface-800">
             <p className="text-xs font-medium text-surface-700 dark:text-surface-300">Ye abhi nahi bane</p>
             <p className="mt-1 text-xs leading-relaxed text-surface-500">
-              Safar ki darkhwast, ghar se kaam, company ki policies, idare ka naqsha (organogram), aur istifa —
-              in ka nizam abhi bana nahi hai. Jab banega, yahin aa jayega.
+              Safar ki darkhwast, ghar se kaam, company ki policies, aur istifa — in ka nizam abhi bana
+              nahi hai. Jab banega, yahin aa jayega. (Idare ka naqsha ab ban gaya hai — "Team ka darakht".)
             </p>
           </Card>
         </div>

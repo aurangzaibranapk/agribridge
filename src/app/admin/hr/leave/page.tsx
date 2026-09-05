@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
@@ -52,7 +54,20 @@ export default async function LeavePage() {
 
   return (
     <div>
-      <PageHeader title={t("lv_title", lang)} description={t("lv_subtitle", lang)} />
+      <PageHeader
+        title={t("lv_title", lang)}
+        description={t("lv_subtitle", lang)}
+        actions={
+          canDecide ? (
+            <Link
+              href="/admin/hr/leave/calendar"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-800 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+            >
+              <CalendarDays className="h-4 w-4" /> Team ka calendar
+            </Link>
+          ) : undefined
+        }
+      />
 
       <LeaveClient
         lang={lang}
