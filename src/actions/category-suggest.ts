@@ -181,7 +181,7 @@ Jawab SIRF JSON array mein dein, aur kuch nahi:
 
 "y" sirf "pakka" ya "shayad" ho sakta hai.`;
 
-  const raw = await generateGeminiText(prompt);
+  const raw = await generateGeminiText(prompt, "qism-tajweez");
   if (!raw) return { error: "AI se jawab nahi aaya. Thori der baad dobara koshish karein." };
 
   // AI aksar jawab ko ```json ... ``` mein lapet deta hai.

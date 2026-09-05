@@ -12,6 +12,7 @@ import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool
 import { ACCESS_TOOL, CONFLICT_TOOL, executeAccessTool, executeConflictTool } from "@/lib/ai/access-tool";
 import { createServiceClient } from "@/lib/supabase/service";
 import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireStaff();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+  const shuru = Date.now();
   try {
     const body = await request.json();
     const message: string = typeof body?.message === "string" ? body.message : "";
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
     const functionCalls = result.functionCalls;
     const toolsCalled: string[] = [];
     let answer: string;
+    let result2Usage: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | null = null;
 
     if (functionCalls && functionCalls.length > 0) {
       const functionResponseParts = await Promise.all(
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
       );
       const result2 = await chat.sendMessage({ message: functionResponseParts });
       answer = result2.text ?? "";
+      result2Usage = jodTokens(result?.usageMetadata, result2?.usageMetadata);
     } else {
       answer = result.text ?? "";
     }
@@ -113,11 +117,34 @@ export async function POST(request: NextRequest) {
       // Logging failure should never break the user-facing answer
     }
 
+    // AI ka khata (317). Tasveer bhej kar poocha gaya ho to us ki qeemat
+    // alag hoti hai -- is liye alag qism.
+    await recordAiUsage({
+      feature: "chat",
+      kind: image ? "tasveer-parhna" : "likhai",
+      model: "gemini-3.6-flash",
+      ok: Boolean(answer),
+      // Ek sawal par do dafa baat hoti hai jab AI koi tool chalata hai;
+      // token dono ka jama hai.
+      usage: (result2Usage ?? result?.usageMetadata) ?? null,
+      ms: Date.now() - shuru,
+      actorId: auth.caller.userId,
+      note: message.slice(0, 120),
+    });
+
     return NextResponse.json({ answer, agent, role: ctx?.role ?? auth.caller.role });
   } catch (error: any) {
     // Poora stack log mein, aur bande ke saamne wo jumla jis se agla
     // qadam maloom ho.
     console.error("Bridge AI error:", error);
+    await recordAiUsage({
+      feature: "chat",
+      kind: "likhai",
+      model: "gemini-3.6-flash",
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      ms: Date.now() - shuru,
+    });
     return NextResponse.json({ error: aiErrorMessage(error) }, { status: 500 });
   }
 }
@@ -232,5 +259,24 @@ async function executeCoachTool(name: string, args: Record<string, any>, ctx: Aw
     steps: f.how,
     next: f.next,
     help_panel: "Safhe par upar daayen '? Samjhein' dabane se yehi maloomat panel mein khulti hai.",
+  };
+}
+
+
+/**
+ * Do baaton ke token ek sath.
+ *
+ * AI koi tool chalaye to ek hi sawal par do dafa baat hoti hai. Sirf
+ * doosri ginna adha sach hota -- aur bill poore par aata hai.
+ */
+function jodTokens(
+  a: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined,
+  b: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined
+) {
+  const add = (x?: number, y?: number) => (x == null && y == null ? undefined : (x ?? 0) + (y ?? 0));
+  return {
+    promptTokenCount: add(a?.promptTokenCount, b?.promptTokenCount),
+    candidatesTokenCount: add(a?.candidatesTokenCount, b?.candidatesTokenCount),
+    totalTokenCount: add(a?.totalTokenCount, b?.totalTokenCount),
   };
 }

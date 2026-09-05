@@ -1,5 +1,6 @@
 import { geminiApiKey } from "@/lib/ai/gemini-key";
 import { resolveImageModel } from "@/lib/ai/gemini-models";
+import { recordAiUsage } from "@/lib/ai/usage";
 
 /**
  * Cheez ki tasveer AI se.
@@ -94,8 +95,11 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
   // maujood hi nahi tha. Ab Google se poochh kar tay hota hai
   // (`gemini-models.ts`), aur malik `GEMINI_IMAGE_MODEL` daal dein to
   // wohi chalta hai.
+  const shuru = Date.now();
+
   const chuna = await resolveImageModel();
   if ("error" in chuna) {
+    await recordAiUsage({ feature: "tasveer", kind: "tasveer", ok: false, error: chuna.error, ms: Date.now() - shuru });
     return {
       error: chuna.maujood?.length
         ? `${chuna.error} Is chaabi par ye model maujood hain: ${chuna.maujood.join(", ")}`
@@ -120,6 +124,10 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
 
     if (!res.ok) {
       const body = await res.text();
+      await recordAiUsage({
+        feature: "tasveer", kind: "tasveer", model, ok: false,
+        error: `${res.status}: ${body}`, ms: Date.now() - shuru,
+      });
       // Asal ghalti aage bheji jati hai. "Tasveer nahi bani" likh kar
       // wajah chhupa dena bande ko us masle par bithha deta hai jo wo
       // dekh hi nahi sakta.
@@ -132,6 +140,11 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
 
     if (!img) {
       const said = parts.find((p: any) => p?.text)?.text;
+      await recordAiUsage({
+        feature: "tasveer", kind: "tasveer", model, ok: false,
+        error: said ? String(said) : "AI ne koi tasveer nahi bheji",
+        usage: json?.usageMetadata ?? null, ms: Date.now() - shuru,
+      });
       return {
         error: said
           ? `AI ne tasveer ke bajaye ye kaha: ${String(said).slice(0, 200)}`
@@ -141,6 +154,12 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
       };
     }
 
+    await recordAiUsage({
+      feature: "tasveer", kind: "tasveer", model, ok: true,
+      usage: json?.usageMetadata ?? null, images: 1, ms: Date.now() - shuru,
+      note: input.name.slice(0, 80),
+    });
+
     return {
       base64: img.inlineData.data as string,
       mimeType: (img.inlineData.mimeType as string) || "image/png",
@@ -148,6 +167,10 @@ export async function generateProductImage(input: ProductImageInput): Promise<Pr
       model,
     };
   } catch (err) {
+    await recordAiUsage({
+      feature: "tasveer", kind: "tasveer", model, ok: false,
+      error: err instanceof Error ? err.message : "maloom nahi", ms: Date.now() - shuru,
+    });
     return { error: `AI tak baat nahi pahunchi: ${err instanceof Error ? err.message : "maloom nahi"}`, prompt, model };
   }
 }

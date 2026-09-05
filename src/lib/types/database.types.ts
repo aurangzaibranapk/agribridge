@@ -2041,6 +2041,57 @@ export type Database = {
           },
         ]
       }
+      ai_usage_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          error: string | null
+          feature: string
+          id: string
+          images: number
+          kind: string
+          model: string | null
+          ms: number | null
+          note: string | null
+          ok: boolean
+          output_tokens: number | null
+          prompt_tokens: number | null
+          total_tokens: number | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          error?: string | null
+          feature: string
+          id?: string
+          images?: number
+          kind: string
+          model?: string | null
+          ms?: number | null
+          note?: string | null
+          ok: boolean
+          output_tokens?: number | null
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          error?: string | null
+          feature?: string
+          id?: string
+          images?: number
+          kind?: string
+          model?: string | null
+          ms?: number | null
+          note?: string | null
+          ok?: boolean
+          output_tokens?: number | null
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+        }
+        Relationships: []
+      }
       ai_report_instructions: {
         Row: {
           id: string
@@ -23781,6 +23832,20 @@ export type Database = {
           din_guzray: number | null
           warehouse_id: string | null
           warehouse_name: string | null
+        }
+        Relationships: []
+      }
+      v_ai_usage_monthly: {
+        Row: {
+          feature: string | null
+          kamyab: number | null
+          kind: string | null
+          kul: number | null
+          mahina: string | null
+          nakaam: number | null
+          tasveerein: number | null
+          token: number | null
+          token_na_mile: number | null
         }
         Relationships: []
       }

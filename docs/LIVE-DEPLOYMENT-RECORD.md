@@ -866,3 +866,48 @@ Sath mein safhon par:
   **"shayad" par nahi**. AI nayi qism nahi bana sakta (sirf maujooda
   fehrist se chunta hai), aur khud kuch mehfooz nahi karta. Har manzoor
   shuda qatar audit mein jati hai.
+
+---
+
+## 5m. Rokay hua kaam — migration 317 (AI ka khata)
+
+Malik ka sawal (5 September): *"jo maine apne ERP mein itna AI involve
+kiya hai, kya is ka mujhe bill aayega?"*
+
+Us waqt is sawal ka **theek jawab dena mumkin hi nahi tha**. Sirf
+`bridge_ai_activity_log` maujood tha aur wo bhi sirf chat panel ka --
+bill reader, qism ki tajweez, tasveer, tasveer se maloomat nikalna: in
+mein se koi bhi darj nahi hota tha. Chat ka adad **7** tha, magar asal
+istemal us se zyada, aur kitna -- maloom nahi.
+
+**317** `ai_usage_log` banati hai: har AI call ka indraj -- kis feature
+se, kaunsa model, kamyab hui ya nahi, kitne token, kitni tasveerein,
+kitna waqt. Sath `v_ai_usage_monthly` (mahine ka hisaab) aur safha
+`/admin/ai-usage` (AI Command ke neeche, sirf Owner/Admin).
+
+Do usool jaan boojh kar:
+
+- **Ye safha paisa nahi ginta.** Qeemat Google tay karta hai, wo badalti
+  rehti hai, aur har chaabi ke saamne alag hoti hai -- yahan rupya likh
+  dena andaza hota. Sirf ISTEMAL likha jata hai; bill Google Cloud
+  Console -> Billing par dekha jata hai.
+- **Token Google ke `usageMetadata` se aate hain, andaze se nahi.** Na
+  milein to NULL rehte hain aur safhe par alag se likha aata hai ke kitni
+  qataron par ginti nahi mili -- "sifar token" aur "ginti nahi mili" ek
+  cheez nahi.
+
+Khata likhna kabhi kisi kaam ko **rokta nahi**: `recordAiUsage` khamoshi
+se nakaam ho jata hai. Hisaab rakhne wali cheez ka asal kaam rok dena us
+se bura hai ke hisaab na rakha jaye.
+
+Abhi ye raaste khate mein aate hain: chat (Bridge AI), qism ki tajweez,
+tasveer banana, aur wo sab jo `generateGeminiText` se guzarte hain
+(daily report, naam ki tajweez, blog draft, chatbot, messages). Bill
+reader aur tasveer se maloomat nikalne wale apne alag client hain -- wo
+abhi baqi hain.
+
+### Testing par rollback test
+
+Qatarein banin, ghalat `kind` **ruki**, mahine ka hisaab theek: tasveer 1,
+token 1,500 (sirf jahan ginti mili), aur `token_na_mile` = 2. Sab ulta
+diya gaya.
