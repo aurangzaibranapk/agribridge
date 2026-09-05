@@ -11,6 +11,7 @@ import { Type, type FunctionDeclaration } from "@google/genai";
 import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool";
 import { ACCESS_TOOL, CONFLICT_TOOL, executeAccessTool, executeConflictTool } from "@/lib/ai/access-tool";
 import { createServiceClient } from "@/lib/supabase/service";
+import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
@@ -31,7 +32,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient();
-    const ai = new GoogleGenAI({ apiKey: process.env.BRIDGE_AI_GEMINI_API_KEY! });
+
+    // Chaabi dono naamon se qabool (`gemini-key.ts`). Pehle yahan seedha
+    // `BRIDGE_AI_GEMINI_API_KEY!` likha tha -- aur Live par sirf doosra
+    // naam laga hua tha, is liye bill reader chalta tha magar ye panel
+    // har sawal par "kuch masla ho gaya" kehta tha.
+    const apiKey = aiKeyOrNull();
+    if (!apiKey) return NextResponse.json({ error: AI_KEY_MISSING }, { status: 503 });
+
+    const ai = new GoogleGenAI({ apiKey });
 
     const agent = classifyAgent(message);
     const lang = getLanguageFromCookies("rm");
@@ -106,11 +115,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ answer, agent, role: ctx?.role ?? auth.caller.role });
   } catch (error: any) {
+    // Poora stack log mein, aur bande ke saamne wo jumla jis se agla
+    // qadam maloom ho.
     console.error("Bridge AI error:", error);
-    return NextResponse.json(
-      { error: "Kuch masla ho gaya, dobara koshish karein." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: aiErrorMessage(error) }, { status: 500 });
   }
 }
 
