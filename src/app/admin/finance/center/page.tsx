@@ -130,6 +130,7 @@ export default async function FinanceCenterPage() {
         { href: "/admin/finance/reports?view=working", label: t("fr_v_working", lang) },
         { href: "/admin/finance/reports?view=party", label: t("fr_v_party", lang) },
         { href: "/admin/finance/reports?view=branch", label: t("fr_v_branch", lang) },
+        { href: "/admin/finance/ledger", label: t("led_title", lang), hint: t("led_desc", lang) },
         { href: "/admin/finance/statements?view=trial", label: t("fc_trial", lang) },
         { href: "/admin/finance/statements?view=pnl", label: t("fc_pnl", lang) },
         { href: "/admin/finance/statements?view=bs", label: t("fc_bs", lang) },

@@ -297,8 +297,13 @@ async function ClosingView({ from, to, lang }: { from: string; to: string; lang:
           {cb.rows.map((r) => (
             <tr key={r.code}>
               <td className="px-4 py-1.5">
-                <span className="mr-2 font-mono text-xs text-surface-400">{r.code}</span>
-                {r.name}
+                <Link
+                  href={`/admin/finance/ledger?account=${r.code}&from=${from}&to=${to}`}
+                  className="hover:text-brand-600 hover:underline"
+                >
+                  <span className="mr-2 font-mono text-xs text-surface-400">{r.code}</span>
+                  {r.name}
+                </Link>
               </td>
               <td className="px-4 py-1.5 text-right tabular-nums text-surface-500">{money(r.opening)}</td>
               <td className="px-4 py-1.5 text-right tabular-nums">{r.debit ? money(r.debit) : "—"}</td>

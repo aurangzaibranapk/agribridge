@@ -384,4 +384,49 @@ export const financeReportsDict = {
     rm: "abhi ke qawaid padhe nahi ja sake — neeche ke khane KHALI hain, sifar nahi",
     ur: "ابھی کے قواعد پڑھے نہیں جا سکے — نیچے کے خانے خالی ہیں، صفر نہیں",
   },
+
+  // ---------------------------------------------------------------
+  // Khate ka ledger
+  // ---------------------------------------------------------------
+  led_title: { en: "Account Ledger", rm: "Khate ka Ledger", ur: "کھاتے کا لیجر" },
+  led_desc: {
+    en: "Every line in one account, with the running balance after each.",
+    rm: "Ek khate ki har qatar, aur har qatar ke baad ka chalta hua baqi.",
+    ur: "ایک کھاتے کی ہر قطار، اور ہر قطار کے بعد کا چلتا ہوا باقی۔",
+  },
+  led_only_finance: {
+    en: "This page is for Owner, Admin, Manager and Finance.",
+    rm: "Ye safha Owner, Admin, Manager aur Finance ke liye hai.",
+    ur: "یہ صفحہ اونر، ایڈمن، مینیجر اور فنانس کے لیے ہے۔",
+  },
+  led_back: { en: "Chart of Accounts", rm: "Khaton ki fehrist", ur: "کھاتوں کی فہرست" },
+  led_error: { en: "Could not be worked out", rm: "Jawab nahi mil saka", ur: "جواب نہیں مل سکا" },
+  led_account: { en: "Account", rm: "Khata", ur: "کھاتہ" },
+  led_from: { en: "From", rm: "Se", ur: "سے" },
+  led_to: { en: "To", rm: "Tak", ur: "تک" },
+  led_show: { en: "Show", rm: "Dikhayein", ur: "دکھائیں" },
+  led_pick: { en: "Pick an account to see its ledger.", rm: "Khata chunein — us ka poora ledger aa jayega.", ur: "کھاتہ چنیں — اس کا پورا لیجر آ جائے گا۔" },
+  led_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
+  led_entry: { en: "Entry", rm: "Entry", ur: "انٹری" },
+  led_what: { en: "What it was", rm: "Kya tha", ur: "کیا تھا" },
+  led_debit: { en: "Debit", rm: "Debit", ur: "ڈیبٹ" },
+  led_credit: { en: "Credit", rm: "Credit", ur: "کریڈٹ" },
+  led_balance: { en: "Balance", rm: "Baqi", ur: "باقی" },
+  led_opening: { en: "Opening", rm: "Shuru ka baqi", ur: "شروع کا باقی" },
+  led_opening_row: {
+    en: "Balance before this date",
+    rm: "Is tareekh se pehle ka baqi",
+    ur: "اس تاریخ سے پہلے کا باقی",
+  },
+  led_closing: { en: "Closing", rm: "Aakhir ka baqi", ur: "آخر کا باقی" },
+  led_empty: {
+    en: "Nothing happened on this account in this period.",
+    rm: "Is arse mein is khate par kuch nahi hua.",
+    ur: "اس عرصے میں اس کھاتے پر کچھ نہیں ہوا۔",
+  },
+  led_note: {
+    en: "The running balance is kept on the account's own side: on a debit account a debit raises it, on a credit account a credit does. Without the opening line the first balance would be a lie — everything before the start date would simply not be counted.",
+    rm: "Chalta hua baqi khate ke apne RUKH par ginta hai: debit rukh wale khate mein debit barhata hai, credit rukh wale mein credit. Shuru wali qatar ke baghair pehla baqi jhoota hota — us tareekh se pehle ka sab kuch ginti hi na hota.",
+    ur: "چلتا ہوا باقی کھاتے کے اپنے رخ پر گنتا ہے۔ شروع والی قطار کے بغیر پہلا باقی جھوٹا ہوتا۔",
+  },
 } as const;

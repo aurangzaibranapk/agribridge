@@ -152,21 +152,44 @@ async function TrialView({ from, to, lang }: { from: string; to: string; lang: a
             <th className="py-2">{t("fs_account", lang)}</th>
             <th className="py-2 text-right">{t("fs_debit", lang)}</th>
             <th className="py-2 text-right">{t("fs_credit", lang)}</th>
+            {/* Teesra khana: BAQI. Debit aur credit alag alag dekh kar
+                banda khud ghata-jama karta rehta hai, aur wohi jagah hai
+                jahan ginti mein ghalti hoti hai. Baqi apne rukh par likha
+                jata hai -- debit rukh wale khate ka debit minus credit,
+                credit rukh wale ka credit minus debit. (Malik ka kehna,
+                5 September: "3rd line balance bhi ana chiay ... kal ko
+                asani ho track krne ki".) */}
+            <th className="py-2 text-right">{t("fs_balance", lang)}</th>
+            <th className="py-2 text-center text-[10px]">{t("fs_side", lang)}</th>
           </tr>
         </thead>
         <tbody>
           {tb.rows.map((r) => (
             <tr key={r.code} className="border-b border-surface-100 dark:border-surface-800">
               <td className="py-1.5">
-                <span className="font-mono text-xs text-surface-400">{r.code}</span> {r.name}
+                {/* Har qatar se us khate ka apna ledger khulta hai -- yehi
+                    wo raasta hai jis se "ye adad bana kaise" ka jawab
+                    milta hai. */}
+                <Link
+                  href={`/admin/finance/ledger?account=${r.code}&from=${from}&to=${to}`}
+                  className="hover:text-brand-600 hover:underline"
+                >
+                  <span className="font-mono text-xs text-surface-400">{r.code}</span> {r.name}
+                </Link>
               </td>
               <td className="py-1.5 text-right tabular-nums">{r.debit ? money(r.debit) : ""}</td>
               <td className="py-1.5 text-right tabular-nums">{r.credit ? money(r.credit) : ""}</td>
+              <td className="py-1.5 text-right font-medium tabular-nums">{money(r.balance)}</td>
+              {/* Baqi kis taraf hai -- Dr ya Cr. Manfi adad ko bracket mein
+                  dekh kar ye sawal har dafa poochhna paRta tha. */}
+              <td className="py-1.5 text-center text-[11px] text-surface-400">
+                {r.balance === 0 ? "" : (r.normal_side === "debit") === r.balance > 0 ? "Dr" : "Cr"}
+              </td>
             </tr>
           ))}
           {tb.rows.length === 0 && (
             <tr>
-              <td colSpan={3} className="py-6 text-center text-surface-400">
+              <td colSpan={5} className="py-6 text-center text-surface-400">
                 {t("fs_no_entries", lang)}
               </td>
             </tr>
@@ -177,9 +200,25 @@ async function TrialView({ from, to, lang }: { from: string; to: string; lang: a
             <td className="py-2">{t("fs_total", lang)}</td>
             <td className="py-2 text-right tabular-nums">{money(tb.totalDebit)}</td>
             <td className="py-2 text-right tabular-nums">{money(tb.totalCredit)}</td>
+            {/* Baqi ka jama jaan boojh kar KHALI hai. Alag alag qism ke
+                khaton ka baqi jama karna koi maani nahi rakhta: asaase
+                aur aamdani ka jor kisi sawal ka jawab nahi. Jo adad
+                bemani ho usay dikhana usi bharose ko kharab karta hai jo
+                baqi adadon par hai. */}
+            <td className="py-2" />
+            <td className="py-2" />
           </tr>
         </tfoot>
       </table>
+
+      {/* Baqi ka khana chuni hui tareekhon ka hai, shuru se ab tak ka
+          nahi. Ye farq likh dena zaroori hai: warna Rs 22,570 credit
+          wale cash ke khate ka baqi manfi dekh kar banda samajhta hai ke
+          cash box mein manfi paisa para hai, jabke asal baat ye hoti hai
+          ke us tareekh se PEHLE ka baqi is fehrist mein hai hi nahi. */}
+      {tb.rows.length > 0 && (
+        <p className="mt-3 text-xs text-surface-500 dark:text-surface-400">{t("fs_balance_note", lang)}</p>
+      )}
 
       {/* Dono taraf barabar hona ledger ki apni sehat ki jaanch hai. Farq
           aaye to wo report ki ghalti nahi -- wo asal masla hai, aur usay

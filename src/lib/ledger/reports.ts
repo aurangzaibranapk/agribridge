@@ -31,6 +31,7 @@ interface RawLine {
   account_code: string;
   debit: number | null;
   credit: number | null;
+  memo: string | null;
   party_type: string | null;
   party_id: string | null;
   journal_entries: { entry_date: string; branch_id: string | null; description: string; entry_number: string };
@@ -45,7 +46,7 @@ async function rawLines(
   let q = service
     .from("journal_lines")
     .select(
-      "entry_id, account_code, debit, credit, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number)"
+      "entry_id, account_code, debit, credit, memo, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number)"
     )
     .lte("journal_entries.entry_date", to);
   if (from) q = q.gte("journal_entries.entry_date", from);
@@ -528,4 +529,146 @@ export async function branchPnl(from: string, to: string): Promise<BranchPnl> {
   }));
   out.sort((a, b) => b.profit - a.profit);
   return { rows: out };
+}
+
+
+// =====================================================================
+// 7. Ek khate ka apna ledger -- qatar dar qatar, chalta hua baqi
+// =====================================================================
+/**
+ * Malik ka kehna (5 September): "mery her ledger mein jahan jahan use ho
+ * raha hai debit credit OR BALANCE aana chahiye ... sab details ke sath
+ * aaye, hamein kal ko asani ho track karne ki."
+ *
+ * Yehi wo safha hai jo goshare se ASAL kaam ka banata hai. Trial Balance
+ * batata hai ke khate mein kitna para hai; ye batata hai ke wo raqam
+ * BANI KAISE -- kis din, kis entry se, aur us ke baad baqi kya ho gaya.
+ *
+ * Chalta hua baqi (running balance) khate ke apne RUKH par ginta hai:
+ * debit rukh wale khate mein debit barhata hai, credit rukh wale mein
+ * credit. Ulta ginne se har asaase ka baqi manfi nazar aane lagta hai
+ * aur banda har qatar par ruk kar sochta hai.
+ *
+ * Shuru ka baqi (opening) alag se aata hai -- us ke baghair pehli qatar
+ * ka baqi jhoota hota hai, kyunki us se pehle ki poori tareekh ginti hi
+ * nahi.
+ */
+export interface LedgerLine {
+  entryId: string;
+  entryNumber: string;
+  entryDate: string;
+  description: string;
+  memo: string | null;
+  partyType: string | null;
+  debit: number;
+  credit: number;
+  /** Is qatar ke BAAD ka baqi -- khate ke apne rukh par. */
+  balance: number;
+}
+export interface AccountLedger {
+  code: string;
+  name: string;
+  accountType: string;
+  normalSide: "debit" | "credit";
+  opening: number;
+  totalDebit: number;
+  totalCredit: number;
+  closing: number;
+  lines: LedgerLine[];
+  error?: string;
+}
+
+export async function accountLedger(
+  code: string,
+  from: string,
+  to: string,
+  branchId?: string | null
+): Promise<AccountLedger> {
+  const service = createServiceClient();
+  const khali: AccountLedger = {
+    code,
+    name: code,
+    accountType: "",
+    normalSide: "debit",
+    opening: 0,
+    totalDebit: 0,
+    totalCredit: 0,
+    closing: 0,
+    lines: [],
+  };
+
+  const { data: acc, error: accErr } = await service
+    .from("gl_accounts")
+    .select("code, name, account_type, normal_side")
+    .eq("code", code)
+    .maybeSingle();
+  if (accErr) return { ...khali, error: accErr.message };
+  if (!acc) return { ...khali, error: `Khata ${code} maujood nahi.` };
+
+  const side = acc.normal_side as "debit" | "credit";
+
+  // Shuru ka baqi: is tareekh se PEHLE ka sab kuch.
+  const pehle = pehlaDinSePehle(from);
+  const [{ rows: pichhli, error: e1 }, { rows: abKi, error: e2 }] = await Promise.all([
+    rawLines(null, pehle, branchId),
+    rawLines(from, to, branchId),
+  ]);
+  if (e1 || e2 || !pichhli || !abKi) {
+    return { ...khali, name: acc.name as string, error: e1 ?? e2 ?? "maloom nahi" };
+  }
+
+  const jama = (rows: RawLine[]) => {
+    let d = 0;
+    let c = 0;
+    for (const l of rows) {
+      if (l.account_code !== code) continue;
+      d += Number(l.debit ?? 0);
+      c += Number(l.credit ?? 0);
+    }
+    return { d, c };
+  };
+
+  const purana = jama(pichhli);
+  const opening = Math.round((side === "debit" ? purana.d - purana.c : purana.c - purana.d) * 100) / 100;
+
+  const meri = abKi
+    .filter((l) => l.account_code === code)
+    .sort((a, b) => {
+      const t = a.journal_entries.entry_date.localeCompare(b.journal_entries.entry_date);
+      return t !== 0 ? t : a.journal_entries.entry_number.localeCompare(b.journal_entries.entry_number);
+    });
+
+  let chalta = opening;
+  let totalDebit = 0;
+  let totalCredit = 0;
+  const lines: LedgerLine[] = meri.map((l) => {
+    const d = Number(l.debit ?? 0);
+    const c = Number(l.credit ?? 0);
+    totalDebit += d;
+    totalCredit += c;
+    chalta = Math.round((chalta + (side === "debit" ? d - c : c - d)) * 100) / 100;
+    return {
+      entryId: l.entry_id,
+      entryNumber: l.journal_entries.entry_number,
+      entryDate: l.journal_entries.entry_date,
+      description: l.journal_entries.description,
+      memo: l.memo ?? null,
+      partyType: l.party_type ?? null,
+      debit: d,
+      credit: c,
+      balance: chalta,
+    };
+  });
+
+  return {
+    code,
+    name: acc.name as string,
+    accountType: acc.account_type as string,
+    normalSide: side,
+    opening,
+    totalDebit: Math.round(totalDebit * 100) / 100,
+    totalCredit: Math.round(totalCredit * 100) / 100,
+    closing: chalta,
+    lines,
+  };
 }

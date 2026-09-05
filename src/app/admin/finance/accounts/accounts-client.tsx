@@ -245,7 +245,11 @@ export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdi
                   <tr key={a.code} className={a.active ? "" : "opacity-50"}>
                     <td className="px-4 py-2 font-mono text-xs">{a.code}</td>
                     <td className="px-4 py-2 text-surface-900 dark:text-white">
-                      {a.name}
+                      {/* Naam se us khate ka apna ledger khulta hai -- qatar
+                          dar qatar, chalte hue baqi ke sath. */}
+                      <a href={`/admin/finance/ledger?account=${a.code}`} className="hover:text-brand-600 hover:underline">
+                        {a.name}
+                      </a>
                       {a.contra && <span className="ml-2 text-xs text-surface-400">({t("coa_contra_tag", lang)})</span>}
                       {!a.active && <span className="ml-2 text-xs text-surface-400">({t("coa_closed_tag", lang)})</span>}
                     </td>

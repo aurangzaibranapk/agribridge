@@ -139,6 +139,13 @@ export const financeDict = {
   fs_account: { en: "Account", rm: "Khata", ur: "کھاتہ" },
   fs_debit: { en: "Debit", rm: "Debit", ur: "ڈیبٹ" },
   fs_credit: { en: "Credit", rm: "Credit", ur: "کریڈٹ" },
+  fs_balance: { en: "Balance", rm: "Baqi", ur: "باقی" },
+  fs_balance_note: {
+    en: "This balance is only for the dates you picked (debit minus credit, on the account's own side). For the full balance from the very beginning, click the account name — its ledger shows the opening balance too.",
+    rm: "Ye baqi SIRF chuni hui tareekhon ka hai (debit minus credit, khate ke apne rukh par). Shuru se ab tak ka poora baqi dekhna ho to khate ke naam par click karein — us ke ledger mein shuru ka baqi bhi hota hai.",
+    ur: "یہ باقی صرف چنی ہوئی تاریخوں کا ہے۔ شروع سے اب تک کا پورا باقی دیکھنے کے لیے کھاتے کے نام پر کلک کریں۔",
+  },
+  fs_side: { en: "Dr/Cr", rm: "Rukh", ur: "رخ" },
   fs_total: { en: "Total", rm: "Kul", ur: "کل" },
   fs_no_entries: { en: "No entries in this period.", rm: "Is arse mein koi entry nahi.", ur: "اس عرصے میں کوئی اندراج نہیں۔" },
   fs_failed: { en: "Could not be worked out:", rm: "Hisaab nahi ho saka:", ur: "حساب نہیں ہو سکا:" },
