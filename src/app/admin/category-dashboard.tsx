@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { Button } from "@/components/ui/form";
 import { Package, DollarSign, AlertTriangle, ShoppingCart, Plus } from "lucide-react";
+import { DeleteButton } from "@/app/admin/products/delete-button";
 import { formatDate } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -52,10 +53,24 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
     ? await supabase.from("stock_batches").select("id, expiry_date").in("id", batchIds)
     : { data: [] as { id: string; expiry_date: string | null }[] };
   const expiryByBatch = new Map((batchRows ?? []).map((b: any) => [b.id as string, b.expiry_date as string | null]));
-  const totalStockValue = (products ?? []).reduce(
+  // Stock ki qeemat: jo maal is waqt para hai, us ki KHARID ki qeemat
+  // par. Bikri ki qeemat par nahi -- wo abhi kamai nahi hui.
+  //
+  // Malik ne 5 September ko poocha: "stock value ki samajh nahi aa
+  // rahi". Adad khud kabhi apna matlab nahi batata, aur is safhe par to
+  // bilkul nahi: 146 cheezon mein se sirf 2 par maal para hai, is liye
+  // Rs 7,442 dekh kar lagta hai jaise poori dukan itni ki hai.
+  //
+  // Do baatein us adad ke sath likhni parti hain: ye kitni cheezon ka
+  // hai, aur kya koi aisi cheez hai jis ki KHARID KI QEEMAT DARJ HI
+  // NAHI -- kyunki us ka maal is jamaa mein sifar ki tarah aata hai, aur
+  // "sifar" ka matlab "kuch nahi hai" nahi, "maloom nahi" hota.
+  const stockWaliQatarein = (products ?? []).filter((p) => (stockByProduct[p.id] ?? 0) > 0);
+  const totalStockValue = stockWaliQatarein.reduce(
     (sum, p) => sum + (stockByProduct[p.id] ?? 0) * Number(p.purchase_price),
     0
   );
+  const binaKharidQeemat = stockWaliQatarein.filter((p) => !(Number(p.purchase_price) > 0));
   // "Kam stock" ka jawab tabhi maani rakhta hai jab kisi cheez par hadd
   // (min_stock_threshold) lagi ho. Ek bhi hadd na lagi ho to "0 cheezein
   // kam hain" kehna jhoot hai -- sach ye hai ke ye HISAAB HI NAHI RAKHA
@@ -127,6 +142,19 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
           <p className="mt-2 font-display text-xl font-semibold text-brand-700 dark:text-brand-300">
             Rs {totalStockValue.toLocaleString()}
           </p>
+          {/* Adad khud apna matlab nahi batata. Ye teen jumle wohi teen
+              sawal hain jo malik ne 5 September ko poochhe. */}
+          <p className="mt-1 text-[11px] leading-relaxed text-brand-700/70 dark:text-brand-300/70">
+            {stockWaliQatarein.length === 0
+              ? "Abhi kisi cheez ka maal para nahi hai."
+              : `${stockWaliQatarein.length} cheezon ka jo maal is waqt para hai, us ki KHARID ki qeemat. Bikri ki qeemat nahi — wo abhi kamai nahi hui.`}
+          </p>
+          {binaKharidQeemat.length > 0 && (
+            <p className="mt-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+              {binaKharidQeemat.length} cheez par maal to para hai magar kharid ki qeemat darj nahi — us ka maal is
+              jamaa mein shaamil nahi hai.
+            </p>
+          )}
         </Card>
         <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30">
           <div className="flex items-center gap-2 text-red-600">
@@ -165,6 +193,11 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
                   <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
                   <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_stock", lang)}</th>
                   <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_price", lang)}</th>
+                  {/* Fehrist dekhne ki jagah thi, badalne ki nahi.
+                      Naam theek karna ho ya cheez khatam karni ho to
+                      banda Products ke poore safhe par dhoondhta phirta
+                      tha (malik ne 5 September ko yehi kaha). */}
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_actions", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,12 +216,27 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
                       <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">
                         Rs {Number(p.selling_price).toLocaleString()}
                       </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-end gap-3">
+                          <Link
+                            href={`/admin/products/${p.id}/edit`}
+                            className="text-xs font-medium text-brand-700 hover:underline dark:text-brand-300"
+                          >
+                            {t("at_edit", lang)}
+                          </Link>
+                          {/* Cheez mit'ti nahi -- nishan lagta hai
+                              (`is_deleted`), aur purani bikri apni jagah
+                              rehti hai. Ijazat ki rok server par hai:
+                              sirf Admin/Owner. */}
+                          <DeleteButton productId={p.id} />
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
                 {(!products || products.length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("cd_no_products_cat", lang)}</td>
+                    <td colSpan={4} className="px-3 py-8 text-center text-surface-400">{t("cd_no_products_cat", lang)}</td>
                   </tr>
                 )}
               </tbody>

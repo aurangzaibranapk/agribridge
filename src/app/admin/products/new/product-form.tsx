@@ -8,6 +8,7 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { PRODUCT_UNITS } from "@/lib/data/units";
 import type { UnitRow, PackSizeRow } from "@/lib/units";
 import { ProductImageUpload } from "@/app/admin/products/new/product-image-upload";
+import { QuickAddSelect } from "@/app/admin/products/new/quick-add-select";
 import { VoiceDictationButton } from "@/components/admin/voice-dictation-button";
 import { Sparkles, Barcode, Clock } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -70,6 +71,8 @@ export function ProductForm({
   // poore khane. Faisla qism par likha hai (247) -- yahan sirf us ka
   // natija dikhta hai.
   const [categoryId, setCategoryId] = useState<string>(product?.category_id ?? "");
+  const [companyId, setCompanyId] = useState<string>(product?.company_id ?? "");
+  const [brandId, setBrandId] = useState<string>(product?.brand_id ?? "");
   const [showAgri, setShowAgri] = useState<boolean | null>(null);
 
   const chosenCategory = categories.find((c) => c.id === categoryId);
@@ -175,37 +178,54 @@ export function ProductForm({
 
       <FieldWithMic label={t("pf_product_name", lang)} inputRef={nameRef} name="name" required defaultValue={product?.name} />
 
+      {/* Teenon jagah "naya" ka raasta usi safhe par (5 September).
+          Pehle nayi company/brand/qism banane ke liye form chhorna parta
+          tha, aur wapas aane par tasveer aur AI se nikli hui saari
+          tafseel zaya ho jati thi -- is liye log qism khali chhor dete
+          the aur POS par "Uncategorised" ka dher lag jata tha. */}
       <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="company_id">{t("c_company", lang)}</Label>
-          <Select id="company_id" name="company_id" defaultValue={product?.company_id ?? ""}><option value="">- select -</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-        </div>
-        <div>
-          <Label htmlFor="brand_id">{t("c_brand", lang)}</Label>
-          <Select id="brand_id" name="brand_id" defaultValue={product?.brand_id ?? ""}><option value="">- select -</option>{brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-        </div>
-        <div>
-          <Label htmlFor="category_id">{t("c_category", lang)}</Label>
-          <Select
-            id="category_id"
-            name="category_id"
-            value={categoryId}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              // Qism badalne par bande ka apna faisla bhi hat jata hai --
-              // warna wo purani qism ka faisla nayi qism par chipka
-              // rehta.
-              setShowAgri(null);
-            }}
-          >
-            <option value="">- select -</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <QuickAddSelect
+          id="company_id"
+          name="company_id"
+          label={t("c_company", lang)}
+          table="companies"
+          options={companies}
+          value={companyId}
+          onChange={setCompanyId}
+        />
+        <QuickAddSelect
+          id="brand_id"
+          name="brand_id"
+          label={t("c_brand", lang)}
+          table="brands"
+          options={brands}
+          value={brandId}
+          onChange={setBrandId}
+        />
+        <QuickAddSelect
+          id="category_id"
+          name="category_id"
+          label={t("c_category", lang)}
+          table="categories"
+          options={categories}
+          value={categoryId}
+          // Nayi qism wohi shakal le jo abhi form par dikh rahi hai --
+          // zarai khane khule hon to zarai, warna karyana. Andaza nahi:
+          // bande ne jo screen par chuna, wohi.
+          categoryKind={agriVisible ? "agri" : "karyana"}
+          // Nayi qism abhi server wali fehrist mein nahi hai, is liye
+          // `chosenCategory` khali milta hai aur khane khud ba khud
+          // karyana par gir jate. Jo shakal us waqt screen par thi,
+          // wohi thami rehti hai.
+          onAdded={() => setShowAgri(agriVisible)}
+          onChange={(id) => {
+            setCategoryId(id);
+            // Qism badalne par bande ka apna faisla bhi hat jata hai --
+            // warna wo purani qism ka faisla nayi qism par chipka
+            // rehta.
+            setShowAgri(null);
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
