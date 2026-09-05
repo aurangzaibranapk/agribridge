@@ -92,7 +92,7 @@ export function CategoryAi() {
                       <input
                         type="checkbox"
                         name="chuna"
-                        value={`${t.productId}::${t.categoryId}`}
+                        value={t.productId}
                         // "Pakka" par nishan pehle se; "shayad" par nahi.
                         defaultChecked={t.yaqeen === "pakka"}
                         className="h-4 w-4 rounded border-surface-300"
@@ -103,13 +103,33 @@ export function CategoryAi() {
                       {t.stock > 0 ? t.stock : "—"}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="font-medium text-surface-800 dark:text-surface-200">{t.categoryName}</span>
-                      {t.yaqeen === "shayad" && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                          shayad
-                        </span>
-                      )}
-                      {t.wajah && <p className="text-[11px] text-surface-500">{t.wajah}</p>}
+                      {/* AI ki tajweez pehle se chuni hui hai, magar
+                          badli ja sakti hai. Malik ka kehna (5 Sept):
+                          "Mooli hai -- agar editing ka option hota to
+                          main edit kar ke OK kar deta." AI ne Mooli par
+                          "Vegetable Seeds (shayad)" likha tha; us ka
+                          shak theek tha, magar us ke aage ka raasta band
+                          tha -- ya ghalat tajweez manzoor karo, ya qatar
+                          chhor do. */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          name={`qism__${t.productId}`}
+                          defaultValue={t.categoryId}
+                          className="h-8 max-w-[220px] rounded-md border border-surface-200 bg-white px-2 text-xs text-surface-900 outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-900 dark:text-white"
+                        >
+                          {(draft.qismein ?? [{ id: t.categoryId, name: t.categoryName }]).map((q) => (
+                            <option key={q.id} value={q.id}>
+                              {q.name}
+                            </option>
+                          ))}
+                        </select>
+                        {t.yaqeen === "shayad" && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                            shayad
+                          </span>
+                        )}
+                      </div>
+                      {t.wajah && <p className="mt-0.5 text-[11px] text-surface-500">{t.wajah}</p>}
                     </td>
                   </tr>
                 ))}
@@ -120,7 +140,8 @@ export function CategoryAi() {
           <div className="mt-3 flex items-center gap-3">
             <ApplyButton />
             <p className="text-xs text-surface-500">
-              Sirf jin par nishan hai wohi darj hongi. &ldquo;Shayad&rdquo; wali qatarein khud se nahi chuni gayin.
+              Sirf jin par nishan hai wohi darj hongi — aur wohi qism jo dropdown mein dikh rahi hai.
+              &ldquo;Shayad&rdquo; wali qatarein khud se nahi chuni gayin.
             </p>
           </div>
         </form>

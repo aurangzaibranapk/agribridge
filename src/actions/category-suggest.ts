@@ -58,6 +58,18 @@ export interface SuggestState {
   tajaweez?: Tajweez[];
   /** Jin par AI kuch tay na kar saka -- inhen chhupaya nahi jata. */
   naMaloom?: { productId: string; productName: string }[];
+  /**
+   * Saari maujooda qismein -- safhe par dropdown ke liye.
+   *
+   * Malik ka kehna (5 September): *"Mooli hai -- agar editing ka option
+   * hota to main edit kar ke OK kar deta."* AI ne Mooli par "Vegetable
+   * Seeds (shayad)" likha tha; Mooli sabzi hai, beej nahi. AI ka shak
+   * theek tha, magar us ke aage ka raasta band tha: banda ya to ghalat
+   * tajweez manzoor kare, ya us qatar ko chhor de.
+   *
+   * Ab teesra raasta hai -- wahin badal kar manzoor karna.
+   */
+  qismein?: { id: string; name: string }[];
 }
 
 const ALLOWED = ["owner", "super_admin", "admin"];
@@ -199,7 +211,8 @@ Jawab SIRF JSON array mein dein, aur kuch nahi:
   return {
     tajaweez,
     naMaloom,
-    notice: `${tajaweez.length} tajweez taiyar hain${naMaloom.length ? `, aur ${naMaloom.length} par AI kuch tay nahi kar saka` : ""}. Dekh kar nishan lagayein, phir "Manzoor karein".`,
+    qismein: categories.map((c) => ({ id: c.id as string, name: c.name as string })),
+    notice: `${tajaweez.length} tajweez taiyar hain${naMaloom.length ? `, aur ${naMaloom.length} par AI kuch tay nahi kar saka` : ""}. Qism badalni ho to wahin dropdown se badal dein, phir "Manzoor karein".`,
   };
 }
 
@@ -223,10 +236,15 @@ export async function applyCategorySuggestions(_prev: SuggestState, formData: Fo
   let lagayin = 0;
   const nakaam: string[] = [];
 
-  for (const jorra of chune) {
-    // Shakal: "<productId>::<categoryId>"
-    const [productId, categoryId] = jorra.split("::");
-    if (!productId || !categoryId) continue;
+  // Qism ab AI ki tajweez se nahi, us DROPDOWN se aati hai jo safhe par
+  // dikha tha -- banda ne badal di ho to badli hui. AI ka jawab yahan
+  // tak aata hi nahi.
+  for (const productId of chune) {
+    const categoryId = String(formData.get(`qism__${productId}`) ?? "");
+    if (!productId || !categoryId) {
+      nakaam.push(productId);
+      continue;
+    }
 
     // Sirf usi cheez par jis ki qism ABHI TAK khali hai. Beech mein kisi
     // aur ne qism laga di ho to us par nahi chalta -- warna kisi ka kaam
