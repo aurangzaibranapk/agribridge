@@ -62,6 +62,10 @@ export interface NavResult {
 // dikhata, sirf wo card dikhata hai jin ki ijazat pehle se hai.
 const ALWAYS = [
   "/admin/academy",
+  // Inbox har bande ko khulta hai, magar us mein SIRF wohi qatarein
+  // aati hain jin ka safha us par khulta hai (`filterInbox`). Ye raasta
+  // band rakhne se wo banda apne hi kaam ka darwaza kho deta hai.
+  "/admin/inbox",
   "/admin/my-access","/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
 
 function fallbackGroups(allowed: Set<string> | null): NavGroupData[] {
