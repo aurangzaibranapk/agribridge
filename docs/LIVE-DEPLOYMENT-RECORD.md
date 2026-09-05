@@ -358,7 +358,7 @@ ka nafa 10,576. Yani Balance Sheet Live par barabar hai.
 ---
 
 
-## 5d. Mustaqil Asaasay (301) — Testing par chal chuki, **Live par baqi**
+## 5d. Mustaqil Asaasay (301) — Live par chal chuki (5 September)
 
 Malik ka group 4 (Fixed Assets) ab bana hua hai: register, qismein,
 depreciation ka hisaab aur ledger, farokht/kharij, dobara qeemat, aur
@@ -393,7 +393,7 @@ JAMA kar deti -- yani har asaase ki ghisai do dafa gini jati aur asaasay
 utne hi bare nazar aate. Ab `balanceSheet` aise khate ka baqi minus
 karti hai aur safhe par bhi wo (bracket) mein nazar aata hai.
 
-## 5e. Khaton ki fehrist (302) — Testing par chal chuki, **Live par baqi**
+## 5e. Khaton ki fehrist (302) — Live par chal chuki (5 September)
 
 `gl_accounts` pehle din se maujood tha magar us ka koi safha nahi tha:
 naya khata banane ke liye SQL likhni parti thi. Ab
@@ -440,7 +440,7 @@ ka dawa). Rok theek thi, jumla ghalat tha. Ab dono halaton ka apna
 jumla hai, aur tasdeeq wale mein Kaam ke Dawe ka safha bhi likha hai.
 Live par MB-2026-00006 aur MB-2026-00005 dono isi halat mein hain.
 
-## 5h. Finance ka baqi poora naqsha (303–309) — Testing par chal chuka, **Live par baqi**
+## 5h. Finance ka baqi poora naqsha (303–309) — Live par chal chuka (5 September)
 
 Malik ka hukm (5 September, raat): *"finance k jitna baqi kam hy wo
 sara krin ... sobha tk sb final hona chiaye phir sb k backup krin gy or
@@ -499,19 +499,48 @@ tareekh usi din ki banegi. Ye jaan boojh kar hai — bina tareekh wala
 bill kisi fehrist mein nazar hi nahi aata. Agar aam shart 15 ya 30 din
 honi chahiye to `/admin/finance/terms` par badal di jaye.
 
-### Live par chalane ki tarteeb (P0 rule)
+### Live par kya hua — 5 September, dopahar (MUKAMMAL)
 
-Backup verified (file ka size chat mein) -> pre-migration ginti ->
-301, 302, 303, 304, 305, 306, 307, 308, 309 (isi tarteeb mein) ->
-ginti dobara -> naya build upload -> smoke test.
+P0 tarteeb poori tarah chali:
 
-### Pre-migration ginti (Live, 5 September raat)
+**1. Backup verified.** `live-full-20260905.sql` — **3.5M**, 12:30 par
+bana. (Pehli koshish mein `pg_dump` Git Bash ke raaste mein nahi tha;
+PostgreSQL 18 ka bin folder PATH mein daal kar chala.)
 
-products 265, stock ki qatarein 62, movements 70, journal entries 14,
-journal lines 39, **Dr = Cr = 244,502**, gl khate 45 (sab chaar hindson
-ke), supplier 1, bina due_date wale purchase 1.
+**2. Pre-migration ginti.** products 265, stock ki qatarein 62,
+movements 70, journal entries 14, journal lines 39,
+**Dr = Cr = 244,502**, gl khate 45, POS bikri 2.
 
-Live par abhi **kuch nahi** chala.
+**3. Migrations 301 se 309 — isi tarteeb mein, sab kamyab.**
+
+**4. Ginti dobara — bilkul wohi.**
+
+| | Pehle | Baad |
+|---|---|---|
+| Products | 265 | 265 |
+| Stock ki qatarein | 62 | 62 |
+| Stock movements | 70 | 70 |
+| Journal entries | 14 | 14 |
+| Journal lines | 39 | 39 |
+| **Debit = Credit** | **244,502** | **244,502** |
+| GL khate | 45 | 58 |
+| POS bikri | 2 | 2 |
+
+Yani kisi purane adad ko haath nahi laga -- sirf 13 naye khate (11 asaason
+ke, 2 cheque ke), 5 asaason ki qismein, 6 adaigi ki shartein, aur naye
+safhon ke feature/ijazat/madad ke indraj jure.
+
+**5. Build.** `✓ Compiled successfully`, 275 safhe. Naye safhe build mein
+maujood: finance/accounts, assets (+[id], categories, depreciation),
+budget, cheques, costing, periods, recurring, reports, terms.
+
+### Ek cheez jo is deployment mein saamne aayi
+
+Backup lete waqt connection string ka password screen par aa gaya (paste
+ki hui line mein line-break tha, is liye `read` ne aadha hissa liya aur
+baqi shell ne command samajh kar likh diya). **Password foran badal
+diya gaya.** Aage ke liye tareeqa: URL clipboard mein rakh kar
+`Get-Clipboard` se uthana -- wo screen par kabhi nahi aata.
 
 ---
 
