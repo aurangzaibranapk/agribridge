@@ -66,6 +66,9 @@ const ALWAYS = [
   // aati hain jin ka safha us par khulta hai (`filterInbox`). Ye raasta
   // band rakhne se wo banda apne hi kaam ka darwaza kho deta hai.
   "/admin/inbox",
+  // "Mera HR" har staff ko khulta hai -- us par banda sirf APNA hisaab
+  // dekhta hai, kisi aur ka nahi (321).
+  "/admin/my-hr",
   "/admin/my-access","/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
 
 function fallbackGroups(allowed: Set<string> | null): NavGroupData[] {
