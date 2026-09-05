@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { ArrowRightLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowRightLeft, AlertTriangle, CheckCircle2, Plus } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Button, Input, Label, Select } from "@/components/ui/form";
-import { rechargeFloat, type LoadState } from "@/actions/load-bill";
+import { rechargeFloat, createLoadAccount, type LoadState } from "@/actions/load-bill";
 
 const initial: LoadState = {};
 
@@ -22,6 +23,7 @@ function Submit() {
 }
 
 export function FloatClient({
+  providers,
   accounts,
   financeAccounts,
   moves,
@@ -32,23 +34,76 @@ export function FloatClient({
   moves: { id: string; account: string; kind: string; amount: number; reason: string | null; waqt: string }[];
 }) {
   const [state, action] = useFormState(rechargeFloat, initial);
+  const [newState, newAction] = useFormState(createLoadAccount, initial);
+  const [khula, setKhula] = useState(accounts.length === 0);
+
+  const paighaam = state.error ?? newState.error;
+  const khushKhabri = state.notice ?? newState.notice;
 
   return (
     <div className="space-y-4">
-      {state.error && (
+      {paighaam && (
         <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {state.error}
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {paighaam}
           </p>
         </Card>
       )}
-      {state.notice && !state.error && (
+      {khushKhabri && !paighaam && (
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20">
           <p className="flex items-start gap-2 text-sm text-brand-800 dark:text-brand-200">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {state.notice}
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {khushKhabri}
           </p>
         </Card>
       )}
+
+      {/* Naya account. Pehla account banne tak ye khula rehta hai --
+          warna safha kholne wale ko samajh hi nahi aata ke shuru kahan
+          se kare. */}
+      <Card>
+        <button
+          type="button"
+          onClick={() => setKhula((k) => !k)}
+          className="flex w-full items-center gap-2 text-left text-sm font-semibold text-surface-900 dark:text-white"
+        >
+          <Plus className="h-4 w-4 text-brand-600" /> Naya provider account
+        </button>
+        {khula && (
+          <form action={newAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Label htmlFor="provider_id">Provider</Label>
+              <Select id="provider_id" name="provider_id" required>
+                <option value="">— chunein —</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="title">Account ka naam</Label>
+              <Input id="title" name="title" required placeholder="Jazz retailer — Main Branch" />
+            </div>
+            <div>
+              <Label htmlFor="account_ref">Account number (marzi ka)</Label>
+              <Input id="account_ref" name="account_ref" placeholder="jaise 0300xxxxxxx" />
+            </div>
+            <div>
+              <Label htmlFor="opening_float">Abhi us mein kitna hai</Label>
+              <Input id="opening_float" name="opening_float" inputMode="decimal" placeholder="khali bhi chhora ja sakta hai" />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <p className="mb-2 text-[11px] leading-relaxed text-surface-500">
+                &ldquo;Abhi us mein kitna hai&rdquo; khali chhorna theek hai — us ka matlab &ldquo;darj nahi
+                hua&rdquo; hai, sifar nahi. Likh dein to wo ledger mein bhi chala jayega, sirf is khane mein
+                nahi baithega.
+              </p>
+              <Button type="submit">Account banayein</Button>
+            </div>
+          </form>
+        )}
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="p-0">
@@ -57,8 +112,7 @@ export function FloatClient({
           </p>
           {accounts.length === 0 ? (
             <p className="px-5 py-6 text-sm text-surface-500">
-              Abhi koi account nahi. Account banane ka safha abhi nahi bana — is waqt account seedha
-              database mein darj hota hai.
+              Abhi koi account nahi. Upar &ldquo;Naya provider account&rdquo; se shuru karein.
             </p>
           ) : (
             <div className="overflow-x-auto">

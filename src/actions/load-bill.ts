@@ -619,3 +619,97 @@ export async function saveLoadReconciliation(_prev: LoadState, formData: FormDat
     notice: farq === 0 ? "Mil gaya — koi farq nahi." : `Farq Rs ${Math.abs(farq).toLocaleString()} darj ho gaya.`,
   };
 }
+
+/**
+ * Naya provider account banana.
+ *
+ * Shuru ka float (opening) khali reh sakta hai -- us ka matlab hai "abhi
+ * darj nahi hua", sifar nahi. Magar agar likha jaye to wo sirf ek khane
+ * mein nahi baithta: us ki bhi ledger entry banti hai (1190 debit,
+ * shuruati sarmaya credit).
+ *
+ * Ye baat pehle Finance ke khaton par ghalti kar chuki hai: wahan
+ * opening balance sirf `opening_balance` ke khane mein para reh gaya tha
+ * aur ledger use jaanta hi nahi tha -- phir do adad ban gaye. Yahan wo
+ * ghalti dobara nahi hone di gayi.
+ */
+export async function createLoadAccount(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, branch_id, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!me?.is_active || !FLOAT_ROLES.includes(me.role)) {
+    return { error: "Provider ka account banana sirf Manager, Finance ya Admin ka kaam hai." };
+  }
+
+  const providerId = String(formData.get("provider_id") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const accountRef = String(formData.get("account_ref") ?? "").trim() || null;
+  const opening = paisa(formData.get("opening_float"));
+
+  if (!providerId) return { error: "Provider chunein." };
+  if (title.length < 2) return { error: "Account ka naam likhein (jaise: Jazz retailer — Main Branch)." };
+  if (opening !== null && opening < 0) return { error: "Shuru ka float manfi nahi hota." };
+
+  const service = createServiceClient();
+
+  const { data: row, error: insErr } = await service
+    .from("load_accounts")
+    .insert({
+      provider_id: providerId,
+      title,
+      account_ref: accountRef,
+      branch_id: me.branch_id,
+      opening_float: opening,
+      opened_on: new Date().toISOString().slice(0, 10),
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (insErr || !row) return { error: `Account nahi bana: ${insErr?.message ?? ""}` };
+
+  // Shuru ka float ledger mein bhi -- warna safha kuch aur kehta aur
+  // ledger kuch aur.
+  if (opening && opening > 0) {
+    const posted = await postJournal({
+      description: `Shuru ka float — ${title}`,
+      sourceModule: "load_float_opening",
+      sourceId: row.id,
+      branchId: me.branch_id,
+      createdBy: user.id,
+      lines: [
+        {
+          account: ACC.loadFloat,
+          debit: opening,
+          partyType: "load_account",
+          partyId: row.id,
+          memo: "Shuru ka float",
+        },
+        { account: ACC.openingEquity, credit: opening, memo: `Shuru ka float — ${title}` },
+      ],
+      claims: [{ table: "load_accounts", rowId: row.id }],
+    });
+
+    if ("error" in posted) {
+      await service.from("load_accounts").delete().eq("id", row.id);
+      return { error: `Shuru ka float ledger mein nahi gaya: ${posted.error}` };
+    }
+  }
+
+  revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/load-bill/accounts");
+  return {
+    success: true,
+    notice: opening
+      ? `${title} ban gaya — shuru ka float Rs ${opening.toLocaleString()}.`
+      : `${title} ban gaya. Shuru ka float darj nahi hua — float mein paisa daal kar shuru karein.`,
+  };
+}

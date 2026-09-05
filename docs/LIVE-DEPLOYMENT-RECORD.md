@@ -1232,8 +1232,12 @@ farq **ruka**, bina manzoori adjustment **ruka**, bina adad "tasdeeq"
 
 ### Jo abhi NAHI bana (aur safha ye khud kehta hai)
 
-- Provider ke account banane ka safha — abhi account seedha database mein
-  darj hota hai.
+Account banane ka form "Float aur account" par hai. Shuru ka float khali
+chhora ja sakta hai (matlab "darj nahi hua", sifar nahi); likh dein to
+wo ledger mein bhi jata hai (1190 debit / 3200 credit) -- sirf khane
+mein nahi baithta. Finance ke khaton par yehi ghalti ho chuki hai, wahan
+opening balance sirf khane mein para reh gaya tha aur do adad ban gaye.
+
 - Provider ka statement import kar ke commission ki tasdeeq — is ke
   baghair commission hamesha `muntazir` rahegi.
 - Slab wala commission ka qaida (abhi sirf fisad aur fixed).
