@@ -7712,6 +7712,8 @@ export type Database = {
       finance_accounts: {
         Row: {
           account_number: string | null
+          account_title: string | null
+          bank_name: string | null
           account_type: Database["public"]["Enums"]["finance_account_type"]
           created_at: string
           current_balance: number
@@ -7725,6 +7727,8 @@ export type Database = {
         }
         Insert: {
           account_number?: string | null
+          account_title?: string | null
+          bank_name?: string | null
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number
@@ -7738,6 +7742,8 @@ export type Database = {
         }
         Update: {
           account_number?: string | null
+          account_title?: string | null
+          bank_name?: string | null
           account_type?: Database["public"]["Enums"]["finance_account_type"]
           created_at?: string
           current_balance?: number
@@ -11777,6 +11783,9 @@ export type Database = {
         Row: {
           amount: number
           booking_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
           client_action_id: string | null
           created_at: string
           created_by: string | null
@@ -11800,6 +11809,9 @@ export type Database = {
         Insert: {
           amount: number
           booking_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           client_action_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -11823,6 +11835,9 @@ export type Database = {
         Update: {
           amount?: number
           booking_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           client_action_id?: string | null
           created_at?: string
           created_by?: string | null

@@ -31,6 +31,7 @@ import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { CropLiftStep, type CropLiftInfo } from "./crop-lift-step";
+import { CancelFuelButton } from "./cancel-fuel-button";
 import { Check, Circle, Plus, X, Undo2, CheckCircle2 } from "lucide-react";
 
 import { PaymentForm, Err, Submit, initialState } from "@/components/machinery/payment-form";
@@ -152,6 +153,8 @@ export function BookingDetail({
     amount: number;
     paid_by: string;
     vendor_recoverable: boolean;
+    verification_status: string;
+    cancelled_reason: string | null;
   }>;
   efficiency: {
     kulGhante: number | null;
@@ -217,13 +220,18 @@ export function BookingDetail({
   // Screen par pehle dono ek hi lakeer mein "hamara diesel (kharcha)"
   // likhe jate the. Adad theek tha, lafz ghalat -- aur usi lafz par
   // banda faisla karta hai.
-  const ourFuelRecoverable = fuelLogs
+  //
+  // Mansookh shuda diesel kisi jor mein nahi aata (313). Safhe par wo
+  // phir bhi nazar aata hai -- chhupa dene se ye sawal khara reh jata
+  // hai ke "diesel to daala tha, gaya kahan".
+  const ginneWaleFuel = fuelLogs.filter((f) => f.verification_status !== "cancelled");
+  const ourFuelRecoverable = ginneWaleFuel
     .filter((f) => f.paid_by === "company" && f.vendor_recoverable)
     .reduce((s2, f) => s2 + f.amount, 0);
-  const ourFuelExpense = fuelLogs
+  const ourFuelExpense = ginneWaleFuel
     .filter((f) => f.paid_by === "company" && !f.vendor_recoverable)
     .reduce((s2, f) => s2 + f.amount, 0);
-  const othersFuel = fuelLogs.filter((f) => f.paid_by !== "company").reduce((s2, f) => s2 + f.amount, 0);
+  const othersFuel = ginneWaleFuel.filter((f) => f.paid_by !== "company").reduce((s2, f) => s2 + f.amount, 0);
 
   // Kisan ka aakhri aitraaz -- sirf wo jo aakhri rate bhejne ke BAAD
   // aaya ho. Purana aitraaz naye rate par dikhana galat hai: wo bahes
@@ -248,7 +256,7 @@ export function BookingDetail({
   // taake adaigi se pehle dono taraf ko pata ho.
   const artDiesel = Math.max(
     0,
-    Math.round((fuelLogs.filter((f) => f.vendor_recoverable).reduce((s2, f) => s2 + f.amount, 0) - paidToVendor) * 100) / 100
+    Math.round((ginneWaleFuel.filter((f) => f.vendor_recoverable).reduce((s2, f) => s2 + f.amount, 0) - paidToVendor) * 100) / 100
   );
 
   return (
@@ -592,19 +600,50 @@ export function BookingDetail({
                 kaam ke sath hai, kyunke diesel usi kaam ka kharcha hai. */}
             {fuelLogs.length > 0 && (
               <div className="mb-3 space-y-1 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
-                {fuelLogs.map((f) => (
-                  <div key={f.id} className="flex justify-between">
-                    <span className="text-surface-600 dark:text-surface-300">
-                      {f.litres} L ·{" "}
-                      {f.paid_by === "company"
-                        ? t("mc_diesel_by_company", lang)
-                        : f.paid_by === "vendor"
-                        ? t("mc_diesel_by_vendor", lang)
-                        : t("mc_diesel_by_farmer", lang)}
-                    </span>
-                    <span className="font-medium">Rs {f.amount.toLocaleString()}</span>
-                  </div>
-                ))}
+                {fuelLogs.map((f) => {
+                  const mansookh = f.verification_status === "cancelled";
+                  return (
+                    <div key={f.id}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={
+                            mansookh
+                              ? "text-surface-400 line-through dark:text-surface-500"
+                              : "text-surface-600 dark:text-surface-300"
+                          }
+                        >
+                          {f.litres} L ·{" "}
+                          {f.paid_by === "company"
+                            ? t("mc_diesel_by_company", lang)
+                            : f.paid_by === "vendor"
+                            ? t("mc_diesel_by_vendor", lang)
+                            : t("mc_diesel_by_farmer", lang)}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={
+                              mansookh ? "text-surface-400 line-through dark:text-surface-500" : "font-medium"
+                            }
+                          >
+                            Rs {f.amount.toLocaleString()}
+                          </span>
+                          {/* Ghalti se do dafa darj ho jaye to us ka
+                              raasta yahin hona chahiye. Pehle koi raasta
+                              tha hi nahi: qatar mitai nahi ja sakti aur
+                              tasdeeq shuda diesel wapas nahi jata, is
+                              liye ghalat adad hamesha ke liye baith jata
+                              tha (5 September). */}
+                          {!mansookh && <CancelFuelButton fuelId={f.id} />}
+                        </span>
+                      </div>
+                      {mansookh && (
+                        <p className="text-[11px] text-surface-400 dark:text-surface-500">
+                          Mansookh{f.cancelled_reason ? ` — ${f.cancelled_reason}` : ""}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
                 {ourFuelRecoverable > 0 && (
                   <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
                     <span className="text-surface-500">{t("mc_fuel_recoverable", lang)}</span>

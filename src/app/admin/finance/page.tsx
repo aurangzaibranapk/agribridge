@@ -13,7 +13,7 @@ export default async function AdminFinancePage() {
 
   const { data: accounts } = await supabase
     .from("finance_accounts")
-    .select("id, name, account_type, current_balance")
+    .select("id, name, account_type, current_balance, opening_balance, bank_name, account_title, account_number")
     .eq("is_active", true)
     .order("created_at");
 
@@ -31,6 +31,16 @@ export default async function AdminFinancePage() {
       </div>
     );
   }
+
+  // Kis khate ka shuruati balance darj ho chuka hai. Ye sawal is safhe
+  // par saaf nazar aana chahiye: jis khate ka shuru maloom hi nahi, us
+  // ka "balance" asal balance nahi -- sirf us ke baad ki aamad-o-raft
+  // hai. Wohi wajah hai ke UBL par Rs -11,370 likha aa raha tha.
+  const { data: openingRows } = await supabase
+    .from("finance_transactions")
+    .select("account_id")
+    .eq("category", "Shuruati balance");
+  const openingDone = new Set((openingRows ?? []).map((r) => r.account_id as string));
 
   const { data: rawTransactions } = await supabase
     .from("finance_transactions")
@@ -57,7 +67,19 @@ export default async function AdminFinancePage() {
       <div className="mb-4">
         <DueSoon lang={lang} compact />
       </div>
-      <FinanceClient accounts={accounts} transactions={transactions} />
+      <FinanceClient
+        accounts={accounts.map((a) => ({
+          id: a.id,
+          name: a.name,
+          account_type: a.account_type,
+          current_balance: Number(a.current_balance),
+          bank_name: a.bank_name,
+          account_title: a.account_title,
+          account_number: a.account_number,
+          shuruatiDarj: openingDone.has(a.id) || Number(a.opening_balance) > 0,
+        }))}
+        transactions={transactions}
+      />
     </div>
   );
 }

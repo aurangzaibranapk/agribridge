@@ -253,6 +253,11 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         amount: Number(f.amount),
         paid_by: f.paid_by,
         vendor_recoverable: Boolean(f.vendor_recoverable),
+        // Mansookh qatar bhi bhejni hai -- chhupa dene se safhe par ye
+        // sawal khara reh jata hai ke "diesel to daala tha, gaya kahan".
+        // Wo nazar aati hai, magar kisi jor mein nahi ginni jati (313).
+        verification_status: (f.verification_status as string | null) ?? "verified",
+        cancelled_reason: (f.cancelled_reason as string | null) ?? null,
       }))}
       work={(work ?? []).map((w) => ({
         id: w.id,

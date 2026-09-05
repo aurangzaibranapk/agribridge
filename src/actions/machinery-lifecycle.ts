@@ -3262,6 +3262,118 @@ export async function verifyVendorCollection(_prev: ActionState, formData: FormD
   return { success: true, notice: "Tasdeeq ho gayi — ab ye raqam hisaab mein hai." };
 }
 
+/**
+ * Diesel ka ghalat indraj mansookh karna.
+ *
+ * Malik ka kehna (5 September): *"maine diesel ek dafa hi add kiya hai"*
+ * -- MB-2026-00008 par 23 sekind ke faasle se do dafa 30 litre darj ho
+ * gaya tha. Ledger wali ghalti to reverse ho gayi, magar diesel ki qatar
+ * "verified" pari rahi, aur vendor ka safha Rs 33,930 kaatta raha jabke
+ * ledger Rs 22,650 kehta tha. Do kitabein alag ho gayin.
+ *
+ * Us waqt is ka koi raasta hi nahi tha: `fn_guard_fuel_log` (theek hi)
+ * tasdeeq shuda diesel ko wapas nahi jane deta, aur qatar mitane se
+ * saboot chala jata hai. Ab teesra darja hai -- `cancelled` (313):
+ * qatar apni jagah rehti hai, wajah ke sath, magar kisi hisaab mein
+ * nahi ginni jati.
+ *
+ * DONO kitabein ek sath ulti hoti hain. Ledger pehle: agar wo na
+ * ulta ja sake to diesel bhi mansookh nahi hota, warna wohi shakal
+ * dobara ban jati jis se bachna hai.
+ */
+export async function cancelFuelLog(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const fuelId = str(formData, "fuel_id");
+  const reason = (str(formData, "reason") ?? "").trim();
+  if (!fuelId) return { error: "Indraj nahi mila." };
+  if (reason.length < 10) return { error: "Mansookhi ki wajah likhein (kam az kam das harf)." };
+
+  const { data: log } = await supabase
+    .from("machinery_fuel_logs")
+    .select("id, booking_id, amount, litres, paid_by, verification_status, expense_id")
+    .eq("id", fuelId)
+    .maybeSingle();
+  if (!log) return { error: "Indraj nahi mila." };
+  if (log.verification_status === "cancelled") {
+    return { error: "Ye indraj pehle hi mansookh ho chuka hai." };
+  }
+
+  const service = createServiceClient();
+
+  // Ledger pehle. Diesel ka kharcha `finance_transactions` ki qatar par
+  // khara hai, aur usi qatar par journal entry ne apna daawa likha tha
+  // (`journal_entry_sources`) -- andaze se dhoondhne ki zaroorat nahi.
+  let reversalNumber: string | null = null;
+  if (log.expense_id) {
+    const { data: claim } = await service
+      .from("journal_entry_sources")
+      .select("entry_id")
+      .eq("source_table", "finance_transactions")
+      .eq("source_row_id", log.expense_id)
+      .maybeSingle();
+
+    if (claim?.entry_id) {
+      // Pehle se ulti ja chuki ho to dobara ulatne ki koshish nahi --
+      // `reverseJournal` khud rok deta hai, magar us ki rok yahan
+      // "kaam ruk gaya" ban jati. Diesel ki qatar ko phir bhi nishan
+      // lagna chahiye.
+      const { data: pehleSe } = await service
+        .from("journal_entries")
+        .select("entry_number")
+        .eq("reversal_of", claim.entry_id)
+        .maybeSingle();
+
+      if (pehleSe) {
+        reversalNumber = pehleSe.entry_number as string;
+      } else {
+        const reversed = await reverseJournal(claim.entry_id, `Diesel mansookh: ${reason}`, actorId);
+        if ("error" in reversed) {
+          return { error: `Ledger nahi ulta ja saka, is liye diesel bhi mansookh nahi kiya: ${reversed.error}` };
+        }
+        reversalNumber = reversed.entryNumber;
+      }
+    }
+  }
+
+  const { error } = await service
+    .from("machinery_fuel_logs")
+    .update({
+      verification_status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: actorId,
+      cancelled_reason: reason,
+    })
+    .eq("id", fuelId);
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId: log.booking_id,
+    eventType: "fuel_cancelled",
+    note: `Diesel Rs ${Number(log.amount).toLocaleString()} (${log.litres} litre) mansookh: ${reason}${
+      reversalNumber ? ` — ledger ${reversalNumber}` : ""
+    }`,
+    actorId,
+  });
+
+  await logAudit({
+    actionType: "update",
+    module: "machinery",
+    recordId: fuelId,
+    recordLabel: `Diesel Rs ${Number(log.amount).toLocaleString()}`,
+    description: `Diesel ka indraj mansookh: ${reason}`,
+    changes: { verification_status: { pehle: log.verification_status, ab: "cancelled" } },
+  });
+
+  revalidateAll(log.booking_id);
+  return {
+    success: true,
+    notice: reversalNumber
+      ? `Diesel mansookh ho gaya. Ledger bhi ulta diya gaya (${reversalNumber}).`
+      : "Diesel mansookh ho gaya.",
+  };
+}
+
 export async function verifyFuelClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
