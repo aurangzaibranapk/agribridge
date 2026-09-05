@@ -1051,3 +1051,89 @@ chhorna wo darwaza hai jahan se koi bhi khata bhar sakta hai.
 Do alag raseed numbers wali ek jaisi kharabi **ek hi qatar** mein jama
 hui (`kitni_dafa = 2`); bina wajah "hal ho gayi" **ruki**; wajah ke sath
 chali; ghalat `severity` **ruki**. Sab ulta diya gaya.
+
+---
+
+## 5p. Live run — 5 September, raat (317 se 322 tak) — MIGRATIONS MUKAMMAL
+
+Malik ne backup chala kar us ki tasdeeq chat mein bheji, aur usi ke baad
+ye chhe migrations Live par chalayi gayin. **Ye tarteeb kabhi nahi
+badlegi:** backup verified → ginti → migrations → ginti dobara → build
+upload → smoke test.
+
+### Backup (pehle, jaisa lazim hai)
+
+```
+agribridge-backup-20260905-2134.sql   —   3.8M   —   5 Sep 21:41
+```
+
+### Ginti — migrations se PEHLE
+
+| Cheez | Adad |
+|---|---|
+| features | 198 |
+| dashboard_features | 243 |
+| feature_help | 234 |
+| role_feature_permissions | 210 |
+| products | 266 |
+| journal_entries | 25 |
+| supplier_bill_reads | 0 |
+| supplier_bill_lines | 0 |
+| `ai_usage_log` | maujood nahi |
+| `error_log` | maujood nahi |
+
+### Jo chalayi gayin
+
+| # | Kya |
+|---|---|
+| 317 | `ai_usage_log`, `v_ai_usage_monthly`, safha `/admin/ai-usage` |
+| 318 | Bill par discount / tax / baqi kharche ke khane, `v_supplier_bill_milan` |
+| 319 | `supplier_bill_lines.wholesale_rate`, `fn_apply_bill_line_rate` naya |
+| 320 | `error_log`, `v_error_summary`, safha `/admin/errors` |
+| 321 | Safha `/admin/my-hr` (Mera HR) |
+| 322 | Safhe `/admin/hr/leave/calendar` aur `/admin/hr/team/tree` |
+
+### Ginti — migrations ke BAAD (tasdeeq)
+
+| Cheez | Pehle | Baad | Farq |
+|---|---|---|---|
+| features | 198 | 203 | +5 (ai-usage, errors, my-hr, hr.leave-calendar, hr.org-tree) |
+| dashboard_features | 243 | 248 | +5 |
+| feature_help | 234 | 239 | +5 |
+| role_feature_permissions | 210 | 214 | +4 |
+| products | 266 | 266 | **koi tabdeeli nahi** |
+| journal_entries | 25 | 25 | **koi tabdeeli nahi** |
+
+Naye khane aur khate: `ai_usage_log` ✓, `error_log` ✓,
+`v_ai_usage_monthly` ✓, `v_error_summary` ✓, `v_supplier_bill_milan` ✓,
+`supplier_bill_lines.wholesale_rate` ✓, `supplier_bill_reads.tax_amount` ✓.
+
+**Kisi karobari record ko haath nahi laga** — products aur journal
+entries dono ka adad waisa ka waisa hai. Ye chheon migrations sirf naye
+khane, naye khate aur naye safhe banati hain.
+
+### Ab baqi kya hai
+
+**Sirf build ka upload.** Live ka database naye code ke liye tayyar hai,
+magar server par purana build chal raha hai — is liye naye safhe
+(`/admin/errors`, `/admin/ai-usage`, `/admin/my-hr`, team ka calendar aur
+darakht) upload se pehle **404** denge. Ye normal hai, aur upload ke baad
+khud theek ho jata hai.
+
+### Smoke test (upload ke baad, isi tarteeb se)
+
+1. `/admin/errors` khulta hai (khali fehrist theek hai — abhi koi
+   kharabi darj nahi hui).
+2. `/admin/ai-usage` khulta hai aur saaf likhta hai ke wo paisa nahi
+   ginta.
+3. `/admin/my-hr` khulta hai, check-in ka khana nazar aata hai.
+4. `/admin/hr/leave/calendar` khulta hai — Live par `leave_requests` = 0
+   hai, is liye calendar khali hoga. **Ye kharabi nahi**: abhi kisi ne
+   chhutti ki darkhwast di hi nahi.
+5. `/admin/hr/team/tree` khulta hai — Live par `staff_details` = 0 hai,
+   is liye darakht khali hoga aur safha khud likh dega ke kitne log
+   darakht se bahar hain. **Ye bhi kharabi nahi**: HR record abhi kisi ka
+   nahi bana. Jaise jaise staff ka record banega, darakht khud bharta
+   jayega.
+6. POS par ek test bill — ye dekhne ke liye ke purana kaam waisa ka waisa
+   chal raha hai.
