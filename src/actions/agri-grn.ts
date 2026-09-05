@@ -46,6 +46,8 @@ interface GrnItemInput {
   unit_price: number;
   ordered_qty: number;
   received_qty: number;
+  /** Aaya magar toota (263). received_qty theek aaya hua hai. */
+  damaged_qty?: number;
   difference_type: string;
   seal_condition: string;
   packaging_condition: string;
@@ -59,7 +61,11 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: order } = await supabase.from("agri_orders").select("order_to_branch_id, payment_terms").eq("id", orderId).single();
+  const { data: order } = await supabase
+    .from("agri_orders")
+    .select("order_to_branch_id, order_from_branch_id, settlement_method, payment_terms")
+    .eq("id", orderId)
+    .single();
 
   if (order?.order_to_branch_id) {
     const isAdvancePaid = order.payment_terms === "Advance Payment";
@@ -72,6 +78,34 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
         notes: `GRN complete hone par charge hua: ${grnNumber}`,
         created_by: user?.id ?? null,
       });
+    }
+  }
+
+  // Branch-to-branch settlement. Maal ab lene wale ke paas pahunch chuka
+  // hai, is liye yahi wo lamha hai jab dene wali shop ka haq banta hai.
+  //
+  //   company_ledger -> Company beech mein hai: dene wali shop ke khate
+  //     mein utni raqam jama hoti hai ('adjustment' outstanding ghata
+  //     deta hai, bilkul usi formula se jo /admin/branch-credit page
+  //     istemal karta hai). Lene wali shop upar pehle hi charge ho chuki.
+  //
+  //   direct_branch -> Company ka koi taalluq nahi. Koi entry nahi jati,
+  //     sirf timeline par likh diya jata hai ke dono shops khud settle
+  //     karengi — warna Company ke khate mein aisa udhaar aa jayega jo
+  //     us ka hai hi nahi.
+  if (order?.order_from_branch_id && payableAmount > 0) {
+    if (order.settlement_method === "company_ledger") {
+      await supabase.from("branch_credit_transactions").insert({
+        branch_id: order.order_from_branch_id,
+        transaction_type: "adjustment",
+        amount: payableAmount,
+        order_id: orderId,
+        notes: `Shop-to-shop settlement: apna stock diya (${grnNumber}). Company ke zariye hisaab.`,
+        created_by: user?.id ?? null,
+      });
+      await logTimeline(orderId, "completed", `Settlement: Company ke zariye. Dene wali shop ke khate mein Rs ${payableAmount.toLocaleString()} jama huye.`);
+    } else if (order.settlement_method === "direct_branch") {
+      await logTimeline(orderId, "completed", `Settlement: Seedha shops ke darmiyan. Rs ${payableAmount.toLocaleString()} lene wali shop khud dene wali shop ko degi — Company ke khate mein koi entry nahi.`);
     }
   }
 
@@ -116,11 +150,19 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   let damageAmount = 0;
 
   const itemRows = items.map((i) => {
+    // Kam aur toota ek sath ho sakte hain (263): 60 mangwaye, 59 aaye,
+    // un mein 1 toota -> received 58, damaged 1, short 1.
+    const damaged = Math.max(0, Number(i.damaged_qty ?? 0));
+    const short = Math.max(0, i.ordered_qty - i.received_qty - damaged);
     const diffQty = i.received_qty - i.ordered_qty;
     orderedValue += i.ordered_qty * i.unit_price;
     receivedValue += i.received_qty * i.unit_price;
-    if (i.difference_type === "Short") shortageAmount += Math.abs(diffQty) * i.unit_price;
-    if (i.difference_type === "Damaged") damageAmount += Math.abs(diffQty || i.received_qty) * i.unit_price;
+    shortageAmount += short * i.unit_price;
+    damageAmount += damaged * i.unit_price;
+    // Purana "farq ki qisam" ab adadon se nikalta hai, taake purani
+    // reports par bhi sahi lafz aaye.
+    const differenceType =
+      short > 0 && damaged > 0 ? "Short+Damaged" : short > 0 ? "Short" : damaged > 0 ? "Damaged" : diffQty > 0 ? "Excess" : i.difference_type || "None";
 
     return {
       order_item_id: i.order_item_id || null,
@@ -131,8 +173,9 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
       unit_price: i.unit_price,
       ordered_qty: i.ordered_qty,
       received_qty: i.received_qty,
+      damaged_qty: damaged,
       difference_qty: diffQty,
-      difference_type: i.difference_type,
+      difference_type: differenceType,
       seal_condition: i.seal_condition,
       packaging_condition: i.packaging_condition,
       quality_status: i.quality_status,
@@ -200,21 +243,37 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
 
         const { data: existingStock } = await supabase
           .from("inventory")
-          .select("id, quantity_on_hand")
+          .select("id")
           .eq("warehouse_id", warehouse.id)
           .eq("product_id", item.product_id)
           .maybeSingle();
 
-        if (existingStock) {
-          await supabase
-            .from("inventory")
-            .update({ quantity_on_hand: Number(existingStock.quantity_on_hand) + item.received_qty })
-            .eq("id", existingStock.id);
-        } else {
-          await supabase.from("inventory").insert({
-            warehouse_id: warehouse.id,
-            product_id: item.product_id,
-            quantity_on_hand: item.received_qty,
+        // Ye jagah baqi sab se alag tarah kharab thi: yahan ginti to
+        // badalti thi magar stock_movements mein KUCH LIKHA HI NAHI
+        // JATA tha. Yani maal godam mein aata tha aur us ka koi kaghaz
+        // nahi banta -- "ye sau bore kahan se aaye" ka jawab kahin nahi
+        // milta, aur GRN ka poora maqsad yehi sawal hai.
+        //
+        // Ab ginti khud nahi likhi jati (trigger karta hai, 129) aur
+        // harkat darj hoti hai.
+        const inventoryId =
+          existingStock?.id ??
+          (
+            await supabase
+              .from("inventory")
+              .insert({ warehouse_id: warehouse.id, product_id: item.product_id })
+              .select("id")
+              .single()
+          ).data?.id;
+
+        if (inventoryId) {
+          await supabase.from("stock_movements").insert({
+            inventory_id: inventoryId,
+            movement_type: "purchase_in",
+            quantity: item.received_qty,
+            reference_type: "agri_grn",
+            reference_id: orderId,
+            created_by: user?.id ?? null,
           });
         }
         if (item.batch_no) {

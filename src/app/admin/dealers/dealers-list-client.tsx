@@ -8,6 +8,8 @@ import { DeleteButton } from "@/components/admin/delete-button";
 import { DealerForm } from "./dealer-form";
 import { EmptyState } from "@/components/ui/layout-primitives";
 import { CheckSquare } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 const initialBulkState: BulkActionState = {};
@@ -25,6 +27,7 @@ interface Dealer {
 }
 
 export function DealersListClient({ dealers }: { dealers: Dealer[] }) {
+  const lang = useLang();
   const [selected, setSelected] = useState<string[]>([]);
 
   function toggleSelect(id: string) {
@@ -41,7 +44,7 @@ export function DealersListClient({ dealers }: { dealers: Dealer[] }) {
         {selected.length > 0 && <BulkActionBar selectedIds={selected} onDone={() => setSelected([])} />}
 
         {dealers.length === 0 ? (
-          <EmptyState title="No dealers yet" description="'Add New Dealer' form use karein, ya investor inquiry convert karein." />
+          <EmptyState title={t("dl_none_yet", lang)} description="'Add New Dealer' form use karein, ya investor inquiry convert karein." />
         ) : (
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
@@ -50,15 +53,15 @@ export function DealersListClient({ dealers }: { dealers: Dealer[] }) {
                   <th className="px-3 py-3">
                     <input type="checkbox" checked={selected.length > 0 && selected.length === dealers.length} onChange={toggleSelectAll} />
                   </th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Dealer Code</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Business Name</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Phone</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">District</th>
-                  <th className="px-4 py-3 text-right font-medium text-surface-500">Payable</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Statement</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Edit</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Delete</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("dl_code", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_business_name", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_district", lang)}</th>
+                  <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_payable", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_statement", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_edit", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("c_delete", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -78,14 +81,10 @@ export function DealersListClient({ dealers }: { dealers: Dealer[] }) {
                       <StatusSelect dealerId={d.id} currentStatus={d.status} />
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/dealers/${d.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                        Statement
-                      </Link>
+                      <Link href={`/admin/dealers/${d.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">{t("c_statement", lang)}</Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/dealers/${d.id}/edit`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                        Edit
-                      </Link>
+                      <Link href={`/admin/dealers/${d.id}/edit`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">{t("c_edit", lang)}</Link>
                     </td>
                     <td className="px-4 py-3">
                       <DeleteButton id={d.id} action={deleteDealer} />
@@ -103,6 +102,7 @@ export function DealersListClient({ dealers }: { dealers: Dealer[] }) {
 }
 
 function StatusSelect({ dealerId, currentStatus }: { dealerId: string; currentStatus: string }) {
+  const lang = useLang();
   const [, formAction] = useFormState(updateDealerStatus, initialState);
   return (
     <form action={formAction}>
@@ -113,15 +113,16 @@ function StatusSelect({ dealerId, currentStatus }: { dealerId: string; currentSt
         onChange={(e) => e.target.form?.requestSubmit()}
         className="rounded-lg border border-surface-200 px-2 py-1 text-xs"
       >
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="suspended">Suspended</option>
+        <option value="active">{t("c_active", lang)}</option>
+        <option value="inactive">{t("c_inactive", lang)}</option>
+        <option value="suspended">{t("c_suspended", lang)}</option>
       </select>
     </form>
   );
 }
 
 function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+  const lang = useLang();
   const [statusState, statusAction] = useFormState(bulkUpdateDealerStatus, initialBulkState);
   const [deleteState, deleteAction] = useFormState(bulkDeleteDealers, initialBulkState);
 
@@ -135,12 +136,12 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="status" value="active" />
-        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">Active Karein</button>
+        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">{t("c_activate", lang)}</button>
       </form>
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="status" value="suspended" />
-        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">Suspend Karein</button>
+        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">{t("c_suspend", lang)}</button>
       </form>
       <form
         action={deleteAction}
@@ -149,7 +150,7 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
         }}
       >
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">Delete Karein</button>
+        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">{t("c_delete", lang)}</button>
       </form>
     </div>
   );

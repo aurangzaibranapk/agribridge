@@ -2,7 +2,37 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { UserRole } from "@/lib/types/database.types";
+import type { UserRole } from "@/lib/utils/roles";
+import { DEPARTMENTS } from "@/lib/departments";
+import { logAudit } from "@/lib/audit";
+import { profileGaps } from "@/lib/access/profile-gaps";
+
+/**
+ * Kisi banday ka role badalna.
+ *
+ * Malik ka usool (5 September): **poori profile ke baghair role nahi.**
+ *
+ * Ye sirf tarteeb ki baat nahi. Adhoori profile par role de dena chhe
+ * mahine baad takleef deta hai: CNIC na ho to tankhwah ki adaigi rukti
+ * hai; afsar darj na ho to us ki har chhutti seedhi HR ke paas jati hai
+ * aur manager ko khabar tak nahi hoti; shoba na ho to wo team ke darakht
+ * mein kahin nazar nahi aata. Har ek akela masla chhota hai; ikatthe ye
+ * wohi surat banate hain jahan "banda system mein hai" magar system us
+ * ke bare mein kuch jaanta nahi.
+ *
+ * Rok sirf AAGE ki taraf lagti hai. Role WAPAS lena ya kam karna hamesha
+ * chalta hai -- warna ek adhoori profile wale bande se ikhtiyar wapas
+ * lena bhi mumkin na hota, aur ye rok hifazat ke bajaye khatra ban
+ * jati.
+ */
+const IKHTIYAR_DARJA: Record<string, number> = {
+  owner: 6,
+  super_admin: 5,
+  admin: 4,
+  manager: 3,
+  hr: 2,
+  finance: 2,
+};
 
 export async function updateUserRole(userId: string, role: UserRole): Promise<{ error?: string }> {
   const supabase = createClient();
@@ -11,9 +41,98 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<{ 
   if (!actingProfile || !["owner", "super_admin", "admin"].includes(actingProfile.role)) {
     return { error: "You don't have permission to change user roles." };
   }
+
+  const { data: target } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (!target) return { error: "Ye banda maujood nahi." };
+  if (target.role === role) return {};
+
+  const purana = IKHTIYAR_DARJA[target.role] ?? 1;
+  const naya = IKHTIYAR_DARJA[role] ?? 1;
+
+  if (naya >= purana) {
+    const gaps = await profileGaps(userId, role);
+
+    // null = record parha nahi ja saka. Us ko "sab theek hai" samajh kar
+    // aage barhna wohi ghalti hai jo is project mein bar bar ghalat adad
+    // de chuki hai -- "kuch nahi mila" aur "sab theek hai" ek cheez nahi.
+    if (gaps === null) {
+      return { error: "Is bande ka record parha nahi ja saka, is liye role nahi diya ja sakta. Dobara koshish karein." };
+    }
+
+    if (gaps.length > 0) {
+      return {
+        error: `Pehle profile mukammal karein — abhi ye khane khali hain: ${gaps
+          .map((g) => g.label)
+          .join(", ")}. (Staff → HR record mein bharein.)`,
+      };
+    }
+  }
+
   const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
   if (error) return { error: error.message };
+
+  // Ikhtiyar ka har hath badalna nishan chhorta hai. Pehle ye chupke se
+  // ho jata tha -- extra_roles ka audit tha, asal role ka nahi.
+  await logAudit({
+    actionType: "update",
+    module: "user_roles",
+    recordId: userId,
+    description: `Role badla: ${target.role} → ${role}`,
+  });
+
   revalidatePath("/admin/users");
+  return {};
+}
+
+/**
+ * Ek bande ke DOOSRE department.
+ *
+ * Asli department (role) apni jagah rehta hai -- wohi us ka ghar hai
+ * aur wohi us ka dashboard banata hai. Ye fehrist us ke ILAWA hai:
+ * "Sales ka banda hai, magar mausam mein Machinery bhi dekhta hai."
+ *
+ * Pehle is ke sirf do raaste the aur dono ghalat: ya us ka department
+ * badal do (aur pehla kaam band ho jaye), ya usay Admin bana do (aur
+ * poore karobar ka darwaza khul jaye).
+ *
+ * Ye sirf safhe nahi kholta. Database ki rok bhi wohi baat kehti hai
+ * (193) -- warna banda safha khol leta aur qatarein khali aatin.
+ */
+export async function updateUserExtraRoles(userId: string, roles: string[]): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: actingProfile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
+  if (!actingProfile || !["owner", "super_admin", "admin"].includes(actingProfile.role)) {
+    return { error: "Department sirf Malik ya Admin de sakta hai." };
+  }
+
+  // Sirf wo department jo waqai maujood hain. Fehrist safhe se aati hai,
+  // aur safha bhi ghalat bhej sakta hai (purana khula hua tab).
+  const known = new Set(DEPARTMENTS.map((d) => d.role));
+  const bad = roles.filter((r) => !known.has(r));
+  if (bad.length > 0) return { error: `Ye department maujood nahi: ${bad.join(", ")}` };
+
+  const { data: target } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (!target) return { error: "Ye banda maujood nahi." };
+
+  // Apna hi department dobara likhna bemaani hai -- aur safhe par wo
+  // ye ghalat khabar deta ke us ke do department hain jabke ek hi hai.
+  const extra = [...new Set(roles)].filter((r) => r !== target.role);
+
+  const { error } = await supabase.from("profiles").update({ extra_roles: extra }).eq("id", userId);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "user_departments",
+    recordId: userId,
+    description: extra.length > 0
+      ? `Doosre department: ${extra.join(", ")}`
+      : "Doosre department hata diye gaye",
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/departments");
   return {};
 }
 

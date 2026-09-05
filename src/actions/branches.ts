@@ -56,6 +56,48 @@ export async function updateBranch(_prev: ActionState, formData: FormData): Prom
   return { success: true };
 }
 
+/**
+ * Branch ki jagah aur hazri ka daira. Ye jaan boojh kar updateBranch se
+ * alag hai: wo form lat/lng nahi bhejta, is liye agar wahin daal dete to
+ * har aam si edit par location khali ho jati aur hazri ki tasdeeq chup
+ * chaap band ho jati.
+ */
+export async function saveBranchLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const branchId = String(formData.get("branch_id") ?? "");
+  if (!branchId) return { error: "Missing branch id." };
+
+  const latRaw = String(formData.get("latitude") ?? "").trim();
+  const lngRaw = String(formData.get("longitude") ?? "").trim();
+  const radiusRaw = String(formData.get("attendance_radius_meters") ?? "").trim();
+
+  // Dono khali = location hata dein (hazri phir bhi lagegi, bas tasdeeq
+  // ke baghair).
+  if (!latRaw && !lngRaw) {
+    const { error } = await supabase.from("branches").update({ latitude: null, longitude: null }).eq("id", branchId);
+    if (error) return { error: error.message };
+    revalidatePath("/admin/branches/locations");
+    return { success: true };
+  }
+
+  const latitude = Number(latRaw);
+  const longitude = Number(lngRaw);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return { error: "Latitude sahi nahi hai (-90 se 90 ke darmiyan honi chahiye)." };
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return { error: "Longitude sahi nahi hai (-180 se 180 ke darmiyan honi chahiye)." };
+
+  const radius = radiusRaw ? Number(radiusRaw) : 200;
+  if (!Number.isFinite(radius) || radius < 20 || radius > 20000) return { error: "Daira 20 se 20000 meter ke darmiyan rakhein." };
+
+  const { error } = await supabase
+    .from("branches")
+    .update({ latitude, longitude, attendance_radius_meters: Math.round(radius) })
+    .eq("id", branchId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/branches/locations");
+  return { success: true };
+}
+
 export async function assignUserBranch(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const userId = String(formData.get("user_id") ?? "");

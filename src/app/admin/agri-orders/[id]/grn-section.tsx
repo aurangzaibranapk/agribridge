@@ -5,6 +5,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createGRN, submitWarehouseExplanation, finalizeGrnDiscrepancy, type ActionState } from "@/actions/agri-grn";
 import { ClipboardCheck, X, AlertTriangle, Check } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -40,6 +42,7 @@ interface DeliveryInfo {
 
 interface ItemRow {
   received_qty: number;
+  damaged_qty: number;
   difference_type: string;
   seal_condition: string;
   packaging_condition: string;
@@ -65,35 +68,33 @@ export function GrnSection({
   deliveryInfoByOrderItem: Record<string, DeliveryInfo>;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const lang = useLang();
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-        <ClipboardCheck className="h-4 w-4" /> GRN (Goods Receiving)
-      </h3>
+        <ClipboardCheck className="h-4 w-4" />{t("at_grn", lang)}</h3>
 
       {!grn && orderStatus === "delivered" && permissions.canCreateGrn && (
-        <button onClick={() => setShowCreate(true)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          GRN Banayein
-        </button>
+        <button onClick={() => setShowCreate(true)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("ao_create_grn", lang)}</button>
       )}
 
       {grn && (
         <div className="space-y-1 text-sm">
           <p className="font-mono text-xs text-surface-500">{grn.grn_number}</p>
-          <div className="flex justify-between"><span className="text-surface-500">Ordered Value</span><span>Rs {grn.ordered_value.toLocaleString()}</span></div>
-          <div className="flex justify-between"><span className="text-surface-500">Received Value</span><span>Rs {grn.received_value.toLocaleString()}</span></div>
-          <div className="flex justify-between text-red-600"><span>Shortage</span><span>- Rs {grn.shortage_amount.toLocaleString()}</span></div>
-          <div className="flex justify-between text-red-600"><span>Damage</span><span>- Rs {grn.damage_amount.toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-surface-500">{t("ao_ordered_value", lang)}</span><span>Rs {grn.ordered_value.toLocaleString()}</span></div>
+          <div className="flex justify-between"><span className="text-surface-500">{t("ao_received_value", lang)}</span><span>Rs {grn.received_value.toLocaleString()}</span></div>
+          <div className="flex justify-between text-red-600"><span>{t("c_shortage", lang)}</span><span>- Rs {grn.shortage_amount.toLocaleString()}</span></div>
+          <div className="flex justify-between text-red-600"><span>{t("c_damage", lang)}</span><span>- Rs {grn.damage_amount.toLocaleString()}</span></div>
           <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800">
             <span>{grn.discrepancy_status === "completed" ? "Payable Amount" : "Proposed Payable"}</span>
             <span>Rs {(grn.final_payable_amount ?? grn.payable_amount).toLocaleString()}</span>
           </div>
-          <p className="mt-1 text-xs text-green-600">Stock inventory mein add ho chuka hai.</p>
+          <p className="mt-1 text-xs text-green-600">{t("ao_stock_added", lang)}</p>
 
           {grn.discrepancy_status === "pending_warehouse_review" && (
             <div className="mt-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3.5 w-3.5" /> Discrepancy mili hai - Warehouse ki wajah ka intezar hai</p>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />{t("ao_discrepancy_wait", lang)}</p>
               {(permissions.role === "warehouse" || ["super_admin", "admin", "owner"].includes(permissions.role ?? "")) && (
                 <WarehouseExplanationForm orderId={orderId} grnId={grn.id} />
               )}
@@ -102,7 +103,7 @@ export function GrnSection({
 
           {grn.discrepancy_status === "pending_finance_review" && (
             <div className="mt-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
-              <p className="text-xs font-semibold text-blue-700">Warehouse Wajah:</p>
+              <p className="text-xs font-semibold text-blue-700">{t("ao_warehouse_reason", lang)}</p>
               <p className="mt-0.5 text-xs text-blue-600">{grn.warehouse_notes}</p>
               {(permissions.role === "finance" || ["super_admin", "admin", "owner"].includes(permissions.role ?? "")) && (
                 <FinalizeForm orderId={orderId} grnId={grn.id} suggestedAmount={grn.payable_amount} />
@@ -122,6 +123,7 @@ export function GrnSection({
 function WarehouseExplanationForm({ orderId, grnId }: { orderId: string; grnId: string }) {
   const router = useRouter();
   const [state, formAction] = useFormState(submitWarehouseExplanation, initialState);
+  const lang = useLang();
 
   useEffect(() => {
     if (state.success) router.refresh();
@@ -132,8 +134,8 @@ function WarehouseExplanationForm({ orderId, grnId }: { orderId: string; grnId: 
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="grn_id" value={grnId} />
       {state.error && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">{state.error}</p>}
-      <textarea name="warehouse_notes" required rows={2} placeholder="Wajah likhein (jaise: packing mein hi kam tha, transit mein damage hua)" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
-      <SubmitButton label="Wajah Bhejein" />
+      <textarea name="warehouse_notes" required rows={2} placeholder={t("ao_reason_ph", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
+      <SubmitButton label={t("ao_send_reason", lang)} />
     </form>
   );
 }
@@ -141,6 +143,7 @@ function WarehouseExplanationForm({ orderId, grnId }: { orderId: string; grnId: 
 function FinalizeForm({ orderId, grnId, suggestedAmount }: { orderId: string; grnId: string; suggestedAmount: number }) {
   const router = useRouter();
   const [state, formAction] = useFormState(finalizeGrnDiscrepancy, initialState);
+  const lang = useLang();
 
   useEffect(() => {
     if (state.success) router.refresh();
@@ -152,11 +155,11 @@ function FinalizeForm({ orderId, grnId, suggestedAmount }: { orderId: string; gr
       <input type="hidden" name="grn_id" value={grnId} />
       {state.error && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">{state.error}</p>}
       <div>
-        <label className="text-[10px] text-blue-600">Final Payable Amount (Rs)</label>
+        <label className="text-[10px] text-blue-600">{t("ao_final_payable", lang)}</label>
         <input type="number" step="0.01" name="final_payable_amount" defaultValue={suggestedAmount} required className="mt-0.5 w-full rounded-lg border border-blue-200 p-2 text-xs" />
       </div>
-      <textarea name="finance_notes" rows={2} placeholder="Notes (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
-      <SubmitButton label="Finalize Karein" />
+      <textarea name="finance_notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
+      <SubmitButton label={t("ao_finalize", lang)} />
     </form>
   );
 }
@@ -175,6 +178,7 @@ function CreateGrnModal({
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState(createGRN, initialState);
+  const lang = useLang();
   const [discountAdjustment, setDiscountAdjustment] = useState(0);
   const [additionalCharges, setAdditionalCharges] = useState(0);
 
@@ -190,6 +194,7 @@ function CreateGrnModal({
           i.id,
           {
             received_qty: info ? info.received_qty : i.order_qty,
+            damaged_qty: info ? info.damaged_qty : 0,
             difference_type: hasDiff ? (info!.short_qty > 0 ? "Short" : "Damaged") : "None",
             seal_condition: "Good",
             packaging_condition: hasDiff ? "Damaged" : "Good",
@@ -207,16 +212,10 @@ function CreateGrnModal({
   }
 
   const liveReceivedValue = orderItems.reduce((sum, i) => sum + (rows[i.id]?.received_qty ?? i.order_qty) * i.unit_price, 0);
-  const liveShortage = orderItems.reduce((sum, i) => {
-    const row = rows[i.id];
-    if (row?.difference_type !== "Short") return sum;
-    return sum + Math.abs((row.received_qty ?? i.order_qty) - i.order_qty) * i.unit_price;
-  }, 0);
-  const liveDamage = orderItems.reduce((sum, i) => {
-    const row = rows[i.id];
-    if (row?.difference_type !== "Damaged") return sum;
-    return sum + Math.abs((row.received_qty ?? i.order_qty) - i.order_qty || row.received_qty) * i.unit_price;
-  }, 0);
+  // Kam = ordered - theek aaya - toota (263). Dono ek sath ho sakte hain.
+  const shortOf = (i: OrderItem) => Math.max(0, i.order_qty - (rows[i.id]?.received_qty ?? i.order_qty) - (rows[i.id]?.damaged_qty ?? 0));
+  const liveShortage = orderItems.reduce((sum, i) => sum + shortOf(i) * i.unit_price, 0);
+  const liveDamage = orderItems.reduce((sum, i) => sum + (rows[i.id]?.damaged_qty ?? 0) * i.unit_price, 0);
   const liveTotalPayable = liveReceivedValue - liveShortage - liveDamage - discountAdjustment + additionalCharges;
 
   const itemsJson = JSON.stringify(
@@ -230,6 +229,7 @@ function CreateGrnModal({
       unit_price: i.unit_price,
       ordered_qty: i.order_qty,
       received_qty: rows[i.id]?.received_qty ?? i.order_qty,
+      damaged_qty: rows[i.id]?.damaged_qty ?? 0,
       difference_type: rows[i.id]?.difference_type ?? "None",
       seal_condition: rows[i.id]?.seal_condition ?? "Good",
       packaging_condition: rows[i.id]?.packaging_condition ?? "Good",
@@ -241,7 +241,7 @@ function CreateGrnModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">GRN Banayein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("ao_create_grn", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <p className="mb-2 text-xs text-surface-400">
@@ -265,74 +265,80 @@ function CreateGrnModal({
                   <p className="text-sm font-medium text-surface-800">{item.product_name} (Ordered: {item.order_qty})</p>
                   {info && (info.short_qty > 0 || info.damaged_qty > 0) && (
                     <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                      <AlertTriangle className="h-3 w-3" /> Delivery pe farak mila tha
-                    </span>
+                      <AlertTriangle className="h-3 w-3" />{t("at_delivery_diff", lang)}</span>
                   )}
                   {info && info.short_qty === 0 && info.damaged_qty === 0 && (
                     <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                      <Check className="h-3 w-3" /> Delivery pe sahi mila tha
-                    </span>
+                      <Check className="h-3 w-3" />{t("at_delivery_ok", lang)}</span>
                   )}
                 </div>
                 {info?.reason && (
                   <p className="mb-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Delivery Wajah: {info.reason}</p>
                 )}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
                   <div>
-                    <label className="text-[10px] text-surface-400">Received Qty</label>
-                    <input type="number" value={row.received_qty} onChange={(e) => updateRow(item.id, "received_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
+                    <label className="text-[10px] text-surface-400">{t("ao_received_qty", lang)}</label>
+                    <input type="number" min={0} value={row.received_qty} onChange={(e) => updateRow(item.id, "received_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-surface-400">Difference</label>
+                    <label className="text-[10px] text-surface-400">{t("c_damaged", lang)}</label>
+                    <input type="number" min={0} value={row.damaged_qty} onChange={(e) => updateRow(item.id, "damaged_qty", Number(e.target.value))} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-surface-400">{t("c_short", lang)}</label>
+                    <p className={`rounded border border-surface-100 bg-surface-50 p-1.5 text-xs tabular-nums ${shortOf(item) > 0 ? "font-medium text-amber-700" : "text-surface-500"}`}>{shortOf(item)}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-surface-400">{t("ao_difference", lang)}</label>
                     <select value={row.difference_type} onChange={(e) => updateRow(item.id, "difference_type", e.target.value)} className="w-full rounded border border-surface-200 p-1.5 text-xs">
-                      <option>None</option>
-                      <option>Short</option>
-                      <option>Excess</option>
-                      <option>Damaged</option>
-                      <option>Wrong Product</option>
-                      <option>Expired</option>
-                      <option>Batch Issue</option>
+                      <option>{t("ao_diff_none", lang)}</option>
+                      <option>{t("c_short", lang)}</option>
+                      <option>{t("ao_diff_excess", lang)}</option>
+                      <option>{t("c_damaged", lang)}</option>
+                      <option>{t("ao_diff_wrong_product", lang)}</option>
+                      <option>{t("ao_diff_expired", lang)}</option>
+                      <option>{t("ao_diff_batch", lang)}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-surface-400">Seal Condition</label>
+                    <label className="text-[10px] text-surface-400">{t("ao_seal_condition", lang)}</label>
                     <input value={row.seal_condition} onChange={(e) => updateRow(item.id, "seal_condition", e.target.value)} className="w-full rounded border border-surface-200 p-1.5 text-xs" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-surface-400">Quality Status</label>
+                    <label className="text-[10px] text-surface-400">{t("ao_quality_status", lang)}</label>
                     <select value={row.quality_status} onChange={(e) => updateRow(item.id, "quality_status", e.target.value)} className="w-full rounded border border-surface-200 p-1.5 text-xs">
-                      <option>Accepted</option>
-                      <option>Accepted with Difference</option>
-                      <option>Rejected</option>
+                      <option>{t("ao_accepted", lang)}</option>
+                      <option>{t("ao_accepted_with_diff", lang)}</option>
+                      <option>{t("ao_rejected", lang)}</option>
                     </select>
                   </div>
                 </div>
                 {row.quality_status === "Rejected" && (
-                  <input placeholder="Rejection Reason" value={row.rejection_reason} onChange={(e) => updateRow(item.id, "rejection_reason", e.target.value)} className="mt-2 w-full rounded border border-red-200 p-1.5 text-xs" />
+                  <input placeholder={t("ao_rejection_reason", lang)} value={row.rejection_reason} onChange={(e) => updateRow(item.id, "rejection_reason", e.target.value)} className="mt-2 w-full rounded border border-red-200 p-1.5 text-xs" />
                 )}
               </div>
             );
           })}
 
           <div className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm dark:bg-surface-800">
-            <div className="flex justify-between"><span className="text-surface-500">Received Value (jitna stock aya)</span><span>Rs {liveReceivedValue.toLocaleString()}</span></div>
-            {liveShortage > 0 && <div className="flex justify-between text-red-600"><span>Shortage</span><span>- Rs {liveShortage.toLocaleString()}</span></div>}
-            {liveDamage > 0 && <div className="flex justify-between text-red-600"><span>Damage</span><span>- Rs {liveDamage.toLocaleString()}</span></div>}
-            {additionalCharges > 0 && <div className="flex justify-between text-blue-600"><span>Charges (Freight, wagera)</span><span>+ Rs {additionalCharges.toLocaleString()}</span></div>}
-            {discountAdjustment > 0 && <div className="flex justify-between text-red-600"><span>Discount Adjustment</span><span>- Rs {discountAdjustment.toLocaleString()}</span></div>}
-            <div className="mt-1 flex justify-between border-t border-surface-200 pt-1 font-semibold dark:border-surface-700"><span>Total Payable</span><span>Rs {liveTotalPayable.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-surface-500">{t("ao_received_value_stock", lang)}</span><span>Rs {liveReceivedValue.toLocaleString()}</span></div>
+            {liveShortage > 0 && <div className="flex justify-between text-red-600"><span>{t("c_shortage", lang)}</span><span>- Rs {liveShortage.toLocaleString()}</span></div>}
+            {liveDamage > 0 && <div className="flex justify-between text-red-600"><span>{t("c_damage", lang)}</span><span>- Rs {liveDamage.toLocaleString()}</span></div>}
+            {additionalCharges > 0 && <div className="flex justify-between text-blue-600"><span>{t("ao_charges", lang)}</span><span>+ Rs {additionalCharges.toLocaleString()}</span></div>}
+            {discountAdjustment > 0 && <div className="flex justify-between text-red-600"><span>{t("ao_discount_adjustment", lang)}</span><span>- Rs {discountAdjustment.toLocaleString()}</span></div>}
+            <div className="mt-1 flex justify-between border-t border-surface-200 pt-1 font-semibold dark:border-surface-700"><span>{t("c_total_payable", lang)}</span><span>Rs {liveTotalPayable.toLocaleString()}</span></div>
           </div>
           <div>
-            <label className="text-xs text-surface-500">Charges - Freight/Loading wagera (Rs) - agar nahi lena to 0 rakhein</label>
+            <label className="text-xs text-surface-500">{t("ao_charges_ph", lang)}</label>
             <input type="number" name="additional_charges" value={additionalCharges} onChange={(e) => setAdditionalCharges(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-            <p className="mt-1 text-[11px] text-surface-400">Agar yahan amount daali to ye stock ki cost mein shamil ho jayegi (asal landed cost).</p>
+            <p className="mt-1 text-[11px] text-surface-400">{t("at_landed_cost_note", lang)}</p>
           </div>
           <div>
-            <label className="text-xs text-surface-500">Discount Adjustment (Rs)</label>
+            <label className="text-xs text-surface-500">{t("ao_discount_adjustment_rs", lang)}</label>
             <input type="number" name="discount_adjustment" value={discountAdjustment} onChange={(e) => setDiscountAdjustment(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
-          <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <SubmitButton label="GRN Submit Karein" />
+          <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <SubmitButton label={t("ao_submit_grn", lang)} />
         </form>
       </div>
     </div>

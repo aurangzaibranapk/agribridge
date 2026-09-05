@@ -6,15 +6,20 @@ import { createProduct, updateProduct, extractProductFromImageAction, type FormS
 import { type ExtractedProductInfo } from "@/lib/ai/product-extraction-client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { PRODUCT_UNITS } from "@/lib/data/units";
+import type { UnitRow, PackSizeRow } from "@/lib/units";
 import { ProductImageUpload } from "@/app/admin/products/new/product-image-upload";
+import { QuickAddSelect } from "@/app/admin/products/new/quick-add-select";
 import { VoiceDictationButton } from "@/components/admin/voice-dictation-button";
 import { Sparkles, Barcode, Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FormState = {};
 
 interface ExistingProduct {
   id: string;
   name: string;
+  unit_code?: string | null;
   company_id: string | null;
   brand_id: string | null;
   category_id: string | null;
@@ -32,18 +37,26 @@ interface ExistingProduct {
   purchase_price: number;
   selling_price: number;
   mrp_price: number | null;
+  wholesale_price: number | null;
   min_stock_threshold: number | null;
   image_url: string | null;
 }
 
 export function ProductForm({
-  companies, brands, categories, product,
+  companies, brands, categories, product, uiMode = "advanced", units = [], packSizes = [],
 }: {
-  companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string }[];
+  companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string; category_kind: string; default_min_stock: number | null }[];
   product?: ExistingProduct;
+  /** Units ka master (273); khali ho to purani built-in fehrist. */
+  units?: UnitRow[];
+  packSizes?: PackSizeRow[];
+  /** Simple = zarai/technical khane chhupe (E). Rok wahi rehti hai. */
+  uiMode?: "simple" | "advanced";
 }) {
+  const simple = uiMode === "simple";
   const isEditMode = !!product;
   const [state, formAction] = useFormState(isEditMode ? updateProduct : createProduct, initialState);
+  const lang = useLang();
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? "");
   const [barcode, setBarcode] = useState(product?.barcode ?? "");
 
@@ -54,6 +67,21 @@ export function ProductForm({
 
   const nameRef = useRef<HTMLInputElement>(null);
   const activeIngredientRef = useRef<HTMLInputElement>(null);
+  // Qism chunte hi form badal jata hai: karyana par saada, zarai par
+  // poore khane. Faisla qism par likha hai (247) -- yahan sirf us ka
+  // natija dikhta hai.
+  const [categoryId, setCategoryId] = useState<string>(product?.category_id ?? "");
+  const [companyId, setCompanyId] = useState<string>(product?.company_id ?? "");
+  const [brandId, setBrandId] = useState<string>(product?.brand_id ?? "");
+  const [showAgri, setShowAgri] = useState<boolean | null>(null);
+
+  const chosenCategory = categories.find((c) => c.id === categoryId);
+  // showAgri === null ka matlab: bande ne khud kuch nahi chuna, qism se
+  // tay hoga. Qism bhi na ho to khane CHHUPE rehte hain -- karyana wala
+  // banda paanch khali khane dekh kar rukta hai, aur wo khane us ke maal
+  // se koi taalluq nahi rakhte.
+  const agriVisible = showAgri ?? chosenCategory?.category_kind === "agri";
+
   const compositionRef = useRef<HTMLTextAreaElement>(null);
   const packSizeRef = useRef<HTMLInputElement>(null);
   const doseRef = useRef<HTMLInputElement>(null);
@@ -101,9 +129,7 @@ export function ProductForm({
     return (
       <div className="rounded-card border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
         <Clock className="mx-auto mb-3 h-8 w-8 text-amber-500" />
-        <h2 className="font-display text-base font-semibold text-amber-800 dark:text-amber-300">
-          Admin ki Approval ke liye Bhej Diya Gaya
-        </h2>
+        <h2 className="font-display text-base font-semibold text-amber-800 dark:text-amber-300">{t("pf_sent_for_approval", lang)}</h2>
         <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
           {isEditMode
             ? "Aapke changes save ho gaye hain, lekin abhi live nahi honge jab tak admin verify na kare."
@@ -142,44 +168,86 @@ export function ProductForm({
               </div>
             )}
             {aiNotConfigured && (
-              <p className="mt-2 max-w-md text-xs text-amber-600 dark:text-amber-400">
-                AI photo reading isn&apos;t connected yet - this needs the Gemini API key configured (GEMINI_API_KEY). Manual and Voice both work right now.
-              </p>
+              <p className="mt-2 max-w-md text-xs text-amber-600 dark:text-amber-400">{t("pf_ai_not_connected", lang)}</p>
             )}
             {aiError && <p className="mt-2 max-w-md text-xs text-red-600 dark:text-red-400">{aiError}</p>}
-            {aiData && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">Fields filled in below from the photo - please double check them.</p>}
+            {aiData && <p className="mt-2 text-xs text-brand-600 dark:text-brand-400">{t("pf_photo_prefilled", lang)}</p>}
           </div>
         </div>
       </div>
 
-      <FieldWithMic label="Product Name *" inputRef={nameRef} name="name" required defaultValue={product?.name} />
+      <FieldWithMic label={t("pf_product_name", lang)} inputRef={nameRef} name="name" required defaultValue={product?.name} />
 
+      {/* Teenon jagah "naya" ka raasta usi safhe par (5 September).
+          Pehle nayi company/brand/qism banane ke liye form chhorna parta
+          tha, aur wapas aane par tasveer aur AI se nikli hui saari
+          tafseel zaya ho jati thi -- is liye log qism khali chhor dete
+          the aur POS par "Uncategorised" ka dher lag jata tha. */}
       <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="company_id">Company</Label>
-          <Select id="company_id" name="company_id" defaultValue={product?.company_id ?? ""}><option value="">- select -</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-        </div>
-        <div>
-          <Label htmlFor="brand_id">Brand</Label>
-          <Select id="brand_id" name="brand_id" defaultValue={product?.brand_id ?? ""}><option value="">- select -</option>{brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-        </div>
-        <div>
-          <Label htmlFor="category_id">Category</Label>
-          <Select id="category_id" name="category_id" defaultValue={product?.category_id ?? ""}><option value="">- select -</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-        </div>
+        <QuickAddSelect
+          id="company_id"
+          name="company_id"
+          label={t("c_company", lang)}
+          table="companies"
+          options={companies}
+          value={companyId}
+          onChange={setCompanyId}
+        />
+        <QuickAddSelect
+          id="brand_id"
+          name="brand_id"
+          label={t("c_brand", lang)}
+          table="brands"
+          options={brands}
+          value={brandId}
+          onChange={setBrandId}
+        />
+        <QuickAddSelect
+          id="category_id"
+          name="category_id"
+          label={t("c_category", lang)}
+          table="categories"
+          options={categories}
+          value={categoryId}
+          // Nayi qism wohi shakal le jo abhi form par dikh rahi hai --
+          // zarai khane khule hon to zarai, warna karyana. Andaza nahi:
+          // bande ne jo screen par chuna, wohi.
+          categoryKind={agriVisible ? "agri" : "karyana"}
+          // Nayi qism abhi server wali fehrist mein nahi hai, is liye
+          // `chosenCategory` khali milta hai aur khane khud ba khud
+          // karyana par gir jate. Jo shakal us waqt screen par thi,
+          // wohi thami rehti hai.
+          onAdded={() => setShowAgri(agriVisible)}
+          onChange={(id) => {
+            setCategoryId(id);
+            // Qism badalne par bande ka apna faisla bhi hat jata hai --
+            // warna wo purani qism ka faisla nayi qism par chipka
+            // rehta.
+            setShowAgri(null);
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="unit">Unit</Label>
-          <Select id="unit" name="unit" defaultValue={product?.unit ?? ""}>
+          <Label htmlFor="unit">{t("pf_unit", lang)}</Label>
+          <Select id="unit" name="unit" defaultValue={product?.unit_code ?? (units.find((u) => u.label === product?.unit)?.code ?? product?.unit ?? "")}>
             <option value="">- select -</option>
-            {PRODUCT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+            {units.length > 0
+              ? units.map((u) => <option key={u.code} value={u.code}>{u.label}</option>)
+              : PRODUCT_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </Select>
         </div>
-        <FieldWithMic label="Pack Size" inputRef={packSizeRef} name="pack_size" placeholder="e.g. 500ml, 1kg" defaultValue={product?.pack_size ?? undefined} />
         <div>
-          <Label htmlFor="barcode">Barcode</Label>
+          <FieldWithMic label={t("c_pack_size", lang)} inputRef={packSizeRef} name="pack_size" placeholder={t("pf_pack_size_eg", lang)} defaultValue={product?.pack_size ?? undefined} list="pack-size-options" />
+          {packSizes.length > 0 && (
+            <datalist id="pack-size-options">
+              {packSizes.map((p) => <option key={p.id} value={p.label} />)}
+            </datalist>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="barcode">{t("pf_barcode", lang)}</Label>
           <div className="flex gap-2">
             <Input id="barcode" name="barcode" value={barcode} onChange={(e) => setBarcode(e.target.value)} className="flex-1" />
             <button
@@ -187,30 +255,60 @@ export function ProductForm({
               onClick={generateBarcode}
               className="flex shrink-0 items-center gap-1 rounded-lg border border-brand-200 bg-white px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:bg-surface-900 dark:text-brand-400"
             >
-              <Barcode className="h-3.5 w-3.5" /> Generate
-            </button>
+              <Barcode className="h-3.5 w-3.5" />{t("pf_generate", lang)}</button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="manufacture_date">Manufacture Date</Label>
+          <Label htmlFor="manufacture_date">{t("pf_manufacture_date", lang)}</Label>
           <Input ref={manufactureDateRef} id="manufacture_date" name="manufacture_date" type="date" defaultValue={product?.manufacture_date ?? undefined} />
         </div>
         <div>
-          <Label htmlFor="expiry_date">Expiry Date</Label>
+          <Label htmlFor="expiry_date">{t("c_expiry_date", lang)}</Label>
           <Input ref={expiryDateRef} id="expiry_date" name="expiry_date" type="date" defaultValue={product?.expiry_date ?? undefined} />
+          <p className="mt-1 text-[11px] text-surface-400">{t("pf_expiry_from_batch", lang)}</p>
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
-        <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} /> Show Expiry Date to customers on the public product page
-      </label>
+        <input type="checkbox" name="show_expiry_to_customer" defaultChecked={product?.show_expiry_to_customer} />{t("pf_show_expiry", lang)}</label>
 
-      <FieldWithMic label="Active Ingredient" inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
+      {/* Zarai ke khane. Khaad, zeher aur wande par ye LAZMI hain --
+          bina safety aur dose ke wo maal bechna theek nahi. Karyana ke
+          dabbe par in mein se ek bhi nahi hota, is liye wahan ye chhupe
+          rehte hain.
+
+          Chhupane ka matlab MITANA nahi: jo qeemat pehle se bhari hui
+          hai wo form ke sath jati rahegi, kyunke ye khane hate nahi,
+          sirf nazar se ojhal hain. */}
+      {!agriVisible && (
+        <button
+          type="button"
+          onClick={() => setShowAgri(true)}
+          className="text-xs text-brand-700 underline"
+        >
+          Zarai ke khane dikhayein (dose, composition, safety)
+        </button>
+      )}
+
+      <div className={agriVisible ? "space-y-4" : "hidden"}>
+        {chosenCategory?.category_kind === "karyana" && (
+          <button
+            type="button"
+            onClick={() => setShowAgri(false)}
+            className="text-xs text-surface-500 underline"
+          >
+            ye khane chhupa dein — is qism par zaroorat nahi
+          </button>
+        )}
+
+      {!simple && (
+        <>
+      <FieldWithMic label={t("pf_active_ingredient", lang)} inputRef={activeIngredientRef} name="active_ingredient" defaultValue={product?.active_ingredient ?? undefined} />
 
       <div>
-        <Label htmlFor="composition">Composition</Label>
+        <Label htmlFor="composition">{t("pf_composition", lang)}</Label>
         <div className="flex gap-2">
           <Textarea ref={compositionRef} id="composition" name="composition" rows={2} defaultValue={product?.composition ?? undefined} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (compositionRef.current) compositionRef.current.value = text; }} />
@@ -218,35 +316,64 @@ export function ProductForm({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FieldWithMic label="Dose" inputRef={doseRef} name="dose" defaultValue={product?.dose ?? undefined} />
-        <FieldWithMic label="Usage Instructions" inputRef={usageRef} name="usage_instructions" defaultValue={product?.usage_instructions ?? undefined} />
+        <FieldWithMic label={t("pf_dose", lang)} inputRef={doseRef} name="dose" defaultValue={product?.dose ?? undefined} />
+        <FieldWithMic label={t("pf_usage_instructions", lang)} inputRef={usageRef} name="usage_instructions" defaultValue={product?.usage_instructions ?? undefined} />
       </div>
 
       <div>
-        <Label htmlFor="safety_information">Safety Information</Label>
+        <Label htmlFor="safety_information">{t("pf_safety_info", lang)}</Label>
         <div className="flex gap-2">
           <Textarea ref={safetyInformationRef} id="safety_information" name="safety_information" rows={2} defaultValue={product?.safety_information ?? undefined} className="flex-1" />
           <VoiceDictationButton onResult={(text) => { if (safetyInformationRef.current) safetyInformationRef.current.value = text; }} />
         </div>
       </div>
+        </>
+      )}
+
+      </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="purchase_price">Purchase Price (Rs.) *</Label>
+          <Label htmlFor="purchase_price">{t("pf_purchase_price", lang)}</Label>
           <Input id="purchase_price" name="purchase_price" type="number" step="0.01" required defaultValue={product?.purchase_price} />
         </div>
         <div>
-          <Label htmlFor="selling_price">Selling Price (Cash) (Rs.) *</Label>
+          <Label htmlFor="selling_price">{t("pf_selling_cash", lang)}</Label>
           <Input id="selling_price" name="selling_price" type="number" step="0.01" required defaultValue={product?.selling_price} />
         </div>
         <div>
-          <Label htmlFor="mrp_price">MRP Rate (Credit ke liye) (Rs.)</Label>
+          <Label htmlFor="mrp_price">{t("pf_mrp_rate", lang)}</Label>
           <Input id="mrp_price" name="mrp_price" type="number" step="0.01" defaultValue={product?.mrp_price ?? undefined} />
+        </div>
+        <div>
+          <Label htmlFor="wholesale_price">{t("pf_f_wholesale", lang)}</Label>
+          <Input
+            id="wholesale_price"
+            name="wholesale_price"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={product?.wholesale_price ?? undefined}
+            placeholder={t("pf_f_wholesale_ph", lang)}
+          />
+          {/* Khali chhoRna theek hai -- sifar ka matlab "thok par muft"
+              hota, aur wo adad ek din bill par chala jata. */}
+          <p className="mt-0.5 text-[11px] text-surface-500">{t("pf_f_wholesale_hint", lang)}</p>
         </div>
       </div>
       <div>
-        <Label htmlFor="min_stock_threshold">Low Stock Alert Below</Label>
-        <Input id="min_stock_threshold" name="min_stock_threshold" type="number" step="0.001" defaultValue={product?.min_stock_threshold ?? undefined} />
+        <Label htmlFor="min_stock_threshold">{t("pf_low_stock_below", lang)}</Label>
+        <Input
+            id="min_stock_threshold"
+            name="min_stock_threshold"
+            type="number"
+            step="0.001"
+            min="0"
+            key={`ms-${categoryId}`}
+            defaultValue={
+              product?.min_stock_threshold ?? chosenCategory?.default_min_stock ?? undefined
+            }
+          />
       </div>
 
       <SubmitButton isEditMode={isEditMode} />
@@ -255,13 +382,13 @@ export function ProductForm({
 }
 
 function FieldWithMic({
-  label, inputRef, name, required, placeholder, defaultValue,
-}: { label: string; inputRef: React.RefObject<HTMLInputElement>; name: string; required?: boolean; placeholder?: string; defaultValue?: string }) {
+  label, inputRef, name, required, placeholder, defaultValue, list,
+}: { label: string; inputRef: React.RefObject<HTMLInputElement>; name: string; required?: boolean; placeholder?: string; defaultValue?: string; list?: string }) {
   return (
     <div>
       <Label htmlFor={name}>{label}</Label>
       <div className="flex gap-2">
-        <Input ref={inputRef} id={name} name={name} required={required} placeholder={placeholder} defaultValue={defaultValue} className="flex-1" />
+        <Input ref={inputRef} id={name} name={name} required={required} placeholder={placeholder} defaultValue={defaultValue} list={list} className="flex-1" />
         <VoiceDictationButton onResult={(text) => { if (inputRef.current) inputRef.current.value = text; }} />
       </div>
     </div>

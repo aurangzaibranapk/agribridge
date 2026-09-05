@@ -3,23 +3,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { nextExpenseNumber } from "@/lib/expense-number";
+import { postExpenseApproved, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
-}
-
-async function generateExpenseNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await serviceClient.from("company_expense_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await serviceClient.from("company_expense_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("company_expense_counters").insert({ year, last_number: nextNumber });
-  }
-  return `EXP-${year}-${String(nextNumber).padStart(5, "0")}`;
 }
 
 export async function requestExpense(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -47,7 +36,7 @@ export async function requestExpense(_prev: ActionState, formData: FormData): Pr
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const expenseNumber = await generateExpenseNumber();
+  const expenseNumber = await nextExpenseNumber();
   const { data: expense, error } = await supabase
     .from("company_expense_requests")
     .insert({
@@ -86,14 +75,31 @@ export async function approveExpense(_prev: ActionState, formData: FormData): Pr
     .from("company_expense_requests")
     .update({ status: "approved", approved_by: user?.id ?? null, approved_at: new Date().toISOString() })
     .eq("id", expenseId)
-    .select("category, amount, supplier_id, expense_number")
+    .select("category, amount, supplier_id, expense_number, branch_id")
     .single();
   if (error) return { error: error.message };
-  if (expense?.category === "supplier_payment" && expense.supplier_id) {
-    const { data: supplier } = await supabase.from("suppliers").select("current_payable").eq("id", expense.supplier_id).single();
-    const newPayable = Math.max(0, Number(supplier?.current_payable ?? 0) - Number(expense.amount));
-    await supabase.from("suppliers").update({ current_payable: newPayable }).eq("id", expense.supplier_id);
+
+  // Kharcha manzoori par darj hota hai, darkhwast par nahi -- jo manzoor
+  // nahi hua wo abhi kharcha nahi hai.
+  const posted = await postExpenseApproved({
+    expenseId,
+    amount: Number(expense?.amount ?? 0),
+    category: expense?.category ?? null,
+    supplierId: expense?.supplier_id ?? null,
+    description: `${expense?.expense_number ?? "Kharcha"} — ${expense?.category ?? ""}`.trim(),
+    ctx: {
+      createdBy: user?.id ?? null,
+      branchId: expense?.branch_id ?? null,
+      claims: [{ table: "company_expense_requests", rowId: expenseId }],
+    },
+  });
+  if (failed(posted)) {
+    return { error: `Kharcha manzoor to ho gaya magar ledger mein nahi gaya: ${posted.error}` };
   }
+
+  // Supplier ka payable yahan se NAHI ghataya jata. Kharche ki halat
+  // "approved" hote hi trigger khud hisaab dobara laga deta hai (139) --
+  // aur wo is raaste ko ginta bhi hai, is liye adaigi gum nahi hoti.
   await logAudit({
     actionType: "approve",
     module: "company_expenses",
@@ -103,6 +109,7 @@ export async function approveExpense(_prev: ActionState, formData: FormData): Pr
   });
   revalidatePath("/admin/company-expenses");
   revalidatePath("/admin/suppliers");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 

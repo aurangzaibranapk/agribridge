@@ -4,10 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/form";
 import { formatDateTime } from "@/lib/utils/format";
 import { DealerOrderActions } from "@/app/admin/dealer-orders/dealer-order-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealerOrdersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -18,7 +21,7 @@ export default async function DealerOrdersPage() {
   if (!dealer) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">This account is not linked to a dealer.</p>
+        <p className="text-surface-600">{t("at_no_dealer_link", lang)}</p>
       </div>
     );
   }
@@ -46,6 +49,7 @@ export default async function DealerOrdersPage() {
   }));
 
   function statusTone(status: string) {
+  const lang = getLanguageFromCookies("rm");
     if (["delivered", "settled"].includes(status)) return "green" as const;
     if (status === "assigned") return "amber" as const;
     if (status === "dealer_rejected") return "red" as const;
@@ -54,17 +58,13 @@ export default async function DealerOrdersPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <Link href="/admin/pos" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        Back to POS
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">My Orders</h1>
-      <p className="mt-1 text-surface-500">Orders routed to you by AgriBridge - fulfil under the Al Rana Traders identity.</p>
+      <Link href="/admin/pos" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">{t("at_back_to_pos", lang)}</Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("at_my_orders", lang)}</h1>
+      <p className="mt-1 text-surface-500">{t("at_dealer_orders_note", lang)}</p>
 
       <div className="mt-6 space-y-3">
         {orders.length === 0 ? (
-          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400">
-            No orders yet.
-          </p>
+          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400">{t("at_no_orders", lang)}</p>
         ) : (
           orders.map((o) => (
             <div key={o.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">

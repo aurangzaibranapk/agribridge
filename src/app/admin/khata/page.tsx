@@ -1,10 +1,13 @@
 ﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { KhataClient } from "@/components/khata/khata-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function KhataPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -24,9 +27,7 @@ export default async function KhataPage() {
   if (!dealer) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">
-          This account is not linked to a dealer. Contact admin to set up your dealer profile.
-        </p>
+        <p className="text-surface-600">{t("at_no_dealer_profile", lang)}</p>
       </div>
     );
   }

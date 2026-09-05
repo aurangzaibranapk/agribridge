@@ -1,0 +1,953 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { decideMatch } from "@/lib/product-match";
+import { logAudit } from "@/lib/audit";
+import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
+import { createClient } from "@/lib/supabase/server";
+import { loadUnitAliases } from "@/lib/units";
+import { looksBinary, parseDelimited } from "@/lib/csv";
+import { parsePaymentTerms } from "@/lib/purchase-terms";
+
+/**
+ * Supplier ke bill se trade rate charhane ka kaam.
+ *
+ * Do qadam, jaan boojh kar alag:
+ *   1) Bill ki photo charhti hai, AI qatarein parhta hai, wo mehfooz
+ *      ho jati hain.
+ *   2) Banda har qatar ke saamne product chunta hai, phir rate charhta
+ *      hai.
+ *
+ * Beech ka qadam mitaya nahi ja sakta. Bill par "SUFI 5LTR" likha hota
+ * hai aur hamare paas "Sufi Cooking Oil 5 Litre" -- ye faisla ke dono
+ * ek hi cheez hain, bande ka hai. Ek ghalat milaan chup chaap ghalat
+ * lagat bana deta hai, aur us ka pata mahine baad munafe ke adad se
+ * chalta hai.
+ */
+
+export interface BillRateState {
+  error?: string;
+  notice?: string;
+  success?: boolean;
+  billId?: string;
+  applied?: number;
+  failed?: number;
+}
+
+const ALLOWED = ["owner", "super_admin", "admin", "warehouse"];
+
+async function gate() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { supabase, user: null, ok: false };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return { supabase, user, ok: !!me?.is_active && ALLOWED.includes(me.role) };
+}
+
+const paths = (billId?: string) => {
+  revalidatePath("/admin/products/bill-rates");
+  if (billId) revalidatePath(`/admin/products/bill-rates/${billId}`);
+  revalidatePath("/admin/products");
+};
+
+/**
+ * Naam ko milaan ke qabil banana.
+ *
+ * Bill par "SUFI-5LTR", catalogue mein "Sufi 5 Ltr". Nishan aur khali
+ * jagah hata dene se ye dono ek jaise ho jate hain. Is se zyada
+ * hoshiyari yahan jaan boojh kar nahi ki gayi: jo aap se aap milta
+ * hai, us par bhi banda nazar daalta hai.
+ */
+function matchKey(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+// =====================================================================
+// 1) Bill charhana aur parhwana
+// =====================================================================
+/**
+ * Ek bill, kai file.
+ *
+ * Bill do ya teen safhon ka hota hai, aur aksar PDF mein aata hai. Har
+ * safhe ko alag "bill" bana dena ghalat hisaab deta hai: bill ka kul
+ * ek hi hota hai, aur qataron ka jorh us se milana chahiye. Is liye
+ * saari file ek hi bill ke neeche baithti hain.
+ *
+ * Har file ka apna indraj banta hai. Jo file parhi na ja sake, us par
+ * wajah likhi jati hai -- khamoshi se chhoR dene par banda samajhta
+ * hai ke poora bill parh liya gaya.
+ */
+type MatchCatalogue = { id: string; name: string; pack_size: string | null }[];
+
+async function matchMap(supabase: ReturnType<typeof createClient>): Promise<MatchCatalogue> {
+  // Units/Pack Sizes ke aliases (273): "bori", "5 ltr" catalogue se milein.
+  await loadUnitAliases();
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, pack_size")
+    .eq("is_deleted", false)
+    .limit(5000);
+  return (products ?? []) as MatchCatalogue;
+}
+
+/**
+ * Naam se apne aap milaan -- score ke sath (H).
+ *
+ * Bilkul wohi naam -> "auto_name". Milta julta aur doosre se saaf aage
+ * -> "fuzzy:NN" (NN = feesad): product lag jata hai magar ANDAZE ka
+ * nishan sath; banda Save dabaye to "confirmed" hota hai, aur us se
+ * pehle rate nahi charhta. Do barabar hon ya score kam ho -> khali.
+ *
+ * `taken` wo products hain jo isi bill mein pehle se kisi qatar par lag
+ * chuke hain. Ek hi bill mein ek product do dafa charhne se rate do
+ * dafa badalta hai aur aakhri jeet jata hai -- bina kisi ke jaane.
+ */
+function autoMatch(
+  catalogue: MatchCatalogue,
+  taken: Set<string>,
+  itemName: string | null,
+  packSize: string | null
+): { id: string; source: string } | null {
+  if (!itemName) return null;
+  const d = decideMatch(itemName, packSize, catalogue);
+  if (d.kind === "none") return null;
+  if (taken.has(d.item.id)) return null;
+  taken.add(d.item.id);
+  return { id: d.item.id, source: d.kind === "exact" ? "auto_name" : `fuzzy:${Math.round(d.score * 100)}` };
+}
+
+export async function createBillFromFiles(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Bill se rate charhana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+
+  let files: { url: string; mime: string }[] = [];
+  try {
+    const raw = JSON.parse(String(formData.get("files") ?? "[]"));
+    if (Array.isArray(raw)) {
+      files = raw
+        .filter((f) => f && typeof f.url === "string" && f.url)
+        .slice(0, 20)
+        .map((f) => ({ url: String(f.url), mime: String(f.mime ?? "") }));
+    }
+  } catch {
+    return { error: "File ki fehrist samajh nahi aayi. Dobara lagayein." };
+  }
+
+  if (files.length === 0) return { error: "Bill ki tasveer ya PDF lagayein." };
+
+  const supplierId = (formData.get("supplier_id") as string) || null;
+
+  const kinds = new Set(files.map((f) => (f.mime === "application/pdf" ? "pdf" : "photo")));
+  const source = kinds.size > 1 ? "mixed" : [...kinds][0];
+
+  const { data: bill, error } = await supabase
+    .from("supplier_bill_reads")
+    .insert({
+      // Pehli file bhi rakhi jati hai -- fehrist par ek nazar mein
+      // dikhane ke liye. Asal fehrist supplier_bill_files hai.
+      image_url: files[0].url,
+      source,
+      supplier_id: supplierId,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await supabase.from("supplier_bill_files").insert(
+    files.map((f, i) => ({
+      bill_read_id: bill.id,
+      file_url: f.url,
+      mime_type: f.mime || null,
+      page_no: i + 1,
+    }))
+  );
+
+  const byName = await matchMap(supabase);
+  const taken = new Set<string>();
+
+  let lineNo = 0;
+  let readAny = false;
+  let binaRate = 0;
+  const failedPages: number[] = [];
+  const head: { supplierName: string | null; billNumber: string | null; billDate: string | null; billTotal: number | null } = {
+    supplierName: null,
+    billNumber: null,
+    billDate: null,
+    billTotal: null,
+  };
+
+  for (let i = 0; i < files.length; i++) {
+    const reading = await readSupplierBillLines(files[i].url);
+    const pageNo = i + 1;
+
+    if (!reading) {
+      failedPages.push(pageNo);
+      await supabase
+        .from("supplier_bill_files")
+        .update({
+          problem:
+            "Ye file parhi nahi ja saki (ho sakta hai GEMINI_API_KEY na laga ho, ya file saaf na ho). Qatarein khud likh lein.",
+        })
+        .eq("bill_read_id", bill.id)
+        .eq("page_no", pageNo);
+      continue;
+    }
+
+    readAny = true;
+
+    // Bill ka sar (naam, number, tareekh, kul) pehle safhe se leta
+    // hai; baad wale safhe sirf tab bharte hain jab pehla khali ho.
+    head.supplierName ??= reading.supplierName;
+    head.billNumber ??= reading.billNumber;
+    head.billDate ??= reading.billDate;
+    head.billTotal ??= reading.billTotal;
+
+    const rows = reading.lines.map((line) => {
+      lineNo += 1;
+      const m = autoMatch(byName, taken, line.itemName, line.packSize);
+      const productId = m?.id ?? null;
+      if (line.rate == null) binaRate += 1;
+      return {
+        bill_read_id: bill.id,
+        line_no: lineNo,
+        page_no: pageNo,
+        raw_text: line.rawText || null,
+        item_name: line.itemName,
+        pack_size: line.packSize,
+        qty: line.qty,
+        rate: line.rate,
+        line_total: line.lineTotal,
+        product_id: productId,
+        match_source: m?.source ?? null,
+        confidence: line.confidence,
+        status: "draft",
+      };
+    });
+
+    if (rows.length > 0) await supabase.from("supplier_bill_lines").insert(rows);
+
+    await supabase
+      .from("supplier_bill_files")
+      .update({ ai_read_at: new Date().toISOString(), lines_found: rows.length, problem: null })
+      .eq("bill_read_id", bill.id)
+      .eq("page_no", pageNo);
+  }
+
+  if (readAny) {
+    await supabase
+      .from("supplier_bill_reads")
+      .update({
+        supplier_name_raw: head.supplierName,
+        bill_number: head.billNumber,
+        bill_date: head.billDate,
+        bill_total: head.billTotal,
+        ai_read_at: new Date().toISOString(),
+      })
+      .eq("id", bill.id);
+  }
+
+  await logAudit({
+    actionType: "create",
+    module: "products",
+    recordId: bill.id,
+    recordLabel: head.billNumber ?? "Supplier bill",
+    description: `Supplier ka bill parha gaya — ${files.length} file, ${lineNo} qatarein`,
+  });
+
+  paths(bill.id);
+
+  const parts = [`${files.length} file mein se ${lineNo} qatarein parhi gayin.`];
+  if (binaRate > 0) parts.push(`In mein se ${binaRate} ka rate bill par saaf nahi tha — wo khali hain.`);
+  if (failedPages.length > 0) parts.push(`File ${failedPages.join(", ")} parhi nahi ja saki.`);
+
+  return { success: true, billId: bill.id, notice: parts.join(" ") };
+}
+
+// =====================================================================
+// 1b) Sheet se rate
+// =====================================================================
+/**
+ * Kabhi bill hota hi nahi -- supplier rate ki ek sheet bhejta hai.
+ *
+ * Ye raasta AI se guzarta hi nahi: sheet mein rate LIKHA hua adad hai,
+ * parha hua nahi. Jahan adad saaf likha ho, wahan AI se parhwana sirf
+ * ek nayi ghalti ka darwaza kholta hai.
+ *
+ * Magar aage ka qanoon wohi rehta hai: product AAP chunte hain, aur
+ * rate manzoori ke baad charhta hai. Sheet mein "SUFI 5LTR" likha hone
+ * se ye tay nahi hota ke hamare catalogue mein kaun sa product hai.
+ */
+export async function createBillFromSheet(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Bill se rate charhana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+
+  const text = String(formData.get("sheet") ?? "");
+  if (text.trim().length === 0) return { error: "Sheet khali hai. Excel se khane copy kar ke yahan paste karein." };
+  if (looksBinary(text)) {
+    return {
+      error:
+        "Ye Excel ki asal file lagti hai, matn nahi. Sheet mein khane chun kar copy karein aur yahan paste kar dein.",
+    };
+  }
+
+  const table = parseDelimited(text);
+  if (table.length < 2) {
+    return { error: "Sheet mein sirf ek lakeer hai. Pehli lakeer khanon ke naam ki honi chahiye, us ke neeche qatarein." };
+  }
+
+  const norm = (v: string) => v.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  const header = table[0].map(norm);
+
+  // Dukan ki sheet haath se banti hai. "prodect" likha hone par bande
+  // ko "naam ka khana nahi mila" kehna us se apni hi sheet theek
+  // karwana hai -- jo us ka kaam nahi.
+  const NAME = [
+    "name", "naam", "product", "product name", "products name", "item", "item name", "cheez",
+    "prodect", "prodcut", "produt", "product naam",
+  ];
+  const RATE = [
+    "trade rate", "trade", "rate", "trade price", "trade pri", "trade rt",
+    "purchase price", "purchase", "cost", "lagat",
+  ];
+  const PACK = ["pack", "pack size", "packsize", "size"];
+  const QTY = ["qty", "quantity", "quantati", "quentety", "quantiti", "tadad", "kitne"];
+
+  const findCol = (names: string[]) => header.findIndex((h) => names.includes(h));
+  const iName = findCol(NAME);
+  const iRate = findCol(RATE);
+  const iPack = findCol(PACK);
+  const iQty = findCol(QTY);
+
+  if (iName < 0) {
+    return {
+      error: `Naam ka khana nahi mila. Pehli lakeer mein "name" (ya "naam") likha hona chahiye. Mile hue khane: ${table[0].join(", ")}`,
+    };
+  }
+  if (iRate < 0) {
+    return {
+      error: `Rate ka khana nahi mila. Pehli lakeer mein "trade rate" (ya "rate") likha hona chahiye. Mile hue khane: ${table[0].join(", ")}`,
+    };
+  }
+
+  const num = (v: string | undefined): number | null => {
+    if (v == null) return null;
+    const cleaned = v.replace(/[^0-9.]/g, "");
+    if (cleaned === "") return null;
+    const n = Number(cleaned);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
+  const { data: bill, error } = await supabase
+    .from("supplier_bill_reads")
+    .insert({
+      source: "sheet",
+      supplier_id: (formData.get("supplier_id") as string) || null,
+      bill_number: String(formData.get("bill_number") ?? "").trim() || null,
+      bill_date: String(formData.get("bill_date") ?? "").trim() || null,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  const byName = await matchMap(supabase);
+  const taken = new Set<string>();
+
+  let lineNo = 0;
+  let binaRate = 0;
+
+  const rows = table.slice(1).map((r) => {
+    lineNo += 1;
+    const itemName = (r[iName] ?? "").trim() || null;
+    const packSize = iPack >= 0 ? (r[iPack] ?? "").trim() || null : null;
+    // Rate khali ho to khali hi rehta hai. Sifar likhne ka matlab
+    // "muft aaya" hota, aur wo adad seedha munafe mein chala jata.
+    const rate = num(r[iRate]);
+    if (rate == null) binaRate += 1;
+    const m = autoMatch(byName, taken, itemName, packSize);
+    const productId = m?.id ?? null;
+
+    return {
+      bill_read_id: bill.id,
+      line_no: lineNo,
+      raw_text: r.join(" | ").slice(0, 400) || null,
+      item_name: itemName,
+      pack_size: packSize,
+      qty: iQty >= 0 ? num(r[iQty]) : null,
+      rate,
+      line_total: null,
+      product_id: productId,
+      match_source: m?.source ?? null,
+      status: "draft",
+    };
+  });
+
+  const usable = rows.filter((r) => r.item_name);
+  if (usable.length === 0) {
+    await supabase.from("supplier_bill_reads").delete().eq("id", bill.id);
+    return { error: "Ek bhi qatar mein naam nahi mila. Khanon ke naam dekh lein." };
+  }
+
+  const { error: lineErr } = await supabase.from("supplier_bill_lines").insert(usable);
+  if (lineErr) {
+    paths(bill.id);
+    return { success: true, billId: bill.id, notice: `Sheet charh gayi magar qatarein mehfooz nahi hui: ${lineErr.message}` };
+  }
+
+  await logAudit({
+    actionType: "create",
+    module: "products",
+    recordId: bill.id,
+    recordLabel: "Sheet se rate",
+    description: `Sheet se ${usable.length} qatarein aayin`,
+  });
+
+  paths(bill.id);
+
+  return {
+    success: true,
+    billId: bill.id,
+    notice:
+      `${usable.length} qatarein aa gayin.` +
+      (binaRate > 0 ? ` In mein se ${binaRate} ka rate khali tha — wo waise hi khali hain.` : ""),
+  };
+}
+
+// =====================================================================
+// 2) Ek qatar theek karna
+// =====================================================================
+export async function saveBillLine(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Ye kaam sirf Owner, Admin ya Warehouse wale kar sakte hain." };
+
+  const lineId = String(formData.get("line_id") ?? "");
+  if (!lineId) return { error: "Qatar saaf nahi." };
+
+  const { data: line } = await supabase
+    .from("supplier_bill_lines")
+    .select("id, bill_read_id, status, product_id, match_source")
+    .eq("id", lineId)
+    .maybeSingle();
+  if (!line) return { error: "Qatar nahi mili." };
+  if (line.status === "applied") return { error: "Is qatar ka rate charh chuka hai — ab ye nahi badalti." };
+
+  const num = (key: string): number | null => {
+    const raw = String(formData.get(key) ?? "").trim();
+    if (!raw) return null;
+    const n = Number(raw.replace(/,/g, ""));
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
+  const chosen = String(formData.get("product_id") ?? "").trim();
+  const productId = chosen || null;
+  const rate = num("rate");
+  const qty = num("qty");
+  // Khali = "ye rate mat chhuo". Sifar alag baat hai (wo "muft" ka
+  // matlab deta hai) -- is liye sifar yahan qabool nahi hota.
+  const wholesaleRaw = num("wholesale_rate");
+  const wholesale = wholesaleRaw && wholesaleRaw > 0 ? wholesaleRaw : null;
+
+  // "Ready" ka matlab: ye qatar charhne layak hai. Bina product ya
+  // bina rate ke wo dawa jhooti hai -- database bhi yahi kehta hai.
+  const ready = Boolean(productId) && rate != null;
+
+  const { error } = await supabase
+    .from("supplier_bill_lines")
+    .update({
+      item_name: String(formData.get("item_name") ?? "").trim() || null,
+      qty,
+      rate,
+      wholesale_rate: wholesale,
+      product_id: productId,
+      // Andaze wala milaan Save par "confirmed" ho jata hai -- banda dekh
+      // kar aage barha, yehi tasdeeq hai (H).
+      match_source: productId
+        ? productId === line.product_id
+          ? (line.match_source ?? "").startsWith("fuzzy")
+            ? "confirmed"
+            : line.match_source ?? "chosen"
+          : "chosen"
+        : null,
+      status: ready ? "ready" : "draft",
+      problem: null,
+    })
+    .eq("id", lineId);
+
+  if (error) {
+    // Ek hi bill mein ek product do qataron par lag jaye to rate do
+    // dafa badalta hai aur aakhri jeet jata hai -- bina kisi ke jaane.
+    // Database wahin rok deta hai; yahan us rok ko bande ki zaban mein
+    // likha jata hai, warna wo Postgres ka paighaam parh kar samajhta
+    // hai ke nizam kharab hai.
+    if (error.code === "23505") {
+      return {
+        error:
+          "Ye product isi bill ki kisi aur qatar par pehle se laga hua hai. Ek bill mein ek product ka ek hi rate charhta hai — pehle wali qatar dekh lein.",
+      };
+    }
+    return { error: error.message };
+  }
+
+  paths(line.bill_read_id);
+  return { success: true, notice: ready ? "Qatar tayyar hai." : "Mehfooz ho gaya." };
+}
+
+export async function skipBillLine(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Ye kaam sirf Owner, Admin ya Warehouse wale kar sakte hain." };
+
+  const lineId = String(formData.get("line_id") ?? "");
+  const { data: line } = await supabase
+    .from("supplier_bill_lines")
+    .select("bill_read_id, status")
+    .eq("id", lineId)
+    .maybeSingle();
+  if (!line) return { error: "Qatar nahi mili." };
+  if (line.status === "applied") return { error: "Jo rate charh chuka hai wo chhoRa nahi ja sakta." };
+
+  const { error } = await supabase
+    .from("supplier_bill_lines")
+    .update({ status: "skipped" })
+    .eq("id", lineId);
+  if (error) return { error: error.message };
+
+  paths(line.bill_read_id);
+  return { success: true, notice: "Ye qatar chhoR di gayi." };
+}
+
+// =====================================================================
+// 3) Rate charhana
+// =====================================================================
+/**
+ * Har qatar apne darwaze se charhti hai (fn_apply_bill_line_rate), aur
+ * har ek apni jagah mukammal hoti hai: rate, "abhi maloom nahi" ka
+ * nishan, aur indraj -- teenon ya koi nahi.
+ *
+ * Ek qatar ka na charhna baqi ko nahi rokta -- magar wo chup chaap bhi
+ * nahi jati, us par wajah likh di jati hai.
+ */
+export async function applyBillRates(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Rate charhana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+
+  const billId = String(formData.get("bill_id") ?? "");
+  if (!billId) return { error: "Bill saaf nahi." };
+
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("id, status, bill_number")
+    .eq("id", billId)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+  if (bill.status === "applied") return { error: "Is bill ke rate pehle hi charh chuke hain." };
+
+  const { data: lines } = await supabase
+    .from("supplier_bill_lines")
+    .select("id, item_name, rate, product_id, match_source")
+    .eq("bill_read_id", billId)
+    .eq("status", "ready");
+
+  // Andaze wala milaan bina tasdeeq ke nahi charhta (H). Aisi qatar
+  // "ready" ho bhi to yahan ruk jati hai, aur wajah likhi jati hai.
+  const unconfirmed = (lines ?? []).filter((l) => (l.match_source ?? "").startsWith("fuzzy"));
+  for (const l of unconfirmed) {
+    await supabase
+      .from("supplier_bill_lines")
+      .update({ problem: "Product andaze se mila tha -- qatar khol kar dekhein aur Save dabayein, tab charhega." })
+      .eq("id", l.id);
+  }
+  const ready = (lines ?? []).filter((l) => !(l.match_source ?? "").startsWith("fuzzy"));
+  if (ready.length === 0) {
+    return {
+      error:
+        unconfirmed.length > 0
+          ? `${unconfirmed.length} qatar par product andaze se mila hai -- har ek khol kar dekhein aur Save dabayein, tab charhega.`
+          : "Koi qatar charhne ke liye tayyar nahi. Har qatar par product chunna aur rate hona zaroori hai.",
+    };
+  }
+
+  let applied = 0;
+  const failures: string[] = [];
+
+  for (const line of ready) {
+    const { data, error } = await supabase.rpc("fn_apply_bill_line_rate", { p_line_id: line.id });
+    if (error) {
+      failures.push(`${line.item_name ?? "qatar"}: ${error.message}`);
+      await supabase.from("supplier_bill_lines").update({ problem: error.message }).eq("id", line.id);
+      continue;
+    }
+    const res = data as { ok?: boolean; reason?: string } | null;
+    if (res?.ok) applied += 1;
+    else failures.push(`${line.item_name ?? "qatar"}: ${res?.reason ?? "charh nahi saki"}`);
+  }
+
+  // Bill tabhi "ho gaya" kehlata hai jab koi qatar baqi na ho. Aadha
+  // charha hua bill khula rehta hai -- warna baqi qatarein nazar se
+  // gayab ho jati hain.
+  const { count: baqi } = await supabase
+    .from("supplier_bill_lines")
+    .select("id", { count: "exact", head: true })
+    .eq("bill_read_id", billId)
+    .in("status", ["draft", "ready"]);
+
+  if ((baqi ?? 0) === 0) {
+    await supabase
+      .from("supplier_bill_reads")
+      .update({ status: "applied", applied_at: new Date().toISOString(), applied_by: user.id })
+      .eq("id", billId);
+  }
+
+  await logAudit({
+    actionType: "update",
+    module: "products",
+    recordId: billId,
+    recordLabel: bill.bill_number ?? "Supplier bill",
+    description: `Bill se trade rate charhaye — ${applied} charhe, ${failures.length} nahi`,
+  });
+
+  paths(billId);
+
+  return {
+    success: applied > 0,
+    applied,
+    failed: failures.length,
+    notice:
+      failures.length === 0
+        ? `${applied} products ka trade rate charh gaya.`
+        : `${applied} charhe. Ye nahi charh sake: ${failures.slice(0, 5).join(" | ")}`,
+    error: applied === 0 ? `Koi rate nahi charha: ${failures.slice(0, 3).join(" | ")}` : undefined,
+  };
+}
+
+export async function discardBillRead(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Ye kaam sirf Owner, Admin ya Warehouse wale kar sakte hain." };
+
+  const billId = String(formData.get("bill_id") ?? "");
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("status")
+    .eq("id", billId)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+  if (bill.status === "applied") {
+    return { error: "Jis bill ke rate charh chuke hain wo hataya nahi ja sakta — indraj us se juRa hai." };
+  }
+
+  const { error } = await supabase
+    .from("supplier_bill_reads")
+    .update({ status: "discarded" })
+    .eq("id", billId);
+  if (error) return { error: error.message };
+
+  paths(billId);
+  return { success: true, notice: "Bill chhoR diya gaya." };
+}
+
+// =====================================================================
+// 4) Bill se Purchase (254)
+// =====================================================================
+/**
+ * Malik ke naqshe ka qadam A: bill se seedha purchase ka draft.
+ *
+ * Ab tak bill sirf TRADE RATE charhata tha; purchase alag, haath se
+ * banti thi. Halanke wohi qatarein, wohi milaan, wohi rate -- sab
+ * purchase ke liye bhi kaafi hai.
+ *
+ * Yahan teen kaam ek sath hote hain, aur teenon ka usool pehle se tay
+ * hai:
+ *
+ *   1. purchases (PENDING) + purchase_items + stock_batches -- bilkul
+ *      wahi shakl jo /admin/purchases/new banata hai. Is liye Receive,
+ *      GRN, payable, adaigi -- sab wohi purane raaste chalte hain.
+ *   2. Har qatar ka trade rate fn_apply_bill_line_rate se (248): rate +
+ *      nishan + indraj, teenon ek sath.
+ *   3. Bill par purchase ka link (254) -- ek bill se ek hi purchase.
+ *
+ * Aur ek kaam JAAN BOOJH KAR NAHI hota: stock nahi barhta, dena nahi
+ * charhta. Wo Receive dabne par hota hai -- approval aur warehouse ka
+ * maal do alag baatein hain.
+ */
+export async function createPurchaseFromBill(_prev: BillRateState, formData: FormData): Promise<BillRateState & { purchaseId?: string }> {
+  const { supabase, user, ok } = await gate();
+  if (!user) return { error: "Login karein." };
+  if (!ok) return { error: "Purchase banana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
+
+  const billId = String(formData.get("bill_id") ?? "");
+  if (!billId) return { error: "Bill saaf nahi." };
+
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("id, status, bill_number, bill_date, supplier_id, purchase_id, source")
+    .eq("id", billId)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+  if (bill.purchase_id) return { error: "Is bill se purchase pehle hi ban chuki hai." };
+  if (bill.status === "applied") return { error: "Is bill ke rate pehle hi charh chuke hain — purchase ab alag se /admin/purchases/new par banayein." };
+
+  // Supplier: bill par ho to wohi, warna form se. Bina supplier ke
+  // purchase nahi banti -- dena kis ka charhega?
+  const supplierId = bill.supplier_id ?? (String(formData.get("supplier_id") ?? "").trim() || null);
+  if (!supplierId) return { error: "Supplier chunein — purchase ke liye zaroori hai, dena usi ka charhta hai." };
+
+  // Branch: wohi qaida jo purchases/new par hai.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, branch_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdminLevel = ["owner", "super_admin", "admin"].includes(profile?.role ?? "");
+  const branchId = isAdminLevel
+    ? String(formData.get("branch_id") ?? "").trim() || profile?.branch_id || null
+    : profile?.branch_id ?? null;
+  if (!branchId) return { error: "Branch chunein — maal kis branch ki kharid hai." };
+
+  const { data: lines } = await supabase
+    .from("supplier_bill_lines")
+    .select("id, item_name, qty, rate, applied_rate, product_id, status")
+    .eq("bill_read_id", billId)
+    .eq("status", "ready");
+
+  const ready = lines ?? [];
+  if (ready.length === 0) {
+    return { error: "Koi qatar tayyar nahi. Har qatar par product chunna aur rate hona zaroori hai." };
+  }
+
+  // Purchase ki qatar bina tadad ke nahi ban sakti. Yahan ruk jana
+  // behtar hai -- aadhi purchase banane se poora hisaab ghalat hota.
+  const noQty = ready.filter((l) => l.qty == null || Number(l.qty) <= 0);
+  if (noQty.length > 0) {
+    return {
+      error: `In qataron mein tadad nahi likhi — bina tadad ke qatar purchase par nahi ja sakti: ${noQty
+        .map((l) => l.item_name ?? "qatar")
+        .slice(0, 6)
+        .join(", ")}`,
+    };
+  }
+
+  const purchaseNumber = `PO-${Date.now()}`;
+  const totalAmount = ready.reduce(
+    (sum, l) => sum + Number(l.qty) * Number(l.applied_rate ?? l.rate ?? 0),
+    0
+  );
+  const purchaseDate = bill.bill_date ?? new Date().toISOString().slice(0, 10);
+
+  // Adaigi ki shartein (255) -- wohi sawal jo purchases/new par hain.
+  const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
+  if ("error" in terms) return { error: terms.error };
+
+  const { data: po, error: poErr } = await supabase
+    .from("purchases")
+    .insert({
+      purchase_number: purchaseNumber,
+      supplier_id: supplierId,
+      branch_id: branchId,
+      purchase_date: purchaseDate,
+      // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
+      // na stock, na dena.
+      status: "pending",
+      // AI ka draft: manzoori ke baghair receive nahi (259).
+      review_status: "submitted",
+      total_amount: totalAmount,
+      payment_terms: terms.terms,
+      credit_days: terms.creditDays,
+      due_date: terms.dueDate,
+      // Bill ka number khane mein bhi jata hai, sirf note mein nahi --
+      // note par koi taala nahi lagta. Isi khane par 289 ka taala hai
+      // jo ek bill se do purchase banne se rokta hai.
+      supplier_bill_no: bill.bill_number || null,
+      notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (poErr || !po) return { error: `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}` };
+
+  // Jo abhi diya, supplier_payments mein -- adaigi ka ek hi darwaza (139).
+  if (terms.paidNow > 0) {
+    const { error: payErr } = await supabase.from("supplier_payments").insert({
+      supplier_id: supplierId,
+      purchase_id: po.id,
+      amount: terms.paidNow,
+      payment_date: purchaseDate,
+      payment_method: (formData.get("payment_method") as string) || null,
+      notes: `Kharid ${purchaseNumber} ke waqt (bill se)`,
+      created_by: user.id,
+    });
+    if (payErr) return { error: `Purchase ban gayi magar adaigi likhi nahi ja saki: ${payErr.message}` };
+  }
+
+  let made = 0;
+  const problems: string[] = [];
+
+  for (const l of ready) {
+    const qty = Number(l.qty);
+    const cost = Number(l.applied_rate ?? l.rate ?? 0);
+
+    const { data: batch } = await supabase
+      .from("stock_batches")
+      .insert({
+        product_id: l.product_id as string,
+        batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}`,
+        initial_quantity: qty,
+      })
+      .select("id")
+      .single();
+
+    const { error: itemErr } = await supabase.from("purchase_items").insert({
+      purchase_id: po.id,
+      product_id: l.product_id as string,
+      batch_id: batch?.id ?? null,
+      quantity: qty,
+      unit_cost: cost,
+      line_total: qty * cost,
+    });
+    if (itemErr) {
+      problems.push(`${l.item_name ?? "qatar"}: ${itemErr.message}`);
+      continue;
+    }
+
+    // Trade rate usi darwaze se (248) -- rate, nishan, indraj.
+    const { error: rateErr } = await supabase.rpc("fn_apply_bill_line_rate", { p_line_id: l.id });
+    if (rateErr) problems.push(`${l.item_name ?? "qatar"} ka rate: ${rateErr.message}`);
+
+    made += 1;
+  }
+
+  await supabase
+    .from("supplier_bill_reads")
+    .update({
+      purchase_id: po.id,
+      status: "applied",
+      applied_at: new Date().toISOString(),
+      applied_by: user.id,
+    })
+    .eq("id", billId);
+
+  await logAudit({
+    actionType: "create",
+    module: "purchases",
+    recordId: po.id,
+    recordLabel: purchaseNumber,
+    description: `Supplier ke bill se purchase bani — ${made} qatarein, Rs ${totalAmount.toLocaleString()}`,
+  });
+
+  paths(billId);
+  revalidatePath("/admin/purchases");
+  revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/finance");
+
+  return {
+    success: true,
+    billId,
+    purchaseId: po.id,
+    applied: made,
+    notice:
+      `Purchase ${purchaseNumber} ban gayi — ${made} qatarein, Rs ${totalAmount.toLocaleString()}. Maal aane par Purchases par ja kar Receive dabayein.` +
+      (problems.length ? ` Masle: ${problems.slice(0, 3).join(" | ")}` : ""),
+  };
+}
+
+/**
+ * Nakaam ya ghalat bill ko khatam karna.
+ *
+ * Malik ka kehna (4 September): jo bill parha hi nahi gaya, wo qatar
+ * mein khara rehta hai aur us ka koi faida nahi -- Admin ya Manager ke
+ * paas usay hatane ka raasta hona chahiye.
+ *
+ * EK ROK JO NAHI HAT SAKTI: jis bill se purchase ban chuki hai, wo
+ * bill nahi mitta. Purchase supplier ka dena banati hai aur stock
+ * charhati hai; us ka bunyadi kaghaz mita dena ek aisi raqam chhoR
+ * deta hai jis ke peeche koi saboot na ho. Aisi soorat mein purchase
+ * ko us ke apne raaste se radd karna sahi kaam hai, bill mitana nahi.
+ *
+ * Bill ki tasveer storage mein rehti hai. Usay yahan se nahi mitaya
+ * jata -- qatarein aur milaan chale jate hain, magar asal kaghaz ka
+ * nishan baqi rehta hai. Kaghaz mita dena wo cheez khatam kar deta hai
+ * jis se baad mein tehqeeq hoti hai.
+ */
+export async function deleteSupplierBill(_prev: BillRateState, formData: FormData): Promise<BillRateState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Manager bhi kar sakta hai -- warehouse nahi. Bill hatana rate
+  // charhane se bara faisla hai.
+  const CAN_DELETE = ["owner", "super_admin", "admin", "manager"];
+  if (!me?.is_active || !CAN_DELETE.includes(me.role)) {
+    return { error: "Bill hatana sirf Owner, Admin ya Manager ka kaam hai." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "Bill nahi mila." };
+
+  const { data: bill } = await supabase
+    .from("supplier_bill_reads")
+    .select("id, bill_number, purchase_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!bill) return { error: "Bill nahi mila." };
+
+  if (bill.purchase_id) {
+    return {
+      error:
+        "Is bill se purchase ban chuki hai, is liye bill nahi hataya ja sakta. " +
+        "Pehle us purchase ko us ke apne safhe se radd karein.",
+    };
+  }
+
+  await supabase.from("supplier_bill_lines").delete().eq("bill_read_id", id);
+  await supabase.from("supplier_bill_files").delete().eq("bill_read_id", id);
+  const { error } = await supabase.from("supplier_bill_reads").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "delete",
+    module: "purchases",
+    recordId: id,
+    recordLabel: bill.bill_number ? `Bill ${bill.bill_number}` : "Supplier ka bill",
+    description: `Supplier ka bill hataya gaya (halat: ${bill.status ?? "—"})`,
+  });
+
+  revalidatePath("/admin/products/bill-rates");
+
+  // Banda aksar BILL KE APNE SAFHE se delete dabata hai. Bill hat gaya
+  // magar browser wahin khaRa rehta tha -- aur wo safha ab maujood hi
+  // nahi, is liye seedha "404 This page could not be found" khul jata
+  // tha (malik, 5 September). Kaam theek hua tha, magar nazar aane wali
+  // aakhri cheez ek ghalti thi.
+  //
+  // `redirect` yahan se wapas nahi aata, is liye is ke baad kuch nahi.
+  // Fehrist ke safhe se dabaya gaya ho to bhi ye theek hai -- wahi safha
+  // dobara khulta hai.
+  redirect("/admin/products/bill-rates");
+}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { submitLivestockLoan, type ServiceRequestState } from "@/actions/service-requests";
 import { useLanguage } from "@/hooks/useLanguage";
-import { t } from "@/lib/i18n/translations";
+import { t, type Lang } from "@/lib/i18n/translations";
 
 const initialState: ServiceRequestState = {};
 
@@ -80,7 +80,7 @@ export function LivestockForm() {
   );
 }
 
-function SubmitButton({ lang }: { lang: "en" | "ur" }) {
+function SubmitButton({ lang }: { lang: Lang }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">

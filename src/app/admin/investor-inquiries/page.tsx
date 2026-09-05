@@ -5,10 +5,13 @@ import { formatDateTime } from "@/lib/utils/format";
 import { InquiryStatusForm } from "@/app/admin/investor-inquiries/inquiry-status-form";
 import { ConvertDealerButton } from "@/app/admin/investor-inquiries/convert-dealer-button";
 import { ConvertInvestorButton } from "@/app/admin/investor-inquiries/convert-investor-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminInvestorInquiriesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: inquiries } = await supabase
     .from("investor_inquiries")
@@ -17,9 +20,9 @@ export default async function AdminInvestorInquiriesPage() {
 
   return (
     <div>
-      <PageHeader title="Investor Inquiries" description="Submissions from the /invest page" />
+      <PageHeader title={t("ii_title", lang)} description="Submissions from the /invest page" />
       {!inquiries || inquiries.length === 0 ? (
-        <EmptyState title="No inquiries yet" />
+        <EmptyState title={t("ii_none_yet", lang)} />
       ) : (
         <div className="space-y-3">
           {inquiries.map((i) => (

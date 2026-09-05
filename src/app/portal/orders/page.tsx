@@ -4,10 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { OrderForm } from "@/app/portal/orders/order-form";
 import { checkFarmerVerification } from "@/lib/utils/verification-gate";
 import { VerificationGateMessage } from "@/components/portal/verification-gate-message";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function FarmerOrdersPage() {
+  const lang = getLanguageFromCookies("ur");
   const supabase = createClient();
   const {
     data: { user },
@@ -35,13 +38,9 @@ export default async function FarmerOrdersPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        Back to Dashboard
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">Place an Order</h1>
-      <p className="mt-1 text-surface-500">
-        Your order will be routed to a verified dealer in your area, delivered under Al Rana Traders.
-      </p>
+      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">{t("back_to_dashboard", lang)}</Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("pm_place_order", lang)}</h1>
+      <p className="mt-1 text-surface-500">{t("pm_order_routed", lang)}</p>
 
       <div className="mt-6">
         <OrderForm

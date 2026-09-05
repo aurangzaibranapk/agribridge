@@ -2,8 +2,11 @@
 
 import { useState, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 export function VoiceDictationButton({ onResult }: { onResult: (text: string) => void }) {
+  const lang = useLang();
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
@@ -38,7 +41,7 @@ export function VoiceDictationButton({ onResult }: { onResult: (text: string) =>
   }
 
   if (!supported) {
-    return <span className="text-xs text-surface-400">Voice input not supported in this browser</span>;
+    return <span className="text-xs text-surface-400">{t("sh_no_voice", lang)}</span>;
   }
 
   return (

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { dismissAnnouncement, type ActionState } from "@/actions/announcements";
 import { X, Megaphone, Loader2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -16,6 +18,7 @@ interface Announcement {
 }
 
 export function AnnouncementPopup({ announcement, farmerId }: { announcement: Announcement; farmerId: string }) {
+  const lang = useLang();
   const [dismissed, setDismissed] = useState(false);
   const [state, formAction] = useFormState(dismissAnnouncement, initialState);
 
@@ -47,13 +50,13 @@ export function AnnouncementPopup({ announcement, farmerId }: { announcement: An
               <input type="hidden" name="announcement_id" value={announcement.id} />
               <input type="hidden" name="farmer_id" value={farmerId} />
               <input type="hidden" name="vote" value="yes" />
-              <VoteButton label="Haan" color="bg-green-600 hover:bg-green-700" />
+              <VoteButton label={t("yes_label", lang)} color="bg-green-600 hover:bg-green-700" />
             </form>
             <form action={formAction} className="flex-1">
               <input type="hidden" name="announcement_id" value={announcement.id} />
               <input type="hidden" name="farmer_id" value={farmerId} />
               <input type="hidden" name="vote" value="no" />
-              <VoteButton label="Nahi" color="bg-surface-200 hover:bg-surface-300 !text-surface-700" />
+              <VoteButton label={t("no_label", lang)} color="bg-surface-200 hover:bg-surface-300 !text-surface-700" />
             </form>
           </div>
         )}

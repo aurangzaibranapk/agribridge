@@ -1,5 +1,7 @@
 "use server";
 
+import { resolveUnit } from "@/lib/units";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -66,7 +68,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       usage_instructions: (formData.get("usage_instructions") as string) || null,
       safety_information: (formData.get("safety_information") as string) || null,
       pack_size: (formData.get("pack_size") as string) || null,
-      unit: (formData.get("unit") as string) || null,
+      ...(await unitFields(formData.get("unit") as string | null)),
       barcode: (formData.get("barcode") as string) || null,
       manufacture_date: (formData.get("manufacture_date") as string) || null,
       expiry_date: (formData.get("expiry_date") as string) || null,
@@ -75,6 +77,9 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       purchase_price: Number(formData.get("purchase_price")),
       selling_price: Number(formData.get("selling_price")),
       mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+      // Thok ka rate NULL rehta hai jab tak diya na jaye -- har cheez
+      // thok par nahi milti, aur sifar ka matlab "thok par muft" hota.
+      wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
       min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
       is_verified: skipApproval,
       created_by: userId,
@@ -126,7 +131,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     usage_instructions: (formData.get("usage_instructions") as string) || null,
     safety_information: (formData.get("safety_information") as string) || null,
     pack_size: (formData.get("pack_size") as string) || null,
-    unit: (formData.get("unit") as string) || null,
+    ...(await unitFields(formData.get("unit") as string | null)),
     barcode: (formData.get("barcode") as string) || null,
     manufacture_date: (formData.get("manufacture_date") as string) || null,
     expiry_date: (formData.get("expiry_date") as string) || null,
@@ -135,6 +140,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     purchase_price: Number(formData.get("purchase_price")),
     selling_price: Number(formData.get("selling_price")),
     mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+    wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
     min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
   };
 
@@ -184,4 +190,17 @@ export async function deleteProduct(_prev: FormState, formData: FormData): Promi
 
   revalidatePath("/admin/products");
   return { success: true };
+}
+
+/**
+ * Form "unit" mein master ka code bhejta hai (273); purane safhe/labels
+ * ke liye products.unit mein label rehta hai aur unit_code alag. Code na
+ * mile (purani built-in fehrist ka text) to text waise hi unit mein.
+ */
+async function unitFields(raw: string | null): Promise<{ unit: string | null; unit_code: string | null }> {
+  const v = (raw ?? "").trim();
+  if (!v) return { unit: null, unit_code: null };
+  const u = await resolveUnit(v);
+  if (u) return { unit: u.label, unit_code: u.code };
+  return { unit: v, unit_code: null };
 }

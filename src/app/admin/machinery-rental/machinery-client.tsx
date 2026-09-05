@@ -1,24 +1,41 @@
 "use client";
 import { useState, useEffect } from "react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createMachineryVendor,
   createVendorMachine,
-  createMachineryBooking,
-  updateBookingStatus,
-  completeMachineryBooking,
-  recordFarmerPayment,
   recordVendorPayout,
+  updateMachineryVendor,
+  setMachineryVendorActive,
+  deleteMachineryVendor,
   type ActionState,
 } from "@/actions/machinery-rental";
+import { setMachineryCommissionRate } from "@/actions/machinery-lifecycle";
+import { createVendorLogin, resetVendorPassword, type VendorActionState } from "@/actions/vendor-portal";
+
+type VendorLoginState = VendorActionState & { loginId?: string; password?: string };
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { LiveBoard } from "./live-board";
 import Link from "next/link";
-import { Plus, X, Share2 } from "lucide-react";
+import { Plus, X, Share2, Pencil, Ban, Trash2, RotateCcw } from "lucide-react";
 
 const initialState: ActionState = {};
 
-interface Vendor { id: string; vendor_name: string; contact_person: string | null; phone: string | null; }
+interface Vendor {
+  id: string;
+  vendor_name: string;
+  contact_person: string | null;
+  phone: string | null;
+  user_id?: string | null;
+  is_active?: boolean;
+  /** Kya is vendor ke sath kuch juda hua hai -- mitane ka faisla isi par hai (181). */
+  machine_count?: number;
+  booking_count?: number;
+  /** Login ka pata -- do ek jaise vendor isi se alag pehchane jate hain. */
+  login_email?: string | null;
+}
 interface Machine {
   id: string;
   vendor_id: string;
@@ -26,16 +43,17 @@ interface Machine {
   machine_type: string;
   model: string | null;
   rate_type: string;
+  driver_name: string | null;
+  driver_phone: string | null;
   rate_amount: number;
-  commission_percentage: number;
 }
 interface Farmer { id: string; full_name: string; farmer_code: string; booking_link_token?: string; }
-interface FinanceAccount { id: string; name: string; account_type: string; }
 interface Booking {
   id: string;
   booking_number: string;
   booking_date: string;
   farmer_name: string;
+  farmer_id: string | null;
   vendor_name: string;
   machine_label: string;
   acres: number | null;
@@ -47,17 +65,20 @@ interface Booking {
   amount_received_from_farmer: number;
   amount_paid_to_vendor: number;
   status: string;
+  farmer_remaining: number;
+  vendor_remaining: number;
+  has_bill: boolean;
 }
 
 const RATE_TYPE_LABELS: Record<string, string> = { per_acre: "Per Acre", per_hour: "Per Hour", per_day: "Per Day" };
-const STATUS_OPTIONS = ["pending", "confirmed", "in_progress", "completed", "cancelled"];
 
 export function MachineryClient({
   vendors,
   machines,
   farmers,
-  financeAccounts,
   bookings,
+  commissionRate,
+  canEditCommission,
   defaultFarmerId,
   defaultRequestId,
   defaultAcres,
@@ -66,71 +87,90 @@ export function MachineryClient({
   vendors: Vendor[];
   machines: Machine[];
   farmers: Farmer[];
-  financeAccounts: FinanceAccount[];
   bookings: Booking[];
+  commissionRate: number;
+  canEditCommission: boolean;
   defaultFarmerId?: string;
   defaultRequestId?: string;
   defaultAcres?: string;
   defaultLocation?: string;
 }) {
-  const [tab, setTabState] = useState<"live" | "booking" | "vendors" | "bookings">("live");
+  const lang = useLang();
+  const [tab, setTabState] = useState<"live" | "vendors" | "bookings">("live");
   useEffect(() => {
     const saved = sessionStorage.getItem("machinery_active_tab");
-    if (saved === "live" || saved === "booking" || saved === "vendors" || saved === "bookings") setTabState(saved as any);
+    // "booking" ab tab nahi raha -- wo apne safhe par chala gaya. Purani
+    // session mein wo mehfooz ho to use nazarandaz kar dein.
+    if (saved === "live" || saved === "vendors" || saved === "bookings") setTabState(saved);
   }, []);
-  function setTab(next: "live" | "booking" | "vendors" | "bookings") {
+  function setTab(next: "live" | "vendors" | "bookings") {
     setTabState(next);
     sessionStorage.setItem("machinery_active_tab", next);
   }
   const [showNewVendor, setShowNewVendor] = useState(false);
   const [showNewMachine, setShowNewMachine] = useState(false);
   const [showShareLink, setShowShareLink] = useState(false);
-  const [payingBooking, setPayingBooking] = useState<{ booking: Booking; type: "farmer" | "vendor" } | null>(null);
-  const [completingBookingId, setCompletingBookingId] = useState<string | null>(null);
 
   return (
     <div>
       {defaultRequestId && (
-        <div className="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
-          Farmer ki request se Booking bana rahe hain - Machine aur Rate select karein.
-        </div>
+        <div className="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">{t("at_from_request", lang)}</div>
       )}
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-surface-200 dark:border-surface-800">
         <div className="flex gap-2">
-          <TabButton active={tab === "live"} onClick={() => setTab("live")}>Live Board</TabButton>
-          <TabButton active={tab === "booking"} onClick={() => setTab("booking")}>Nayi Booking</TabButton>
-          <TabButton active={tab === "vendors"} onClick={() => setTab("vendors")}>Vendors & Machines</TabButton>
-          <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>Poori Bookings</TabButton>
+          <TabButton active={tab === "live"} onClick={() => setTab("live")}>{t("mc_live_board", lang)}</TabButton>
+          <Link
+            href="/admin/machinery-rental/booking/new"
+            className="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-surface-500 hover:text-brand-700 dark:hover:text-brand-300"
+          >
+            {t("mc_new_booking", lang)}
+          </Link>
+          <TabButton active={tab === "vendors"} onClick={() => setTab("vendors")}>{t("mc_vendors_machines", lang)}</TabButton>
+          <TabButton active={tab === "bookings"} onClick={() => setTab("bookings")}>{t("mc_all_bookings", lang)}</TabButton>
         </div>
         <button onClick={() => setShowShareLink(true)} className="mb-2 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
-          <Share2 className="h-3.5 w-3.5" /> Farmer Ko Link Bhejein
+          <Share2 className="h-3.5 w-3.5" /> {t("mc_send_link_to_farmer", lang)}
         </button>
       </div>
 
       {tab === "live" && <LiveBoard />}
 
-      {tab === "booking" && (
-        <NewBookingForm farmers={farmers} machines={machines} defaultFarmerId={defaultFarmerId} defaultRequestId={defaultRequestId} defaultAcres={defaultAcres} defaultLocation={defaultLocation} />
-      )}
-
       {tab === "vendors" && (
         <div className="space-y-4">
+          <CommissionRateCard rate={commissionRate} canEdit={canEditCommission} />
           <div className="flex gap-2">
             <button onClick={() => setShowNewVendor(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              <Plus className="h-4 w-4" /> Naya Vendor
+              <Plus className="h-4 w-4" /> {t("mc_new_vendor", lang)}
             </button>
             <button onClick={() => setShowNewMachine(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">
-              <Plus className="h-4 w-4" /> Nayi Machine
+              <Plus className="h-4 w-4" /> {t("mc_new_machine", lang)}
             </button>
           </div>
+          {/* Har vendor ka apna login. Portal bana hua tha magar us tak
+              pohanchne ka koi rasta nahi tha -- ye wahi kari hai. */}
+          <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+            <div className="border-b border-surface-200 bg-surface-50 px-3 py-2 dark:border-surface-800 dark:bg-surface-800">
+              <p className="font-medium text-surface-700 dark:text-surface-300">{t("mc_vendor_logins", lang)}</p>
+              <p className="text-xs text-surface-500">{t("mc_vendor_logins_hint", lang)}</p>
+            </div>
+            <div className="divide-y divide-surface-100 dark:divide-surface-800">
+              {vendors.map((v) => (
+                <VendorRow key={v.id} vendor={v} all={vendors} />
+              ))}
+              {vendors.length === 0 && (
+                <p className="px-3 py-6 text-center text-surface-400">{t("mc_no_vendors", lang)}</p>
+              )}
+            </div>
+          </div>
+
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Vendor</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Machine</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Rate</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Commission %</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_vendor", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_machine", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_driver", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("mc_rate", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -138,12 +178,15 @@ export function MachineryClient({
                   <tr key={m.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{m.vendor_name}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{m.machine_type}{m.model ? ` (${m.model})` : ""}</td>
+                    <td className="px-3 py-2 text-surface-600 dark:text-surface-400">
+                      {m.driver_name ?? "—"}
+                      {m.driver_phone && <span className="block text-xs text-surface-400">{m.driver_phone}</span>}
+                    </td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">Rs {m.rate_amount.toLocaleString()} / {RATE_TYPE_LABELS[m.rate_type]}</td>
-                    <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{m.commission_percentage}%</td>
                   </tr>
                 ))}
                 {machines.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">Koi machine nahi hai.</td></tr>
+                  <tr><td colSpan={4} className="px-3 py-8 text-center text-surface-400">{t("mc_no_machines", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -152,18 +195,12 @@ export function MachineryClient({
       )}
 
       {tab === "bookings" && (
-        <BookingsTab bookings={bookings} setPayingBooking={setPayingBooking} setCompletingBookingId={setCompletingBookingId} />
+        <BookingsTab bookings={bookings} />
       )}
 
       {showNewVendor && <NewVendorModal onClose={() => setShowNewVendor(false)} />}
       {showNewMachine && <NewMachineModal vendors={vendors} onClose={() => setShowNewMachine(false)} />}
       {showShareLink && <ShareLinkModal farmers={farmers} onClose={() => setShowShareLink(false)} />}
-      {payingBooking && (
-        <PaymentModal booking={payingBooking.booking} type={payingBooking.type} financeAccounts={financeAccounts} onClose={() => setPayingBooking(null)} />
-      )}
-      {completingBookingId && (
-        <CompleteBookingModal bookingId={completingBookingId} financeAccounts={financeAccounts} onClose={() => setCompletingBookingId(null)} />
-      )}
     </div>
   );
 }
@@ -194,15 +231,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function BookingsTab({
-  bookings,
-  setPayingBooking,
-  setCompletingBookingId,
-}: {
-  bookings: Booking[];
-  setPayingBooking: (v: { booking: Booking; type: "farmer" | "vendor" } | null) => void;
-  setCompletingBookingId: (id: string | null) => void;
-}) {
+function BookingsTab({ bookings }: { bookings: Booking[] }) {
+  const lang = useLang();
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "week">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
 
@@ -252,8 +282,8 @@ function BookingsTab({
           ))}
         </div>
         <div className="ml-auto flex gap-3 text-xs text-surface-500">
-          <span><strong className="text-red-600">{pendingCount}</strong> Pending</span>
-          <span><strong className="text-green-600">{confirmedCount}</strong> Confirmed</span>
+          <span><strong className="text-red-600">{pendingCount}</strong> {t("mc_pending", lang)}</span>
+          <span><strong className="text-green-600">{confirmedCount}</strong> {t("mc_confirmed", lang)}</span>
         </div>
       </div>
 
@@ -262,57 +292,80 @@ function BookingsTab({
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
               <th className="px-3 py-2 font-medium text-surface-500">No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Vendor / Machine</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Commission</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Payments</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_date", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_farmer", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_vendor_machine", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_total_amount", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("mc_commission", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_status", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("mc_payments", lang)}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((b) => {
-              const farmerRemaining = b.total_amount - b.amount_received_from_farmer;
-              const vendorRemaining = b.vendor_payable - b.amount_paid_to_vendor;
+              const farmerRemaining = b.farmer_remaining;
+              const vendorRemaining = b.vendor_remaining;
               return (
                 <tr key={b.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                  <td className="px-3 py-2 font-mono text-xs text-surface-500">{b.booking_number}</td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-brand-600 hover:underline">
+                      {b.booking_number}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2 text-xs text-surface-500">{new Date(b.booking_date).toLocaleDateString()}</td>
-                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{b.farmer_name}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                    {b.farmer_id ? (
+                      <Link href={`/admin/machinery-rental/khata/${b.farmer_id}`} className="hover:underline">
+                        {b.farmer_name}
+                      </Link>
+                    ) : (
+                      b.farmer_name
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{b.vendor_name} - {b.machine_label}</td>
                   <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {b.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-green-600">Rs {b.commission_amount.toLocaleString()}</td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-col gap-1">
-                      <StatusBadge status={b.status} />
-                      <StatusForm bookingId={b.id} currentStatus={b.status} onWantsComplete={() => setCompletingBookingId(b.id)} />
-                    </div>
+                    <StatusBadge status={b.status} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
-                      {farmerRemaining > 0 && (
-                        <button onClick={() => setPayingBooking({ booking: b, type: "farmer" })} className="text-left text-xs font-medium text-brand-600 hover:underline">
+                      {/* Paisa yahan se NAHI liya jata.
+                          Booking ke safhe par poori zanjeer hai -- bill,
+                          advance ka adjustment, split payment, vendor ka
+                          hissa. Do jagah payment lene ka matlab hota ek
+                          hi raqam do dafa darj ho jana.
+
+                          "Farmer Se Lena" ab kisan ke KHATE par le jata
+                          hai: wahan pehle wo hisaab saamne aata hai jis
+                          se ye adad bana, aur wahin se ek click par usi
+                          booking ke payment wale khane tak. */}
+                      {!b.has_bill && <span className="text-xs text-surface-400">{t("mc_bill_not_made", lang)}</span>}
+                      {b.has_bill && farmerRemaining > 0 && (
+                        <Link
+                          href={b.farmer_id ? `/admin/machinery-rental/khata/${b.farmer_id}` : `/admin/machinery-rental/booking/${b.id}#payment`}
+                          className="text-left text-xs font-medium text-brand-600 hover:underline"
+                        >
                           Farmer Se Lena: Rs {farmerRemaining.toLocaleString()}
-                        </button>
+                        </Link>
                       )}
-                      {vendorRemaining > 0 && b.amount_received_from_farmer > 0 && (
-                        <button onClick={() => setPayingBooking({ booking: b, type: "vendor" })} className="text-left text-xs font-medium text-amber-600 hover:underline">
+                      {b.has_bill && vendorRemaining > 0 && (
+                        <Link href={`/admin/machinery-rental/booking/${b.id}`} className="text-left text-xs font-medium text-amber-600 hover:underline">
                           Vendor Ko Dena: Rs {vendorRemaining.toLocaleString()}
-                        </button>
+                        </Link>
                       )}
-                      {farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">Poora Settle</Badge>}
+                      {b.has_bill && farmerRemaining <= 0 && vendorRemaining <= 0 && <Badge tone="green">{t("mc_fully_settled", lang)}</Badge>}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <Link href={`/admin/machinery-rental/booking-slip/${b.id}`} className="text-xs font-medium text-brand-600 hover:underline">Slip</Link>
+                    <Link href={`/admin/machinery-rental/booking-slip/${b.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("mc_slip", lang)}</Link>
                   </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">Is filter mein koi booking nahi hai.</td></tr>
+              <tr><td colSpan={9} className="px-3 py-8 text-center text-surface-400">{t("mc_no_booking_filter", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -329,256 +382,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function NewBookingForm({
-  farmers,
-  machines,
-  defaultFarmerId,
-  defaultRequestId,
-  defaultAcres,
-  defaultLocation,
-}: {
-  farmers: Farmer[];
-  machines: Machine[];
-  defaultFarmerId?: string;
-  defaultRequestId?: string;
-  defaultAcres?: string;
-  defaultLocation?: string;
-}) {
-  const [state, formAction] = useFormState(createMachineryBooking, initialState);
-  const [machineId, setMachineId] = useState("");
-  const [quantity, setQuantity] = useState(defaultAcres ?? "");
-  const [customRate, setCustomRate] = useState("");
-
-  const selectedMachine = machines.find((m) => m.id === machineId);
-  const effectiveRate = customRate ? parseFloat(customRate) || 0 : (selectedMachine?.rate_amount ?? 0);
-  const total = (parseFloat(quantity) || 0) * effectiveRate;
-  const commission = total * ((selectedMachine?.commission_percentage ?? 0) / 100);
-  const vendorPayable = total - commission;
-
-  function handleMachineChange(id: string) {
-    setMachineId(id);
-    setCustomRate("");
-  }
-
-  if (state.success) setTimeout(() => window.location.reload(), 900);
-
-  return (
-    <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Booking Karein</h2>
-      {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Booking ban gayi.</p>}
-      <form action={formAction} className="space-y-3">
-        {defaultRequestId && <input type="hidden" name="request_id" value={defaultRequestId} />}
-        <div>
-          <Label>Farmer *</Label>
-          <Select name="farmer_id" defaultValue={defaultFarmerId ?? ""} required>
-            <option value="">- select -</option>
-            {farmers.map((f) => (
-              <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Machine (Vendor) *</Label>
-          <Select value={machineId} onChange={(e) => handleMachineChange(e.target.value)} name="machine_id" required>
-            <option value="">- select -</option>
-            {machines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.vendor_name} - {m.machine_type}{m.model ? ` (${m.model})` : ""} - Rs {m.rate_amount}/{RATE_TYPE_LABELS[m.rate_type]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Date</Label>
-          <Input type="date" name="booking_date" defaultValue={new Date().toISOString().slice(0, 10)} />
-        </div>
-        {selectedMachine && (
-          <div>
-            <Label>
-              {selectedMachine.rate_type === "per_acre" ? "Kitne Acres *" : selectedMachine.rate_type === "per_hour" ? "Kitne Hours *" : "Kitne Days *"}
-            </Label>
-            <Input
-              type="number"
-              step="0.1"
-              name={selectedMachine.rate_type === "per_acre" ? "acres" : selectedMachine.rate_type === "per_hour" ? "hours" : "days"}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              required
-            />
-          </div>
-        )}
-        <div>
-          <Label>Location Address</Label>
-          <Input name="location_address" defaultValue={defaultLocation ?? ""} placeholder="Kis jagah machine chahiye" />
-        </div>
-        <div>
-          <Label>Notes</Label>
-          <Textarea name="notes" rows={2} />
-        </div>
-        <input type="hidden" name="custom_rate" value={customRate} />
-        {selectedMachine && (
-          <div>
-            <Label>Rate (Rs.) - Machine ka default rate {selectedMachine.rate_amount} hai, safar/distance ke hisab se yahan badal sakte hain</Label>
-            <Input type="number" step="0.01" value={customRate} onChange={(e) => setCustomRate(e.target.value)} placeholder={String(selectedMachine.rate_amount)} />
-          </div>
-        )}
-        {selectedMachine && (
-          <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
-            <div className="flex justify-between text-xs text-surface-400"><span>Rate Istemal Ho Rahi Hai</span><span>Rs {effectiveRate.toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-surface-500">Total (Farmer Se)</span><span className="font-medium">Rs {total.toLocaleString()}</span></div>
-            <div className="flex justify-between text-green-600"><span>AgriBridge Commission ({selectedMachine.commission_percentage}%)</span><span>Rs {commission.toLocaleString()}</span></div>
-            <div className="flex justify-between font-semibold text-surface-800 dark:text-surface-200"><span>Vendor Ko Milega</span><span>Rs {vendorPayable.toLocaleString()}</span></div>
-          </div>
-        )}
-        <SubmitButton label="Booking Confirm Karein" />
-      </form>
-    </div>
-  );
-}
-
-function StatusForm({ bookingId, currentStatus, onWantsComplete }: { bookingId: string; currentStatus: string; onWantsComplete: () => void }) {
-  const [state, formAction] = useFormState(updateBookingStatus, initialState);
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="booking_id" value={bookingId} />
-      <select
-        name="status"
-        defaultValue={currentStatus}
-        onChange={(e) => {
-          if (e.target.value === "completed") {
-            onWantsComplete();
-            e.target.value = currentStatus;
-            return;
-          }
-          e.target.form?.requestSubmit();
-        }}
-        className="rounded-lg border border-surface-200 p-1.5 text-xs"
-      >
-        {STATUS_OPTIONS.map((s) => (
-          <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-        ))}
-      </select>
-    </form>
-  );
-}
-
-function CompleteBookingModal({ bookingId, financeAccounts, onClose }: { bookingId: string; financeAccounts: FinanceAccount[]; onClose: () => void }) {
-  const [state, formAction] = useFormState(completeMachineryBooking, initialState);
-  const [willSell, setWillSell] = useState<"" | "yes" | "no">("");
-  const [wantsReminder, setWantsReminder] = useState<"" | "yes" | "no">("");
-  const [dieselAmount, setDieselAmount] = useState("0");
-  if (state.success) setTimeout(() => window.location.reload(), 900);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div dir="rtl" className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">بکنگ مکمل کریں</h3>
-          <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
-        </div>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">مکمل ہو گیا۔</p>}
-        <form action={formAction} className="space-y-3">
-          <input type="hidden" name="booking_id" value={bookingId} />
-          <input type="hidden" name="will_sell_to_us" value={willSell} />
-          <input type="hidden" name="wants_next_season_reminder" value={wantsReminder} />
-
-          <div className={`rounded-lg border-2 p-3 ${willSell === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
-            <label className="block text-sm font-medium text-surface-700">کیا فارمر ہمیں فصل بیچے گا؟ *</label>
-            <div className="mt-2 flex gap-2">
-              <button type="button" onClick={() => setWillSell("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
-              <button type="button" onClick={() => setWillSell("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
-            </div>
-          </div>
-
-          <div className={`rounded-lg border-2 p-3 ${wantsReminder === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
-            <label className="block text-sm font-medium text-surface-700">کیا اگلی فصل کے لیے مشینری بکنگ کی یاد دہانی چاہیے؟ *</label>
-            <div className="mt-2 flex gap-2">
-              <button type="button" onClick={() => setWantsReminder("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
-              <button type="button" onClick={() => setWantsReminder("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-surface-500">ڈیزل کتنا دیا؟ (روپے)</label>
-            <input type="number" step="0.01" name="diesel_amount" value={dieselAmount} onChange={(e) => setDieselAmount(e.target.value)} placeholder="0" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-surface-500">ڈیزل ریٹ (فی لیٹر)</label>
-            <input type="number" step="0.01" name="diesel_rate" placeholder="0" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          </div>
-          {parseFloat(dieselAmount) > 0 && (
-            <div>
-              <label className="block text-xs text-surface-500">کون سا اکاؤنٹ سے ادا کیا *</label>
-              <select name="diesel_account_id" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-                <option value="">- منتخب کریں -</option>
-                {financeAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <SubmitButtonUrdu disabled={willSell === "" || wantsReminder === ""} />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function PaymentModal({
-  booking,
-  type,
-  financeAccounts,
-  onClose,
-}: {
-  booking: Booking;
-  type: "farmer" | "vendor";
-  financeAccounts: FinanceAccount[];
-  onClose: () => void;
-}) {
-  const action = type === "farmer" ? recordFarmerPayment : recordVendorPayout;
-  const [state, formAction] = useFormState(action, initialState);
-  const remaining = type === "farmer" ? booking.total_amount - booking.amount_received_from_farmer : booking.vendor_payable - booking.amount_paid_to_vendor;
-  if (state.success) setTimeout(onClose, 900);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">
-            {type === "farmer" ? "Farmer Se Payment Lena" : "Vendor Ko Payment Dena"}
-          </h3>
-          <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
-        </div>
-        <p className="mb-3 text-sm text-surface-500">
-          {type === "farmer" ? booking.farmer_name : booking.vendor_name} - Baaqi: Rs {remaining.toLocaleString()}
-        </p>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Record ho gaya.</p>}
-        <form action={formAction} className="space-y-3">
-          <input type="hidden" name="booking_id" value={booking.id} />
-          <div>
-            <Label>Amount (Rs.) *</Label>
-            <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={remaining} required />
-          </div>
-          <div>
-            <Label>Konsa Account *</Label>
-            <Select name="account_id" required>
-              <option value="">- select -</option>
-              {financeAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
-          <SubmitButton label="Record Karein" />
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function NewVendorModal({ onClose }: { onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createMachineryVendor, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
@@ -586,17 +391,17 @@ function NewVendorModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Naya Vendor Banayein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("mc_create_vendor", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Input name="vendor_name" required placeholder="Vendor ka Naam *" />
-          <Input name="contact_person" placeholder="Contact Person" />
-          <Input name="phone" placeholder="Phone" />
-          <Input name="cnic" placeholder="CNIC (optional)" />
-          <Textarea name="address" rows={2} placeholder="Address" />
-          <SubmitButton label="Vendor Banayein" />
+          <Input name="vendor_name" required placeholder={t("mc_vendor_name_req", lang)} />
+          <Input name="contact_person" placeholder={t("mc_contact_person", lang)} />
+          <Input name="phone" placeholder={t("mc_phone", lang)} />
+          <Input name="cnic" placeholder={t("mc_cnic_optional", lang)} />
+          <Textarea name="address" rows={2} placeholder={t("mc_address", lang)} />
+          <SubmitButton label={t("mc_create_vendor", lang)} />
         </form>
       </div>
     </div>
@@ -604,43 +409,112 @@ function NewVendorModal({ onClose }: { onClose: () => void }) {
 }
 
 function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createVendorMachine, initialState);
+  const [owner, setOwner] = useState("vendor");
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Nayi Machine Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("mc_add_machine", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Select name="vendor_id" required>
-            <option value="">- Vendor Select Karein -</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>{v.vendor_name}</option>
-            ))}
+          {/* Machine kis ki hai. ART ki apni ho to vendor hota hi
+              nahi -- aur us par commission bhi nahi banta, poori
+              aamdani hamari hoti hai. Pehle ye mumkin hi nahi tha:
+              har machine kisi vendor ki hoti thi, aur apni machine
+              ke liye jhoota vendor banana parta. */}
+          <Select name="owner" value={owner} onChange={(e) => setOwner(e.target.value)}>
+            <option value="vendor">{t("mc_owner_vendor", lang)}</option>
+            <option value="art">{t("mc_owner_art", lang)}</option>
           </Select>
-          <Input name="machine_type" required placeholder="Machine Type (Tractor, Thresher, wagera) *" />
-          <Input name="model" placeholder="Model (optional)" />
+          {owner === "vendor" && (
+            <Select name="vendor_id" required>
+              <option value="">{t("mc_select_vendor", lang)}</option>
+              {/* Band vendor yahan nahi aata -- nayi machine us par
+                  lagana wohi cheez wapis khol dena hai jo band ki gayi
+                  thi. Fehrist mein wo phir bhi dikhta hai, taake dobara
+                  chalu kiya ja sake. */}
+              {vendors
+                .filter((v) => v.is_active !== false)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>{v.vendor_name}</option>
+                ))}
+            </Select>
+          )}
+          <Input name="machine_type" required placeholder={t("mc_machine_type_field", lang)} />
+          <Input name="model" placeholder={t("mc_model_optional", lang)} />
           <Select name="rate_type" required>
-            <option value="">- Rate Type Select Karein -</option>
-            <option value="per_acre">Per Acre</option>
-            <option value="per_hour">Per Hour</option>
-            <option value="per_day">Per Day</option>
+            <option value="">{t("mc_select_rate_type", lang)}</option>
+            <option value="per_acre">{t("mc_per_acre", lang)}</option>
+            <option value="per_hour">{t("mc_per_hour", lang)}</option>
+            <option value="per_day">{t("mc_per_day", lang)}</option>
           </Select>
-          <Input type="number" step="0.01" name="rate_amount" required placeholder="Rate Amount (Rs) *" />
-          <Input type="number" step="0.01" name="commission_percentage" placeholder="AgriBridge Commission % (jaise 10)" />
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
-          <SubmitButton label="Machine Add Karein" />
+          <Input type="number" step="0.01" name="rate_amount" required placeholder={t("mc_rate_amount_req", lang)} />
+          {/* Driver yahan likha jata hai, rawangi par nahi. Rawangi
+              ke waqt ye khud bhar jayega -- aur wahan badla bhi ja
+              sakega, kyunke kisi din koi doosra bhi le jata hai. */}
+          <Input name="driver_name" placeholder={t("mc_driver_name_optional", lang)} />
+          <Input name="driver_phone" placeholder={t("mc_driver_phone_optional", lang)} />
+          <Input name="registration_number" placeholder={t("mc_registration_optional", lang)} />
+          {/* Is machine ki apni rozana hadd (180). Khali chhoRein to
+              poore nizam wali hadd lagti hai -- yani ek jagah badal kar
+              sab machinon par lag jati hai. */}
+          <Input type="number" step="0.01" name="daily_capacity_acres" placeholder={t("mcal_daily_cap", lang)} />
+          <p className="text-xs text-surface-500">{t("mcal_cap_hint", lang)}</p>
+          <Textarea name="notes" rows={2} placeholder={t("mc_notes_optional", lang)} />
+          <SubmitButton label={t("mc_add_machine", lang)} />
         </form>
       </div>
     </div>
   );
 }
 
+/**
+ * Commission ka rate -- poori company ke liye ek hi.
+ *
+ * Pehle ye har machine par alag para tha aur kisi hisaab mein aata nahi
+ * tha: screen 10% dikhati thi aur bill 12% ka banta tha. Ab ek hi jagah
+ * hai, aur wahi bill par lagti hai.
+ */
+function CommissionRateCard({ rate, canEdit }: { rate: number; canEdit: boolean }) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(setMachineryCommissionRate, initialState);
+  return (
+    <div className="mb-4 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-surface-500">{t("mc_our_commission", lang)}</p>
+          <p className="font-display text-2xl font-semibold text-brand-700 dark:text-brand-300">{rate}%</p>
+          <p className="mt-1 text-xs text-surface-500">
+            Har booking ke final bill par lagta hai — asal kaam ke gross par. Baqi {100 - rate}% vendor ka.
+          </p>
+        </div>
+        {canEdit && (
+          <form action={formAction} className="flex items-end gap-2">
+            <div>
+              <Label>{t("mc_new_rate_pct", lang)}</Label>
+              <Input type="number" name="rate" step="0.01" min={0} max={100} defaultValue={rate} className="w-28" />
+            </div>
+            <SubmitButton label={t("mc_change", lang)} />
+          </form>
+        )}
+      </div>
+      {state.error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state.success && <p className="mt-2 text-sm text-brand-700 dark:text-brand-300">{t("mc_rate_changed", lang)}</p>}
+      <p className="mt-3 border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+        {t("mc_rate_change_note", lang)}
+      </p>
+    </div>
+  );
+}
+
 function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_link_token?: string })[]; onClose: () => void }) {
+  const lang = useLang();
   const [selectedFarmer, setSelectedFarmer] = useState("");
   const [copied, setCopied] = useState(false);
   const farmer = farmers.find((f) => f.id === selectedFarmer);
@@ -661,14 +535,14 @@ function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_lin
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Farmer Ko Booking Link Bhejein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("mc_send_booking_link", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-surface-500">Farmer Select Karein</label>
+            <label className="text-xs text-surface-500">{t("mc_select_farmer", lang)}</label>
             <select value={selectedFarmer} onChange={(e) => setSelectedFarmer(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-              <option value="">- select -</option>
+              <option value="">{t("mc_select", lang)}</option>
               {farmers.map((f) => (
                 <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
               ))}
@@ -682,10 +556,10 @@ function ShareLinkModal({ farmers, onClose }: { farmers: (Farmer & { booking_lin
                   {copied ? "Copy Ho Gaya!" : "Link Copy Karein"}
                 </button>
                 <button onClick={handleWhatsApp} className="flex-1 rounded-lg bg-green-600 py-2 text-xs font-medium text-white hover:bg-green-700">
-                  WhatsApp Se Bhejein
+                  {t("mc_send_on_whatsapp", lang)}
                 </button>
               </div>
-              <p className="text-[11px] text-surface-400">Ye link is Farmer ke liye hamesha wahi rahega - jitni marzi booking, isi link se aati rahengi.</p>
+              <p className="text-[11px] text-surface-400">{t("at_farmer_link_note", lang)}</p>
             </>
           )}
         </div>
@@ -702,4 +576,270 @@ function SubmitButton({ label }: { label: string }) {
 function SubmitButtonUrdu({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={pending || disabled} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : "محفوظ کریں"}</button>;
+}
+
+/**
+ * Ek vendor, ek login.
+ *
+ * Password sirf banate waqt ek dafa nazar aata hai aur kahin mehfooz
+ * nahi hota. Mehfooz rakhne ka matlab hota ke jo bhi ye safha khole wo
+ * har vendor ke khate mein daakhil ho sake -- is liye bhool jane par
+ * naya banaya jata hai, purana dhoondha nahi jata.
+ */
+/**
+ * Vendor ki apni qatar: naam, login, aur us par kiye jane wale kaam.
+ *
+ * Teen alag cheezen, aur unhein alag rakhna zaroori hai:
+ *
+ *   THEEK KARNA -- naam ya number ghalat ho to badal lein. Pehle is ka
+ *   koi raasta nahi tha, aur staff naya vendor bana leta -- yehi
+ *   duplicate ki asal jarh thi.
+ *
+ *   BAND KARNA -- vendor ab kaam nahi karta, magar us ka poora record
+ *   khara rehta hai. Aksar yehi cheez chahiye hoti hai.
+ *
+ *   MITANA -- sirf us vendor par jis ke sath kuch juda hi na ho. Jis ki
+ *   ek bhi booking ya machine ho, us ka button hi nahi aata; aur agar
+ *   kisi doosre raaste se koshish ho to database khud rok deta hai.
+ */
+/** Naam aur number ka wohi jora kisi aur qatar mein bhi hai? */
+function hasTwin(vendor: Vendor, all: Vendor[]) {
+  const digits = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "");
+  return all.some(
+    (o) =>
+      o.id !== vendor.id &&
+      o.vendor_name.trim().toLowerCase() === vendor.vendor_name.trim().toLowerCase() &&
+      digits(o.phone) === digits(vendor.phone)
+  );
+}
+
+function VendorRow({ vendor, all }: { vendor: Vendor; all: Vendor[] }) {
+  const lang = useLang();
+  const [editing, setEditing] = useState(false);
+
+  const attached = (vendor.machine_count ?? 0) + (vendor.booking_count ?? 0);
+  const canDelete = attached === 0 && !vendor.user_id;
+
+  if (editing) {
+    return <VendorEditForm vendor={vendor} onDone={() => setEditing(false)} />;
+  }
+
+  return (
+    <div className={vendor.is_active === false ? "bg-surface-50/60 dark:bg-surface-800/30" : ""}>
+      <VendorLoginRow vendor={vendor} />
+
+      {/* PEHCHAN.
+          Do vendor ek hi naam aur number ke ho sakte hain -- gaon mein
+          aksar hote hain, aur duplicate bhi isi tarah banta hai. Aisi
+          soorat mein dono qatarein bilkul ek jaisi lagti thin aur malik
+          ko har ek ke andar ja kar dekhna parta tha ke asli kaun sa hai.
+          Ab teen cheezein qatar par hi likhi hain: kitni machinein,
+          kitni bookingein, aur login ka pata -- aur login ka pata kabhi
+          do ka ek nahi hota. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 text-xs">
+        <span className={vendor.machine_count ? "text-surface-600 dark:text-surface-300" : "text-surface-400"}>
+          {vendor.machine_count ? `${vendor.machine_count} machine` : "koi machine nahi"}
+        </span>
+        <span className="text-surface-300">·</span>
+        <span className={vendor.booking_count ? "text-surface-600 dark:text-surface-300" : "text-surface-400"}>
+          {vendor.booking_count ? `${vendor.booking_count} booking` : "koi booking nahi"}
+        </span>
+        {vendor.login_email && (
+          <>
+            <span className="text-surface-300">·</span>
+            <span className="font-mono text-surface-600 dark:text-surface-300">{vendor.login_email}</span>
+          </>
+        )}
+      </div>
+
+      {hasTwin(vendor, all) && (
+        <p className="mx-3 mb-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          Isi naam aur number ka ek aur record bhi maujood hai. Jis par machine aur booking hai wohi asli hai — doosre
+          ko band kar dein, aur vendor ko usi ka login dein jo yahan likha hai.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3 px-3 pb-3 text-xs">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1 font-medium text-brand-600 hover:underline"
+        >
+          <Pencil className="h-3 w-3" /> {t("mv_edit", lang)}
+        </button>
+
+        <VendorActiveToggle vendor={vendor} />
+
+        {canDelete ? (
+          <VendorDeleteButton vendor={vendor} />
+        ) : (
+          <span className="text-surface-400">
+            {attached > 0
+              ? `${attached} cheez juri hui hai — ${t("mv_delete", lang).toLowerCase()} nahi ho sakta`
+              : "login bana hua hai"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VendorEditForm({ vendor, onDone }: { vendor: Vendor; onDone: () => void }) {
+  const lang = useLang();
+  const [state, action] = useFormState(updateMachineryVendor, initialState);
+
+  useEffect(() => {
+    if (state.success) onDone();
+  }, [state.success, onDone]);
+
+  return (
+    <form action={action} className="space-y-2 border-l-4 border-brand-400 px-3 py-3">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      {state.error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+          {state.error}
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Input name="vendor_name" defaultValue={vendor.vendor_name} placeholder={t("mv_name", lang)} required />
+        <Input name="contact_person" defaultValue={vendor.contact_person ?? ""} placeholder={t("mv_contact", lang)} />
+        <Input name="phone" defaultValue={vendor.phone ?? ""} placeholder={t("mv_phone", lang)} />
+      </div>
+      <div className="flex gap-2">
+        <SubmitButton label={t("mv_save", lang)} />
+        <button type="button" onClick={onDone} className="text-xs text-surface-500 underline hover:text-surface-700">
+          {t("mv_cancel", lang)}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function VendorActiveToggle({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [, action] = useFormState(setMachineryVendorActive, initialState);
+  const active = vendor.is_active !== false;
+
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      {/* Checkbox nahi -- seedha wo halat bheji jati hai jo chahiye. */}
+      <input type="hidden" name="active" value={active ? "" : "on"} />
+      <button type="submit" className="flex items-center gap-1 font-medium text-surface-600 hover:underline dark:text-surface-400">
+        {active ? <Ban className="h-3 w-3" /> : <RotateCcw className="h-3 w-3" />}
+        {active ? t("mv_suspend", lang) : t("mv_activate", lang)}
+      </button>
+      {!active && (
+        <span className="rounded-full bg-surface-200 px-2 py-0.5 text-[11px] text-surface-600 dark:bg-surface-700 dark:text-surface-300">
+          {t("mv_inactive", lang)}
+        </span>
+      )}
+      {active && <span className="text-surface-400">({t("mv_suspend_hint", lang)})</span>}
+    </form>
+  );
+}
+
+function VendorDeleteButton({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [state, action] = useFormState(deleteMachineryVendor, initialState);
+  const [asking, setAsking] = useState(false);
+
+  if (state.error) return <span className="text-red-600 dark:text-red-400">{state.error}</span>;
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="flex items-center gap-1 font-medium text-red-600 hover:underline"
+      >
+        <Trash2 className="h-3 w-3" /> {t("mv_delete", lang)}
+      </button>
+    );
+  }
+
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="vendor_id" value={vendor.id} />
+      <span className="text-surface-600 dark:text-surface-400">{t("mv_delete_sure", lang)}</span>
+      <button type="submit" className="font-medium text-red-600 hover:underline">
+        {t("mv_delete", lang)}
+      </button>
+      <button type="button" onClick={() => setAsking(false)} className="text-surface-500 underline">
+        {t("mv_cancel", lang)}
+      </button>
+    </form>
+  );
+}
+
+function VendorLoginRow({ vendor }: { vendor: Vendor }) {
+  const lang = useLang();
+  const [createState, createAction] = useFormState(createVendorLogin, {} as VendorLoginState);
+  const [resetState, resetAction] = useFormState(resetVendorPassword, {} as VendorLoginState);
+  const [showEmail, setShowEmail] = useState(false);
+  const state = createState.password ? createState : resetState;
+
+  return (
+    <div className="px-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-medium text-surface-800 dark:text-surface-200">{vendor.vendor_name}</p>
+          <p className="text-xs text-surface-500">{vendor.phone ?? t("mc_no_phone", lang)}</p>
+        </div>
+
+        {vendor.user_id ? (
+          <form action={resetAction} className="flex items-center gap-2">
+            <input type="hidden" name="vendor_id" value={vendor.id} />
+            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+              {t("mc_login_exists", lang)}
+            </span>
+            <button type="submit" className="text-xs font-medium text-brand-600 hover:underline">
+              {t("mc_new_password", lang)}
+            </button>
+          </form>
+        ) : (
+          <form action={createAction} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="vendor_id" value={vendor.id} />
+            {showEmail && (
+              <input
+                type="email"
+                name="email"
+                placeholder={t("mc_vendor_email", lang)}
+                className="rounded-lg border border-surface-200 p-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEmail((e) => !e)}
+              className="text-xs text-surface-500 hover:text-brand-700"
+            >
+              {showEmail ? t("mc_use_phone", lang) : t("mc_use_email", lang)}
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+            >
+              {t("mc_make_login", lang)}
+            </button>
+          </form>
+        )}
+      </div>
+
+      {(createState.error || resetState.error) && (
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          {createState.error ?? resetState.error}
+        </p>
+      )}
+
+      {/* Password ek hi dafa. Safha refresh hote hi chala jayega -- ye
+          jaan boojh kar hai, is liye saaf likh diya jata hai. */}
+      {state.password && (
+        <div className="mt-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="text-xs font-medium text-amber-800 dark:text-amber-300">{state.notice}</p>
+          <p className="mt-1 font-mono text-surface-900 dark:text-surface-100">{state.loginId}</p>
+          <p className="font-mono text-lg font-semibold text-surface-900 dark:text-surface-100">{state.password}</p>
+        </div>
+      )}
+    </div>
+  );
 }

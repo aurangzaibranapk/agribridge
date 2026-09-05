@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { Printer, MessageCircle, Mail, ArrowLeft } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface LedgerRow {
   id: string;
@@ -37,6 +39,8 @@ export function FarmerCreditStatementClient({
 }) {
   const shareText = `Al Rana Traders - Farmer Credit Statement\n${farmerName} (${farmerCode})\nTotal Issued: Rs ${totalDebit.toLocaleString()}\nTotal Paid: Rs ${totalCredit.toLocaleString()}\nBaaqi: Rs ${balanceDue.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
+  const lang = useLang();
+
   function handlePrint() {
     window.print();
   }
@@ -48,27 +52,24 @@ export function FarmerCreditStatementClient({
     <div className="mx-auto max-w-3xl p-4">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/admin/farmer-credit" className="flex items-center gap-1 text-sm text-surface-500 hover:text-brand-700">
-          <ArrowLeft className="h-4 w-4" /> Wapas
-        </Link>
+          <ArrowLeft className="h-4 w-4" />{t("at_back", lang)}</Link>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <Printer className="h-3.5 w-3.5" /> Print / PDF
-          </button>
+            <Printer className="h-3.5 w-3.5" />{t("at_print_pdf", lang)}</button>
           <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
+            <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
         </div>
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white p-8 shadow-card print:border-0 print:shadow-none">
         <div className="mb-6 border-b border-surface-200 pb-4">
-          <h1 className="font-display text-xl font-bold text-surface-900">Al Rana Traders - AgriBridge</h1>
-          <p className="text-sm text-surface-500">Farmer Credit Statement</p>
+          <h1 className="font-display text-xl font-bold text-surface-900">{t("at_alrana_agribridge", lang)}</h1>
+          <p className="text-sm text-surface-500">{t("fcl_statement_title", lang)}</p>
         </div>
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-surface-400">Farmer</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-surface-400">{t("c_farmer", lang)}</p>
             <p className="font-display text-lg font-semibold text-surface-900">{farmerName}</p>
             <p className="text-xs text-surface-500">Code: {farmerCode}</p>
             {farmerPhone && <p className="text-xs text-surface-500">Phone: {farmerPhone}</p>}
@@ -93,12 +94,12 @@ export function FarmerCreditStatementClient({
         <table className="mb-6 w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left">
-              <th className="pb-2 font-medium text-surface-500">Date</th>
-              <th className="pb-2 font-medium text-surface-500">Tafseel</th>
-              <th className="pb-2 font-medium text-surface-500">Le Ke Jaane Wala</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Issued (+)</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Paid (-)</th>
-              <th className="pb-2 text-right font-medium text-surface-500">Balance</th>
+              <th className="pb-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="pb-2 font-medium text-surface-500">{t("c_detail", lang)}</th>
+              <th className="pb-2 font-medium text-surface-500">{t("fc_taken_by", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("fcl_issued_plus", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("fcl_paid_minus", lang)}</th>
+              <th className="pb-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -116,15 +117,15 @@ export function FarmerCreditStatementClient({
               </tr>
             ))}
             {ledger.length === 0 && (
-              <tr><td colSpan={6} className="py-8 text-center text-surface-400">Koi record nahi hai.</td></tr>
+              <tr><td colSpan={6} className="py-8 text-center text-surface-400">{t("c_no_records", lang)}</td></tr>
             )}
           </tbody>
         </table>
 
         <div className="flex justify-end border-t border-surface-200 pt-4">
           <div className="w-64 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-surface-500">Total Credit Issued</span><span>Rs {totalDebit.toLocaleString()}</span></div>
-            <div className="flex justify-between text-green-600"><span>Total Paid</span><span>- Rs {totalCredit.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-surface-500">{t("fcl_total_issued", lang)}</span><span>Rs {totalDebit.toLocaleString()}</span></div>
+            <div className="flex justify-between text-green-600"><span>{t("c_total_paid", lang)}</span><span>- Rs {totalCredit.toLocaleString()}</span></div>
             <div className="flex justify-between border-t border-surface-200 pt-1 font-bold text-surface-900">
               <span>{balanceDue >= 0 ? "Baaqi (Farmer Ka Udhaar)" : "Company Farmer Ka De"}</span>
               <span>Rs {Math.abs(balanceDue).toLocaleString()}</span>
@@ -133,9 +134,9 @@ export function FarmerCreditStatementClient({
         </div>
 
         <div className="mt-8 border-t border-surface-100 pt-3">
-          <p className="text-center text-[10px] text-surface-300">This is a computer-generated statement from the AgriBridge system.</p>
+          <p className="text-center text-[10px] text-surface-300">{t("fcl_computer_statement", lang)}</p>
           <div className="mt-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-surface-400">Software by ZR Technologies</p>
+            <p className="text-xs font-semibold text-surface-400">{t("at_software_by", lang)}</p>
             <p className="text-xs text-surface-400">0312-6513294</p>
           </div>
         </div>

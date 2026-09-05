@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { addCropExpenseAction, bookHarvestAction, type ExpenseState } from "./actions";
 import { Plus, X, Wheat, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ExpenseState = {};
 
@@ -54,6 +56,7 @@ export function CropExpensePanel({
   expenseOptions?: ExpenseOptions;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const lang = useLang();
 
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
   const perAcre = areaSownAcres && areaSownAcres > 0 ? totalExpense / areaSownAcres : null;
@@ -67,15 +70,13 @@ export function CropExpensePanel({
       {isReadyToHarvest && !isBooked && (
         <div className="mb-3 rounded-lg bg-brand-50 p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium text-brand-800">
-            <Wheat className="h-4 w-4" /> Aapki fasal tayyar hai!
-          </p>
+            <Wheat className="h-4 w-4" />{t("pm_crop_ready", lang)}</p>
           <BookHarvestButton cropHistoryId={cropHistoryId} />
         </div>
       )}
       {isBooked && (
         <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-700">
-          <CheckCircle2 className="h-4 w-4" /> Harvest Book Ho Chuki Hai - Harvest page par record karein.
-        </div>
+          <CheckCircle2 className="h-4 w-4" />{t("pm_harvest_booked", lang)}</div>
       )}
 
       <div className="flex items-center justify-between">
@@ -103,8 +104,7 @@ export function CropExpensePanel({
         onClick={() => setShowForm(true)}
         className="mt-2 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
       >
-        <Plus className="h-3 w-3" /> Kharcha Add Karein
-      </button>
+        <Plus className="h-3 w-3" />{t("pm_add_expense", lang)}</button>
 
       {showForm && (
         <ExpenseModal
@@ -130,6 +130,7 @@ function ExpenseModal({
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState(addCropExpenseAction, initialState);
+  const lang = useLang();
   const [source, setSource] = useState<"internal" | "external">("external");
   const [category, setCategory] = useState("land_prep");
   const [amount, setAmount] = useState("");
@@ -173,19 +174,19 @@ function ExpenseModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Kharcha Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_add_expense", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Add ho gaya.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("pm_added", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="crop_history_id" value={cropHistoryId} />
           <input type="hidden" name="product_id" value={productId} />
 
           <div>
-            <label className="text-xs font-medium text-surface-600">Category</label>
+            <label className="text-xs font-medium text-surface-600">{t("c_category", lang)}</label>
             <select
               name="expense_category"
               value={category}
@@ -209,20 +210,18 @@ function ExpenseModal({
                   <option key={o.id} value={o.id}>{o.name} (Rs {o.rate.toLocaleString()})</option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-surface-400">Select karne par rate khud aa jayega - neeche adjust bhi kar sakte hain.</p>
+              <p className="mt-1 text-xs text-surface-400">{t("pm_rate_autofill", lang)}</p>
             </div>
           )}
 
           {!["fertilizer", "spray", "seed", "land_prep", "labor"].includes(category) && (
             <div>
-              <label className="text-xs font-medium text-surface-600">Kahan Se Liya?</label>
+              <label className="text-xs font-medium text-surface-600">{t("pm_where_from", lang)}</label>
               <div className="mt-1 flex gap-3">
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="source" value="external" checked={source === "external"} onChange={() => setSource("external")} /> Bahar Se
-                </label>
+                  <input type="radio" name="source" value="external" checked={source === "external"} onChange={() => setSource("external")} />{t("pm_from_outside", lang)}</label>
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="source" value="internal" checked={source === "internal"} onChange={() => setSource("internal")} /> Hamare System Se
-                </label>
+                  <input type="radio" name="source" value="internal" checked={source === "internal"} onChange={() => setSource("internal")} />{t("pm_from_our_system", lang)}</label>
               </div>
             </div>
           )}
@@ -231,12 +230,12 @@ function ExpenseModal({
           )}
 
           <div>
-            <label className="text-xs font-medium text-surface-600">Amount (Rs.)</label>
+            <label className="text-xs font-medium text-surface-600">{t("pm_amount_rs", lang)}</label>
             <input type="number" step="0.01" name="amount" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">Notes (optional)</label>
-            <input type="text" name="description" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" placeholder="e.g. DAP 1 bag" />
+            <label className="text-xs font-medium text-surface-600">{t("pm_notes_optional", lang)}</label>
+            <input type="text" name="description" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" placeholder={t("pm_eg_expense", lang)} />
           </div>
           <SubmitButton />
         </form>

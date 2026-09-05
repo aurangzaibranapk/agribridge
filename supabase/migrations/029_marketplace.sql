@@ -12,7 +12,7 @@
 -- steps - same statuses, just interpreted without a dealer in the loop).
 
 create type bridge_order_source as enum ('service_request', 'marketplace');
-alter table bridge_orders add column source bridge_order_source not null default 'service_request';
+alter table bridge_orders add column if not exists source bridge_order_source not null default 'service_request';
 
 -- Finds the cheapest available offer for a product+quantity, across
 -- both dealer stock (dealer_inventory) and Al Rana's own warehouse

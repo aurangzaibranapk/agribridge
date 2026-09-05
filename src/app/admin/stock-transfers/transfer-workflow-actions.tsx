@@ -12,6 +12,8 @@ import {
   type ActionState,
 } from "@/actions/stock-transfer-workflow";
 import { Input, Select, Textarea } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -46,6 +48,7 @@ export function TransferWorkflowActions({
   isShopToShop,
   financeAccounts,
 }: Props) {
+  const lang = useLang();
   const admin = isAdminLevel(currentUserRole);
   const isReceivingManager = currentUserRole === "manager" && currentUserBranchId === toBranchId;
 
@@ -68,7 +71,7 @@ export function TransferWorkflowActions({
       {status === "pending" && (admin || currentUserRole === "finance") && isShopToShop && (
         <form action={approveAction}>
           <input type="hidden" name="transfer_id" value={transferId} />
-          <SmallButton label="Approve" pendingLabel="Approving..." />
+          <SmallButton label={t("st_approve", lang)} pendingLabel={t("st_approving", lang)} />
           {approveState.error && <p className="text-red-600">{approveState.error}</p>}
         </form>
       )}
@@ -78,12 +81,12 @@ export function TransferWorkflowActions({
           <input type="hidden" name="transfer_id" value={transferId} />
           <input type="hidden" name="account_id" value={accountId} />
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="h-7 w-36 text-xs">
-            <option value="">— account —</option>
+            <option value="">{t("st_account", lang)}</option>
             {financeAccounts.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </Select>
-          <SmallButton label="Verify Payment" pendingLabel="Verifying..." />
+          <SmallButton label={t("st_verify_payment", lang)} pendingLabel={t("st_verifying", lang)} />
           {verifyState.error && <p className="text-red-600">{verifyState.error}</p>}
         </form>
       )}
@@ -91,7 +94,7 @@ export function TransferWorkflowActions({
       {status === "payment_verified" && (admin || currentUserRole === "warehouse") && (
         <form action={dispatchAction}>
           <input type="hidden" name="transfer_id" value={transferId} />
-          <SmallButton label="Dispatch" pendingLabel="Dispatching..." />
+          <SmallButton label={t("st_dispatch", lang)} pendingLabel={t("st_dispatching", lang)} />
           {dispatchState.error && <p className="text-red-600">{dispatchState.error}</p>}
         </form>
       )}
@@ -103,12 +106,12 @@ export function TransferWorkflowActions({
           <Input
             type="number"
             step="0.01"
-            placeholder="Qty received"
+            placeholder={t("st_qty_received", lang)}
             value={confirmedQty}
             onChange={(e) => setConfirmedQty(e.target.value)}
             className="h-7 w-28 text-xs"
           />
-          <SmallButton label="Match & Accept" pendingLabel="Saving..." />
+          <SmallButton label={t("st_match_accept", lang)} pendingLabel={t("st_saving", lang)} />
           {matchState.error && <p className="text-red-600">{matchState.error}</p>}
         </form>
       )}
@@ -118,13 +121,13 @@ export function TransferWorkflowActions({
           <input type="hidden" name="transfer_id" value={transferId} />
           <input type="hidden" name="resolution_notes" value={resolutionNotes} />
           <Textarea
-            placeholder="Resolution notes"
+            placeholder={t("st_resolution_notes", lang)}
             value={resolutionNotes}
             onChange={(e) => setResolutionNotes(e.target.value)}
             rows={2}
             className="w-40 text-xs"
           />
-          <SmallButton label="Resolve" pendingLabel="Resolving..." />
+          <SmallButton label={t("st_resolve", lang)} pendingLabel={t("st_resolving", lang)} />
           {resolveState.error && <p className="text-red-600">{resolveState.error}</p>}
         </form>
       )}
@@ -132,7 +135,7 @@ export function TransferWorkflowActions({
       {status === "discrepancy" && discrepancyResolvedAt && (admin || isReceivingManager) && (
         <form action={finalAction}>
           <input type="hidden" name="transfer_id" value={transferId} />
-          <SmallButton label="Final Accept" pendingLabel="Accepting..." />
+          <SmallButton label={t("st_final_accept", lang)} pendingLabel={t("st_accepting", lang)} />
           {finalState.error && <p className="text-red-600">{finalState.error}</p>}
         </form>
       )}
@@ -140,7 +143,7 @@ export function TransferWorkflowActions({
       {canCancel && (
         <form action={cancelAction}>
           <input type="hidden" name="transfer_id" value={transferId} />
-          <button type="submit" className="text-red-500 hover:underline">Cancel</button>
+          <button type="submit" className="text-red-500 hover:underline">{t("st_cancel", lang)}</button>
           {cancelState.error && <p className="text-red-600">{cancelState.error}</p>}
         </form>
       )}

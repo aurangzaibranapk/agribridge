@@ -61,8 +61,22 @@ export async function submitMachineryRequest(_prev: ServiceRequestState, formDat
   const locationLng = formData.get("location_lng") ? Number(formData.get("location_lng")) : null;
   const locationAddress = String(formData.get("location_address") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const farmId = String(formData.get("farm_id") ?? "") || null;
+  const willSell = String(formData.get("will_sell_to_us") ?? "");
+
+  // Kisan ka dawa: "advance de diya hai". Ye ABHI paisa nahi hai. Yahan
+  // sirf likh liya jata hai; booking banne par ye 'claimed' qatar banta
+  // hai aur staff ki tasdeeq par hi ledger mein jata hai (145).
+  const claimedAmount = formData.get("advance_claimed_amount")
+    ? Number(formData.get("advance_claimed_amount"))
+    : null;
+  const claimedMethod = String(formData.get("advance_claimed_method") ?? "").trim();
+  const claimedReference = String(formData.get("advance_claimed_reference") ?? "").trim();
 
   if (!machineType) return { error: "Please select a machine type." };
+  if (claimedAmount !== null && (!Number.isFinite(claimedAmount) || claimedAmount <= 0)) {
+    return { error: "Advance ki raqam sahi likhein." };
+  }
   if (machineType === "other" && !machineTypeOther) return { error: "Please specify the machine you need." };
   if (!expectedDate) return { error: "Please select the date you need the machine." };
 
@@ -79,6 +93,11 @@ export async function submitMachineryRequest(_prev: ServiceRequestState, formDat
       location_lng: locationLng,
       location_address: locationAddress || null,
       notes: notes || null,
+      farm_id: farmId,
+      will_sell_to_us: willSell === "yes" ? true : willSell === "no" ? false : null,
+      advance_claimed_amount: claimedAmount,
+      advance_claimed_method: claimedAmount ? claimedMethod || "cash" : null,
+      advance_claimed_reference: claimedAmount ? claimedReference || null : null,
     })
     .select("id")
     .single();

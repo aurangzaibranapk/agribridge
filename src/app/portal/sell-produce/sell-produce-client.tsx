@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createProduceListing, cancelProduceListing, farmerRespondToProduceOrder, type ActionState } from "@/actions/produce";
 import { Plus, Wheat, X, Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -26,6 +28,7 @@ interface Order {
 }
 
 export function SellProduceClient({ listings, orders }: { listings: Listing[]; orders: Order[] }) {
+  const lang = useLang();
   const [showForm, setShowForm] = useState(false);
 
   function statusLabel(status: string) {
@@ -45,7 +48,7 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
     <div>
       {orders.some((o) => o.status === "placed") && (
         <div className="mb-6">
-          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">Orders Needing Your Response</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">{t("pm_orders_needing", lang)}</h2>
           <div className="space-y-3">
             {orders.filter((o) => o.status === "placed").map((o) => (
               <div key={o.id} className="rounded-card border border-amber-200 bg-amber-50 p-4">
@@ -64,7 +67,7 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
 
       {orders.filter((o) => o.status !== "placed").length > 0 && (
         <div className="mb-6">
-          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">Order History</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">{t("pm_order_history", lang)}</h2>
           <div className="space-y-2">
             {orders.filter((o) => o.status !== "placed").map((o) => (
               <div key={o.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-3 shadow-card">
@@ -82,20 +85,17 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold text-surface-900">My Listings</h2>
+        <h2 className="font-display text-lg font-semibold text-surface-900">{t("pm_my_listings", lang)}</h2>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
-          <Plus className="h-4 w-4" /> New Listing
-        </button>
+          <Plus className="h-4 w-4" />{t("pm_new_listing", lang)}</button>
       </div>
 
       <div className="space-y-3">
         {listings.length === 0 ? (
-          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400">
-            No listings yet. Create one to start selling your produce.
-          </p>
+          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400">{t("pm_no_listings", lang)}</p>
         ) : (
           listings.map((l) => (
             <div key={l.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-4 shadow-card">
@@ -149,24 +149,25 @@ function OrderResponseButtons({ orderId }: { orderId: string }) {
 }
 
 function AcceptButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-      <Check className="h-3.5 w-3.5" /> Accept
-    </button>
+      <Check className="h-3.5 w-3.5" />{t("pm_accept", lang)}</button>
   );
 }
 
 function RejectButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
-      <X className="h-3.5 w-3.5" /> Reject
-    </button>
+      <X className="h-3.5 w-3.5" />{t("pm_reject", lang)}</button>
   );
 }
 
 function NewListingModal({ onClose }: { onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(createProduceListing, initialState);
 
   if (state.success) {
@@ -177,42 +178,42 @@ function NewListingModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">New Produce Listing</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_new_produce_listing", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
         </div>
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Listing created.</p>}
+        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("pm_listing_created", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-surface-500">Crop Name *</label>
-            <input name="crop_name" required placeholder="e.g. Wheat, Rice, Maize" className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500">{t("pm_crop_name", lang)}</label>
+            <input name="crop_name" required placeholder={t("pm_eg_crops", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-surface-500">Quantity Available *</label>
+              <label className="text-xs font-medium text-surface-500">{t("pm_qty_available", lang)}</label>
               <input name="quantity_available" type="number" step="0.1" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-500">Unit</label>
+              <label className="text-xs font-medium text-surface-500">{t("unit_label", lang)}</label>
               <select name="unit" defaultValue="kg" className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
-                <option value="kg">kg</option>
-                <option value="maund">maund</option>
-                <option value="ton">ton</option>
+                <option value="kg">{t("pm_kg", lang)}</option>
+                <option value="maund">{t("pm_maund", lang)}</option>
+                <option value="ton">{t("pm_ton", lang)}</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">Asking Price per Unit (Rs.) *</label>
+            <label className="text-xs font-medium text-surface-500">{t("pm_asking_price", lang)}</label>
             <input name="asking_price_per_unit" type="number" step="0.01" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">Quality Grade</label>
-            <input name="quality_grade" placeholder="e.g. A, Premium" className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500">{t("pm_quality_grade", lang)}</label>
+            <input name="quality_grade" placeholder={t("pm_eg_grade", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">Notes</label>
+            <label className="text-xs font-medium text-surface-500">{t("c_notes", lang)}</label>
             <textarea name="notes" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
           </div>
           <SubmitButton />
@@ -223,11 +224,12 @@ function NewListingModal({ onClose }: { onClose: () => void }) {
 }
 
 function CancelButton({ listingId }: { listingId: string }) {
+  const lang = useLang();
   const [, formAction] = useFormState(cancelProduceListing, initialState);
   return (
     <form action={formAction}>
       <input type="hidden" name="listing_id" value={listingId} />
-      <button type="submit" className="text-xs text-red-600 hover:underline">Cancel</button>
+      <button type="submit" className="text-xs text-red-600 hover:underline">{t("c_cancel", lang)}</button>
     </form>
   );
 }

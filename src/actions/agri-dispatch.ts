@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
+import { getAdvancePaymentStatus } from "@/lib/order-payment-gate";
+import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 
 export interface ActionState {
   error?: string;
@@ -17,10 +19,14 @@ async function logTimeline(orderId: string, status: string, note: string) {
   await supabase.from("agri_order_timeline").insert({ order_id: orderId, status, note, created_by: user?.id ?? null });
 }
 
-async function getOrderBranchId(orderId: string): Promise<string | null> {
+// Branch-to-branch orders ke liye dono ids chahiye: order_to_branch_id
+// (jis shop ne order kiya) aur order_from_branch_id (jo shop apna stock de
+// rahi hai). Source branch ko dispatch banane ka haq getOrderPermissions
+// tabhi de sakta hai jab usay from-branch bhi mile.
+async function getOrderBranchIds(orderId: string): Promise<{ toBranchId: string | null; fromBranchId: string | null }> {
   const supabase = createClient();
-  const { data } = await supabase.from("agri_orders").select("order_to_branch_id").eq("id", orderId).maybeSingle();
-  return data?.order_to_branch_id ?? null;
+  const { data } = await supabase.from("agri_orders").select("order_to_branch_id, order_from_branch_id").eq("id", orderId).maybeSingle();
+  return { toBranchId: data?.order_to_branch_id ?? null, fromBranchId: data?.order_from_branch_id ?? null };
 }
 
 async function generateDispatchNumber(): Promise<string> {
@@ -55,9 +61,28 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
-  const branchId = await getOrderBranchId(orderId);
-  const permissions = await getOrderPermissions(branchId);
+  const { toBranchId, fromBranchId } = await getOrderBranchIds(orderId);
+  const permissions = await getOrderPermissions(toBranchId, fromBranchId);
   if (!permissions.canCreateDispatch) return { error: "Aapko dispatch create karne ki ijazat nahi hai. Ye warehouse/admin ka kaam hai." };
+
+  // Advance Order ka usool: jab tak poori payment verify na ho, maal
+  // godown se nahi nikalta. Approval chain (sales > finance > manager)
+  // pehle ki tarah chalti rehti hai — rok sirf isi aakhri qadam par
+  // lagti hai. Base order is check se guzarta hi nahi.
+  // Ab dispatch banate hi stock kam hota hai, is liye do dafa dispatch
+  // banane se stock do dafa kat jayega. UI button chhupa deti hai magar
+  // wo kaafi nahi — rok yahan zaroori hai.
+  const { data: existingDispatch } = await supabase.from("agri_dispatches").select("dispatch_number").eq("order_id", orderId).maybeSingle();
+  if (existingDispatch) {
+    return { error: `Is order ka dispatch pehle hi ban chuka hai (${existingDispatch.dispatch_number}).` };
+  }
+
+  const advance = await getAdvancePaymentStatus(orderId);
+  if (!advance.isSatisfied) {
+    return {
+      error: `Ye Advance Order hai. Grand Total Rs ${advance.grandTotal.toLocaleString()} mein se Rs ${advance.verifiedPaid.toLocaleString()} verify hui hai — Rs ${advance.remaining.toLocaleString()} baqi hai. Poori payment verify hone tak dispatch nahi ho sakta.`,
+    };
+  }
 
   const vehicleNo = (formData.get("vehicle_no") as string) || null;
   const driverName = (formData.get("driver_name") as string) || null;
@@ -114,6 +139,41 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
     const { error: itemsError } = await supabase.from("agri_dispatch_items").insert(itemRows);
   if (itemsError) return { error: itemsError.message };
 
+  // Maal godown se nikal gaya, is liye bhejne wale ka stock ab kam hona
+  // chahiye. Source wahi hai jahan se order maangaya gaya: branch-to-branch
+  // mein doosri shop ka godown, warna HQ ka.
+  //
+  // Yahan sirf NIKALNA hota hai, DAALNA nahi — maal lene wale ki inventory
+  // mein GRN par jata hai (agri-grn.ts), jab wo waqai pahunch jaye. Is beech
+  // ka maal kisi ke bhi stock mein nahi ginta, jo durust hai: wo raaste
+  // mein hai.
+  //
+  // agri_dispatch_items sirf product_name rakhti hai, is liye product_id
+  // order items se uthana parta hai.
+  const sourceWarehouseId = fromBranchId ? await mainWarehouseId(fromBranchId) : await hqWarehouseId();
+  if (sourceWarehouseId) {
+    const orderItemIds = items.map((i) => i.order_item_id).filter(Boolean);
+    const { data: orderItems } = orderItemIds.length
+      ? await supabase.from("agri_order_items").select("id, product_id").in("id", orderItemIds)
+      : { data: [] as { id: string; product_id: string | null }[] };
+    const productByOrderItem = new Map((orderItems ?? []).map((oi) => [oi.id, oi.product_id]));
+
+    for (const item of items) {
+      const productId = productByOrderItem.get(item.order_item_id);
+      if (!productId || item.dispatched_qty <= 0) continue;
+      await moveStock({
+        fromWarehouseId: sourceWarehouseId,
+        toWarehouseId: null,
+        productId,
+        qty: item.dispatched_qty,
+        referenceType: "agri_dispatch",
+        referenceId: dispatch.id,
+        userId: user?.id ?? null,
+        outType: "transfer_out",
+      });
+    }
+  }
+
   await supabase.from("agri_orders").update({ status: "dispatched" }).eq("id", orderId);
   await logTimeline(orderId, "dispatched", `Dispatch banaya: ${dispatchNumber}`);
   revalidatePath(`/admin/agri-orders/${orderId}`);
@@ -127,8 +187,8 @@ export async function confirmDelivery(_prev: ActionState, formData: FormData): P
   const dispatchId = String(formData.get("dispatch_id") ?? "");
   if (!orderId || !dispatchId) return { error: "Missing ids." };
 
-  const branchId = await getOrderBranchId(orderId);
-  const permissions = await getOrderPermissions(branchId);
+  const { toBranchId, fromBranchId } = await getOrderBranchIds(orderId);
+  const permissions = await getOrderPermissions(toBranchId, fromBranchId);
   if (!permissions.canConfirmDelivery) return { error: "Sirf order karne wali branch delivery confirm kar sakti hai." };
 
   const receiverName = String(formData.get("receiver_name") ?? "").trim();

@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { saveCustomer, updateCustomer, type ActionState } from "@/actions/customers";
 import { Button, Input, Label, Textarea } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -15,10 +17,12 @@ interface ExistingCustomer {
   email: string | null;
   address: string | null;
   credit_limit: number;
+  customer_type?: string;
   payment_due_days: number;
 }
 
 export function AddCustomerButton() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -26,23 +30,21 @@ export function AddCustomerButton() {
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
       >
-        <Plus className="h-4 w-4" /> Add Customer
-      </button>
+        <Plus className="h-4 w-4" />{t("at_add_customer", lang)}</button>
       {open && <CustomerModal onClose={() => setOpen(false)} />}
     </>
   );
 }
 
 export function EditCustomerButton({ customer }: { customer: ExistingCustomer }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         onClick={() => setOpen(true)}
         className="text-xs font-medium text-brand-600 hover:underline"
-      >
-        Edit
-      </button>
+      >{t("at_edit", lang)}</button>
       {open && <CustomerModal customer={customer} onClose={() => setOpen(false)} />}
     </>
   );
@@ -50,6 +52,7 @@ export function EditCustomerButton({ customer }: { customer: ExistingCustomer })
 
 function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onClose: () => void }) {
   const isEditMode = !!customer;
+  const lang = useLang();
   const [state, formAction] = useFormState(isEditMode ? updateCustomer : saveCustomer, initialState);
 
   if (state.success) {
@@ -73,39 +76,59 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
           </p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Saved.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_saved", lang)}</p>
         )}
         <form action={formAction} className="space-y-3">
           {isEditMode && <input type="hidden" name="id" value={customer.id} />}
           <div>
-            <Label>Customer Name *</Label>
+            <Label>{t("at_customer_name_req", lang)}</Label>
             <Input name="name" defaultValue={customer?.name} required />
           </div>
           <div>
-            <Label>Contact Person</Label>
+            <Label>{t("c_contact_person", lang)}</Label>
             <Input name="contact_person" defaultValue={customer?.contact_person ?? ""} />
           </div>
           <div>
-            <Label>Phone Number *</Label>
+            <Label>{t("at_phone_number_req", lang)}</Label>
             <Input name="phone_number" defaultValue={customer?.phone_number} required />
           </div>
           <div>
-            <Label>Email</Label>
+            <Label>{t("c_email", lang)}</Label>
             <Input name="email" type="email" defaultValue={customer?.email ?? ""} />
           </div>
           <div>
-            <Label>Address</Label>
+            <Label>{t("c_address", lang)}</Label>
             <Textarea name="address" rows={2} defaultValue={customer?.address ?? ""} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Credit Limit (Rs.)</Label>
+              <Label>{t("cr_credit_limit_dot", lang)}</Label>
               <Input name="credit_limit" type="number" step="0.01" defaultValue={customer?.credit_limit} />
             </div>
+            <div className="sm:col-span-2">
+              {/* Ye darja EK DAFA yahan likha jata hai. POS par har bill
+                  par "thok ya retail" chunne se rate counter wale ki
+                  marzi par aa jata, aur mahine baad ye sawal ka jawab
+                  nahi hota ke falan bill par thok kyun laga tha. */}
+              <label className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300">
+                <input
+                  type="checkbox"
+                  name="customer_type"
+                  value="wholesale_shop"
+                  defaultChecked={customer?.customer_type === "wholesale_shop"}
+                  className="mt-0.5"
+                />
+                <span>
+                  Ye <strong>thok wali dukan</strong> hai — hum isay maal dete hain
+                  <span className="block text-xs text-surface-500">
+                    POS par is ke bill par thok ka rate khud lagega. Jis cheez par thok ka rate darj
+                    nahi, us par retail lagega.
+                  </span>
+                </span>
+              </label>
+            </div>
             <div>
-              <Label>Payment Due (Days)</Label>
+              <Label>{t("cr_payment_due_days", lang)}</Label>
               <Input name="payment_due_days" type="number" defaultValue={customer?.payment_due_days} />
             </div>
           </div>

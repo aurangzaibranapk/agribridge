@@ -1,5 +1,7 @@
 "use client";
 import { Award, ThumbsUp, ThumbsDown } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface QuestionScore {
   question: string;
@@ -18,6 +20,7 @@ interface ScoreData {
 }
 
 export function ScoreChart({ score }: { score: ScoreData }) {
+  const lang = useLang();
   const maxTotal = (score.question_scores.length + 4) * 5;
   const percentage = maxTotal > 0 ? Math.round((score.total_score / maxTotal) * 100) : 0;
 
@@ -32,8 +35,7 @@ export function ScoreChart({ score }: { score: ScoreData }) {
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <div className="mb-3 flex items-center justify-between">
         <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-          <Award className="h-3.5 w-3.5" /> Interview Score
-        </p>
+          <Award className="h-3.5 w-3.5" />{t("at_interview_score", lang)}</p>
         <div className="flex items-center gap-1.5">
           <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">
             {score.total_score}/{maxTotal}
@@ -69,6 +71,7 @@ export function ScoreChart({ score }: { score: ScoreData }) {
 }
 
 function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const lang = useLang();
   const pct = (value / max) * 100;
   return (
     <div className="flex items-center gap-2 text-xs">

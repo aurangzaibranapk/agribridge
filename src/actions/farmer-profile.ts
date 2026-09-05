@@ -1,10 +1,14 @@
 ﻿"use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logAudit, diffFields } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/service";
+import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
 export interface FarmerProfileState {
   error?: string;
   success?: boolean;
+  // Kaam ho gaya, magar sath mein ek baat batani hai.
+  notice?: string;
 }
 export async function updateFarmerProfile(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
   const supabase = createClient();
@@ -20,11 +24,40 @@ export async function updateFarmerProfile(_prev: FarmerProfileState, formData: F
     .single();
   if (lookupError || !farmer) return { error: "Farmer profile not found for this account." };
 
+  // Farmer 360 Profile -- paanch hissay, ek hi form.
+  //
+  // Yahan sab kuch EK BAAR bharta hai aur phir har service isi ko parhti
+  // hai. Is liye ye form service ke waqt nahi aata: machinery ki booking
+  // ke beech mein CNIC poochhna kaam rok deta hai, aur kaam rukne ka
+  // matlab ye ke banda kisi aur se machine le leta hai.
+  const cropTypes = String(formData.get("crop_types") ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  const landSize = String(formData.get("land_size_acres") ?? "").trim();
+
   const updates: Record<string, unknown> = {
     full_name: (formData.get("full_name") as string) || null,
+    father_name: (formData.get("father_name") as string) || null,
     cnic: (formData.get("cnic") as string) || null,
+
     village: (formData.get("village") as string) || null,
+    tehsil: (formData.get("tehsil") as string) || null,
     district: (formData.get("city") as string) || null,
+    address: (formData.get("address") as string) || null,
+
+    land_size_acres: landSize === "" ? null : Number(landSize),
+    crop_types: cropTypes,
+
+    bank_name: (formData.get("bank_name") as string) || null,
+    bank_account_title: (formData.get("bank_account_title") as string) || null,
+    bank_account_number: (formData.get("bank_account_number") as string) || null,
+    bank_iban: (formData.get("bank_iban") as string) || null,
+    mobile_wallet_provider: (formData.get("mobile_wallet_provider") as string) || null,
+    mobile_wallet_number: (formData.get("mobile_wallet_number") as string) || null,
+
+    preferred_language: (formData.get("preferred_language") as string) || null,
     whatsapp_notifications_enabled: formData.get("whatsapp_notifications_enabled") === "on",
   };
 
@@ -52,6 +85,53 @@ export async function updateFarmerProfile(_prev: FarmerProfileState, formData: F
   revalidatePath("/portal/dashboard");
   return { success: true };
 }
+/**
+ * "Profile Confirm" ka button.
+ *
+ * Ye alag amal is liye hai ke SAVE karna aur CONFIRM karna do alag
+ * baatein hain. Save adhoora bhi ho sakta hai -- banda aaj naam likh
+ * kar chala jaye, kal CNIC ki photo laaye. Confirm ka matlab hai "ye sab
+ * theek hai, isi par kaam karein", aur usi lamhe se profile ka darja
+ * profile_complete ho jata hai (migration 124).
+ *
+ * Adhoori profile confirm nahi hoti. Warna confirm ka koi matlab hi na
+ * rehta: har kisan pehle din button daba deta aur baad mein bank ka khata
+ * poochhne par hum yahi dekhte ke "profile to complete hai".
+ */
+export async function confirmFarmerProfile(_prev: FarmerProfileState, _formData: FormData): Promise<FarmerProfileState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const serviceClient = createServiceClient();
+  const { data: farmer } = await serviceClient.from("farmers").select("*").eq("user_id", user.id).maybeSingle();
+  if (!farmer) return { error: "Farmer profile not found for this account." };
+
+  const completion = computeProfileCompletion(farmer);
+  if (!completion.isComplete) {
+    const missing = [
+      !completion.identityComplete ? "pehchan (walid ka naam, CNIC)" : null,
+      !completion.locationComplete ? "pata (gaon, tehsil, zila, poora pata)" : null,
+      !completion.farmingComplete ? "zameen aur fasal" : null,
+      !completion.paymentComplete ? "bank ya mobile wallet" : null,
+      !completion.documentsComplete ? "CNIC ki dono taraf ki photo" : null,
+    ].filter(Boolean);
+    return { error: `Ye hissay abhi baqi hain: ${missing.join("، ")}` };
+  }
+
+  const { error } = await serviceClient
+    .from("farmers")
+    .update({ profile_confirmed_at: new Date().toISOString() })
+    .eq("id", farmer.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/portal/profile");
+  revalidatePath("/portal/dashboard");
+  return { success: true, notice: "Profile confirm ho gayi. Ab koi service aap se ye tafseel dobara nahi poochhegi." };
+}
+
 async function uploadOne(
   serviceClient: ReturnType<typeof createServiceClient>,
   farmerId: string,
@@ -65,7 +145,38 @@ async function uploadOne(
   const { data } = serviceClient.storage.from("farmer-documents").getPublicUrl(path);
   return data.publicUrl;
 }
+/**
+ * Admin ki taraf se kisan ki tafseel badalna.
+ *
+ * Do cheezein pehle nahi thin aur dono zaroori hain.
+ *
+ * Pehli: ijazat ki jaanch. Ye action service client se chalta hai --
+ * yani RLS ise nahi rokti. Jaanch na hone ka matlab tha ke jo bhi is
+ * action tak pohanch jaye wo KISI bhi kisan ka mobile number badal
+ * sakta tha.
+ *
+ * Doosri: kya badla. Audit mein sirf "kisi ne update kiya" likha jata
+ * tha. Asal sawal hafte baad aata hai -- "is kisan ka number pehle kya
+ * tha?" -- aur us ka jawab kahin nahi hota tha.
+ */
 export async function adminUpdateFarmerDetails(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const allowed = ["admin", "owner", "super_admin", "manager", "admin_assistant"];
+  if (!profile?.is_active || !allowed.includes(String(profile.role))) {
+    return { error: "Kisan ki tafseel badalne ki ijazat nahi." };
+  }
+
   const serviceClient = createServiceClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   if (!farmerId) return { error: "Missing farmer id." };
@@ -95,13 +206,62 @@ export async function adminUpdateFarmerDetails(_prev: FarmerProfileState, formDa
     milk_advance_loan_amount: formData.get("milk_advance_loan_amount") ? parseFloat(formData.get("milk_advance_loan_amount") as string) : null,
   };
 
+  // Purani qatar pehle -- warna baad mein farq nikalne ka koi rasta
+  // nahi rehta.
+  const { data: before } = await serviceClient
+    .from("farmers")
+    .select("*")
+    .eq("id", farmerId)
+    .maybeSingle();
+  if (!before) return { error: "Kisan nahi mila." };
+
   const { error } = await serviceClient.from("farmers").update(updates).eq("id", farmerId);
   if (error) return { error: error.message };
 
+  const changes = diffFields(before as Record<string, unknown>, updates, FARMER_FIELD_LABELS);
+  if (Object.keys(changes).length > 0) {
+    await logAudit({
+      actionType: "update",
+      module: "farmers",
+      recordId: farmerId,
+      recordLabel: (before as { full_name?: string }).full_name ?? farmerId,
+      description: `${Object.keys(changes).length} khane badle`,
+      changes,
+    });
+  }
+
   revalidatePath("/admin/farmers");
   revalidatePath(`/admin/farmers/${farmerId}`);
-  return { success: true };
+  return {
+    success: true,
+    notice:
+      Object.keys(changes).length > 0
+        ? `${Object.keys(changes).length} khane badle: ${Object.keys(changes).join(", ")}`
+        : "Kuch nahi badla.",
+  };
 }
+
+// Khane ka naam jaisa aadmi bolta hai. "phone_number" ki jagah
+// "Mobile" -- audit ki fehrist parhne wale ke liye.
+const FARMER_FIELD_LABELS: Record<string, string> = {
+  full_name: "Naam",
+  phone_number: "Mobile",
+  email: "Email",
+  cnic: "CNIC",
+  village: "Gaon",
+  district: "Zila",
+  crop_types: "Fasal",
+  has_livestock: "Maweshi hain",
+  cow_count: "Gaayein",
+  buffalo_count: "Bhainsein",
+  calves_count: "Bachhre",
+  milking_animal_count: "Doodh wale janwar",
+  meat_animal_count: "Gosht wale janwar",
+  milk_liters_per_day: "Rozana doodh (litre)",
+  milk_buyer_name: "Doodh kaun leta hai",
+  milk_sale_rate: "Doodh ka rate",
+  milk_advance_loan_amount: "Doodh ka advance",
+};
 
 export async function updateFarmingOverview(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
   const supabase = createClient();

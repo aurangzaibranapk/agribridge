@@ -8,6 +8,8 @@ import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { FarmerActions } from "@/app/admin/farmers/farmer-actions";
 import { bulkToggleFarmerActive, bulkDeleteFarmers, type ActionState } from "@/actions/farmers-bulk";
 import { CheckSquare, FileText } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -24,6 +26,7 @@ interface Farmer {
 }
 
 export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
+  const lang = useLang();
   const [selected, setSelected] = useState<string[]>([]);
 
   function toggleSelect(id: string) {
@@ -43,13 +46,13 @@ export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
           <thead>
             <tr className="border-b border-surface-100 text-left text-xs font-medium uppercase tracking-wide text-surface-400 dark:border-surface-800 dark:text-surface-500">
               <th className="px-3 py-3"><input type="checkbox" checked={selected.length === farmers.length && farmers.length > 0} onChange={toggleSelectAll} /></th>
-              <th className="px-5 py-3">Name</th>
-              <th className="px-5 py-3">Contact</th>
-              <th className="px-5 py-3">Location</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3">Active</th>
-              <th className="px-5 py-3 text-right">Registered</th>
-              <th className="px-5 py-3">Actions</th>
+              <th className="px-5 py-3">{t("c_name", lang)}</th>
+              <th className="px-5 py-3">{t("fp_contact", lang)}</th>
+              <th className="px-5 py-3">{t("c_location", lang)}</th>
+              <th className="px-5 py-3">{t("c_status", lang)}</th>
+              <th className="px-5 py-3">{t("c_active", lang)}</th>
+              <th className="px-5 py-3 text-right">{t("fp_registered", lang)}</th>
+              <th className="px-5 py-3">{t("c_actions", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -62,13 +65,13 @@ export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
                 </td>
                 <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{f.phone_number}</td>
                 <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{[f.tehsil, f.district].filter(Boolean).join(", ") || "-"}</td>
-                <td className="px-5 py-3">{f.is_verified ? <Badge tone="green">Verified</Badge> : <VerifyFarmerButton id={f.id} />}</td>
+                <td className="px-5 py-3">{f.is_verified ? <Badge tone="green">{t("c_verified", lang)}</Badge> : <VerifyFarmerButton id={f.id} />}</td>
                 <td className="px-5 py-3"><Badge tone={f.is_active ? "green" : "gray"}>{f.is_active ? "Active" : "Inactive"}</Badge></td>
                 <td className="px-5 py-3 text-right text-xs text-surface-400 dark:text-surface-500">{formatDate(f.created_at)}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2">
-                    <Link href={`/admin/farmers/${f.id}`} className="text-xs font-medium text-brand-600 hover:underline">Details</Link>
-                    <Link href={`/admin/farmers/${f.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-surface-500 hover:underline"><FileText className="h-3 w-3" /> Statement</Link>
+                    <Link href={`/admin/farmers/${f.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("fp_details", lang)}</Link>
+                    <Link href={`/admin/farmers/${f.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-surface-500 hover:underline"><FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
                     <FarmerActions farmerId={f.id} isActive={f.is_active ?? true} />
                   </div>
                 </td>
@@ -82,6 +85,7 @@ export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
 }
 
 function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+  const lang = useLang();
   const [activateState, activateAction] = useFormState(bulkToggleFarmerActive, initialState);
   const [deleteState, deleteAction] = useFormState(bulkDeleteFarmers, initialState);
 
@@ -95,12 +99,12 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
       <form action={activateAction}>
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="true" />
-        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">Active Karein</button>
+        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">{t("c_activate", lang)}</button>
       </form>
       <form action={activateAction}>
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="false" />
-        <button type="submit" className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-medium text-surface-600 hover:bg-surface-200">Inactive Karein</button>
+        <button type="submit" className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-medium text-surface-600 hover:bg-surface-200">{t("c_deactivate", lang)}</button>
       </form>
       <form
         action={deleteAction}
@@ -109,7 +113,7 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
         }}
       >
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">Delete Karein</button>
+        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">{t("c_delete", lang)}</button>
       </form>
     </div>
   );

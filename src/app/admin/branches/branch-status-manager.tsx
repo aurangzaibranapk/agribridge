@@ -3,21 +3,20 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { setBranchStatus, type ActionState } from "@/actions/branches";
 import { AlertTriangle, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function BranchStatusManager({ branchId, status }: { branchId: string; status: string }) {
+  const lang = useLang();
   const [modalAction, setModalAction] = useState<"suspended" | "blocked" | null>(null);
 
   if (status === "active") {
     return (
       <div className="flex gap-1.5">
-        <button onClick={() => setModalAction("suspended")} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
-          Suspend
-        </button>
-        <button onClick={() => setModalAction("blocked")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">
-          Block
-        </button>
+        <button onClick={() => setModalAction("suspended")} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">{t("at_suspend", lang)}</button>
+        <button onClick={() => setModalAction("blocked")} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">{t("at_block", lang)}</button>
         {modalAction && <ReasonModal branchId={branchId} status={modalAction} onClose={() => setModalAction(null)} />}
       </div>
     );
@@ -28,6 +27,7 @@ export function BranchStatusManager({ branchId, status }: { branchId: string; st
 
 function ReasonModal({ branchId, status, onClose }: { branchId: string; status: "suspended" | "blocked"; onClose: () => void }) {
   const [state, formAction] = useFormState(setBranchStatus, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 600);
 
   return (
@@ -43,8 +43,8 @@ function ReasonModal({ branchId, status, onClose }: { branchId: string; status: 
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="branch_id" value={branchId} />
           <input type="hidden" name="status" value={status} />
-          <label className="text-xs font-medium text-surface-600">Wajah (Reason)</label>
-          <textarea name="reason" required rows={3} placeholder="e.g. Payment issue, license expired" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <label className="text-xs font-medium text-surface-600">{t("br_reason_field", lang)}</label>
+          <textarea name="reason" required rows={3} placeholder={t("br_reason_eg", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={status === "suspended" ? "Suspend Karein" : "Block Karein"} />
         </form>
       </div>
@@ -53,14 +53,13 @@ function ReasonModal({ branchId, status, onClose }: { branchId: string; status: 
 }
 
 function ReactivateForm({ branchId }: { branchId: string }) {
+  const lang = useLang();
   const [, formAction] = useFormState(setBranchStatus, initialState);
   return (
     <form action={formAction}>
       <input type="hidden" name="branch_id" value={branchId} />
       <input type="hidden" name="status" value="active" />
-      <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">
-        Reactivate
-      </button>
+      <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">{t("at_reactivate", lang)}</button>
     </form>
   );
 }

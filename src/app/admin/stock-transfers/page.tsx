@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { t, type TranslationKey } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { TransferActions } from "@/app/admin/stock-transfers/transfer-actions";
@@ -7,8 +10,24 @@ import { RequestTransferForm } from "@/app/admin/stock-transfers/request-transfe
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Halat database mein angrezi mein rehti hai (wo data hai). Screen par
+ * us ka lafz yahan se aata hai -- warna manager ko "payment_verified"
+ * likha nazar aata tha.
+ */
+const TRANSFER_STATUS: Record<string, TranslationKey> = {
+  pending: "st_s_pending",
+  approved: "st_s_approved",
+  payment_verified: "st_s_payment_verified",
+  in_transit: "st_s_in_transit",
+  completed: "st_s_completed",
+  discrepancy: "st_s_discrepancy",
+  cancelled: "st_s_cancelled",
+};
+
 export default async function AdminStockTransfersPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -125,7 +144,14 @@ export default async function AdminStockTransfersPage() {
 
   return (
     <div>
-      <PageHeader title="Stock Transfer Requests" description="Shop-to-shop and Central Warehouse transfers - Admin/Finance approval required at every stage" />
+      <PageHeader title={t("st_title", lang)} description={t("st_subtitle", lang)} />
+      {/* Tajweez wala safha (280): 30 din ki bikri se kya kam paR raha hai. */}
+      <Link
+        href="/admin/stock-transfers/suggested"
+        className="mb-4 inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-200"
+      >
+        {t("sr_title", lang)} →
+      </Link>
 
       {canRequest && (
         <div className="mt-4">
@@ -143,58 +169,58 @@ export default async function AdminStockTransfersPage() {
 
       <div className="mt-6">
         {transfers.length === 0 ? (
-          <EmptyState title="No transfer requests yet" />
+          <EmptyState title={t("st_empty", lang)} />
         ) : (
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-4 py-3 font-medium text-surface-500">Product</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">From</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">To</th>
-                  <th className="px-4 py-3 text-right font-medium text-surface-500">Qty</th>
-                  <th className="px-4 py-3 text-right font-medium text-surface-500">Amount</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                  <th className="px-4 py-3 font-medium text-surface-500">Action</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("st_product", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("st_from", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("st_to", lang)}</th>
+                  <th className="px-4 py-3 text-right font-medium text-surface-500">{t("st_qty", lang)}</th>
+                  <th className="px-4 py-3 text-right font-medium text-surface-500">{t("st_amount", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("st_status", lang)}</th>
+                  <th className="px-4 py-3 font-medium text-surface-500">{t("st_action", lang)}</th>
                 </tr>
               </thead>
               <tbody>
-                {transfers.map((t) => (
-                  <tr key={t.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                    <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{t.product_name}</td>
+                {transfers.map((row) => (
+                  <tr key={row.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                    <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{row.product_name}</td>
                     <td className="px-4 py-3 text-surface-600 dark:text-surface-400">
-                      {t.from_warehouse}{t.from_branch_name ? ` (${t.from_branch_name})` : ""}
+                      {row.from_warehouse}{row.from_branch_name ? ` (${row.from_branch_name})` : ""}
                     </td>
                     <td className="px-4 py-3 text-surface-600 dark:text-surface-400">
-                      {t.to_warehouse}{t.to_branch_name ? ` (${t.to_branch_name})` : ""}
+                      {row.to_warehouse}{row.to_branch_name ? ` (${row.to_branch_name})` : ""}
                     </td>
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
-                      {t.quantity}
-                      {t.confirmed_quantity != null && Number(t.confirmed_quantity) !== Number(t.quantity) ? ` (recv: ${t.confirmed_quantity})` : ""}
+                      {row.quantity}
+                      {row.confirmed_quantity != null && Number(row.confirmed_quantity) !== Number(row.quantity) ? ` (${t("st_received", lang)}: ${row.confirmed_quantity})` : ""}
                     </td>
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
-                      {t.total_amount != null ? `Rs. ${Number(t.total_amount).toLocaleString()}` : "-"}
+                      {row.total_amount != null ? `Rs. ${Number(row.total_amount).toLocaleString()}` : "-"}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={statusTone(t.status)}>{t.status.replace(/_/g, " ")}</Badge>
-                      {t.status === "discrepancy" && t.discrepancy_notes && (
-                        <p className="mt-1 text-[10px] text-surface-400">{t.discrepancy_notes}</p>
+                      <Badge tone={statusTone(row.status)}>{t(TRANSFER_STATUS[row.status] ?? "st_status", lang)}</Badge>
+                      {row.status === "discrepancy" && row.discrepancy_notes && (
+                        <p className="mt-1 text-[10px] text-surface-400">{row.discrepancy_notes}</p>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {t.unit_price != null ? (
+                      {row.unit_price != null ? (
                         <TransferWorkflowActions
-                          transferId={t.id}
-                          status={t.status}
-                          discrepancyResolvedAt={t.discrepancy_resolved_at}
+                          transferId={row.id}
+                          status={row.status}
+                          discrepancyResolvedAt={row.discrepancy_resolved_at}
                           currentUserRole={role}
                           currentUserBranchId={profile?.branch_id ?? null}
-                          toBranchId={t.to_branch_id}
-                          isShopToShop={t.is_shop_to_shop}
+                          toBranchId={row.to_branch_id}
+                          isShopToShop={row.is_shop_to_shop}
                           financeAccounts={financeAccounts ?? []}
                         />
                       ) : (
-                        t.status === "pending" && <TransferActions transferId={t.id} />
+                        row.status === "pending" && <TransferActions transferId={row.id} />
                       )}
                     </td>
                   </tr>

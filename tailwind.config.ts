@@ -6,39 +6,60 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Deliberate palette: deep field-green as the brand anchor (this is
-        // an agriculture business), warm wheat as a secondary accent, and a
-        // near-neutral slate for the actual data-dense UI so the green
-        // doesn't fight with tables full of numbers.
+        // AgriBridge ke rang -- malik ne 4 September ko ye lock kiye.
+        //
+        // Ye ek hi jagah hain, safhon mein nahi: rang badalna ho to yahan
+        // badle, poore nizam par khud lag jaye. Pehle har safha apna
+        // hara chun raha tha aur nateeja ye tha ke screen safaid-khaki
+        // lagti thi -- brand nazar hi nahi aata tha.
+        //
+        //   600 Deep Green  #1F6B3A -- asal brand, buttons aur nishan
+        //   700 Dark Green  #174D2B -- gehra (AI ka header, hover)
+        //   50  Light Green #EAF5EC -- nishan ke peeche ka khana
+        //   25  Soft Green  #F3F9F4 -- halka pas-manzar
         brand: {
-          50: "#f0f7f0",
-          100: "#dcebdc",
-          200: "#b9d7ba",
-          300: "#8ebd90",
-          400: "#5f9c63",
-          500: "#3f7d43",
-          600: "#2f6334",
-          700: "#274f2b",
-          800: "#204024",
-          900: "#1b351f",
+          25: "#f3f9f4",
+          50: "#eaf5ec",
+          100: "#d6ebda",
+          200: "#b3d9bb",
+          300: "#86c194",
+          400: "#4f9f66",
+          500: "#2b8047",
+          600: "#1f6b3a",
+          700: "#174d2b",
+          800: "#123c22",
+          900: "#0e2f1b",
+          950: "#081d11",
         },
+        // Sona: sirf doosre darje ka nishan (badge, tawajjo) -- brand nahi.
         wheat: {
-          400: "#e0b96c",
-          500: "#d3a24a",
-          600: "#b8873a",
+          50: "#fff4d6",
+          400: "#e5bb54",
+          500: "#d9a62e",
+          600: "#b88722",
         },
+        // Kaghaz aur likhai. Halka sabz-mail rakha gaya hai taake safed
+        // khana bhi usi khandan ka lage, thanda neela na lage.
         surface: {
-          50: "#fafaf9",
-          100: "#f4f3f1",
-          200: "#e7e5e1",
-          300: "#d3d1cb",
-          400: "#a8a69e",
-          500: "#78766e",
-          600: "#57564f",
-          700: "#3f3e38",
-          800: "#26261f",
-          900: "#1a1a16",
-          950: "#121210",
+          50: "#f7f8f5",
+          100: "#eff1ec",
+          200: "#e2e8e3",
+          300: "#cbd4cc",
+          400: "#9aa69c",
+          500: "#68736b",
+          600: "#4c554e",
+          700: "#333b35",
+          800: "#222a24",
+          900: "#17221a",
+          950: "#0e150f",
+        },
+        // Khatra: laal bhi khandan ka -- kachcha #ff0000 nahi.
+        danger: {
+          50: "#fdecec",
+          100: "#fad7d7",
+          500: "#d64545",
+          600: "#c03636",
+          700: "#9c2b2b",
         },
       },
       fontFamily: {

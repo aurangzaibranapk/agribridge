@@ -9,6 +9,8 @@ import { DocumentViewer } from "./document-viewer";
 import { ScoreChart } from "./score-chart";
 import { ApplicationTimeline } from "./timeline";
 import { X, Award, KeyRound, CheckCircle2, Ban, Trash2, RotateCcw } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 const staffInitialState: StaffActionState = {};
@@ -72,15 +74,16 @@ interface Branch {
 
 export function ApplicationDetailButton({ application, branches }: { application: Application; branches: Branch[] }) {
   const [showModal, setShowModal] = useState(false);
+  const lang = useLang();
 
   return (
     <div>
       <div className="flex items-center gap-2">
         <button onClick={() => setShowModal(true)} className="text-xs font-medium text-brand-600 hover:underline">
-          Details Dekhein
+          {t("c_view_details", lang)}
         </button>
         {application.created_profile_id && (
-          <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">Joined</span>
+          <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">{t("c_joined", lang)}</span>
         )}
         {application.created_profile_id && <StaffManageButtons applicationId={application.id} profileId={application.created_profile_id} />}
       </div>
@@ -94,24 +97,25 @@ function StaffManageButtons({ applicationId, profileId }: { applicationId: strin
   const [reactivateState, reactivateAction] = useFormState(reactivateStaff, staffInitialState);
   const [deleteState, deleteAction] = useFormState(deleteStaff, staffInitialState);
   const [showSuspendForm, setShowSuspendForm] = useState(false);
+  const lang = useLang();
   void applicationId;
 
   return (
     <div className="flex items-center gap-1">
       {!showSuspendForm ? (
-        <button onClick={() => setShowSuspendForm(true)} title="Suspend" className="rounded-lg p-1 text-amber-600 hover:bg-amber-50">
+        <button onClick={() => setShowSuspendForm(true)} title={t("c_suspend", lang)} className="rounded-lg p-1 text-amber-600 hover:bg-amber-50">
           <Ban className="h-3.5 w-3.5" />
         </button>
       ) : (
         <form action={suspendAction} className="flex items-center gap-1">
           <input type="hidden" name="profile_id" value={profileId} />
-          <input name="reason" placeholder="Wajah" className="w-24 rounded border border-surface-200 p-1 text-xs" />
-          <button type="submit" className="rounded bg-amber-600 px-1.5 py-1 text-xs text-white">OK</button>
+          <input name="reason" placeholder={t("hj_suspend_reason", lang)} className="w-24 rounded border border-surface-200 p-1 text-xs" />
+          <button type="submit" className="rounded bg-amber-600 px-1.5 py-1 text-xs text-white">{t("hj_ok", lang)}</button>
         </form>
       )}
       <form action={reactivateAction}>
         <input type="hidden" name="profile_id" value={profileId} />
-        <button type="submit" title="Reactivate" className="rounded-lg p-1 text-green-600 hover:bg-green-50">
+        <button type="submit" title={t("c_reactivate", lang)} className="rounded-lg p-1 text-green-600 hover:bg-green-50">
           <RotateCcw className="h-3.5 w-3.5" />
         </button>
       </form>
@@ -122,7 +126,7 @@ function StaffManageButtons({ applicationId, profileId }: { applicationId: strin
         }}
       >
         <input type="hidden" name="profile_id" value={profileId} />
-        <button type="submit" title="Delete" className="rounded-lg p-1 text-red-600 hover:bg-red-50">
+        <button type="submit" title={t("c_delete", lang)} className="rounded-lg p-1 text-red-600 hover:bg-red-50">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </form>
@@ -134,12 +138,13 @@ function StaffManageButtons({ applicationId, profileId }: { applicationId: strin
 }
 
 function DetailModal({ application, branches, onClose }: { application: Application; branches: Branch[]; onClose: () => void }) {
+  const lang = useLang();
   const docs = [
-    { label: "CNIC Front", url: application.cnic_image_url },
-    { label: "CNIC Back", url: application.cnic_back_image_url },
-    { label: "Qualification Certificate", url: application.certificate_url },
-    { label: "Experience Certificate", url: application.experience_certificate_url },
-    { label: "CV / Resume", url: application.cv_url },
+    { label: t("af_cnic_front", lang), url: application.cnic_image_url },
+    { label: t("af_cnic_back", lang), url: application.cnic_back_image_url },
+    { label: t("hj_doc_qualification", lang), url: application.certificate_url },
+    { label: t("hj_doc_experience", lang), url: application.experience_certificate_url },
+    { label: t("hj_doc_cv", lang), url: application.cv_url },
   ].filter((d) => d.url) as { label: string; url: string }[];
 
   return (
@@ -151,14 +156,14 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
         </div>
 
         <div className="space-y-1 text-sm text-surface-600 dark:text-surface-300">
-          <p><strong>Email:</strong> {application.email}</p>
-          <p><strong>Phone:</strong> {application.phone ?? "-"}</p>
-          <p><strong>CNIC:</strong> {application.cnic ?? "-"}</p>
-          <p><strong>Address:</strong> {application.address ?? "-"}</p>
-          <p><strong>Expected Salary:</strong> {application.expected_salary ? `Rs ${application.expected_salary.toLocaleString()}` : "-"}</p>
-          <p><strong>Qualification:</strong> {application.qualification ?? "-"}</p>
-          <p><strong>Experience:</strong> {application.experience ?? "-"}</p>
-          {application.message && <p><strong>Message:</strong> {application.message}</p>}
+          <p><strong>{t("hj_email_label", lang)}</strong> {application.email}</p>
+          <p><strong>{t("hj_phone_label", lang)}</strong> {application.phone ?? "-"}</p>
+          <p><strong>{t("hj_cnic_label", lang)}</strong> {application.cnic ?? "-"}</p>
+          <p><strong>{t("hj_address_label", lang)}</strong> {application.address ?? "-"}</p>
+          <p><strong>{t("hj_expected_salary", lang)}</strong> {application.expected_salary ? `Rs ${application.expected_salary.toLocaleString()}` : "-"}</p>
+          <p><strong>{t("hj_qualification", lang)}</strong> {application.qualification ?? "-"}</p>
+          <p><strong>{t("hj_experience", lang)}</strong> {application.experience ?? "-"}</p>
+          {application.message && <p><strong>{t("hj_message", lang)}</strong> {application.message}</p>}
         </div>
 
         <DocumentViewer documents={docs} />
@@ -194,15 +199,14 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
 }
 
 function UnderReviewForm({ applicationId }: { applicationId: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(markUnderReview, initialState);
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       <form action={formAction}>
         <input type="hidden" name="application_id" value={applicationId} />
-        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          Review Mein Daalein
-        </button>
+        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("at_put_in_review", lang)}</button>
       </form>
     </div>
   );
@@ -210,24 +214,21 @@ function UnderReviewForm({ applicationId }: { applicationId: string }) {
 
 function EligibilityForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(markEligibility, initialState);
+  const lang = useLang();
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Eligibility Decision</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("hj_eligibility", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       <div className="flex gap-2">
         <form action={formAction} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="is_eligible" value="true" />
-          <button type="submit" className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">
-            Shortlist Karein
-          </button>
+          <button type="submit" className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">{t("at_shortlist", lang)}</button>
         </form>
         <form action={formAction} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="is_eligible" value="false" />
-          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">
-            Reject Karein
-          </button>
+          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("c_reject", lang)}</button>
         </form>
       </div>
     </div>
@@ -236,19 +237,20 @@ function EligibilityForm({ applicationId }: { applicationId: string }) {
 
 function InterviewScheduleForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(scheduleInterview, initialState);
+  const lang = useLang();
   const [mode, setMode] = useState<"online" | "face_to_face" | "call">("online");
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Interview Call Schedule Karein</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("hj_schedule_interview", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
         <div className="flex gap-2">
           <input type="date" name="interview_date" required className="flex-1 rounded-lg border border-surface-200 p-2 text-sm" />
           <select name="interview_mode" value={mode} onChange={(e) => setMode(e.target.value as any)} className="rounded-lg border border-surface-200 p-2 text-sm">
-            <option value="online">Online</option>
-            <option value="face_to_face">Face to Face</option>
-            <option value="call">Call</option>
+            <option value="online">{t("hj_online", lang)}</option>
+            <option value="face_to_face">{t("hj_face_to_face", lang)}</option>
+            <option value="call">{t("hj_call", lang)}</option>
           </select>
         </div>
         <input
@@ -256,7 +258,7 @@ function InterviewScheduleForm({ applicationId }: { applicationId: string }) {
           placeholder={mode === "online" ? "Meeting Link (Zoom/Google Meet)" : mode === "call" ? "Phone Number" : "Poora Address"}
           className="w-full rounded-lg border border-surface-200 p-2 text-sm"
         />
-        <button type="submit" className="w-full rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">Schedule</button>
+        <button type="submit" className="w-full rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("hj_schedule", lang)}</button>
       </form>
     </div>
   );
@@ -264,13 +266,13 @@ function InterviewScheduleForm({ applicationId }: { applicationId: string }) {
 
 function InterviewScoreForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(saveInterviewScore, initialState);
+  const lang = useLang();
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-        <Award className="h-3.5 w-3.5" /> Interview Scoring
-      </p>
+        <Award className="h-3.5 w-3.5" />{t("at_interview_scoring", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
-      {state.success && <p className="mb-2 text-xs text-brand-700">Score save ho gaya.</p>}
+      {state.success && <p className="mb-2 text-xs text-brand-700">{t("hj_score_saved", lang)}</p>}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
         {DEFAULT_QUESTIONS.map((q, i) => (
@@ -284,28 +286,28 @@ function InterviewScoreForm({ applicationId }: { applicationId: string }) {
         ))}
         <div className="grid grid-cols-2 gap-2 border-t border-surface-100 pt-2 dark:border-surface-800">
           <div>
-            <label className="text-[10px] text-surface-400">Behavior</label>
+            <label className="text-[10px] text-surface-400">{t("hj_behavior", lang)}</label>
             <input type="number" name="behavior_score" defaultValue="5" min="0" max="10" className="w-full rounded border border-surface-200 p-1 text-xs" />
           </div>
           <div>
-            <label className="text-[10px] text-surface-400">Attitude</label>
+            <label className="text-[10px] text-surface-400">{t("hj_attitude", lang)}</label>
             <input type="number" name="attitude_score" defaultValue="5" min="0" max="10" className="w-full rounded border border-surface-200 p-1 text-xs" />
           </div>
           <div>
-            <label className="text-[10px] text-surface-400">Communication</label>
+            <label className="text-[10px] text-surface-400">{t("hj_communication", lang)}</label>
             <input type="number" name="communication_score" defaultValue="5" min="0" max="10" className="w-full rounded border border-surface-200 p-1 text-xs" />
           </div>
           <div>
-            <label className="text-[10px] text-surface-400">Cleanliness</label>
+            <label className="text-[10px] text-surface-400">{t("hj_cleanliness", lang)}</label>
             <input type="number" name="cleanliness_score" defaultValue="5" min="0" max="10" className="w-full rounded border border-surface-200 p-1 text-xs" />
           </div>
         </div>
-        <textarea name="notes" rows={2} placeholder="Notes" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
+        <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
         <select name="recommendation" defaultValue="hire" className="w-full rounded-lg border border-surface-200 p-2 text-xs">
-          <option value="hire">Hire Karein</option>
-          <option value="reject">Reject Karein</option>
+          <option value="hire">{t("hj_hire", lang)}</option>
+          <option value="reject">{t("c_reject", lang)}</option>
         </select>
-        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">Score Save Karein</button>
+        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("hj_save_score", lang)}</button>
       </form>
     </div>
   );
@@ -313,17 +315,17 @@ function InterviewScoreForm({ applicationId }: { applicationId: string }) {
 
 function CreateLoginForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(createOfficialLogin, initialState);
+  const lang = useLang();
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-        <KeyRound className="h-3.5 w-3.5" /> Official Login Banayein
-      </p>
+        <KeyRound className="h-3.5 w-3.5" />{t("at_official_login", lang)}</p>
       {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
-      {state.success && <p className="mb-2 flex items-center gap-1 text-xs text-brand-700"><CheckCircle2 className="h-3 w-3" /> Login ban gaya.</p>}
+      {state.success && <p className="mb-2 flex items-center gap-1 text-xs text-brand-700"><CheckCircle2 className="h-3 w-3" />{t("hj_login_created", lang)}</p>}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
-        <input name="official_email" type="email" required placeholder="Official Email (pehle cPanel mein banayein)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-        <input name="password" type="text" required minLength={6} placeholder="Password (kam az kam 6 characters)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input name="official_email" type="email" required placeholder={t("hj_official_email", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input name="password" type="text" required minLength={6} placeholder={t("hj_password_min", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <SubmitButton />
       </form>
     </div>

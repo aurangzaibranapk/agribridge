@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { SERVICES } from "@/lib/data/services";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export default function ServicesPage() {
+  const lang = getLanguageFromCookies("rm");
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">Services</h1>
-      <p className="mt-2 text-surface-500 dark:text-surface-400">What Al Rana Traders offers beyond the product catalog.</p>
+      <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">{t("sp_services", lang)}</h1>
+      <p className="mt-2 text-surface-500 dark:text-surface-400">{t("sp_services_lead", lang)}</p>
 
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {SERVICES.map((s) => (

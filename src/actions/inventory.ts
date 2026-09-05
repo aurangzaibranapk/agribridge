@@ -40,7 +40,6 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     inventory_id: inventoryId,
     movement_type: direction === "increase" ? "adjustment_increase" : "adjustment_decrease",
     quantity,
-    balance_after: 0,
     reference_type: "manual_adjustment",
     notes: reason,
     created_by: user?.id ?? null,

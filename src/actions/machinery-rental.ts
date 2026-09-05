@@ -1,25 +1,27 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { notifyRoles } from "@/lib/notifications";
+import { createServiceClient } from "@/lib/supabase/service";
+import { postMachineryVendorPayout, failed } from "@/lib/ledger/rules";
+import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Kaam ho gaya, magar us mein ek baat batane wali hai. */
+  notice?: string;
 }
 
-async function generateBookingNumber(): Promise<string> {
-  const supabase = createClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await supabase.from("machinery_booking_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await supabase.from("machinery_booking_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await supabase.from("machinery_booking_counters").insert({ year, last_number: nextNumber });
-  }
-  return `MACH-${year}-${String(nextNumber).padStart(5, "0")}`;
-}
+// Purana booking form aur us ka action hata diya gaya.
+//
+// Booking ab machinery-lifecycle.ts se banti hai, jahan booking ka
+// andaza, kisan se tay hua final rate, aur kattai ke baad ka asal kaam
+// teen alag cheezein hain. Purana action rate aur total seedha booking
+// par likh deta tha -- yani wahi ghalti jo is poore module ki wajah
+// bani: bill andaze par ban jata tha.
+//
+// Ise sirf istemal se hataana kaafi nahi tha: pari rehti to kisi din
+// koi ise dobara jorh deta aur zanjeer chup chaap bypass ho jati.
 
 export async function createMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -47,6 +49,95 @@ export async function createMachineryVendor(_prev: ActionState, formData: FormDa
   return { success: true };
 }
 
+/**
+ * Vendor ka naam/phone theek karna.
+ *
+ * Pehle vendor sirf BANAYA ja sakta tha. Naam ghalat likha jaye to us
+ * ka koi ilaaj hi nahi tha, aur staff naya vendor bana leta -- yehi
+ * duplicate ki asal jarh thi.
+ */
+export async function updateMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const vendorName = String(formData.get("vendor_name") ?? "").trim();
+  if (!vendorName) return { error: "Vendor ka naam likhein." };
+
+  const { error } = await supabase
+    .from("machinery_vendors")
+    .update({
+      vendor_name: vendorName,
+      contact_person: (formData.get("contact_person") as string)?.trim() || null,
+      phone: (formData.get("phone") as string)?.trim() || null,
+    })
+    .eq("id", id);
+  // "Ek mobile ek vendor" ki rok database par hai (181). Us ka paighaam
+  // waise ka waisa aage bhejte hain -- wo staff ke liye likha gaya hai.
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
+/**
+ * Vendor band karna ya dobara chalu karna.
+ *
+ * BAND karna mitana NAHI hai: us ka poora record khara rehta hai --
+ * purani bookings, bill, adaigiyan, sab. Bas nayi booking us par nahi
+ * jati.
+ *
+ * Aksar yehi cheez chahiye hoti hai. Mitana sirf us soorat mein banta
+ * hai jab vendor ke sath kuch juda hi na ho.
+ */
+export async function setMachineryVendorActive(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  const makeActive = String(formData.get("active") ?? "") === "on";
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const { error } = await supabase.from("machinery_vendors").update({ is_active: makeActive }).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
+/**
+ * Vendor mitana -- sirf jab us ke sath kuch juda hi na ho.
+ *
+ * Asal rok database par hai (181): booking, machine ya login juda ho to
+ * wahan se hi inkar ho jata hai. Yahan wo shart dobara parkhi jati hai
+ * taake staff ko saaf jawab mile, database ka rukha paighaam nahi.
+ */
+export async function deleteMachineryVendor(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const id = String(formData.get("vendor_id") ?? "");
+  if (!id) return { error: "Vendor nahi mila." };
+
+  const [{ count: machines }, { count: bookings }] = await Promise.all([
+    supabase.from("machinery_vendor_machines").select("id", { count: "exact", head: true }).eq("vendor_id", id),
+    supabase.from("machinery_bookings").select("id", { count: "exact", head: true }).eq("vendor_id", id),
+  ]);
+
+  if ((bookings ?? 0) > 0) {
+    return {
+      error: `Is vendor ki ${bookings} booking maujood hain -- mitaya nahi ja sakta. Us ko BAND kar dein: record khara rahega aur nayi booking us par nahi jayegi.`,
+    };
+  }
+  if ((machines ?? 0) > 0) {
+    return {
+      error: `Is vendor ki ${machines} machine darj hai -- pehle machine kisi aur vendor par le jayein, phir ye vendor mitayein.`,
+    };
+  }
+
+  const { error } = await supabase.from("machinery_vendors").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/machinery-rental");
+  return { success: true };
+}
+
 export async function createVendorMachine(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const vendorId = String(formData.get("vendor_id") ?? "");
@@ -54,228 +145,82 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const model = (formData.get("model") as string) || null;
   const rateType = String(formData.get("rate_type") ?? "");
   const rateAmount = Number(formData.get("rate_amount") ?? 0);
-  const commissionPercentage = Number(formData.get("commission_percentage") ?? 0);
   const notes = (formData.get("notes") as string) || null;
 
-  if (!vendorId) return { error: "Vendor select karein." };
+  // Machine kis ki hai. ART ki apni ho to vendor hota hi nahi -- aur
+  // wo shart DB par bhi lagi hui hai (173), taake "commission kis ko
+  // jaye" wala sawal kabhi khula na rahe.
+  const owner = String(formData.get("owner") ?? "vendor") === "art" ? "art" : "vendor";
+  const registrationNumber = (formData.get("registration_number") as string)?.trim() || null;
+
+  // Driver machine ke sath likha jata hai, har booking par nahi. Wohi
+  // machine, wohi driver -- har dafa naya likhwana ek hi naam ke teen
+  // hijje aur ek galat phone number paida karta hai.
+  const driverName = (formData.get("driver_name") as string)?.trim() || null;
+  const driverPhone = (formData.get("driver_phone") as string)?.trim() || null;
+
+  // Is machine ki apni rozana hadd (180). Khali ho to poore nizam wali
+  // hadd lagti hai -- ek jagah badalne se sab par lag jati hai.
+  const dailyCapacity = Number(formData.get("daily_capacity_acres") ?? 0) || null;
+  if (dailyCapacity !== null && dailyCapacity <= 0) {
+    return { error: "Rozana hadd sifar se ziyada honi chahiye, ya khali chhoR dein." };
+  }
+
+  if (owner === "vendor" && !vendorId) return { error: "Vendor select karein." };
   if (!machineType) return { error: "Machine type likhein." };
   if (!["per_acre", "per_hour", "per_day"].includes(rateType)) return { error: "Rate type sahi select karein." };
   if (!rateAmount || rateAmount <= 0) return { error: "Rate sahi likhein." };
-  if (commissionPercentage < 0 || commissionPercentage > 100) return { error: "Commission % 0-100 ke darmiyan hona chahiye." };
+
+  // Machine ka apna number -- "kabota wali" kehna kaam nahi karta
+  // jab teen kabota hon.
+  const year = new Date().getFullYear();
+  const { data: counter } = await supabase
+    .from("machinery_machine_counters")
+    .select("last_number")
+    .eq("year", year)
+    .maybeSingle();
+  const next = (counter?.last_number ?? 0) + 1;
+  if (counter) {
+    await supabase.from("machinery_machine_counters").update({ last_number: next }).eq("year", year);
+  } else {
+    await supabase.from("machinery_machine_counters").insert({ year, last_number: next });
+  }
 
   const { error } = await supabase.from("machinery_vendor_machines").insert({
-    vendor_id: vendorId,
+    vendor_id: owner === "art" ? null : vendorId,
+    owner,
+    machine_code: `MC-${String(next).padStart(3, "0")}`,
+    registration_number: registrationNumber,
     machine_type: machineType,
     model,
     rate_type: rateType,
     rate_amount: rateAmount,
-    commission_percentage: commissionPercentage,
+    driver_name: driverName,
+    driver_phone: driverPhone,
+    daily_capacity_acres: dailyCapacity,
     notes,
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/machinery-rental");
+  revalidatePath("/admin/machinery-rental/calendar");
   return { success: true };
 }
 
-export async function createMachineryBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const farmerId = String(formData.get("farmer_id") ?? "");
-  const machineId = String(formData.get("machine_id") ?? "");
-  const bookingDate = String(formData.get("booking_date") ?? new Date().toISOString().slice(0, 10));
-  const acres = formData.get("acres") ? Number(formData.get("acres")) : null;
-  const hours = formData.get("hours") ? Number(formData.get("hours")) : null;
-  const days = formData.get("days") ? Number(formData.get("days")) : null;
-  const locationAddress = (formData.get("location_address") as string) || null;
-  const notes = (formData.get("notes") as string) || null;
-  const requestId = (formData.get("request_id") as string) || null;
-  const customRate = formData.get("custom_rate") ? Number(formData.get("custom_rate")) : null;
 
-  if (!farmerId) return { error: "Farmer select karein." };
-  if (!machineId) return { error: "Machine select karein." };
-
-  const { data: machine } = await supabase
-    .from("machinery_vendor_machines")
-    .select("vendor_id, rate_type, rate_amount, commission_percentage")
-    .eq("id", machineId)
-    .single();
-  if (!machine) return { error: "Machine nahi mili." };
-
-  let quantity = 0;
-  if (machine.rate_type === "per_acre") quantity = acres ?? 0;
-  if (machine.rate_type === "per_hour") quantity = hours ?? 0;
-  if (machine.rate_type === "per_day") quantity = days ?? 0;
-  if (!quantity || quantity <= 0) return { error: `${machine.rate_type === "per_acre" ? "Acres" : machine.rate_type === "per_hour" ? "Hours" : "Days"} sahi likhein.` };
-
-  const effectiveRate = customRate && customRate > 0 ? customRate : Number(machine.rate_amount);
-  if (effectiveRate <= 0) return { error: "Rate sahi likhein." };
-
-  const totalAmount = quantity * effectiveRate;
-  const commissionAmount = totalAmount * (Number(machine.commission_percentage) / 100);
-  const vendorPayable = totalAmount - commissionAmount;
-
-  const bookingNumber = await generateBookingNumber();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { error } = await supabase.from("machinery_bookings").insert({
-    booking_number: bookingNumber,
-    farmer_id: farmerId,
-    vendor_id: machine.vendor_id,
-    machine_id: machineId,
-    booking_date: bookingDate,
-    acres,
-    hours,
-    days,
-    rate_amount: effectiveRate,
-    total_amount: totalAmount,
-    commission_percentage: Number(machine.commission_percentage),
-    commission_amount: commissionAmount,
-    vendor_payable: vendorPayable,
-    location_address: locationAddress,
-    request_id: requestId,
-    notes,
-    created_by: user?.id ?? null,
-  });
-  if (error) return { error: error.message };
-
-  if (requestId) {
-    await supabase.from("machinery_requests").update({ status: "fulfilled" }).eq("id", requestId);
-  }
-
-  await notifyRoles(
-    ["sales_staff", "manager", "super_admin", "admin", "owner"],
-    "Nayi Machinery Booking",
-    `Booking ${bookingNumber} ban gayi hai.`,
-    `/admin/machinery-rental`
-  );
-
-  revalidatePath("/admin/machinery-rental");
-  revalidatePath("/admin/machinery-rental/dashboard");
-  return { success: true };
-}
-
-export async function updateBookingStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const bookingId = String(formData.get("booking_id") ?? "");
-  const status = String(formData.get("status") ?? "");
-  if (!bookingId) return { error: "Missing booking id." };
-  if (!["pending", "confirmed", "in_progress", "completed", "cancelled"].includes(status)) return { error: "Status sahi select karein." };
-
-  const { error } = await supabase.from("machinery_bookings").update({ status }).eq("id", bookingId);
-  if (error) return { error: error.message };
-  revalidatePath("/admin/machinery-rental");
-  return { success: true };
-}
-
-export async function completeMachineryBooking(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const bookingId = String(formData.get("booking_id") ?? "");
-  const willSellToUs = formData.get("will_sell_to_us") === "yes";
-  const wantsReminder = formData.get("wants_next_season_reminder") === "yes";
-  const dieselAmount = Number(formData.get("diesel_amount") ?? 0);
-  const dieselRate = Number(formData.get("diesel_rate") ?? 0);
-  const dieselAccountId = (formData.get("diesel_account_id") as string) || null;
-
-  if (!bookingId) return { error: "Missing booking id." };
-  if (dieselAmount > 0 && !dieselAccountId) return { error: "Diesel ka konsa account, wo select karein." };
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  await supabase
-    .from("machinery_bookings")
-    .update({
-      status: "completed",
-      will_sell_to_us: willSellToUs,
-      wants_next_season_reminder: wantsReminder,
-      diesel_amount: dieselAmount,
-      diesel_rate: dieselRate,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", bookingId);
-
-  if (dieselAmount > 0 && dieselAccountId) {
-    const { data: booking } = await supabase.from("machinery_bookings").select("booking_number").eq("id", bookingId).single();
-    await supabase.from("finance_transactions").insert({
-      account_id: dieselAccountId,
-      transaction_type: "expense",
-      category: "Machinery - Diesel",
-      amount: dieselAmount,
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Diesel for booking ${booking?.booking_number ?? bookingId} - Rs ${dieselRate}/litre`,
-      created_by: user?.id ?? null,
-    });
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", dieselAccountId).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - dieselAmount }).eq("id", dieselAccountId);
-    }
-  }
-
-  revalidatePath("/admin/machinery-rental");
-  revalidatePath("/admin/finance");
-  return { success: true };
-}
-
-export async function recordFarmerPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const bookingId = String(formData.get("booking_id") ?? "");
-  const amount = Number(formData.get("amount") ?? 0);
-  const accountId = (formData.get("account_id") as string) || null;
-  const payFromWallet = formData.get("pay_from_wallet") === "yes";
-  if (!bookingId) return { error: "Missing booking id." };
-  if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
-  if (!payFromWallet && !accountId) return { error: "Account select karein." };
-
-  const { data: booking } = await supabase.from("machinery_bookings").select("farmer_id, total_amount, amount_received_from_farmer, booking_number").eq("id", bookingId).single();
-  if (!booking) return { error: "Booking nahi mili." };
-  const remaining = Number(booking.total_amount) - Number(booking.amount_received_from_farmer);
-  if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} baaqi hai.` };
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (payFromWallet) {
-    const { data: wallet } = await supabase.from("wallets").select("id, balance").eq("owner_type", "farmer").eq("owner_id", booking.farmer_id).single();
-    if (!wallet) return { error: "Is Farmer ka Wallet nahi mila." };
-    if (Number(wallet.balance) < amount) return { error: `Wallet mein sirf Rs ${Number(wallet.balance).toLocaleString()} hai.` };
-
-    await supabase.from("wallet_transactions").insert({
-      wallet_id: wallet.id,
-      type: "machinery_payment",
-      direction: "debit",
-      amount,
-      balance_after: 0,
-      reference_type: "machinery_booking",
-      reference_id: bookingId,
-      notes: `Booking ${booking.booking_number} - Machinery payment from wallet`,
-      created_by: user?.id ?? null,
-    });
-  } else {
-    await supabase.from("finance_transactions").insert({
-      account_id: accountId,
-      transaction_type: "income",
-      category: "Machinery Rental - Farmer Payment",
-      amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
-      notes: `Booking ${booking.booking_number} - Farmer payment`,
-      created_by: user?.id ?? null,
-    });
-    const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId!).single();
-    if (account) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId!);
-    }
-  }
-
-  await supabase.from("machinery_bookings").update({ amount_received_from_farmer: Number(booking.amount_received_from_farmer) + amount }).eq("id", bookingId);
-
-  revalidatePath("/admin/machinery-rental");
-  revalidatePath("/admin/finance");
-  return { success: true };
-}
+// updateBookingStatus aur completeMachineryBooking hata diye gaye.
+//
+// Dono ek hi darwaza the: booking ko seedha "completed" kar dena --
+// bina asal raqbe ke, bina bill ke. Jo booking is raaste se guzarti thi
+// wo har qatar se nikal jati thi, aur kisan se lena kabhi darj hi na
+// hota. Diesel us modal mein darj ho jata tha, yani kharcha likha hua
+// aur aamdani ghayab.
+//
+// Ab dono cheezein apni jagah par hain: diesel machine ki rawangi par
+// (142), aur booking ki halat sirf zanjeer ke qadmon se badalti hai --
+// kaam darj hone par, bill banne par, paisa aane par.
+//
+// Inhein sirf istemal se hataana kaafi nahi tha: pari rehti to kisi din
+// koi dobara jorh deta aur zanjeer chup chaap bypass ho jati.
 
 export async function recordVendorPayout(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -286,34 +231,124 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
   if (!accountId) return { error: "Account select karein." };
 
-  const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number").eq("id", bookingId).single();
+  const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number, vendor_id").eq("id", bookingId).single();
   if (!booking) return { error: "Booking nahi mili." };
-  const remaining = Number(booking.vendor_payable) - Number(booking.amount_paid_to_vendor);
-  if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} Vendor ko dena baaqi hai.` };
+  const remaining = Math.max(0, Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor));
+
+  // Is booking par jitna dena tha us se ZYADA bhi diya ja sakta hai.
+  //
+  // Malik ka aitraaz (5 September): "vendor ko 30 hazar pay kiya hai to
+  // hona chahiye, bhaley us ka 24,750 banta hai -- baqi raqam bhi to
+  // mere paas hai na us ki." Baat theek hai: paisa waqai haath se nikal
+  // chuka, aur jo cheez waqai ho chuki ho usay darj hone se rokna cash
+  // book ko jhoota kar deta hai (kaghaz par to wo raqam nikli hui hai
+  // hi).
+  //
+  // Magar us zyada raqam ko IS BOOKING ka kharcha likh dena bhi ghalat
+  // hai -- is booking par vendor ka hissa utna hi hai jitna bana. Is
+  // liye zyada raqam vendor ke khate mein ADVANCE ban jati hai (1120):
+  // wo us se agli booking par kat jayegi, aur tab tak nazar mein rehti
+  // hai ke us ke paas hamara itna paisa para hai.
+  const payableSettled = Math.min(amount, remaining);
+  const advance = Math.round((amount - payableSettled) * 100) / 100;
+
+  // ART ne is booking par vendor ke liye jo diesel diya, wo isi
+  // adaigi mein wapas aata hai (170).
+  //
+  // Vendor ke naam par jo raqam khari hai wo poori kam hoti hai,
+  // magar cash sirf farq nikalta hai -- baqi wo pehle hi diesel ki
+  // shakal mein ja chuka hai. Alag se "recovery" darj karwana wo
+  // qadam hai jo koi kabhi nahi karta, aur phir 1120 mein ek jor
+  // hamesha ke liye para reh jata hai.
+  const { data: dieselRows } = await supabase
+    .from("machinery_fuel_logs")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("vendor_recoverable", true)
+    .eq("verification_status", "verified");
+
+  const dieselTotal = (dieselRows ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const alreadyPaid = Number(booking.amount_paid_to_vendor);
+  // Diesel sirf utna hi wapas aata hai jitna abhi tak wapas nahi aaya.
+  const dieselLeft = Math.max(0, Math.round((dieselTotal - alreadyPaid) * 100) / 100);
+  const dieselRecovered = Math.min(dieselLeft, amount);
+  const cashOut = Math.round((amount - dieselRecovered) * 100) / 100;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  await supabase.from("machinery_bookings").update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + amount }).eq("id", bookingId);
-
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "expense",
-    category: "Machinery Rental - Vendor Payout",
-    amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    notes: `Booking ${booking.booking_number} - Vendor payout`,
-    created_by: user?.id ?? null,
-  });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - amount }).eq("id", accountId);
+  // Kharche ki qatar sirf us paise ki banti hai jo waqai bahar gaya.
+  // Diesel ka kharcha us din darj ho chuka tha.
+  let txn: { id: string } | null = null;
+  if (cashOut > 0) {
+    const { data: row, error: txnError } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "expense",
+        category: "Machinery Rental - Vendor Payout",
+        amount: cashOut,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        notes:
+          dieselRecovered > 0
+            ? `Booking ${booking.booking_number} - Vendor payout (Rs ${dieselRecovered.toLocaleString()} diesel wapas kata)`
+            : `Booking ${booking.booking_number} - Vendor payout`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (txnError || !row) return { error: txnError?.message ?? "Payout darj nahi hua." };
+    txn = row;
   }
 
+  // Account ka balance yahan haath se KAM NAHI kiya jata.
+  //
+  // finance_transactions par trigger (trg_finance_transaction_apply) khud
+  // ye kaam karta hai. Pehle yahan dobara bhi kata jata tha, yani Rs 1,000
+  // ke payout par balance Rs 2,000 kam hota tha. Jaanch kar ke dekha:
+  // 0 -> trigger ke baad -1000 -> code ke apne update ke baad -2000.
+
+  const posted = await postMachineryVendorPayout({
+    bookingId,
+    vendorId: booking.vendor_id,
+    amount,
+    advance,
+    dieselRecovered,
+    accountId,
+    description:
+      dieselRecovered > 0
+        ? `Machinery ${booking.booking_number} — vendor ko us ka hissa (ART ka diesel Rs ${dieselRecovered.toLocaleString()} wapas)`
+        : `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: txn ? [{ table: "finance_transactions", rowId: txn.id }] : [],
+    },
+  });
+  if (failed(posted)) {
+    if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
+  }
+
+  // Booking par sirf US BOOKING ka hissa charhta hai. Zyada raqam yahan
+  // jorne se booking par "diya hua" us se bara nazar aata jitna is
+  // booking par banta tha -- aur wo adad har report mein galat chala
+  // jata.
+  await supabase
+    .from("machinery_bookings")
+    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + payableSettled })
+    .eq("id", bookingId);
+
   revalidatePath("/admin/machinery-rental");
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
   revalidatePath("/admin/finance");
-  return { success: true };
+  return {
+    success: true,
+    notice:
+      advance > 0
+        ? `Rs ${payableSettled.toLocaleString()} is booking ka hissa, aur Rs ${advance.toLocaleString()} vendor ke khate mein ADVANCE — wo us ki agli booking par kat jayega.`
+        : undefined,
+  };
 }
 
 export async function emailMachineryBookingSlip(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -323,55 +358,81 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
   if (!bookingId) return { error: "Missing booking id." };
   if (!toEmail) return { error: "Email likhein." };
 
+  // Email wali parchi bhi wohi adad dikhati hai jo screen wali (182).
+  //
+  // Pehle dono booking ke PURANE khanon se banti thin -- acres, hours,
+  // days, rate_amount -- aur nayi zanjeer un mein se kisi ko haath hi
+  // nahi lagati. Nateeja kisan ke haath mein jane wale kaghaz par
+  // chhapta tha: "null Days", "Rate: Rs 0".
   const { data: booking } = await supabase
     .from("machinery_bookings")
     .select(
-      "booking_number, booking_date, acres, hours, days, rate_amount, total_amount, amount_received_from_farmer, location_address, farmers(full_name, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
+      "booking_number, booking_date, harvest_area, final_rate, estimated_rate, location_address, village, farmers(full_name, phone_number), machinery_vendors(vendor_name), machinery_vendor_machines(machine_type, model)"
     )
     .eq("id", bookingId)
     .single();
   if (!booking) return { error: "Booking nahi mili." };
 
+  const [{ data: bill }, { data: paidRows }] = await Promise.all([
+    supabase
+      .from("machinery_bills")
+      .select("bill_number, actual_area, rate_amount, gross_amount, discount_amount, balance_payable")
+      .eq("booking_id", bookingId)
+      .is("cancelled_at", null)
+      .maybeSingle(),
+    supabase
+      .from("machinery_payments")
+      .select("amount, kind")
+      .eq("booking_id", bookingId)
+      .eq("verification_status", "verified"),
+  ]);
+
   const farmer = Array.isArray((booking as any).farmers) ? (booking as any).farmers[0] : (booking as any).farmers;
   const vendor = Array.isArray((booking as any).machinery_vendors) ? (booking as any).machinery_vendors[0] : (booking as any).machinery_vendors;
   const machine = Array.isArray((booking as any).machinery_vendor_machines) ? (booking as any).machinery_vendor_machines[0] : (booking as any).machinery_vendor_machines;
 
-  const quantityLabel = booking.acres ? `${booking.acres} Acres` : booking.hours ? `${booking.hours} Hours` : `${booking.days} Days`;
+  const num = (v: unknown) => Number(v ?? 0);
+  const paid = (paidRows ?? []).reduce((sum, p) => sum + num(p.amount), 0);
+  const finalPaid = (paidRows ?? []).filter((p) => p.kind === "final").reduce((sum, p) => sum + num(p.amount), 0);
+
+  // Bill ban chuka ho to sach wahi hai; warna booking ka andaza.
+  const slipArea = bill ? num(bill.actual_area) : num(booking.harvest_area);
+  const slipRate = bill ? num(bill.rate_amount) : num(booking.final_rate) || num(booking.estimated_rate);
+  const slipGross = bill ? num(bill.gross_amount) : Math.round(slipArea * slipRate * 100) / 100;
+  const quantityLabel = `${slipArea} Acres${bill ? "" : " (andaza)"}`;
 
   const { generateMachineryBookingSlipPdf } = await import("@/lib/machinery-booking-slip-pdf");
   const pdfBuffer = await generateMachineryBookingSlipPdf({
-    slipNumber: booking.booking_number,
+    slipNumber: bill?.bill_number ?? booking.booking_number,
     farmerName: farmer?.full_name ?? "-",
     farmerPhone: farmer?.phone_number ?? null,
     vendorName: vendor?.vendor_name ?? "-",
     machineLabel: `${machine?.machine_type ?? ""}${machine?.model ? ` (${machine.model})` : ""}`,
     bookingDate: booking.booking_date,
     quantityLabel,
-    rateAmount: Number(booking.rate_amount),
-    totalAmount: Number(booking.total_amount),
-    amountReceived: Number(booking.amount_received_from_farmer),
-    locationAddress: booking.location_address,
+    rateAmount: slipRate,
+    totalAmount: slipGross,
+    discountAmount: bill ? num(bill.discount_amount) : 0,
+    amountReceived: paid,
+    locationAddress: booking.location_address ?? booking.village,
   });
 
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
-      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${Number(booking.total_amount).toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  // Machinery ki mail machinery ke khate se jati hai, naukri wale khate
+  // se nahi -- warna kisan ka jawab naukriyon ke inbox mein gum ho jata
+  // hai (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "machinery",
+    to: toEmail,
+    subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
+    html: mailWrapper(
+      `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p><strong>Booking:</strong> ${booking.booking_number}</p><p><strong>Total:</strong> Rs ${(slipGross - (bill ? num(bill.discount_amount) : 0)).toLocaleString()}</p>`,
+      "machinery"
+    ),
+    attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
+  });
+  // Nakami ka asal paighaam wapas -- "masla hua" se koi kaam nahi banta.
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `Slip ${toEmail} par bhej di gayi (${sent.from} se).` };
 }
 
 export async function emailMachineryBookingsList(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -404,23 +465,16 @@ export async function emailMachineryBookingsList(_prev: ActionState, formData: F
   const { generateMachineryBookingsListPdf } = await import("@/lib/machinery-bookings-list-pdf");
   const pdfBuffer = await generateMachineryBookingsListPdf(rows);
 
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Machinery Bookings List - ${new Date().toLocaleDateString()}`,
-      html: `<p>Machinery Bookings ki poori list is email ke sath attach hai.</p><p>Total Bookings: ${rows.length}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `machinery-bookings-list.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  const sent = await sendDeptMail({
+    dept: "machinery",
+    to: toEmail,
+    subject: `Machinery Bookings List - ${new Date().toLocaleDateString()}`,
+    html: mailWrapper(
+      `<p>Machinery Bookings ki poori list is email ke sath attach hai.</p><p><strong>Total Bookings:</strong> ${rows.length}</p>`,
+      "machinery"
+    ),
+    attachments: [{ filename: `machinery-bookings-list.pdf`, content: pdfBuffer }],
+  });
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `List ${toEmail} par bhej di gayi (${sent.from} se).` };
 }

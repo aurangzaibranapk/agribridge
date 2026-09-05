@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { ProductPermissionsClient } from "./product-permissions-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function ProductPermissionsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: staff } = await supabase
     .from("profiles")
@@ -27,7 +30,7 @@ export default async function ProductPermissionsPage() {
   });
   return (
     <div>
-      <PageHeader title="Product Catalog Permissions" description="Har staff ke liye Add/Edit/View/Delete/Approve access alag set karein" />
+      <PageHeader title={t("at_product_catalog_perms", lang)} description="Har staff ke liye Add/Edit/View/Delete/Approve access alag set karein" />
       <ProductPermissionsClient staff={staffWithPerms} />
     </div>
   );

@@ -3,12 +3,15 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
 import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-context";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MasterDashboardPage() {
   const supabase = createClient();
   const businessContext = await getBusinessContext();
+  const lang = getLanguageFromCookies("rm");
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
@@ -90,8 +93,17 @@ export default async function MasterDashboardPage() {
   const totalAdjustedVolume = (milkEntries ?? []).reduce((s, e) => s + Number(e.adjusted_volume ?? e.quantity_liters ?? 0), 0);
   const milkGrossIncome = totalAdjustedVolume * serviceRate;
 
-  const { data: salaryPayments } = await supabase.from("salary_payments").select("amount").gte("payment_date", monthStart).lte("payment_date", monthEnd);
-  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Ye sawal toota hua tha: `amount` aur `payment_date` naam ke khane
+  // salary_payments mein hain hi nahi (wo net_salary aur paid_date hain).
+  // Sawal chup chaap nakaam hota tha aur is dashboard par tankhwah ka
+  // adad HAR MAHINE sifar aata tha.
+  const { data: salaryPayments } = await supabase
+    .from("salary_payments")
+    .select("net_salary")
+    .eq("status", "paid")
+    .gte("paid_date", monthStart)
+    .lte("paid_date", monthEnd);
+  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.net_salary ?? 0), 0);
 
   const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
   const milkPetrolCost = (fuelLogs ?? []).reduce((s, f) => s + Number(f.fuel_cost ?? 0), 0);
@@ -151,7 +163,7 @@ export default async function MasterDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Master Dashboard"
+        title={t("md_title", lang)}
         description={
           businessContext === "master"
             ? "Poora business ek nazar mein - box par click karein, neeche graph khulega"
@@ -182,9 +194,7 @@ export default async function MasterDashboardPage() {
       />
 
       {!showCompanyWideFinancials && (
-        <p className="mb-4 text-xs text-surface-400">
-          Note: Bank/Inventory/Receivables/Payables abhi business-wise split nahi hain (poori company ke combined numbers hain) - ye Phase 9 mein aayega.
-        </p>
+        <p className="mb-4 text-xs text-surface-400">{t("at_note_split", lang)}</p>
       )}
 
       {(showAgri || showDairy) && (
@@ -194,7 +204,7 @@ export default async function MasterDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Revenue</p>
+              <p className="text-xs text-surface-400">{t("md_total_revenue", lang)}</p>
               <p className="font-display text-lg font-semibold text-green-600">Rs {totalRevenue.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `AgriBridge: Rs ${agriRevenue.toLocaleString()}`}
@@ -203,7 +213,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Expenses</p>
+              <p className="text-xs text-surface-400">{t("md_total_expenses", lang)}</p>
               <p className="font-display text-lg font-semibold text-red-600">Rs {totalAllExpenses.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `Company: Rs ${totalExpenses.toLocaleString()}`}
@@ -212,7 +222,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className={`rounded-lg p-3 text-center ${netProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-              <p className="text-xs text-surface-400">Net Profit/Loss</p>
+              <p className="text-xs text-surface-400">{t("md_net_pl", lang)}</p>
               <p className={`font-display text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>Rs {netProfit.toLocaleString()}</p>
             </div>
           </div>

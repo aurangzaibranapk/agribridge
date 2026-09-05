@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { RoutesClient } from "./routes-client";
 export const dynamic = "force-dynamic";
 export default async function MilkRoutesPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const { data: branches } = await supabase.from("branches").select("id, name").order("is_main_branch", { ascending: false }).order("name");
   const { data: rawEntries } = await supabase
     .from("milk_route_collections")
@@ -19,7 +22,7 @@ export default async function MilkRoutesPage() {
 
   return (
     <div>
-      <PageHeader title="Route Collection & Shortage Tracker" description="Field vs Chiller reconciliation - auto Red Alert on excess shortage" />
+      <PageHeader title={t("mk_routes_title", lang)} description={t("mk_routes_subtitle", lang)} />
       <RoutesClient entries={entries} branches={branches ?? []} />
     </div>
   );

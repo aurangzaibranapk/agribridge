@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { PendingEditsClient } from "./pending-edits-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 export const dynamic = "force-dynamic";
 
 export default async function PendingEditsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: rawRequests } = await supabase
     .from("product_edit_requests")
@@ -25,7 +29,8 @@ export default async function PendingEditsPage() {
 
   return (
     <div>
-      <PageHeader title="Pending Product Edits" description="Staff ke proposed edits - verify kar ke live karein" />
+      <PageHeader title={t("pd_pending_edits", lang)} description="Staff ke proposed edits - verify kar ke live karein" />
+      <ProductSetupTabs current="edits" lang={lang} />
       <PendingEditsClient requests={requests} />
     </div>
   );

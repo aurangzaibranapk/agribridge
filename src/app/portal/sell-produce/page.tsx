@@ -4,10 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { SellProduceClient } from "@/app/portal/sell-produce/sell-produce-client";
 import { checkFarmerVerification } from "@/lib/utils/verification-gate";
 import { VerificationGateMessage } from "@/components/portal/verification-gate-message";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function SellProducePage() {
+  const lang = getLanguageFromCookies("ur");
   const supabase = createClient();
   const {
     data: { user },
@@ -49,13 +52,9 @@ export default async function SellProducePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        Back to Dashboard
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">Sell Your Produce</h1>
-      <p className="mt-1 text-surface-500">
-        List your harvested crops for sale - verified buyers will place orders, and we'll route the payment to you.
-      </p>
+      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">{t("back_to_dashboard", lang)}</Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("pm_sell_title", lang)}</h1>
+      <p className="mt-1 text-surface-500">{t("pm_sell_intro", lang)}</p>
 
       <div className="mt-6">
         <SellProduceClient
