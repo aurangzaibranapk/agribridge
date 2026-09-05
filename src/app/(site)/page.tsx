@@ -286,7 +286,7 @@ export default async function HomePage() {
           <p className="mt-3 font-display text-lg text-surface-800 dark:text-surface-200">
             &ldquo;Hamaara maqsad sirf business nahi — Pakistan ki kheti aur kisaano ki tarakki hai. Ek khushhal kisan hi ek khushhal Pakistan banata hai.&rdquo;
           </p>
-          <p className="mt-4 text-sm font-semibold text-surface-900 dark:text-white">Ch. Mahabal Ali</p>
+          <p className="mt-4 text-sm font-semibold text-surface-900 dark:text-white">Aurangzaib Rana</p>
           <p className="text-xs text-surface-400 dark:text-surface-500">{t("sh_founder", lang)}</p>
         </div>
 

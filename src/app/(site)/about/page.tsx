@@ -26,8 +26,8 @@ export default function AboutPage() {
           <p className="font-display text-lg text-surface-800">
             &ldquo;Hamaara maqsad sirf business nahi — Pakistan ki kheti aur kisaano ki tarakki hai.&rdquo;
           </p>
-          <p className="mt-3 text-sm font-semibold text-surface-900">Ch. Mahabal Ali</p>
-          <p className="mt-3 text-sm font-semibold text-surface-900">{t("sp_founder_since", lang)}</p>
+          <p className="mt-3 text-sm font-semibold text-surface-900">Aurangzaib Rana</p>
+          <p className="mt-1 text-xs text-surface-400">{t("sp_founder_since", lang)}</p>
         </div>
       </section>
     </div>

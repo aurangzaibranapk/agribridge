@@ -9,7 +9,7 @@
  *
  * JO TARJUMA NAHI HUE, AUR KYUN:
  *
- *   Bande aur jagah ke naam (Ch. Mahabal Ali) -- naam tarjuma nahi hote.
+ *   Bande aur jagah ke naam (Aurangzaib Rana) -- naam tarjuma nahi hote.
  *   Email ka pata -- wo ek pata hai, jumla nahi.
  *   Karobar ke naam -- glossary.ts ke mutabiq: AgriBridge = ایگری بریج,
  *   Al Rana Traders = الرانا ٹریڈرز, ART = اے آر ٹی.
