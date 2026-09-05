@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { Button } from "@/components/ui/form";
 import { Package, DollarSign, AlertTriangle, ShoppingCart, Plus } from "lucide-react";
@@ -100,6 +101,38 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
     return String(a.name).localeCompare(String(b.name));
   });
   const stockWali = sortedProducts.filter((p) => (stockByProduct[p.id] ?? 0) > 0).length;
+  // Jis cheez par QISM likhi hi nahi, wo KISI qism ke safhe par nazar
+  // nahi aati -- na yahan, na kisi aur jagah. Malik ne 5 September ko
+  // yehi poocha: "mere paas stock to zyada hai, yahan kam kyun bata raha
+  // hai?"
+  //
+  // Us waqt yahan likha aa raha tha "146 mein se 2 par stock hai,
+  // Rs 7,442" -- aur wo adad is safhe ke liye bilkul theek tha. Asal
+  // maal Rs 91,545 ka tha, magar 52 cheezon ki qism darj nahi thi, is
+  // liye wo poore system mein kahin dikhta hi nahi tha.
+  //
+  // Safha ab khamosh nahi rehta. Ye ginti SERVICE client se aati hai --
+  // ye poore idare ki baat hai, sirf is qism ki nahi.
+  const { data: binaQism } = await createServiceClient()
+    .from("products")
+    .select("id, purchase_price")
+    .is("category_id", null)
+    .eq("is_deleted", false);
+  const binaQismIds = (binaQism ?? []).map((p) => p.id);
+  const { data: binaQismStock } = binaQismIds.length
+    ? await createServiceClient()
+        .from("inventory")
+        .select("product_id, quantity_on_hand")
+        .in("product_id", binaQismIds)
+        .gt("quantity_on_hand", 0)
+    : { data: [] as { product_id: string; quantity_on_hand: number }[] };
+  const kharidById = new Map((binaQism ?? []).map((p) => [p.id as string, Number(p.purchase_price)]));
+  const binaQismCheezein = new Set((binaQismStock ?? []).map((r) => r.product_id as string)).size;
+  const binaQismQeemat = (binaQismStock ?? []).reduce(
+    (sum, r) => sum + Number(r.quantity_on_hand) * (kharidById.get(r.product_id as string) ?? 0),
+    0
+  );
+
   const { data: recentPurchases } = productIds.length
     ? await supabase
         .from("purchase_items")
@@ -119,6 +152,27 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
           </Link>
         }
       />
+      {/* Wo maal jo kisi bhi qism ke safhe par nazar nahi aata. Ye
+          khamoshi sab se mehngi thi: adad theek tha, magar wo poori
+          tasveer nahi tha. */}
+      {binaQismCheezein > 0 && (
+        <Card className="mb-4 border-amber-300 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+            {binaQismCheezein} cheezon par maal para hai (kharid ki qeemat Rs {Math.round(binaQismQeemat).toLocaleString()}) —
+            magar un ki <strong>qism darj nahi</strong>.
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-800/80 dark:text-amber-300/80">
+            Har qism ka safha sirf apni qism ka maal dikhata hai. Jis cheez par qism likhi hi nahi, wo kisi bhi
+            safhe par nazar nahi aati — is liye upar wala &ldquo;Stock Value&rdquo; poori dukan ka nahi, sirf is qism ka hai.
+          </p>
+          <Link
+            href="/admin/products/setup?f=category"
+            className="mt-2 inline-block rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800"
+          >
+            Qism darj karein
+          </Link>
+        </Card>
+      )}
       {invError && (
         <Card className="mb-4 border-rose-200 bg-rose-50 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
           {t("cd_stock_error", lang)}: {invError.message}

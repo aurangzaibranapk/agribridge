@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const ALLOWED = ["owner", "super_admin", "admin", "warehouse"];
 const APPROVERS = ["owner", "super_admin", "admin"];
-const FILTERS: Filter[] = ["all", "rate", "barcode", "image", "expiry", "approval"];
+const FILTERS: Filter[] = ["all", "rate", "barcode", "image", "expiry", "approval", "category"];
 
 /**
  * Adhoore products (258) -- jo bhi baqi hai, ek jagah.
@@ -66,6 +66,7 @@ export default async function SetupQueuePage({ searchParams }: { searchParams?: 
           image: Number(counts?.image_missing ?? 0),
           expiry: Number(counts?.expiry_attention ?? 0),
           approval: Number(counts?.approval_pending ?? 0),
+          category: Number(counts?.category_missing ?? 0),
           intakeOpen: Number(counts?.intake_open ?? 0),
           total: Number(counts?.total_products ?? 0),
         }}
@@ -87,6 +88,7 @@ export default async function SetupQueuePage({ searchParams }: { searchParams?: 
           expired: Boolean(r.expired),
           expirySoon: Boolean(r.expiry_soon),
           approvalPending: Boolean(r.approval_pending),
+          categoryMissing: Boolean(r.category_missing),
         }))}
       />
     </div>

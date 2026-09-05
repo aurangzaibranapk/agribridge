@@ -23792,6 +23792,7 @@ export type Database = {
           image_missing: number | null
           intake_open: number | null
           rate_pending: number | null
+          category_missing: number | null
           total_products: number | null
         }
         Relationships: []
@@ -23801,6 +23802,8 @@ export type Database = {
           approval_pending: boolean | null
           barcode: string | null
           barcode_missing: boolean | null
+          category_id: string | null
+          category_missing: boolean | null
           created_at: string | null
           days_left: number | null
           expired: boolean | null

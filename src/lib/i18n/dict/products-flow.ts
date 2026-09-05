@@ -999,6 +999,10 @@ export const productsFlowDict = {
   pf_sq_c_image: { en: "Photo", rm: "Tasveer", ur: "تصویر" },
   pf_sq_c_expiry: { en: "Expiry", rm: "Miyaad", ur: "میعاد" },
   pf_sq_c_approval: { en: "Approval", rm: "Manzoori", ur: "منظوری" },
+  // Qism ka na hona baqi adhoore pan se alag hai: wo cheez ko adhoora
+  // nahi, GHAYAB kar deta hai -- kisi qism ke safhe par nazar hi nahi
+  // aati (316).
+  pf_sq_c_category: { en: "Category", rm: "Qism", ur: "قسم" },
   pf_sq_intake_open: {
     en: "{n} Maal Andar round(s) are still open — products in them are not on this list until approved.",
     rm: "Maal Andar ke {n} chakkar abhi khule hain — un ke products manzoori tak is fehrist mein nahi aate.",

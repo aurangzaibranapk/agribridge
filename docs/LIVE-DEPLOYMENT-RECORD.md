@@ -831,3 +831,38 @@ kisan), magar staff ne teenon dafa "ART" chuna. Us ek khane ka jawab
 ghalat hona sab se mehnga parta hai. Aage is khane par form mein ek
 saaf jumla chahiye: *"ART ne paisa diya? Nahi to khata khali rahega aur
 vendor se kuch wapas nahi liya jayega."*
+
+---
+
+## 5l. Rokay hua kaam — migration 316 (abhi Live par nahi)
+
+Malik ka sawal: *"mere paas stock to zyada hai, yahan kam kyun bata raha
+hai?"*
+
+Grocery ka safha keh raha tha "146 mein se 2 par stock hai, Rs 7,442" --
+aur wo adad **bilkul theek tha**, magar poori tasveer nahi thi:
+
+| Kahan | Cheezein | Adad | Kharid ki qeemat |
+|---|---|---|---|
+| **Qism darj NAHI** | **52** | **2,288** | **Rs 91,545** |
+| Cooking Oil & Ghee | 1 | 3 | Rs 7,200 |
+| Cigarettes | 1 | 1 | Rs 242 |
+
+Har qism ka safha sirf apni qism ka maal dikhata hai. Jis cheez par qism
+likhi hi nahi (capstan, Rio, Lays, Rin, sunsilk...), wo **kisi bhi safhe
+par nazar nahi aati**. Aur Product Setup ki qatar paanch adhoore pan
+ginti thi -- rate, barcode, tasveer, miyaad, manzoori -- **qism un mein
+thi hi nahi**, is liye kisi ne kabhi bataya nahi.
+
+**316** `v_product_setup_counts` aur `v_product_setup_queue` mein
+`category_missing` jorti hai (naye khane aakhir mein, kyunki
+`create or replace` tarteeb badalne nahi deta). Koi data nahi hilta.
+
+Sath mein safhon par:
+- Qism ke safhe par peela paighaam + "Qism darj karein" ka button
+- Product Setup mein naya khana **"Qism"**
+- Us khane par **AI se qism ki tajweez** -- AI draft banata hai, banda
+  nishan laga kar manzoor karta hai. "Pakka" par nishan pehle se,
+  **"shayad" par nahi**. AI nayi qism nahi bana sakta (sirf maujooda
+  fehrist se chunta hai), aur khud kuch mehfooz nahi karta. Har manzoor
+  shuda qatar audit mein jati hai.

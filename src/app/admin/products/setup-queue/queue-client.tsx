@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, Barcode, CalendarClock, CheckCircle2, CircleDollarSign, ImageOff, Save, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Barcode, CalendarClock, CheckCircle2, CircleDollarSign, ImageOff, Save, ShieldCheck, FolderTree } from "lucide-react";
 import { saveSetupQueue, type SetupState } from "@/actions/product-setup";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input } from "@/components/ui/form";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
+import { CategoryAi } from "./category-ai";
 
 const initial: SetupState = {};
 
-export type Filter = "all" | "rate" | "barcode" | "image" | "expiry" | "approval";
+export type Filter = "all" | "rate" | "barcode" | "image" | "expiry" | "approval" | "category";
 
 interface Row {
   id: string;
@@ -30,6 +31,7 @@ interface Row {
   expired: boolean;
   expirySoon: boolean;
   approvalPending: boolean;
+  categoryMissing: boolean;
 }
 
 interface Counts {
@@ -38,6 +40,7 @@ interface Counts {
   image: number;
   expiry: number;
   approval: number;
+  category: number;
   intakeOpen: number;
   total: number;
 }
@@ -59,6 +62,10 @@ const TILES: { key: Filter; label: TranslationKey; icon: typeof Barcode; tone: s
   { key: "image", label: "pf_sq_c_image", icon: ImageOff, tone: "text-surface-500" },
   { key: "expiry", label: "pf_sq_c_expiry", icon: CalendarClock, tone: "text-amber-700" },
   { key: "approval", label: "pf_sq_c_approval", icon: ShieldCheck, tone: "text-brand-600" },
+  // Qism sab se ahem adhoora pan hai: baqi char ek cheez ko adhoora
+  // rakhte hain, magar qism ka na hona usay POORE SAFHE se ghayab kar
+  // deta hai -- na Grocery par, na kisi aur qism par (316).
+  { key: "category", label: "pf_sq_c_category", icon: FolderTree, tone: "text-red-700" },
 ];
 
 function matches(r: Row, f: Filter): boolean {
@@ -73,6 +80,8 @@ function matches(r: Row, f: Filter): boolean {
       return r.expired || r.expirySoon;
     case "approval":
       return r.approvalPending;
+    case "category":
+      return r.categoryMissing;
     default:
       return true;
   }
@@ -101,6 +110,12 @@ export function QueueClient({
 
   return (
     <div className="space-y-3">
+      {/* Qism wale khane par AI ki tajweez ka darwaza. Sirf yahan --
+          baqi adhoore pan (rate, barcode, tasveer) andaze se nahi bhare
+          ja sakte, wo asal maloomat maangte hain. Qism ka andaza naam se
+          lag jata hai, aur wohi 52 cheezein poore system se ghayab kar
+          raha tha (316). */}
+      {filter === "category" && <CategoryAi />}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Link
           href="/admin/products/setup-queue"
