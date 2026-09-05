@@ -113,11 +113,16 @@ export function WorkSidebar({
 
   return (
     <aside className="hidden w-[15rem] shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
-      <Link href={homeHref} className="flex items-center gap-2 border-b border-surface-200 px-4 py-4 dark:border-surface-800">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
+      <Link href={homeHref} className="flex items-center gap-2.5 border-b border-surface-200 px-4 py-4 dark:border-surface-800">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
           <Sprout className="h-5 w-5" />
         </span>
-        <span className="font-display text-base font-semibold text-surface-900 dark:text-white">AgriBridge</span>
+        <span className="min-w-0">
+          <span className="block font-display text-base font-semibold leading-tight text-brand-700 dark:text-brand-300">
+            AgriBridge
+          </span>
+          <span className="block truncate text-[10px] leading-tight text-surface-400">{t("ws_tagline", lang)}</span>
+        </span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
@@ -128,6 +133,27 @@ export function WorkSidebar({
         <Section label={t("ws_departments", lang)} items={departments} />
         <Section label={t("ws_reports", lang)} items={reports} />
         <Section label={t("ws_settings", lang)} items={settings} />
+
+        {/* Madad — malik ke karyana wale reference ke mutabiq. AI ka
+            darwaza yahan bhi hai magar wo LINK nahi: wohi panel khulta
+            hai jo neeche kone mein hai, do alag AI nahi. */}
+        <div className="mb-4">
+          <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-surface-400">
+            {t("ws_help", lang)}
+          </p>
+          <div className="space-y-0.5">
+            <button
+              type="button"
+              onClick={() => document.dispatchEvent(new CustomEvent("agribridge:open-assistant"))}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-surface-600 transition hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
+            >
+              <Icons.Bot className="h-[18px] w-[18px] shrink-0 text-surface-400" />
+              <span className="min-w-0 flex-1 truncate">{t("ws_ai", lang)}</span>
+            </button>
+            <Row item={{ href: "/admin/academy", label: t("ws_training", lang), icon: "GraduationCap" }} />
+            <Row item={{ href: "/admin/improvements", label: t("ws_suggestions", lang), icon: "Lightbulb" }} />
+          </div>
+        </div>
       </nav>
 
       {/* AI ka darwaza yahan bhi -- panel wohi hai jo neeche daayen kone
@@ -137,10 +163,16 @@ export function WorkSidebar({
         onClick={() => document.dispatchEvent(new CustomEvent("agribridge:open-assistant"))}
         className="m-2 flex items-center gap-2.5 rounded-lg border border-brand-200 bg-brand-50/60 px-3 py-2.5 text-left hover:bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20"
       >
-        <Bot className="h-4 w-4 shrink-0 text-brand-600" />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
+          <Bot className="h-[18px] w-[18px]" />
+        </span>
         <span className="min-w-0">
-          <span className="block text-sm font-medium text-brand-800 dark:text-brand-200">{t("ws_ai", lang)}</span>
-          <span className="block truncate text-[11px] text-brand-600/80 dark:text-brand-300/70">{t("ws_ai_sub", lang)}</span>
+          <span className="block truncate text-sm font-semibold text-brand-800 dark:text-brand-200">
+            {t("ws_assistant_card", lang)}
+          </span>
+          <span className="block truncate text-[11px] text-brand-600/80 dark:text-brand-300/70">
+            {t("ws_assistant_sub", lang)}
+          </span>
         </span>
       </button>
     </aside>

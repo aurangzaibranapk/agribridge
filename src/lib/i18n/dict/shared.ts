@@ -64,6 +64,13 @@ export const sharedDict = {
   ws_settings: { en: "Settings", rm: "Settings", ur: "ترتیبات" },
   ws_ai: { en: "AI Assistant", rm: "AI Assistant", ur: "اے آئی اسسٹنٹ" },
   ws_ai_sub: { en: "Your work, my help", rm: "Aap ka kaam, meri madad", ur: "آپ کا کام، میری مدد" },
+  // Madad ka hissa (malik ke karyana reference ke mutabiq, 5 September)
+  ws_tagline: { en: "Kisan Se Karobar Tak", rm: "Kisan Se Karobar Tak", ur: "کسان سے کاروبار تک" },
+  ws_help: { en: "Help", rm: "Madad", ur: "مدد" },
+  ws_training: { en: "Training", rm: "Training", ur: "ٹریننگ" },
+  ws_suggestions: { en: "Suggestions", rm: "Tajaweez", ur: "تجاویز" },
+  ws_assistant_card: { en: "AgriBridge Assistant", rm: "AgriBridge Assistant", ur: "ایگری برج اسسٹنٹ" },
+  ws_assistant_sub: { en: "Any question? Just ask me.", rm: "Koi sawal? Mujh se poochein.", ur: "کوئی سوال؟ مجھ سے پوچھیں۔" },
   // Assistant panel (276) -- Assistant | Paighaam | Tajaweez
   ap_tab_ai: { en: "Assistant", rm: "Assistant", ur: "اسسٹنٹ" },
   ap_tab_msg: { en: "Messages", rm: "Paighaam", ur: "پیغامات" },
