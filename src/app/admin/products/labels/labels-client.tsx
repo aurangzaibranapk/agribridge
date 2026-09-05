@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { Barcode, Printer, Search, Sparkles } from "lucide-react";
-import { assignInternalBarcodes, type SetupState } from "@/actions/product-setup";
+import { assignInternalBarcodes, saveScannedBarcode, type SetupState } from "@/actions/product-setup";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -46,6 +46,68 @@ function BarcodeSvg({ code, height = 44 }: { code: string; height?: number }) {
         {code}
       </text>
     </svg>
+  );
+}
+
+/**
+ * Barcode scan kar ke lagane ka khana.
+ *
+ * Scanner asal mein ek keyboard hai: wo adad type karta hai aur aakhir
+ * mein Enter dabata hai. Is liye khana Enter par khud mehfooz karta hai
+ * -- banda scan kar ke agli cheez par chala jata hai, koi button nahi
+ * dhoondna paRta.
+ *
+ * Jis cheez par company ka barcode pehle se laga ho, us par khana khud
+ * nahi khulta. Purana barcode chup chaap badal jana wo ghalti hai jo
+ * counter par tab pakRi jati hai jab gahak khaRa ho.
+ */
+function ScanKhana({ productId, maujood }: { productId: string; maujood: string | null }) {
+  const [state, formAction] = useFormState(saveScannedBarcode, initial);
+  const [khula, setKhula] = useState(!maujood);
+
+  if (state.notice) {
+    return <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400">{state.notice}</p>;
+  }
+
+  if (!khula) {
+    return (
+      <button
+        type="button"
+        onClick={() => setKhula(true)}
+        className="mt-1 block text-[11px] text-brand-700 hover:underline dark:text-brand-300"
+      >
+        barcode badlein
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="mt-1">
+      <input type="hidden" name="product_id" value={productId} />
+      <div className="flex items-center gap-1">
+        <input
+          name="barcode"
+          placeholder="yahan scan karein"
+          autoComplete="off"
+          className="h-7 w-36 rounded-md border border-surface-200 px-2 font-mono text-[11px] outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-800"
+        />
+        <ScanButton />
+      </div>
+      {state.error && <p className="mt-0.5 text-[11px] text-red-600">{state.error}</p>}
+    </form>
+  );
+}
+
+function ScanButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="h-7 rounded-md bg-brand-700 px-2 text-[11px] font-medium text-white hover:bg-brand-800 disabled:opacity-60"
+    >
+      {pending ? "…" : "lagayein"}
+    </button>
   );
 }
 
@@ -194,6 +256,12 @@ export function LabelsClient({
                       ) : (
                         <Badge tone="amber">{t("pf_sq_b_barcode", lang)}</Badge>
                       )}
+                      {/* Company ka asal barcode yahin scan ho sakta hai
+                          (malik, 5 September). Pehle is ke liye Setup
+                          Queue par jana paRta tha -- doosra safha,
+                          doosri fehrist, aur wapas aa kar dobara wohi
+                          cheez dhoondni. */}
+                      <ScanKhana productId={r.id} maujood={r.barcode} />
                     </td>
                     <td className="py-2">
                       <Input

@@ -210,3 +210,96 @@ export async function assignInternalBarcodes(_prev: SetupState, formData: FormDa
   revalidatePath("/admin/pos");
   return { success: true, saved: made, notice: made === 0 ? "Sab par pehle se barcode hai." : undefined };
 }
+
+
+/**
+ * Asal (company ka) barcode scan kar ke lagana -- Barcode Labels ke safhe se.
+ *
+ * Malik ka kehna (5 September): *"yahan option hona chahiye, hum in ke
+ * barcode scan kar ke update kar dein -- isi page par hona chahiye."*
+ *
+ * Us safhe par ab tak sirf APNA (internal) barcode banaya ja sakta tha.
+ * Jis cheez par company ka asal barcode maujood ho, us ke liye banda ko
+ * Setup Queue par jana paRta tha -- doosra safha, doosri fehrist, aur
+ * wapas aa kar dobara wohi cheez dhoondni.
+ *
+ * Rok wohi purani hai jo `saveSetupQueue` mein pehle se chali aa rahi
+ * hai, aur JAAN BOOJH KAR wohi:
+ *
+ *   - barcode normalize ho kar jata hai (scanner kabhi space/enter
+ *     bhejta hai),
+ *   - jo barcode kisi AUR product par laga ho, wo yahan nahi lagta --
+ *     warna counter par ek scan do cheezein le aata,
+ *   - check digit na mile to barcode lag to jata hai magar saaf kaha
+ *     jata hai ke dobara scan kar lein (kuch scanner aakhri adad chhod
+ *     dete hain).
+ *
+ * Do jagah do qaide rakhne se kisi din do alag nateeje nikal aate hain,
+ * is liye yahan koi naya qanoon nahi banaya gaya.
+ */
+export async function saveScannedBarcode(_prev: SetupState, formData: FormData): Promise<SetupState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !ALLOWED.includes(me.role)) {
+    return { error: "Ye kaam sirf Owner, Admin ya Warehouse wale ka hai." };
+  }
+
+  const id = String(formData.get("product_id") ?? "");
+  const raw = String(formData.get("barcode") ?? "").trim();
+  if (!id) return { error: "Cheez nahi mili." };
+  if (!raw) return { error: "Barcode khali hai — scanner se scan karein ya haath se likhein." };
+
+  const bc = normalizeBarcode(raw);
+  if (!bc) return { error: "Barcode parha nahi gaya. Dobara scan karein." };
+
+  const { data: p } = await supabase
+    .from("products")
+    .select("name, barcode")
+    .eq("id", id)
+    .maybeSingle();
+  if (!p) return { error: "Cheez nahi mili." };
+
+  const { data: clash } = await supabase
+    .from("products")
+    .select("id, name")
+    .eq("barcode", bc)
+    .eq("is_deleted", false)
+    .neq("id", id)
+    .maybeSingle();
+  if (clash) {
+    return { error: `Ye barcode pehle se "${clash.name}" par laga hai. Ek barcode do cheezon par nahi lag sakta.` };
+  }
+
+  const { error } = await supabase
+    .from("products")
+    .update({ barcode: bc, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "products",
+    recordId: id,
+    recordLabel: p.name ?? id,
+    description: "Company ka barcode scan kar ke lagaya gaya",
+    changes: { barcode: { pehle: p.barcode, ab: bc } },
+  });
+
+  revalidatePath("/admin/products/labels");
+  revalidatePath("/admin/products/setup");
+
+  // Lag to gaya, magar shak hai to chhupaya nahi jata. Kuch scanner
+  // aakhri adad chhod dete hain -- aur wo barcode counter par kaam
+  // nahi karta.
+  if (!isValidBarcode(bc)) {
+    return {
+      notice: `${bc} lag gaya — magar us ka check digit nahi milta. Ek dafa dobara scan kar ke dekh lein.`,
+    };
+  }
+  return { notice: `${bc} lag gaya.` };
+}
