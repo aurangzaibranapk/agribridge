@@ -44,7 +44,26 @@ import { logAudit } from "@/lib/audit";
 
 export interface Tajweez {
   productId: string;
+  /** Jo naam ABHI darj hai. Ye default rehta hai. */
   productName: string;
+  /**
+   * AI ka tajweez shuda poora naam -- sirf TAJWEEZ, badla hua naam nahi.
+   *
+   * Malik ka kehna (5 September): *"jo naam likha hai, sath AI recommend
+   * kare. Agar theek to OK, warna edit kar ke naya likh dein. Pehla wala
+   * jo hai wo hona chahiye jab tak change na karein."*
+   *
+   * Dukan par naam chhote likhe jate hain -- "Rin", "surfexcel",
+   * "freshup", "capstan". Wo counter par kaam ke hain, magar bill par,
+   * report mein aur kal kisi aur bande ke liye adhoore hain. Phir bhi
+   * inhen CHUP CHAAP badal dena ghalat hai: wohi naam hai jis se malik
+   * apna maal pehchante hain.
+   *
+   * Is liye do alag cheezein: darj shuda naam (jo khane mein rehta hai)
+   * aur AI ki tajweez (jo saath likhi aati hai). Naam tabhi badalta hai
+   * jab banda khud us khane mein haath lagaye.
+   */
+  tajweezNaam: string | null;
   stock: number;
   categoryId: string;
   categoryName: string;
@@ -151,8 +170,14 @@ Qawaid:
 - Jis product ka koi munasib qism maujood hi na ho, usay bilkul chhor dein (jawab mein na daalein).
 - Pakistani bazaar ke aam naam samjhein (misal: "capstan" = cigarette, "Rin" = detergent/soap, "Lays" = snacks, "sunsilk" = shampoo, "vital" = tea).
 
+Sath hi har product ka POORA, saaf naam bhi tajweez karein ("n"). Dukan par naam chhote likhe
+jate hain -- "Rin", "surfexcel", "freshup". Bill aur report ke liye poora naam behtar hota hai,
+misal: "Rin" -> "Rin Washing Powder", "surfexcel" -> "Surf Excel Washing Powder",
+"capstan" -> "Capstan Cigarettes". Naam wohi rakhein jo Pakistan mein us cheez ka asal naam hai;
+apni taraf se koi nayi cheez na banayein. Naam pehle se poora ho to wohi dobara likh dein.
+
 Jawab SIRF JSON array mein dein, aur kuch nahi:
-[{"p":"product-id","c":"category-id","y":"pakka","w":"chhoti wajah Roman Urdu mein"}]
+[{"p":"product-id","c":"category-id","n":"poora naam","y":"pakka","w":"chhoti wajah Roman Urdu mein"}]
 
 "y" sirf "pakka" ya "shayad" ho sakta hai.`;
 
@@ -167,7 +192,7 @@ Jawab SIRF JSON array mein dein, aur kuch nahi:
     return { error: "AI ka jawab samajh nahi aaya. Dobara koshish karein." };
   }
 
-  let parsed: { p?: string; c?: string; y?: string; w?: string }[];
+  let parsed: { p?: string; c?: string; n?: string; y?: string; w?: string }[];
   try {
     parsed = JSON.parse(jsonText.slice(start, end + 1));
   } catch {
@@ -188,9 +213,17 @@ Jawab SIRF JSON array mein dein, aur kuch nahi:
     if (!prodById.has(pid) || !catById.has(cid)) continue;
     if (dekhe.has(pid)) continue;
     dekhe.add(pid);
+    // AI ka naam sirf tajweez hai. Jo naam pehle se darj hai wo `productName`
+    // mein jyon ka tyon rehta hai -- safhe par wohi khane mein aata hai.
+    const naya = String(row.n ?? "").trim().slice(0, 120);
+    const purana = prodById.get(pid)!;
+
     tajaweez.push({
       productId: pid,
-      productName: prodById.get(pid)!,
+      productName: purana,
+      // Wohi naam dobara tajweez karne ka koi faida nahi -- us se safha
+      // bhar jata hai aur asal tajweezein us mein gum ho jati hain.
+      tajweezNaam: naya && naya.toLowerCase() !== purana.trim().toLowerCase() ? naya : null,
       stock: stockBy.get(pid) ?? 0,
       categoryId: cid,
       categoryName: catById.get(cid)!,
@@ -246,12 +279,20 @@ export async function applyCategorySuggestions(_prev: SuggestState, formData: Fo
       continue;
     }
 
+    // Naam sirf tab badalta hai jab banda ne us khane mein haath lagaya
+    // ho. Khali khana kuch nahi badalta, aur wohi naam dobara likha ho
+    // to bhi kuch nahi badalta -- warna audit bekaar qataron se bhar
+    // jata hai.
+    const purana = String(formData.get(`purana__${productId}`) ?? "").trim();
+    const naya = String(formData.get(`naam__${productId}`) ?? "").trim();
+    const naamBadla = naya.length > 0 && purana.length > 0 && naya !== purana;
+
     // Sirf usi cheez par jis ki qism ABHI TAK khali hai. Beech mein kisi
     // aur ne qism laga di ho to us par nahi chalta -- warna kisi ka kaam
     // chup chaap ulta ho jata.
     const { data, error } = await service
       .from("products")
-      .update({ category_id: categoryId })
+      .update(naamBadla ? { category_id: categoryId, name: naya } : { category_id: categoryId })
       .eq("id", productId)
       .is("category_id", null)
       .select("id, name")
@@ -268,8 +309,12 @@ export async function applyCategorySuggestions(_prev: SuggestState, formData: Fo
       module: "products",
       recordId: productId,
       recordLabel: data.name ?? productId,
-      description: "Qism darj ki gayi (AI ki tajweez, insaan ki manzoori se)",
-      changes: { category_id: { pehle: null, ab: categoryId } },
+      description: naamBadla
+        ? "Qism darj ki gayi aur naam badla (AI ki tajweez, insaan ki manzoori se)"
+        : "Qism darj ki gayi (AI ki tajweez, insaan ki manzoori se)",
+      changes: naamBadla
+        ? { category_id: { pehle: null, ab: categoryId }, name: { pehle: purana, ab: naya } }
+        : { category_id: { pehle: null, ab: categoryId } },
     });
   }
 

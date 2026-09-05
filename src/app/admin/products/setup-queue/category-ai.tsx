@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Sparkles, Check } from "lucide-react";
 import {
@@ -38,8 +39,8 @@ export function CategoryAi() {
             <Sparkles className="h-4 w-4 text-brand-600" /> AI se qism ki tajweez
           </h3>
           <p className="mt-0.5 text-xs leading-relaxed text-surface-600 dark:text-surface-400">
-            AI har cheez ke naam se andaza laga kar munasib qism tajweez karega. <strong>Wo khud kuch darj nahi
-            karega</strong> — aap nishan lagayenge, tab qism lagegi.
+            AI har cheez ki munasib qism aur poora naam tajweez karega. <strong>Wo khud kuch darj nahi
+            karega</strong> — naam wahi rahega jo abhi hai, jab tak aap khud na badlein.
           </p>
         </div>
         <form action={draftAction}>
@@ -77,7 +78,9 @@ export function CategoryAi() {
               <thead className="sticky top-0 bg-surface-50 dark:bg-surface-800">
                 <tr className="border-b border-surface-200 text-left dark:border-surface-700">
                   <th className="w-10 px-3 py-2"></th>
-                  <th className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-surface-500">Cheez</th>
+                  <th className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-surface-500">
+                    Cheez ka naam
+                  </th>
                   <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-surface-500">Stock</th>
                   <th className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-surface-500">Tajweez shuda qism</th>
                 </tr>
@@ -98,7 +101,13 @@ export function CategoryAi() {
                         className="h-4 w-4 rounded border-surface-300"
                       />
                     </td>
-                    <td className="px-3 py-2 text-surface-800 dark:text-surface-200">{t.productName}</td>
+                    <td className="px-3 py-2">
+                      <NaamKhana
+                        productId={t.productId}
+                        purana={t.productName}
+                        tajweez={t.tajweezNaam}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
                       {t.stock > 0 ? t.stock : "—"}
                     </td>
@@ -159,6 +168,66 @@ export function CategoryAi() {
             {draft.naMaloom.length > 20 ? " …" : ""}
           </p>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Naam ka khana -- darj shuda naam, aur sath AI ki tajweez.
+ *
+ * Malik ka kehna (5 September): *"jo naam likha hai, sath AI recommend
+ * kare. Agar theek to OK, warna edit kar ke naya likh dein. **Pehla wala
+ * jo hai wo hona chahiye jab tak change na karein.**"*
+ *
+ * Isi liye khane mein PURANA naam hota hai, AI ka nahi. AI ki tajweez
+ * neeche ek chip par likhi aati hai -- dabane se khane mein aa jati hai,
+ * na dabayein to naam waisa ka waisa rehta hai.
+ *
+ * Ye farq ahem hai: "Rin" counter par kaam ka naam hai, aur wohi naam
+ * hai jis se malik apna maal pehchante hain. Usay chup chaap "Rin
+ * Washing Powder" bana dena us pehchaan ko le uRta hai.
+ */
+function NaamKhana({
+  productId,
+  purana,
+  tajweez,
+}: {
+  productId: string;
+  purana: string;
+  tajweez: string | null;
+}) {
+  const [naam, setNaam] = useState(purana);
+
+  return (
+    <div>
+      {/* Purana naam sath jata hai taake server bata sake ke waqai kuch
+          badla ya nahi -- bina us ke har qatar "badal gayi" lagti. */}
+      <input type="hidden" name={`purana__${productId}`} value={purana} />
+      <input
+        name={`naam__${productId}`}
+        value={naam}
+        onChange={(e) => setNaam(e.target.value)}
+        className="h-8 w-full min-w-[160px] rounded-md border border-surface-200 bg-white px-2 text-sm text-surface-900 outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-900 dark:text-white"
+      />
+      {tajweez && naam !== tajweez && (
+        <button
+          type="button"
+          onClick={() => setNaam(tajweez)}
+          title="Ye naam khane mein daalein"
+          className="mt-1 inline-flex items-center gap-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-800 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-200"
+        >
+          <Sparkles className="h-3 w-3" /> {tajweez}
+        </button>
+      )}
+      {tajweez && naam === tajweez && naam !== purana && (
+        <button
+          type="button"
+          onClick={() => setNaam(purana)}
+          className="mt-1 text-[11px] text-surface-400 hover:text-surface-600"
+        >
+          purana naam wapas ({purana})
+        </button>
       )}
     </div>
   );
