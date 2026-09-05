@@ -687,3 +687,84 @@ gayi hi nahi, is liye seedha 313 chalana kaafi hai.
   safhe par gyarah aise khate hain jo kisi bande ke nahi, sirf role ka
   naam hain (admin, Manager, HR Department, Finance Team…).
 - Staff ka qarza (installments) — malik ke qawaid ka intezar.
+
+---
+
+## 5j. Live run — 5 September, sham (313, 314, 315)
+
+P0 tarteeb poori chali: **backup verified → pre-migration ginti →
+migrations → verification → build upload → smoke test.**
+
+### Backup
+`agribridge-backup-20260905-1554.sql` — **3.7M**, malik ki machine par.
+
+Backup lene mein paanch chakkar lage aur wajah aakhir mein saaf hui:
+**Git Bash mein terminal ka text select karte hi wo clipboard mein chala
+jata hai** — aur clipboard wala connection URL mit jata hai. Har dafa
+malik terminal se natija copy kar ke chat mein bhejte, aur agli dafa
+`pg_dump` ko URL ki jagah terminal ka apna text milta (`lambai: 368`,
+`missing "=" after "Dx"`).
+
+Hal: clipboard ka raasta chhor diya. URL ab `~/pgurl.txt` mein ek dafa
+mehfooz hai (`~/seturl.sh` se), aur `~/backup.sh` usi file se parhta
+hai. Ab beech mein jo marzi copy ho, farq nahi paRta. **Ye file repo se
+bahar hai (home folder mein), is liye kabhi commit nahi hogi.**
+
+### Ginti — pehle aur baad mein
+
+| | Pehle | Baad |
+|---|---|---|
+| journal_entries | 24 | 24 |
+| journal_lines | 74 | 74 |
+| **Dr / Cr** | **499,226 / 499,226** | **499,226 / 499,226** |
+| machinery_bookings | 8 | 8 |
+| machinery_bills | 9 | 9 |
+| machinery_payments | 3 | 3 |
+| machinery_fuel_logs | 3 | 3 |
+| finance_accounts | 5 | 5 |
+| finance_transactions | 6 | 6 |
+| products | 266 | 266 |
+| features | 197 | **198** (Inbox) |
+| feature_help | 233 | **234** (Inbox) |
+
+Koi karobari qatar nahi hili. Sirf wohi do adad barhe jo barhne the.
+
+### Duplicate diesel — khatam (malik ki ijazat se)
+
+`machinery_fuel_logs` ki qatar `16ae7f14` (MB-2026-00008, Rs 11,280,
+4 September 14:00:23) ab `cancelled` hai, wajah ke sath. Qatar mitai
+nahi gayi — safhe par kati hui nazar aayegi.
+
+**Nateeja — dono kitabein mil gayin:**
+
+| | Pehle | Ab |
+|---|---|---|
+| Safha (verified fuel logs) | 33,930 | **22,650** |
+| Ledger (khata 1120) | 22,650 | **22,650** |
+
+Yehi asal masla tha: journal to 5 September ki subah reverse ho chuka
+tha, magar diesel ki qatar `verified` pari rahi — aur vendor ka safha
+Rs 11,280 zyada kaat raha tha.
+
+### Farman Ali ka hisaab — ab jaisa hona chahiye tha
+
+| Khana | Raqam |
+|---|---|
+| Kul hissa | 136,796 |
+| Vendor ko mila (us ne kisan se khud rakha) | **32,000** |
+| Us mein se hamara commission jo us ke paas hai | **3,840** |
+| ART ke paas jama (kisan ne hamein diya) | 24,000 |
+| ART ka diesel (wapas aana hai) | 22,650 |
+
+Rs 32,000 pehle "ART ke paas jama" mein likha aa raha tha — hamari
+tijori mein, jahan wo tha hi nahi. Ab "vendor ko mil gaya" mein hai, aur
+us ka hisse se zyada hissa apne alag khane mein.
+
+### Ab baqi (naye build ke baad, safhe par)
+
+1. **Shuruati balance** — charon khate abhi bhi sifar par hain. Finance →
+   Cash Book par peela form aayega; har khate ka asal balance malik
+   daalenge. Raqam Cash Book aur ledger dono mein jayegi.
+2. **"Al Rana Traders (kisan dukan)"** — purane build se bana, is liye us
+   ka shuruati balance sirf `opening_balance` ke khane mein baitha hai
+   aur ledger ko khabar nahi. Us ka milan karna hai.
