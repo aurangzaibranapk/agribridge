@@ -1137,3 +1137,110 @@ khud theek ho jata hai.
    jayega.
 6. POS par ek test bill — ye dekhne ke liye ke purana kaam waisa ka waisa
    chal raha hai.
+
+---
+
+## 5q. Rokay hua kaam — 323 aur 324 (Load & Bill Services)
+
+Malik ne 5 September ki raat mobile load aur bill payment ka poora naqsha
+bheja, aur us ke baad ye bhi likha ke abhi apna wallet ya licence nahi
+lena — **Phase 1 sirf "Load & Bill Control"**: maujooda retailer account
+ka balance track ho, aur shaam ko us se milaya jaye.
+
+Wohi bana hai.
+
+### Char faisle jinho ne is module ki shakal tay ki
+
+**1. AgriBridge load BHEJTA NAHI — DARJ karta hai.**
+Malik ke bheje naqshe mein "Confirm & Process" ka button tha, jaise ERP
+khud load kar dega. Aisa nahi ho sakta: load provider ki apni app se jata
+hai aur retailer ko un ka API aam tor par milta nahi. Agar button ye dawa
+karta aur asal mein load na jata, to banda samajhta ho gaya, customer se
+paisa le leta, aur load jata hi nahi.
+
+Is liye button **"Load ho gaya — darj karein"** hai, aur us ke saath
+`provider_tid` ka khana — provider ki apni reference, jo staff us ki app
+se copy karta hai. Jis qatar par TID na ho wo **nakaam nahi**, wo
+**`saboot_baqi`** hai. Do alag baatein: ek ka matlab "hua hi nahi",
+doosre ka "hua, magar saboot nahi laga".
+
+**2. Service charge aur commission do alag cheezein hain.**
+
+| | Kya | Kab aamdani banti hai |
+|---|---|---|
+| Service charge | customer se liya extra | usi waqt — 4050 |
+| Commission | company baad mein deti hai | statement ki tasdeeq ke baad — 4055 |
+
+Commission ka andaza (`commission_expected`) sirf DIKHAYA jata hai,
+khate mein kabhi nahi jata. Malik ka apna jumla: *"agar commission
+immediately confirm nahi hoti to system fake earning calculate na kare."*
+Tab tak halat **`muntazir`** rehti hai — sifar nahi, khali nahi.
+
+**3. Float asset hai, aur us ka balance journal se ginta hai.**
+`load_accounts` mein `current_float` naam ka koi khana JAAN BOOJH KAR
+nahi hai. Har account ka float 1190 ki un qataron se ginta hai jin par
+`party_id = load_account` likha hai. Alag rakha hua balance ek din asal
+qataron se hat jata hai aur phir do adad hote hain jin mein se koi nahi
+jaanta kaun sa sach hai — wohi ghalti cash ke sath ho chuki hai.
+
+**4. Bill jama karna aur bill ada karna ek lamha nahi.**
+Provider band ho aur paisa raat ko jaye, to us dauran wo paisa hamare
+paas hai magar hamara nahi — wo **2060** (bojh) par baithta hai, aur bill
+ada hote hi float se utar jata hai. Us ko aamdani ya float ki kami
+dikhana dono ghalat hain.
+
+### Naye khate
+
+| Code | Naam | Qism |
+|---|---|---|
+| 1190 | Provider Float (Load/Bill) | asset |
+| 2060 | Bill jama shuda — abhi ada nahi | liability |
+| 4050 | Load/Bill service charge (customer se) | income |
+| 4055 | Load/Bill commission (company se) | income |
+| 6105 | Float ka farq (kam / zyada) | expense |
+
+### Ijazat ki taqseem — aur wo kyun aise hai
+
+| Kaam | Kaun |
+|---|---|
+| Load/bill darj karna | POS wala staff |
+| Float mein paisa daalna | Manager / Finance / Admin |
+| Milan ka asal balance likhna | POS wala staff |
+| Milan ka FARQ khate mein daalna | Manager / Finance / Admin |
+
+Milan ka safha staff ko khulta hai (wo provider ki app ka balance likh
+sakta hai) magar farq manzoor karne ka ikhtiyar us ke paas nahi. Agar
+wohi banda farq bhi khud manzoor kar sakta, to farq ka matlab hi khatam
+ho jata: jis se ginti mein ghalti hui wohi us ghalti ko "theek" keh deta.
+
+### Ek asal bug jo test se pakRa gaya
+
+`fn_load_float_balance` andar `fn_is_any_staff()` poochta hai. Safhe pehle
+ye RPC **service client** se bula rahe the — aur service client ka koi
+`auth.uid()` hota hi nahi, is liye har dafa inkaar milta aur float ka
+khana khali rehta. Ab ye bulawa logged-in bande ke naam par jata hai
+(function khud SECURITY DEFINER hai, is liye RLS rukawat nahi banti).
+
+### Testing par rollback test — gyarah baatein
+
+Float 0 → 50,000 daalne par 50,000 → Rs 1,000 load ke baad 49,000
+(seedha journal se). Qatar ka number `LD-2026-00001` bana. Aur saat
+rokein chalin: sifar raqam ka load **ruka**, sifar service charge
+**ruka** (khali rakha jata hai), bina customer khata **ruka**, bina wajah
+farq **ruka**, bina manzoori adjustment **ruka**, bina adad "tasdeeq"
+**ruki**, manfi recharge **ruka**. Sab ulta diya gaya.
+
+### Jo abhi NAHI bana (aur safha ye khud kehta hai)
+
+- Provider ke account banane ka safha — abhi account seedha database mein
+  darj hota hai.
+- Provider ka statement import kar ke commission ki tasdeeq — is ke
+  baghair commission hamesha `muntazir` rahegi.
+- Slab wala commission ka qaida (abhi sirf fisad aur fixed).
+- API integration (Phase 2 — malik ne khud kaha ke wo baad mein).
+
+### Live par abhi NAHI chalayi gayin
+
+**323 aur 324 dono Testing par hain, Live par nahi.** Live par jane se
+pehle wohi tarteeb: backup verified → ginti → migrations → ginti dobara
+→ build upload → smoke test.

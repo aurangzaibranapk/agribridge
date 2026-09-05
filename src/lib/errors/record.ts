@@ -41,6 +41,7 @@ export type ErrorModule =
   | "hr"
   | "milk"
   | "grain"
+  | "load-bill"
   | "website";
 
 /**

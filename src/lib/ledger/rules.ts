@@ -60,6 +60,10 @@ export const ACC = {
   dealerDue: "1160",
   cropLifterDue: "1170",
   fixedAssetAccum: "1390",
+  // Provider ke paas para hua digital float. Ye STOCK NAHI hai -- is ka
+  // per-account balance journal ki un qataron se ginta hai jin par
+  // party_id = load_account hota hai.
+  loadFloat: "1190",
   stockGoods: "1200",
   stockMilk: "1210",
   stockGrain: "1220",
@@ -69,6 +73,9 @@ export const ACC = {
   salaryDue: "2025",
   customerAdvance: "2030",
   walletPayable: "2040",
+  // Customer ka bill le liya, provider tak abhi nahi pahuncha. Wo paisa
+  // hamare paas hai magar hamara nahi.
+  billsCollected: "2060",
   ownerCapital: "3000",
   ownerDrawings: "3100",
   openingEquity: "3200",
@@ -78,6 +85,11 @@ export const ACC = {
   salesMilk: "4020",
   machineryIncome: "4030",
   cropCommission: "4040",
+  // Do alag aamdaniyan, jaan boojh kar alag: service charge customer se
+  // liya hua PAKKA paisa hai; commission company ki taraf se aati hai
+  // aur us ki tasdeeq statement se hoti hai.
+  loadServiceCharge: "4050",
+  loadCommission: "4055",
   otherIncome: "4090",
   assetSaleGain: "4095",
   cogs: "5000",
@@ -94,6 +106,10 @@ export const ACC = {
   assetWriteDown: "6220",
   otherExpense: "6090",
   cashDifference: "6100",
+  // Float ka farq cash ke farq se alag rakha hai: sawal alag hai (golak
+  // mein kami hui ya provider ke account mein), aur peechha karne ka
+  // tareeqa bhi alag.
+  floatDifference: "6105",
   stockLoss: "6110",
   milkLoss: "6120",
   grainLoss: "6130",

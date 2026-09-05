@@ -10143,6 +10143,300 @@ export type Database = {
         }
         Relationships: []
       }
+      load_accounts: {
+        Row: {
+          account_ref: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          opened_on: string | null
+          opening_float: number | null
+          provider_id: string
+          tenant_key: string | null
+          title: string
+        }
+        Insert: {
+          account_ref?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          opened_on?: string | null
+          opening_float?: number | null
+          provider_id: string
+          tenant_key?: string | null
+          title: string
+        }
+        Update: {
+          account_ref?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          opened_on?: string | null
+          opening_float?: number | null
+          provider_id?: string
+          tenant_key?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      load_commission_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          from_date: string
+          id: string
+          is_active: boolean
+          kind: string
+          mode: string
+          note: string | null
+          provider_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          from_date?: string
+          id?: string
+          is_active?: boolean
+          kind: string
+          mode: string
+          note?: string | null
+          provider_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          from_date?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          mode?: string
+          note?: string | null
+          provider_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      load_float_moves: {
+        Row: {
+          account_id: string
+          amount: number
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          finance_account_id: string | null
+          id: string
+          journal_entry_id: string | null
+          kind: string
+          reason: string | null
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          kind: string
+          reason?: string | null
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          kind?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      load_providers: {
+        Row: {
+          bill_category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          key: string
+          kind: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          bill_category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          kind?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          bill_category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          kind?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      load_reconciliations: {
+        Row: {
+          account_id: string
+          actual_closing: number | null
+          adjustments: number
+          approved_by: string | null
+          bill_principal: number
+          created_at: string
+          created_by: string | null
+          expected_closing: number
+          farq: number | null
+          float_added: number
+          id: string
+          journal_entry_id: string | null
+          load_principal: number
+          opening_float: number
+          reason: string | null
+          status: string
+          tareekh: string
+        }
+        Insert: {
+          account_id: string
+          actual_closing?: number | null
+          adjustments?: number
+          approved_by?: string | null
+          bill_principal?: number
+          created_at?: string
+          created_by?: string | null
+          expected_closing: number
+          farq?: number | null
+          float_added?: number
+          id?: string
+          journal_entry_id?: string | null
+          load_principal?: number
+          opening_float: number
+          reason?: string | null
+          status?: string
+          tareekh: string
+        }
+        Update: {
+          account_id?: string
+          actual_closing?: number | null
+          adjustments?: number
+          approved_by?: string | null
+          bill_principal?: number
+          created_at?: string
+          created_by?: string | null
+          expected_closing?: number
+          farq?: number | null
+          float_added?: number
+          id?: string
+          journal_entry_id?: string | null
+          load_principal?: number
+          opening_float?: number
+          reason?: string | null
+          status?: string
+          tareekh?: string
+        }
+        Relationships: []
+      }
+      load_transactions: {
+        Row: {
+          account_id: string
+          bill_category: string | null
+          branch_id: string | null
+          commission_confirmed: number | null
+          commission_expected: number | null
+          commission_status: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          finance_account_id: string | null
+          float_settled: boolean
+          id: string
+          journal_entry_id: string | null
+          kind: string
+          payment_method: string
+          principal: number
+          provider_id: string
+          provider_tid: string | null
+          reference: string
+          reversal_of: string | null
+          service_charge: number | null
+          status: string
+          txn_number: string
+        }
+        Insert: {
+          account_id: string
+          bill_category?: string | null
+          branch_id?: string | null
+          commission_confirmed?: number | null
+          commission_expected?: number | null
+          commission_status?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          finance_account_id?: string | null
+          float_settled?: boolean
+          id?: string
+          journal_entry_id?: string | null
+          kind: string
+          payment_method: string
+          principal: number
+          provider_id: string
+          provider_tid?: string | null
+          reference: string
+          reversal_of?: string | null
+          service_charge?: number | null
+          status?: string
+          txn_number: string
+        }
+        Update: {
+          account_id?: string
+          bill_category?: string | null
+          branch_id?: string | null
+          commission_confirmed?: number | null
+          commission_expected?: number | null
+          commission_status?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          finance_account_id?: string | null
+          float_settled?: boolean
+          id?: string
+          journal_entry_id?: string | null
+          kind?: string
+          payment_method?: string
+          principal?: number
+          provider_id?: string
+          provider_tid?: string | null
+          reference?: string
+          reversal_of?: string | null
+          service_charge?: number | null
+          status?: string
+          txn_number?: string
+        }
+        Relationships: []
+      }
       leave_requests: {
         Row: {
           created_at: string
@@ -24268,6 +24562,28 @@ export type Database = {
           shift_start: string
           weekly_off_days: number[]
         }[]
+      }
+      fn_load_day_summary: {
+        Args: { p_account: string; p_date: string }
+        Returns: {
+          adjustments: number
+          bill_principal: number
+          expected_closing: number
+          float_added: number
+          load_principal: number
+          opening_float: number
+          saboot_baqi: number
+          service_charge: number
+          txn_count: number
+        }[]
+      }
+      fn_load_float_balance: {
+        Args: { p_account: string; p_upto?: string | null }
+        Returns: number
+      }
+      fn_next_load_number: {
+        Args: { p_kind: string }
+        Returns: string
       }
       fn_hr_staff_directory: {
         Args: never
