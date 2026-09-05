@@ -2,13 +2,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import nodemailer from "nodemailer";
+import { sendDeptMail } from "@/lib/mailer";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
   documentUrl?: string;
   signingLink?: string;
+  notice?: string;
 }
 
 const SITE_URL = "https://alranatraders.pk";
@@ -114,24 +115,16 @@ export async function sendSigningLinkEmail(_prev: ActionState, formData: FormDat
   const branch = Array.isArray(agreement.branches) ? agreement.branches[0] : agreement.branches;
   const link = `${SITE_URL}/agreement-sign/${agreement.signing_token}`;
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Rent Agreement - ${branch?.name ?? "Shop"}`,
-      html: `<div dir="rtl" style="font-family: Arial, sans-serif;"><p>محترم ${agreement.landlord_name},</p><p>براہ کرم نیچے دیئے گئے لنک پر جا کر معاہدہ کرایہ داری ملاحظہ فرمائیں اور دستخط کریں۔</p><p><a href="${link}">${link}</a></p></div>`,
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
+  // Kiraye ka muahida kiraye ke khate se (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "rent",
+    to: toEmail,
+    subject: `Rent Agreement - ${branch?.name ?? "Shop"}`,
+    html: `<div dir="rtl" style="font-family: Arial, sans-serif;"><p>محترم ${agreement.landlord_name},</p><p>براہ کرم نیچے دیئے گئے لنک پر جا کر معاہدہ کرایہ داری ملاحظہ فرمائیں اور دستخط کریں۔</p><p><a href="${link}">${link}</a></p></div>`,
+  });
+  if (!sent.sent) return { error: sent.error };
 
-  return { success: true };
+  return { success: true, notice: `Muahida ${toEmail} par bhej diya gaya (${sent.from} se).` };
 }
 
 export async function saveLandlordSignature(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -4,12 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { postCashOut, postWalletMovement, ACC } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
+import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
   entryId?: string;
   paymentId?: string;
+  /** Kaam ho gaya -- aur kya hua, wo staff ko batane wala jumla. */
+  notice?: string;
 }
 
 interface InlineExpense {
@@ -653,23 +656,17 @@ export async function emailGrainPaymentSlip(_prev: ActionState, formData: FormDa
     date: new Date(payment.created_at).toLocaleDateString(),
   });
 
-  const nodemailer = (await import("nodemailer")).default;
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Payment Slip - ${sellerName}`,
-      html: `<p>Assalam-o-Alaikum ${sellerName},</p><p>Aapki grain payment ki slip is email ke sath attach hai.</p><p>Amount: Rs ${Number(payment.amount).toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `payment-slip-${paymentId.slice(0, 8)}.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  // Anaj ki slip anaj ke khate se (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "grain",
+    to: toEmail,
+    subject: `Payment Slip - ${sellerName}`,
+    html: mailWrapper(
+      `<p>Assalam-o-Alaikum ${sellerName},</p><p>Aapki grain payment ki slip is email ke sath attach hai.</p><p><strong>Amount:</strong> Rs ${Number(payment.amount).toLocaleString()}</p>`,
+      "grain"
+    ),
+    attachments: [{ filename: `payment-slip-${paymentId.slice(0, 8)}.pdf`, content: pdfBuffer }],
+  });
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `Slip ${toEmail} par bhej di gayi (${sent.from} se).` };
 }

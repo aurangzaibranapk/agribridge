@@ -1,6 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { NextRequest, NextResponse } from "next/server";
 import { requireStaff } from "@/lib/api-auth";
+import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 
 export async function POST(req: NextRequest) {
   // Bina rok ke ye SMTP ka khula darwaza tha — koi bhi kisi ko bhi email
@@ -8,36 +8,29 @@ export async function POST(req: NextRequest) {
   const auth = await requireStaff();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  try {
-    const { to, subject, text } = await req.json();
+  const { to, subject, text } = await req.json();
 
-    if (!to || !subject || !text) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error("Email send error:", err);
-    return NextResponse.json({ error: err.message ?? "Failed to send email" }, { status: 500 });
+  if (!to || !subject || !text) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+
+  // Dukan ki raseed dukan ke khate se. Pehle yahan `SMTP_USER` tha --
+  // ek tesra khata jo kisi aur jagah likha hi nahi tha, aur us ki wajah
+  // se raseed ki mail chup chaap ruki rehti thi (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "sales",
+    to,
+    subject,
+    html: mailWrapper(
+      `<p>${String(text).replace(/\n/g, "<br />")}</p>`,
+      "sales"
+    ),
+  });
+
+  if (!sent.sent) {
+    console.error("Email send error:", sent.error);
+    return NextResponse.json({ error: sent.error }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, from: sent.from });
 }

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postMachineryVendorPayout, failed } from "@/lib/ledger/rules";
+import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 
 export interface ActionState {
   error?: string;
@@ -416,25 +417,22 @@ export async function emailMachineryBookingSlip(_prev: ActionState, formData: Fo
     locationAddress: booking.location_address ?? booking.village,
   });
 
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
-      html: `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p>Total: Rs ${(slipGross - (bill ? num(bill.discount_amount) : 0)).toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  // Machinery ki mail machinery ke khate se jati hai, naukri wale khate
+  // se nahi -- warna kisan ka jawab naukriyon ke inbox mein gum ho jata
+  // hai (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "machinery",
+    to: toEmail,
+    subject: `Machinery Booking Slip - ${farmer?.full_name ?? ""}`,
+    html: mailWrapper(
+      `<p>Assalam-o-Alaikum ${farmer?.full_name ?? ""},</p><p>Aapki Machinery Booking ki slip is email ke sath attach hai.</p><p><strong>Booking:</strong> ${booking.booking_number}</p><p><strong>Total:</strong> Rs ${(slipGross - (bill ? num(bill.discount_amount) : 0)).toLocaleString()}</p>`,
+      "machinery"
+    ),
+    attachments: [{ filename: `machinery-slip-${booking.booking_number}.pdf`, content: pdfBuffer }],
+  });
+  // Nakami ka asal paighaam wapas -- "masla hua" se koi kaam nahi banta.
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `Slip ${toEmail} par bhej di gayi (${sent.from} se).` };
 }
 
 export async function emailMachineryBookingsList(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -467,23 +465,16 @@ export async function emailMachineryBookingsList(_prev: ActionState, formData: F
   const { generateMachineryBookingsListPdf } = await import("@/lib/machinery-bookings-list-pdf");
   const pdfBuffer = await generateMachineryBookingsListPdf(rows);
 
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Machinery Bookings List - ${new Date().toLocaleDateString()}`,
-      html: `<p>Machinery Bookings ki poori list is email ke sath attach hai.</p><p>Total Bookings: ${rows.length}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `machinery-bookings-list.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  const sent = await sendDeptMail({
+    dept: "machinery",
+    to: toEmail,
+    subject: `Machinery Bookings List - ${new Date().toLocaleDateString()}`,
+    html: mailWrapper(
+      `<p>Machinery Bookings ki poori list is email ke sath attach hai.</p><p><strong>Total Bookings:</strong> ${rows.length}</p>`,
+      "machinery"
+    ),
+    attachments: [{ filename: `machinery-bookings-list.pdf`, content: pdfBuffer }],
+  });
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `List ${toEmail} par bhej di gayi (${sent.from} se).` };
 }
