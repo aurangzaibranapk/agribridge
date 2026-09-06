@@ -229,8 +229,33 @@ scoped, jis mein wasooli ka koi raasta nahi tha -- sirf barhta, kabhi
 ghatta nahi) se `customers.current_balance` (ab dono taraf se sach)
 par mor diya gaya.
 
-### 2. Menu mein na aane wale safhe
+### 2. Menu mein na aane wale safhe — dhoonda aur jorha
 
-Un mein se aksar waajib hain (kisi safhe ke andar ke safhe — `new`,
-`[id]`, sub-tabs). Magar kuch aise bhi hain jo kabhi menu mein aaye hi
-nahi. Malik chahen to un ki alag fehrist bana kar dekhi ja sakti hai.
+Poori `src/app/admin/**` (265 safhe) ko nav ke config
+(`src/components/layout/nav-items.ts` + tabs) se milaya. Aksar (`new`,
+`[id]`, sub-tabs, layout ke andar ke tab) waajib nikle — kisi na kisi
+parent safhe se link hote hain, sirf top-menu mein nahi. Magar 7 safhe
+aise mile jo **poore codebase mein kahin se bhi link nahi the** — na
+menu, na kisi parent safhe se, kuch bhi nahi. Ye stub ya adhoora kaam
+nahi thay: har ek 80-300 lines ka poora, kaam karta hua safha tha
+(role-check, i18n, ledger query sab maujood):
+
+- `/admin/ai-usage` — "AI ka khata", malik ke 5 September sawal ka
+  jawab (AI ka bill kitna banta hai) — ab AI Instructions ke sath.
+- `/admin/grain-procurement/payments` — kisan ki anaj ki adaigi (spec
+  ke mutabiq subah ki kharid se alag) — ab Grain Procurement ke sath.
+- `/admin/grain-procurement/warehouse` — godam mein kaunsa anaj kitna
+  para hai — ab Grain Procurement ke sath.
+- `/admin/grain/leads` — machinery booking se aayi grain-farokht ki
+  leads (sauda nahi, sirf khabar) — ab Grain Procurement ke sath.
+- `/admin/hr/attendance/board` — hazri ka board (present/absent/late)
+  — ab HR, Hazri Record ke sath.
+- `/admin/machinery-rental/reports` — machinery ki maujooda reports ki
+  fehrist — ab Agriculture/Machinery ke sath.
+- `/admin/shaam-ka-hisaab` — din band karne wala safha — ab Finance,
+  Money Trail ke sath.
+
+Saaton `nav-items.ts` mein un ke sahi group ke andar daal diye —
+koi naya migration nahi, koi UI mitayi nahi, sirf missing link jorha.
+`tsc` aur `npm run build` dono pehle jaisa (71 purani, koi nayi
+ghalti) saaf.
