@@ -22,12 +22,49 @@ export default async function NewReturnPage() {
 
   // Shop sirf wahi maal wapas kar sakti hai jo us ke apne godown mein
   // maujood hai — is liye list us ke apne stock se banti hai.
-  const { data: warehouse } = await supabase
-    .from("warehouses")
-    .select("id")
-    .eq("branch_id", seller.id)
-    .eq("code", "MAIN")
-    .maybeSingle();
+  //
+  // -------------------------------------------------------------------
+  // GODAM DUKAN KA HOTA HAI, SHAAKH KA NAHI
+  //
+  // Pehle godam sirf SHAAKH se dhoondha jata tha (`branch_id` + code
+  // "MAIN"). Live ka naqsha aisa nahi hai: godam DUKAN se juRa hua hai
+  // (`warehouses.shop_id`), aur dono dukanein "Main Branch" ke neeche
+  // baithi hain -- jab ke staff ki shaakh "Kisan Karyana Mahabali" hai.
+  //
+  // Nateeja: karyana ke staff ko hamesha yehi jawab milta tha --
+  // *"This shop's warehouse is not set in the system"* -- jab ke us ka
+  // godam maujood tha aur us mein maal bhi para tha. (Malik ne 6
+  // September ko yehi screen bheji.)
+  //
+  // Ab pehle DUKAN se dekha jata hai, aur wo na mile to purane tareeqe
+  // par -- taake jahan pehle chal raha tha wahan waise hi chalta rahe.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let warehouse: { id: string } | null = null;
+
+  if (user) {
+    const { data: me } = await supabase.from("profiles").select("shop_id").eq("id", user.id).maybeSingle();
+    if (me?.shop_id) {
+      const { data: shopWarehouse } = await supabase
+        .from("warehouses")
+        .select("id")
+        .eq("shop_id", me.shop_id)
+        .maybeSingle();
+      warehouse = shopWarehouse ?? null;
+    }
+  }
+
+  if (!warehouse) {
+    const { data: branchWarehouse } = await supabase
+      .from("warehouses")
+      .select("id")
+      .eq("branch_id", seller.id)
+      .eq("code", "MAIN")
+      .maybeSingle();
+    warehouse = branchWarehouse ?? null;
+  }
 
   let products: { id: string; name: string; pack_size: string | null; price: number; stock: number }[] = [];
   if (warehouse) {

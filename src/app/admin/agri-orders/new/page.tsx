@@ -4,6 +4,7 @@ import { NewOrderForm } from "./new-order-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { categoriesForShop, type CatNode } from "@/lib/products/shop-kinds";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +27,33 @@ export default async function NewAgriOrderPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Dukan ki qism, aur ye bhi ke wo MALOOM hai ya nahi.
+  //
+  // Malik (6 September): *"karyana ki shop ko yahan karyana hi nazar
+  // aaye, baqi nahi — agri input ki shop ko agri se related aur wanda
+  // aaye lekin karyana nahi aana chahiye."*
+  //
+  // Chhanti ka nizam pehle se maujood tha. Jo cheez nahi thi wo ye:
+  // agar bande ka SHOP hi set na ho to filter chup chaap haath utha
+  // leta tha aur saara maal nazar aa jata tha. Ab wo baat safhe par
+  // likhi jati hai (neeche), taake khamosh na rahe.
   let meraShopKind: string | null = null;
+  let shopNahiChuna = false;
   if (user) {
-    const { data: me } = await supabase.from("profiles").select("shop_id").eq("id", user.id).maybeSingle();
-    if (me?.shop_id) {
-      const { data: shop } = await supabase.from("shops").select("business_type").eq("id", me.shop_id).maybeSingle();
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("shop_id, role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const shopId = (me?.shop_id as string | null) ?? null;
+    // Owner/Admin kisi ek dukan ke nahi hote -- un ko poora maal dikhna
+    // chahiye, aur un par ye tanbeeh bemaani hai.
+    const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
+    if (shopId) {
+      const { data: shop } = await supabase.from("shops").select("business_type").eq("id", shopId).maybeSingle();
       meraShopKind = (shop?.business_type as string | null) ?? null;
+    } else if (!sabKuchWala) {
+      shopNahiChuna = true;
     }
   }
 
@@ -84,6 +106,13 @@ export default async function NewAgriOrderPage() {
   return (
     <div>
       <PageHeader title={t("ao_new_order", lang)} description="Product select karein, order details bharein" />
+      {shopNahiChuna && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+          <b>Aap ki dukan set nahi hai</b>, is liye yahan <b>saara maal</b> nazar aa raha hai — karyana bhi
+          aur agri input bhi. Admin se kahein ke <b>Users</b> par aap ka shop chun dein; us ke baad sirf aap
+          ki dukan ka maal aayega.
+        </div>
+      )}
       <NewOrderForm branches={branches ?? []} products={productsFormatted} categories={categories ?? []} />
     </div>
   );

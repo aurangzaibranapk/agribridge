@@ -83,3 +83,50 @@ export function categoriesForShop(businessType: string | null | undefined, all: 
 
   return aulaadSameit(rootIds, all);
 }
+
+/**
+ * Is bande ki dukan ki qism -- aur agar maloom hi na ho to wo baat SAAF
+ * kehna.
+ *
+ * -------------------------------------------------------------------
+ * KHAMOSH "SAB KUCH" SE BACHNE KE LIYE
+ *
+ * Malik (6 September) ne karyana wale staff ke login se ordering kholi
+ * aur wahan agri ka maal bhi nazar aaya -- jab ke chhanti ka nizam pehle
+ * se bana hua tha.
+ *
+ * Wajah code mein nahi thi: us bande ka `shop_id` KHALI tha. Khali
+ * `shop_id` ka matlab hai "dukan maloom nahi", aur us surat mein filter
+ * haath utha leta hai (sab kuch dikha deta hai). Owner ke liye wo theek
+ * hai -- wo kisi ek dukan ka nahi hota. Magar dukan par baithe bande ke
+ * liye wo khamosh ghalti hai: usay lagta hai system aisa hi hai.
+ *
+ * Is liye ab jawab ke sath ye bhi aata hai ke dukan MALOOM thi ya nahi,
+ * taake safha wo baat likh sake.
+ */
+export interface ShopKindResult {
+  /** NULL = maloom nahi. */
+  kind: string | null;
+  /** Is bande ka shop set hi nahi -- aur ye baat batani chahiye. */
+  shopNahiChuna: boolean;
+}
+
+export async function shopKindForUser(
+  supabase: {
+    from: (t: string) => {
+      select: (c: string) => {
+        eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> };
+      };
+    };
+  },
+  userId: string | null | undefined
+): Promise<ShopKindResult> {
+  if (!userId) return { kind: null, shopNahiChuna: false };
+
+  const { data: me } = await supabase.from("profiles").select("shop_id").eq("id", userId).maybeSingle();
+  const shopId = (me?.shop_id as string | null) ?? null;
+  if (!shopId) return { kind: null, shopNahiChuna: true };
+
+  const { data: shop } = await supabase.from("shops").select("business_type").eq("id", shopId).maybeSingle();
+  return { kind: (shop?.business_type as string | null) ?? null, shopNahiChuna: false };
+}
