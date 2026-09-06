@@ -1635,3 +1635,64 @@ Testing par chal chuki hai. Ye teen kaam karti hai:
 Migration ke baad Live par ye khud theek ho jayega — koi data nahi bharna
 parta. Malik ko sirf har bande ka **ohda aur afsar** chunna hoga
 (`/admin/hr/team/tree` → "Badlein").
+
+
+---
+
+# 6 September — Live par chal gayi (chhe migrations)
+
+Backup ki tasdeeq pehle: `agribridge-backup-20260906-1405.sql`, **4.0M**.
+
+**329, 330, 331, 332, 333, 334** — tarteeb se, har ek ke baad ginti.
+
+## Ginti ka milan
+
+| | Pehle | Ab | |
+|---|---|---|---|
+| Journal entries | 32 | 33 | +1 (Suspense wali durustagi) |
+| Journal lines | 94 | 97 | |
+| Trial Balance | 573,978 = 573,978 | 574,008 = 574,008 | barabar |
+| **Suspense (9999)** | **Rs 30** | **Rs 0** | saaf |
+| Finance khate | 6 | 10 | +JazzCash, Easypaisa, QR, Kisan Card |
+| Bina khate ke tareeqe | **6** | **0** | |
+| GL khate | 69 | 72 | |
+| Features | 207 | 208 | +Shaam ka Hisaab |
+| Ohde (org_positions) | — | 10 | |
+| Sales / Products / Staff | 3 / 265 / 19 | 3 / 265 / 19 | **koi data nahi hila** |
+
+## 330 pehli koshish mein RUK GAYI — aur theek ruki
+
+```
+null value in column "opening_balance" of relation "finance_accounts"
+violates not-null constraint
+```
+
+Repo ki file `null` likh rahi thi, jab ke us khane par `NOT NULL` ki rok
+hai. File ke apne comment mein ye baat pehle se likhi thi — sirf SQL us
+comment se mel nahi khati thi. Testing par jo waqai chala tha wo `0` tha;
+file kabhi us ke sath nahi lagayi gayi thi.
+
+**Live ne mana kar diya aur poori migration wapas ho gayi — ek harf nahi
+badla.** File theek kar ke dobara chalayi.
+
+Chaaron naye khate `opening_balance = 0` par hain aur **un ka koi opening
+journal entry nahi** — yani ye koi dawa nahi karta ke un mein sifar hai.
+Un mein abhi kitna para hai, wo pehle shaam ke milan par darj hoga.
+
+## 333 ne foran wo cheez pakri jo pehle nazar hi nahi aati thi
+
+```
+purchases              1 qatar    Rs 112,048   <- ledger tak nahi pahunchi
+finance_transactions   1 qatar    Rs  19,000
+```
+
+## Ab bhi baqi
+
+1. **Rs 112,048 ki durustagi wali entry** — `Dr 1200 / Cr 2000`. Code
+   aage ke liye theek ho chuka, magar purani kharid apne aap ledger mein
+   nahi jayegi. **Malik ke saaf kehne par hi.**
+2. **cPanel par cron** — roz ka milaan 29 August se band hai.
+3. **Darakht par ohda aur afsar** — 334 ke baad 19 log nazar aayenge,
+   magar har bande ka ohda malik ko chunna hoga.
+4. **335 (ginti ki tarteeb)** — testing par pass, safha ban chuka hai.
+   Agle round mein Live par jayegi.

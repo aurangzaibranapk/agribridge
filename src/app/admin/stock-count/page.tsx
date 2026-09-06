@@ -7,8 +7,10 @@ import {
   openCount,
   recentCounts,
   overdueCounts,
+  countSchedules,
   COUNT_OVERDUE_DAYS,
 } from "@/lib/ledger/stock-count";
+import { ScheduleSection } from "./schedule-client";
 import { AlertTriangle, CheckCircle2, PackageSearch, EyeOff } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -35,18 +37,47 @@ export default async function StockCountPage({
     ? await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle()
     : { data: null };
 
-  if (!me?.is_active || !ROLES.includes(me.role)) {
+  // Ijazat do raaston se aati hai.
+  //
+  // Purana raasta ROLE ka hai. Naya raasta ZIMMEDARI ka: malik ne kaha
+  // *"hum kisi ko bhi access dein ke stock count karwa sakein."* Us ke
+  // liye poore nizam ka `warehouse` role de dena bohot bara darwaza
+  // kholta -- wo banda phir har godam ka maal hila sakta. Is liye
+  // ijazat tang hai: sirf ginti, aur sirf un godamon ki jin ka wo
+  // zimmedar likha gaya hai (335).
+  const roleSeIjazat = Boolean(me?.is_active) && ROLES.includes(me?.role ?? "");
+  const { data: mereGodam } = me?.is_active
+    ? await supabase.rpc("fn_stock_count_mere_godam")
+    : { data: null };
+  const zimmedariWaleGodam = new Set((mereGodam ?? []).map((r) => r.warehouse_id as string));
+
+  if (!me?.is_active || (!roleSeIjazat && zimmedariWaleGodam.size === 0)) {
     return (
       <div className="p-8 text-center text-surface-400">{t("at_warehouse_roles", lang)}</div>
     );
   }
 
-  const seesAll = me.role !== "warehouse" && me.role !== "manager";
+  const seesAll = roleSeIjazat && me.role !== "warehouse" && me.role !== "manager";
   let whQuery = supabase.from("warehouses").select("id, name").eq("is_active", true).order("name");
-  if (!seesAll && me.branch_id) whQuery = whQuery.eq("branch_id", me.branch_id);
+  if (roleSeIjazat && !seesAll && me.branch_id) whQuery = whQuery.eq("branch_id", me.branch_id);
   const { data: whRows } = await whQuery;
 
-  const warehouses = (whRows ?? []).map((w) => ({ id: w.id, name: w.name }));
+  // Jise sirf zimmedari se ijazat mili, usay SIRF apne godam.
+  const warehouses = (whRows ?? [])
+    .filter((w) => roleSeIjazat || zimmedariWaleGodam.has(w.id))
+    .map((w) => ({ id: w.id, name: w.name }));
+
+  // Tarteeb sirf Admin darja badal sakta hai -- ginne wala nahi. Agar
+  // ginne wala apni hi tareekh aage kar sake to ginti hamesha "kal"
+  // hoti rehti hai.
+  const tarteebBadalSakta = ["owner", "super_admin", "admin"].includes(me.role);
+  const [tarteeb, { data: sabLog }] = await Promise.all([
+    countSchedules(),
+    supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name"),
+  ]);
+  const tarteebDikhao = roleSeIjazat
+    ? tarteeb
+    : tarteeb.filter((r) => zimmedariWaleGodam.has(r.warehouseId));
   const selected = params.w ?? warehouses[0]?.id ?? null;
 
   // Milaan ke safhe par hi asal adad kholte hain. Ginti ke safhe par
@@ -84,6 +115,12 @@ export default async function StockCountPage({
           </p>
         </Card>
       )}
+
+      <ScheduleSection
+        rows={tarteebDikhao}
+        log={(sabLog ?? []).map((p) => ({ id: p.id as string, naam: (p.full_name as string | null) ?? "—" }))}
+        canEdit={tarteebBadalSakta}
+      />
 
       {warehouses.length === 0 ? (
         <Card className="p-4">
