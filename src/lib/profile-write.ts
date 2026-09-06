@@ -72,3 +72,78 @@ export async function profileKaKhanaBadlein(
 
   return {};
 }
+
+
+/**
+ * Apne hi profile ka wo khana badalna jo banda khud badal sakta hai.
+ *
+ * =====================================================================
+ * FEHRIST BANDHI HUI KYUN HAI
+ * =====================================================================
+ *
+ * Ye function bhi service client se likhta hai -- yani RLS is ke raaste
+ * mein nahi. Aur wohi baat ise khatarnaak bana sakti thi: agar ye kisi
+ * bhi khane ko qubool karta, to koi bhi apna `role` "owner" likh kar
+ * poore karobar ka darwaza khol leta.
+ *
+ * Is liye khane ki fehrist YAHAN bandhi hui hai, bulane wale ke haath
+ * mein nahi. `role`, `is_active`, `branch_id`, `shop_id`, `extra_roles`
+ * -- ye sab is fehrist mein nahi hain aur na kabhi honge; wo doosre
+ * bande ka faisla hain, apna nahi.
+ *
+ * Aur banda hamesha `auth.uid()` se aata hai -- form se nahi. Jo cheez
+ * bheji hi nahi ja sakti, us se dhoka bhi nahi ho sakta.
+ */
+const APNE_KHANE = ["training_mode", "ui_mode", "language", "theme"] as const;
+type ApnaKhana = (typeof APNE_KHANE)[number];
+
+export async function apnaKhanaBadlein(
+  userId: string,
+  patch: Partial<Record<ApnaKhana, unknown>>
+): Promise<{ error?: string }> {
+  if (!userId) return { error: "Login zaroori hai." };
+
+  const saaf: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if ((APNE_KHANE as readonly string[]).includes(k)) saaf[k] = v;
+  }
+  if (Object.keys(saaf).length === 0) {
+    return { error: "Ye khana apne aap badalne walon mein nahi hai." };
+  }
+
+  return profileKaKhanaBadlein(userId, saaf);
+}
+
+
+/**
+ * Ek se zyada bandon ka ek hi khana.
+ *
+ * Alag se is liye ke tasdeeq ka sawal yahan alag hai: kitne badle,
+ * kitne maange gaye the. Chup chaap kam badalna wohi kharabi hai jis ne
+ * Users ka safha bekaar kar rakha tha -- bas ginti mein.
+ */
+export async function bohatKeKhaneBadlein(
+  userIds: string[],
+  patch: Record<string, unknown>
+): Promise<{ badle: number; error?: string }> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return { badle: 0, error: "Koi banda chuna hi nahi gaya." };
+
+  const service = createServiceClient();
+  const { data, error } = await service.from("profiles").update(patch).in("id", ids).select("id");
+  if (error) return { badle: 0, error: error.message };
+
+  const badle = data?.length ?? 0;
+  if (badle === 0) {
+    return { badle: 0, error: "Kuch mehfooz nahi hua — ye bande mile hi nahi. Safha taza karein." };
+  }
+  if (badle < ids.length) {
+    // Aadha kaam ho jana bhi khabar hai. Khamoshi se "ho gaya" kehna wo
+    // ghalti hai jis ka pata mahine baad chalta hai.
+    return {
+      badle,
+      error: `${ids.length} mein se sirf ${badle} par lagi — baqi ${ids.length - badle} nahi mile. Safha taza kar ke dobara dekhein.`,
+    };
+  }
+  return { badle };
+}

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { bohatKeKhaneBadlein } from "@/lib/profile-write";
 import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
@@ -378,10 +379,14 @@ export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData
   const ids = idsRaw.split(",").filter(Boolean);
   if (ids.length === 0) return { error: "Koi Staff select nahi hui." };
 
-  const { error } = await supabase.from("profiles").update({ is_active: false }).in("id", ids);
-  if (error) return { error: error.message };
+  // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`. Yahan ginti bhi
+  // ahem hai: aadhe bande band ho jayen aur safha "ho gaya" kahe, to wo
+  // baat mahine baad tankhwah ke waqt nikalti hai.
+  const res = await bohatKeKhaneBadlein(ids, { is_active: false });
+  if (res.error) return { error: res.error };
 
   revalidatePath("/admin/hr");
+  revalidatePath("/admin/users");
   return { success: true };
 }
 /**

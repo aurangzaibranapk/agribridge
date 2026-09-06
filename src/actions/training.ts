@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { apnaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
 
 /** Academy, Training Mode aur Simple/Advanced (Guided ERP D, E). */
@@ -36,8 +37,11 @@ export async function setTrainingMode(_prev: TrainingState, formData: FormData):
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
   const on = String(formData.get("on") ?? "") === "1";
-  const { error } = await supabase.from("profiles").update({ training_mode: on }).eq("id", user.id);
-  if (error) return { error: error.message };
+  // Apne hi profile ka khana -- aur wo bhi bandhi hui fehrist se.
+  // `profiles` par badalne ka koi RLS qanoon nahi hai, is liye user wale
+  // client se ye update chup chaap 0 qatarein badalta tha.
+  const res = await apnaKhanaBadlein(user.id, { training_mode: on });
+  if (res.error) return { error: res.error };
   revalidatePath("/admin/my-work");
   revalidatePath("/admin/academy");
   return { success: true };
@@ -49,8 +53,8 @@ export async function setUiMode(mode: "simple" | "advanced"): Promise<TrainingSt
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
-  const { error } = await supabase.from("profiles").update({ ui_mode: mode }).eq("id", user.id);
-  if (error) return { error: error.message };
+  const res = await apnaKhanaBadlein(user.id, { ui_mode: mode });
+  if (res.error) return { error: res.error };
   revalidatePath("/admin", "layout");
   return { success: true };
 }
