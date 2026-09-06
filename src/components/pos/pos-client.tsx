@@ -19,7 +19,6 @@ import {
   Plus,
   Minus,
   X,
-  PackagePlus,
   Paperclip,
   Check,
   Package,
@@ -673,12 +672,21 @@ export function PosClient({
             <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
           </button>
 
-          <Link
-            href="/admin/pos/ordering"
-            className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300"
-          >
-            <PackagePlus className="h-4 w-4" /> {t("pos_karyana_ordering", lang)}
-          </Link>
+          {/* Ordering ka darwaza yahan se HATA diya gaya.
+              Malik (6 September): *"jab hum ye AgriBridge Ordering de
+              rahe hain to POS ke andar ordering... wahan phir nahi honi
+              chahiye."*
+
+              Wo theek keh rahe the. Maal mangwane ke do darwaze the --
+              POS ke andar ka chhota raasta, aur poora AgriBridge
+              Ordering ka safha. Do darwazon ka matlab do adhoore raaste:
+              banda kabhi ek se order karta, kabhi doosre se, aur "mera
+              order kahan hai" ka jawab dhoondhna paRta.
+
+              Ab ek hi darwaza hai: sidebar par **AgriBridge Ordering**.
+              `/admin/pos/ordering` ka safha mitaya nahi gaya -- purane
+              link (aur AI ki roz ki report) us par ja sakte hain -- bas
+              POS ki patti se us ka button hata diya gaya hai. */}
         </div>
 
         {/* Jo cheezein rate na hone ki wajah se chhupi hain, un ka adad
