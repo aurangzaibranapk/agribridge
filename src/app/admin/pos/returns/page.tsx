@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
+import { BackLink } from "@/components/pos/back-link";
 import { Badge } from "@/components/ui/form";
 import { ReturnsClient } from "./returns-client";
 import { t } from "@/lib/i18n/translations";
@@ -79,6 +80,7 @@ export default async function PosReturnsPage() {
       <PageHeader
         title={t("pos_returns_title", lang)}
         description={t("pos_returns_subtitle", lang)}
+        actions={<BackLink href="/admin/pos" label="POS par wapas" />}
       />
 
       <div className="space-y-4">

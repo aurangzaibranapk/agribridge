@@ -6,6 +6,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import Link from "next/link";
 import { ShoppingCart, Store, UserRound } from "lucide-react";
+import { BackLink } from "@/components/pos/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,11 @@ export default async function OrderingDashboardPage() {
 
   return (
     <div>
-      <PageHeader title={t("pos_karyana_ordering", lang)} description={seller.name} />
+      <PageHeader
+        title={t("pos_karyana_ordering", lang)}
+        description={seller.name}
+        actions={<BackLink href="/admin/pos" label="POS par wapas" />}
+      />
 
       <div className="mb-6 rounded-card bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-card">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

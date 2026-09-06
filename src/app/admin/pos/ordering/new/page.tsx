@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { BackLink } from "@/components/pos/back-link";
 import { SimpleOrderForm } from "./simple-order-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -88,7 +89,11 @@ export default async function NewBranchOrderPage() {
 
   return (
     <div>
-      <PageHeader title={t("at_karyana_order", lang)} description={seller.name} />
+      <PageHeader
+        title={t("at_karyana_order", lang)}
+        description={seller.name}
+        actions={<BackLink href="/admin/pos/ordering" label="Ordering par wapas" />}
+      />
       <SimpleOrderForm
         products={productsFormatted}
         categories={karyanaCategories}
