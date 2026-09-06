@@ -1,4 +1,5 @@
 "use client";
+import { aajPakistan } from "@/lib/utils/format";
 import Link from "next/link";
 import { Printer, MessageCircle, Mail, ArrowLeft } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -88,7 +89,7 @@ export function GrainStatementClient({
             {sellerCode && <p className="text-xs text-surface-500">Code: {sellerCode}</p>}
             {sellerPhone && <p className="text-xs text-surface-500">Phone: {sellerPhone}</p>}
           </div>
-          <div className="text-right text-xs text-surface-400">Statement Date: {new Date().toLocaleDateString()}</div>
+          <div className="text-right text-xs text-surface-400">Statement Date: {aajPakistan()}</div>
         </div>
 
         {byGrainType.length > 0 && (

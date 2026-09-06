@@ -1,4 +1,5 @@
 "use client";
+import { aajPakistan } from "@/lib/utils/format";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { selfCheckIn, selfCheckOut, type ActionState } from "@/actions/hr";
@@ -48,7 +49,7 @@ export function CheckinClient({ today }: { today: TodayRecord | null }) {
   return (
     <div className="mx-auto max-w-md">
       <div className="rounded-card border border-surface-200 bg-white p-6 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <p className="text-sm text-surface-500">{new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+        <p className="text-sm text-surface-500">{aajPakistan(true)}</p>
 
         {checkedIn && (
           <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-green-700">

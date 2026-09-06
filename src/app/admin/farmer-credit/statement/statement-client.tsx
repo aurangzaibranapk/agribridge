@@ -1,4 +1,5 @@
 "use client";
+import { aajPakistan } from "@/lib/utils/format";
 import Link from "next/link";
 import { Printer, MessageCircle, Mail, ArrowLeft } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -75,7 +76,7 @@ export function FarmerCreditStatementClient({
             {farmerPhone && <p className="text-xs text-surface-500">Phone: {farmerPhone}</p>}
           </div>
           <div className="text-right text-xs text-surface-400">
-            <p>Statement Date: {new Date().toLocaleDateString()}</p>
+            <p>Statement Date: {aajPakistan()}</p>
             {creditLimit && <p>Credit Limit: Rs {creditLimit.toLocaleString()}</p>}
           </div>
         </div>
