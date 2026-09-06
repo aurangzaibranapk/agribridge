@@ -2151,3 +2151,36 @@ kar chuna gaya tareeqa hain (SECURITY DEFINER + andar `fn_is_any_staff`
 jaisi jaanch), aur pehle bhi isi tarah verify ho chuka hai. Agar malik
 chahen to in ka bhi ek-ek karke gehra review ho sakta hai, magar wo
 alag, lamba kaam hoga.
+
+## Ab tak ka poora hisaab — ye meri chalti hui fehrist hai (6 September)
+
+Malik: *"apni purani memory update kr, us men baqi Jo kam hn wo krin
+tmhara task hg."* Yani ye fehrist ab ek dafa ka kaam nahi — har dafa
+kaam karte waqt ye pehle parhna hai, aur har dafa kuch nayi cheez
+milte ya poori hote hi yahan update karna hai.
+
+**Live par jana baqi hai (backup ki tasdeeq ka intezar) — 19
+migrations:** 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348,
+349, 350, 351, 352, 353, 354, 355, 356 (sab Testing par pass, tarteeb
+upar "chalni baqi migrations" ki table mein hai — 343 se pehle 346
+kabhi nahi).
+
+**Migrations ke baad, ek naya build upload bhi baqi hai** (isi
+sanad ke sab se pehle "Deploy" hisse ke mutabiq — pull, build,
+package, cPanel).
+
+**Malik ke faislے ka intezar (code taiyar nahi, sirf sawal khula
+hai):**
+- "Menu mein na aane wale safhe" ka kaam ab poora ho chuka (upar aur
+  `DUPLICATE-SAFAI.md` mein) — koi khula sawal nahi bacha.
+- 358 security lint mein se ~350 abhi tak sirf "ye is project ka apna
+  tareeqa hai" keh kar chhore gaye, ek-ek karke gehra review nahi hua.
+  Agar malik chahen to alag se ye kaam ho sakta hai.
+- `allowed_pages`/`role_page_permissions` girane wali migration ka SQL
+  taiyar hai (upar "Purana khana girane wali migration — BAAD mein"),
+  magar jaan boojh kar nahi banai — naya build Live par chalne ki
+  tasdeeq ke baad hi banegi.
+
+**Koi aur khula, na-poora kaam abhi nazar nahi aaya.** Agla review jab
+bhi ho, is fehrist ko yahin se aage barhana hai, dobara sab kuch parhne
+ki zaroorat nahi.
