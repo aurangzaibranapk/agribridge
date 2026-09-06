@@ -1810,6 +1810,7 @@ tasdeeq se pehle Live par koi migration nahi).
 | 347 | Rozana ka kharcha: banda, khata, tareekh + manzoori ka taala | ✅ | **baqi** |
 | 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | **baqi** |
 | 349 | Mazdoori, advance ka khud-ba-khud adjust, bande ka ek khata | ✅ (malik ka apna misaal ledger par chala kar dekha) | **baqi** |
+| 350 | Do taraf ki raqam manzoori se katti hai (`party_settlements`) | ✅ | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -1890,3 +1891,49 @@ Malik ne jo tarteeb likhi thi, wo qatarein daal kar chala kar dekhi gayi
 Aur us ke saath khaad ka Rs 10,000 udhaar daal kar dekha gaya ke khulasa
 DONO alag dikhata hai — `1150 lena 10,000` aur `2015 dena 500` — na ke
 "7,000 net". Chup chaap set-off nahi hota; wo malik ki apni shart thi.
+
+## P0 — `profiles` par badalne ka koi RLS qanoon hi nahi
+
+6 September ko malik ne likha: *"Anwar ko maine karyana par lagaya hai
+to kahin save ka button nahi, jahan hum save kar dein."*
+
+Button maujood tha (dropdown badalte hi form jama ho jata tha). Magar
+Live par dekha to `shop_id` phir bhi KHALI tha, aur safhe par koi ghalti
+bhi nazar nahi aayi.
+
+Wajah `profiles` ki ijazat mein hai. Us par RLS chalu hai aur SIRF EK
+qanoon likha hua hai:
+
+```
+own_profile — SELECT — (auth.uid() = id OR fn_is_any_staff())
+```
+
+Parhne ka qanoon hai, BADALNE ka koi nahi. RLS ke peeche update NAKAAM
+nahi hota — wo kisi qatar par lagta hi nahi. Nateeja: `error` khali,
+`success: true`, aur database mein kuch nahi badla.
+
+Ye ek jagah ki baat nahi thi. Isi tarah chup chaap nakaam ho rahe the:
+
+| Kaam | Kahan |
+|---|---|
+| Bande ki dukan | `assignUserShop` |
+| Bande ki shaakh | `assignUserBranch` |
+| Bande ka department/role | `updateUserRole` |
+| Doosre department | `updateUserExtraRoles` |
+| Account chaalu / band | `toggleUserActive` |
+
+Yani Users ka poora safha dekhne mein chalta tha aur amal mein kuch
+nahi karta tha.
+
+**Hal (code mein, migration nahi):** `lib/profile-write.ts` — ye
+likhaiyan service client se hoti hain (ye kaam pehle hi Owner/Admin tak
+mehdood hain) AUR `.select("id")` se tasdeeq hoti hai ke waqai qatar
+badli. Sifar par saaf ghalti wapas jati hai.
+
+Sath ek aur kami: `ShopSelector` dukan ka NAAM nahi, sirf QISM dikhata
+tha — is liye ek hi shaakh ke neeche do "Karyana" bilkul ek jaise nazar
+aate the. Ab naam pehle, qism baad mein. Aur dono selector ab "mehfooz"
+ka nishan dikhate hain.
+
+Anwar ki dukan Live par set kar di gayi (Kisaan Karyana Mahabali,
+KKM001) — malik ke kehne par.

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -323,8 +324,19 @@ export async function assignUserShop(_prev: ActionState, formData: FormData): Pr
   const shopId = (formData.get("shop_id") as string) || null;
   if (!userId) return { error: "Missing user id." };
 
-  const { error } = await supabase.from("profiles").update({ shop_id: shopId }).eq("id", userId);
-  if (error) return { error: error.message };
+  // Service client se, aur tasdeeq ke sath -- wajah `lib/profile-write.ts`
+  // mein likhi hai: `profiles` par badalne ka koi RLS qanoon hai hi nahi,
+  // is liye user wale client se ye update chup chaap 0 qatarein badalta
+  // tha aur safha "ho gaya" keh deta tha.
+  const res = await profileKaKhanaBadlein(userId, { shop_id: shopId });
+  if (res.error) return { error: res.error };
+
+  await logAudit({
+    actionType: "update",
+    module: "user_shop",
+    recordId: userId,
+    description: shopId ? `Dukan lagai: ${shopId}` : "Dukan hata di (poori shaakh)",
+  });
 
   revalidatePath("/admin/users");
   return { success: true };

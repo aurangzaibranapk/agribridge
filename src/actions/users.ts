@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { UserRole } from "@/lib/utils/roles";
@@ -68,8 +69,8 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<{ 
     }
   }
 
-  const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
-  if (error) return { error: error.message };
+  const res = await profileKaKhanaBadlein(userId, { role });
+  if (res.error) return { error: res.error };
 
   // Ikhtiyar ka har hath badalna nishan chhorta hai. Pehle ye chupke se
   // ho jata tha -- extra_roles ka audit tha, asal role ka nahi.
@@ -119,8 +120,8 @@ export async function updateUserExtraRoles(userId: string, roles: string[]): Pro
   // ye ghalat khabar deta ke us ke do department hain jabke ek hi hai.
   const extra = [...new Set(roles)].filter((r) => r !== target.role);
 
-  const { error } = await supabase.from("profiles").update({ extra_roles: extra }).eq("id", userId);
-  if (error) return { error: error.message };
+  const res = await profileKaKhanaBadlein(userId, { extra_roles: extra });
+  if (res.error) return { error: res.error };
 
   await logAudit({
     actionType: "update",
@@ -138,8 +139,24 @@ export async function updateUserExtraRoles(userId: string, roles: string[]): Pro
 
 export async function toggleUserActive(userId: string, isActive: boolean): Promise<{ error?: string }> {
   const supabase = createClient();
-  const { error } = await supabase.from("profiles").update({ is_active: isActive }).eq("id", userId);
-  if (error) return { error: error.message };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user?.id ?? "").maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(String(me.role))) {
+    return { error: "Account chaalu ya band sirf Owner ya Admin kar sakta hai." };
+  }
+
+  const res = await profileKaKhanaBadlein(userId, { is_active: isActive });
+  if (res.error) return { error: res.error };
+
+  await logAudit({
+    actionType: "update",
+    module: "user_status",
+    recordId: userId,
+    description: isActive ? "Account chaalu kiya" : "Account band kiya",
+  });
+
   revalidatePath("/admin/users");
   return {};
 }
