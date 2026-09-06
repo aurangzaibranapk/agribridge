@@ -1800,6 +1800,28 @@ tasdeeq se pehle Live par koi migration nahi).
 |---|---|---|---|
 | 338 | Cash Book aur ledger ka milan + farq wala view | ✅ (0 farq) | **baqi** |
 | 339 | Customer ka khata: `fn_customer_ledger`, `fn_customer_baqi`, help | ✅ | **baqi** |
+| 340 | Wade ki tareekh har tabdeeli nahi rokti | ✅ | **baqi** |
+| 341 | Membership ka darja aur udhaar ka taala | ✅ | **baqi** |
+| 342 | Vendor ko do dafa zyada gaya paisa wapas | ✅ | **baqi** |
+| 343 | Ohda TEMPLATE bane, taala nahi + `fn_apply_role_template` | ✅ (har ohde ki ginti waisi hi rahi) | **baqi** |
+| 344 | Sales staff ka template malik ki fehrist par (20 → 9, view+create) | ✅ | **baqi** |
+| 345 | Dukan ka code khud bane (01, 02…) | ✅ | **baqi** |
+| 346 | Ek bande ke ek feature ki EK hi pakki qatar (unique taala) | ✅ (index bana) | **baqi** |
+
+### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
+
+343 **pehle** chalti hai. Wo har bande ki mojooda ijazat us ke apne
+khate mein NAQAL karti hai, aur us ke baad hi view se ohde wala hissa
+nikalti hai. Ulti tarteeb mein ek lamhe ke liye har bande ki ijazat
+sifar ho jati — gyarah logon ka menu khali, aur kaam ruk jata.
+
+346 usi table par unique taala lagati hai, is liye wo 343 ke **baad**
+hi maani rakhti hai.
+
+Build in dono ke **baad** upload hona hai. Build pehle chala jaye to
+`/admin/staff-access` ka "Template lagayein" `fn_apply_role_template`
+na milne par kaam nahi karega (safha khulta rahega, sirf wo dabao
+kharabi dega).
 
 Live par 338 chalne se pehle aur baad mein ye ginti leni hai:
 
@@ -1827,3 +1849,15 @@ select * from v_cash_book_ledger_farq;   -- baad mein KHALI honi chahiye
    hai ke wo Rs 15 **kis khate** mein aaye (CBA float mein, ya kahin
    aur). Us ke bagair darj nahi ki ja sakti — andaza lagana wohi ghalti
    hoti jo mahine baad company ki statement se milan par nikalti hai.
+
+6. **Anwar ki dukan** — us ka `shop_id` abhi khali hai. Wo Main Branch
+   Mahabali par aa chuka hai (pehle ek `blocked` shaakh par tha jis ke
+   neeche koi dukan hi nahi thi -- isi liye Users ke safhe par Shop ka
+   khana khali reh jata tha). Do karyana dukanein maujood hain; kaunsi
+   us ki hai, ye malik hi bata sakte hain.
+
+7. **Rs 5 lakh ki udhaar ki hadd** — `branch_credit_accounts` ki wo
+   qatar `Kisan Karyana Mahabali` (blocked shaakh) par lagi hui hai, jo
+   malik mitana chahte hain. Shaakh mitane se wo hadd bhi chupchaap mit
+   jayegi. Malik se poochha ja chuka hai: hadd Main Branch Mahabali par
+   le jayein ya khatam karein. Jawab ke baghair shaakh nahi miti.
