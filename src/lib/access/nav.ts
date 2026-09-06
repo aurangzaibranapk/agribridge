@@ -113,7 +113,34 @@ function groupsFromRegistry(registry: Registry, visible: Set<string> | null): Na
 
 export async function loadNav(profileId: string, role: string, lang: Lang = "rm"): Promise<NavResult> {
   const unrestricted = UNRESTRICTED_ROLES.includes(role);
-  const service = createServiceClient();
+
+  // Service client BHI try ke andar.
+  //
+  // Ye ek harf ki ghalti thi jis ka anjaam poora admin band hona hai.
+  // `createServiceClient()` phenk deta hai agar `SUPABASE_SERVICE_ROLE_KEY`
+  // maujood na ho -- aur wo yahan try se BAHAR banta tha. Us soorat mein
+  // `loadNav` phenkta hai, `admin/layout.tsx` phenkta hai, aur layout ke
+  // OOPER koi error boundary nahi (`admin/error.tsx` sirf us ke ANDAR ke
+  // safhon ko pakarta hai). Nateeja: har admin safha ek saada
+  // "Internal Server Error" -- bina kisi ishaare ke ke masla kya hai.
+  //
+  // Is file ka apna usool pehle se likha hua tha: "navigation ka ghayab
+  // ho jana poore daftar ko rok deta hai", is liye har nakami par purani
+  // fehrist chalti hai. Wo usool yahan laagu hi nahi ho pa raha tha,
+  // kyunki client us se pehle ban jata tha.
+  //
+  // Ab nakami par bhi banda andar aa jata hai -- fallback menu ke sath --
+  // aur wajah server ke log mein saaf likhi jati hai.
+  let service: ReturnType<typeof createServiceClient>;
+  try {
+    service = createServiceClient();
+  } catch (e) {
+    console.error(
+      "loadNav: service client nahi bana (SUPABASE_SERVICE_ROLE_KEY dekhein) —",
+      e instanceof Error ? e.message : e
+    );
+    return { groups: fallbackGroups(null), allowedRoutes: [], unrestricted, usedFallback: true };
+  }
 
   let registry: Registry;
   try {
