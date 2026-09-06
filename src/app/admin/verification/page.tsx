@@ -20,9 +20,16 @@ function umar(ghante: number): string {
   return `${din} din ${g % 24}h`;
 }
 
+/**
+ * Har qatar apne darwaze par.
+ *
+ * Mazdoori ka apna safha maujood hai, magar us ka DARWAZA ab Paisa &
+ * Khata hai -- malik ka usool: *"shop par ek hi tag ho jis mein Paisa &
+ * Khata ho."* Wahan wo qatarein bhi hain aur manzoori ka button bhi.
+ */
 const KAHAN_KA_RAASTA: Record<string, string> = {
   kharche: "/admin/kharche",
-  mazdoori: "/admin/mazdoori",
+  mazdoori: "/admin/kharche",
   settlements: "/admin/settlements",
 };
 

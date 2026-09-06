@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { LoadBillClient } from "./load-bill-client";
-import { CounterTabs } from "@/components/pos/counter-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +106,6 @@ export default async function LoadBillPage({
 
   return (
     <div>
-      <CounterTabs active={shuruKind} />
       <PageHeader
         title="Load & Bill"
         description="Mobile load aur customer ke bill — float ke hisaab ke sath"

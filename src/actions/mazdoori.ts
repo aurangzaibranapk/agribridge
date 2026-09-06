@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
+import { canDo } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
@@ -127,10 +128,32 @@ export async function bandeKaHaal(
   return mazdooriKaHaal(partyType, partyId);
 }
 
-/** Staff kaam darj karta hai. */
+/**
+ * Staff kaam darj karta hai.
+ *
+ * -------------------------------------------------------------------
+ * IJAZAT KI ROK YAHAN NAHI THI
+ *
+ * Pehle yahan sirf ye dekha jata tha ke banda login hai aur us ka
+ * account chaalu hai -- koi feature wali rok nahi thi. Yani jis ke paas
+ * bhi koi profile hai (portal wala kisan bhi) wo mazdoori ki qatar bana
+ * sakta tha. Manzoori us ke baad bhi manager ki thi, magar qatar khari
+ * kar dena bhi ek darwaza hai.
+ *
+ * Rok `kharche` par lagi hai, `mazdoori` par nahi -- kyunke ab shop par
+ * DARWAZA ek hi hai (malik ka usool: "shop par ek hi tag ho jis mein
+ * Paisa & Khata ho"). Jise wo tag khulta hai, usay mazdoori bhi khulti
+ * hai. Jin logon ko purani `mazdoori` wali ijazat alag di gayi thi, wo
+ * bhi chalti rehti hai.
+ */
 export async function mazdooriDarj(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const who = await main();
   if ("error" in who) return { error: who.error };
+
+  const khul = (await canDo("kharche", "create")) || (await canDo("mazdoori", "create"));
+  if (!khul && !SAB_KUCH.includes(who.role)) {
+    return { error: "Aap ko Paisa & Khata mein darj karne ki ijazat nahi hai." };
+  }
 
   const partyType = String(formData.get("party_type") ?? "").trim();
   const partyId = String(formData.get("party_id") ?? "").trim();

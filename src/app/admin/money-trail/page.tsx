@@ -61,6 +61,7 @@ export default async function MoneyTrailPage({
     { label: "Supplier ko advance", value: trail.advanceSuppliers, code: "1120" },
     { label: "Staff ko advance", value: trail.advanceStaff, code: "1130" },
     { label: "Farmer ko advance", value: trail.advanceFarmers, code: "1140" },
+    { label: "Mazdoor ko advance (kaam baqi)", value: trail.advanceWorkers, code: "1145" },
     { label: "Stock ki qeemat", value: trail.stock, code: "1200" },
   ];
 
@@ -68,6 +69,7 @@ export default async function MoneyTrailPage({
     { label: "Supplier ko dena", value: trail.payableSuppliers, code: "2000" },
     { label: "Farmer ko dena", value: trail.payableFarmers, code: "2010" },
     { label: "Staff ko dena", value: trail.payableStaff, code: "2020" },
+    { label: "Mazdoori dena", value: trail.payableWorkers, code: "2015" },
     { label: "Wallet ka bojh", value: trail.walletLiability, code: "2040" },
   ];
 

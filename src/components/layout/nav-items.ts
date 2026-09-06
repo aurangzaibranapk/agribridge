@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
-  Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck,
+  Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -123,7 +123,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/finance/payment-mapping", label: "Payment Method Mapping", icon: CreditCard },
       { href: "/admin/agri-orders", label: "AgriBridge Ordering", icon: ClipboardType },
       { href: "/admin/kharche", label: "Paisa & Khata", icon: ReceiptText },
-      { href: "/admin/mazdoori", label: "Mazdoori / Daily Work", icon: ReceiptText },
+      { href: "/admin/load-bill", label: "Load / Bill", icon: Smartphone },
       { href: "/admin/settlements", label: "Khaton ka Adjustment", icon: Scale },
       { href: "/admin/verification", label: "Manzoori ki Qatar", icon: ClipboardCheck },
       { href: "/admin/company-expenses", label: "Company Expenses", icon: ReceiptText },

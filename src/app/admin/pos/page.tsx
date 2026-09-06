@@ -2,8 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { BINA_QISM } from "@/lib/pos/constants";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
-import { CounterTabs } from "@/components/pos/counter-tabs";
-import { loadUserAccess, can } from "@/lib/access/permissions";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
@@ -292,17 +290,25 @@ export default async function PosPage() {
   }
 
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
-  // Counter ke teen kaam upar. Load/Bill ka khana sirf us bande ko
-  // dikhta hai jise wo safha khulta hai -- warna wo ek aisa darwaza dekh
-  // raha hota jo us ke liye band hai, aur har dafa dabane par inkaar
-  // milta. Ijazat wahin se poochi jati hai jahan se baqi poora menu
-  // banta hai, warna do jagah do jawab ban jate.
-  const access = await loadUserAccess(user.id);
-  const loadBillAllowed = access ? can(access, "load-bill", "view") : false;
 
+  /**
+   * Load aur Bill POS se nikal gaye.
+   *
+   * Malik (6 September): *"POS se bill aur load bhi hata do. Slide bar
+   * mein 1 tag banao Load/Bill ka, is par load aur bill ho ga."*
+   *
+   * Wo pehle bhi yehi keh chuke the: *"jab hum ye ordering bridge de
+   * rahe hain to POS ke andar ordering app ke tuk nahi banta, wahan phir
+   * nahi honi chahiye."* Wohi baat load aur bill par bhi lagti hai --
+   * counter par bikri hoti hai; load aur bill alag kaam hain aur un ka
+   * apna safha maujood hai.
+   *
+   * Safha `/admin/load-bill` waise ka waisa hai; sirf POS ke ooper se
+   * us ke khane hataye gaye hain. Menu mein wo ek hi tag ban kar rehta
+   * hai.
+   */
   return (
     <>
-      {loadBillAllowed && <CounterTabs active="products" />}
       <PosClient
         lang={lang}
         sellerName={sellerName}

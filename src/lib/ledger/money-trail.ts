@@ -119,10 +119,14 @@ export interface MoneyTrail {
   advanceSuppliers: number;
   advanceStaff: number;
   advanceFarmers: number;
+  /** Mazdoor ko diya hua advance -- kaam abhi baqi hai (1145). */
+  advanceWorkers: number;
   stock: number;
   payableSuppliers: number;
   payableFarmers: number;
   payableStaff: number;
+  /** Kaam ho chuka, mazdoori abhi di nahi (2015). */
+  payableWorkers: number;
   walletLiability: number;
   suspense: number;
   /** Sab kuch mila kar -- kul maal-o-asbaab. */
@@ -146,10 +150,15 @@ const GROUPS = {
   advanceSuppliers: ["1120"],
   advanceStaff: ["1130"],
   advanceFarmers: ["1140"],
+  // Mazdoori ka advance kisan ki fasal wali peshgi (1140) se ALAG hai:
+  // us ke badle maal aata hai, is ke badle kaam. Ek hi khane mein
+  // ginne se "kitni mazdoori baqi hai" ka jawab kahin se nahi milta.
+  advanceWorkers: ["1145"],
   stock: ["1200", "1210", "1220"],
   payableSuppliers: ["2000"],
   payableFarmers: ["2010"],
   payableStaff: ["2020"],
+  payableWorkers: ["2015"],
   walletLiability: ["2040"],
   suspense: ["9999"],
 } as const;

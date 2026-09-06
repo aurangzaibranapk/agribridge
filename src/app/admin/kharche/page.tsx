@@ -62,12 +62,45 @@ export default async function KharchePage() {
     .limit(200);
   if (!sabKuchWala && me?.branch_id) q = q.eq("branch_id", me.branch_id);
 
-  const [{ data: rawRows }, { data: khaate }, { data: suppliers }, { data: staff }, { data: farmers }, { data: customers }] =
-    await Promise.all([
+  /**
+   * Mazdoori ki qatarein bhi isi safhe par.
+   *
+   * Malik (6 September): *"Maine kaha tha shop par EK HI tag ho jis mein
+   * Paisa & Khata ho — us mein koi kharcha hua add, kuch diya add, kuch
+   * aaya add."*
+   *
+   * Wo theek keh rahe the. Mazdoori ka apna safha bana dena shop par
+   * doosra tag khara kar deta hai, aur dukan par baitha banda har dafa
+   * sochta hai ke kaunsa kholoon. Ab wo table apni jagah hai (us mein
+   * ginti aur rate hain jo kharche ki qatar mein hote hi nahi), magar
+   * DARWAZA ek hi hai.
+   */
+  const looseService = service as unknown as { from: (t: string) => any };
+  let mq = looseService
+    .from("labour_work_entries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (!sabKuchWala && me?.branch_id) mq = mq.eq("branch_id", me.branch_id);
+
+  const [
+    { data: rawRows },
+    { data: rawMazdoori },
+    { data: khaate },
+    { data: suppliers },
+    { data: staff },
+    { data: farmers },
+    { data: customers },
+  ] = await Promise.all([
       q,
+      mq,
+      // `current_balance` sirf Cash Book se banta hai (127) -- yehi wo
+      // adad hai jo Finance ke safhe par nazar aata hai, is liye yahan
+      // bhi wohi parha ja raha hai. Do jagah alag hisaab lagane se ek din
+      // do alag jawab aate hain.
       service
         .from("finance_accounts")
-        .select("id, name, gl_code, is_active")
+        .select("id, name, gl_code, is_active, current_balance")
         .eq("is_active", true)
         .order("name"),
       service.from("suppliers").select("id, name").order("name").limit(500),
@@ -93,6 +126,24 @@ export default async function KharchePage() {
     expense_date: (r.expense_date as string | null) ?? (r.created_at as string).slice(0, 10),
     paid_from_account_id: (r.paid_from_account_id as string | null) ?? null,
     created_at: r.created_at as string,
+  }));
+
+  const mazdooriRows = ((rawMazdoori ?? []) as any[]).map((r) => ({
+    id: r.id as string,
+    entry_number: r.entry_number as string,
+    party_type: r.party_type as string,
+    party_id: r.party_id as string,
+    work_date: r.work_date as string,
+    work_detail: r.work_detail as string,
+    quantity: r.quantity != null ? Number(r.quantity) : null,
+    unit: (r.unit as string | null) ?? null,
+    rate: r.rate != null ? Number(r.rate) : null,
+    amount: Number(r.amount ?? 0),
+    advance_adjusted: Number(r.advance_adjusted ?? 0),
+    payable_added: Number(r.payable_added ?? 0),
+    received_by_name: (r.received_by_name as string | null) ?? null,
+    status: (r.status as string) ?? "pending",
+    rejection_reason: (r.rejection_reason as string | null) ?? null,
   }));
 
   // Bande ka naam har fehrist se -- taake qatar par id nahi, naam nazar
@@ -138,7 +189,13 @@ export default async function KharchePage() {
 
       <KharcheClient
         rows={rows}
-        khaate={(khaate ?? []).map((k: any) => ({ id: k.id, name: k.name, gl_code: k.gl_code }))}
+        mazdooriRows={mazdooriRows}
+        khaate={(khaate ?? []).map((k: any) => ({
+          id: k.id,
+          name: k.name,
+          gl_code: k.gl_code,
+          balance: Number(k.current_balance ?? 0),
+        }))}
         bande={{
           supplier: (suppliers ?? []).map((s: any) => ({ id: s.id, naam: s.name })),
           staff: (staff ?? []).map((s: any) => ({ id: s.id, naam: s.full_name })),

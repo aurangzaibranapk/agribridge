@@ -163,30 +163,39 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
    * koi farmer aa jata hai to wo already register hoga, us ki id aani
    * chahiye"*), chahe us qatar se us ka BALANCE na hila ho.
    */
+  /**
+   * Banda REGISTERED hona lazmi hai — har qatar par.
+   *
+   * Malik (6 September): *"Jo paisa le gaya us ka registered hona lazmi
+   * hai. Us ke ledger, finance ledger, money trail — sab par aana
+   * chahiye."*
+   *
+   * Pehle yahan sirf naam likh dena bhi qubool tha ("spray wala",
+   * "Baba"). Malik ki baat theek hai aur wajah unhon ne khud batayi: naam
+   * ledger mein jata hi nahi — sirf ID jati hai. Naam likh kar chhorne se
+   * wo qatar us bande ke khaate mein KABHI nazar nahi aati, aur Money
+   * Trail par bhi wo raqam bandhe baghair para rehti hai.
+   *
+   * Is liye ab har qatar par fehrist se banda chunna parta hai. Jo
+   * fehrist mein nahi, usay pehle darj karna hoga — ek dafa ka kaam hai,
+   * aur us ke baad us ka poora hisaab apne aap jurta rehta hai.
+   */
   const partyType = String(formData.get("party_type") ?? "").trim() || null;
   const partyId = String(formData.get("party_id") ?? "").trim() || null;
   const partyName = String(formData.get("party_name") ?? "").trim() || null;
 
-  if (!partyId && !partyName) {
-    return { error: "Ye likhein ke paisa kaun le gaya (ya kis se aaya) — baad mein sab se pehla sawal yehi hota hai." };
+  if (!partyId || !partyType) {
+    return {
+      error:
+        "Fehrist se banda chunein. Sirf naam likhne se wo qatar us ke khaate mein nahi jati — ledger sirf ID pehchanta hai. Jo fehrist mein nahi, usay pehle Farmers ya Customers par darj karein.",
+    };
   }
 
-  // Jis qism ka apna khata banta hai, us mein banda usi fehrist ka hona
-  // chahiye. Warna kisan ka advance staff ke khate mein ja kar baith
-  // jata -- aur wo ghalti kabhi khud nazar nahi aati.
-  if (qism.bandaZaroori) {
-    if (!partyId) {
-      return {
-        error: `"${qism.label}" mein paisa wapas aana ya jana hai, is liye banda fehrist se chunna parta hai — sirf naam likhne se us ka khata nahi banta.`,
-      };
-    }
-    // Kuch qismein kisi bhi fehrist ka banda qubool karti hain (mazdoori
-    // wale khate) -- malik ka poora nuqta yehi tha ke wohi banda kisan
-    // bhi ho sakta hai, customer bhi aur mazdoor bhi. Jin qismon ka apna
-    // khata ek hi fehrist ka hai, un mein wo bandhish lagti hai.
-    if (qism.bandaKahanSe && partyType !== qism.bandaKahanSe) {
-      return { error: `"${qism.label}" ke liye banda ${qism.bandaKahanSe} ki fehrist se chunein.` };
-    }
+  // Jin qismon ka apna khata ek hi fehrist ka hai, un mein wo bandhish
+  // lagti hai -- warna kisan ka advance staff ke khate mein ja kar baith
+  // jata, aur wo ghalti kabhi khud nazar nahi aati.
+  if (qism.bandaKahanSe && partyType !== qism.bandaKahanSe) {
+    return { error: `"${qism.label}" ke liye banda ${qism.bandaKahanSe} ki fehrist se chunein.` };
   }
 
   const service = createServiceClient();
