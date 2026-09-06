@@ -1939,3 +1939,30 @@ ka nishan dikhate hain.
 
 Anwar ki dukan Live par set kar di gayi (Kisaan Karyana Mahabali,
 KKM001) — malik ke kehne par.
+
+## Do safhe jo bana kar HATAYE gaye — malik ka usool
+
+Malik (6 September): *"Agar already bana hai to theek hai, kuch miss hai
+to upgrade kar do. Pehle bane ko update karo, behtar karo. Ek hi kaam
+baar baar naye tag naye naam ke sath nahi hone chahiye."*
+
+Ye baat theek meri ghalti par thi. Do safhe aise bane jo pehle se
+maujood kaam ke doosre naam the:
+
+| Bana | Pehle se kya tha | Ab |
+|---|---|---|
+| `/admin/verification` | "Approval Inbox" (`/admin/submissions`) aur Command Center ka Approval department | Mit gaya. Qatarein Approval Inbox ke andar. |
+| `/admin/mazdoori` | Shop par "Paisa & Khata" ka tag | Mit gaya. Form aur qatarein Paisa & Khata ke andar. |
+
+Dono ke `features` / `role_feature_permissions` / `feature_help` ki
+qatarein bhi Testing par hata di gayin. Live par ye kabhi gaye hi nahi
+the (338 se aage ki koi migration Live par nahi chali), is liye wahan
+kuch mitane ki zaroorat nahi.
+
+Migration 349 aur 351 ki files se wo hissay nikal diye gaye hain, taake
+Live par jaate waqt wo feature bane hi na.
+
+**View aur function apni jagah hain** — `v_manzoori_ki_qatar` aur
+`fn_manzoori_ka_khulasa`. Unhen ab Approval Inbox aur Command Center
+DONO parhte hain, ek hi jagah se (`lib/manzoori-qatar.ts`), taake ek
+hisaab do jagah alag alag na lage.

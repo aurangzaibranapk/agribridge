@@ -266,48 +266,21 @@ grant execute on function public.fn_bande_ka_khulasa(text, uuid) to authenticate
 
 
 -- ---------------------------------------------------------------------
--- 6) Safha, ijazat aur madad
+-- 6) Mazdoori ka apna safha NAHI hai
 -- ---------------------------------------------------------------------
-insert into public.features (key, label, route, is_active, is_sensitive, icon)
-values ('mazdoori', 'Mazdoori / Daily Work', '/admin/mazdoori', true, false, 'HardHat')
-on conflict (key) do update set
-  label = excluded.label, route = excluded.route, is_active = true;
-
-insert into public.role_feature_permissions (role, feature_key, actions, data_scope)
-values
-  ('sales_staff',     'mazdoori', ARRAY['view','create'], 'own_shop'),
-  ('manager',         'mazdoori', ARRAY['view','create','approve','reject'], 'own_branch'),
-  ('admin_assistant', 'mazdoori', ARRAY['view','create','approve','reject'], 'all'),
-  ('finance',         'mazdoori', ARRAY['view','create','approve','reject','export'], 'all')
-on conflict (role, feature_key) do update set
-  actions = excluded.actions, data_scope = excluded.data_scope;
-
-insert into public.feature_help
-  (feature_key, lang, purpose, who_uses, when_use, how_steps, next_step, mistakes)
-values (
-  'mazdoori', 'rm',
-  'Kis ne ART ke liye kaam kiya aur us ki kitni mazdoori bani. Purana advance us mein se KHUD adjust ho jata hai — staff ko hisaab haath se nahi lagana parta.',
-  'Dukan par baitha banda darj karta hai. Manzoori Manager, Admin Assistant ya Finance deti hai.',
-  'Usi din jab kaam ho jaye. Paisa usi waqt diya ho ya na diya ho — dono soorat mein qatar aaj hi banni chahiye.',
-  ARRAY[
-    'Banda dhoondein — naam, mobile ya ID se. Jo pehle se register hai us ka dobara khata nahi banta.',
-    'Safha wahin us ka haal dikha deta hai: kitna advance baqi hai, aur kitna us ko dena hai.',
-    'Kaam likhein, aur ginti + rate daal dein (jaise 100 bori × Rs 20). Raqam khud ban jati hai.',
-    'Bhej dein. Manzoori par kitab mein qatar banti hai: mazdoori kharcha, aur us mein se jitna purane advance mein se adjust hua wo advance kam kar deta hai.',
-    'Jo bacha, wo "mazdoori dena" ban jata hai — us ki adaigi Kharche ke safhe se hoti hai.'
-  ],
-  'Manzoori ke baad us bande ke 360 khaate par teen adad alag nazar aate hain: kitna advance baqi, kitna dena, aur kitna lena.',
-  ARRAY[
-    'Advance dete waqt usay mazdoori ka KHARCHA na likhein — kaam abhi hua hi nahi. Wo "Mazdoor ko advance" hai, jo hamein wapas lena hai. Kharcha usi din banta hai jis din kaam hota hai.',
-    'Advance sirf MAZDOORI wale advance mein se adjust hota hai. Kisan ki fasal wali peshgi (1140) aur khaad ka udhaar (1150) is se khud nahi katte — un ke liye alag, manzoor shuda adjustment hai. Chup chaap kaat dena wo ghalti hai jis se koi khata phir kabhi milta nahi.',
-    'Ginti aur rate khali na chhorein. Sirf raqam likhne se agle mahine ye sawal jawab nahi paata ke bori ka rate kya chal raha tha.',
-    'Manzoor shuda qatar badli nahi ja sakti — ghalti par ulti qatar banayein.'
-  ]
-)
-on conflict (feature_key, lang) do update set
-  purpose = excluded.purpose, who_uses = excluded.who_uses, when_use = excluded.when_use,
-  how_steps = excluded.how_steps, next_step = excluded.next_step, mistakes = excluded.mistakes,
-  updated_at = now();
+-- Pehle yahan `mazdoori` ke naam se apna feature aur safha banaya gaya
+-- tha. Malik ne wo mana kiya:
+--
+--   *"Pehle bane ko update karo, behtar karo. Ek hi kaam baar baar naye
+--   tag naye naam ke sath nahi hone chahiye."*
+--
+-- Wo theek keh rahe the: shop par pehle se "Paisa & Khata" ka tag tha,
+-- aur mazdoori usi kaam ka hissa hai. Ab mazdoori ka form aur us ki
+-- qatarein usi safhe ke andar hain, aur ijazat bhi `kharche` par lagti
+-- hai. Is table ka apna koi feature nahi.
+--
+-- (350 mein banaya gaya `verification` ka safha bhi isi wajah se hata
+-- diya gaya -- us ka kaam Approval Inbox ke andar aa gaya.)
 
 
 -- ---------------------------------------------------------------------

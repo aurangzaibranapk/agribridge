@@ -140,17 +140,17 @@ export async function bandeKaHaal(
  * sakta tha. Manzoori us ke baad bhi manager ki thi, magar qatar khari
  * kar dena bhi ek darwaza hai.
  *
- * Rok `kharche` par lagi hai, `mazdoori` par nahi -- kyunke ab shop par
- * DARWAZA ek hi hai (malik ka usool: "shop par ek hi tag ho jis mein
- * Paisa & Khata ho"). Jise wo tag khulta hai, usay mazdoori bhi khulti
- * hai. Jin logon ko purani `mazdoori` wali ijazat alag di gayi thi, wo
- * bhi chalti rehti hai.
+ * Rok `kharche` par lagi hai -- kyunke ab shop par DARWAZA ek hi hai
+ * (malik ka usool: "shop par ek hi tag ho jis mein Paisa & Khata ho").
+ * Mazdoori ka apna safha bhi hata diya gaya: us ka form aur us ki
+ * qatarein Paisa & Khata ke andar hain. Alag safha rakhne ka matlab
+ * hota ek hi kaam ke do naam -- aur malik ne wohi mana kiya hai.
  */
 export async function mazdooriDarj(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const who = await main();
   if ("error" in who) return { error: who.error };
 
-  const khul = (await canDo("kharche", "create")) || (await canDo("mazdoori", "create"));
+  const khul = await canDo("kharche", "create");
   if (!khul && !SAB_KUCH.includes(who.role)) {
     return { error: "Aap ko Paisa & Khata mein darj karne ki ijazat nahi hai." };
   }
@@ -219,7 +219,7 @@ export async function mazdooriDarj(_prev: ActionState, formData: FormData): Prom
     description: `Mazdoori Rs ${amount.toLocaleString()} — advance mein se ${adjust.toLocaleString()} adjust, ${payable.toLocaleString()} dena.`,
   });
 
-  revalidatePath("/admin/mazdoori");
+  revalidatePath("/admin/kharche");
   return {
     success: true,
     message:
@@ -333,7 +333,6 @@ export async function mazdooriManzoor(_prev: ActionState, formData: FormData): P
     description: `Manzoor: Rs ${amount.toLocaleString()} (advance adjust ${adjust.toLocaleString()}, dena ${payable.toLocaleString()}). Raye: ${raye}`,
   });
 
-  revalidatePath("/admin/mazdoori");
   revalidatePath("/admin/kharche");
 
   return {
@@ -378,6 +377,6 @@ export async function mazdooriRadd(_prev: ActionState, formData: FormData): Prom
     description: `Radd: ${wajah}`,
   });
 
-  revalidatePath("/admin/mazdoori");
+  revalidatePath("/admin/kharche");
   return { success: true, message: "Radd kar diya." };
 }

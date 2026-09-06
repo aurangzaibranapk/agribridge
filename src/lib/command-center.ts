@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { manzooriKiQatar, qatarKaKhulasa, umarLikhein } from "@/lib/manzoori-qatar";
 import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import type { Lang } from "@/lib/i18n/translations";
@@ -215,6 +216,11 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
   const service = createServiceClient();
   const from = monthStart();
   const to = monthEnd();
+
+  // Safhon se aayi intezar wali qatarein -- wohi hisaab jo Approval
+  // Inbox parhta hai (`lib/manzoori-qatar.ts`). Do jagah alag hisaab
+  // lagane se ek din do alag jawab aa jate hain.
+  const qatar = qatarKaKhulasa(await manzooriKiQatar(null));
 
   const [
     { data: pos, error: posErr },
@@ -474,15 +480,43 @@ export async function loadDeptKpis(lang: Lang = "rm"): Promise<DeptKpi[]> {
       key: "approvals",
       label: "Approval",
       href: "/admin/submissions",
-      work: [`${t("cc_w_waiting", lang)} ${(pendingSubs ?? []).length}`],
+      /**
+       * Approval ki ginti mein ab DONO shamil hain.
+       *
+       * Malik (6 September): *"Har activity har related department se
+       * hoti hui CEO tak jani chahiye realtime mein — kis stage par kya
+       * pending hai."*
+       *
+       * Pehle yahan sirf WhatsApp se aayi parchiyan ginti thin. Paisa &
+       * Khata, Mazdoori aur Adjustment ki qatarein is adad mein aati hi
+       * nahi thin -- yani CEO ke safhe par "Approval: 0" likha aa sakta
+       * tha jab ke saat qatarein hadd se guzar chuki hoti.
+       */
+      work: [
+        `${t("cc_w_waiting", lang)} ${(pendingSubs ?? []).length + qatar.kul}`,
+        ...(qatar.ooper > 0 ? [`${qatar.ooper} hadd se guzri`] : []),
+      ],
       revenue: null,
       directCost: null,
       otherExpense: null,
       profit: null,
       margin: null,
-      pending: (pendingSubs ?? []).length,
+      pending: (pendingSubs ?? []).length + qatar.kul,
       pendingReason:
-        (pendingSubs ?? []).length > 0 ? `${(pendingSubs ?? []).length} ${t("cc_p_approvals", lang)}` : null,
+        (pendingSubs ?? []).length + qatar.kul > 0
+          ? [
+              (pendingSubs ?? []).length > 0
+                ? `${(pendingSubs ?? []).length} ${t("cc_p_approvals", lang)}`
+                : null,
+              qatar.kul > 0
+                ? `${qatar.kul} safhon se (Rs ${Math.round(qatar.raqam).toLocaleString()}${
+                    qatar.puraniUmar != null ? `, sab se purani ${umarLikhein(qatar.puraniUmar)}` : ""
+                  })`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : null,
       pendingHref: "/admin/submissions",
       state: "untracked",
       note: t("cc_n_approval", lang),
@@ -532,6 +566,36 @@ export async function loadAlerts(): Promise<Alert[]> {
       service.from("vehicle_daily_logs").select("id").not("opening_km", "is", null).is("closing_km", null).lt("log_date", today()),
       service.from("milk_entries").select("id").not("possible_duplicate_of", "is", null).neq("status", "rejected"),
     ]);
+
+  /**
+   * Hadd se guzri hui manzoori — CEO ke liye EXCEPTION, ginti nahi.
+   *
+   * Malik (6 September): *"CEO ko 100 normal entries nahi dikhani. Sirf
+   * exception."*
+   *
+   * Is liye yahan alert sirf us waqt banta hai jab koi qatar apni hadd
+   * se guzar chuki ho. Waqt ke andar wali qatarein department wale
+   * khane mein hain -- wahan un ka hona theek hai, yahan shor.
+   */
+  const qatarSab = await manzooriKiQatar(null);
+  const qk = qatarKaKhulasa(qatarSab);
+  if (qk.ooper > 0) {
+    alerts.push({
+      tone: "red",
+      title: `${qk.ooper} manzoori hadd se guzar chuki`,
+      detail:
+        `Sab se purani ${qk.puraniUmar == null ? "—" : umarLikhein(qk.puraniUmar)} se ruki hui hai. ` +
+        `Kul Rs ${Math.round(qatarSab.filter((q) => q.darja === "malik").reduce((t, q) => t + q.amount, 0)).toLocaleString()} phansa hua hai.`,
+      href: "/admin/submissions",
+    });
+  } else if (qk.guzri > 0) {
+    alerts.push({
+      tone: "amber",
+      title: `${qk.guzri} manzoori overdue`,
+      detail: `Manager ki hadd guzar chuki hai. Sab se purani ${qk.puraniUmar == null ? "—" : umarLikhein(qk.puraniUmar)}.`,
+      href: "/admin/submissions",
+    });
+  }
 
   for (const route of redRoutes ?? []) {
     alerts.push({

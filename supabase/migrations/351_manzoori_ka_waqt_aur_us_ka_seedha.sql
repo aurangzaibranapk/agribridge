@@ -175,42 +175,18 @@ grant execute on function public.fn_manzoori_ka_khulasa() to authenticated;
 
 
 -- ---------------------------------------------------------------------
--- 4) Safha aur ijazat
+-- 4) Is ka apna safha NAHI hai
 -- ---------------------------------------------------------------------
-insert into public.features (key, label, route, is_active, is_sensitive, icon)
-values ('verification', 'Manzoori ki Qatar', '/admin/verification', true, false, 'ClipboardCheck')
-on conflict (key) do update set
-  label = excluded.label, route = excluded.route, is_active = true;
-
-insert into public.role_feature_permissions (role, feature_key, actions, data_scope)
-values
-  ('manager', 'verification', ARRAY['view','approve','reject'], 'own_branch'),
-  ('admin_assistant', 'verification', ARRAY['view','approve','reject'], 'all'),
-  ('finance', 'verification', ARRAY['view','approve','reject'], 'all')
-on conflict (role, feature_key) do update set
-  actions = excluded.actions, data_scope = excluded.data_scope;
-
-insert into public.feature_help
-  (feature_key, lang, purpose, who_uses, when_use, how_steps, next_step, mistakes)
-values (
-  'verification', 'rm',
-  'Jo kuch manzoori ke intezar mein hai — Paisa & Khata, Mazdoori aur Adjustment — sab ek fehrist mein, umar ke sath. Sab se purani sab se ooper.',
-  'Manager, Admin Assistant aur Finance. Malik ko sirf wo nazar aata hai jo hadd se guzar chuka ho.',
-  'Din mein ek dafa — aur jab bhi "OVERDUE" ka nishan aaye.',
-  ARRAY[
-    'Fehrist khud purani qatarein ooper rakhti hai — neeche se shuru karne ki zarurat nahi.',
-    'Har qatar par us ka rang batata hai: waqt ke andar, hadd se guzri hui, ya ooper ja chuki.',
-    'Qatar par dabayein — us ke apne safhe par jayenge jahan poori tafseel aur manzoori ka button hai.',
-    'Manzoori par raye likhna lazmi hai.'
-  ],
-  'Manzoori ke baad wo qatar is fehrist se nikal jati hai aur kitab mein chali jati hai.',
-  ARRAY[
-    'Fehrist khali dekh kar ye na samjhein ke kaam nahi hai — mumkin hai aap ki shaakh ki qatarein hon hi na. Ginti ke saath shaakh bhi dekh lein.',
-    'Waqt ki hadd (12 aur 24 ghante) badli ja sakti hai — wo pathar par nahi. Magar us ka faisla malik ka hai.',
-    'Purani qatar par jaldi mein manzoori na dein. Deri ki wajah aksar yehi hoti hai ke us mein waqai kuch theek nahi tha.'
-  ]
-)
-on conflict (feature_key, lang) do update set
-  purpose = excluded.purpose, who_uses = excluded.who_uses, when_use = excluded.when_use,
-  how_steps = excluded.how_steps, next_step = excluded.next_step, mistakes = excluded.mistakes,
-  updated_at = now();
+-- Pehle yahan `verification` ke naam se ek naya safha banaya gaya tha.
+-- Malik ne wo mana kiya:
+--
+--   *"Agar already bana hai to theek hai... Ek hi kaam baar baar naye
+--   tag naye naam ke sath nahi hone chahiye."*
+--
+-- Aur wo theek the: "Approval Inbox" (`/admin/submissions`) pehle se
+-- maujood tha, aur Command Center par us ka apna department bhi bana
+-- hua tha. Ek hi kaam ke do naam ban gaye the.
+--
+-- Ye view aur function apni jagah hain -- unhen Approval Inbox aur
+-- Command Center DONO parhte hain (`lib/manzoori-qatar.ts` se), taake
+-- ek hi hisaab do jagah alag alag na lage.

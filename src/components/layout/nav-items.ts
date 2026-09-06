@@ -125,7 +125,6 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/kharche", label: "Paisa & Khata", icon: ReceiptText },
       { href: "/admin/load-bill", label: "Load / Bill", icon: Smartphone },
       { href: "/admin/settlements", label: "Khaton ka Adjustment", icon: Scale },
-      { href: "/admin/verification", label: "Manzoori ki Qatar", icon: ClipboardCheck },
       { href: "/admin/company-expenses", label: "Company Expenses", icon: ReceiptText },
       { href: "/admin/finance", label: "Cash Book", icon: Landmark },
       { href: "/admin/finance/banks", label: "Banks", icon: Landmark },
