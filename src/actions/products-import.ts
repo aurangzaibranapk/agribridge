@@ -662,9 +662,13 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
   for (const r of updateRows) {
     const { error: rateErr } = await supabase.rpc("fn_set_product_rates", {
       p_product_id: r.existingId as string,
-      p_sale: r.sellingPrice,
-      p_trade: r.purchasePrice,
-      p_wholesale: r.wholesalePrice,
+      // Jo rate diya hi nahi gaya wo BHEJA hi nahi jata -- function ka
+      // default NULL hai aur NULL ka matlab "is rate ko haath mat
+      // lagao". `null` bhejna aur na bhejna database mein ek hi baat
+      // hai; types ke liye na bhejna sahi hai.
+      p_sale: r.sellingPrice ?? undefined,
+      p_trade: r.purchasePrice ?? undefined,
+      p_wholesale: r.wholesalePrice ?? undefined,
       p_source: "import",
     });
     if (rateErr) {

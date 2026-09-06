@@ -107,7 +107,7 @@ export async function posCheckout(input: {
     p_items: input.items as unknown as Json,
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
-    p_discount_reason: discount > 0 ? discountReason : null,
+    p_discount_reason: discount > 0 ? discountReason : undefined,
   });
 
   const saleId = saleIdRaw as string | null;

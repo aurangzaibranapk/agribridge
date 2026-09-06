@@ -78,7 +78,7 @@ export default async function LoadBillPage({
   // function khud SECURITY DEFINER hai.
   const floats = new Map<string, number | null>();
   for (const a of accounts ?? []) {
-    const { data, error } = await supabase.rpc("fn_load_float_balance", { p_account: a.id, p_upto: null });
+    const { data, error } = await supabase.rpc("fn_load_float_balance", { p_account: a.id, p_upto: undefined });
     // Na mile to NULL -- sifar nahi. "Balance sifar hai" aur "balance
     // parha nahi ja saka" do alag baatein hain.
     floats.set(a.id as string, error ? null : Number(data ?? 0));

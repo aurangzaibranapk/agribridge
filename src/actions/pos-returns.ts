@@ -117,9 +117,13 @@ export async function returnPosSaleLines(input: {
       condition: l.condition,
     })) as unknown as Json,
     p_reason: input.reason.trim(),
-    p_reason_code: input.reasonCode ?? null,
+    // In do ka SQL mein koi default NAHI hai -- yani inhen bhejna lazmi
+    // hai, magar khali (NULL) bhejna bilkul theek hai. Types un ki
+    // nullability ghalat batate hain, is liye yahan cast hai -- undefined
+    // bhejna ghalat hota, us se function hi nahi milta.
+    p_reason_code: (input.reasonCode ?? null) as unknown as string,
     p_refund_method: input.refundMethod,
-    p_note: input.note ?? null,
+    p_note: (input.note ?? null) as unknown as string,
     p_manager_code: input.managerCode.trim(),
   });
 

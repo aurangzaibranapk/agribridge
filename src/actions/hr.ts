@@ -383,3 +383,70 @@ export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData
   revalidatePath("/admin/hr");
   return { success: true };
 }
+/**
+ * Apni tasveer lagana.
+ *
+ * Malik (6 September): *"sare staff apni image laga sakein, aur tree
+ * mein image bhi aani chahiye."*
+ *
+ * -------------------------------------------------------------------
+ * KOI APNI HI TASVEER KYUN LAGA SAKTA HAI, KISI AUR KI NAHI
+ *
+ * `staff_details` mein tankhwah (`basic_salary`), afsar (`reports_to`)
+ * aur ohda bhi hain. Staff ko us table par khula UPDATE de dena ye maan
+ * lena hota ke banda apni tankhwah aur apna afsar khud badal le.
+ *
+ * Is liye database mein ek TANG darwaza hai: `fn_set_my_photo` sirf
+ * `photo_url` ko haath lagata hai, aur sirf usi bande ka jo abhi login
+ * hai. `auth.uid()` bahar se bheja hi nahi ja sakta.
+ *
+ * Yahan bhi jaan boojh kar koi `profile_id` nahi liya jata -- na form
+ * se, na kahin se. Jo cheez bheji hi nahi ja sakti, us se dhoka bhi
+ * nahi ho sakta.
+ *
+ * HR ko kisi aur ki tasveer lagani ho to us ka apna raasta hai: HR ke
+ * paas `staff_details` par pehle se poora ikhtiyar hai.
+ */
+export async function setMyPhoto(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Tasveer chunein." };
+  }
+  if (!file.type.startsWith("image/")) {
+    return { error: "Sirf tasveer chalti hai (jpg, png, webp)." };
+  }
+  // 5 MB. Phone ki seedhi tasveer isi ke andar aati hai; is se barhi
+  // aksar ghalati se chuni hui koi aur file hoti hai.
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: "Tasveer 5 MB se chhoti honi chahiye." };
+  }
+
+  const saaf = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const path = `${user.id}/${Date.now()}-${saaf}`;
+  const { error: upErr } = await service.storage.from("staff-photos").upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (upErr) return { error: `Tasveer upload nahi hui: ${upErr.message}` };
+
+  const { data: pub } = service.storage.from("staff-photos").getPublicUrl(path);
+
+  // RPC user client se -- service client ke paas `auth.uid()` nahi hota
+  // aur function wahin ruk jata hai. Is nizam mein ye ghalati pehle bhi
+  // ho chuki hai (float ka balance), is liye yahan likh di gayi hai.
+  const { error: rpcErr } = await supabase.rpc("fn_set_my_photo", { p_url: pub.publicUrl });
+  if (rpcErr) return { error: rpcErr.message };
+
+  revalidatePath("/admin/my-hr");
+  revalidatePath("/admin/hr/team");
+  revalidatePath("/admin/hr/team/tree");
+  return { success: true };
+}

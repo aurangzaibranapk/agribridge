@@ -175,7 +175,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   if (settled) {
     const { data: balance, error: balErr } = await supabase.rpc("fn_load_float_balance", {
       p_account: accountId,
-      p_upto: null,
+      p_upto: undefined,
     });
     if (balErr) {
       return { error: `Float ka balance parha nahi ja saka: ${balErr.message}` };
@@ -487,7 +487,7 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
   const principal = Number(txn.principal);
   const { data: balance } = await supabase.rpc("fn_load_float_balance", {
     p_account: txn.account_id,
-    p_upto: null,
+    p_upto: undefined,
   });
   if (Number(balance ?? 0) < principal) {
     return { error: `Float mein sirf Rs ${Number(balance ?? 0).toLocaleString()} hai — ye bill ada nahi ho sakta.` };

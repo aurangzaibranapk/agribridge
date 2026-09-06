@@ -6,34 +6,53 @@ import { OrgTreeClient } from "./tree-client";
 
 export const dynamic = "force-dynamic";
 
-// Poori company ka darakht sirf ye log dekhte hain. Manager ko bhi
-// fn_hr_staff_directory sirf us ki apni shakh deti hai -- ye rok
-// database mein hai, yahan sirf us ka natija dikhta hai.
-const POORI_COMPANY = ["hr", "admin", "owner", "super_admin"];
+// Kaun poori company badal sakta hai. Manager ko fn_hr_staff_directory
+// sirf us ki apni shakh deti hai -- ye rok database mein hai, yahan
+// sirf us ka natija dikhta hai.
+const HR_ROLES = ["hr", "admin", "owner", "super_admin"];
 
 /**
  * Team ka darakht — kaun kis ke ooper hai.
  *
  * Malik ne 5 September ko kaha: *"kon kis k oper hy kis trha sy tree
- * bni hy pori team ki."*
- *
- * `/admin/hr/team` par fehrist pehle se thi -- naam, shoba, afsar ka
- * naam, sab qatar dar qatar. Us se ek banda dhoondhna asaan hai, magar
- * ye sawal us se nahi milta: **poori company ka dhaancha kaisa hai?**
- * Us ke liye shakhein nazar aani chahiyein, qatarein nahi.
+ * bni hy pori team ki."* Aur 6 September ko safha KHALI dekh kar:
+ * *"ye tree banayein — Board of Director, phir CEO, phir Admin, phir
+ * Assistant Admin... aur sath har file edit kar sakein, aur sare staff
+ * apni image laga sakein, aur tree mein image bhi aani chahiye."*
  *
  * -------------------------------------------------------------------
- * DO BAATEIN JAAN BOOJH KAR:
+ * SAFHA KHALI KYUN THA
  *
- * 1. **Jis ka afsar darj nahi, wo chhupta nahi -- upar aata hai.** Aisa
- *    banda darakht ki jaR par alag nishan ke sath aata hai. Use kisi ke
- *    neeche daal dena ya list se nikal dena, dono jhoot hain: pehla
- *    ghalat dhaancha dikhata hai, doosra bande ko gayab kar deta hai.
+ * `staff_details` mein EK BHI qatar nahi thi (19 active profiles, 0 HR
+ * records), aur `fn_hr_staff_directory` us table par INNER JOIN karta
+ * tha. Yani jis ka HR record na ho, wo fehrist mein aata hi nahi tha --
+ * aur kisi ka tha hi nahi.
  *
- * 2. **Jo log staff_details mein nahi, un ki ginti saaf likhi hai.**
- *    Darakht sirf un logon ka banta hai jin ka HR record mukammal hai.
- *    Baqi ko khamoshi se chhorna "company mein bas itne log hain" jaisa
- *    ghalat jawab deta -- is liye ginti aur naam dono saamne hain.
+ * Safha apni khaali ki wajah theek bata raha tha ("abhi kisi ka HR
+ * record mukammal nahi"), magar wo jawab kisi kaam ka nahi tha: banda
+ * yahan dhaancha dekhne aata hai, aur usay 19 log nazar aane chahiyen --
+ * chahe un mein se 19 ka hi record adhoora ho.
+ *
+ * 334 ne wo INNER JOIN LEFT kar diya. Ab darakht **poori company** ka
+ * banta hai, aur adhoore record par saaf nishan lagta hai.
+ *
+ * -------------------------------------------------------------------
+ * TEEN BAATEIN JAAN BOOJH KAR
+ *
+ * 1. **Jis ka afsar darj nahi, wo chhupta nahi -- jaR par aata hai.**
+ *    Use kisi ke neeche daal dena ya fehrist se nikal dena, dono jhoot
+ *    hain: pehla ghalat dhaancha dikhata hai, doosra bande ko gayab kar
+ *    deta hai.
+ *
+ * 2. **Ohda aur system role do alag cheezein hain.** Ohda company mein
+ *    darja hai (Board of Director → CEO → Admin → Assistant Admin);
+ *    role ye tay karta hai ke system mein kya khul sakta hai. Inhen ek
+ *    kar dena ye maan lena hota ke ohda barhne par ijazat khud barh
+ *    jaye.
+ *
+ * 3. **Tasveer yahan se nahi lagti.** Har banda apni tasveer apne
+ *    "My HR" safhe se khud lagata hai. HR ke haath mein doosron ki
+ *    shakal dena na zaroori hai na theek.
  */
 export default async function OrgTreePage() {
   const supabase = createClient();
@@ -50,7 +69,15 @@ export default async function OrgTreePage() {
     .maybeSingle();
   if (!me?.is_active) redirect("/login");
 
-  const { data: dir, error: dirErr } = await supabase.rpc("fn_hr_staff_directory");
+  const canEdit = HR_ROLES.includes(me.role);
+
+  const [{ data: dir, error: dirErr }, { data: positions }, { data: departments }, { data: branches }] =
+    await Promise.all([
+      supabase.rpc("fn_hr_staff_directory"),
+      supabase.from("org_positions").select("key, label, rank").eq("is_active", true).order("rank"),
+      supabase.from("departments").select("key, label").eq("is_active", true).order("sort_order"),
+      supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
+    ]);
 
   if (dirErr) {
     return (
@@ -68,27 +95,18 @@ export default async function OrgTreePage() {
     naam: (d.full_name as string | null) ?? "—",
     role: (d.role as string | null) ?? "—",
     ohda: (d.designation as string | null) ?? null,
+    darja: (d.position_key as string | null) ?? null,
+    darjaNaam: (d.position_label as string | null) ?? null,
+    shobaKey: (d.department_key as string | null) ?? null,
     shoba: (d.department_label as string | null) ?? null,
+    shakhaId: (d.branch_id as string | null) ?? null,
     shakha: (d.branch_name as string | null) ?? null,
     afsar: (d.reports_to as string | null) ?? null,
     afsarNaam: (d.reports_to_name as string | null) ?? null,
-    neechay: (d.direct_reports as number | null) ?? 0,
+    kaamKiQism: (d.employment_type as string | null) ?? "permanent",
+    tasveer: (d.photo_url as string | null) ?? null,
+    recordHai: Boolean(d.hr_record),
   }));
-
-  // Sirf poori company dekhne walon ke liye: kaun sa active banda
-  // darakht se bahar reh gaya (HR record na hone ki wajah se).
-  let bahar: string[] = [];
-  if (POORI_COMPANY.includes(me.role)) {
-    const { data: sab } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("is_active", true);
-    const andar = new Set(rows.map((r) => r.id));
-    bahar = (sab ?? [])
-      .filter((p) => !andar.has(p.id as string))
-      .map((p) => (p.full_name as string | null) ?? "—")
-      .sort();
-  }
 
   return (
     <div>
@@ -104,7 +122,14 @@ export default async function OrgTreePage() {
           </Link>
         }
       />
-      <OrgTreeClient rows={rows} bahar={bahar} khudId={user.id} />
+      <OrgTreeClient
+        rows={rows}
+        khudId={user.id}
+        canEdit={canEdit}
+        positions={(positions ?? []).map((p) => ({ key: p.key as string, label: p.label as string }))}
+        departments={(departments ?? []).map((d) => ({ key: d.key as string, label: d.label as string }))}
+        branches={(branches ?? []).map((b) => ({ id: b.id as string, name: b.name as string }))}
+      />
     </div>
   );
 }

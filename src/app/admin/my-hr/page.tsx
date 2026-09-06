@@ -9,6 +9,7 @@ import { loadNav } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { AttendanceCalendar } from "./attendance-calendar";
+import { PhotoClient } from "./photo-client";
 import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck, Network } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -128,12 +129,30 @@ export default async function MyHrPage() {
 
   const naam = (me.full_name ?? "").split(" ")[0] || "ji";
 
+  // Apni tasveer. RLS `staff_details_read_own` ki wajah se banda apni
+  // qatar khud parh sakta hai -- yahan service client ki zarurat nahi.
+  // Record na ho to NULL, aur wo bilkul theek hai: naya mulazim abhi
+  // tasveer laga hi nahi chuka.
+  const { data: meraHr } = await supabase
+    .from("staff_details")
+    .select("photo_url")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  const meriTasveer = (meraHr?.photo_url as string | null) ?? null;
+
   return (
     <div>
       <PageHeader
         title={`Assalam-o-Alaikum, ${naam}`}
         description="Aap ki apni hazri, chhutti, tankhwah aur baqi kaam — ek jagah"
       />
+
+      {/* Apni tasveer. Ye yahan hai, Team ke safhe par nahi -- har banda
+          apni tasveer khud lagata hai (334). */}
+      <Card className="mb-4">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-surface-500">Aap ki tasveer</p>
+        <PhotoClient naam={naam} maujooda={meriTasveer} />
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

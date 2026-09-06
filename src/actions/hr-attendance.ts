@@ -23,7 +23,9 @@ const paths = () => {
   revalidatePath("/admin/hr/corrections");
   revalidatePath("/admin/hr/leave");
   revalidatePath("/admin/hr/team");
+  revalidatePath("/admin/hr/team/tree");
   revalidatePath("/admin/my-attendance");
+  revalidatePath("/admin/my-hr");
 };
 
 /** Kaun poochh raha hai. Bina is ke koi action aage nahi baRhta. */
@@ -112,13 +114,31 @@ export async function saveReportingLine(_prev: AttState, formData: FormData): Pr
 
   const { data: before } = await supabase
     .from("staff_details")
-    .select("reports_to, department_key, branch_id, designation, employment_type")
+    .select("reports_to, department_key, branch_id, designation, employment_type, position_key")
     .eq("profile_id", profileId)
     .maybeSingle();
 
+  // Ohda (334). `designation` se alag hai aur jaan boojh kar: wo naukri
+  // ka naam hai ("Warehouse Incharge"), ye seerhi ka darja
+  // ("Assistant Admin"). Free text par darakht kabhi tarteeb se nahi
+  // banta -- "CEO", "C.E.O" aur "Chief Executive" teen alag cheezein ban
+  // jate hain.
+  //
+  // Ye khana SIRF tab likha jata hai jab form ne bheja ho. Ye rok is
+  // liye hai ke ye action DO safhon se chalta hai (Team ki fehrist aur
+  // Team ka darakht), aur purane form mein ohde ka khana hai hi nahi.
+  // Bina is shart ke wahan se koi bhi choti si tabdeeli -- shoba badalna
+  // bhi -- ohda chup chaap MITA deti, aur banda darakht mein neeche
+  // khisak jata bina kisi ko pata chale.
+  const ohdaBheja = formData.has("position_key");
+  const naiPosition = (formData.get("position_key") as string) || null;
+  const finalPayload = ohdaBheja
+    ? { ...payload, position_key: naiPosition }
+    : payload;
+
   const { error } = await supabase
     .from("staff_details")
-    .upsert(payload, { onConflict: "profile_id" });
+    .upsert(finalPayload, { onConflict: "profile_id" });
 
   if (error) {
     if (error.message.includes("gol chakkar")) {
@@ -138,6 +158,10 @@ export async function saveReportingLine(_prev: AttState, formData: FormData): Pr
       department_key: { pehle: before?.department_key ?? null, ab: payload.department_key },
       branch_id: { pehle: before?.branch_id ?? null, ab: payload.branch_id },
       designation: { pehle: before?.designation ?? null, ab: payload.designation },
+      position_key: {
+        pehle: before?.position_key ?? null,
+        ab: ohdaBheja ? naiPosition : (before?.position_key ?? null),
+      },
       employment_type: { pehle: before?.employment_type ?? null, ab: payload.employment_type },
     },
   });

@@ -55,7 +55,7 @@ export default async function LoadAccountsPage() {
 
   const floats = new Map<string, number | null>();
   for (const a of accounts ?? []) {
-    const { data, error } = await supabase.rpc("fn_load_float_balance", { p_account: a.id, p_upto: null });
+    const { data, error } = await supabase.rpc("fn_load_float_balance", { p_account: a.id, p_upto: undefined });
     floats.set(a.id as string, error ? null : Number(data ?? 0));
   }
 
