@@ -1814,6 +1814,7 @@ tasdeeq se pehle Live par koi migration nahi).
 | 351 | Manzoori ka waqt (SLA) aur us ka seedha (escalation) | ✅ (teen umar ki qatarein chala kar dekhi gayin) | **baqi** |
 | 352 | Khulasa rukh dekhe, khate ki qism nahi (ulta balance chhupta tha) | ✅ | **baqi** |
 | 353 | Live push: realtime ki ijazat + publication | ✅ (saaton table publication mein, replica identity full) | **baqi** |
+| 354 | Purani ijazat (`allowed_pages`) nayi fehrist mein | ✅ (har bande ka har purana safha khula raha — 0 band) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -2008,3 +2009,46 @@ Jo teen safhe hataye/more gaye (`verification`, `mazdoori`,
 `company-expenses`) un ke `features` waali qatarein Live par kabhi gayi
 hi nahi thin — 338 se aage ki koi migration Live par nahi chali. Is liye
 wahan kuch mitane ki zaroorat nahi; naya build hi kaafi hai.
+
+### 354 — is ke baghair 343 log ko bahar kar deti
+
+Ye baat Live ke apne adad se naapi gayi hai. **343 akeli chalti to:**
+
+| Banda | Purane safhe | Jo BAND ho jate |
+|---|---|---|
+| Admin Assistant | 98 | **82** |
+| Manager | 98 | **77** |
+| Finance Team | 22 | 7 |
+| HR Department | 14 | 7 |
+| Warehouse Team | 12 | 3 |
+
+Wajah: middleware purani fehrist (`allowed_pages`) SIRF us waqt parhta
+hai jab nayi bilkul khali ho. 343 sab ko qatarein de deti hai, is liye
+purana raasta khud band ho jata hai — aur us mein jo zyada safhe the wo
+gum ho jate.
+
+**Is liye 343 aur 354 ek sath jani hain. 354 ke baghair 343 Live par na
+chalayein.**
+
+354 ke baad Testing par ginti: har bande ka har purana safha khula —
+**ek bhi band nahi.**
+
+### Purana khana girane wali migration — BAAD mein
+
+`profiles.allowed_pages` aur `role_page_permissions` jaan boojh kar nahi
+girayi gayin. Deploy ki tarteeb migrations pehle, build baad mein hai —
+yani thori der purana build naye schema par chalta hai, aur purana
+middleware har request par `allowed_pages` maangta hai.
+
+Abhi girate to us thori der mein har bande ka har safha toot jata, login
+samet.
+
+**Naya build Live par chalne aur smoke test pass hone ke BAAD** ye
+migration bhejni hai:
+
+```sql
+alter table public.profiles drop column if exists allowed_pages;
+drop table if exists public.role_page_permissions;
+```
+
+Abhi ye likhi nahi gayi — malik ke build accept karne ke baad banegi.

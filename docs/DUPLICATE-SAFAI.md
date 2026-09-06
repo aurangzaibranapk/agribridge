@@ -77,39 +77,81 @@ mein daalne lagein, aur kisi ko pata bhi na chale.
 
 ---
 
-## E. Jo abhi BAQI hai — malik ka faisla chahiye
+## E. Malik ke kehne par — ijazat ke do nizam ek kiye gaye
+
+Malik: *"Haan dono karo, migration bhi banao, aur business dashboard hata
+do jo double hai."*
+
+### Ijazat: do nizam -> ek
+
+| Safha | Kahan likhta tha | Kya deta tha | Ab |
+|---|---|---|---|
+| `/admin/permissions` — "Ek Banday ki Ijazat" | `profiles.allowed_pages` | sirf "safha khulta hai" | **Mor diya** `/admin/staff-access` par |
+| `/admin/staff-access` — "Staff ki Ijazat" | `user_feature_permissions` | safha AUR us par kaam | Naam ab **"Ek Banday ki Ijazat"** — wohi jo malik pehchante hain |
+
+**Migration 354** ne purani ijazat nayi fehrist mein naqal ki.
+
+#### Wo khatra jo 354 ne roka
+
+343 har bande ki OHDE wali ijazat us ke khate mein naqal karti hai. Us
+ke baad purana raasta khud band ho jata hai — kyunke middleware purani
+fehrist SIRF us waqt parhta hai jab nayi bilkul khali ho.
+
+Live ke adad naape gaye. **343 akeli chalti to:**
+
+| Banda | Purane safhe | Jo BAND ho jate |
+|---|---|---|
+| Admin Assistant | 98 | **82** |
+| Manager | 98 | **77** |
+| Finance Team | 22 | 7 |
+| HR Department | 14 | 7 |
+| Warehouse Team | 12 | 3 |
+
+Aur un mein se HAR route ka feature maujood tha — wo sirf us ohde ke
+template mein nahi tha. Yani ye ijazat waqai di gayi thi.
+
+354 ke baad Testing par jaanch: **har bande ka har purana safha khula
+hai, ek bhi band nahi.**
+
+#### Sirf "dekhna" kyun
+
+Purana nizam kaam ki baat karta hi nahi tha — wo sirf darwaza kholta
+tha. Is liye naqal bhi wohi kehti hai. Us mein "banana" ya "badalna" bhi
+daal dena 82 safhon par ek sath, bina kisi ke kahe, ijazat barhana hota
+— aur malik ka usool us ke ulat hai.
+
+Jahan ohde ka template pehle se kaam deta hai (343 se), wo qatar apni
+jagah rehti hai.
+
+#### Purana khana abhi giraya NAHI gaya — jaan boojh kar
+
+Deploy ki tarteeb pehle migrations hai, phir build. Yani thori der
+purana build naye schema par chalta hai, aur purana middleware har
+request par `allowed_pages` maangta hai. Abhi girate to us thori der
+mein har bande ka har safha toot jata — login samet.
+
+`allowed_pages` aur `role_page_permissions` girane wali migration naya
+build Live par chalne ke BAAD jayegi.
+
+### Teesra dashboard hata diya
+
+`/admin/business-dashboard` — menu mein tha hi nahi, aur Command Center
+/ Master Dashboard se kuch alag kehta bhi nahi tha. **Mit gaya.**
+
+Magar us se pehle ek cheez theek karni pari: `/admin` (yani login ke
+baad ka pehla safha) SEEDHA usi par bhejta tha. Ab wo `homePageForRole`
+se poochta hai — Malik/Admin ko Command Center, baqi sab ko "Mera Kaam".
+Yani menu, middleware aur ye safha, teenon ab ek hi function se poochte
+hain.
+
+---
+
+## F. Jo abhi BAQI hai — malik ka faisla chahiye
 
 Ye nakalein hain, magar in ka hal safha mitane se nahi hota. Chup chaap
 mitane se kaam ruk jata, is liye yahan likhi ja rahi hain.
 
-### 1. Ijazat ke DO alag nizam ek sath chal rahe hain
-
-| Safha | Nizam | Haal |
-|---|---|---|
-| `/admin/permissions` — "Ek Banday ki Ijazat" | Purana: `profiles.allowed_pages` | **Zinda hai** — Live par Manager par 98 safhe, Admin Assistant par 98, Finance par 22 |
-| `/admin/staff-access` — "Staff ki Ijazat" | Naya: `user_feature_permissions` (343 ke baad wahid darwaza) | Naya |
-
-Dono safhe ek hi sawal ka jawab dete hain: "is bande ko kya khulta hai".
-Magar do alag khaanon mein likhte hain, aur middleware dono parhta hai.
-
-**Ye migration ka kaam hai, safha mitane ka nahi:** purani `allowed_pages`
-ko nayi fehrist mein badalna parega, phir purana safha hat sakta hai.
-Abhi mita dene se Manager ki 98 safhon wali ijazat ka koi darwaza nahi
-rahega.
-
-### 2. Teen dashboard
-
-| Safha | Kis ke liye |
-|---|---|
-| `/admin/command-center` | Malik — department, pending, alerts |
-| `/admin/master-dashboard` | Bank, inventory, receivables ka poora hisaab |
-| `/admin/business-dashboard` | **Menu mein hai hi nahi** — bikri, stock, doodh, khata |
-
-Pehle do ka farq waajib hai (khulasa vs tafseel). Teesra menu mein nahi
-hai aur pehle do se kuch alag nahi kehta — malik bataayein to hata diya
-jaye.
-
-### 3. Udhaar aur khaate ke chhe safhe
+### 1. Udhaar aur khaate ke chhe safhe
 
 `/admin/khata` · `/admin/staff-khata` · `/admin/branch-credit` ·
 `/admin/credit-requests` · `/admin/farmer-credit` · `/admin/farmer-loans`
@@ -119,7 +161,7 @@ naam se ye farq nazar nahi aata. **Bande ka ek khata**
 (`/admin/khata/banda/...`) in mein se aksar ka jawab pehle hi de deta
 hai. Malik chahen to in ko us ke neeche laaya ja sakta hai.
 
-### 4. Menu mein na aane wale 101 safhe
+### 2. Menu mein na aane wale safhe
 
 Un mein se aksar waajib hain (kisi safhe ke andar ke safhe — `new`,
 `[id]`, sub-tabs). Magar kuch aise bhi hain jo kabhi menu mein aaye hi
