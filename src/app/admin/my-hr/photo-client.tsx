@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Camera, UserRound } from "lucide-react";
 import { setMyPhoto, type ActionState } from "@/actions/hr";
-import { Button } from "@/components/ui/form";
 
 const initialState: ActionState = {};
 
@@ -83,11 +82,21 @@ export function PhotoClient({ naam, maujooda }: { naam: string; maujooda: string
         <p className="mt-1 text-[11px] text-surface-400">jpg / png, 5 MB tak</p>
       </div>
 
-      {/* Bina JS wale haal ke liye -- file chunne par form khud chalta
-          hai, magar agar wo na chale to raasta band nahi hona chahiye. */}
-      <noscript>
-        <Button type="submit">Mehfooz karein</Button>
-      </noscript>
+      {/* Yahan pehle bina-JS walon ke liye ek <noscript> button tha. Wo
+          HATA diya gaya, aur wajah ahem hai:
+
+          React `<noscript>` ke andar ka maal server par ek HTML ki
+          lakeer bana kar bhejta hai, magar browser mein us ke andar
+          asal DOM nahi banta (JS chalu ho to browser us hisse ko inert
+          rakhta hai). Hydration ke waqt React ko wahan wo cheez nahi
+          milti jo us ne bheji thi, aur poora safha
+          "Hydration failed because the initial UI does not match"
+          ke sath ruk jata hai.
+
+          Aur wo button waise bhi kisi kaam ka nahi tha: ye poora admin
+          panel JS ke baghair chalta hi nahi -- na sidebar, na koi form.
+          Ek aisi soorat ke liye rok lagana jo is nizam mein hai hi nahi,
+          aur us ke badle asal safha toR dena, saaf ghaata hai. */}
     </form>
   );
 }
