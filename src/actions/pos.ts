@@ -254,10 +254,47 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
 
   const { data: sale } = await service
     .from("pos_sales")
-    .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, created_at")
+    .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, dealer_id, crm_customer_id, created_at")
     .eq("id", saleId)
     .maybeSingle();
   if (!sale) return "Bikri ka record nahi mila, ledger mein nahi ja saki.";
+
+  /**
+   * Dealer ki apni bikri, company ka journal nahi.
+   *
+   * =====================================================================
+   * YE ROK KYUN LAGI
+   * =====================================================================
+   *
+   * Malik (6 September): *"/admin/khata ko ledger se jorh do."*
+   *
+   * Us se pehle poora dealer wala raasta khangala gaya. Nateeja ye nikla
+   * ke `create_pos_sale` (database function) dealer ki bikri par bhi
+   * COGS/stock ki qatar KABHI nahi banati -- `v_item_cogs` dealer ke
+   * liye hamesha sifar rehta hai (sirf `dealer_inventory` ghatta hai,
+   * jo khud kabhi bharta hi nahi -- koi bhi safha us mein maal daalta
+   * hi nahi). Is ke bawajood ye function har dealer ki bikri "Dukan ki
+   * Bikri" (4000) mein CREDIT kar deta tha, bina kisi COGS ke.
+   *
+   * Yani agar kabhi ek bhi dealer sale hoti, wo company ke apne Sales
+   * mein Rs jama kar deti bina kisi lagat ke -- company ka nafa hamesha
+   * ke liye ghalat charh jata, aur wo ghalti kabhi khud nazar na aati.
+   *
+   * Live par is waqt EK BHI dealer sale nahi hai (0 rows), is liye ye
+   * rok kisi purane hisaab ko nahi chhedti -- sirf AAGE ke liye rasta
+   * band karti hai.
+   *
+   * Wajah asal mein saaf hai: dealer apna maal khud khareedta hai
+   * (`dealers.current_payable`), aur apne gahak ko apni marzi se bechta
+   * hai -- wo dealer ka apna karobar hai, company ka nahi. Dealer ki
+   * bikri company ke Sales mein ginna wohi galti hai jo aaj din bhar
+   * dhoondi gayi: do alag cheezon ko ek dikhana.
+   *
+   * Dealer ka apna khata (`/admin/khata`, `khata_accounts` jahan
+   * `dealer_id` bhara ho) apni jagah chalta rehta hai -- wo dealer aur
+   * us ke gahak ke darmiyan ka maamla hai, is function ka nahi.
+   */
+  if (sale.dealer_id) return null;
 
   const { data: payments } = await service
     .from("pos_sale_payment_details")
@@ -303,7 +340,25 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   }
 
   const khata = Number(sale.khata_amount ?? 0);
-  if (khata > 0) lines.push({ account: ACC.customerDue, debit: khata, memo: "POS — khata" });
+  if (khata > 0) {
+    /**
+     * Party linkage -- is ke baghair ye qatar kisi ke khaate mein
+     * kabhi nazar nahi aati thi.
+     *
+     * `fn_customer_ledger`/`fn_customer_baqi` (339) sirf wahi qatarein
+     * dekhte hain jin par `party_type='customer'` aur `party_id` bhara
+     * ho. Ye khana yahan khali tha -- kul 1100 ("Customer se lena") ka
+     * jorr theek nikalta tha, magar KISI EK customer ke statement par
+     * ye bikri kabhi nahi aati thi. Ab jata hai.
+     */
+    lines.push({
+      account: ACC.customerDue,
+      debit: khata,
+      partyType: sale.crm_customer_id ? "customer" : null,
+      partyId: sale.crm_customer_id ?? null,
+      memo: "POS — khata",
+    });
+  }
 
   // Bikri POORI raqam par likhi jati hai, aur jo chhoRa gaya wo apne
   // khate mein. Seedha kam raqam likh dene se kitab to barabar rehti,
@@ -335,5 +390,33 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   });
 
   if (failed(result)) return `Bikri ho gayi magar ledger mein nahi gayi: ${result.error}`;
+
+  /**
+   * Gahak ka balance -- wohi khana jo credit-limit ki jaanch parhti hai.
+   *
+   * `checkCredit()` isi `current_balance` ko dekh kar faisla karta hai
+   * ke agli bikri hadd se guzarti hai ya nahi. Pehle ye khana POS ki
+   * kisi bhi khata-bikri par HILTA hi nahi tha -- yani jaanch hamesha
+   * purana (aksar sifar) adad dekh rahi hoti thi, aur hadd kabhi lagti
+   * hi nahi thi, chahe gahak ka asal udhaar kitna hi bara ho jata.
+   *
+   * Wohi tareeqa jo `customer-udhaar.ts` (naqad udhaar) mein hai: pehle
+   * parho, phir jorr kar wapas likho. Ledger qatar ban chuki hai; agar
+   * ye khana update na ho to sirf agli jaanch dhili paRti hai, kitab
+   * ghalat nahi hoti -- is liye ghalti par yahan safha rokna theek nahi.
+   */
+  if (khata > 0 && sale.crm_customer_id) {
+    const { data: cust } = await service
+      .from("customers")
+      .select("current_balance")
+      .eq("id", sale.crm_customer_id)
+      .maybeSingle();
+    const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
+    await service
+      .from("customers")
+      .update({ current_balance: Math.round((abTak + khata) * 100) / 100 })
+      .eq("id", sale.crm_customer_id);
+  }
+
   return null;
 }

@@ -262,9 +262,23 @@ export default async function SalesReportPage({
    * baithe bande ko us ki BRANCH ka lena nazar aata hai, aur ye baat
    * card par likhi hui hai -- warna wo samajhta hai ye sirf us ki dukan
    * ka hai.
+   *
+   * -------------------------------------------------------------------
+   * `khata_accounts` SE NAHI, `customers` SE -- YE BADLAV JAAN BOOJH KAR
+   *
+   * Pehle ye `khata_accounts` (branch_id + crm_customer_id wali qatar)
+   * parhta tha. Wo qatar sirf POS khata-bikri par BARHTI thi -- kisi
+   * bhi wasooli (customer-udhaar.ts) par wo KABHI ghatti nahi thi, kyunke
+   * wasooli us table ko chhuti hi nahi thi. Yani ye adad hamesha ooper
+   * hi ooper jata, chahe gahak ne kitna hi wapas kyun na kar diya ho.
+   *
+   * `customers.current_balance` wohi khana hai jise POS ki bikri
+   * (ab, 6 September ke fix ke baad) aur naqad udhaar/wasooli
+   * (customer-udhaar.ts) DONO milkar sahi rakhte hain -- yehi ek adad
+   * hai jo dono taraf se sach bolta hai.
    */
   const meriBranch = (me?.branch_id as string | null) ?? null;
-  let khataQuery = supabase.from("khata_accounts").select("current_balance, credit_limit, branch_id");
+  let khataQuery = supabase.from("customers").select("current_balance, credit_limit, branch_id");
   if (meriDukan && meriBranch) khataQuery = khataQuery.eq("branch_id", meriBranch);
   else if (branchId) khataQuery = khataQuery.eq("branch_id", branchId);
   const { data: khaate } = await khataQuery;

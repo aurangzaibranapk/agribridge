@@ -169,10 +169,14 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
 
   const { data: ret } = await service
     .from("pos_returns")
-    .select("id, return_number, sale_id, branch_id, total_amount, cash_refund, khata_refund, created_at")
+    .select("id, return_number, sale_id, branch_id, total_amount, cash_refund, khata_refund, created_at, pos_sales(crm_customer_id)")
     .eq("id", returnId)
     .maybeSingle();
   if (!ret) return "Wapsi ka record nahi mila, ledger mein nahi ja saki.";
+
+  // Asal bikri ka gahak -- wapsi usi ke khaate se ghatti hai.
+  const saleRow = Array.isArray((ret as any).pos_sales) ? (ret as any).pos_sales[0] : (ret as any).pos_sales;
+  const crmCustomerId: string | null = saleRow?.crm_customer_id ?? null;
 
   const { data: items } = await service.from("pos_return_items").select("line_cogs").eq("return_id", returnId);
   const cogs = (items ?? []).reduce((sum, i) => sum + Number(i.line_cogs ?? 0), 0);
@@ -206,7 +210,21 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
   }
 
   const khata = Number(ret.khata_refund ?? 0);
-  if (khata > 0) lines.push({ account: ACC.customerDue, credit: khata, memo: "Wapsi — khata" });
+  if (khata > 0) {
+    /**
+     * Wohi party-linkage wali kami jo POS ki bikri mein thi (pos.ts,
+     * 6 September) -- yahan bhi thi. Bina is ke, gahak ka khata udhaar
+     * to kabhi ghatta hi nahi tha: bikri par charhta (jab charhta tha),
+     * magar wapsi par kabhi utarta nahi.
+     */
+    lines.push({
+      account: ACC.customerDue,
+      credit: khata,
+      partyType: crmCustomerId ? "customer" : null,
+      partyId: crmCustomerId,
+      memo: "Wapsi — khata",
+    });
+  }
 
   if (cogs > 0) {
     lines.push({ account: ACC.stockGoods, debit: cogs, memo: "Maal wapas godam mein" });
@@ -224,6 +242,23 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
   });
 
   if (failed(result)) return `wapsi ho gayi magar ledger mein nahi gayi: ${result.error}`;
+
+  // Gahak ka balance bhi utarna hai -- warna wapsi ke baad bhi us ka
+  // "hamein dena hai" adad bikri jitna hi bara raha aata, aur agli
+  // bikri par credit-limit ki jaanch usay ghalat rokti rehti.
+  if (khata > 0 && crmCustomerId) {
+    const { data: cust } = await service
+      .from("customers")
+      .select("current_balance")
+      .eq("id", crmCustomerId)
+      .maybeSingle();
+    const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
+    await service
+      .from("customers")
+      .update({ current_balance: Math.round((abTak - khata) * 100) / 100 })
+      .eq("id", crmCustomerId);
+  }
+
   return null;
 }
 

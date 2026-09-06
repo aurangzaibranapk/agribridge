@@ -179,17 +179,55 @@ sirf har ek par **"Poora khata"** ka ek chhota link laga diya gaya, jo
 seedha `/admin/khata/banda/<qism>/<id>` par le jata hai. Koi hisaab
 naya nahi laga, sirf raasta joRha gaya.
 
-**Do safhe -- ALAG cheez hain, in ko zabardasti "banda ka khata" mein
+**Ek safha -- ALAG cheez hai, is ko zabardasti "banda ka khata" mein
 DAALNA GHALAT hota:**
 
-| Safha | Wajah |
-|---|---|
-| `/admin/branch-credit` | `party_type = 'branch'` -- ek SHAAKH hai, koi banda nahi. "Bande ka khata" ka safha (`/admin/khata/banda/[qism]/[id]`) sirf farmer/staff/customer/supplier qubool karta hai; branch us mein daalna khud us model ko ghalat kar deta. |
-| `/admin/khata` | Ye "khata hub" hai hi nahi -- ye ek DEALER ka apna safha hai (login kiye hue dealer ko us ke apne customers ki `khata_accounts` dikhata hai). Ye table `journal_lines` mein jata hi NAHI -- kisi action mein is se `postJournal` bulaya hi nahi jata. Isay "banda ka khata" mein daalne ka matlab hota pehle is poore raaste ko ledger se jorna -- wo asal maali kaam hai, safha hilane wala nahi. |
+`/admin/branch-credit` — `party_type = 'branch'` — ek SHAAKH hai, koi
+banda nahi. "Bande ka khata" ka safha (`/admin/khata/banda/[qism]/[id]`)
+sirf farmer/staff/customer/supplier qubool karta hai; branch us mein
+daalna khud us model ko ghalat kar deta. **Haath nahi lagaya.**
 
-**In dono ko HAATH NAHI lagaya gaya.** Chup chaap "ek jagah la dena" yahan
-wohi ghalti hoti jo aaj din bhar dhoondi ja rahi thi: do alag cheezon ko
-ek dikhana, jab ke un ka asal hisaab do jagah alag alag laga hua hai.
+**`/admin/khata` (dealer) — check karne par ledger se JORHNE ki zaroorat
+nahi nikli, balke jorHTE hi ek asal maali bug pakra gaya:**
+
+Malik: *"/admin/khata ko ledger se jorh do."*
+
+Peechha karne par nikla ke `/admin/khata` (dealer ka apna safha) ko
+company ke `journal_lines` se jorna KHUD GHALAT hota -- dealer apna
+maal khud khareedta hai (`dealers.current_payable`) aur apne gahak ko
+apni marzi se bechta hai; ye dealer ka apna karobar hai, company ka
+nahi. Us ko company ki apni Sales mein ginna wohi ghalti hoti jo aaj
+din bhar dhoondi ja rahi thi.
+
+Magar isi khoj mein ek ASAL bug nikla, aur wo `/admin/khata` mein nahi
+tha -- **POS ki apni khata-bikri mein tha**:
+
+1. **`create_pos_sale`** dealer ki bikri par COGS/stock ki qatar KABHI
+   nahi banati thi (dealer ke liye `v_item_cogs` hamesha sifar), phir
+   bhi `pos.ts` har dealer sale ko company ke "Dukan ki Bikri" (4000)
+   mein credit kar deta -- bina kisi lagat ke. Ek bhi dealer sale hoti
+   to company ka nafa hamesha ke liye ghalat charh jata.
+2. POS ki khata-bikri (`ACC.customerDue`, 1100) journal mein **bina
+   party linkage ke** jati thi -- na `partyType`, na `partyId`. Kul
+   1100 ka jorr theek nikalta tha, magar KISI EK gahak ka statement
+   (`fn_customer_ledger`) ye bikri kabhi dikhata hi nahi tha.
+3. `customers.current_balance` (wohi khana jo credit-limit ki jaanch
+   parhta hai) POS ki kisi bhi khata-bikri par **hilta hi nahi tha**.
+   Yani jaanch hamesha purana (aksar sifar) adad dekh rahi hoti,
+   chahe gahak ka asal udhaar kitna bara ho jata.
+4. Wapsi (`pos-returns.ts`) mein bhi wohi kami -- khata refund na party
+   se juRa tha, na `customers.current_balance` ko wapas ghataata tha.
+
+**Live par is waqt EK BHI dealer, EK BHI POS khata-bikri, EK BHI khata
+wapsi nahi hai (sab sifar)** -- is liye ye chaaron fix kisi purane
+hisaab ko nahi chhedte, sirf AAGE ka raasta seedha karte hain. Koi
+migration nahi chahiye thi; sab kuch code (`pos.ts`, `pos-returns.ts`,
+`reports/sales/page.tsx`) mein hai.
+
+`reports/sales/page.tsx` (aaj hi bana tha) `khata_accounts` (branch-
+scoped, jis mein wasooli ka koi raasta nahi tha -- sirf barhta, kabhi
+ghatta nahi) se `customers.current_balance` (ab dono taraf se sach)
+par mor diya gaya.
 
 ### 2. Menu mein na aane wale safhe
 

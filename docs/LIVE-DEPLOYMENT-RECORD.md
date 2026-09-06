@@ -2052,3 +2052,50 @@ drop table if exists public.role_page_permissions;
 ```
 
 Abhi ye likhi nahi gayi — malik ke build accept karne ke baad banegi.
+
+---
+
+## Code fix (koi naya migration nahi) — POS khata, party linkage, dealer sale
+
+Malik: *"/admin/khata ko ledger se jorh do."*
+
+Peechha karte hue asal maali bug mila — `/admin/khata` (dealer) mein
+nahi, **POS ki apni khata-bikri** mein. Chaar cheezein theek hui hain,
+sab code mein (`src/actions/pos.ts`, `src/actions/pos-returns.ts`,
+`src/app/admin/reports/sales/page.tsx`), **koi DB migration nahi**:
+
+1. Dealer ki bikri ab company ke journal mein POST hi nahi hoti
+   (`postSaleToLedger` `sale.dealer_id` par seedha wapas). Wajah:
+   `create_pos_sale` dealer ki bikri par COGS/stock kabhi nahi
+   banati thi, phir bhi poori raqam "Dukan ki Bikri" mein charh jati —
+   bina lagat ke, company ka nafa hamesha ghalat.
+
+2. POS khata-bikri (1100) ab `partyType: "customer", partyId:
+   crm_customer_id` ke sath jati hai — pehle bina linkage ke jati thi,
+   is liye `fn_customer_ledger` par kabhi nazar nahi aati thi.
+
+3. `customers.current_balance` ab POS khata-bikri par BARHTA hai
+   (`postSaleToLedger` ke aakhir mein) aur khata-wapsi par GHATTA hai
+   (`postReturnToLedger`) — pehle ye khana kisi POS action se hilta hi
+   nahi tha, is liye credit-limit ki jaanch (`checkCredit`) hamesha
+   purana (aksar sifar) adad dekh rahi hoti.
+
+4. `reports/sales/page.tsx` ka "Kul lena hai" / "hadd 80%" card ab
+   `customers.current_balance` se parhta hai, `khata_accounts` se nahi
+   — us table mein wasooli ka koi raasta nahi tha, sirf barhta jata.
+
+**Live par is waqt sifar hai:** 0 dealer, 0 POS khata-bikri, 0 khata
+wapsi. Is liye ye chaaron fix kisi purane hisaab ko nahi chhedte — sirf
+agli bikri se sahi chalna shuru hota hai. Testing par party-linkage
+manual test se dikhaya gaya (qatar bana kar, ulti karke saaf ki gayi):
+
+```
+journal_lines: 1100 debit 3000, party_type='customer', party_id=<id>
+customers.current_balance: 0 -> 3000
+```
+
+Dealer ka apna khata (`/admin/khata`, `khata_accounts` jahan `dealer_id`
+bhara ho) jaan boojh kar company ke journal se ALAG rakha gaya —
+dealer apna maal khud khareedta hai aur apne gahak ko apni marzi se
+bechta hai; ye us ka apna karobar hai, company ka nahi. Us safhe ka
+poora peechha `docs/DUPLICATE-SAFAI.md` mein hai.
