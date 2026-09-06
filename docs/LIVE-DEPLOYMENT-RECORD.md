@@ -1559,9 +1559,9 @@ Malik ke "system par aa gaya" kehne par ye poori fehrist ek sath jayegi.
 Tarteeb P0 rule ke mutabiq: **backup verified → pre-migration ginti →
 migrations → verification → naya build upload → smoke test**.
 
-## Live par chalni baqi migrations (chaar)
+## Live par chalni baqi migrations (paanch)
 
-Chaaron **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
+Paanchon **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
 
 | # | File | Kya karti hai |
 |---|---|---|
@@ -1569,6 +1569,7 @@ Chaaron **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
 | 330 | `330_har_adaigi_ka_apna_khata.sql` | Cash / QR / easypaisa / JazzCash / bank / Kisan Card — har adaigi ka apna khata. Suspense ke Rs 30 isi se saaf honge |
 | 332 | `332_ek_hi_cba_account.sql` | Load & Bill ka float alag khate par nahi — wohi CBA account (1014) |
 | 333 | `333_kharid_ledger_ki_nigrani.sql` | Kharid aur supplier adaigi ab `v_ledger_unposted` mein; `v_supplier_payable_vs_ledger` |
+| 334 | `334_team_ka_darakht_ohde_aur_tasveer.sql` | Team ka darakht: sab log nazar aayein, ohde ki seerhi, apni tasveer |
 
 331 (`shaam_ka_hisaab`) **jaan boojh kar rok kar rakhi hai**: wo menu mein
 ek qatar daalti hai jis ka safha abhi bana nahi. Menu se aisi jagah par
@@ -1616,3 +1617,19 @@ usi din surkh nazar aa jati.
 alag pack size hain (bill par rate 171 / 330 / 902 / 1757, product par
 saved rate Rs 18). Isi tarah Lays (19 aur 28 dono), Rio, candi, lifeboy,
 pizzo, Lux, vital.
+
+## 334 bhi is baar jayegi — Team ka darakht
+
+Testing par chal chuki hai. Ye teen kaam karti hai:
+
+1. `fn_hr_staff_directory` ka INNER JOIN → **LEFT JOIN**. Live par
+   `staff_details` mein **zero** qatarein hain aur 19 active profiles —
+   isi wajah se darakht bilkul khali tha.
+2. `org_positions` — ohde ki seerhi: Board of Director → CEO → Director
+   → Admin → Assistant Admin → Manager → ...
+3. `fn_set_my_photo` — har banda apni tasveer khud laga sake, aur **sirf**
+   tasveer (tankhwah/afsar nahi).
+
+Migration ke baad Live par ye khud theek ho jayega — koi data nahi bharna
+parta. Malik ko sirf har bande ka **ohda aur afsar** chunna hoga
+(`/admin/hr/team/tree` → "Badlein").
