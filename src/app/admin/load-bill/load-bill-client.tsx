@@ -69,6 +69,7 @@ export function LoadBillClient({
   providers,
   accounts,
   financeAccounts,
+  customers,
   today,
   canReverse,
 }: {
@@ -77,6 +78,7 @@ export function LoadBillClient({
   providers: Provider[];
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
+  customers: { id: string; name: string }[];
   today: Txn[];
   canReverse: boolean;
 }) {
@@ -104,7 +106,19 @@ export function LoadBillClient({
   const [accountId, setAccountId] = useState(kaamKeAccounts[0]?.id ?? accounts[0]?.id ?? "");
   const [principal, setPrincipal] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
-  const [method, setMethod] = useState("cash");
+  /**
+   * Ek hi khane se do cheezein.
+   *
+   * `paisaKahan` wo hai jo banda chunta hai: "cash", kisi khate ki id
+   * (`acct:<id>`), "wallet" ya "khata". Us se `method` aur
+   * `chunaHuaKhata` khud nikal aate hain, aur wohi server ko jate hain.
+   * Server ka hisaab bilkul nahi badla -- sirf poochne ka tareeqa badla
+   * hai.
+   */
+  const [paisaKahan, setPaisaKahan] = useState("cash");
+  const khataChuna = paisaKahan.startsWith("acct:");
+  const method = khataChuna ? "bank" : paisaKahan;
+  const chunaHuaKhata = khataChuna ? paisaKahan.slice(5) : "";
   const [settled, setSettled] = useState(true);
 
   const chunaHua = accounts.find((a) => a.id === accountId) ?? null;
@@ -308,33 +322,76 @@ export function LoadBillClient({
             </div>
 
             <div>
-              <Label htmlFor="payment_method">Customer ne kaise diya</Label>
+              <Label htmlFor="paisa_kahan">Payment kahan aayi</Label>
+              {/* EK FEHRIST, ASAL KHATON KE SATH.
+                  Pehle yahan sirf qism likhi thi -- "Bank / Card",
+                  "Wallet" -- aur khata chunne ka khana us ke BAAD alag
+                  se khulta tha, wo bhi sirf "Bank" par.
+
+                  Malik (6 September): *"yahan jo hamare ACTUAL account
+                  hain wo aane chahiyen ke kis account mein payment hui
+                  hai... jaise hi bank select hua hamein pata ho ga ye
+                  is bank mein hai; JazzCash to pata hai, Easypaisa hai
+                  to pata hai, QR code hai to pata hai."*
+
+                  Wo theek keh rahe the. Counter par khara banda "qism"
+                  nahi sochta -- wo ye sochta hai ke "paisa Easypaisa
+                  mein aaya". Us se qism poochna aur phir khata poochna
+                  do sawal hain jahan ek kaafi tha; aur usi do-qadam ki
+                  wajah se 6 September ko wo "Wallet" chun baithe (jo is
+                  nizam mein CUSTOMER ka jama shuda paisa hai, hamara
+                  Easypaisa nahi) aur khate ka khana khula hi nahi.
+
+                  Ab ek hi fehrist hai. Andar ki qism (`payment_method`)
+                  aur khata (`finance_account_id`) chhupe hue khanon
+                  mein jate hain -- server ka hisaab bilkul wahi rehta
+                  hai. */}
               <Select
-                id="payment_method"
-                name="payment_method"
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
+                id="paisa_kahan"
+                value={paisaKahan}
+                onChange={(e) => setPaisaKahan(e.target.value)}
               >
-                <option value="cash">Cash</option>
-                <option value="bank">Bank / Card</option>
-                <option value="wallet">Wallet</option>
-                <option value="khata">Khata (udhaar)</option>
+                <option value="cash">Cash — golak mein aaya</option>
+                {financeAccounts.map((f) => (
+                  <option key={f.id} value={`acct:${f.id}`}>
+                    {f.name}
+                  </option>
+                ))}
+                <option value="wallet">Customer ke apne wallet se</option>
+                <option value="khata">Khata — udhaar likh dein</option>
               </Select>
+              <input type="hidden" name="payment_method" value={method} />
+              <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
             </div>
 
-            {method === "bank" && (
+            {/* Khata par likhna hai to KIS ka khata -- ye poochna lazmi
+                hai. Pehle ye khana tha hi nahi: server `customer_id`
+                maangta tha, form bhejta hi nahi tha, aur "Khata" chunne
+                par hamesha "customer chunna zaroori hai" ka jawab aata
+                tha. Yani wo option kabhi kaam kar hi nahi sakta tha.
+
+                Naam ka khana (neeche) is ki jagah nahi le sakta: wo
+                sirf likhai hai, us se kisi ka khata nahi banta. Udhaar
+                us waqt tak udhaar nahi jab tak wo KISI ke naam par na
+                ho. */}
+            {method === "khata" && (
               <div>
-                <Label htmlFor="finance_account_id">Kaunse khate mein aaya</Label>
-                <Select id="finance_account_id" name="finance_account_id" required>
-                  <option value="">— chunein —</option>
-                  {financeAccounts.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
+                <Label htmlFor="customer_id">Kis ke khate par</Label>
+                <Select id="customer_id" name="customer_id" required>
+                  <option value="">— customer chunein —</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
                 </Select>
+                <p className="mt-1 text-[11px] text-surface-500">
+                  Customer fehrist mein na ho to pehle CRM par us ka indraj karein.
+                </p>
               </div>
             )}
+
+
 
             <div>
               <Label htmlFor="customer_name">Customer ka naam (marzi ka)</Label>

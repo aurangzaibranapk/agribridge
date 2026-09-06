@@ -63,10 +63,15 @@ export default async function LoadBillPage({
   const service = createServiceClient();
   const aaj = aajKaKhana();
 
-  const [{ data: providers }, { data: accounts }, { data: financeAccounts }] = await Promise.all([
+  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }] = await Promise.all([
     service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
     service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
     service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
+    // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
+    // form mein customer chunne ka khana tha hi nahi -- is liye
+    // "Khata" chunne par server hamesha "customer chunna zaroori hai"
+    // keh kar rok deta tha. Wo khana MARA HUA tha.
+    service.from("customers").select("id, name").order("name"),
   ]);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
@@ -158,6 +163,7 @@ export default async function LoadBillPage({
             providerName: a.provider_id ? providerName.get(a.provider_id as string) ?? "—" : "—",
             float: floats.get(a.id as string) ?? null,
           }))}
+          customers={(customers ?? []).map((c) => ({ id: c.id as string, name: (c.name as string | null) ?? "—" }))}
           financeAccounts={(financeAccounts ?? []).map((f) => ({
             id: f.id as string,
             name: f.name as string,
