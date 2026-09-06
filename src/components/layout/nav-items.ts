@@ -124,6 +124,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/agri-orders", label: "AgriBridge Ordering", icon: ClipboardType },
       { href: "/admin/kharche", label: "Paisa & Khata", icon: ReceiptText },
       { href: "/admin/mazdoori", label: "Mazdoori / Daily Work", icon: ReceiptText },
+      { href: "/admin/settlements", label: "Khaton ka Adjustment", icon: Scale },
       { href: "/admin/company-expenses", label: "Company Expenses", icon: ReceiptText },
       { href: "/admin/finance", label: "Cash Book", icon: Landmark },
       { href: "/admin/finance/banks", label: "Banks", icon: Landmark },
