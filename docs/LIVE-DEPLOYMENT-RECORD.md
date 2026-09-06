@@ -1559,9 +1559,9 @@ Malik ke "system par aa gaya" kehne par ye poori fehrist ek sath jayegi.
 Tarteeb P0 rule ke mutabiq: **backup verified → pre-migration ginti →
 migrations → verification → naya build upload → smoke test**.
 
-## Live par chalni baqi migrations (paanch)
+## Live par chalni baqi migrations (chhe)
 
-Paanchon **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
+Chhon **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
 
 | # | File | Kya karti hai |
 |---|---|---|
@@ -1569,11 +1569,13 @@ Paanchon **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
 | 330 | `330_har_adaigi_ka_apna_khata.sql` | Cash / QR / easypaisa / JazzCash / bank / Kisan Card — har adaigi ka apna khata. Suspense ke Rs 30 isi se saaf honge |
 | 332 | `332_ek_hi_cba_account.sql` | Load & Bill ka float alag khate par nahi — wohi CBA account (1014) |
 | 333 | `333_kharid_ledger_ki_nigrani.sql` | Kharid aur supplier adaigi ab `v_ledger_unposted` mein; `v_supplier_payable_vs_ledger` |
+| 331 | `331_shaam_ka_hisaab.sql` | Shaam ka Hisaab ka safha — menu, ijazat, madad |
 | 334 | `334_team_ka_darakht_ohde_aur_tasveer.sql` | Team ka darakht: sab log nazar aayein, ohde ki seerhi, apni tasveer |
 
-331 (`shaam_ka_hisaab`) **jaan boojh kar rok kar rakhi hai**: wo menu mein
-ek qatar daalti hai jis ka safha abhi bana nahi. Menu se aisi jagah par
-le jana jahan kuch hai hi nahi, us se bura hai ke qatar hi na ho.
+331 pehle **rok kar rakhi thi** — wo menu mein ek qatar daalti hai aur us
+ka safha bana nahi tha. Menu se aisi jagah le jana jahan kuch hai hi
+nahi, us se bura hai ke qatar hi na ho. **Ab safha ban chuka hai**
+(`/admin/shaam-ka-hisaab`), is liye 331 bhi is baar jayegi.
 
 ## Live ka data theek karna — malik ki ijazat ke baghair NAHI
 
