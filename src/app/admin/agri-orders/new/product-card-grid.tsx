@@ -30,11 +30,26 @@ export function ProductCardGrid({
   categories,
   rows,
   onUpdateRow,
+  bulkFill,
 }: {
   products: Product[];
   categories: Category[];
   rows: Record<string, RowState>;
   onUpdateRow: (productId: string, field: keyof RowState, value: number, defaultPrice: number) => void;
+  /**
+   * "Jitna stock hai, sab" wali patti — sirf tab dikhti hai jab bulane
+   * wala ye kaam de.
+   *
+   * Ye patti har jagah nahi honi chahiye. Maal BHEJNE par "sab" ka
+   * matlab banta hai (dukan khali karni hai, ya sab kuch godam wapas
+   * bhejna hai). Magar maal MANGWANE par "sab" ka koi matlab nahi --
+   * wahan wo sirf ek ghalti ka darwaza hota, jahan ek click poora
+   * order bhar deta.
+   *
+   * Is liye ye khana OPTIONAL hai: transfer wala safha ye deta hai,
+   * order wala nahi.
+   */
+  bulkFill?: (visible: Product[], mode: "sab" | "khali") => void;
 }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const lang = useLang();
@@ -114,6 +129,34 @@ export function ProductCardGrid({
           </button>
         ))}
       </div>
+      {bulkFill && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/60 px-3 py-2 dark:border-brand-900/40 dark:bg-brand-950/20">
+          <span className="text-xs text-brand-900 dark:text-brand-200">
+            {filtered.length} cheezein saamne hain
+            {categoryFilter ? " (is qism ki)" : ""}
+            {search.trim() ? " (talash ke mutabiq)" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={() => bulkFill(filtered, "sab")}
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+          >
+            Jitna stock hai, sab bhar dein
+          </button>
+          <button
+            type="button"
+            onClick={() => bulkFill(filtered, "khali")}
+            className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+          >
+            Ye saaf karein
+          </button>
+          <span className="w-full text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
+            Ye sirf WOHI cheezein bharta hai jo is waqt saamne hain — qism ka khana daba kar sirf us qism
+            ka sara stock bhi bhara ja sakta hai. Bharne ke baad ginti haath se badli ja sakti hai.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {filtered.map((p) => {
           const row = rows[p.id];

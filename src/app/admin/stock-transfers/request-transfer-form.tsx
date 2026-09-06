@@ -65,6 +65,53 @@ export function RequestTransferForm({
     }));
   }
 
+  /**
+   * "Jitna stock hai, sab bhar dein."
+   *
+   * Malik ka kehna (6 September): *"jo stock available hai, agar wo sara
+   * shop se warehouse ya warehouse se shop — All par click karna chahein
+   * to transfer ho jana chahiye. Category wise karna chahein phir bhi.
+   * Karyana mein sirf karyana stock ho, koi aur nahi."*
+   *
+   * Aakhri jumla is kaam ki asal wajah hai: dukan mein aisa maal para hai
+   * jo wahan ka hai hi nahi, aur use ek ek kar ke wapas bhejna itna lamba
+   * kaam hai ke koi karta hi nahi -- is liye ghalat maal wahin para
+   * rehta hai.
+   *
+   * TEEN BAATEIN JAAN BOOJH KAR:
+   *
+   * 1. **Sirf WOHI cheezein bharta hai jo saamne hain.** Qism ka khana
+   *    daba hua ho to sirf us qism ki, talash likhi ho to sirf wo. Ye
+   *    "All" ka matlab "poori dunya" nahi -- "jo dikh raha hai, wo".
+   *
+   * 2. **Jis mein stock nahi, us ko haath nahi lagta.** Sifar wali qatar
+   *    bharne ka koi matlab nahi, aur wo neeche wali fehrist ko bekaar
+   *    lambi kar deti.
+   *
+   * 3. **Bharna aakhri faisla nahi.** Har ginti us ke baad haath se badli
+   *    ja sakti hai. Ye khana kaam shuru karne ke liye hai, khatam karne
+   *    ke liye nahi -- aur bhejne ki manzoori us ke baad bhi wahin hai
+   *    jahan pehle thi.
+   */
+  function bulkFill(visible: { id: string; warehouse_stock: number; selling_price: number }[], mode: "sab" | "khali") {
+    setRows((prev) => {
+      const next = { ...prev };
+      for (const p of visible) {
+        if (mode === "khali") {
+          delete next[p.id];
+          continue;
+        }
+        // Jis mein stock hai hi nahi, us ko chhoR dein.
+        if (p.warehouse_stock <= 0) continue;
+        next[p.id] = {
+          qty: p.warehouse_stock,
+          price: prev[p.id]?.price ?? p.selling_price,
+        };
+      }
+      return next;
+    });
+  }
+
   function shopLabel(s: ShopOpt) {
     return `${s.branch_name ? `${s.branch_name} - ` : ""}${BUSINESS_TYPE_LABELS[s.business_type] ?? s.business_type} (${s.name})`;
   }
@@ -159,12 +206,21 @@ export function RequestTransferForm({
         <div>
           <Label>{t("st_pick_products", lang)}</Label>
           <div className="mt-1">
-            <ProductCardGrid products={productsWithStock} categories={categories} rows={rows} onUpdateRow={handleUpdateRow} />
+            <ProductCardGrid
+              products={productsWithStock}
+              categories={categories}
+              rows={rows}
+              onUpdateRow={handleUpdateRow}
+              bulkFill={bulkFill}
+            />
           </div>
         </div>
 
         {activeItems.length > 0 && (
-          <div className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm dark:bg-surface-800">
+          <div className="max-h-60 overflow-y-auto rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm dark:bg-surface-800">
+            <p className="mb-1 text-xs font-semibold text-surface-700 dark:text-surface-200">
+              {activeItems.length} cheezein chuni gayi hain
+            </p>
             {activeItems.map((i) => (
               <div key={i.product_id} className="flex justify-between text-xs text-surface-600">
                 <span>{i.name} x {i.quantity} @ Rs {i.unit_price.toLocaleString()}</span>
