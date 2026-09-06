@@ -40,6 +40,24 @@ export function ShopSelector({
     return <span className="text-xs text-surface-400">{t("us_pick_branch_first", lang)}</span>;
   }
 
+  // Is shaakh ke neeche koi dukan hai hi nahi -- ye baat SAAF kehni
+  // paRti hai.
+  //
+  // Malik (6 September) ne poochha: *"ye main kaise karun, mujhe
+  // batao."* Jawab dena mumkin hi nahi tha: un ke staff ki shaakh
+  // "Kisan Karyana Mahabali" hai, jab ke dono dukanein "Main Branch" ke
+  // neeche darj hain. Is liye ye fehrist khali aati thi -- bina kuch
+  // kahe. Banda dobara dobara kholta hai aur samajh nahi aata ke kya
+  // kam hai.
+  if (shopsForBranch.length === 0) {
+    return (
+      <span className="text-xs text-amber-700 dark:text-amber-400">
+        Is shaakh ke neeche koi dukan darj nahi — pehle Shops par is shaakh ki dukan banayein ya us dukan ki
+        shaakh theek karein.
+      </span>
+    );
+  }
+
   return (
     <form action={formAction}>
       <input type="hidden" name="user_id" value={userId} />
