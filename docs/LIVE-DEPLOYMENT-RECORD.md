@@ -1809,6 +1809,7 @@ tasdeeq se pehle Live par koi migration nahi).
 | 346 | Ek bande ke ek feature ki EK hi pakki qatar (unique taala) | ✅ (index bana) | **baqi** |
 | 347 | Rozana ka kharcha: banda, khata, tareekh + manzoori ka taala | ✅ | **baqi** |
 | 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | **baqi** |
+| 349 | Mazdoori, advance ka khud-ba-khud adjust, bande ka ek khata | ✅ (malik ka apna misaal ledger par chala kar dekha) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -1874,3 +1875,18 @@ select * from v_cash_book_ledger_farq;   -- baad mein KHALI honi chahiye
    Abhi tak kisi ne mehsoos nahi kiya kyunki Live par ek bhi kharcha
    darj hi nahi hua (ginti 0). Migration 348 ye taala shakal wale taale
    se badal deti hai. Ye Live par 347 ke saath hi jayegi.
+
+### 349 ki jaanch — malik ka apna misaal, Testing ke ledger par
+
+Malik ne jo tarteeb likhi thi, wo qatarein daal kar chala kar dekhi gayi
+(sab wapas le li gayin, koi qatar Testing par baqi nahi):
+
+| Qadam | Nateeja | Chahiye tha |
+|---|---|---|
+| Din 1: Rs 3,000 advance | advance 3,000 · dena 0 | 3,000 / 0 |
+| Din 2: Rs 2,000 mazdoori | advance 1,000 · dena 0 | 1,000 / 0 |
+| Din 3: Rs 1,500 mazdoori | advance 0 · dena 500 | 0 / 500 |
+
+Aur us ke saath khaad ka Rs 10,000 udhaar daal kar dekha gaya ke khulasa
+DONO alag dikhata hai — `1150 lena 10,000` aur `2015 dena 500` — na ke
+"7,000 net". Chup chaap set-off nahi hota; wo malik ki apni shart thi.

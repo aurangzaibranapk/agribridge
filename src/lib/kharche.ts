@@ -56,6 +56,37 @@ import { ACC } from "@/lib/ledger/rules";
 
 export type KharchaRukh = "gaya" | "aaya";
 
+/**
+ * Staff ke saamne paanch khaane -- accounting ki zaban ek bhi nahi.
+ *
+ * Malik (6 September):
+ *
+ *   *"Main 'Expense' naam nahi rakhunga, kyunke is screen mein sirf
+ *   kharcha nahi hoga. Is mein paisa dena, paisa lena, udhaar,
+ *   mazdoori, general kharcha aur settlement sab aa rahe hain.
+ *   Accounting mein farmer ko Rs 5,000 udhaar dena zaroori nahi ke
+ *   expense ho... Mera recommended naam: **Paisa & Khata**."*
+ *
+ *   *"Staff ko debit/credit, receivable/payable jaise accounting terms
+ *   nahi dikhayenge."*
+ *
+ * Wo theek keh rahe hain, aur wajah un ki apni likhi hui hai: safhe ka
+ * naam "Expense" rakhne se banda HAR cash-out ko kharcha samajhne lagta
+ * hai -- aur wohi ghalti P&L mein nafa kam dikhati hai.
+ *
+ * Is liye saamne ye paanch naam hain, aur peechhe khate wohi ke wohi
+ * apni jagah rehte hain.
+ */
+export const PAISA_KHAANE = [
+  { value: "paisa_diya", label: "Paisa Diya", tafseel: "Kisi ko cash diya" },
+  { value: "paisa_mila", label: "Paisa Mila", tafseel: "Kisi se payment mili" },
+  { value: "udhaar", label: "Udhaar / Advance", tafseel: "Kisi ne aap se advance ya udhaar liya" },
+  { value: "mazdoori", label: "Mazdoori / Kaam", tafseel: "Kisi ne ART ke liye kaam kiya" },
+  { value: "kharcha", label: "General Kharcha", tafseel: "Chai, loading, marammat, bijli, transport" },
+] as const;
+
+export type PaisaKhaana = (typeof PAISA_KHAANE)[number]["value"];
+
 export interface KharchaQism {
   value: string;
   label: string;
@@ -67,96 +98,156 @@ export interface KharchaQism {
    * bijli ka bill 6040 par aur diesel 6010 par jata hai.
    */
   saamneWalaKhata: string | null;
-  /** Kis fehrist se banda chunega. NULL = koi banda nahi. */
+  /**
+   * Kis fehrist se banda chunega. NULL ka matlab "kisi bhi fehrist se"
+   * hai, "koi banda nahi" NAHI -- wo `bandaZaroori` batata hai.
+   */
   bandaKahanSe: "supplier" | "staff" | "farmer" | "customer" | null;
+  /**
+   * Registered banda chunna LAZMI hai?
+   *
+   * Ye us waqt sach hota hai jab us bande ka BALANCE hilta hai. Sirf
+   * naam likh dene se balance nahi banta -- baad mein us se wasooli
+   * karne ke liye koi ID hi nahi hoti.
+   *
+   * Mazdoori wale khaton (1145 / 2015) mein banda kisi bhi fehrist ka
+   * ho sakta hai -- malik ka poora nuqta yehi tha: *"wohi Muhammad
+   * Aslam farmer bhi ho sakta hai, customer bhi, milk supplier bhi,
+   * mazdoor bhi -- lekin ID/person ek hi rahe."*
+   */
+  bandaZaroori: boolean;
   /** Ledger mein party ki qism. */
   partyType: string | null;
   /** Manager ko yaad dilane ke liye — is ka asar kya hoga. */
   asar: string;
   /** Ye asal kharcha hai (nafe mein se katega)? */
   asalKharcha: boolean;
+  /** Staff ke saamne ye kis khaane mein baithti hai. */
+  khaana: PaisaKhaana;
 }
 
 export const KHARCHA_QISMEIN: KharchaQism[] = [
   // ---------------- PAISA GAYA ----------------
   {
     value: "kharcha",
+    khaana: "kharcha",
     label: "Kharcha (chai, marammat, bijli, safai, kiraya)",
     rukh: "gaya",
     saamneWalaKhata: null, // qism se tay hoga
     bandaKahanSe: null,
+    bandaZaroori: false,
     partyType: null,
     asar: "Ye asal kharcha hai — nafe mein se kat jayega. Kisi ka khata nahi hilega.",
     asalKharcha: true,
   },
   {
     value: "supplier_ko_diya",
+    khaana: "paisa_diya",
     label: "Supplier ko adaigi",
     rukh: "gaya",
     saamneWalaKhata: ACC.supplierPayable,
     bandaKahanSe: "supplier",
+    bandaZaroori: true,
     partyType: "supplier",
     asar: "Ye kharcha NAHI — maal pehle aa chuka. Supplier ka dena kam ho jayega.",
     asalKharcha: false,
   },
   {
     value: "staff_ko_advance",
+    khaana: "udhaar",
     label: "Staff ko advance ya qarz",
     rukh: "gaya",
     saamneWalaKhata: ACC.staffAdvance,
     bandaKahanSe: "staff",
+    bandaZaroori: true,
     partyType: "staff",
     asar: "Ye kharcha NAHI — us se wapas lena hai. Us ke khaate mein charh jayega.",
     asalKharcha: false,
   },
   {
     value: "kisan_ko_advance",
-    label: "Kisan ko peshgi / advance",
+    khaana: "udhaar",
+    label: "Kisan ko fasal ki peshgi",
     rukh: "gaya",
     saamneWalaKhata: ACC.farmerAdvance,
     bandaKahanSe: "farmer",
+    bandaZaroori: true,
     partyType: "farmer",
-    asar: "Ye kharcha NAHI — kisan se maal ya paisa wapas aana hai.",
+    asar: "Ye kharcha NAHI — is ke badle kisan se MAAL aana hai.",
+    asalKharcha: false,
+  },
+  {
+    value: "mazdoor_ko_advance",
+    khaana: "udhaar",
+    label: "Mazdoor ko advance (kaam abhi nahi hua)",
+    rukh: "gaya",
+    saamneWalaKhata: ACC.workerAdvance,
+    bandaKahanSe: null,
+    bandaZaroori: true,
+    partyType: null,
+    asar:
+      "Ye kharcha NAHI — is ke badle KAAM aana hai. Jis din kaam hoga, us din ye advance khud-ba-khud us mein se kat jayega.",
+    asalKharcha: false,
+  },
+  {
+    value: "mazdoori_ki_adaigi",
+    khaana: "paisa_diya",
+    label: "Mazdoori ki adaigi (kaam ho chuka)",
+    rukh: "gaya",
+    saamneWalaKhata: ACC.workerPayable,
+    bandaKahanSe: null,
+    bandaZaroori: true,
+    partyType: null,
+    asar:
+      "Jitni mazdoori baqi thi wo kat jayegi. Us se ZYADA diya to baqi raqam nayi advance ban kar us par charh jayegi — kharcha nahi.",
     asalKharcha: false,
   },
 
   // ---------------- PAISA AAYA ----------------
   {
     value: "customer_se_wasooli",
+    khaana: "paisa_mila",
     label: "Customer se udhaar ki wasooli",
     rukh: "aaya",
     saamneWalaKhata: ACC.customerDue,
     bandaKahanSe: "customer",
+    bandaZaroori: true,
     partyType: "customer",
     asar: "Ye aamdani NAHI — purana udhaar wapas aaya. Us ka khata kam hoga.",
     asalKharcha: false,
   },
   {
     value: "staff_se_wapas",
+    khaana: "paisa_mila",
     label: "Staff se advance wapas",
     rukh: "aaya",
     saamneWalaKhata: ACC.staffAdvance,
     bandaKahanSe: "staff",
+    bandaZaroori: true,
     partyType: "staff",
     asar: "Ye aamdani NAHI — jo advance diya tha wo wapas aaya.",
     asalKharcha: false,
   },
   {
     value: "kisan_se_wapas",
+    khaana: "paisa_mila",
     label: "Kisan se peshgi wapas",
     rukh: "aaya",
     saamneWalaKhata: ACC.farmerAdvance,
     bandaKahanSe: "farmer",
+    bandaZaroori: true,
     partyType: "farmer",
     asar: "Ye aamdani NAHI — jo peshgi di thi wo wapas aayi.",
     asalKharcha: false,
   },
   {
     value: "aamdani",
+    khaana: "paisa_mila",
     label: "Aamdani (kiraya, scrap, deegar)",
     rukh: "aaya",
     saamneWalaKhata: ACC.otherIncome,
     bandaKahanSe: null,
+    bandaZaroori: false,
     partyType: null,
     asar: "Ye asal aamdani hai — nafe mein shamil hogi.",
     asalKharcha: false,

@@ -60,6 +60,20 @@ export const ACC = {
   supplierAdvance: "1120",
   staffAdvance: "1130",
   farmerAdvance: "1140",
+  /**
+   * Mazdoor ko diya hua advance -- jis ke badle KAAM aana hai.
+   *
+   * Ye 1140 se alag hai aur wo alag hona zaroori hai. 1140 fasal ki
+   * peshgi hai: us ke badle MAAL aata hai. Ek hi banda dono le sakta
+   * hai (malik ka misaal: kisan jo dukaan par mazdoori bhi karta hai),
+   * aur unhen ek khate mein rakh dene se do nuqsan hote hain:
+   *
+   *   1. "Is bande ki kitni mazdoori baqi hai" ka jawab kahin se nahi
+   *      milta.
+   *   2. Nayi mazdoori khud-ba-khud adjust hote waqt fasal wali peshgi
+   *      ko bhi kha jati -- chup chaap.
+   */
+  workerAdvance: "1145",
   farmerDue: "1150",
   dealerDue: "1160",
   cropLifterDue: "1170",
@@ -90,6 +104,8 @@ export const ACC = {
   // sakti thi ke maal walon ka kitna dena hai.
   machineryVendorPayable: "2005",
   farmerPayable: "2010",
+  /** Kaam ho chuka, paisa abhi nahi diya. */
+  workerPayable: "2015",
   staffPayable: "2020",
   salaryDue: "2025",
   customerAdvance: "2030",
@@ -121,6 +137,14 @@ export const ACC = {
   milkPurchase: "5010",
   grainPurchase: "5020",
   salaries: "6000",
+  /**
+   * Mazdoori -- aur ye kharcha KAAM hone par banta hai, paisa dene par
+   * nahi.
+   *
+   * Malik (6 September): *"Advance diya lekin kaam abhi nahi hua -- us
+   * ko turant Labour Expense banana accounting-wise ghalat hoga."*
+   */
+  labour: "6015",
   fuel: "6010",
   vehicleRepair: "6020",
   rent: "6030",

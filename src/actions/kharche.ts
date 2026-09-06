@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requireAction } from "@/lib/access/guard";
 import { nextExpenseNumber } from "@/lib/expense-number";
 import { postJournal } from "@/lib/ledger/post";
-import { glForFinanceAccount, expenseAccountFor } from "@/lib/ledger/rules";
+import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { qismDhoondein, qismKaNaamSaaf, APNI_QISM } from "@/lib/kharche";
 
@@ -53,6 +53,35 @@ export interface ActionState {
  */
 
 const MANZOORI_WALE = ["manager", "admin_assistant", "finance"];
+
+/**
+ * Is bande par mazdoori ka kya haal hai -- ledger se.
+ *
+ * `actions/mazdoori.ts` mein bhi yehi hisaab hai. Dono jagah ek hi sawal
+ * hai aur ek hi jawab dena chahiye; naql se bachne ka behtar tareeqa
+ * database ka `fn_mazdoori_haal` hai, magar wo `fn_is_any_staff()` ke
+ * peeche hai aur service client us gate se nahi guzarta. Is liye yahan
+ * wohi hisaab ledger se seedha lagta hai.
+ */
+async function mazdooriKaHaal(partyType: string, partyId: string) {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("journal_lines")
+    .select("account_code, debit, credit")
+    .eq("party_type", partyType)
+    .eq("party_id", partyId)
+    .in("account_code", [ACC.workerAdvance, ACC.workerPayable]);
+
+  let advance = 0;
+  let dena = 0;
+  for (const l of (data ?? []) as { account_code: string; debit: number | null; credit: number | null }[]) {
+    const d = Number(l.debit ?? 0);
+    const c = Number(l.credit ?? 0);
+    if (l.account_code === ACC.workerAdvance) advance += d - c;
+    else dena += c - d;
+  }
+  return { advanceBaqi: Math.max(advance, 0), denaBaqi: Math.max(dena, 0) };
+}
 
 async function main() {
   const supabase = createClient();
@@ -145,13 +174,17 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
   // Jis qism ka apna khata banta hai, us mein banda usi fehrist ka hona
   // chahiye. Warna kisan ka advance staff ke khate mein ja kar baith
   // jata -- aur wo ghalti kabhi khud nazar nahi aati.
-  if (qism.bandaKahanSe) {
+  if (qism.bandaZaroori) {
     if (!partyId) {
       return {
         error: `"${qism.label}" mein paisa wapas aana ya jana hai, is liye banda fehrist se chunna parta hai — sirf naam likhne se us ka khata nahi banta.`,
       };
     }
-    if (partyType !== qism.bandaKahanSe) {
+    // Kuch qismein kisi bhi fehrist ka banda qubool karti hain (mazdoori
+    // wale khate) -- malik ka poora nuqta yehi tha ke wohi banda kisan
+    // bhi ho sakta hai, customer bhi aur mazdoor bhi. Jin qismon ka apna
+    // khata ek hi fehrist ka hai, un mein wo bandhish lagti hai.
+    if (qism.bandaKahanSe && partyType !== qism.bandaKahanSe) {
       return { error: `"${qism.label}" ke liye banda ${qism.bandaKahanSe} ki fehrist se chunein.` };
     }
   }
@@ -298,16 +331,61 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
   const partyId = (kharcha.party_id as string | null) ?? null;
   const partyType = partyId ? ((kharcha.party_type as string | null) ?? null) : null;
 
-  const lines =
-    qism.rukh === "gaya"
-      ? [
-          { account: saamnaGl, debit: amount, partyType, partyId, memo: tafseel },
-          { account: cashGl, credit: amount, memo: tafseel },
-        ]
-      : [
-          { account: cashGl, debit: amount, memo: tafseel },
-          { account: saamnaGl, credit: amount, partyType, partyId, memo: tafseel },
-        ];
+  /**
+   * Mazdoori ki adaigi -- pehle jo dena tha wo, phir baqi advance.
+   *
+   * Malik ka misaal ulta bhi chalta hai: banda pehle Rs 3,000 le jata
+   * hai aur kaam BAAD mein karta hai. Aisi soorat mein us waqt us par
+   * koi "dena" hai hi nahi -- wo paisa advance hai, kharcha nahi.
+   *
+   * Is liye adaigi do hisson mein baith sakti hai:
+   *
+   *   * Jitna "mazdoori dena" (2015) baqi tha -- utna wahan se katta hai.
+   *   * Us se ZYADA diya -- wo baqi raqam nayi advance (1145) ban kar us
+   *     par charh jati hai.
+   *
+   * Dono soorton mein KHARCHA nahi banta: kharcha us din bana tha (ya
+   * banega) jis din kaam hua.
+   */
+  let lines: {
+    account: string;
+    debit?: number;
+    credit?: number;
+    partyType?: string | null;
+    partyId?: string | null;
+    memo: string;
+  }[];
+
+  if (qism.value === "mazdoori_ki_adaigi" && partyId && partyType) {
+    const { denaBaqi } = await mazdooriKaHaal(partyType, partyId);
+    const utra = Math.min(denaBaqi, amount);
+    const nayaAdvance = Math.round((amount - utra) * 100) / 100;
+
+    lines = [];
+    if (utra > 0) {
+      lines.push({ account: ACC.workerPayable, debit: utra, partyType, partyId, memo: `${tafseel} — dena utra` });
+    }
+    if (nayaAdvance > 0) {
+      lines.push({
+        account: ACC.workerAdvance,
+        debit: nayaAdvance,
+        partyType,
+        partyId,
+        memo: `${tafseel} — dene se zyada diya, ye advance hai`,
+      });
+    }
+    lines.push({ account: cashGl, credit: amount, memo: tafseel });
+  } else if (qism.rukh === "gaya") {
+    lines = [
+      { account: saamnaGl, debit: amount, partyType, partyId, memo: tafseel },
+      { account: cashGl, credit: amount, memo: tafseel },
+    ];
+  } else {
+    lines = [
+      { account: cashGl, debit: amount, memo: tafseel },
+      { account: saamnaGl, credit: amount, partyType, partyId, memo: tafseel },
+    ];
+  }
 
   const posted = await postJournal({
     description: tafseel,

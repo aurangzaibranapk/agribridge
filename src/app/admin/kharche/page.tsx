@@ -15,9 +15,19 @@ const MANZOORI_WALE = ["manager", "admin_assistant", "finance"];
 /**
  * Kharche aur adaigi — din bhar ka har len-den ek jagah.
  *
- * Malik (6 September): *"Expense ka alag se tag hona chahiye slide bar
- * mein, jis mein daily koi bhi bill hai wo add kar sakein, jis ki
- * manzoori manager dega."*
+ * Malik (6 September), pehle: *"Expense ka alag se tag hona chahiye
+ * slide bar mein, jis mein daily koi bhi bill hai wo add kar sakein, jis
+ * ki manzoori manager dega."*
+ *
+ * Aur phir naam par apna faisla:
+ *
+ *   *"Main 'Expense' naam nahi rakhunga, kyunke is screen mein sirf
+ *   kharcha nahi hoga... Accounting mein farmer ko Rs 5,000 udhaar dena
+ *   zaroori nahi ke expense ho. Mera recommended naam: Paisa & Khata."*
+ *
+ * Wo theek keh rahe the aur wajah bhi unhon ne khud likhi: "Expense"
+ * rakhne se banda HAR cash-out ko kharcha samajhne lagta hai, aur wohi
+ * ghalti P&L mein nafa kam dikhati hai.
  */
 export default async function KharchePage() {
   const supabase = createClient();
@@ -62,8 +72,8 @@ export default async function KharchePage() {
         .order("name"),
       service.from("suppliers").select("id, name").order("name").limit(500),
       service.from("profiles").select("id, full_name").eq("is_active", true).order("full_name").limit(500),
-      service.from("farmers").select("id, full_name, mobile").eq("is_deleted", false).order("full_name").limit(1000),
-      service.from("customers").select("id, name, phone").order("name").limit(1000),
+      service.from("farmers").select("id, full_name, phone_number").eq("is_deleted", false).order("full_name").limit(1000),
+      service.from("customers").select("id, name, phone_number").order("name").limit(1000),
     ]);
 
   const rows = ((rawRows ?? []) as any[]).map((r) => ({
@@ -111,8 +121,8 @@ export default async function KharchePage() {
   return (
     <div>
       <PageHeader
-        title="Kharche aur Adaigi"
-        description="Din bhar ka har bill aur len-den — aur ye ke wo kis ke khaate mein gaya"
+        title="Paisa & Khata"
+        description="Paisa dena, lena, udhaar, kharcha aur mazdoori — sab ek jagah"
       />
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -134,11 +144,11 @@ export default async function KharchePage() {
           staff: (staff ?? []).map((s: any) => ({ id: s.id, naam: s.full_name })),
           farmer: (farmers ?? []).map((f: any) => ({
             id: f.id,
-            naam: f.mobile ? `${f.full_name} — ${f.mobile}` : f.full_name,
+            naam: f.phone_number ? `${f.full_name} — ${f.phone_number}` : f.full_name,
           })),
           customer: (customers ?? []).map((c: any) => ({
             id: c.id,
-            naam: c.phone ? `${c.name} — ${c.phone}` : c.name,
+            naam: c.phone_number ? `${c.name} — ${c.phone_number}` : c.name,
           })),
         }}
         naamMap={Object.fromEntries(naamMap)}

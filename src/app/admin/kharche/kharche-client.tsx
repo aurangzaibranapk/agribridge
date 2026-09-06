@@ -5,6 +5,7 @@ import { Check, X, Plus, Paperclip, Info } from "lucide-react";
 import { kharchaDarj, kharchaManzoor, kharchaRadd, type ActionState } from "@/actions/kharche";
 import {
   KHARCHA_QISMEIN,
+  PAISA_KHAANE,
   BILL_QISMEIN,
   BANDE_KI_QISMEIN,
   APNI_QISM,
@@ -102,6 +103,7 @@ export function KharcheClient({
   // hai -- chunne ka mauqa hi nahi dena chahiye ke kisan ka advance
   // staff ke khate mein chala jaye.
   const bandhiQism = qism?.bandaKahanSe ?? null;
+  const bandaZaroori = qism?.bandaZaroori === true;
   const chaliQism = bandhiQism ?? bandeKiQism;
   const fehrist = bande[chaliQism] ?? [];
 
@@ -114,8 +116,18 @@ export function KharcheClient({
     return "—";
   }
 
-  const gaye = KHARCHA_QISMEIN.filter((q) => q.rukh === "gaya");
-  const aaye = KHARCHA_QISMEIN.filter((q) => q.rukh === "aaya");
+  /**
+   * Qismein malik ke paanch khaanon mein.
+   *
+   * Malik (6 September): *"Staff ko debit/credit, receivable/payable
+   * jaise accounting terms nahi dikhayenge."* Is liye ooper wale naam
+   * "Paisa Diya / Paisa Mila / Udhaar / Mazdoori / General Kharcha"
+   * hain, aur asal qism un ke andar chunni parti hai.
+   */
+  const khaanoMein = PAISA_KHAANE.map((kh) => ({
+    ...kh,
+    qismein: KHARCHA_QISMEIN.filter((q) => q.khaana === kh.value),
+  })).filter((kh) => kh.qismein.length > 0);
 
   return (
     <div className="mt-6 space-y-4">
@@ -159,20 +171,15 @@ export function KharcheClient({
                   onChange={(e) => setKind(e.target.value)}
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 >
-                  <optgroup label="Paisa gaya">
-                    {gaye.map((q) => (
-                      <option key={q.value} value={q.value}>
-                        {q.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Paisa aaya">
-                    {aaye.map((q) => (
-                      <option key={q.value} value={q.value}>
-                        {q.label}
-                      </option>
-                    ))}
-                  </optgroup>
+                  {khaanoMein.map((kh) => (
+                    <optgroup key={kh.value} label={`${kh.label} — ${kh.tafseel}`}>
+                      {kh.qismein.map((q) => (
+                        <option key={q.value} value={q.value}>
+                          {q.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
                 {qism && (
                   <span
@@ -240,8 +247,10 @@ export function KharcheClient({
                   ke har naam par udhaar chadh raha hai.
                 */}
                 <p className="mt-2 text-[11px] leading-snug text-surface-400">
-                  {bandhiQism
-                    ? `Is qism mein paisa wapas aana ya jana hai, is liye banda ${bandhiQism} ki fehrist se chunna zaroori hai — sirf naam likhne se us ka khata nahi banta.`
+                  {bandaZaroori
+                    ? bandhiQism
+                      ? `Is qism mein paisa wapas aana ya jana hai, is liye banda ${bandhiQism} ki fehrist se chunna zaroori hai — sirf naam likhne se us ka khata nahi banta.`
+                      : "Is qism mein us bande ka khata hilta hai, is liye fehrist se chunna zaroori hai. Fehrist koi bhi ho — wohi banda kisan bhi ho sakta hai, customer bhi aur mazdoor bhi; ID ek hi rehti hai."
                     : "Ye asal kharcha hai: naam sirf record ke liye jata hai, us bande par udhaar nahi chadhta. Registered banda chunein to wo qatar us ke naam se dhoondi ja sakegi."}
                 </p>
               </div>
