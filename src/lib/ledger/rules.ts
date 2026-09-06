@@ -72,6 +72,23 @@ export const ACC = {
   stockMilk: "1210",
   stockGrain: "1220",
   supplierPayable: "2000",
+  // Machinery vendor ka dena ALAG khata.
+  //
+  // Malik (6 September): *"ye supplier to na hua na, ye to vendor mein
+  // aayega -- machinery vendor mein."*
+  //
+  // Wo theek keh rahe the. Dono ek hi khate (2000) par baithte the, aur
+  // safhe par unwan "Supplier ko dena" likha aata tha -- jab ke us mein
+  // Rs 104,796 poore ke poore machinery vendor (Farman Ali) ke the aur
+  // maal wale supplier ka ek rupya bhi nahi. Adad theek tha, jagah
+  // ghalat thi.
+  //
+  // Ye sirf naam ki baat nahi: dono ka peechha karne ka tareeqa alag
+  // hai. Supplier ko bill ke against ada karte hain; machinery vendor ka
+  // hissa kaam poora hone par banta hai aur us mein se hamara commission
+  // nikalta hai. Ek khate mein rakhne se koi bhi report ye nahi bata
+  // sakti thi ke maal walon ka kitna dena hai.
+  machineryVendorPayable: "2005",
   farmerPayable: "2010",
   staffPayable: "2020",
   salaryDue: "2025",
@@ -1057,7 +1074,7 @@ export async function postMachineryBill(args: {
 
   if (args.vendorPayable > 0) {
     lines.push({
-      account: ACC.supplierPayable,
+      account: ACC.machineryVendorPayable,
       credit: args.vendorPayable,
       partyType: "machinery_vendor",
       partyId: args.vendorId ?? null,
@@ -1140,7 +1157,7 @@ export async function postMachineryVendorCollected(args: {
 }): Promise<PostResult> {
   const debit =
     args.settlement === "kept"
-      ? { account: ACC.supplierPayable, partyType: "machinery_vendor", partyId: args.vendorId }
+      ? { account: ACC.machineryVendorPayable, partyType: "machinery_vendor", partyId: args.vendorId }
       : { account: ACC.cashWithPerson, partyType: "machinery_vendor", partyId: args.vendorId };
 
   return postJournal({
@@ -1461,7 +1478,7 @@ export async function postMachineryVendorPayout(args: {
 
   if (payable > 0) {
     lines.push({
-      account: ACC.supplierPayable,
+      account: ACC.machineryVendorPayable,
       debit: payable,
       partyType: "machinery_vendor",
       partyId: args.vendorId ?? null,
