@@ -52,7 +52,7 @@ social login. Baqi har cheez mein maujooda behtar hai. Is liye faisla:
 - `src/app/login/page.tsx` — design (developer ka hissa)
 - `src/app/login/login-form.tsx` — saare login ke raaste
 
-## Ek kharabi jo is dauran mili — abhi TOOTI HUI hai
+## Ek kharabi jo is dauran mili — THEEK KAR DI GAYI
 
 `login-form.tsx` mein "Not a member? Register" ka link `/register` par
 jata hai.
@@ -63,12 +63,20 @@ hai, aur `next.config` mein us ka koi redirect bhi nahi.
 Yani naya kisan jo "Register" dabata hai, usay **404** milta hai — wo
 register kar hi nahi sakta.
 
-Ilaaj do mein se ek:
+**Malik ne khud kaha ke ye theek kar dun** ("ye aap kar do, lekin same to
+same rakhna hai"), is liye sirf ye kiya gaya:
 
-1. `href="/register"` → `href="/register/farmer"`
-2. Ya `src/app/register/page.tsx` bana kar wahan bhej dein — agar aage
-   customer/vendor ki alag registration bhi aani ho to ye behtar hai.
+```
+href="/register"  →  href="/register/farmer"
+```
 
-Ye login page ka hissa hai, is liye **AI ne khud theek nahi kiya** —
-malik ke usool (6 September) ke mutabiq front website, front page aur
-login page developer ka hissa hain.
+**Ek lakeer, aur bas.** `page.tsx` ko haath nahi lagaya; `login-form.tsx`
+mein bhi baqi sab harf-ba-harf wahi hai (`git diff` = 1 insertion,
+1 deletion).
+
+Aage ke liye ek behtar raasta bhi maujood hai, magar wo malik ke kehne
+par hi: `src/app/register/page.tsx` bana kar wahan se aage bhejna --
+agar kabhi customer ya vendor ki alag registration bhi aani ho.
+
+Baqi login page abhi bhi **developer ka hissa** hai (malik ka usool,
+6 September). Us mein koi aur cheez AI apni marzi se nahi badlega.

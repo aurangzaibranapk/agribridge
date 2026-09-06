@@ -191,7 +191,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
         <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." pending={emailBusy || asking} />
       </form>
 
-      <p className="mt-4 text-center text-[13px] text-surface-600">{t("au_not_member", lang)} <Link href="/register" className="font-semibold text-[#1E4A2E] hover:underline">{t("au_register_now", lang)}</Link></p>
+      <p className="mt-4 text-center text-[13px] text-surface-600">{t("au_not_member", lang)} <Link href="/register/farmer" className="font-semibold text-[#1E4A2E] hover:underline">{t("au_register_now", lang)}</Link></p>
       <div className="mt-4 grid grid-cols-2 gap-2 border-t border-surface-100 pt-4"><button type="button" onClick={onUsername} className="rounded-lg px-2 py-2 text-xs font-semibold text-surface-500 hover:bg-surface-50 hover:text-[#1E4A2E]">{t("au_link_user_id", lang)}</button><button type="button" onClick={onPassword} className="rounded-lg px-2 py-2 text-xs font-semibold text-surface-500 hover:bg-surface-50 hover:text-[#1E4A2E]">{t("au_link_password", lang)}</button></div>
     </>
   );
