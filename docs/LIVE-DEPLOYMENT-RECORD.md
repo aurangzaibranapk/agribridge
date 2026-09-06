@@ -1696,3 +1696,41 @@ finance_transactions   1 qatar    Rs  19,000
    magar har bande ka ohda malik ko chunna hoga.
 4. **335 (ginti ki tarteeb)** — testing par pass, safha ban chuka hai.
    Agle round mein Live par jayegi.
+
+
+## 335 bhi chal gayi — aur us mein ek kharabi PAKRI GAYI
+
+335 Live par chalte hi `v_stock_count_due` dekha, aur jo dikha wo ghalat
+tha:
+
+| Godam | Pehle (110 ka nishan) | 335 ke baad |
+|---|---|---|
+| Central Warehouse | **surkh** (kabhi gina nahi) | waqt par |
+| Kisan Karyana - Godam | **surkh** | waqt par |
+| Kisan Dukan - Godam | **surkh** | waqt par |
+
+Teenon godam, jin ki ginti **kabhi hui hi nahi**, surkh se seedha "waqt
+par" ho gaye. Yani jo nishan 110 ne lagaya tha wo chup chaap **bujh gaya
+tha**.
+
+**Wajah:** view mein `coalesce(s.shuru_se, current_date)` likha tha. Jis
+godam ki tarteeb darj na ho, us ka "shuru" har roz AAJ ban jata — aur
+agla moqa hamesha "aaj se 30 din baad". Aisa godam **kabhi late nazar hi
+nahi aata**.
+
+**Fix (335b):** `coalesce(s.shuru_se, w.created_at::date)` — godam BANNE
+ki tareekh. Ab:
+
+| Godam | Bana | Pehla moqa | Haalat |
+|---|---|---|---|
+| Kisan Karyana - Godam | 26-Jul | 25-Aug | **12 din late** |
+| Central Warehouse | 09-Aug | 08-Sep | waqt par |
+| Kisan Dukan - Godam | 23-Aug | 22-Sep | waqt par |
+
+Ye 110 se zyada durust hai (wahan teenon 9999 din late the), aur narm
+bhi nahi: jo waqai apni pehli 30-din wali muddat guzar chuka hai, wohi
+surkh hai.
+
+Ye wohi qism ki ghalti thi jis se ye project bar bar bachta aaya hai --
+nishan chup chaap bujh jana. Pakri gayi kyunki migration chalane ke baad
+ginti dobara ki gayi thi, jaisa P0 rule kehta hai.

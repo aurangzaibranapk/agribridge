@@ -154,7 +154,19 @@ with (security_invoker = true) as
       s.mahine_ki_tareekh,
       s.zimmedar,
       s.band_ki_wajah,
-      coalesce(s.shuru_se, current_date) as shuru_se,
+      -- Ginti ki ginti kahan se shuru ho, jab koi ginti hui hi na ho.
+      --
+      -- Tarteeb darj ho to us ka apna `shuru_se`. Darj NA ho to GODAM
+      -- BANNE ki tareekh -- `current_date` NAHI.
+      --
+      -- Ye farq mamooli nahi. `current_date` rakhne par har bina-tarteeb
+      -- wala godam roz apni due date bhi aage khiska leta: agla moqa
+      -- hamesha "aaj se 30 din baad" hota, aur wo godam KABHI late nazar
+      -- na aata. 335 pehli dafa Live par chalte waqt teen aise godam --
+      -- jin ki ginti kabhi hui hi nahi thi -- surkh se seedha "waqt par"
+      -- ho gaye. Yani jo nishan 110 ne lagaya tha, wo chup chaap bujh
+      -- gaya tha.
+      coalesce(s.shuru_se, w.created_at::date) as shuru_se,
       (s.warehouse_id is not null) as tarteeb_darj,
       a.posted_at::date as aakhri_ginti,
       p.total_difference_value as pichhla_farq
