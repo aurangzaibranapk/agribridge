@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/form";
 import Link from "next/link";
 import { Inbox, AlertTriangle, Check, X, CornerUpLeft, Clock, ArrowRight } from "lucide-react";
 import { manzooriKiQatar, qatarKaKhulasa, umarLikhein, QATAR_KA_RAASTA } from "@/lib/manzoori-qatar";
+import { LiveRefresh } from "@/components/live/live-refresh";
 import { KIND_LABEL, STATUS_LABEL, type SubmissionKind, type SubmissionStatus } from "@/lib/whatsapp-submissions";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -96,6 +97,11 @@ export default async function SubmissionsInboxPage() {
       <PageHeader
         title={t("sb_inbox", lang)}
         description="WhatsApp se aaye bills, meter readings aur cash. Manager ki comment ke baghair koi transaction accounts mein nahi jati."
+        actions={
+          <LiveRefresh
+            tables={["whatsapp_submissions", "company_expense_requests", "labour_work_entries", "party_settlements"]}
+          />
+        }
       />
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">

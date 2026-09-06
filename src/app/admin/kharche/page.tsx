@@ -7,6 +7,7 @@ import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { billQismKaLabel } from "@/lib/kharche";
 import { ArrowDownCircle, ArrowUpCircle, Clock } from "lucide-react";
+import { LiveRefresh } from "@/components/live/live-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -174,6 +175,9 @@ export default async function KharchePage() {
       <PageHeader
         title="Paisa & Khata"
         description="Paisa dena, lena, udhaar, kharcha aur mazdoori — sab ek jagah"
+        actions={
+          <LiveRefresh tables={["company_expense_requests", "labour_work_entries", "finance_transactions"]} />
+        }
       />
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

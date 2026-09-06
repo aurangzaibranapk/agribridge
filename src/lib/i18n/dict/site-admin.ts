@@ -19,7 +19,7 @@
  */
 export const siteAdminDict = {
   // ---- Audit log ----
-  al_title: { en: "Audit Log", rm: "Audit log", ur: "آڈٹ لاگ" },
+  al_title: { en: "Who Did What", rm: "Kis ne kya kiya", ur: "کس نے کیا کیا" },
   al_all_modules: { en: "All Modules", rm: "Sab hissay", ur: "سب حصے" },
   al_all_actions: { en: "All Actions", rm: "Sab kaam", ur: "سب کام" },
   al_create: { en: "Create", rm: "Banaya", ur: "بنایا" },

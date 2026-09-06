@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals } from "@/lib/command-center";
 import { AlertTriangle, CheckCircle2, ArrowRight, TrendingUp, Sparkles } from "lucide-react";
+import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
@@ -71,6 +72,27 @@ export default async function CommandCenterPage() {
       <PageHeader
         title={t("cc_title", lang)}
         description={t("cc_subtitle", lang)}
+        actions={
+          /*
+            Malik: *"hamein har kaam realtime mein chahiye na — hamein ye
+            nahi chahiye ke 10 din ke baad pata chale."*
+
+            Ye safha ab khud taaza hota rehta hai. Jin tables par nazar
+            hai, wo wohi hain jin se is safhe ke adad bante hain -- baqi
+            par nazar rakhne ka matlab hota bekaar mein safha khinchna.
+          */
+          <LiveRefresh
+            tables={[
+              "pos_sales",
+              "company_expense_requests",
+              "labour_work_entries",
+              "party_settlements",
+              "whatsapp_submissions",
+              "journal_entries",
+              "finance_transactions",
+            ]}
+          />
+        }
       />
 
       {/* ---- Aaj ---- */}

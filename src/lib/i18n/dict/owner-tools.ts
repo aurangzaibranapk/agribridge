@@ -276,7 +276,21 @@ export const ownerToolsDict = {
   },
 
   // ---- Audit trail ----
-  aud_title: { en: "Who Did What", rm: "Kis ne kya kiya", ur: "کس نے کیا کیا" },
+  /**
+   * Do safhon ke naam aapas mein badle hue the.
+   *
+   * `/admin/audit-trail` ka naam "Kis ne kya kiya" tha -- magar wo safha
+   * ye batata hi nahi. Wo REVERSAL aur PURANI TAREEKH ki entriyon par
+   * nazar rakhta hai (ledger ki wo do jagahen jahan haath ki safai chhup
+   * sakti hai).
+   *
+   * "Kis ne kya kiya" ka jawab `/admin/activity-logs` deta hai, jis ka
+   * naam "Audit log" para hua tha.
+   *
+   * Yani dono naam ek dusre ki jagah lage hue the -- aur menu par dono
+   * ek hi kaam ke lagte the. Ab har naam apne safhe par hai.
+   */
+  aud_title: { en: "Reversals & Backdated Entries", rm: "Reversal aur purani tareekh", ur: "ریورسل اور پرانی تاریخ" },
   at_recent: { en: "Recent entries", rm: "Haal ki qatarein", ur: "حال کی قطاریں" },
   at_other_actions: { en: "Record of other actions", rm: "Baqi kaamon ka record", ur: "باقی کاموں کا ریکارڈ" },
   at_no_entry: { en: "No entries yet.", rm: "Abhi koi qatar nahi.", ur: "ابھی کوئی قطار نہیں۔" },
