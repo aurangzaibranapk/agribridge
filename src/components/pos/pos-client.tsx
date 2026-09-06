@@ -79,7 +79,11 @@ type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa
 const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "cash", label: "Cash" },
   { key: "bank_transfer", label: "Bank" },
-  { key: "card", label: "Card" },
+  // "Card" nahi -- KISAN CARD. Ye aam debit/credit card nahi, aur us ka
+  // paisa bank mein nahi jata: us ka apna khata hai (1018). Naam counter
+  // par saaf hona chahiye, warna staff bank ka card samajh kar dabata
+  // hai aur paisa ghalat khate mein chala jata hai.
+  { key: "card", label: "Kisan Card" },
   { key: "jazzcash", label: "JazzCash" },
   { key: "easypaisa", label: "Easypaisa" },
   { key: "qr", label: "QR" },
