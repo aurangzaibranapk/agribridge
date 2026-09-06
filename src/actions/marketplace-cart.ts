@@ -221,6 +221,6 @@ export async function submitMarketplaceCart(_prev: CartState, formData: FormData
     `/admin/bridge-orders`
   );
 
-  revalidatePath("/marketplace");
+  revalidatePath("/marketplace/shop");
   return { success: true, orderNumbers };
 }

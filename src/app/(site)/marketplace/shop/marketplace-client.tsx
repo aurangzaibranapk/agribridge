@@ -129,8 +129,8 @@ export function MarketplaceClient({ categories, products }: { categories: Catego
   }
 
   return (
-    <div dir={dir} className="min-h-screen bg-surface-50">
-      <div className="sticky top-0 z-40 border-b border-surface-200 bg-white/95 backdrop-blur">
+    <div dir={dir} className="bg-surface-50">
+      <div className="border-b border-surface-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div>
             <h1 className="font-display text-lg font-bold text-surface-900">{t.title}</h1>

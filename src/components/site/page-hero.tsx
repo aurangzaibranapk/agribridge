@@ -45,14 +45,21 @@ export function PageHero({
       </div>
 
       <SiteContainer className="relative py-14 sm:py-20 lg:py-24">
+        {/* `flex w-fit`, `inline-flex` nahi.
+            Dono khane inline the, is liye ye aur neeche wala eyebrow EK
+            HI LAKEER par chipak jate the -- `mt-5` inline cheez ko agli
+            lakeer par nahi bhejta. Screenshot mein "Home" ke upar hi
+            "AGRIBRIDGE MARKETPLACE" ka pill chaRha hua nazar aata tha.
+            `w-fit` is liye ke khana sirf apni chauRai le, poori lakeer
+            nahi. */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-surface-500 hover:text-[#1E4A2E] dark:text-surface-400"
+          className="flex w-fit items-center gap-1.5 text-xs font-semibold text-surface-500 hover:text-[#1E4A2E] dark:text-surface-400"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Home
         </Link>
 
-        <span className="mt-5 inline-flex rounded-full border border-[#C9A227]/25 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#A9791A] dark:bg-surface-900">
+        <span className="mt-5 flex w-fit rounded-full border border-[#C9A227]/25 bg-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#A9791A] dark:bg-surface-900">
           {eyebrow}
         </span>
 

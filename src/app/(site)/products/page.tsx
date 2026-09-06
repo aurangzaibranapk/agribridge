@@ -27,7 +27,7 @@ export default async function PublicProductsPage({ searchParams }: { searchParam
   ]);
 
   let filtered = products ?? [];
-  if (searchParams.category) filtered = filtered.filter((p: any) => p.categories?.name === searchParams.category);
+  if (searchParams.category) filtered = filtered.filter((p: any) => categoryMatches(p.categories?.name, searchParams.category!));
   if (searchParams.company) filtered = filtered.filter((p: any) => p.companies?.name === searchParams.company);
 
   // Stock status: sum of on-hand quantity across warehouses per product.
@@ -80,4 +80,39 @@ export default async function PublicProductsPage({ searchParams }: { searchParam
       </div>
     </div>
   );
+}
+
+/**
+ * Category ka milaan -- naam se bhi, aur us ke chhote naam se bhi.
+ *
+ * =====================================================================
+ * YE KYUN CHAHIYE THA
+ * =====================================================================
+ *
+ * Pehle yahan seedha `===` tha. Home ke card asal naam bhejte hain
+ * ("Fertilizer") is liye wo chalta tha -- magar Marketplace ke card
+ * chhota naam bhejte hain (`?category=fertilizer`, `pesticide`, `seed`,
+ * `wanda`), aur database mein naam is tarah likhe hain:
+ *
+ *     Fertilizer · Pesticide · Pesticides · Seeds ·
+ *     Field Crop Seeds · Vegetable Seeds · Animal Feed (Wanda)
+ *
+ * Yani chaaron card ek KHALI safhe par le jate: "koi product nahi
+ * mila". Aur ye us qism ki kharabi hai jo shikayat nahi karti -- safha
+ * theek khulta hai, bas us par kuch hota nahi, aur dekhne wala samajhta
+ * hai ke maal hi nahi hai.
+ *
+ * Ab milaan teen darjon mein hota hai: poora naam, phir bina lihaaz-e-
+ * harf, phir "is naam ke andar ye lafz aata hai" (jis se `seed` ->
+ * "Field Crop Seeds" aur `wanda` -> "Animal Feed (Wanda)" mil jate
+ * hain). Purana `===` wala raasta pehle darje mein maujood hai, is liye
+ * Home ke card jaise chalte the waise hi chalte hain.
+ */
+function categoryMatches(name: string | null | undefined, wanted: string): boolean {
+  if (!name) return false;
+  if (name === wanted) return true;
+  const a = name.toLowerCase();
+  const b = wanted.trim().toLowerCase();
+  if (!b) return false;
+  return a === b || a.includes(b);
 }

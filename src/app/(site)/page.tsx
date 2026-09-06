@@ -2,14 +2,56 @@ import Link from "next/link";
 import {
   Stethoscope, Package, ArrowRight, ShieldCheck,
   Handshake, TrendingUp, Sprout, Building2, Quote, AlertTriangle,
+  Leaf, Smartphone, ShoppingBag, Wheat, Tractor, Beef, Brain, LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { HeroSlider } from "@/components/site/hero-slider";
 import { NewsletterForm } from "@/components/site/newsletter-form";
+import { SiteContainer } from "@/components/site/site-container";
+import { SectionHeading } from "@/components/site/section-heading";
+import { ActionCard } from "@/components/site/action-card";
+import { EcosystemFlow } from "@/components/site/ecosystem-flow";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+
+/**
+ * Home ke aath darwaze -- malik ka final design (6 September).
+ *
+ * Aathon ASAL chalte hue safhon par jate hain. Koi "coming soon" nahi:
+ * jo cheez website par nazar aati hai us par dabane se kuch khulna
+ * chahiye, warna banda doosri dafa koshish nahi karta.
+ */
+const ECOSYSTEM = [
+  { title: "Agriculture", description: "Beej, khaad aur dawai — poori fasal ke liye.", href: "/agriculture", icon: Leaf },
+  { title: "Kisan Services", description: "Registration, khata aur kisan ki digital khidmat.", href: "/kisan-services", icon: Smartphone },
+  { title: "Marketplace", description: "Products dekhein aur wahin se order karein.", href: "/marketplace", icon: ShoppingBag },
+  { title: "Grain & Produce", description: "Anaj ki kharid, godam aur adaigi.", href: "/grain", icon: Wheat },
+  { title: "Machinery", description: "Harvester, tractor aur baqi machine ki booking.", href: "/machinery", icon: Tractor },
+  { title: "Dairy & Livestock", description: "Doodh ki collection, wanda aur jaanwar ki sehat.", href: "/dairy", icon: Beef },
+  { title: "Kisan AI", description: "Fasal ki tasveer se bimari ki pehchan aur ilaaj.", href: "/kisan-ai", icon: Brain },
+  { title: "AgriBridge ERP", description: "Kharid se ledger tak — poore karobar ka nizam.", href: "/erp", icon: LayoutGrid },
+];
+
+/** Kisan ka safar -- spec ke aath qadam, isi tarteeb mein. */
+const FARMER_JOURNEY = [
+  "Farmer",
+  "Inputs",
+  "Crop Plan",
+  "AI Advice",
+  "Machinery",
+  "Produce / Milk",
+  "Marketplace",
+  "Payment / Khata",
+];
+
+const ERP_POINTS = [
+  "Stock ek hi jagah se",
+  "Har qatar ledger tak",
+  "Har bande ko apna kaam",
+  "Har tabdeeli ka nishan",
+];
 
 const CATEGORY_FALLBACK = [
   { name: "Fertilizers", icon: "🧪" },
@@ -78,6 +120,93 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* ---------------------------------------------------------------- */}
+      {/* AGRICULTURE. TECHNOLOGY. ONE BRIDGE.                             */}
+      {/* ---------------------------------------------------------------- */}
+      {/* Malik ka final Home design (6 September). Ye block CMS hero ke   */}
+      {/* FORAN BAAD aata hai -- hero ko haath nahi lagaya gaya. Das slide */}
+      {/* wala slider admin se chalta hai aur wahi is safhe ka pehla       */}
+      {/* chehra rehta hai; ye sirf us ke neeche ka raasta hai.            */}
+      <section className="bg-white py-14 sm:py-20 dark:bg-surface-950">
+        <SiteContainer>
+          <SectionHeading
+            center
+            eyebrow="Agriculture. Technology. One Bridge."
+            title="Beej se Bazaar tak — Business se AI tak"
+            description="Kheti, kisan ki khidmat, marketplace, machinery, dairy aur AI — sab alag alag nahi, ek hi platform ke hisse. Har darwaza yahan se khulta hai."
+          />
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {ECOSYSTEM.map((item) => (
+              <ActionCard key={item.title} {...item} />
+            ))}
+          </div>
+        </SiteContainer>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* FARMER JOURNEY                                                   */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="bg-[#0c2d22] py-14 text-white sm:py-20">
+        <SiteContainer>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E8C767]">
+            Beej se Bazaar tak
+          </p>
+          <h2 className="mt-2 max-w-3xl text-balance font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            Kisan ka poora safar — ek hi platform par
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/70">
+            Har qadam apne baad wale qadam se juRa hua hai. Isi liye kisan ko har jagah apna hisaab nazar
+            aata hai — aur kahin bhi baat naye siray se shuru nahi karni parti.
+          </p>
+          <div className="mt-9">
+            <EcosystemFlow steps={FARMER_JOURNEY} tone="dark" />
+          </div>
+        </SiteContainer>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* AGRIBRIDGE ERP                                                   */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="border-y border-surface-200 bg-[#f6f8f3] py-14 sm:py-20 dark:border-surface-800 dark:bg-surface-900">
+        <SiteContainer>
+          <div className="grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#A9791A]">
+                AgriBridge ERP
+              </p>
+              <h2 className="mt-2 text-balance font-display text-3xl font-semibold tracking-tight text-surface-900 sm:text-4xl dark:text-white">
+                Karobar chalane wala nizam — kaghaz nahi
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-surface-600 dark:text-surface-400">
+                Kharid, stock, bikri, khata aur ledger — sab ek hi jagah se. Wohi nizam jis par Al Rana
+                Traders khud chalta hai.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/erp">
+                  <Button size="md">ERP dekhein</Button>
+                </Link>
+                <Link href="/contact">
+                  <Button variant="secondary" size="md">
+                    Demo ke liye raabta
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {ERP_POINTS.map((point) => (
+                <div
+                  key={point}
+                  className="rounded-2xl border border-[#1E4A2E]/10 bg-white p-5 dark:border-surface-800 dark:bg-surface-950"
+                >
+                  <ShieldCheck className="h-5 w-5 text-[#1E4A2E] dark:text-brand-400" />
+                  <p className="mt-3 text-sm font-semibold text-surface-900 dark:text-white">{point}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SiteContainer>
+      </section>
 
       {/* ---------------------------------------------------------------- */}
       {/* TRUST STATS — Districts, Farmers, Dealers, Products are all live */}
