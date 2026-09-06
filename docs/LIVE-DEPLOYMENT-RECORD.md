@@ -1813,6 +1813,7 @@ tasdeeq se pehle Live par koi migration nahi).
 | 350 | Do taraf ki raqam manzoori se katti hai (`party_settlements`) | ✅ | **baqi** |
 | 351 | Manzoori ka waqt (SLA) aur us ka seedha (escalation) | ✅ (teen umar ki qatarein chala kar dekhi gayin) | **baqi** |
 | 352 | Khulasa rukh dekhe, khate ki qism nahi (ulta balance chhupta tha) | ✅ | **baqi** |
+| 353 | Live push: realtime ki ijazat + publication | ✅ (saaton table publication mein, replica identity full) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -1966,3 +1967,44 @@ Live par jaate waqt wo feature bane hi na.
 `fn_manzoori_ka_khulasa`. Unhen ab Approval Inbox aur Command Center
 DONO parhte hain, ek hi jagah se (`lib/manzoori-qatar.ts`), taake ek
 hisaab do jagah alag alag na lage.
+
+### 353 — live push ke baghair ye do cheezein chal hi nahi sakti thin
+
+Live par ye migration chalne se PEHLE koi bhi "Live" ka nishan jhoota
+hoga. Do baatein Live par bhi wohi hain jo Testing par thin (dekhi ja
+chuki hain):
+
+1. **`supabase_realtime` publication khali hai** — ek bhi table us mein
+   nahi. Yani koi tabdeeli kabhi bahar bheji hi nahi jati.
+
+2. **Teen tables par SELECT ka koi RLS qanoon nahi** —
+   `company_expense_requests`, `finance_transactions`,
+   `whatsapp_submissions`. App ka kaam is se ruka nahi (wo service
+   client se parhe jate hain), magar Realtime bande ki APNI ijazat par
+   chalta hai.
+
+`REPLICA IDENTITY FULL` bhi lagti hai: us ke baghair UPDATE ki khabar
+nahi aati — aur manzoori ek UPDATE hai.
+
+**Live par chalne ke baad ye tasdeeq karein:**
+
+```sql
+select c.relname, c.relreplident,
+       (select count(*) from pg_policies p
+         where p.tablename = c.relname and p.schemaname = 'public' and p.cmd = 'SELECT') as select_policies
+  from pg_publication_rel pr
+  join pg_publication p on p.oid = pr.prpubid
+  join pg_class c on c.oid = pr.prrelid
+ where p.pubname = 'supabase_realtime'
+ order by c.relname;
+```
+
+Saat qatarein aani chahiyen, har ek par `relreplident = f` aur
+`select_policies = 1`.
+
+### Live par safhon ki safai — koi migration nahi chahiye
+
+Jo teen safhe hataye/more gaye (`verification`, `mazdoori`,
+`company-expenses`) un ke `features` waali qatarein Live par kabhi gayi
+hi nahi thin — 338 se aage ki koi migration Live par nahi chali. Is liye
+wahan kuch mitane ki zaroorat nahi; naya build hi kaafi hai.
