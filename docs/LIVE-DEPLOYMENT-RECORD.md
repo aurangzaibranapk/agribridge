@@ -1815,6 +1815,8 @@ tasdeeq se pehle Live par koi migration nahi).
 | 352 | Khulasa rukh dekhe, khate ki qism nahi (ulta balance chhupta tha) | ✅ | **baqi** |
 | 353 | Live push: realtime ki ijazat + publication | ✅ (saaton table publication mein, replica identity full) | **baqi** |
 | 354 | Purani ijazat (`allowed_pages`) nayi fehrist mein | ✅ (har bande ka har purana safha khula raha — 0 band) | **baqi** |
+| 355 | Naya signup khudbakhud staff nahi banta (default `sales_staff` → `customer`) | ✅ | **baqi** |
+| 356 | `supplier_payment_requests` par RLS policy (pehle darwaza band tha) | ✅ (policy lagi, `pg_policies` se tasdeeq) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -2099,3 +2101,53 @@ bhara ho) jaan boojh kar company ke journal se ALAG rakha gaya —
 dealer apna maal khud khareedta hai aur apne gahak ko apni marzi se
 bechta hai; ye us ka apna karobar hai, company ka nahi. Us safhe ka
 poora peechha `docs/DUPLICATE-SAFAI.md` mein hai.
+
+## Nav mein 7 gumshuda safhe (koi migration nahi)
+
+Malik: *"phir jo baqi rehte hain wo karo."* Poori `/admin/**` (265
+safhe) ko nav config se milaya — 7 safhe kabhi kisi menu ya kisi doosre
+safhe se link nahi thay, sirf owner/admin URL se khol sakte thay.
+Poora peechha aur fehrist `docs/DUPLICATE-SAFAI.md` mein.
+
+## Poore ERP ki review (6 September) — 355 aur 356 mile
+
+Malik: *"sary erp ka review kro is ko ok kro."* Poori codebase ka
+file-by-file review mumkin nahi (bahut bara hai), is liye jo mumkin tha
+wo kiya: Supabase security advisor (Testing par 358 lint) parha, aur
+har ERROR/WARN ko wajah dekh kar chaana — zyada tar is project ke apne
+tay-shuda tareeqe (SECURITY DEFINER functions/views) the, jhoothi
+alarm. Do asal masle mile jo malik ne khud nahi poochhe thay:
+
+### 355 — Naya signup khudbakhud staff ban sakta tha
+
+`fn_handle_new_user()` (har naye login banne par chalta hai) agar
+`role` metadata mein na milta (ya na-pehchana role milta) to seedha
+`'sales_staff'` bana deta tha — matlab **koi bhi bahar wala bandaa**,
+sirf public anon key se seedha Supabase Auth API par jaa kar (app ke
+apne form se guzre baghair), staff ban sakta tha. Ab tak app ke andar
+har jagah (registration, farmer login, HR, vendor portal) sahi role
+khud se bhejti hai, is liye abhi tak koi nuqsan nahi hua — magar
+darwaza khula tha. Ab default `'sales_staff'` ki jagah `'customer'`
+(bilkul ijazat wala nahi) hai.
+
+### 356 — supplier_payment_requests ka darwaza khula hi nahi tha
+
+Ulta masla: RLS chalu thi magar policy ek bhi nahi — matlab
+`/admin/finance/queue` ka supplier-payment-request wala hissa
+(banana, dekhna, approve/reject) **kabhi kaam hi nahi kar saka**, khud
+owner ke liye bhi. Table mein isi liye zero qatarein hain. Ab
+`company_expense_requests` jaisi hi policy lagi hai (staff parh sakte
+hain, finance/HQ likh sakte hain).
+
+**Dono Testing par lagi aur tasdeeq hui hain.** Live par abhi NAHI —
+backup ki tasdeeq ka intezar hai, neeche ki "chalni baqi" fehrist mein
+shamil.
+
+**Jo review mein nahi ho saka, saaf keh diya jaye:** 358 mein se
+baaqi ~350 lint (zyada tar `function_search_path_mutable`,
+`security_definer_view`, aur staff-only functions ka anon-executable
+hona) ek ek karke check nahi kiye gaye — wo is project ka jaan-boojh
+kar chuna gaya tareeqa hain (SECURITY DEFINER + andar `fn_is_any_staff`
+jaisi jaanch), aur pehle bhi isi tarah verify ho chuka hai. Agar malik
+chahen to in ka bhi ek-ek karke gehra review ho sakta hai, magar wo
+alag, lamba kaam hoga.

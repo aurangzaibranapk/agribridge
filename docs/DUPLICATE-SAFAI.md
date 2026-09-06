@@ -259,3 +259,11 @@ Saaton `nav-items.ts` mein un ke sahi group ke andar daal diye —
 koi naya migration nahi, koi UI mitayi nahi, sirf missing link jorha.
 `tsc` aur `npm run build` dono pehle jaisa (71 purani, koi nayi
 ghalti) saaf.
+
+**Asal baat sirf menu ki nahi thi.** `/admin/departments` (Ijazat dene
+wala safha) apni fehrist `ADMIN_NAV_GROUPS` (yehi `nav-items.ts`) se
+khud banata hai — matlab in saaton safhon ko koi bhi kabhi kisi staff
+ko *de hi nahi sakta tha*, chahe chahta bhi. Sirf owner/admin/super_admin
+(jo har cheez bypass karte hain) unhen URL se khol sakte thay. Ab ye
+saaton dusre features ki tarah normal ijazat wale ho gaye hain — koi
+extra kaam nahi, khud hi theek ho gaya.
