@@ -24,12 +24,22 @@ export default async function KhataPage() {
     .eq("user_id", user.id)
     .single();
 
+  // Dealer nahi hai to ye safha KHATAM nahi hota -- gahak ke khate par
+  // le jata hai.
+  //
+  // Malik (6 September) ne staff ke login se "Customer Ledger" khola aur
+  // jawab mila: "This account is not linked to a dealer." Menu par likha
+  // tha "Customer Ledger", aur andar dealer ka module tha -- do alag
+  // cheezein ek naam ke neeche.
+  //
+  // Dukan ke staff ke liye "gahak ka khata" ka matlab CRM hai (wahan har
+  // gahak ka baqi aur us ka poora statement khulta hai). Dealer ka khata
+  // sirf DEALER ke liye hai, aur wo apni jagah chal raha hai.
+  //
+  // Marne wala safha dikhane se behtar hai bande ko wahan bhej dena
+  // jahan wo kaam waqai hota hai.
   if (!dealer) {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">{t("at_no_dealer_profile", lang)}</p>
-      </div>
-    );
+    redirect("/admin/crm");
   }
 
   const { data: accounts } = await supabase

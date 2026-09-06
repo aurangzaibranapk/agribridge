@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { puranaSafhaKhudTheekKarein } from "@/lib/errors/stale-build";
 
 /**
  * Jab kisi admin safhe par kuch toot jaye.
@@ -31,6 +32,15 @@ export default function AdminError({
 }) {
   const lang = useLang();
   useEffect(() => {
+    // Purana build khula reh gaya ho to safha KHUD naya le aata hai.
+    //
+    // Ye kharabi hai hi nahi -- ye sirf purana safha hai. Naya build
+    // charhte hi purane chunks ke naam khatam ho jate hain, aur pehle se
+    // khula hua safha jab agla hissa maangta hai to usay wo milta hi
+    // nahi. Malik ki shikayat (6 September): "refresh hota hai data aa
+    // jata hai, phir 1 minute baad ye ho jata hai."
+    if (puranaSafhaKhudTheekKarein(error)) return;
+
     // Browser ke console mein bhi -- jahan poora stack milta hai.
     console.error("Admin safhe par kharabi:", error);
 
