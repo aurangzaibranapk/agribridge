@@ -204,3 +204,96 @@ export function summarise(lines: CountLine[]): {
     netValue: round2(overValue - shortValue),
   };
 }
+
+// =====================================================================
+// Har godam ki apni tarteeb (335)
+// =====================================================================
+/**
+ * Malik (6 September): *"stock count wala option aisa rakhein ke hum jis
+ * shop ki chahein kar sakein. Main Branch har 15 din, doosri branch har
+ * month 30 din baad ya month end. Ya hum kisi ko bhi access dein ke
+ * stock count karwa sakein. Hamein pata ho ga audit hua, kya farq aaya
+ * hai... daily stock count ke liye bohat time lagta hai."*
+ *
+ * Pehle poore nizam par EK qanoon tha -- 30 din. Us mein do kharabiyan
+ * thin, aur dono ka nateeja ek: nishan par se aitbaar uth jata hai.
+ *
+ *   * Jis godam ki ginti har 15 din chahiye, wo 29 din tak hara rehta
+ *     tha -- do haftay ki ghaflat nazar hi nahi aati thi.
+ *   * Jis ki mahine mein ek dafa kaafi thi, wo 31 din par surkh ho jata
+ *     tha -- aur roz surkh dikhne wali cheez ko log dekhna chhoR dete
+ *     hain.
+ */
+export type CycleKind = "har_n_din" | "mahine_ki_tareekh" | "mahine_ke_aakhir" | "band";
+
+export const CYCLE_LABEL: Record<CycleKind, string> = {
+  har_n_din: "Har kuch din baad",
+  mahine_ki_tareekh: "Mahine ki ek tareekh",
+  mahine_ke_aakhir: "Mahine ka aakhir",
+  band: "Band (ginti nahi karni)",
+};
+
+export interface CountSchedule {
+  warehouseId: string;
+  warehouseName: string;
+  cycleKind: CycleKind;
+  /**
+   * Tarteeb waqai darj hai, ya default chal raha hai.
+   *
+   * `false` ka matlab hai ke koi qatar hai hi nahi aur 30 din ka purana
+   * qanoon lag raha hai. Safha ye farq dikhata hai -- warna malik
+   * samajhte ke har godam ki tarteeb un ki chuni hui hai.
+   */
+  tarteebDarj: boolean;
+  harNDin: number | null;
+  mahineKiTareekh: number | null;
+  zimmedar: string | null;
+  zimmedarNaam: string | null;
+  bandKiWajah: string | null;
+  aakhriGinti: string | null;
+  /**
+   * Aakhri poori hui ginti mein kitne ka farq nikla.
+   *
+   * NULL = is godam ki ginti kabhi hui hi nahi. Ye SIFAR se alag hai:
+   * sifar kehta hai "gine, farq nahi tha"; NULL kehta hai "kabhi gina
+   * hi nahi".
+   */
+  pichhlaFarq: number | null;
+  /** Wo aakhri din jab ginti honi chahiye thi. */
+  aakhriMoqa: string | null;
+  /** Us din se aaj tak kitne din. 0 = waqt par. NULL = band. */
+  dinLate: number | null;
+}
+
+export async function countSchedules(): Promise<CountSchedule[]> {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("v_stock_count_due")
+    .select(
+      "warehouse_id, warehouse_name, cycle_kind, tarteeb_darj, har_n_din, mahine_ki_tareekh, zimmedar, zimmedar_naam, band_ki_wajah, aakhri_ginti, pichhla_farq, aakhri_moqa, din_late"
+    );
+
+  return (data ?? [])
+    .map((r) => ({
+      warehouseId: (r.warehouse_id as string | null) ?? "",
+      warehouseName: (r.warehouse_name as string | null) ?? "—",
+      cycleKind: ((r.cycle_kind as string | null) ?? "har_n_din") as CycleKind,
+      tarteebDarj: Boolean(r.tarteeb_darj),
+      harNDin: r.har_n_din === null || r.har_n_din === undefined ? null : Number(r.har_n_din),
+      mahineKiTareekh:
+        r.mahine_ki_tareekh === null || r.mahine_ki_tareekh === undefined
+          ? null
+          : Number(r.mahine_ki_tareekh),
+      zimmedar: (r.zimmedar as string | null) ?? null,
+      zimmedarNaam: (r.zimmedar_naam as string | null) ?? null,
+      bandKiWajah: (r.band_ki_wajah as string | null) ?? null,
+      aakhriGinti: r.aakhri_ginti ? String(r.aakhri_ginti).slice(0, 10) : null,
+      pichhlaFarq:
+        r.pichhla_farq === null || r.pichhla_farq === undefined ? null : Number(r.pichhla_farq),
+      aakhriMoqa: r.aakhri_moqa ? String(r.aakhri_moqa).slice(0, 10) : null,
+      dinLate: r.din_late === null || r.din_late === undefined ? null : Number(r.din_late),
+    }))
+    // Sab se zyada late sab se ooper. Band wale (NULL) sab se neeche --
+    // un par koi kaam baqi nahi.
+    .sort((a, b) => (b.dinLate ?? -1) - (a.dinLate ?? -1) || a.warehouseName.localeCompare(b.warehouseName));
+}

@@ -92,19 +92,19 @@ update public.gl_accounts set name = 'Kisan Card'         where code = '1018';
 -- mein saamne aayega, wajah ke saath. (`opening_balance` khali nahi reh
 -- sakta -- us par database ki rok hai -- is liye sifar rakha gaya.)
 insert into public.finance_accounts (name, account_type, gl_code, opening_balance, current_balance, is_active)
-select 'JazzCash (merchant)', 'mobile_wallet', '1015', null, 0, true
+select 'JazzCash (merchant)', 'mobile_wallet', '1015', 0, 0, true
 where not exists (select 1 from finance_accounts where name = 'JazzCash (merchant)');
 
 insert into public.finance_accounts (name, account_type, gl_code, opening_balance, current_balance, is_active)
-select 'Easypaisa (merchant)', 'mobile_wallet', '1016', null, 0, true
+select 'Easypaisa (merchant)', 'mobile_wallet', '1016', 0, 0, true
 where not exists (select 1 from finance_accounts where name = 'Easypaisa (merchant)');
 
 insert into public.finance_accounts (name, account_type, gl_code, opening_balance, current_balance, is_active)
-select 'QR (merchant)', 'mobile_wallet', '1017', null, 0, true
+select 'QR (merchant)', 'mobile_wallet', '1017', 0, 0, true
 where not exists (select 1 from finance_accounts where name = 'QR (merchant)');
 
 insert into public.finance_accounts (name, account_type, gl_code, opening_balance, current_balance, is_active)
-select 'Kisan Card', 'mobile_wallet', '1018', null, 0, true
+select 'Kisan Card', 'mobile_wallet', '1018', 0, 0, true
 where not exists (select 1 from finance_accounts where name = 'Kisan Card');
 
 

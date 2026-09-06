@@ -1086,6 +1086,13 @@ export type Database = {
             foreignKeyName: "agri_dispatches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "agri_dispatches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -10297,6 +10304,13 @@ export type Database = {
             foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -10678,6 +10692,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "grain_sales_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -11253,6 +11274,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -18781,6 +18809,13 @@ export type Database = {
             foreignKeyName: "product_intake_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -22730,6 +22765,13 @@ export type Database = {
             foreignKeyName: "stock_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -22866,6 +22908,99 @@ export type Database = {
           },
         ]
       }
+      stock_count_schedules: {
+        Row: {
+          band_ki_wajah: string | null
+          cycle_kind: string
+          har_n_din: number | null
+          mahine_ki_tareekh: number | null
+          shuru_se: string
+          updated_at: string
+          updated_by: string | null
+          warehouse_id: string
+          zimmedar: string | null
+        }
+        Insert: {
+          band_ki_wajah?: string | null
+          cycle_kind?: string
+          har_n_din?: number | null
+          mahine_ki_tareekh?: number | null
+          shuru_se?: string
+          updated_at?: string
+          updated_by?: string | null
+          warehouse_id: string
+          zimmedar?: string | null
+        }
+        Update: {
+          band_ki_wajah?: string | null
+          cycle_kind?: string
+          har_n_din?: number | null
+          mahine_ki_tareekh?: number | null
+          shuru_se?: string
+          updated_at?: string
+          updated_by?: string | null
+          warehouse_id?: string
+          zimmedar?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_schedules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: true
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: true
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: true
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: true
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_zimmedar_fkey"
+            columns: ["zimmedar"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_zimmedar_fkey"
+            columns: ["zimmedar"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       stock_counts: {
         Row: {
           count_date: string
@@ -22964,6 +23099,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_counts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -23149,6 +23291,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -23357,6 +23506,13 @@ export type Database = {
             foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
             columns: ["from_warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -23463,6 +23619,13 @@ export type Database = {
             columns: ["to_warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -25194,6 +25357,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "warehouse_bins_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -29056,6 +29226,13 @@ export type Database = {
             foreignKeyName: "stock_batches_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_count_overdue"
             referencedColumns: ["warehouse_id"]
           },
@@ -29437,6 +29614,54 @@ export type Database = {
         }
         Relationships: []
       }
+      v_stock_count_due: {
+        Row: {
+          aakhri_ginti: string | null
+          aakhri_moqa: string | null
+          band_ki_wajah: string | null
+          branch_id: string | null
+          cycle_kind: string | null
+          din_late: number | null
+          har_n_din: number | null
+          mahine_ki_tareekh: number | null
+          pichhla_farq: number | null
+          tarteeb_darj: boolean | null
+          warehouse_id: string | null
+          warehouse_name: string | null
+          zimmedar: string | null
+          zimmedar_naam: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_schedules_zimmedar_fkey"
+            columns: ["zimmedar"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_schedules_zimmedar_fkey"
+            columns: ["zimmedar"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "warehouses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       v_stock_count_overdue: {
         Row: {
           aakhri_ginti: string | null
@@ -29663,6 +29888,13 @@ export type Database = {
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
             referencedColumns: ["warehouse_id"]
           },
           {
@@ -30225,6 +30457,12 @@ export type Database = {
         Returns: undefined
       }
       fn_sod_attach_triggers: { Args: never; Returns: number }
+      fn_stock_count_mere_godam: {
+        Args: never
+        Returns: {
+          warehouse_id: string
+        }[]
+      }
       fn_subject_since: {
         Args: { p_subject_id: string; p_subject_type: string }
         Returns: string
