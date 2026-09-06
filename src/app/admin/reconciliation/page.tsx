@@ -58,6 +58,25 @@ export default async function ReconciliationPage() {
   const today = new Date().toISOString().slice(0, 10);
   const ranToday = latest?.run_date === today;
 
+  // Jaanch ko kitne din ho gaye.
+  //
+  // Ye adad is liye chahiye ke PURANA SABZ NATEEJA aaj ka sabz nateeja
+  // nahi hota. Live par 6 September ko ye safha hara khara tha aur
+  // aakhri jaanch 29 August ki thi -- aath din. Un aath dinon mein Rs
+  // 112,048 ki kharid ledger ke bahar reh gayi aur kisi ne nahi bataya,
+  // kyunki safha "clean" keh raha tha.
+  //
+  // Ab ek din se purani jaanch par card sabz nahi rehta: safhe ka rang
+  // us cheez se banta hai jo AAJ maloom hai, us se nahi jo pichhle
+  // hafte maloom thi.
+  const dinPurani =
+    latest?.run_date != null
+      ? Math.floor(
+          (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${latest.run_date}T00:00:00Z`)) / 86400000
+        )
+      : null;
+  const jaanchBaasi = dinPurani !== null && dinPurani >= 1;
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -79,15 +98,15 @@ export default async function ReconciliationPage() {
       ) : (
         <Card
           className={`p-4 ${
-            latest.verdict === "clean"
-              ? "border-l-4 border-l-green-500"
-              : latest.verdict === "issues"
-                ? "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20"
-                : "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20"
+            latest.verdict === "issues"
+              ? "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20"
+              : jaanchBaasi || latest.verdict === "partial"
+                ? "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                : "border-l-4 border-l-green-500"
           }`}
         >
           <div className="flex items-start gap-3">
-            {latest.verdict === "clean" ? (
+            {latest.verdict === "clean" && !jaanchBaasi ? (
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
             ) : latest.verdict === "issues" ? (
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
@@ -102,6 +121,13 @@ export default async function ReconciliationPage() {
                 {latest.checks_failed > 0 && `, ${latest.checks_failed} masle`}
                 {latest.checks_skipped > 0 && `, ${latest.checks_skipped} chal hi nahi saki`}
               </p>
+              {jaanchBaasi && (
+                <p className="mt-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300">
+                  Ye nateeja {dinPurani} din purana hai — aaj ka nahi. Un {dinPurani} dinon mein kya hua,
+                  ye kisi ne dekha hi nahi. Cron Job band hai ya chal nahi raha; ooper &quot;Abhi chalayein&quot;
+                  daba kar aaj ki jaanch kar lein.
+                </p>
+              )}
               {latest.verdict === "partial" && (
                 <p className="mt-1.5 text-xs font-medium text-amber-800 dark:text-amber-400">
                   Jo jaanch chal hi na sake, us ka nateeja &quot;theek&quot; nahi — maloom NAHI hai. Data
@@ -192,6 +218,9 @@ export default async function ReconciliationPage() {
         <Card className="overflow-hidden">
           <div className="border-b border-surface-200 px-4 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">{t("rc_previous_days", lang)}</div>
           <div className="flex flex-wrap gap-1.5 p-4">
+            {/* Jin dinon jaanch hui HI NAHI, wo yahan nazar nahi aate --
+                aur na aana "us din sab theek tha" ki tarah parha jata
+                hai. Is liye ooper wali patti din ginti hai. */}
             {(history ?? []).map((h) => (
               <span
                 key={h.run_date}
