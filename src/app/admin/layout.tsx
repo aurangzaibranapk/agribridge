@@ -33,6 +33,28 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let sidebarKind: SidebarKind = "full";
   let showPos = false;
   let navGroups: { key: string; label: string; icon?: string | null; items: { href: string; label: string; icon: string | null }[] }[] = [];
+  // POORA khana try ke andar.
+  //
+  // Layout ke OOPER koi error boundary nahi hoti -- `admin/error.tsx`
+  // sirf us ke ANDAR ke safhon ko pakarta hai. Is liye yahan se phenki
+  // gayi koi bhi ghalti seedha ek SAADA "Internal Server Error" banti
+  // hai: poora admin band, aur screen par ek harf bhi aisa nahi jis se
+  // pata chale ke masla kya hai.
+  //
+  // 6 September ko bilkul yehi hua tha. `loadNav()` mein service client
+  // try se BAHAR banta tha, aur wo `SUPABASE_SERVICE_ROLE_KEY` na hone
+  // par phenkta hai.
+  //
+  // Wo ek jagah theek ho chuki, magar sirf usi jagah ko theek kar dena
+  // kaafi nahi: kal koi doosri lakeer wahi kaam kar sakti hai. Is liye
+  // ab poora khana yahan pakra jata hai. Nakami par banda ANDAR aata
+  // hai -- fallback menu ke sath -- aur wajah server ke log mein jati
+  // hai.
+  //
+  // Ye ghalti chhupana NAHI hai: fallback menu khud bata deta hai ke
+  // kuch kam hai, aur log mein poori wajah likhi hoti hai. Chhupana wo
+  // hota agar hum khali sidebar dikha kar chup ho jate.
+  try {
   if (user) {
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
     role = profile?.role ?? "";
@@ -55,6 +77,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // menu lagta hai -- do jagah alag hisaab hota to banda patti par
     // POS dekhta aur khol na pata.
     showPos = nav.unrestricted || routeAllowed(nav.allowedRoutes, "/admin/pos");
+  }
+  } catch (e) {
+    console.error(
+      "admin layout: menu bana nahi -- fallback par chal raha hai:",
+      e instanceof Error ? e.message : e
+    );
+    // navGroups khali reh jayen to sidebar khali dikhti. Aisi soorat mein
+    // banda "Mera Kaam" se apna raasta dhoondh leta hai, aur poora daftar
+    // ruka nahi rehta.
+    showSidebar = false;
+    sidebarKind = "none";
   }
   // Zaban poore admin panel ke liye ek hi jagah se. Andar ke saare
   // client components isi se parhte hain -- kisi ko prop bhejne ki
