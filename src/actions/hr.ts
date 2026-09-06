@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
@@ -166,7 +167,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
       transaction_type: "expense",
       category: "Salary",
       amount: net,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: `Tankhwah ${row.pay_month}/${row.pay_year}`,
       created_by: user?.id ?? null,
     })

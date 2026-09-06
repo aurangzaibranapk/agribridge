@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -11,7 +12,7 @@ export async function recordInvestorInvestment(_prev: ActionState, formData: For
   const supabase = createClient();
   const investorId = String(formData.get("investor_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const investmentDate = String(formData.get("investment_date") ?? new Date().toISOString().slice(0, 10));
+  const investmentDate = String(formData.get("investment_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!investorId) return { error: "Investor select karein." };
@@ -42,7 +43,7 @@ export async function recordInvestorReturn(_prev: ActionState, formData: FormDat
   const supabase = createClient();
   const investorId = String(formData.get("investor_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const returnDate = String(formData.get("return_date") ?? new Date().toISOString().slice(0, 10));
+  const returnDate = String(formData.get("return_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!investorId) return { error: "Investor select karein." };

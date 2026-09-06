@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -11,7 +12,7 @@ export interface ActionState {
 export async function logGeneratorEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
-  const logDate = String(formData.get("log_date") ?? new Date().toISOString().slice(0, 10));
+  const logDate = String(formData.get("log_date") ?? aajKaKhana());
   const branchId = (formData.get("branch_id") as string) || null;
   const openingHours = Number(formData.get("opening_hours") ?? 0);
   const closingHours = Number(formData.get("closing_hours") ?? 0);

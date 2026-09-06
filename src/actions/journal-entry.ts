@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postJournal, type JournalLine } from "@/lib/ledger/post";
 import { logAudit } from "@/lib/audit";
@@ -84,7 +85,7 @@ export async function postManualJournal(_prev: JvState, formData: FormData): Pro
 
   // Purani tareekh: rokte nahi, magar wajah maangte hain aur nishaan
   // lagate hain.
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const purani = entryDate < aaj;
   if (purani && backdateReason.length < 10) {
     return {

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordRouteCollection, updateChillerReceived, type ActionState } from "@/actions/milk-routes";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -129,7 +130,7 @@ function NewRouteEntryForm({ branches }: { branches: Branch[] }) {
         <input name="route_name" required placeholder={t("mk_route_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <input name="rider_name" placeholder={t("mk_rider_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
-          <input type="date" name="collection_date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="collection_date" defaultValue={aajKaKhana()} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <select name="shift" className="rounded-lg border border-surface-200 p-2 text-sm">
             <option value="morning">{t("mk_morning", lang)}</option>
             <option value="evening">{t("mk_evening", lang)}</option>

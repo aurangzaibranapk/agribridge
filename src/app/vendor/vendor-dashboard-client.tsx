@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -221,7 +222,7 @@ export function VendorDashboardClient({
     ? bookings.filter((b) => (b.machineLabel ?? "").startsWith(selected.type))
     : bookings;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const todays = bookings.filter((b) => b.harvestDate === today && !b.workDone);
   const pendingVerify = bookings.filter((b) => b.claimed > 0);
   const activeMachines = machines.filter((m) => !!m.runningBooking).length;
@@ -1345,7 +1346,7 @@ function FuelForm({ bookingId, onClose }: { bookingId: string; onClose: () => vo
 
       <div className="grid grid-cols-2 gap-2">
         <Field label={t("c_date", lang)}>
-          <input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="log_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
         <Field label={t("v_how_many_litres_req", lang)}>
           <input
@@ -1429,7 +1430,7 @@ function CollectionForm({ bookingId, onClose }: { bookingId: string; onClose: ()
           <input type="number" step="0.01" name="amount" required className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
         <Field label={t("v_when_paid", lang)}>
-          <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </Field>
       </div>
 
@@ -1558,7 +1559,7 @@ function WorkForm({
           <input
             type="date"
             name="work_date"
-            defaultValue={new Date().toISOString().slice(0, 10)}
+            defaultValue={aajKaKhana()}
             className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
           />
         </div>

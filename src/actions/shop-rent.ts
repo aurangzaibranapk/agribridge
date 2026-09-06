@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendDeptMail } from "@/lib/mailer";
@@ -206,7 +207,7 @@ export async function recordRentPayment(_prev: ActionState, formData: FormData):
       payment_year: year,
       amount_due: amountDue,
       amount_paid: amountPaid,
-      paid_date: new Date().toISOString().slice(0, 10),
+      paid_date: aajKaKhana(),
       payment_method: paymentMethod,
       notes,
       created_by: user?.id ?? null,
@@ -273,7 +274,7 @@ export async function markBillPaid(_prev: ActionState, formData: FormData): Prom
 
   const { error } = await supabase
     .from("shop_bills")
-    .update({ status: "paid", paid_date: new Date().toISOString().slice(0, 10) })
+    .update({ status: "paid", paid_date: aajKaKhana() })
     .eq("id", billId);
   if (error) return { error: error.message };
 

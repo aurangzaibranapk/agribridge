@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { useFormState, useFormStatus } from "react-dom";
@@ -599,7 +600,7 @@ export function NewBookingForm({
             <Input
               type="date"
               name="preferred_date"
-              min={new Date().toISOString().slice(0, 10)}
+              min={aajKaKhana()}
               value={preferredDate}
               onChange={(e) => setPreferredDate(e.target.value)}
             />
@@ -754,7 +755,7 @@ export function NewBookingForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("mc_date", lang)}</Label>
-                <Input type="date" name="advance_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <Input type="date" name="advance_date" defaultValue={aajKaKhana()} />
               </div>
               <div>
                 <Label>{t("mc_reference_receipt", lang)}</Label>
@@ -904,7 +905,7 @@ function DayCapacity({
   const fits = acres <= 0 || acres <= day.free + 0.001;
   // Wo din jin mein maanga gaya raqba poora aa jata hai.
   const options = rows
-    .filter((r) => r.date >= new Date().toISOString().slice(0, 10) && r.free >= acres && acres > 0)
+    .filter((r) => r.date >= aajKaKhana() && r.free >= acres && acres > 0)
     .slice(0, 4);
 
   return (

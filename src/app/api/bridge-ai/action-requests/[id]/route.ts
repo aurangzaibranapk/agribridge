@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           purchase_number: purchaseNumber,
           supplier_id: supplierId,
           branch_id: branchId,
-          purchase_date: new Date().toISOString().slice(0, 10),
+          purchase_date: aajKaKhana(),
           status: "pending",
           total_amount: totalAmount,
           notes: "Bridge AI proposal se banaya gaya (admin approved)",

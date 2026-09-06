@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
@@ -130,7 +131,7 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   if (!permissions.canCreateGrn) return { error: "Sirf order karne wali branch GRN bana sakti hai." };
 
   const dispatchId = (formData.get("dispatch_id") as string) || null;
-  const receivingDate = String(formData.get("receiving_date") ?? new Date().toISOString().slice(0, 10));
+  const receivingDate = String(formData.get("receiving_date") ?? aajKaKhana());
   const discountAdjustment = Number(formData.get("discount_adjustment") ?? 0);
   const additionalCharges = Number(formData.get("additional_charges") ?? 0);
   const notes = (formData.get("notes") as string) || null;

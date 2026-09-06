@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashOut, postWalletMovement, ACC } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -34,7 +35,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   const farmerId = sellerType === "farmer" ? String(formData.get("farmer_id") ?? "") : null;
   const partyId = sellerType === "party" ? String(formData.get("party_id") ?? "") : null;
   const grainType = String(formData.get("grain_type") ?? "");
-  const entryDate = String(formData.get("entry_date") ?? new Date().toISOString().slice(0, 10));
+  const entryDate = String(formData.get("entry_date") ?? aajKaKhana());
   const grossWeight = Number(formData.get("gross_weight_kg") ?? 0);
   const cutPercentage = Number(formData.get("cut_percentage") ?? 0);
   const rate = Number(formData.get("rate_per_kg") ?? 0);
@@ -465,7 +466,7 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
       transaction_type: "expense",
       category: "Grain Procurement Payment",
       amount: actualCashOut,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: `Grain payment (${paymentMethod ?? "cash"})`,
       created_by: user?.id ?? null,
     });
@@ -533,7 +534,7 @@ export async function editGrainPayment(_prev: ActionState, formData: FormData): 
     transaction_type: "expense",
     category: "Grain Procurement Payment (Edited)",
     amount: newAmount - Number(payment.amount),
-    transaction_date: new Date().toISOString().slice(0, 10),
+    transaction_date: aajKaKhana(),
     notes: `Payment edit hui: purana Rs ${payment.amount} -> naya Rs ${newAmount}`,
     created_by: user?.id ?? null,
   });

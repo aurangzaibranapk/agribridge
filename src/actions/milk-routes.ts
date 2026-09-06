@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -12,7 +13,7 @@ export async function recordRouteCollection(_prev: ActionState, formData: FormDa
   const routeName = String(formData.get("route_name") ?? "").trim();
   const branchId = (formData.get("branch_id") as string) || null;
   const riderName = (formData.get("rider_name") as string) || null;
-  const collectionDate = String(formData.get("collection_date") ?? new Date().toISOString().slice(0, 10));
+  const collectionDate = String(formData.get("collection_date") ?? aajKaKhana());
   const shift = String(formData.get("shift") ?? "morning");
   const fieldVolume = Number(formData.get("field_collected_volume") ?? 0);
   const chillerVolume = formData.get("chiller_received_volume") ? Number(formData.get("chiller_received_volume")) : null;

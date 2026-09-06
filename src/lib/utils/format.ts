@@ -70,3 +70,36 @@ export function aajPakistan(withDay = false): string {
     year: "numeric",
   }).format(new Date());
 }
+
+/**
+ * Aaj ki tareekh form ke khane ke liye (YYYY-MM-DD) -- PAKISTAN ki.
+ *
+ * -------------------------------------------------------------------
+ * `aajKaKhana()` KYUN GHALAT HAI
+ *
+ * `toISOString()` hamesha **UTC** deta hai. Pakistan UTC se paanch ghante
+ * aage hai, is liye raat 12 baje se subah 5 baje ke darmiyan wo AGLA nahi
+ * -- PICHHLA din deta hai:
+ *
+ *     PKT 2 baje raat (7 September)  ->  UTC 9 baje raat (6 September)
+ *
+ * Yani us waqt har form ka default "kal ki tareekh" hota hai. Jahan raat
+ * ko kaam hota hai -- doodh ki subah wali collection, cash closing --
+ * wahan ye khamoshi se GHALAT DIN likh deta hai, aur kisi ko pata nahi
+ * chalta.
+ *
+ * Doosra nuqsan: server UTC par chalta hai aur browser Pakistan par, to
+ * dono alag jawab dete hain -- aur React ka hydration toot jata hai.
+ *
+ * Donon ka ilaaj ek hai: timezone PAKKA kar do.
+ */
+export function aajKaKhana(): string {
+  // en-CA is liye ke wo YYYY-MM-DD deta hai -- wohi shakl jo
+  // <input type="date"> maangta hai.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postMachineryVendorPayout, failed } from "@/lib/ledger/rules";
@@ -289,7 +290,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
         transaction_type: "expense",
         category: "Machinery Rental - Vendor Payout",
         amount: cashOut,
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: aajKaKhana(),
         notes:
           dieselRecovered > 0
             ? `Booking ${booking.booking_number} - Vendor payout (Rs ${dieselRecovered.toLocaleString()} diesel wapas kata)`

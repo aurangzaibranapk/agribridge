@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -268,7 +269,7 @@ async function postToAccounts(input: PostInput): Promise<PostResult> {
       transaction_type: party.financeType,
       amount: input.amount,
       category: input.partyType,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: `${party.label}: ${input.partyName} — ${input.comment} (${trace})`,
       created_by: input.managerId,
     })

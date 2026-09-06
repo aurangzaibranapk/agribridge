@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
@@ -752,7 +753,7 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     (sum, l) => sum + Number(l.qty) * Number(l.applied_rate ?? l.rate ?? 0),
     0
   );
-  const purchaseDate = bill.bill_date ?? new Date().toISOString().slice(0, 10);
+  const purchaseDate = bill.bill_date ?? aajKaKhana();
 
   // Adaigi ki shartein (255) -- wohi sawal jo purchases/new par hain.
   const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);

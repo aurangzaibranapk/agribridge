@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal, reverseJournal, type JournalLine } from "@/lib/ledger/post";
@@ -96,7 +97,7 @@ async function commissionGuess(providerId: string, kind: string, principal: numb
     .eq("provider_id", providerId)
     .eq("kind", kind)
     .eq("is_active", true)
-    .lte("from_date", new Date().toISOString().slice(0, 10))
+    .lte("from_date", aajKaKhana())
     .order("from_date", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -630,7 +631,7 @@ export async function saveLoadReconciliation(_prev: LoadState, formData: FormDat
       entryDate: tareekh,
       branchId: me.branch_id,
       createdBy: user.id,
-      backdateReason: tareekh < new Date().toISOString().slice(0, 10) ? `Us din ka milan aaj darj hua — ${reason}` : null,
+      backdateReason: tareekh < aajKaKhana() ? `Us din ka milan aaj darj hua — ${reason}` : null,
       lines:
         farq < 0
           ? // Float kam nikla: kami kharche mein gayi.
@@ -736,7 +737,7 @@ export async function createLoadAccount(_prev: LoadState, formData: FormData): P
     title,
     account_ref: accountRef,
     branch_id: me.branch_id,
-    opened_on: new Date().toISOString().slice(0, 10),
+    opened_on: aajKaKhana(),
     created_by: user.id,
   });
 

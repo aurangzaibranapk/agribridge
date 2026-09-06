@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
+import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Maidan ki nigrani — ek hi jagah par sab adhoori aur mashkook cheezein.
  *
@@ -57,7 +58,7 @@ export const PENDING_ALERT_HOURS = 24;
 export const UNPOSTED_ALERT_DAYS = 2;
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return aajKaKhana();
 }
 
 function daysSince(iso: string): number {

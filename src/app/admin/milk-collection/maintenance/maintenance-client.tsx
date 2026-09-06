@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { logMaintenance, recordFundWithdrawal, type ActionState } from "@/actions/maintenance";
 import { Wrench, AlertTriangle, PiggyBank, X } from "lucide-react";
@@ -132,7 +133,7 @@ function MaintenanceForm({ vehicles }: { vehicles: Vehicle[] }) {
             <option key={v.id} value={v.id}>{v.vehicle_name}</option>
           ))}
         </select>
-        <input type="date" name="service_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input type="date" name="service_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <select name="maintenance_type" defaultValue="oil_change" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
           <option value="oil_change">{t("c_oil_change", lang)}</option>
           <option value="service">{t("mo_service", lang)}</option>
@@ -164,7 +165,7 @@ function WithdrawModal({ onClose }: { onClose: () => void }) {
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <input type="date" name="withdrawal_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="withdrawal_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <textarea name="reason" required rows={2} placeholder={t("mo_withdraw_reason", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("mo_save_withdrawal", lang)} />

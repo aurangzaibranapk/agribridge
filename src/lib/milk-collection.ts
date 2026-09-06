@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { aajKaKhana } from "@/lib/utils/format";
 import { calculateMilkValue, buildMilkReceiptSms } from "@/lib/utils/milk-formula";
 import { sendMilkSms } from "@/lib/sms";
 import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
@@ -228,7 +229,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
 
   if (!farmerId) return { error: "Farmer batana zaroori hai." };
 
-  const entryDate = input.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = input.entryDate ?? aajKaKhana();
   const shift = input.shift ?? (new Date().getHours() < 14 ? "morning" : "evening");
 
   // ---- Pehle se to nahi aa chuki? ----

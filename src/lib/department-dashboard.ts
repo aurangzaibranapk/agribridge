@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
+import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Har department ke dashboard ke aankre.
  *
@@ -41,7 +42,7 @@ function rs(value: number | null): string {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return aajKaKhana();
 }
 
 function monthStart(): string {

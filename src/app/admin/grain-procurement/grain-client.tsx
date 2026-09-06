@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
@@ -363,7 +364,7 @@ function NewEntryForm({
         </div>
         <div>
           <Label>{t("gr_date", lang)}</Label>
-          <Input type="date" name="entry_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="entry_date" defaultValue={aajKaKhana()} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

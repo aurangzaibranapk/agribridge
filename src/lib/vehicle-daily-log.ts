@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
+import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Motorcycle ka rozana hisaab.
  *
@@ -83,7 +84,7 @@ async function nextLogNumber(): Promise<string> {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return aajKaKhana();
 }
 
 /** Aaj ka log — ho to wahi, na ho to null. */

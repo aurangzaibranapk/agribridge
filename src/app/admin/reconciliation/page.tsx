@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -55,7 +56,7 @@ export default async function ReconciliationPage() {
   const red = findings.filter((f) => f.severity === "red");
   const amber = findings.filter((f) => f.severity === "amber");
   const grey = findings.filter((f) => f.severity === "grey");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const ranToday = latest?.run_date === today;
 
   // Jaanch ko kitne din ho gaye.

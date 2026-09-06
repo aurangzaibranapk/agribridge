@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
@@ -33,7 +34,7 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
   const warehouseId = String(formData.get("warehouse_id") ?? "");
   const quantity = Number(formData.get("quantity_kg") ?? 0);
   const rate = Number(formData.get("rate_per_kg") ?? 0);
-  const saleDate = String(formData.get("sale_date") ?? new Date().toISOString().slice(0, 10));
+  const saleDate = String(formData.get("sale_date") ?? aajKaKhana());
   const deliveryTerm = (formData.get("delivery_term") as string) || null;
   const bardanaCost = Number(formData.get("bardana_cost") ?? 0);
   const mazdooriCost = Number(formData.get("mazdoori_cost") ?? 0);
@@ -204,7 +205,7 @@ export async function recordGrainSalePayment(_prev: ActionState, formData: FormD
       transaction_type: "income",
       category: "Grain Sale",
       amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: `Grain sale payment - ${sale.sale_number}`,
       created_by: user?.id ?? null,
     })

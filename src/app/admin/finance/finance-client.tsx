@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createFinanceAccount,
@@ -257,7 +258,7 @@ function OpeningBalanceForm({ accounts }: { accounts: Account[] }) {
         <Input type="number" step="0.01" min="0.01" name="amount" placeholder="Us din kitna paisa para tha" required />
         <div>
           <Label htmlFor="ob_as_of">Kis din tak</Label>
-          <Input type="date" id="ob_as_of" name="as_of_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" id="ob_as_of" name="as_of_date" defaultValue={aajKaKhana()} />
         </div>
         <OpeningSubmit />
       </form>
@@ -297,7 +298,7 @@ function TransactionForm({ accounts }: { accounts: Account[] }) {
         </Select>
         <Input name="category" placeholder={t("fn_category_eg", lang)} />
         <Input type="number" step="0.01" name="amount" placeholder={t("fn_amount", lang)} required />
-        <Input type="date" name="transaction_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+        <Input type="date" name="transaction_date" defaultValue={aajKaKhana()} />
         <Textarea name="notes" rows={2} placeholder={t("fn_notes_optional", lang)} />
         <TxnSubmitButton />
       </form>
@@ -330,7 +331,7 @@ function TransferForm({ accounts }: { accounts: Account[] }) {
           ))}
         </Select>
         <Input type="number" step="0.01" name="amount" placeholder={t("fn_amount", lang)} required />
-        <Input type="date" name="transaction_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+        <Input type="date" name="transaction_date" defaultValue={aajKaKhana()} />
         <Textarea name="notes" rows={2} placeholder={t("fn_notes_optional", lang)} />
         <TransferSubmitButton />
       </form>
@@ -377,7 +378,7 @@ function NewAccountModal({ onClose }: { onClose: () => void }) {
               Is khate mein aaj waqai kitna paisa para hai. Cash Book aur ledger dono mein jayega.
             </p>
           </div>
-          <Input type="date" name="as_of_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="as_of_date" defaultValue={aajKaKhana()} />
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">
               {t("fn_cancel", lang)}

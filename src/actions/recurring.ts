@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -144,7 +145,7 @@ export async function postRecurring(_prev: RecurringState, formData: FormData): 
   const din = Math.min(Number(khaka.day_of_month), aakhriDin);
   const entryDate = `${period}-${String(din).padStart(2, "0")}`;
 
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   if (entryDate > aaj) {
     return { error: "Ye tareekh abhi aayi nahi. Aane wale din ki entry nahi banti." };
   }

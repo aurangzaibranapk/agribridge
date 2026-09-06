@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -170,12 +171,13 @@ export async function transferAccountBalance(_prev: GlAccountState, formData: Fo
   const to = String(formData.get("to_code") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
   const closeIt = String(formData.get("close_source") ?? "") === "on";
+  const rakamLikhi = String(formData.get("rakam") ?? "").trim();
 
   if (!from || !to) return { error: "Dono khate chunein." };
   if (from === to) return { error: "Ek hi khate se usi khate mein raqam nahi jati." };
   if (reason.length < 10) return { error: "Wajah likhein — kam az kam das harf. Ye wajah hamesha darj rahegi." };
 
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const tb = await trialBalance("1900-01-01", aaj);
   if (tb.error) return { error: `Baqi nahi gina ja saka: ${tb.error}` };
 
@@ -187,7 +189,48 @@ export async function transferAccountBalance(_prev: GlAccountState, formData: Fo
   // Baqi apne rukh par hai. Debit rukh wale khate ka musbat baqi ka
   // matlab hai wahan debit para hai -- usay khatam karne ke liye credit
   // karna parta hai.
-  const rakam = Math.abs(row.balance);
+  const maujood = Math.abs(row.balance);
+
+  /**
+   * Kitni raqam le jani hai.
+   *
+   * -----------------------------------------------------------------
+   * YE KHANA IS LIYE BANA
+   *
+   * Pehle ye form HAMESHA poora baqi utha leta tha -- raqam ka khana
+   * tha hi nahi. 6 September ko malik ne mobile load ke liye Alfalah se
+   * CBA mein Rs 2,000 bhejne the; form ne poore Rs 7,165 bhej diye, aur
+   * sath hi Alfalah band bhi kar diya. Us ki durustagi ke liye alag
+   * entry banani paRi.
+   *
+   * Ab khana khali chhoRna wohi purana matlab rakhta hai ("sab kuch le
+   * jao" -- khata band karte waqt yehi chahiye), magar raqam likhi ja
+   * sakti hai to sirf wohi jati hai.
+   */
+  let rakam = maujood;
+  if (rakamLikhi !== "") {
+    const n = Number(rakamLikhi);
+    if (!Number.isFinite(n) || n <= 0) {
+      return { error: "Raqam theek likhein — sifar se zyada koi adad." };
+    }
+    if (n - maujood > 0.005) {
+      return {
+        error: `Is khate mein sirf Rs ${Math.round(maujood).toLocaleString()} para hai — us se zyada nahi le ja sakte.`,
+      };
+    }
+    rakam = n;
+  }
+
+  // Khata band karna sirf tab jab us mein kuch bache hi na. Warna wo
+  // khata paisa liye hue band ho jata -- aur us par nayi qatar bhi nahi
+  // aa sakti, yani wo paisa nazar se ojhal ho jata.
+  const poora = Math.abs(rakam - maujood) < 0.005;
+  if (closeIt && !poora) {
+    return {
+      error: `Khata band nahi ho sakta — us mein Rs ${Math.round(maujood - rakam).toLocaleString()} bach jayenge. Band karna ho to poori raqam le jayein.`,
+    };
+  }
+
   const sourceKoCredit = row.normal_side === "debit" ? row.balance > 0 : row.balance < 0;
 
   const posted = await postJournal({

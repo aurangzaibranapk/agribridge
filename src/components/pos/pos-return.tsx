@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
 import { Button, Input, Select, Label } from "@/components/ui/form";
@@ -67,7 +68,7 @@ export function PosReturn({
   // dekhna ho, sale is page par dekh sakein." Default aaj se saat din
   // peeche: wapsi ki miyaad do din hai, magar bikri dekhne ke liye us se
   // zyada arsa chahiye hota hai.
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const haftaPehle = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const [from, setFrom] = useState(haftaPehle);
   const [to, setTo] = useState(aaj);

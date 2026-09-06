@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -56,7 +57,7 @@ export async function closePeriod(_prev: PeriodState, formData: FormData): Promi
   const pehlaDin = `${period}-01`;
   const aakhiriDin = mahinaKaAakhir(period);
 
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   if (aakhiriDin > aaj) {
     return { error: "Ye mahina abhi guzra nahi. Chalta hua mahina band nahi hota — us mein abhi kaam ho raha hai." };
   }
@@ -161,7 +162,7 @@ export async function closeYear(_prev: PeriodState, formData: FormData): Promise
 
   const shuru = `${saal}-01-01`;
   const khatam = `${saal}-12-31`;
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   if (khatam > aaj) return { error: "Ye saal abhi guzra nahi. Chalta hua saal band nahi hota." };
 
   const service = createServiceClient();

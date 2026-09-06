@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { payAndPost } from "@/lib/ledger/supplier-money";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -107,7 +108,7 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
   const paid = await payAndPost(supabase, {
     supplierId: request.supplier_id,
     amount: request.amount,
-    paymentDate: new Date().toISOString().slice(0, 10),
+    paymentDate: aajKaKhana(),
     paymentMethod: request.payment_method,
     accountId: (request as { finance_account_id?: string | null }).finance_account_id ?? null,
     notes: `Approved request: ${request.request_number}${request.notes ? " - " + request.notes : ""}`,

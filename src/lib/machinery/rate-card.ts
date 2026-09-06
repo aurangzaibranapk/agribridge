@@ -1,3 +1,4 @@
+import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Rate card ka match -- ek hi jagah (177).
  *
@@ -43,7 +44,7 @@ export function pickDefaultRate(
   cards: RateCard[],
   opts: { crop?: string | null; machineType?: string | null; harvestType: "sabit" | "kutra"; onDate?: string }
 ): RateCard | null {
-  const today = opts.onDate ?? new Date().toISOString().slice(0, 10);
+  const today = opts.onDate ?? aajKaKhana();
   const crop = norm(opts.crop);
   const machine = norm(opts.machineType);
 

@@ -1,5 +1,6 @@
 "use client";
 import { useFormState, useFormStatus } from "react-dom";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { Button, Input, Label, Select, Badge } from "@/components/ui/form";
@@ -29,7 +30,7 @@ export function RateCardClient({
   canEdit: boolean;
 }) {
   const lang = useLang();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const cropName = (key: string | null) =>
     key === null ? t("mrc_any_crop", lang) : (crops.find((c) => c.key === key)?.label ?? key);
 
@@ -138,7 +139,7 @@ function AddForm({ crops }: { crops: { key: string; label: string }[] }) {
           </div>
           <div>
             <Label>{t("mrc_from", lang)}</Label>
-            <Input type="date" name="effective_from" defaultValue={new Date().toISOString().slice(0, 10)} />
+            <Input type="date" name="effective_from" defaultValue={aajKaKhana()} />
           </div>
           <div>
             <Label>{t("mrc_notes", lang)}</Label>

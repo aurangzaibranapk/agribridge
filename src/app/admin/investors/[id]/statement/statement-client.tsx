@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Printer, Download, Mail, MessageCircle, X, Plus, TrendingUp } from "lucide-react";
 import { recordInvestorInvestment, recordInvestorReturn, type ActionState } from "@/actions/investor-transactions";
@@ -162,7 +163,7 @@ function InvestmentModal({ investorId, onClose }: { investorId: string; onClose:
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="investor_id" value={investorId} />
-          <input type="date" name="investment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="investment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_save_investment", lang)} />
@@ -187,7 +188,7 @@ function ReturnModal({ investorId, onClose }: { investorId: string; onClose: () 
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="investor_id" value={investorId} />
-          <input type="date" name="return_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="return_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_save_return", lang)} />

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { addDriverPayment, addMaintenanceRecord, type ActionState } from "@/actions/driver-statement";
 import { Plus, X, MapPin } from "lucide-react";
@@ -176,7 +177,7 @@ function AddPaymentModal({ driverId, onClose }: { driverId: string; onClose: () 
             <option value="Other">{t("c_other", lang)}</option>
           </select>
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_add_payment", lang)} />
         </form>
@@ -212,7 +213,7 @@ function AddMaintenanceModal({ driverId, vehicleId, onClose }: { driverId: strin
           </select>
           <input type="number" step="0.01" name="amount" placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" name="odometer_km" placeholder={t("st_odometer_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="date" name="maintenance_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="maintenance_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_add_record", lang)} />
         </form>

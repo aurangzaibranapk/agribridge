@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -22,7 +23,7 @@ export default async function WalkInPage() {
     return <div className="p-8 text-center text-surface-400">{t("at_chiller_only", lang)}</div>;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   const [{ data: staff }, { data: mine }] = await Promise.all([
     supabase.from("staff_details").select("milk_chiller_name").eq("profile_id", user!.id).maybeSingle(),

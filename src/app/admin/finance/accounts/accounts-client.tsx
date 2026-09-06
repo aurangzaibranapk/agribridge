@@ -115,7 +115,27 @@ export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdi
                 ))}
               </Select>
             </div>
-            <div className="sm:col-span-2">
+            <div>
+              {/* Raqam ka khana.
+                  Pehle ye tha hi nahi aur form HAMESHA poora baqi utha
+                  leta tha. 6 September ko malik ko Rs 2,000 bhejne the,
+                  poore Rs 7,165 chale gaye -- aur khata band bhi ho gaya.
+                  Khali chhoRna wohi purana matlab rakhta hai ("sab kuch"),
+                  magar ab raqam likhi ja sakti hai. */}
+              <Label htmlFor="move_rakam">Kitni raqam</Label>
+              <Input
+                id="move_rakam"
+                name="rakam"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Khali = poora baqi"
+              />
+              <p className="mt-1 text-[11px] text-surface-400">
+                Khali chhoRein to poora baqi chala jayega — khata band karte waqt yehi chahiye.
+              </p>
+            </div>
+            <div>
               <Label htmlFor="move_reason">{t("coa_move_reason", lang)}</Label>
               <Input id="move_reason" name="reason" required minLength={10} />
             </div>
@@ -124,6 +144,9 @@ export function AccountsClient({ lang, canEdit, accounts }: { lang: Lang; canEdi
                 <input type="checkbox" name="close_source" />
                 {t("coa_move_close", lang)}
               </label>
+              <span className="text-[11px] text-surface-400">
+                Khata sirf tab band hota hai jab us mein kuch bache hi na — warna paisa liye hue band ho jata.
+              </span>
               <SaveButton lang={lang} />
             </div>
           </form>

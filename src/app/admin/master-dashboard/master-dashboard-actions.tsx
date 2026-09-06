@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordCapitalInjection, type ActionState } from "@/actions/capital-injections";
 import { Plus, X } from "lucide-react";
@@ -45,7 +46,7 @@ function AddCapitalModal({ onClose }: { onClose: () => void }) {
           {(sourceType === "bank_loan" || sourceType === "borrowed") && (
             <input name="source_name" placeholder={sourceType === "bank_loan" ? "Bank Naam" : "Kis Se Liya (naam)"} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           )}
-          <input type="date" name="injection_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="injection_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div>
             <label className="text-xs text-surface-500">{t("md_document_optional", lang)}</label>

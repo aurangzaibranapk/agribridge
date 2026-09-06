@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
@@ -52,7 +53,7 @@ export async function recordCashClose(_prev: ActionState, formData: FormData): P
   if (!branchId) return { error: "Branch select karein." };
   if (!closeDate) return { error: "Tareekh select karein." };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   if (closeDate > today) return { error: "Aane wale din ki ginti nahi ho sakti." };
 
   const {

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -49,7 +50,7 @@ export function PurchaseForm({
   const [state, formAction] = useFormState(createPurchase, initialState);
   const [supplierId, setSupplierId] = useState("");
   const [branchId, setBranchId] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
+  const [purchaseDate, setPurchaseDate] = useState(aajKaKhana());
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
   function addLine() {

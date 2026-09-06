@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Truck, PackageCheck } from "lucide-react";
 import { recordDispatch, recordReceipt, type DispatchState } from "@/actions/milk-dispatch";
@@ -67,7 +68,7 @@ export function DispatchClient({
             </div>
             <div>
               <Label>{t("md_date", lang)}</Label>
-              <Input type="date" name="dispatch_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Input type="date" name="dispatch_date" defaultValue={aajKaKhana()} />
             </div>
             <div>
               <Label>{t("md_shift", lang)}</Label>

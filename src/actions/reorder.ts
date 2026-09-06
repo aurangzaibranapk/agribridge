@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -86,7 +87,7 @@ export async function createReorderPurchases(_prev: ReorderState, formData: Form
   }
 
   let made = 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   for (const [supplierId, group] of bySupplier) {
     const purchaseNumber = `PO-${Date.now()}-${made + 1}`;
     const total = group.reduce((s, l) => s + l.qty * (l.cost as number), 0);

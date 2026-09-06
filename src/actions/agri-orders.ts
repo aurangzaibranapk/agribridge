@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -569,7 +570,7 @@ export async function verifyOrderPayment(_prev: ActionState, formData: FormData)
         transaction_type: "income",
         category: "agri_order_payment",
         amount: Number(payment.paid_amount),
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: aajKaKhana(),
         notes: `AgriBridge order payment verified (${payment.payment_method})`,
         created_by: user?.id ?? null,
       });

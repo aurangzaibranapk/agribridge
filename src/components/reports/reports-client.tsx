@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/client";
 import { Input, Label, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
@@ -36,7 +37,7 @@ export function ReportsClient({
 }) {
   const supabase = createClient();
   const lang = useLang();
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(aajKaKhana());
   const [currentSummary, setCurrentSummary] = useState<SalesSummary | null>(summary);
   const [loading, setLoading] = useState(false);
 

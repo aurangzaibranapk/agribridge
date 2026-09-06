@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { notifyRoles } from "@/lib/notifications";
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   const service = createServiceClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   // ---- 1) Staff ko: aaj subah ka meter aaya, shaam ka nahi ----
   const { data: openLogs } = await service

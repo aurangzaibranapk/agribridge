@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
@@ -40,7 +41,7 @@ export default async function MasterDashboardPage() {
   //
   // Ab teenon ek hi jagah se aate hain: trial balance. Wahi jagah jahan
   // POS, kharid, machinery aur doodh pehle se likhte hain.
-  const haalat = await position(new Date().toISOString().slice(0, 10));
+  const haalat = await position(aajKaKhana());
   const ledgerNaKhula = Boolean(haalat.error);
 
   const totalBankBalance = haalat.naqdi;

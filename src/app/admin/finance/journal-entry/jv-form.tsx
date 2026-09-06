@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { postManualJournal, type JvState } from "@/actions/journal-entry";
 import { Card } from "@/components/ui/layout-primitives";
@@ -26,7 +27,7 @@ const KHALI: Row = { acc: "", dr: "", cr: "", memo: "" };
 
 export function JournalEntryForm({ lang, accounts }: { lang: Lang; accounts: Acc[] }) {
   const [state, formAction] = useFormState(postManualJournal, initial);
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const [rows, setRows] = useState<Row[]>([{ ...KHALI }, { ...KHALI }]);
   const [date, setDate] = useState(aaj);
 

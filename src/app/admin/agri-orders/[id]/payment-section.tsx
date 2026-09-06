@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { submitOrderPayment, verifyOrderPayment, rejectOrderPayment, type ActionState } from "@/actions/agri-orders";
 import { CreditCard, X, CheckCircle2, XCircle, FileText } from "lucide-react";
@@ -153,7 +154,7 @@ function SubmitPaymentModal({ orderId, onClose }: { orderId: string; onClose: ()
               <input name="transaction_id" placeholder={t("ao_transaction_id", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
             </>
           )}
-          <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="paid_amount" required placeholder={t("ao_paid_amount", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div>
             <label className="text-xs text-surface-500">{t("ao_receipt_upload", lang)}</label>

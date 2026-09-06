@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createDispatch, confirmDelivery, type ActionState } from "@/actions/agri-dispatch";
 import { Truck, X, MapPin, Check } from "lucide-react";
@@ -217,7 +218,7 @@ function CreateDispatchModal({
           <input name="driver_mobile" placeholder={t("ao_driver_mobile", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="transporter" placeholder={t("ao_transporter", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <input type="date" name="dispatch_date" defaultValue={new Date().toISOString().slice(0, 10)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input type="date" name="dispatch_date" defaultValue={aajKaKhana()} className="rounded-lg border border-surface-200 p-2 text-sm" />
             <input type="date" name="expected_delivery_date" className="rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <input name="delivery_location" placeholder={t("ao_delivery_location", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
@@ -383,7 +384,7 @@ function ConfirmDeliveryModal({
           </div>
           <input name="receiver_cnic" placeholder={t("ao_receiver_cnic", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="receiver_mobile" defaultValue={currentUserIdentity.mobile} placeholder={t("ao_receiver_mobile", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="date" name="delivered_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="delivered_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
 
           <div>
             <label className="text-xs text-surface-500">{t("ao_delivery_photo", lang)}</label>

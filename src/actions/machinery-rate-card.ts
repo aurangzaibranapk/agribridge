@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface RateCardState {
@@ -37,7 +38,7 @@ export async function saveRateCard(_prev: RateCardState, formData: FormData): Pr
   // hamesha milta hai.
   const machineType = String(formData.get("machine_type") ?? "").trim().toLowerCase() || null;
   const effectiveFrom =
-    String(formData.get("effective_from") ?? "").trim() || new Date().toISOString().slice(0, 10);
+    String(formData.get("effective_from") ?? "").trim() || aajKaKhana();
 
   const {
     data: { user },

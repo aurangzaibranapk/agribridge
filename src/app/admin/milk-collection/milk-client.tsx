@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createMilkEntry, recordMilkPayment, type ActionState } from "@/actions/milk";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -58,7 +59,7 @@ export function MilkClient({
   const [payTarget, setPayTarget] = useState<Balance | null>(null);
 
   const todayTotal = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = aajKaKhana();
     return entries.filter((e) => e.entry_date === today).reduce((sum, e) => sum + e.quantity_liters, 0);
   }, [entries]);
 
@@ -279,7 +280,7 @@ function NewEntryForm({ farmers, balances, branches }: { farmers: Farmer[]; bala
         )}
         <div>
           <Label>{t("mk_date", lang)}</Label>
-          <Input type="date" name="entry_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="entry_date" defaultValue={aajKaKhana()} />
         </div>
         <div>
           <Label>{t("mk_shift_auto", lang)}: {t(autoShift === "morning" ? "mk_morning" : "mk_evening", lang)}</Label>

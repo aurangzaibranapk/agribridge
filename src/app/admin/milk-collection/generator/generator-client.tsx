@@ -1,5 +1,6 @@
 "use client";
 import { useFormState, useFormStatus } from "react-dom";
+import { aajKaKhana } from "@/lib/utils/format";
 import { logGeneratorEntry, type ActionState } from "@/actions/generator";
 import { AlertTriangle, Zap, Image as ImageIcon } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -110,7 +111,7 @@ function GeneratorLogForm({ branches }: { branches: Branch[] }) {
             ))}
           </select>
         )}
-        <input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input type="date" name="log_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
           <input type="number" step="0.1" name="opening_hours" required placeholder={t("mo_opening_hours", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.1" name="closing_hours" required placeholder={t("mo_closing_hours", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />

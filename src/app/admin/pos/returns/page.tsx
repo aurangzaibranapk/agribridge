@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { BackLink } from "@/components/pos/back-link";
@@ -36,7 +37,7 @@ export default async function PosReturnsPage() {
 
   const canHoldCode = ["manager", "admin", "owner", "super_admin"].includes(me.role);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   const canSetWindow = ["owner", "super_admin", "admin"].includes(me.role);
 

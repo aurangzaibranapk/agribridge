@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -148,7 +149,7 @@ export async function clearCheque(_prev: ChequeState, formData: FormData): Promi
   if (!g.ok) return { error: g.error };
 
   const id = String(formData.get("cheque_id") ?? "").trim();
-  const clearedOn = String(formData.get("cleared_on") ?? "").trim() || new Date().toISOString().slice(0, 10);
+  const clearedOn = String(formData.get("cleared_on") ?? "").trim() || aajKaKhana();
   if (!id) return { error: "Cheque nahi mila." };
 
   const service = createServiceClient();
@@ -217,7 +218,7 @@ export async function bounceCheque(_prev: ChequeState, formData: FormData): Prom
 
   const amount = Number(c.amount);
   const memo = `Cheque ${c.cheque_number} wapas — ${reason}`;
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const posted = await postJournal({
     description: `Cheque wapas aa gaya (bounce): ${c.cheque_number}`,

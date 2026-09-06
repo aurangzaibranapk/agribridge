@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -30,7 +31,7 @@ export default async function ChillerPage({
     return <div className="p-8 text-center text-surface-400">{t("ch_only_chiller", lang)}</div>;
   }
 
-  const date = params.date ?? new Date().toISOString().slice(0, 10);
+  const date = params.date ?? aajKaKhana();
   const shift = params.shift ?? (new Date().getHours() < 14 ? "morning" : "evening");
 
   const [{ data: entries }, { data: receipts }] = await Promise.all([

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
 
@@ -29,7 +30,7 @@ export async function recordDispatch(_prev: DispatchState, formData: FormData): 
   } = await supabase.auth.getUser();
 
   const branchId = String(formData.get("branch_id") ?? "");
-  const date = String(formData.get("dispatch_date") ?? "") || new Date().toISOString().slice(0, 10);
+  const date = String(formData.get("dispatch_date") ?? "") || aajKaKhana();
   const shift = String(formData.get("shift") ?? "morning");
   const liters = Number(formData.get("dispatched_liters") ?? 0);
 

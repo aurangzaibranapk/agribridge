@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { t } from "@/lib/i18n/translations";
@@ -196,7 +197,7 @@ export function PaymentForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_date", lang)}</Label>
-          <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="payment_date" defaultValue={aajKaKhana()} />
         </div>
         {/* Cash kahan liya. Dono soorton mein wo lene wale ke naam par
             khara hota hai -- magar do mahine baad poochho to ye farq

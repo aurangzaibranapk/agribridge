@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { aajKaKhana } from "@/lib/utils/format";
 import { trialBalance } from "@/lib/ledger/money-trail";
 import { quantityReport } from "@/lib/ledger/quantity-money";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
@@ -663,7 +664,7 @@ export async function runChecks(): Promise<RunSummary> {
  */
 export async function saveRun(run: RunSummary, triggeredBy: string): Promise<{ id: string } | { error: string }> {
   const service = createServiceClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   const { data: existing } = await service
     .from("reconciliation_runs")

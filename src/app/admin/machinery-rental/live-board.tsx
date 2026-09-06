@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -82,7 +83,7 @@ export function LiveBoard() {
     return () => clearInterval(interval);
   }, []);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const aaj = cards.filter((c) => c.harvest_date === today).length;
   const chal = cards.filter((c) => c.work_state === "chal_raha").length;
   const guzri = cards.filter((c) => c.overdue).length;

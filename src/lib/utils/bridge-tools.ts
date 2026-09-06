@@ -1,4 +1,5 @@
 import { Type, type FunctionDeclaration } from "@google/genai";
+import { aajKaKhana } from "@/lib/utils/format";
 import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
@@ -673,7 +674,7 @@ async function getSupplierDues(
 ) {
   const days = Number(args.days ?? 7);
   const name = typeof args.supplier_name === "string" ? args.supplier_name.trim() : "";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   let q = supabase
     .from("v_supplier_due_calendar")

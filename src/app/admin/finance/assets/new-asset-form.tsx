@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createAsset, type AssetState } from "@/actions/assets";
 import { Card } from "@/components/ui/layout-primitives";
@@ -38,7 +39,7 @@ export function NewAssetForm({
 }) {
   const [state, formAction] = useFormState(createAsset, initial);
   const [open, setOpen] = useState(false);
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const [catId, setCatId] = useState("");
   const [method, setMethod] = useState("straight_line");

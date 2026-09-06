@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, postTransferIn, postTransferOut, failed, ACC } from "@/lib/ledger/rules";
 
@@ -62,7 +63,7 @@ export async function createFinanceAccount(_prev: ActionState, formData: FormDat
     const opening = new FormData();
     opening.set("account_id", account.id);
     opening.set("amount", String(openingBalance));
-    opening.set("as_of_date", String(formData.get("as_of_date") ?? new Date().toISOString().slice(0, 10)));
+    opening.set("as_of_date", String(formData.get("as_of_date") ?? aajKaKhana()));
     const r = await setOpeningBalance({}, opening);
     if (r.error) return { error: `Khata ban gaya, magar shuruati balance darj nahi hua: ${r.error}` };
   }
@@ -101,7 +102,7 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
 
   const accountId = String(formData.get("account_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const asOf = String(formData.get("as_of_date") ?? new Date().toISOString().slice(0, 10));
+  const asOf = String(formData.get("as_of_date") ?? aajKaKhana());
 
   if (!accountId) return { error: "Khata chunein." };
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -188,7 +189,7 @@ export async function recordFinanceTransaction(_prev: ActionState, formData: For
   const type = String(formData.get("transaction_type") ?? "");
   const category = (formData.get("category") as string) || null;
   const amount = Number(formData.get("amount") ?? 0);
-  const transactionDate = String(formData.get("transaction_date") ?? new Date().toISOString().slice(0, 10));
+  const transactionDate = String(formData.get("transaction_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!accountId) return { error: "Account is required." };
@@ -242,7 +243,7 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
   const fromAccountId = String(formData.get("from_account_id") ?? "");
   const toAccountId = String(formData.get("to_account_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const transactionDate = String(formData.get("transaction_date") ?? new Date().toISOString().slice(0, 10));
+  const transactionDate = String(formData.get("transaction_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!fromAccountId || !toAccountId) return { error: "Both accounts are required." };

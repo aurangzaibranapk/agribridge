@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -16,7 +17,7 @@ export interface ActionState {
 export async function logMaintenance(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const vehicleId = String(formData.get("vehicle_id") ?? "");
-  const serviceDate = String(formData.get("service_date") ?? new Date().toISOString().slice(0, 10));
+  const serviceDate = String(formData.get("service_date") ?? aajKaKhana());
   const kmAtService = Number(formData.get("km_at_service") ?? 0);
   const description = String(formData.get("description") ?? "").trim();
   const cost = Number(formData.get("cost") ?? 0);
@@ -78,7 +79,7 @@ export async function recordFundWithdrawal(_prev: ActionState, formData: FormDat
   const supabase = createClient();
   const amount = Number(formData.get("amount") ?? 0);
   const reason = String(formData.get("reason") ?? "").trim();
-  const withdrawalDate = String(formData.get("withdrawal_date") ?? new Date().toISOString().slice(0, 10));
+  const withdrawalDate = String(formData.get("withdrawal_date") ?? aajKaKhana());
   if (!amount || amount <= 0) return { error: "Amount zaroori hai." };
   if (!reason) return { error: "Wajah likhein." };
 

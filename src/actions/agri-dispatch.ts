@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
@@ -88,7 +89,7 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   const driverName = (formData.get("driver_name") as string) || null;
   const driverMobile = (formData.get("driver_mobile") as string) || null;
   const transporter = (formData.get("transporter") as string) || null;
-  const dispatchDate = String(formData.get("dispatch_date") ?? new Date().toISOString().slice(0, 10));
+  const dispatchDate = String(formData.get("dispatch_date") ?? aajKaKhana());
   const expectedDeliveryDate = (formData.get("expected_delivery_date") as string) || null;
   const deliveryLocation = (formData.get("delivery_location") as string) || null;
   const itemsJson = String(formData.get("items_json") ?? "[]");
@@ -195,7 +196,7 @@ export async function confirmDelivery(_prev: ActionState, formData: FormData): P
   const receiverCnic = (formData.get("receiver_cnic") as string) || null;
   const receiverMobile = (formData.get("receiver_mobile") as string) || null;
   const vehicleNo = (formData.get("vehicle_no") as string) || null;
-  const deliveredDate = String(formData.get("delivered_date") ?? new Date().toISOString().slice(0, 10));
+  const deliveredDate = String(formData.get("delivered_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
   const signatureData = (formData.get("signature_data") as string) || null;
   const itemsJson = String(formData.get("items_json") ?? "[]");

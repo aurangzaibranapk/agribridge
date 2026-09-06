@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types/database.types";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
@@ -106,7 +107,7 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
       transaction_type: "income",
       category: "Farmer Credit Repayment",
       amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: `Farmer credit repayment${notes ? ` - ${notes}` : ""}`,
       created_by: user?.id ?? null,
     })

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGRN, submitWarehouseExplanation, finalizeGrnDiscrepancy, type ActionState } from "@/actions/agri-grn";
@@ -254,7 +255,7 @@ function CreateGrnModal({
           <input type="hidden" name="dispatch_id" value={dispatchId ?? ""} />
           <input type="hidden" name="items_json" value={itemsJson} />
 
-          <input type="date" name="receiving_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="receiving_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
 
           {orderItems.map((item) => {
             const info = deliveryInfoByOrderItem[item.id];

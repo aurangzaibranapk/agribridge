@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainSale, recordGrainSalePayment, type ActionState } from "@/actions/grain-sales";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -166,7 +167,7 @@ function NewSaleForm({
         )}
         <div>
           <Label>{t("c_date", lang)}</Label>
-          <Input type="date" name="sale_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="sale_date" defaultValue={aajKaKhana()} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

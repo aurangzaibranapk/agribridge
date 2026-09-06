@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -257,7 +258,7 @@ export async function postDepreciationRun(_prev: AssetState, formData: FormData)
   const monthEnd = new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0))
     .toISOString()
     .slice(0, 10);
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const entryDate = monthEnd > aaj ? aaj : monthEnd;
 
   const posted = await postAssetDepreciation({

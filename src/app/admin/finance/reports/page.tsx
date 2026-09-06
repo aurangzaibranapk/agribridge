@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -53,7 +54,7 @@ export default async function FinanceReportsPage({
   }
 
   const view = (VIEWS.find((v) => v.key === searchParams.view)?.key ?? "cashflow") as View;
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const saalShuru = `${new Date().getFullYear()}-01-01`;
   const from = searchParams.from ?? saalShuru;
   const to = searchParams.to ?? aaj;

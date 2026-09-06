@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -126,7 +127,7 @@ export async function verifyTransferPayment(_prev: ActionState, formData: FormDa
     transaction_type: "income",
     category: "Internal Stock Transfer",
     amount: transfer.total_amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
+    transaction_date: aajKaKhana(),
     notes: `Payment for transfer ${transfer.transfer_number}`,
     created_by: user.id,
   });

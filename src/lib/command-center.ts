@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import type { Lang } from "@/lib/i18n/translations";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
@@ -125,7 +126,7 @@ function monthStart(): string {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return aajKaKhana();
 }
 
 export async function loadMoneyToday(): Promise<MoneyToday> {

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -91,7 +92,7 @@ export async function checkFarmerSubscriptionAccess(farmerId: string): Promise<{
 
   if (!settings?.is_enforced) return { hasAccess: true, minimumAmount: settings?.minimum_amount ?? 0 };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const { data: activeSub } = await supabase
     .from("farmer_subscriptions")
     .select("id")

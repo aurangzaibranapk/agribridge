@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { addVehicle, logFuelEntry, saveFuelRateSettings, type ActionState } from "@/actions/fuel";
 import { AlertTriangle, Bike, Plus, X, Settings, Image as ImageIcon } from "lucide-react";
@@ -224,7 +225,7 @@ function FuelLogForm({ vehicles }: { vehicles: Vehicle[] }) {
             <option key={v.id} value={v.id}>{v.vehicle_name} {v.branch_name ? `(${v.branch_name})` : ""}</option>
           ))}
         </select>
-        <input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <input type="date" name="log_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
           <input type="number" step="0.1" name="opening_km" required placeholder={t("mf_opening_km", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.1" name="closing_km" required placeholder={t("mf_closing_km", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 import { createClient } from "@/lib/supabase/server";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
@@ -367,7 +368,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
     .insert({
       booking_number: bookingNumber,
       farmer_id: farmerId,
-      booking_date: str(formData, "booking_date") ?? new Date().toISOString().slice(0, 10),
+      booking_date: str(formData, "booking_date") ?? aajKaKhana(),
       status: "new",
 
       crop_type: str(formData, "crop_type"),
@@ -507,7 +508,7 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
         kind: "advance",
         amount: claim.amount,
         method: claim.method ?? "cash",
-        payment_date: new Date().toISOString().slice(0, 10),
+        payment_date: aajKaKhana(),
         reference: claim.reference,
         proof_url: claim.proofUrl,
         verification_status: "claimed",
@@ -606,7 +607,7 @@ async function saveAdvance(args: {
       finance_account_id: inCustody ? null : args.accountId,
       custody_profile_id: inCustody ? args.actorId : null,
       received_location: inCustody ? (args.receivedLocation ?? "office") : null,
-      payment_date: args.paymentDate ?? new Date().toISOString().slice(0, 10),
+      payment_date: args.paymentDate ?? aajKaKhana(),
       reference: args.reference,
       evidence_url: args.evidenceUrl,
       receipt_number: receiptNumber,
@@ -1283,7 +1284,7 @@ async function saveDieselExpense(args: {
       transaction_type: "expense",
       category: "Machinery - Diesel",
       amount: args.amount,
-      transaction_date: new Date().toISOString().slice(0, 10),
+      transaction_date: aajKaKhana(),
       notes: recoverable
         ? `Diesel — machinery booking ${args.bookingNumber}${litrePart} (vendor se wapas aana hai)`
         : `Diesel — machinery booking ${args.bookingNumber}${litrePart}`,
@@ -1398,7 +1399,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
     .from("machinery_fuel_logs")
     .insert({
       booking_id: bookingId,
-      log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
+      log_date: str(formData, "log_date") ?? aajKaKhana(),
       litres,
       rate_per_litre: ratePerLitre,
       amount,
@@ -1631,7 +1632,7 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   const kanal = num(formData, "actual_area_kanal");
   if (toAcres(acres, kanal) <= 0) return { error: "Asal raqba likhein (acre ya kanal)." };
 
-  const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
+  const workDate = str(formData, "work_date") ?? aajKaKhana();
   const isFinal = formData.get("is_final") === "on";
 
   const { data: booking } = await supabase
@@ -2460,7 +2461,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
     return { error: `Baqi sirf Rs ${remaining.toLocaleString()} hai, magar Rs ${newTotal.toLocaleString()} likha gaya hai.` };
   }
 
-  const paymentDate = str(formData, "payment_date") ?? new Date().toISOString().slice(0, 10);
+  const paymentDate = str(formData, "payment_date") ?? aajKaKhana();
 
   // Cash kahan liya gaya. Dono soorton mein wo lene wale ke naam par
   // khara hota hai -- magar do mahine baad poochho to ye farq kisi ko
@@ -3662,7 +3663,7 @@ export async function createFollowUpBooking(_prev: ActionState, formData: FormDa
       farmer_id: parent.farmer_id,
       farm_id: parent.farm_id,
       parent_booking_id: parent.id,
-      booking_date: new Date().toISOString().slice(0, 10),
+      booking_date: aajKaKhana(),
       status: "new",
       crop_type: parent.crop_type,
       machine_type_requested: parent.machine_type_requested,

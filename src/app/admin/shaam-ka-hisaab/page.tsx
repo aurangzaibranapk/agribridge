@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { createClient } from "@/lib/supabase/server";
@@ -69,7 +70,7 @@ export default async function ShaamKaHisaabPage() {
     return <div className="p-8 text-center text-surface-400">Ye safha sirf Finance, Manager ya Admin ke liye hai.</div>;
   }
 
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const [haalat, { data: accounts }, { data: aajKiBikri }, { data: adaigiyan }, { data: inventoryRows }] =
     await Promise.all([

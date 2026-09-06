@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
@@ -15,7 +16,7 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
   const amount = Number(formData.get("amount") ?? 0);
   const accountId = (formData.get("account_id") as string) || null;
   const entryId = (formData.get("entry_id") as string) || null;
-  const expenseDate = String(formData.get("expense_date") ?? new Date().toISOString().slice(0, 10));
+  const expenseDate = String(formData.get("expense_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!["diesel_fuel", "labor_mazdoori", "bardana", "tractor_trolley_rent", "other"].includes(category)) {

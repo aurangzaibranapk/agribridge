@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { payAndPost } from "@/lib/ledger/supplier-money";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
@@ -38,7 +39,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   const supabase = createClient();
   const supplierId = String(formData.get("supplier_id") ?? "");
   if (!supplierId) return { error: "Supplier is required." };
-  const purchaseDate = String(formData.get("purchase_date") ?? new Date().toISOString().slice(0, 10));
+  const purchaseDate = String(formData.get("purchase_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
   const {
     data: { user },

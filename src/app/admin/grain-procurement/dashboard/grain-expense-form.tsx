@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainExpense, type ActionState } from "@/actions/grain-expenses";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -81,7 +82,7 @@ export function GrainExpenseForm({ financeAccounts, entries }: { financeAccounts
           </div>
           <div>
             <Label>{t("c_date", lang)}</Label>
-            <Input type="date" name="expense_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+            <Input type="date" name="expense_date" defaultValue={aajKaKhana()} />
           </div>
         </div>
         <div>

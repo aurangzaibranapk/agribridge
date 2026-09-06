@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -52,7 +53,7 @@ export default async function AccountLedgerPage({
     .eq("is_active", true)
     .order("sort_order");
 
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
   const saalShuru = `${new Date().getFullYear()}-01-01`;
   const from = searchParams.from ?? saalShuru;
   const to = searchParams.to ?? aaj;

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -72,7 +73,7 @@ export default async function ChequesPage() {
       <ChequesClient
         lang={lang}
         canRun={RUN_ROLES.includes(me.role)}
-        today={new Date().toISOString().slice(0, 10)}
+        today={aajKaKhana()}
         accounts={(accounts ?? []).map((a) => ({ id: a.id as string, name: a.name as string }))}
         books={(books ?? []).map((b) => ({
           id: b.id as string,

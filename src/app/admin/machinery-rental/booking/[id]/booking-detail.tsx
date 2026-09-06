@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -1209,7 +1210,7 @@ function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Arr
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_date", lang)}</Label>
-          <Input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="payment_date" defaultValue={aajKaKhana()} />
         </div>
         <div>
           <Label>{t("mc_reference", lang)}</Label>
@@ -1818,7 +1819,7 @@ function FuelForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_date", lang)}</Label>
-          <Input type="date" name="log_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="log_date" defaultValue={aajKaKhana()} />
         </div>
         <div>
           <Label>{t("mc_diesel_litre", lang)} *</Label>
@@ -1967,7 +1968,7 @@ function WorkForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>{t("mc_work_date", lang)}</Label>
-          <Input type="date" name="work_date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input type="date" name="work_date" defaultValue={aajKaKhana()} />
         </div>
         <div />
         <div>
@@ -2531,7 +2532,7 @@ function FollowUpForm({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>{t("mc_followup_date", lang)}</Label>
-              <Input type="date" name="preferred_date" min={new Date().toISOString().slice(0, 10)} />
+              <Input type="date" name="preferred_date" min={aajKaKhana()} />
             </div>
             <div>
               <Label>{t("mc_followup_area", lang)}</Label>
@@ -2627,7 +2628,7 @@ function PromiseForm({
               <Input
                 type="date"
                 name="promise_date"
-                min={new Date().toISOString().slice(0, 10)}
+                min={aajKaKhana()}
                 defaultValue={promiseDate ?? ""}
               />
             </div>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SubscriptionAdminClient } from "./subscription-admin-client";
 import { t } from "@/lib/i18n/translations";
@@ -38,7 +39,7 @@ export default async function AdminSubscriptionsPage() {
     };
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const activeSubscriberIds = new Set(
     normalizedSubs.filter((s) => s.status === "active" && s.endDate >= today).map((s) => s.farmerCode)
   );

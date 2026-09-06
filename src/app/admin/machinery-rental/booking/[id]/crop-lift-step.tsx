@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -222,7 +223,7 @@ function LiftForm({
         </div>
         <div>
           <Label htmlFor="lift_date">{t("ar_date", lang)}</Label>
-          <Input id="lift_date" name="lift_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input id="lift_date" name="lift_date" type="date" defaultValue={aajKaKhana()} />
         </div>
       </div>
 

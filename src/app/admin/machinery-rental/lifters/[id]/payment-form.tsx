@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { recordLifterPayment, type LifterState } from "@/actions/crop-lifters";
@@ -97,7 +98,7 @@ export function LifterPaymentForm({
             id="payment_date"
             name="payment_date"
             type="date"
-            defaultValue={new Date().toISOString().slice(0, 10)}
+            defaultValue={aajKaKhana()}
           />
         </div>
         <div>

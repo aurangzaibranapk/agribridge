@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
@@ -45,7 +46,7 @@ export default async function CashClosePage() {
   if (!seesAllBranches && me.branch_id) branchQuery = branchQuery.eq("id", me.branch_id);
   const { data: branchRows } = await branchQuery;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
 
   // Har branch ka "hona kitna chahiye" server par ginta hai -- form is
   // adad ko chhoo bhi nahi sakta.

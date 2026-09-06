@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Printer, Download, Mail, MessageCircle, X, Plus, Landmark } from "lucide-react";
 import { recordSupplierPayment, type ActionState } from "@/actions/supplier-payments";
@@ -178,7 +179,7 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} encType="multipart/form-data" className="space-y-2">
           <input type="hidden" name="supplier_id" value={supplierId} />
-          <input type="date" name="payment_date" defaultValue={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <select name="payment_method" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
             <option value="cash">{t("c_cash", lang)}</option>

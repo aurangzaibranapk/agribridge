@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -274,7 +275,7 @@ export async function recordCropLift(_prev: LifterState, fd: FormData): Promise<
   const actorId = await actor();
   const bookingId = str(fd, "booking_id");
   const cropValue = num(fd, "crop_value");
-  const liftDate = str(fd, "lift_date") ?? new Date().toISOString().slice(0, 10);
+  const liftDate = str(fd, "lift_date") ?? aajKaKhana();
 
   if (!bookingId) return { error: "Booking nahi mili." };
   if (cropValue === null || cropValue <= 0) {
@@ -430,7 +431,7 @@ export async function recordLifterPayment(_prev: LifterState, fd: FormData): Pro
   const amount = num(fd, "amount");
   const method = str(fd, "method") ?? "cash";
   const accountId = str(fd, "finance_account_id");
-  const payDate = str(fd, "payment_date") ?? new Date().toISOString().slice(0, 10);
+  const payDate = str(fd, "payment_date") ?? aajKaKhana();
 
   if (!lifterId) return { error: "Uthane wala nahi mila." };
   if (amount === null || amount <= 0) return { error: "Raqam likhein." };

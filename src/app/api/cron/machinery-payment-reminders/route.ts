@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   let bheje = 0;
   let nakaam = 0;
   let chhore = 0;

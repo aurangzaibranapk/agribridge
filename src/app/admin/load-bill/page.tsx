@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -60,7 +61,7 @@ export default async function LoadBillPage({
   if (!me?.is_active) redirect("/login");
 
   const service = createServiceClient();
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const [{ data: providers }, { data: accounts }, { data: financeAccounts }] = await Promise.all([
     service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),

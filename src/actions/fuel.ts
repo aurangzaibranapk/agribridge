@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -70,7 +71,7 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const vehicleId = String(formData.get("vehicle_id") ?? "");
-  const logDate = String(formData.get("log_date") ?? new Date().toISOString().slice(0, 10));
+  const logDate = String(formData.get("log_date") ?? aajKaKhana());
   const openingKm = Number(formData.get("opening_km") ?? 0);
   const closingKm = Number(formData.get("closing_km") ?? 0);
   const fuelLiters = Number(formData.get("fuel_liters_purchased") ?? 0);

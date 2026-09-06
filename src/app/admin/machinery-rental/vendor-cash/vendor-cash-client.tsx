@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordVendorCashHandover, type ActionState } from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -120,7 +121,7 @@ function VendorCard({
             <input
               type="date"
               name="received_date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={aajKaKhana()}
               className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
             />
             <div className="flex gap-2">

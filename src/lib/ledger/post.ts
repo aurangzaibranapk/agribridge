@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
+import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Double-entry ka darwaza -- har rupya yahin se guzarta hai.
  *
@@ -133,7 +134,7 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
 
   const service = createServiceClient();
   const entryNumber = await nextEntryNumber();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const entryDate = input.entryDate ?? today;
   const backdated = entryDate < today;
 
@@ -310,7 +311,7 @@ export async function reverseJournal(
           transaction_type: OPPOSITE[row.transaction_type],
           category: row.category,
           amount: row.amount,
-          transaction_date: new Date().toISOString().slice(0, 10),
+          transaction_date: aajKaKhana(),
           notes: `Reversal of ${original.entry_number}${row.notes ? ` — ${row.notes}` : ""}`,
           created_by: byProfileId,
         })

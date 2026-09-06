@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { recordCollection, applyFat } from "@/lib/milk-collection";
 import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
@@ -28,7 +29,7 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   const branchId = (formData.get("branch_id") as string) || null;
-  const entryDate = String(formData.get("entry_date") ?? new Date().toISOString().slice(0, 10));
+  const entryDate = String(formData.get("entry_date") ?? aajKaKhana());
   const shift = String(formData.get("shift") ?? "morning");
   const quantity = Number(formData.get("quantity_liters") ?? 0);
   const fat = Number(formData.get("fat_percentage") ?? 0);

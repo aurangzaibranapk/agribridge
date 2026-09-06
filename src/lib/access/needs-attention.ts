@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
@@ -92,7 +93,7 @@ async function handoffItems(): Promise<AttentionItem[]> {
 }
 
 export async function loadNeedsAttention(): Promise<AttentionItem[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   // Pichhla mahina -- ghisai hamesha guzre hue mahine ki chalti hai.
   const ab = new Date();
   const pichhlaMahinaShuru = new Date(Date.UTC(ab.getUTCFullYear(), ab.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);

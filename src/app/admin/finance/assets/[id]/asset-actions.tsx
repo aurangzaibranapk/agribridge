@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { disposeAsset, revalueAsset, type AssetState } from "@/actions/assets";
 import { Card } from "@/components/ui/layout-primitives";
@@ -34,7 +35,7 @@ export function AssetActions({
   const [type, setType] = useState("sale");
   const [proceeds, setProceeds] = useState("");
   const [newValue, setNewValue] = useState("");
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const rs = (n: number) => `Rs ${Math.round(n).toLocaleString()}`;
   const gainLoss = Math.round(((Number(proceeds) || 0) - bookValue) * 100) / 100;

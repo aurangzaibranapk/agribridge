@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { notifyRoles } from "@/lib/notifications";
 import { logAudit } from "@/lib/audit";
@@ -93,7 +94,7 @@ export async function submitVendorWork(
     }
   }
 
-  const workDate = str(formData, "work_date") ?? new Date().toISOString().slice(0, 10);
+  const workDate = str(formData, "work_date") ?? aajKaKhana();
   const isFinal = formData.get("is_final") === "on";
 
   // DEVICE PAR BANI CHAABI (189).
@@ -272,7 +273,7 @@ export async function submitVendorClosing(
     return { error: "Batayein: kisan ne paisa diya ya nahi." };
   }
 
-  const onDate = str(formData, "answer_date") ?? new Date().toISOString().slice(0, 10);
+  const onDate = str(formData, "answer_date") ?? aajKaKhana();
   const extras: string[] = [];
 
   if (dieselAns === "haan") {
@@ -394,7 +395,7 @@ export async function submitVendorFuel(
   const { error } = await supabase.from("machinery_fuel_logs").insert({
     booking_id: bookingId,
     client_action_id: clientActionId,
-    log_date: str(formData, "log_date") ?? new Date().toISOString().slice(0, 10),
+    log_date: str(formData, "log_date") ?? aajKaKhana(),
     litres,
     rate_per_litre: ratePerLitre,
     amount,
@@ -515,7 +516,7 @@ export async function submitVendorCollection(
     kind: "final",
     amount,
     method: "vendor_collected",
-    payment_date: str(formData, "payment_date") ?? new Date().toISOString().slice(0, 10),
+    payment_date: str(formData, "payment_date") ?? aajKaKhana(),
     reference: str(formData, "reference"),
     collected_by_vendor_id: vendor.id,
     vendor_settlement: settlement,

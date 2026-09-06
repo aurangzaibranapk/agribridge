@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -35,7 +36,7 @@ export default async function ChartOfAccountsPage() {
   }
 
   const service = createServiceClient();
-  const aaj = new Date().toISOString().slice(0, 10);
+  const aaj = aajKaKhana();
 
   const [{ data: accounts, error }, tb] = await Promise.all([
     service.from("gl_accounts").select("code, name, account_type, normal_side, is_active, is_contra, sort_order").order("sort_order"),

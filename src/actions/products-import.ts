@@ -1,6 +1,7 @@
 "use server";
 
 import { loadUnitAliases } from "@/lib/units";
+import { aajKaKhana } from "@/lib/utils/format";
 import { revalidatePath } from "next/cache";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
@@ -763,7 +764,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     } else {
 
     const purchaseNumber = `PO-${Date.now()}`;
-    const purchaseDate = new Date().toISOString().slice(0, 10);
+    const purchaseDate = aajKaKhana();
     const totalAmount = withQty.reduce(
       (sum, x) => sum + Number(x.row.openingQty ?? 0) * Number(x.row.purchasePrice ?? 0),
       0

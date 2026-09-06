@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { aajKaKhana } from "@/lib/utils/format";
 import { loadRegistry } from "@/lib/access/registry";
 import { loadNeedsAttention, filterAttention, type AttentionItem } from "@/lib/access/needs-attention";
 import type { NavGroupData, NavEntry } from "@/lib/access/nav";
@@ -166,7 +167,7 @@ async function infoBadges(lang: Lang): Promise<Map<string, CardBadge>> {
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aajKaKhana();
   const [sales, products] = await Promise.all([
     count("pos_sales", (q) => q.gte("created_at", today)),
     count("products", (q) => q.eq("status", "active")),
