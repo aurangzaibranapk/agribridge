@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
-import { Users, FileText, CheckSquare } from "lucide-react";
+import { Users, FileText, CheckSquare, Store, Plus } from "lucide-react";
 import { DeleteBranchButton } from "./delete-branch-button";
 import { BranchStatusManager } from "./branch-status-manager";
 import { EditBranchButton } from "./edit-branch-modal";
@@ -28,7 +28,30 @@ interface Worker {
   role: string;
 }
 
-export function BranchesListClient({ branches, staffByBranch }: { branches: Branch[]; staffByBranch: Record<string, Worker[]> }) {
+interface Dukan {
+  id: string;
+  name: string;
+  business_type: string;
+  is_active: boolean;
+}
+
+const QISM_LABEL: Record<string, string> = {
+  karyana: "Karyana",
+  agri_inputs: "Agri Inputs",
+  grain_procurement: "Anaj",
+  dairy: "Doodh",
+  machinery_fleet: "Machinery",
+};
+
+export function BranchesListClient({
+  branches,
+  staffByBranch,
+  shopsByBranch = {},
+}: {
+  branches: Branch[];
+  staffByBranch: Record<string, Worker[]>;
+  shopsByBranch?: Record<string, Dukan[]>;
+}) {
   const [selected, setSelected] = useState<string[]>([]);
   const lang = useLang();
 
@@ -53,6 +76,7 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
       <div className="space-y-2">
         {branches.map((b) => {
           const workers = staffByBranch[b.id] ?? [];
+          const dukanein = shopsByBranch[b.id] ?? [];
           return (
             <div key={b.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
               <div className="flex items-start justify-between">
@@ -84,6 +108,45 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
                   <strong>{t("br_reason_label", lang)}</strong> {b.status_reason}
                 </p>
               )}
+              {/* Is shaakh ki dukanein -- shaakh ke andar hi.
+                  Malik ka naqsha: pehle shaakh, phir us ke andar dukan.
+                  Dukan ka apna godam us dukan ka hota hai; HQ ka godam
+                  kisi shaakh ya dukan ka nahi -- wo alag cheez hai. */}
+              <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
+                    <Store className="h-3.5 w-3.5" /> Dukanein ({dukanein.length})
+                  </p>
+                  <Link
+                    href="/admin/shops"
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    <Plus className="h-3 w-3" /> Nayi dukan
+                  </Link>
+                </div>
+                {dukanein.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                    Is shaakh ke neeche koi dukan nahi — is par kaam karne wale ko dukan nahi chuni ja
+                    sakegi.
+                  </p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {dukanein.map((d) => (
+                      <span
+                        key={d.id}
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          d.is_active
+                            ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+                            : "bg-surface-100 text-surface-500 dark:bg-surface-800"
+                        }`}
+                      >
+                        {d.name} <span className="opacity-60">({QISM_LABEL[d.business_type] ?? d.business_type})</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
                   <Users className="h-3.5 w-3.5" /> Workers ({workers.length})
