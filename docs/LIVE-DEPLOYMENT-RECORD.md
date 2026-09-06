@@ -1807,6 +1807,8 @@ tasdeeq se pehle Live par koi migration nahi).
 | 344 | Sales staff ka template malik ki fehrist par (20 → 9, view+create) | ✅ | **baqi** |
 | 345 | Dukan ka code khud bane (01, 02…) | ✅ | **baqi** |
 | 346 | Ek bande ke ek feature ki EK hi pakki qatar (unique taala) | ✅ (index bana) | **baqi** |
+| 347 | Rozana ka kharcha: banda, khata, tareekh + manzoori ka taala | ✅ | **baqi** |
+| 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
@@ -1861,3 +1863,14 @@ select * from v_cash_book_ledger_farq;   -- baad mein KHALI honi chahiye
    malik mitana chahte hain. Shaakh mitane se wo hadd bhi chupchaap mit
    jayegi. Malik se poochha ja chuka hai: hadd Main Branch Mahabali par
    le jayein ya khatam karein. Jawab ke baghair shaakh nahi miti.
+
+8. **Company Expenses par qism ka purana taala** — Live par
+   `company_expense_requests.category` sirf SAAT naam qubool karta hai
+   (inventory_purchase, rent, salary, utility_bill, supplier_payment,
+   maintenance, other). Safha us se ZYADA qismein dikhata hai — `fuel`,
+   `transport`, `tea_food`, `stationery`, `cleaning`. In mein se koi
+   chun kar bill bhejne par qatar database par ruk jati thi.
+
+   Abhi tak kisi ne mehsoos nahi kiya kyunki Live par ek bhi kharcha
+   darj hi nahi hua (ginti 0). Migration 348 ye taala shakal wale taale
+   se badal deti hai. Ye Live par 347 ke saath hi jayegi.

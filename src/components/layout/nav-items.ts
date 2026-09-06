@@ -122,6 +122,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/finance/queue", label: "Finance Queue", icon: CreditCard },
       { href: "/admin/finance/payment-mapping", label: "Payment Method Mapping", icon: CreditCard },
       { href: "/admin/agri-orders", label: "AgriBridge Ordering", icon: ClipboardType },
+      { href: "/admin/kharche", label: "Kharche aur Adaigi", icon: ReceiptText },
       { href: "/admin/company-expenses", label: "Company Expenses", icon: ReceiptText },
       { href: "/admin/finance", label: "Cash Book", icon: Landmark },
       { href: "/admin/finance/banks", label: "Banks", icon: Landmark },
