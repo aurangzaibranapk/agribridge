@@ -250,6 +250,23 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   // liye zyada raqam vendor ke khate mein ADVANCE ban jati hai (1120):
   // wo us se agli booking par kat jayegi, aur tab tak nazar mein rehti
   // hai ke us ke paas hamara itna paisa para hai.
+  // Jis booking par kuch dena hi nahi bacha, us par dobara adaigi NAHI.
+  //
+  // Malik (6 September): *"jab record ho gayi to doubling nahi honi
+  // chahiye -- ek hi farmer par bar bar."*
+  //
+  // Ye rok us din likhi ja rahi hai jis din MB-2026-00004 par Rs 30,000
+  // TEEN dafa nikal chuke the. Zyada raqam ka advance banna theek hai
+  // (5 September ka faisla) -- magar wo ek ASAL adaigi ka bacha hua
+  // hissa hota hai, apne aap mein ek nayi adaigi nahi. Sirf advance
+  // dena ho to wo vendor ke apne khate se hota hai, kisi booking par
+  // nahi.
+  if (remaining <= 0) {
+    return {
+      error: `Is booking par ${booking.booking_number} vendor ko poora paisa ja chuka hai — dobara adaigi darj nahi hoti. Vendor ko sirf advance dena ho to wo us ke apne khate se dein.`,
+    };
+  }
+
   const payableSettled = Math.min(amount, remaining);
   const advance = Math.round((amount - payableSettled) * 100) / 100;
 
@@ -279,6 +296,40 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     data: { user },
   } = await supabase.auth.getUser();
 
+  // BOOKING PAR PEHLE, PAISA BAAD MEIN.
+  //
+  // Ye tarteeb 6 September ki kharabi ke baad badli gayi. Pehle ulta
+  // tha: cash nikalta, ledger mein entry banti, aur SAB SE AAKHIR mein
+  // booking par "itna diya" charhta -- aur us aakhri qadam ki NAKAMI
+  // KOI PARHTA HI NAHI THA.
+  //
+  // MB-2026-00004 par wahi hua. Us booking par kisan ke wade ki tareekh
+  // guzar chuki thi, aur `fn_guard_payment_promise` har update ko rok
+  // raha tha (340 mein theek hua). Update chup chaap nakaam hoti rahi,
+  // safha "Rs 24,750 baqi" dikhata raha, aur Rs 30,000 TEEN dafa nikal
+  // gaye -- Cash in Hand manfi Rs 88,000 par chala gaya.
+  //
+  // Ab agar ye qadam nakaam hota hai to WAHIN ruk jate hain: ek rupya
+  // bhi bahar nahi gaya hota, aur bulane wale ko wajah nazar aati hai.
+  const { error: bookingError } = await supabase
+    .from("machinery_bookings")
+    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + payableSettled })
+    .eq("id", bookingId);
+
+  if (bookingError) {
+    return {
+      error: `Booking par adaigi darj nahi ho saki, is liye paisa bhi nahi nikala gaya: ${bookingError.message}`,
+    };
+  }
+
+  /** Booking wapas wahin, jahan se chali thi. */
+  const bookingWapas = async () => {
+    await createServiceClient()
+      .from("machinery_bookings")
+      .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) })
+      .eq("id", bookingId);
+  };
+
   // Kharche ki qatar sirf us paise ki banti hai jo waqai bahar gaya.
   // Diesel ka kharcha us din darj ho chuka tha.
   let txn: { id: string } | null = null;
@@ -299,7 +350,10 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
       })
       .select("id")
       .single();
-    if (txnError || !row) return { error: txnError?.message ?? "Payout darj nahi hua." };
+    if (txnError || !row) {
+      await bookingWapas();
+      return { error: txnError?.message ?? "Payout darj nahi hua." };
+    }
     txn = row;
   }
 
@@ -328,17 +382,9 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   });
   if (failed(posted)) {
     if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    await bookingWapas();
     return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }
-
-  // Booking par sirf US BOOKING ka hissa charhta hai. Zyada raqam yahan
-  // jorne se booking par "diya hua" us se bara nazar aata jitna is
-  // booking par banta tha -- aur wo adad har report mein galat chala
-  // jata.
-  await supabase
-    .from("machinery_bookings")
-    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + payableSettled })
-    .eq("id", bookingId);
 
   revalidatePath("/admin/machinery-rental");
   revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
