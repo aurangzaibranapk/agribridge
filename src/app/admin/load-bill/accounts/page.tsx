@@ -49,7 +49,7 @@ export default async function LoadAccountsPage() {
 
   const [{ data: providers }, { data: accounts }, { data: financeAccounts }] = await Promise.all([
     service.from("load_providers").select("id, name, kind").eq("is_active", true).order("sort_order"),
-    service.from("load_accounts").select("id, title, account_ref, provider_id, opening_float, opened_on").eq("is_active", true).order("title"),
+    service.from("load_accounts").select("id, title, account_ref, provider_id, finance_account_id, opened_on").eq("is_active", true).order("title"),
     service.from("finance_accounts").select("id, name").eq("is_active", true).order("name"),
   ]);
 
@@ -88,7 +88,7 @@ export default async function LoadAccountsPage() {
           id: a.id as string,
           title: a.title as string,
           accountRef: (a.account_ref as string | null) ?? null,
-          providerName: providerName.get(a.provider_id as string) ?? "—",
+          providerName: a.provider_id ? providerName.get(a.provider_id as string) ?? "—" : "Har provider",
           float: floats.get(a.id as string) ?? null,
         }))}
         financeAccounts={(financeAccounts ?? []).map((f) => ({ id: f.id as string, name: f.name as string }))}

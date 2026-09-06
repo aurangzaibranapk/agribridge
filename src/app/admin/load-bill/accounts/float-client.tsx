@@ -71,9 +71,24 @@ export function FloatClient({
         {khula && (
           <form action={newAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Label htmlFor="provider_id">Provider</Label>
-              <Select id="provider_id" name="provider_id" required>
+              <Label htmlFor="finance_account_id">Asal khata (paisa kahan para hai)</Label>
+              <Select id="finance_account_id" name="finance_account_id" required defaultValue="">
                 <option value="">— chunein —</option>
+                {financeAccounts.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="title">Account ka naam</Label>
+              <Input id="title" name="title" required placeholder="CBA Account — Load/Billing" />
+            </div>
+            <div>
+              <Label htmlFor="provider_id">Sirf ek provider ka? (marzi ka)</Label>
+              <Select id="provider_id" name="provider_id" defaultValue="">
+                <option value="">Har provider ke liye</option>
                 {providers.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -82,22 +97,17 @@ export function FloatClient({
               </Select>
             </div>
             <div>
-              <Label htmlFor="title">Account ka naam</Label>
-              <Input id="title" name="title" required placeholder="Jazz retailer — Main Branch" />
-            </div>
-            <div>
               <Label htmlFor="account_ref">Account number (marzi ka)</Label>
               <Input id="account_ref" name="account_ref" placeholder="jaise 0300xxxxxxx" />
             </div>
-            <div>
-              <Label htmlFor="opening_float">Abhi us mein kitna hai</Label>
-              <Input id="opening_float" name="opening_float" inputMode="decimal" placeholder="khali bhi chhora ja sakta hai" />
-            </div>
             <div className="sm:col-span-2 lg:col-span-4">
               <p className="mb-2 text-[11px] leading-relaxed text-surface-500">
-                &ldquo;Abhi us mein kitna hai&rdquo; khali chhorna theek hai — us ka matlab &ldquo;darj nahi
-                hua&rdquo; hai, sifar nahi. Likh dein to wo ledger mein bhi chala jayega, sirf is khane mein
-                nahi baithega.
+                <b>Shuruati balance ka khana yahan nahi hai — jaan boojh kar.</b> Float us asal khate ka
+                apna balance hai (jaise CBA Account ka), koi alag adad nahi. Do jagah rakhne se ek hi paise
+                ke do adad ban jate hain aur ek din wo alag ho jate hain.
+                <br />
+                Provider khali chhorne ka matlab: <b>yehi ek account har network ke liye chalega</b> — Jazz
+                ka load bhi, bijli ka bill bhi. Har qatar par ye chuna jayega ke wo kis network ka tha.
               </p>
               <Button type="submit">Account banayein</Button>
             </div>

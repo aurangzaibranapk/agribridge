@@ -10187,12 +10187,13 @@ export type Database = {
           account_ref: string | null
           branch_id: string | null
           created_at: string
+          finance_account_id: string | null
           created_by: string | null
           id: string
           is_active: boolean
           opened_on: string | null
           opening_float: number | null
-          provider_id: string
+          provider_id: string | null
           tenant_key: string | null
           title: string
         }
@@ -10200,12 +10201,13 @@ export type Database = {
           account_ref?: string | null
           branch_id?: string | null
           created_at?: string
+          finance_account_id?: string | null
           created_by?: string | null
           id?: string
           is_active?: boolean
           opened_on?: string | null
           opening_float?: number | null
-          provider_id: string
+          provider_id?: string | null
           tenant_key?: string | null
           title: string
         }
@@ -10213,12 +10215,13 @@ export type Database = {
           account_ref?: string | null
           branch_id?: string | null
           created_at?: string
+          finance_account_id?: string | null
           created_by?: string | null
           id?: string
           is_active?: boolean
           opened_on?: string | null
           opening_float?: number | null
-          provider_id?: string
+          provider_id?: string | null
           tenant_key?: string | null
           title?: string
         }

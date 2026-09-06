@@ -153,8 +153,8 @@ export default async function LoadBillPage({
             id: a.id as string,
             title: a.title as string,
             accountRef: (a.account_ref as string | null) ?? null,
-            providerId: a.provider_id as string,
-            providerName: providerName.get(a.provider_id as string) ?? "—",
+            providerId: (a.provider_id as string | null) ?? null,
+            providerName: a.provider_id ? providerName.get(a.provider_id as string) ?? "—" : "—",
             float: floats.get(a.id as string) ?? null,
           }))}
           financeAccounts={(financeAccounts ?? []).map((f) => ({

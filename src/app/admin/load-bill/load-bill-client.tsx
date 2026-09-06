@@ -25,7 +25,8 @@ interface Account {
   id: string;
   title: string;
   accountRef: string | null;
-  providerId: string;
+  /** NULL = ye account har provider ke liye hai. */
+  providerId: string | null;
   providerName: string;
   /** NULL = balance parha nahi ja saka. Sifar se alag baat. */
   float: number | null;
@@ -85,13 +86,20 @@ export function LoadBillClient({
   const [settleState, settleAction] = useFormState(settleBill, initial);
   const [revState, revAction] = useFormState(reverseLoadTransaction, initial);
 
-  // Jis qism ka kaam ho raha hai, sirf us ke provider dikhein.
-  const kaamKeAccounts = useMemo(() => {
-    const ok = new Set(
-      providers.filter((p) => p.kind === "both" || p.kind === kind).map((p) => p.id)
-    );
-    return accounts.filter((a) => ok.has(a.providerId));
-  }, [accounts, providers, kind]);
+  // Account ki fehrist provider se NAHI chhanti.
+  //
+  // Malik ka CBA account har provider ke liye ek hi hai (332). Us ko
+  // "Jazz ka account" maan kar chhan dena us ko bill wale khane se ghayab
+  // kar deta -- aur phir bill darj hi nahi hota.
+  //
+  // Chhanne wali cheez PROVIDER hai: mobile load par sirf network, bill
+  // par sirf bill wale.
+  const kaamKeAccounts = accounts;
+
+  const kaamKeProviders = useMemo(
+    () => providers.filter((p) => p.kind === "both" || p.kind === kind),
+    [providers, kind]
+  );
 
   const [accountId, setAccountId] = useState(kaamKeAccounts[0]?.id ?? accounts[0]?.id ?? "");
   const [principal, setPrincipal] = useState("");
@@ -121,17 +129,17 @@ export function LoadBillClient({
         {accounts.map((a) => (
           <Card key={a.id} className="py-3">
             <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
-              <Wallet className="h-3.5 w-3.5" /> {a.providerName}
+              <Wallet className="h-3.5 w-3.5" /> {a.title}
             </p>
-            <p className="mt-0.5 truncate text-xs text-surface-400" title={a.title}>
-              {a.title}
+            <p className="mt-0.5 truncate text-xs text-surface-400">
+              {a.providerName === "—" ? "Har provider ke liye" : a.providerName}
             </p>
             <p className="mt-1 font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
               {a.float === null ? "—" : rs(a.float)}
             </p>
             {a.float === null && (
-              <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">
-                Balance parha nahi ja saka
+              <p className="mt-0.5 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+                Is ke saath koi asal khata juRa nahi — "Float aur account" par ja kar chunein
               </p>
             )}
           </Card>
@@ -189,7 +197,7 @@ export function LoadBillClient({
             <input type="hidden" name="kind" value={kind} />
 
             <div>
-              <Label htmlFor="account_id">Provider ka account</Label>
+              <Label htmlFor="account_id">Paisa kis account se</Label>
               <Select
                 id="account_id"
                 name="account_id"
@@ -199,8 +207,22 @@ export function LoadBillClient({
               >
                 {kaamKeAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.providerName} — {a.title}
-                    {a.float !== null ? ` (${rs(a.float)})` : ""}
+                    {a.title}
+                    {a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="provider_id">
+                {kind === "load" ? "Kis network ka load" : "Kis cheez ka bill"}
+              </Label>
+              <Select id="provider_id" name="provider_id" required defaultValue="">
+                <option value="">— chunein —</option>
+                {kaamKeProviders.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </Select>

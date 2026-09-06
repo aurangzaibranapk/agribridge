@@ -55,6 +55,30 @@ async function receivingLine(
 }
 
 /**
+ * Is provider account ka ASAL khata (GL code).
+ *
+ * 332 se pehle float ka apna khata tha (1190). Wo ghalat tha: malik ka
+ * CBA account Finance mein pehle se maujood hai, aur do jagah ginne se
+ * ek hi paise ke do adad ban jate hain.
+ *
+ * Ab har provider account ek asal finance account se juRa hota hai, aur
+ * har qatar usi ke khate par jati hai. NULL ka matlab hai ke wo juRa hi
+ * nahi -- us surat mein koi qatar nahi banti, kyunki humein pata hi nahi
+ * ke paisa kis khate se nikla.
+ */
+async function loadAccountGl(accountId: string): Promise<string | null> {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("load_accounts")
+    .select("finance_account_id")
+    .eq("id", accountId)
+    .maybeSingle();
+  const finId = (data?.finance_account_id as string | null) ?? null;
+  if (!finId) return null;
+  return glForFinanceAccount(finId);
+}
+
+/**
  * Commission ka ANDAZA -- qaide se.
  *
  * Ye adad khate mein KABHI nahi jata. Malik ka usool: "agar commission
@@ -156,7 +180,15 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
     if (balErr) {
       return { error: `Float ka balance parha nahi ja saka: ${balErr.message}` };
     }
-    const available = Number(balance ?? 0);
+    // NULL = asal khata juRa hi nahi -- us ko sifar samajh kar rok lagana
+    // ghalat paighaam deta ("float kam hai"), jabke masla ye hai ke khata
+    // chuna hi nahi gaya.
+    if (balance === null || balance === undefined) {
+      return {
+        error: "Is provider account ke saath koi asal khata juRa nahi (jaise CBA Account). Pehle 'Float aur account' par ja kar us ka khata chunein.",
+      };
+    }
+    const available = Number(balance);
     if (available < principal) {
       return {
         error: `Is account mein sirf Rs ${available.toLocaleString()} float hai — Rs ${principal.toLocaleString()} ka kaam nahi ho sakta. Pehle float mein paisa daalein.`,
@@ -180,14 +212,29 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   const number = String(txnNumber.data ?? "");
   if (!number) return { error: "Qatar ka number nahi ban saka." };
 
-  const guess = await commissionGuess(account.provider_id as string, kind, principal);
+  // Provider qatar par chuna jata hai, account se nahi.
+  //
+  // Malik ka CBA account HAR provider ke liye ek hi hai (332) -- Jazz ka
+  // load bhi wahin se, bijli ka bill bhi wahin se. Is liye "kis network
+  // ka load gaya" ek alag sawal hai, aur us ka jawab har qatar par
+  // chahiye. Jin accounts ka apna provider darj ho (sirf ek network ka
+  // account), wahan wo khud bhar jata hai.
+  const providerId =
+    String(formData.get("provider_id") ?? "").trim() ||
+    ((account.provider_id as string | null) ?? "");
+
+  if (!providerId) {
+    return { error: "Provider chunein — kis network ka load hai (ya kis qism ka bill)." };
+  }
+
+  const guess = await commissionGuess(providerId, kind, principal);
 
   const { data: row, error: insErr } = await service
     .from("load_transactions")
     .insert({
       txn_number: number,
       account_id: accountId,
-      provider_id: account.provider_id,
+      provider_id: providerId,
       kind,
       bill_category: billCategory,
       reference,
@@ -224,14 +271,20 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   // Asal raqam AAMDANI NAHI hai -- wo customer ka paisa hai jo provider
   // tak ja raha hai. Aamdani sirf service charge hai. Commission yahan
   // nahi aati: wo statement ki tasdeeq ke baad aati hai.
+  const floatGl = await loadAccountGl(accountId);
+  if (settled && !floatGl) {
+    await service.from("load_transactions").delete().eq("id", row.id);
+    return {
+      error: "Is provider account ke saath koi asal khata juRa nahi (jaise CBA Account). Pehle 'Float aur account' par ja kar us ka khata chunein.",
+    };
+  }
+
   const lines: JournalLine[] = [received];
   lines.push(
     settled
       ? {
-          account: ACC.loadFloat,
+          account: floatGl as string,
           credit: principal,
-          partyType: "load_account",
-          partyId: accountId,
           memo: `${number} — ${reference}`,
         }
       : {
@@ -349,6 +402,14 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
     .maybeSingle();
   if (!account?.is_active) return { error: "Ye provider account band hai." };
 
+  const floatGl = await loadAccountGl(accountId);
+  if (!floatGl) {
+    return { error: "Is provider account ke saath koi asal khata juRa nahi. Pehle us ka khata chunein." };
+  }
+  if (floatGl === (await glForFinanceAccount(financeAccountId))) {
+    return { error: "Paisa usi khate se usi khate mein nahi ja sakta — dono taraf ek hi khata chuna gaya hai." };
+  }
+
   const { data: move, error: insErr } = await service
     .from("load_float_moves")
     .insert({
@@ -371,13 +432,7 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
     branchId: me.branch_id ?? account.branch_id ?? null,
     createdBy: user.id,
     lines: [
-      {
-        account: ACC.loadFloat,
-        debit: amount,
-        partyType: "load_account",
-        partyId: accountId,
-        memo: note ?? "Float recharge",
-      },
+      { account: floatGl, debit: amount, memo: note ?? "Float recharge" },
       { account: await glForFinanceAccount(financeAccountId), credit: amount, memo: `Float — ${account.title}` },
     ],
     claims: [{ table: "load_float_moves", rowId: move.id }],
@@ -424,6 +479,11 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
     return { error: "Ye qatar wapas ho chuki hai — us par adaigi nahi hoti." };
   }
 
+  const settleGl = await loadAccountGl(txn.account_id as string);
+  if (!settleGl) {
+    return { error: "Is provider account ke saath koi asal khata juRa nahi. Pehle us ka khata chunein." };
+  }
+
   const principal = Number(txn.principal);
   const { data: balance } = await supabase.rpc("fn_load_float_balance", {
     p_account: txn.account_id,
@@ -441,13 +501,7 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
     createdBy: user.id,
     lines: [
       { account: ACC.billsCollected, debit: principal, memo: `${txn.txn_number} ada hua` },
-      {
-        account: ACC.loadFloat,
-        credit: principal,
-        partyType: "load_account",
-        partyId: txn.account_id as string,
-        memo: `${txn.txn_number} ada hua`,
-      },
+      { account: settleGl, credit: principal, memo: `${txn.txn_number} ada hua` },
     ],
   });
 
@@ -565,6 +619,10 @@ export async function saveLoadReconciliation(_prev: LoadState, formData: FormDat
     if (!FLOAT_ROLES.includes(me.role)) {
       return { error: "Farq khate mein daalna sirf Manager, Finance ya Admin ka kaam hai. Aap ginti likh sakte hain, farq wo manzoor karenge." };
     }
+    const milanGl = await loadAccountGl(accountId);
+    if (!milanGl) {
+      return { error: "Is provider account ke saath koi asal khata juRa nahi — farq kis khate mein daala jaye?" };
+    }
     const amount = Math.abs(farq);
     const posted = await postJournal({
       description: `Float ka farq — ${tareekh}`,
@@ -578,11 +636,11 @@ export async function saveLoadReconciliation(_prev: LoadState, formData: FormDat
           ? // Float kam nikla: kami kharche mein gayi.
             [
               { account: ACC.floatDifference, debit: amount, memo: reason },
-              { account: ACC.loadFloat, credit: amount, partyType: "load_account", partyId: accountId, memo: `Milan ${tareekh}` },
+              { account: milanGl, credit: amount, memo: `Milan ${tareekh}` },
             ]
           : // Float zyada nikla: farq wapas kharche se kata.
             [
-              { account: ACC.loadFloat, debit: amount, partyType: "load_account", partyId: accountId, memo: `Milan ${tareekh}` },
+              { account: milanGl, debit: amount, memo: `Milan ${tareekh}` },
               { account: ACC.floatDifference, credit: amount, memo: reason },
             ],
     });
@@ -649,67 +707,47 @@ export async function createLoadAccount(_prev: LoadState, formData: FormData): P
     return { error: "Provider ka account banana sirf Manager, Finance ya Admin ka kaam hai." };
   }
 
-  const providerId = String(formData.get("provider_id") ?? "").trim();
+  const providerId = String(formData.get("provider_id") ?? "").trim() || null;
+  const financeAccountId = String(formData.get("finance_account_id") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const accountRef = String(formData.get("account_ref") ?? "").trim() || null;
-  const opening = paisa(formData.get("opening_float"));
 
-  if (!providerId) return { error: "Provider chunein." };
-  if (title.length < 2) return { error: "Account ka naam likhein (jaise: Jazz retailer — Main Branch)." };
-  if (opening !== null && opening < 0) return { error: "Shuru ka float manfi nahi hota." };
+  if (title.length < 2) return { error: "Account ka naam likhein (jaise: CBA Account — Load/Billing)." };
+  if (!financeAccountId) {
+    return { error: "Wo asal khata chunein jis mein is account ka paisa para hai (jaise CBA Account)." };
+  }
 
   const service = createServiceClient();
 
-  const { data: row, error: insErr } = await service
+  // Ek asal khata do provider accounts se na juRe -- warna wohi paisa do
+  // jagah float ban jata aur dono apni jagah "theek" lagte.
+  const { data: pehle } = await service
     .from("load_accounts")
-    .insert({
-      provider_id: providerId,
-      title,
-      account_ref: accountRef,
-      branch_id: me.branch_id,
-      opening_float: opening,
-      opened_on: new Date().toISOString().slice(0, 10),
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (insErr || !row) return { error: `Account nahi bana: ${insErr?.message ?? ""}` };
-
-  // Shuru ka float ledger mein bhi -- warna safha kuch aur kehta aur
-  // ledger kuch aur.
-  if (opening && opening > 0) {
-    const posted = await postJournal({
-      description: `Shuru ka float — ${title}`,
-      sourceModule: "load_float_opening",
-      sourceId: row.id,
-      branchId: me.branch_id,
-      createdBy: user.id,
-      lines: [
-        {
-          account: ACC.loadFloat,
-          debit: opening,
-          partyType: "load_account",
-          partyId: row.id,
-          memo: "Shuru ka float",
-        },
-        { account: ACC.openingEquity, credit: opening, memo: `Shuru ka float — ${title}` },
-      ],
-      claims: [{ table: "load_accounts", rowId: row.id }],
-    });
-
-    if ("error" in posted) {
-      await service.from("load_accounts").delete().eq("id", row.id);
-      return { error: `Shuru ka float ledger mein nahi gaya: ${posted.error}` };
-    }
+    .select("id, title")
+    .eq("finance_account_id", financeAccountId)
+    .maybeSingle();
+  if (pehle) {
+    return { error: `Wo khata pehle se "${pehle.title}" ke saath juRa hua hai. Ek khata do jagah nahi ja sakta.` };
   }
+
+  const { error: insErr } = await service.from("load_accounts").insert({
+    provider_id: providerId,
+    finance_account_id: financeAccountId,
+    title,
+    account_ref: accountRef,
+    branch_id: me.branch_id,
+    opened_on: new Date().toISOString().slice(0, 10),
+    created_by: user.id,
+  });
+
+  if (insErr) return { error: `Account nahi bana: ${insErr.message}` };
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/load-bill/accounts");
   return {
     success: true,
-    notice: opening
-      ? `${title} ban gaya — shuru ka float Rs ${opening.toLocaleString()}.`
-      : `${title} ban gaya. Shuru ka float darj nahi hua — float mein paisa daal kar shuru karein.`,
+    notice: providerId
+      ? `${title} ban gaya — sirf us ek provider ke liye.`
+      : `${title} ban gaya — har provider ke liye yehi account chalega.`,
   };
 }
