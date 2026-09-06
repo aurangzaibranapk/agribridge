@@ -1550,3 +1550,69 @@ na ho wahan **"GL khata nahi"** likha aata hai — sifar nahi.
 Suspense mein Rs 30 hain: POS ki do adaigiyan (easypaisa Rs 20, QR Rs 10)
 jin ke liye `payment_method_account_map` mein koi khata darj nahi. Ye
 malik ke batane par theek hoga — kaunsa paisa kis khate mein aata hai.
+
+---
+
+# 6 September — Live par rukka hua kaam
+
+Malik ke "system par aa gaya" kehne par ye poori fehrist ek sath jayegi.
+Tarteeb P0 rule ke mutabiq: **backup verified → pre-migration ginti →
+migrations → verification → naya build upload → smoke test**.
+
+## Live par chalni baqi migrations (chaar)
+
+Chaaron **testing DB par chal chuki hain**. Live par abhi 328 tak hai.
+
+| # | File | Kya karti hai |
+|---|---|---|
+| 329 | `329_machinery_menu_chhota.sql` | Machinery ke bahut se tage khatam — ek hi form |
+| 330 | `330_har_adaigi_ka_apna_khata.sql` | Cash / QR / easypaisa / JazzCash / bank / Kisan Card — har adaigi ka apna khata. Suspense ke Rs 30 isi se saaf honge |
+| 332 | `332_ek_hi_cba_account.sql` | Load & Bill ka float alag khate par nahi — wohi CBA account (1014) |
+| 333 | `333_kharid_ledger_ki_nigrani.sql` | Kharid aur supplier adaigi ab `v_ledger_unposted` mein; `v_supplier_payable_vs_ledger` |
+
+331 (`shaam_ka_hisaab`) **jaan boojh kar rok kar rakhi hai**: wo menu mein
+ek qatar daalti hai jis ka safha abhi bana nahi. Menu se aisi jagah par
+le jana jahan kuch hai hi nahi, us se bura hai ke qatar hi na ho.
+
+## Live ka data theek karna — malik ki ijazat ke baghair NAHI
+
+### Kharid PO-1788537423737 (Rs 112,048) ledger mein hai hi nahi
+
+Maal godam mein hai, `suppliers.current_payable` bhi theek hai — magar
+journal entry kabhi bani hi nahi:
+
+| Khata | Abhi | Hona chahiye |
+|---|---|---|
+| 1200 Stock | **Rs −28** | ~Rs 99,000 |
+| 2000 Supplier ko dena | 104,796 (sirf machinery vendor) | +112,048 |
+
+Code theek ho chuka hai (`postGoodsReceived`), magar **jo kharid us se
+pehle ho chuki wo apne aap ledger mein nahi jayegi**. Us ke liye ek
+durustagi ki entry chahiye:
+
+```
+Dr 1200 Stock            112,048
+   Cr 2000 Supplier ko dena        112,048
+```
+
+Ye Live ka maali record badalti hai. **Malik ke saaf kehne par hi
+banegi**, aur us se pehle backup ki tasdeeq.
+
+## cPanel par Cron Job (code se nahi lagta)
+
+Roz ka milaan 29 August ke baad se chala hi nahi. cPanel → Cron Jobs →
+rozana raat 11 baje:
+
+```
+curl -s "https://alranatraders.pk/api/cron/daily-reconcile?token=<CRON_SECRET>"
+```
+
+Ye cron chal raha hota to Rs 112,048 wali kharid `all_posted` jaanch par
+usi din surkh nazar aa jati.
+
+## Product rates — malik ke haath ka kaam
+
+`/admin/products/bill-rates` par: **supreme** ek hi naam ke neeche chaar
+alag pack size hain (bill par rate 171 / 330 / 902 / 1757, product par
+saved rate Rs 18). Isi tarah Lays (19 aur 28 dono), Rio, candi, lifeboy,
+pizzo, Lux, vital.
