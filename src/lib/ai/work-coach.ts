@@ -53,6 +53,11 @@ export const SYSTEM_MAP = [
   "Reversal (finance.reversal, 274): apna feature, role se kisi ko nahi -- sirf Owner/Admin ya darkhwast se ijazat; /admin/audit-trail par Reverse",
   "Ijazat: staff Work Coach se maangta hai -> darkhwast (ACC-...) -> Owner/Admin/head manzoor (/admin/access-requests) -> engine lagata hai; AI kabhi khud nahi lagata",
   "Ijazat ka takraao (Separation of Duties): qawaid access_conflict_rules mein (badalne ke qabil), report /admin/access-requests?tab=conflicts; manzoori se pehle jaanch: advise = batao, override = HIGH/CRITICAL sirf Owner/Admin wajah+miyaad ke sath, block = koi nahi; kuch khud nahi hatta, faisla insaan ka",
+  "Load & Bill (/admin/load-bill): teen khane -- Mobile Load, Bill Payment, Udhaar. AgriBridge load BHEJTA NAHI, sirf DARJ karta hai; provider ki TID hi saboot hai. Rs 1,000 ka load Rs 1,000 ki aamdani nahi -- aamdani sirf service charge (4050) aur company ki commission (4055)",
+  "Load ki commission apne aap darj nahi hoti: qatar par raqam likh kar 'Mil gayi' dabana paRta hai, aur ye poochha jata hai ke wo KIS khate mein aayi (aam taur par usi float mein). 'muntazir' wala andaza ledger mein kabhi nahi jata",
+  "Naqad udhaar (/admin/load-bill -> Udhaar): gahak dukan se paisa le gaya. BIKRI NAHI -- koi maal nahi gaya, is liye na aamdani na COGS; sirf 'Customer se lena' (1100) par party ke sath. Wapsi us ka ulta. Har dafa teen jagah ek sath: ledger, Cash Book (finance_transactions), aur customers.current_balance",
+  "Gahak ka khata (/admin/crm/<id>/statement): ledger se banta hai (1100 par us gahak ki qatarein), is liye POS ka khata, load ka khata, naqad udhaar aur har wapsi khud-ba-khud us mein aa jate hain. Jawab fn_customer_ledger / fn_customer_baqi se; gahak na mile to NULL, sifar nahi",
+  "Paise ke DO register hain: ledger (journal_lines -- Trial Balance, P&L) aur Cash Book (finance_transactions -- finance_accounts.current_balance sirf yahin se, 127). Jo kaam sirf ek mein jaye wo Finance ke safhe par ghalat adad deta hai; farq v_cash_book_ledger_farq par nazar aata hai, aur khali hona hi theek hai (338)",
 ].join("\n");
 
 export async function buildCoachContext(userId: string, lang: Lang): Promise<CoachContext | null> {

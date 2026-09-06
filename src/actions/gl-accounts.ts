@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { logAudit } from "@/lib/audit";
 import { postJournal } from "@/lib/ledger/post";
 import { trialBalance } from "@/lib/ledger/statements";
@@ -250,6 +251,26 @@ export async function transferAccountBalance(_prev: GlAccountState, formData: Fo
   });
   if ("error" in posted) return { error: `Entry nahi bani: ${posted.error}` };
 
+  // Cash Book bhi hilna chahiye.
+  //
+  // Malik ne 6 September ko Alfalah se CBA mein Rs 2,000 bheje. Ledger
+  // mein qatar bani, magar Finance ke safhe par Alfalah abhi bhi
+  // Rs 7,165 dikha raha tha -- kyunki `current_balance` sirf Cash Book
+  // se nikalta hai (127), aur ye raasta Cash Book ko chhoR deta tha.
+  //
+  // Dono taraf finance account hon to dono qatarein banti hain. Jo
+  // khata Cash Book ka nahi (jaise 3200 ya 2000), wahan chup chaap kuch
+  // nahi hota -- wo khata cash ka hai hi nahi.
+  const cb = await cashBookLikhein([
+    { glCode: from, amount: rakam, rukh: sourceKoCredit ? "gaya" : "aaya", category: "account_transfer", notes: reason, tareekh: aaj, createdBy: g.userId },
+    { glCode: to, amount: rakam, rukh: sourceKoCredit ? "aaya" : "gaya", category: "account_transfer", notes: reason, tareekh: aaj, createdBy: g.userId },
+  ]);
+  if (cb.error) {
+    return {
+      error: `Entry ${posted.entryNumber} ledger mein ban gayi, magar Cash Book mein qatar nahi bani: ${cb.error}. Finance ka safha aur ledger ab mel nahi khayenge — ye farq theek karwa lein.`,
+    };
+  }
+
   const service = createServiceClient();
   if (closeIt) {
     // Ab baqi sifar hai, is liye database ki rok is ko rokegi nahi.
@@ -266,6 +287,7 @@ export async function transferAccountBalance(_prev: GlAccountState, formData: Fo
 
   revalidatePath("/admin/finance/accounts");
   revalidatePath("/admin/finance/statements");
+  revalidatePath("/admin/finance");
   return {
     success: true,
     message: `Rs ${Math.round(rakam).toLocaleString()} ${from} se ${to} mein chali gayi (${posted.entryNumber}).${closeIt ? " Purana khata band kar diya gaya." : ""}`,

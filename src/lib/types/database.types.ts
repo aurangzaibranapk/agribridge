@@ -3216,6 +3216,13 @@ export type Database = {
             foreignKeyName: "asset_disposals_finance_account_id_fkey"
             columns: ["finance_account_id"]
             isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "asset_disposals_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
           },
@@ -3770,6 +3777,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_statement_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "bank_statement_lines_account_id_fkey"
@@ -5547,6 +5561,13 @@ export type Database = {
             foreignKeyName: "cheque_books_finance_account_id_fkey"
             columns: ["finance_account_id"]
             isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "cheque_books_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
           },
@@ -5664,6 +5685,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cheques_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "cheques_finance_account_id_fkey"
@@ -6601,6 +6629,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crop_lifter_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "crop_lifter_payments_finance_account_id_fkey"
@@ -9505,6 +9540,13 @@ export type Database = {
             foreignKeyName: "finance_balance_repairs_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "finance_balance_repairs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
           },
@@ -9554,6 +9596,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "finance_transactions_account_id_fkey"
@@ -10038,6 +10087,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_expenses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "grain_expenses_account_id_fkey"
@@ -10573,6 +10629,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_sale_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "grain_sale_payments_account_id_fkey"
@@ -12560,6 +12623,13 @@ export type Database = {
             foreignKeyName: "load_accounts_finance_account_id_fkey"
             columns: ["finance_account_id"]
             isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_accounts_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
           },
@@ -12670,6 +12740,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "load_float_moves_finance_account_id_fkey"
@@ -12944,6 +13021,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "load_transactions_finance_account_id_fkey"
@@ -14468,6 +14552,13 @@ export type Database = {
             foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
             columns: ["fuel_account_id"]
             isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
             referencedRelation: "v_finance_balance_check"
             referencedColumns: ["account_id"]
           },
@@ -14741,6 +14832,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
@@ -15398,6 +15496,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "machinery_payments_finance_account_id_fkey"
@@ -17423,6 +17528,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
@@ -25958,6 +26070,25 @@ export type Database = {
           },
         ]
       }
+      v_cash_book_ledger_farq: {
+        Row: {
+          account_id: string | null
+          cash_book_baqi: number | null
+          farq: number | null
+          gl_code: string | null
+          ledger_baqi: number | null
+          name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_accounts_gl_code_fkey"
+            columns: ["gl_code"]
+            isOneToOne: false
+            referencedRelation: "gl_accounts"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       v_cash_close_missing: {
         Row: {
           branch_id: string | null
@@ -27560,6 +27691,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
@@ -30118,6 +30256,18 @@ export type Database = {
       fn_current_user_branch_id: { Args: never; Returns: string }
       fn_current_user_organization_id: { Args: never; Returns: string }
       fn_current_user_warehouse_id: { Args: never; Returns: string }
+      fn_customer_baqi: { Args: { p_customer: string }; Returns: number }
+      fn_customer_ledger: {
+        Args: { p_customer: string; p_end?: string; p_start?: string }
+        Returns: {
+          credit: number
+          debit: number
+          entry_date: string
+          entry_number: string
+          module: string
+          tafseel: string
+        }[]
+      }
       fn_default_branch_id: { Args: never; Returns: string }
       fn_default_organization_id: { Args: never; Returns: string }
       fn_ean13_check_digit: { Args: { p_first12: string }; Returns: number }

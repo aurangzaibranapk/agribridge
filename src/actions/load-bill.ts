@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal, reverseJournal, type JournalLine } from "@/lib/ledger/post";
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
+import { cashBookLikhein, cashBookUlti, type CashBookQatar } from "@/lib/ledger/cash-book";
 import { recordError } from "@/lib/errors/record";
 
 export interface LoadState {
@@ -67,16 +68,36 @@ async function receivingLine(
  * nahi -- us surat mein koi qatar nahi banti, kyunki humein pata hi nahi
  * ke paisa kis khate se nikla.
  */
-async function loadAccountGl(accountId: string): Promise<string | null> {
+async function loadAccountFinanceId(accountId: string): Promise<string | null> {
   const service = createServiceClient();
   const { data } = await service
     .from("load_accounts")
     .select("finance_account_id")
     .eq("id", accountId)
     .maybeSingle();
-  const finId = (data?.finance_account_id as string | null) ?? null;
+  return (data?.finance_account_id as string | null) ?? null;
+}
+
+async function loadAccountGl(accountId: string): Promise<string | null> {
+  const finId = await loadAccountFinanceId(accountId);
   if (!finId) return null;
   return glForFinanceAccount(finId);
+}
+
+/**
+ * Customer ka paisa kis Cash Book ke khate mein aaya.
+ *
+ * Sirf cash aur bank/wallet ke khate Cash Book mein hote hain. "Wallet"
+ * (customer ka apna jama shuda paisa) aur "Khata" (udhaar) kisi khate
+ * mein paisa laate hi nahi -- wahan jawab NULL hai, sifar nahi.
+ */
+function receivingCashBook(
+  method: string,
+  financeAccountId: string | null
+): { accountId?: string; glCode?: string } | null {
+  if (method === "cash") return { glCode: ACC.cash };
+  if (method === "bank" && financeAccountId) return { accountId: financeAccountId };
+  return null;
 }
 
 /**
@@ -319,7 +340,59 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   await service.from("load_transactions").update({ journal_entry_id: posted.id }).eq("id", row.id);
 
+  // Cash Book bhi -- ledger ke sath, us ke baad nahi.
+  //
+  // 6 September ko LD-2026-00001 ne yehi masla khola: ledger mein qatar
+  // bani, magar Finance ke safhe par CBA ka balance wahin ka wahin raha,
+  // kyunki `current_balance` sirf `finance_transactions` se nikalta hai
+  // (127). Do taraf hilti hain:
+  //
+  //   * jahan customer ka paisa aaya (cash ya koi bank/wallet khata)
+  //   * jis khate se load gaya (provider account ka juRa hua khata)
+  //
+  // Wallet aur khata par pehli qatar nahi banti -- wahan paisa kisi
+  // khate mein aaya hi nahi.
+  const cashBook: CashBookQatar[] = [];
+  const aayaKahan = receivingCashBook(method, financeAccountId);
+  if (aayaKahan) {
+    cashBook.push({
+      ...aayaKahan,
+      amount: total,
+      rukh: "aaya",
+      category: kind === "bill" ? "bill_payment" : "mobile_load",
+      notes: `${number} — ${reference}`,
+      createdBy: user.id,
+    });
+  }
+  if (settled) {
+    const floatKhata = await loadAccountFinanceId(accountId);
+    if (floatKhata) {
+      cashBook.push({
+        accountId: floatKhata,
+        amount: principal,
+        rukh: "gaya",
+        category: kind === "bill" ? "bill_payment" : "mobile_load",
+        notes: `${number} — ${reference} (float se gaya)`,
+        createdBy: user.id,
+      });
+    }
+  }
+  const cb = await cashBookLikhein(cashBook);
+  if (cb.error) {
+    // Ledger mein qatar ja chuki hai aur wo mitai nahi ja sakti. Chup
+    // rehna sab se bura hota: safha ek balance dikhata rehta jo ledger
+    // se mel nahi khata, aur kisi ko pata na chalta.
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill",
+      message: `${number}: ledger mein darj ho gaya magar Cash Book mein nahi — ${cb.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
   revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
   return {
     success: true,
     txnNumber: number,
@@ -446,8 +519,45 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
 
   await service.from("load_float_moves").update({ journal_entry_id: posted.id }).eq("id", move.id);
 
+  // Dono taraf asal khate hain -- ek se paisa gaya, doosre (provider ka
+  // juRa hua khata) mein aaya. Cash Book mein dono qatarein banti hain,
+  // warna Finance ka safha ye recharge dikhata hi nahi.
+  const floatKhata = await loadAccountFinanceId(accountId);
+  const cb = await cashBookLikhein([
+    {
+      accountId: financeAccountId,
+      amount,
+      rukh: "gaya",
+      category: "load_float_recharge",
+      notes: `Float recharge — ${account.title}`,
+      createdBy: user.id,
+    },
+    ...(floatKhata
+      ? [
+          {
+            accountId: floatKhata,
+            amount,
+            rukh: "aaya" as const,
+            category: "load_float_recharge",
+            notes: `Float recharge — ${account.title}`,
+            createdBy: user.id,
+          },
+        ]
+      : []),
+  ]);
+  if (cb.error) {
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill/accounts",
+      message: `Float recharge ledger mein gaya magar Cash Book mein nahi — ${cb.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/load-bill/accounts");
+  revalidatePath("/admin/finance");
   return { success: true, notice: `Rs ${amount.toLocaleString()} float mein chala gaya.` };
 }
 
@@ -510,7 +620,32 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
 
   await service.from("load_transactions").update({ float_settled: true }).eq("id", id);
 
+  // Ab paisa waqai khate se nikla hai -- Cash Book mein bhi.
+  const settleKhata = await loadAccountFinanceId(txn.account_id as string);
+  if (settleKhata) {
+    const cb = await cashBookLikhein([
+      {
+        accountId: settleKhata,
+        amount: principal,
+        rukh: "gaya",
+        category: "bill_payment",
+        notes: `${txn.txn_number} ada hua — ${txn.reference}`,
+        createdBy: user.id,
+      },
+    ]);
+    if (cb.error) {
+      await recordError({
+        module: "load-bill",
+        route: "/admin/load-bill",
+        message: `${txn.txn_number} ada hua magar Cash Book mein nahi — ${cb.error}`,
+        severity: "rukawat",
+        actorId: user.id,
+      });
+    }
+  }
+
   revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
   return { success: true, notice: `${txn.txn_number} provider tak pahunch gaya.` };
 }
 
@@ -541,7 +676,9 @@ export async function reverseLoadTransaction(_prev: LoadState, formData: FormDat
   const service = createServiceClient();
   const { data: txn } = await service
     .from("load_transactions")
-    .select("id, txn_number, journal_entry_id, status")
+    .select(
+      "id, txn_number, journal_entry_id, status, account_id, principal, service_charge, payment_method, finance_account_id, float_settled, reference"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -552,10 +689,207 @@ export async function reverseLoadTransaction(_prev: LoadState, formData: FormDat
   const reversed = await reverseJournal(txn.journal_entry_id as string, reason, user.id);
   if ("error" in reversed) return { error: reversed.error };
 
+  // Ledger ulta ho gaya to Cash Book bhi ulta hona chahiye -- warna
+  // khate ka balance us paise ko ginta rahega jo wapas ho chuka hai.
+  // (Yehi baat 127 ke waqt reversal par bhi theek ki gayi thi.)
+  const principal = Number(txn.principal);
+  const totalWapas = Math.round((principal + Number(txn.service_charge ?? 0)) * 100) / 100;
+  const ulti: CashBookQatar[] = [];
+  const aayaKahan = receivingCashBook(
+    String(txn.payment_method ?? ""),
+    (txn.finance_account_id as string | null) ?? null
+  );
+  if (aayaKahan) {
+    ulti.push({
+      ...aayaKahan,
+      amount: totalWapas,
+      rukh: "aaya",
+      category: "load_wapas",
+      notes: `${txn.txn_number} wapas — ${reason}`,
+      createdBy: user.id,
+    });
+  }
+  if (txn.float_settled) {
+    const floatKhata = await loadAccountFinanceId(txn.account_id as string);
+    if (floatKhata) {
+      ulti.push({
+        accountId: floatKhata,
+        amount: principal,
+        rukh: "gaya",
+        category: "load_wapas",
+        notes: `${txn.txn_number} wapas — float mein wapas`,
+        createdBy: user.id,
+      });
+    }
+  }
+  const cb = await cashBookUlti(ulti);
+  if (cb.error) {
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill",
+      message: `${txn.txn_number} wapas hua magar Cash Book ulta nahi ho saka — ${cb.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
   await service.from("load_transactions").update({ status: "wapas" }).eq("id", id);
 
   revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
   return { success: true, notice: `${txn.txn_number} wapas ho gaya (${reversed.entryNumber}).` };
+}
+
+/**
+ * Company ki commission -- jab wo WAQAI mil jaye.
+ *
+ * =====================================================================
+ * YE KHANA KYUN BANA
+ * =====================================================================
+ *
+ * Malik (6 September), pehla load karne ke baad:
+ *
+ *   *"service charges to nahi liye, lekin hamein 15 rupay ka commission
+ *   mila hai -- wo kahan darj nahi hua?"*
+ *
+ * Wo theek keh rahe the. Do cheezein alag hain aur system mein sirf ek
+ * ka raasta tha:
+ *
+ *   * **Service charge** -- jo hum CUSTOMER se lete hain. Wo qatar ke
+ *     waqt hi maloom hota hai, is liye wahin darj hota hai (4050).
+ *   * **Commission** -- jo COMPANY hamein deti hai. Wo qatar ke waqt
+ *     maloom NAHI hota; company apne hisaab se deti hai, kabhi turant
+ *     kabhi statement par. Is liye us ka apna qadam chahiye (4055).
+ *
+ * Ab tak `commission_confirmed` ka khana database mein tha magar us tak
+ * koi raasta nahi tha. Yani commission milti thi aur kitab mein kabhi
+ * aati hi nahi thi.
+ *
+ * =====================================================================
+ * ANDAZA KHATE MEIN NAHI JATA
+ * =====================================================================
+ *
+ * `commission_expected` sirf ek ANDAZA hai (qaide se gina hua) aur wo
+ * ledger mein KABHI nahi jata. Malik ka usool: "agar commission
+ * immediately confirm nahi hoti to system fake earning calculate na
+ * kare." Yahan sirf wo raqam darj hoti hai jo bande ne apni aankh se
+ * dekh kar likhi.
+ *
+ * =====================================================================
+ * "KAHAN AAYI" -- ANDAZA NAHI, SAWAL
+ * =====================================================================
+ *
+ * Commission aam taur par usi float mein aati hai jahan se load gaya
+ * tha (company merchant balance barha deti hai), magar hamesha nahi --
+ * kabhi cash mein, kabhi kisi aur khate mein. Is liye ye poochha jata
+ * hai, maan nahi liya jata. Ghalat khate mein daal dena wo ghalti hai
+ * jo mahine baad, company ki statement se milan karte waqt, nikalti hai.
+ */
+export async function confirmLoadCommission(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, branch_id, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!me?.is_active || !FLOAT_ROLES.includes(me.role)) {
+    return { error: "Commission ki tasdeeq sirf Manager, Finance ya Admin kar sakta hai." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const rakam = paisa(formData.get("rakam"));
+  // "float" = usi khate mein jahan se load gaya tha. Warna kisi finance
+  // account ki id.
+  const kahan = String(formData.get("kahan") ?? "float").trim();
+
+  if (!id) return { error: "Qatar nahi mili." };
+  if (rakam === null || rakam <= 0) {
+    return { error: "Commission ki raqam likhein. Sifar likhne ka matlab hoga ke commission mili hi nahi — us ke liye raqam khali chhoRein." };
+  }
+
+  const service = createServiceClient();
+  const { data: txn } = await service
+    .from("load_transactions")
+    .select("id, txn_number, account_id, reference, status, commission_status, commission_confirmed, branch_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!txn) return { error: "Qatar nahi mili." };
+  if (txn.status === "wapas") {
+    return { error: "Ye qatar wapas ho chuki hai — us par commission nahi banti." };
+  }
+  // Dobara tasdeeq se wohi commission do dafa gin li jati.
+  if (txn.commission_confirmed !== null) {
+    return {
+      error: `Is qatar par Rs ${Number(txn.commission_confirmed).toLocaleString()} ki commission pehle hi darj ho chuki hai. Adad ghalat ho to us entry ko wapas karwa kar nayi darj karein.`,
+    };
+  }
+
+  // Paisa kahan aaya -- khata aur us ka GL.
+  let khataId: string | null;
+  if (kahan === "float") {
+    khataId = await loadAccountFinanceId(txn.account_id as string);
+    if (!khataId) {
+      return { error: "Is provider account ke saath koi asal khata juRa nahi. Ya to wo khata chunein, ya batayein ke commission kis khate mein aayi." };
+    }
+  } else {
+    khataId = kahan;
+  }
+
+  const gl = await glForFinanceAccount(khataId);
+  if (gl === ACC.suspense) {
+    return { error: "Ye khata nahi mila — commission kis khate mein aayi, wo dobara chunein." };
+  }
+
+  const posted = await postJournal({
+    description: `Load commission — ${txn.txn_number} (${txn.reference})`,
+    sourceModule: "load_commission",
+    sourceId: txn.id,
+    branchId: (txn.branch_id as string | null) ?? me.branch_id ?? null,
+    createdBy: user.id,
+    lines: [
+      { account: gl, debit: rakam, memo: `${txn.txn_number} — company ki commission` },
+      { account: ACC.loadCommission, credit: rakam, memo: `${txn.txn_number} — company ki commission` },
+    ],
+  });
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+
+  const cb = await cashBookLikhein([
+    {
+      accountId: khataId,
+      amount: rakam,
+      rukh: "aaya",
+      category: "load_commission",
+      notes: `${txn.txn_number} — company ki commission`,
+      createdBy: user.id,
+    },
+  ]);
+  if (cb.error) {
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill",
+      message: `${txn.txn_number} ki commission ledger mein gayi magar Cash Book mein nahi — ${cb.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
+  await service
+    .from("load_transactions")
+    .update({ commission_confirmed: rakam, commission_status: "tasdeeq" })
+    .eq("id", id);
+
+  revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
+  return {
+    success: true,
+    notice: `${txn.txn_number} par Rs ${rakam.toLocaleString()} commission darj ho gayi (${posted.entryNumber}).`,
+  };
 }
 
 /**

@@ -1734,3 +1734,96 @@ surkh hai.
 Ye wohi qism ki ghalti thi jis se ye project bar bar bachta aaya hai --
 nishan chup chaap bujh jana. Pakri gayi kyunki migration chalane ke baad
 ginti dobara ki gayi thi, jaisa P0 rule kehta hai.
+
+
+---
+
+# 6 September (shaam) — Cash Book aur ledger ka farq
+
+## Kaise pakra gaya
+
+Malik ne kaha: *"jo abhi maine load kia hai wo mere Easypaisa account
+mein shift karein."* Ledger mein wo durustagi ho gayi
+(**TXN-26-000039**) aur ginti bhi theek nikli:
+
+```
+1016 Easypaisa      Rs 1,020
+2040 Wallet ka bojh Rs     0
+Trial Balance       729,570 = 729,570
+```
+
+`load_transactions` ki qatar bhi ledger se mila di gayi
+(`LD-2026-00001` ab `payment_method = bank`, khata Easypaisa).
+
+**Magar us ke baad Finance ka safha khola to adad phir bhi ghalat the.**
+
+## Asal masla: paise ke DO register the, aur do raaste sirf EK mein jate the
+
+| Khata | Finance ka safha | Ledger |
+|---|---|---|
+| Bank Alfalah | 7,165 | **5,165** |
+| CBA Account | 521 | **1,521** |
+| Easypaisa | 0 | **1,020** |
+| QR (merchant) | 0 | **10** |
+
+`finance_accounts.current_balance` **sirf** `finance_transactions` se
+nikalta hai (127 ka usool, aur us par database ka taala bhi hai). Do
+raaste ledger mein qatar daalte the aur Cash Book ko chhoR dete the:
+
+1. `transferAccountBalance` — khate se khate mein raqam
+2. `createLoadTransaction` — load / bill ki qatar
+
+Teesra: 328 aur 330 ki durustagi ki entries, jo seedha ledger par chali
+thin.
+
+**Ye khamosh ghalti thi.** Trial Balance hamesha barabar rehta tha, koi
+report shikayat nahi karti thi — aur malik wohi safha parhte hain jis par
+ghalat adad tha.
+
+## Kya theek hua
+
+* **Code:** `src/lib/ledger/cash-book.ts` — ab har wo raasta jo paisa
+  hilata hai, Cash Book mein bhi qatar daalta hai: load/bill, us ki
+  wapsi, float recharge, bill settle, khate ka transfer, commission,
+  naqad udhaar.
+* **338:** purana farq gin kar barabar (raqam haath se nahi likhi gayi),
+  aur `v_cash_book_ledger_farq` — jahan farq ho wahan qatar nazar aaye.
+  Khali hona hi theek hai.
+
+## Rokay hue qadam — Live par abhi NAHI chale
+
+Dono migration **testing par chal chuki hain aur pass hain**. Live par
+tab jayengi jab malik ka **naya backup** aa jaye (P0 rule: backup ki
+tasdeeq se pehle Live par koi migration nahi).
+
+| # | Kya karti hai | Testing | Live |
+|---|---|---|---|
+| 338 | Cash Book aur ledger ka milan + farq wala view | ✅ (0 farq) | **baqi** |
+| 339 | Customer ka khata: `fn_customer_ledger`, `fn_customer_baqi`, help | ✅ | **baqi** |
+
+Live par 338 chalne se pehle aur baad mein ye ginti leni hai:
+
+```sql
+select * from v_cash_book_ledger_farq;   -- baad mein KHALI honi chahiye
+```
+
+## Naye khane isi round mein
+
+* **Load par commission** — `commission_confirmed` ka khana database
+  mein tha magar us tak koi raasta nahi tha. Malik: *"service charges to
+  nahi liye, lekin hamein 15 rupay ka commission mila hai — wo kahan darj
+  nahi hua?"* Ab qatar ke saamne raqam likh kar "Mil gayi", aur ye
+  poochha jata hai ke wo kis khate mein aayi.
+* **Naqad udhaar aur wapsi** — `/admin/load-bill` ka teesra khana. Ye
+  bikri nahi (koi maal nahi gaya), sirf 1100 par party ke sath. Har dafa
+  teen jagah ek sath hilti hain: ledger, Cash Book, aur gahak ka balance.
+* **Gahak ka khata** — `/admin/crm/<id>/statement`. Supplier, kisan,
+  dealer, buyer, driver, investor sab ka statement pehle se tha; gahak ka
+  nahi.
+
+## Ab bhi baqi (pehle wali fehrist ke ilawa)
+
+5. **Rs 15 ki commission** — khana ban chuka hai, magar malik ko batana
+   hai ke wo Rs 15 **kis khate** mein aaye (CBA float mein, ya kahin
+   aur). Us ke bagair darj nahi ki ja sakti — andaza lagana wohi ghalti
+   hoti jo mahine baad company ki statement se milan par nikalti hai.

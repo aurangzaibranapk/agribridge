@@ -71,7 +71,7 @@ export default async function LoadBillPage({
     // form mein customer chunne ka khana tha hi nahi -- is liye
     // "Khata" chunne par server hamesha "customer chunna zaroori hai"
     // keh kar rok deta tha. Wo khana MARA HUA tha.
-    service.from("customers").select("id, name").order("name"),
+    service.from("customers").select("id, name, current_balance").order("name"),
   ]);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
@@ -93,7 +93,7 @@ export default async function LoadBillPage({
   const { data: aajKiQatarein } = await service
     .from("load_transactions")
     .select(
-      "id, txn_number, kind, reference, principal, service_charge, commission_expected, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
+      "id, txn_number, kind, reference, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
     )
     .gte("created_at", `${aaj}T00:00:00`)
     .order("created_at", { ascending: false })
@@ -163,7 +163,14 @@ export default async function LoadBillPage({
             providerName: a.provider_id ? providerName.get(a.provider_id as string) ?? "—" : "—",
             float: floats.get(a.id as string) ?? null,
           }))}
-          customers={(customers ?? []).map((c) => ({ id: c.id as string, name: (c.name as string | null) ?? "—" }))}
+          customers={(customers ?? []).map((c) => ({
+            id: c.id as string,
+            name: (c.name as string | null) ?? "—",
+            // NULL = is customer ka hisaab shuru hi nahi hua. Us ko
+            // sifar likh dena "dekh liya, kuch nahi" kehna hai -- aur
+            // wo baat yahan sach nahi.
+            balance: c.current_balance == null ? null : Number(c.current_balance),
+          }))}
           financeAccounts={(financeAccounts ?? []).map((f) => ({
             id: f.id as string,
             name: f.name as string,
@@ -176,6 +183,7 @@ export default async function LoadBillPage({
             principal: Number(t.principal),
             serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
             commissionExpected: t.commission_expected === null ? null : Number(t.commission_expected),
+            commissionConfirmed: t.commission_confirmed === null ? null : Number(t.commission_confirmed),
             commissionStatus: t.commission_status as string,
             method: t.payment_method as string,
             tid: (t.provider_tid as string | null) ?? null,

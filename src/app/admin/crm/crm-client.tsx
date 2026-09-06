@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/form";
 import { Users, Truck, Building2, Briefcase } from "lucide-react";
 import { CustomerActions } from "@/app/admin/crm/customer-actions";
@@ -112,8 +113,14 @@ export function CrmClient({
                 <tr key={c.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{c.name}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{c.phone_number}</td>
+                  {/* Adad ab khud khate ka darwaza hai. Pehle sirf kul
+                      raqam nazar aati thi aur ye sawal kahin se jawab
+                      nahi paata tha: "ye kab bana, aur is ne kab kya
+                      diya?" */}
                   <td className={`px-4 py-3 text-right font-semibold ${c.current_balance > 0 ? "text-red-600" : "text-surface-500"}`}>
-                    Rs {c.current_balance.toLocaleString()}
+                    <Link href={`/admin/crm/${c.id}/statement`} className="underline-offset-2 hover:underline">
+                      Rs {c.current_balance.toLocaleString()}
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={c.is_active ? "green" : "gray"}>{c.is_active ? "Active" : "Inactive"}</Badge>
@@ -122,7 +129,15 @@ export function CrmClient({
                     <EditCustomerButton customer={c} />
                   </td>
                   <td className="px-4 py-3">
-                    <CustomerActions customerId={c.id} isActive={c.is_active} />
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/admin/crm/${c.id}/statement`}
+                        className="text-xs font-medium text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
+                      >
+                        Khata
+                      </Link>
+                      <CustomerActions customerId={c.id} isActive={c.is_active} />
+                    </div>
                   </td>
                 </tr>
               ))}

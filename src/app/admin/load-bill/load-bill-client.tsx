@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import {
@@ -10,10 +11,17 @@ import {
   attachProviderTid,
   settleBill,
   reverseLoadTransaction,
+  confirmLoadCommission,
   type LoadState,
 } from "@/actions/load-bill";
+import {
+  giveCustomerLoan,
+  takeCustomerRepayment,
+  type UdhaarState,
+} from "@/actions/customer-udhaar";
 
 const initial: LoadState = {};
+const udhaarInitial: UdhaarState = {};
 
 interface Provider {
   id: string;
@@ -39,6 +47,7 @@ interface Txn {
   principal: number;
   serviceCharge: number | null;
   commissionExpected: number | null;
+  commissionConfirmed: number | null;
   commissionStatus: string;
   method: string;
   tid: string | null;
@@ -78,15 +87,31 @@ export function LoadBillClient({
   providers: Provider[];
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
-  customers: { id: string; name: string }[];
+  customers: { id: string; name: string; balance: number | null }[];
   today: Txn[];
   canReverse: boolean;
 }) {
-  const [kind, setKind] = useState<"load" | "bill">(shuruKind);
+  /**
+   * Teen khane, ek hi safha.
+   *
+   * Malik (6 September): *"customer ke bana dein, POS ke upar jahan hum
+   * load bill kar rahe hain wahan udhaar raqam bhi karein."*
+   *
+   * Udhaar ka `kind` nahi hota -- wo load ya bill hai hi nahi. Is liye
+   * `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
+   */
+  const [tab, setTab] = useState<"load" | "bill" | "udhaar">(shuruKind);
+  const kind: "load" | "bill" = tab === "udhaar" ? "load" : tab;
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
   const [settleState, settleAction] = useFormState(settleBill, initial);
   const [revState, revAction] = useFormState(reverseLoadTransaction, initial);
+  const [commState, commAction] = useFormState(confirmLoadCommission, initial);
+  const [loanState, loanAction] = useFormState(giveCustomerLoan, udhaarInitial);
+  const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
+  /** Udhaar ke andar do kaam: diya, ya wapas aaya. */
+  const [udhaarKaam, setUdhaarKaam] = useState<"diya" | "wapsi">("diya");
+  const [udhaarCustomer, setUdhaarCustomer] = useState("");
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -133,8 +158,10 @@ export function LoadBillClient({
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
 
-  const paighaam = state.error ?? tidState.error ?? settleState.error ?? revState.error;
-  const khushKhabri = state.notice ?? tidState.notice ?? settleState.notice ?? revState.notice;
+  const paighaam =
+    state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
+  const khushKhabri =
+    state.notice ?? tidState.notice ?? settleState.notice ?? revState.notice ?? commState.notice ?? loanState.notice ?? wapsiState.notice;
 
   return (
     <div className="space-y-4">
@@ -178,35 +205,45 @@ export function LoadBillClient({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* -------- Form -------- */}
         <Card>
-          <div className="mb-4 flex gap-2">
-            {(["load", "bill"] as const).map((k) => (
+          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+            {(
+              [
+                { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
+                { key: "bill", title: "Bill Payment", sub: "Bijli, gas, internet", Icon: FileText },
+                { key: "udhaar", title: "Udhaar", sub: "Naqad diya ya wapas aaya", Icon: HandCoins },
+              ] as const
+            ).map(({ key, title, sub, Icon }) => (
               <button
-                key={k}
+                key={key}
                 type="button"
-                onClick={() => setKind(k)}
-                className={`flex flex-1 items-center gap-2 rounded-lg border px-4 py-3 text-left transition ${
-                  kind === k
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left transition ${
+                  tab === key
                     ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
                     : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
                 }`}
               >
-                {k === "load" ? (
-                  <Smartphone className="h-5 w-5 text-brand-600" />
-                ) : (
-                  <FileText className="h-5 w-5 text-brand-600" />
-                )}
-                <span>
-                  <span className="block text-sm font-semibold text-surface-900 dark:text-white">
-                    {k === "load" ? "Mobile Load" : "Bill Payment"}
-                  </span>
-                  <span className="block text-[11px] text-surface-500">
-                    {k === "load" ? "Customer ka mobile load" : "Bijli, gas, internet"}
-                  </span>
+                <Icon className="h-5 w-5 shrink-0 text-brand-600" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-surface-900 dark:text-white">{title}</span>
+                  <span className="block truncate text-[11px] text-surface-500">{sub}</span>
                 </span>
               </button>
             ))}
           </div>
 
+          {tab === "udhaar" ? (
+            <UdhaarForm
+              kaam={udhaarKaam}
+              setKaam={setUdhaarKaam}
+              customerId={udhaarCustomer}
+              setCustomerId={setUdhaarCustomer}
+              customers={customers}
+              financeAccounts={financeAccounts}
+              loanAction={loanAction}
+              wapsiAction={wapsiAction}
+            />
+          ) : (
           <form action={action} className="space-y-3">
             <input type="hidden" name="kind" value={kind} />
 
@@ -440,6 +477,7 @@ export function LoadBillClient({
 
             <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
           </form>
+          )}
         </Card>
 
         {/* -------- Aaj ka hisaab -------- */}
@@ -521,16 +559,26 @@ export function LoadBillClient({
                       {t.serviceCharge === null ? "—" : rs(t.serviceCharge)}
                     </td>
                     <td className="px-4 py-2 text-right text-xs">
-                      {t.commissionStatus === "muntazir" ? (
+                      {/*
+                        Andaza aur asal raqam ek nazar mein alag nazar
+                        aate hain. "~" wala adad kabhi kitab mein nahi
+                        gaya -- wo sirf qaide se gina hua andaza hai.
+                        Qaida hi na ho to "qaida nahi" likha jata hai,
+                        "Rs 0" nahi: dekha hi nahi gaya aur sifar do alag
+                        baatein hain.
+                      */}
+                      {t.commissionStatus === "tasdeeq" ? (
+                        <span className="font-medium text-brand-700 tabular-nums">
+                          {t.commissionConfirmed === null ? "tasdeeq shuda" : rs(t.commissionConfirmed)}
+                        </span>
+                      ) : t.commissionStatus === "nahi_mili" ? (
+                        <span className="text-red-600">nahi mili</span>
+                      ) : (
                         <span className="text-surface-400">
                           {t.commissionExpected === null
                             ? "qaida nahi"
                             : `~${rs(t.commissionExpected)} muntazir`}
                         </span>
-                      ) : t.commissionStatus === "nahi_mili" ? (
-                        <span className="text-red-600">nahi mili</span>
-                      ) : (
-                        <span className="text-brand-700">tasdeeq shuda</span>
                       )}
                     </td>
                     <td className="px-4 py-2">
@@ -568,6 +616,42 @@ export function LoadBillClient({
                             </Button>
                           </form>
                         )}
+                        {/*
+                          Commission ka khana.
+
+                          Malik (6 September): *"service charges to nahi
+                          liye, lekin hamein 15 rupay ka commission mila
+                          hai -- wo kahan darj nahi hua?"*
+
+                          "Kahan aayi" poochha jata hai, maan nahi liya
+                          jata: aam taur par usi float mein aati hai
+                          jahan se load gaya, magar hamesha nahi.
+                        */}
+                        {canReverse &&
+                          t.status === "darj" &&
+                          t.commissionStatus === "muntazir" && (
+                            <form action={commAction} className="flex items-center gap-1">
+                              <input type="hidden" name="id" value={t.id} />
+                              <Input
+                                name="rakam"
+                                inputMode="decimal"
+                                placeholder="commission"
+                                className="h-8 w-24 text-xs"
+                                required
+                              />
+                              <Select name="kahan" className="h-8 w-28 text-xs" defaultValue="float">
+                                <option value="float">float mein</option>
+                                {financeAccounts.map((f) => (
+                                  <option key={f.id} value={f.id}>
+                                    {f.name}
+                                  </option>
+                                ))}
+                              </Select>
+                              <Button type="submit" size="sm" variant="secondary">
+                                Mil gayi
+                              </Button>
+                            </form>
+                          )}
                         {canReverse && t.status !== "wapas" && (
                           <form action={revAction} className="flex items-center gap-1">
                             <input type="hidden" name="id" value={t.id} />
@@ -587,5 +671,152 @@ export function LoadBillClient({
         )}
       </Card>
     </div>
+  );
+}
+
+/**
+ * Naqad udhaar -- diya, aur wapas aaya.
+ *
+ * Do baatein jaan boojh kar:
+ *
+ * 1. **Customer chunte hi us ka baqi saamne aata hai.** Counter par
+ *    faisla isi adad se badalta hai. Baqi maloom hi na ho to banda naya
+ *    udhaar de deta hai -- aur yehi wajah hai ke ye adad chhupaya nahi
+ *    ja sakta.
+ *
+ * 2. **NULL aur sifar alag likhe jate hain.** Jis customer ka hisaab
+ *    abhi shuru hi nahi hua us ke saamne "Rs 0" likh dena jhoot hai --
+ *    wahan "hisaab shuru nahi hua" likha jata hai.
+ */
+function UdhaarForm({
+  kaam,
+  setKaam,
+  customerId,
+  setCustomerId,
+  customers,
+  financeAccounts,
+  loanAction,
+  wapsiAction,
+}: {
+  kaam: "diya" | "wapsi";
+  setKaam: (k: "diya" | "wapsi") => void;
+  customerId: string;
+  setCustomerId: (id: string) => void;
+  customers: { id: string; name: string; balance: number | null }[];
+  financeAccounts: { id: string; name: string }[];
+  loanAction: (fd: FormData) => void;
+  wapsiAction: (fd: FormData) => void;
+}) {
+  const chuna = customers.find((c) => c.id === customerId) ?? null;
+  const diya = kaam === "diya";
+
+  return (
+    <form action={diya ? loanAction : wapsiAction} className="space-y-3">
+      <div className="flex gap-2">
+        {(
+          [
+            { key: "diya", label: "Udhaar diya", sub: "dukan se paisa gaya" },
+            { key: "wapsi", label: "Wapas aaya", sub: "customer ne paisa diya" },
+          ] as const
+        ).map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => setKaam(o.key)}
+            className={`flex-1 rounded-lg border px-3 py-2 text-left transition ${
+              kaam === o.key
+                ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
+                : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
+            }`}
+          >
+            <span className="block text-sm font-semibold text-surface-900 dark:text-white">{o.label}</span>
+            <span className="block text-[11px] text-surface-500">{o.sub}</span>
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_customer">Kis customer ka</Label>
+        <Select
+          id="udhaar_customer"
+          name="customer_id"
+          required
+          value={customerId}
+          onChange={(e) => setCustomerId(e.target.value)}
+        >
+          <option value="">— customer chunein —</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+        {chuna && (
+          <p className="mt-1 text-xs text-surface-600 dark:text-surface-300">
+            {chuna.balance === null ? (
+              <span className="text-surface-400">Is customer ka hisaab abhi shuru nahi hua.</span>
+            ) : chuna.balance > 0 ? (
+              <>
+                Abhi <b className="tabular-nums text-red-700 dark:text-red-300">{rs(chuna.balance)}</b> ka
+                udhaar chal raha hai.
+              </>
+            ) : (
+              <span className="text-brand-700 dark:text-brand-300">Khata saaf hai — koi udhaar baqi nahi.</span>
+            )}
+          </p>
+        )}
+        <p className="mt-1 text-[11px] text-surface-500">
+          Customer fehrist mein na ho to pehle CRM par us ka indraj karein.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_rakam">Raqam</Label>
+        <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" />
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_khata">{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
+        <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} defaultValue="cash">
+          <option value="cash">Cash — golak</option>
+          {financeAccounts.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_tareekh">Kis din</Label>
+        <Input id="udhaar_tareekh" name="tareekh" type="date" defaultValue={aajKaKhana()} />
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_wajah">Wajah / note (marzi ka)</Label>
+        <Input
+          id="udhaar_wajah"
+          name="wajah"
+          placeholder={diya ? "jaise: beej ke liye" : "jaise: fasal bikne par"}
+        />
+      </div>
+
+      <div className="rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
+        {diya ? (
+          <>
+            Ye <b>bikri nahi</b> hai — koi maal nahi gaya, sirf paisa gaya. Is liye is se nafa nahi banta;
+            raqam <b>&ldquo;Customer se lena&rdquo;</b> par chali jati hai aur us ke khate mein nazar aati
+            hai.
+          </>
+        ) : (
+          <>
+            Raqam customer ke khate se <b>kam</b> ho jayegi aur jis khate mein aayi us mein <b>baRh</b>
+            jayegi — dono ek sath.
+          </>
+        )}
+      </div>
+
+      <Submit label={diya ? "Udhaar darj karein" : "Wapsi darj karein"} />
+    </form>
   );
 }
