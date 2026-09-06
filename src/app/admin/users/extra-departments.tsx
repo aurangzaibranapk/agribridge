@@ -1,8 +1,9 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateUserExtraRoles } from "@/actions/users";
 import { DEPARTMENTS } from "@/lib/departments";
+import { X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -22,6 +23,22 @@ import { useLang } from "@/lib/i18n/lang-context";
  * Har tick foran mehfooz hoti hai. "Save" ka button rakhne ka matlab
  * hota ke koi tick laga kar chala jaye aur usay pata bhi na chale ke
  * kuch mehfooz hua hi nahi.
+ *
+ * -------------------------------------------------------------------
+ * BAND KARNE KA RAASTA
+ *
+ * Malik (6 September): *"is ke upar cross ka nishan lagayein. Ab kuch
+ * select hi nahi karna, is ko hatana hai to ye nahi hat raha jab tak
+ * refresh nahi karenge."*
+ *
+ * Pehle ye `<details>` tha aur har tick ke baad safha khud taza hota
+ * tha -- us taza hone mein khana dobara khul kar saamne aa jata tha, aur
+ * band karne ka koi saaf raasta nazar nahi aata tha. Banda phans jata
+ * tha.
+ *
+ * Ab khulna aur band hona hamare apne haath mein hai: kone mein cross,
+ * Escape se bhi band, aur bahar kahin dabane se bhi. Teen raaste is
+ * liye ke har banda alag tarah se band karne ki koshish karta hai.
  */
 export function ExtraDepartments({
   userId,
@@ -37,6 +54,7 @@ export function ExtraDepartments({
   const [chosen, setChosen] = useState<string[]>(current);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
   const others = DEPARTMENTS.filter((d) => d.role !== mainRole);
 
@@ -57,30 +75,72 @@ export function ExtraDepartments({
     });
   }
 
+  const khaanaRef = useRef<HTMLDivElement | null>(null);
+
+  // Escape se band, aur bahar dabane se bhi.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function onClick(e: MouseEvent) {
+      if (khaanaRef.current && !khaanaRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [open]);
+
+  const likhai =
+    chosen.length === 0
+      ? "— (sirf apna department)"
+      : chosen.map((r) => DEPARTMENTS.find((d) => d.role === r)?.label ?? r).join(", ");
+
   return (
-    <details className="w-52">
-      <summary className="cursor-pointer text-xs text-surface-500 hover:text-surface-800 dark:hover:text-surface-200">
-        {chosen.length === 0
-          ? "— (sirf apna department)"
-          : chosen
-              .map((r) => DEPARTMENTS.find((d) => d.role === r)?.label ?? r)
-              .join(", ")}
-      </summary>
-      <div className="mt-2 space-y-1 rounded-lg border border-surface-200 p-2 dark:border-surface-700">
-        {others.map((d) => (
-          <label key={d.role} className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={chosen.includes(d.role)}
-              disabled={pending}
-              onChange={() => toggle(d.role)}
-            />
-            <span>{d.label}</span>
-          </label>
-        ))}
-        <p className="pt-1 text-[11px] leading-snug text-surface-400">{t("at_ticked_depts", lang)}</p>
-        {error && <p className="text-[11px] text-red-600">{error}</p>}
-      </div>
-    </details>
+    <div ref={khaanaRef} className="relative w-52">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-left text-xs text-surface-500 hover:text-surface-800 dark:hover:text-surface-200"
+      >
+        {open ? "\u25bc" : "\u25b6"} {likhai}
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-1 rounded-lg border border-surface-200 bg-white p-2 shadow-lg dark:border-surface-700 dark:bg-surface-900">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-surface-400">
+              Doosre department
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Band karein"
+              className="-mr-1 -mt-1 rounded p-0.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700 dark:hover:bg-surface-800 dark:hover:text-surface-200"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {others.map((d) => (
+            <label key={d.role} className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={chosen.includes(d.role)}
+                disabled={pending}
+                onChange={() => toggle(d.role)}
+              />
+              <span>{d.label}</span>
+            </label>
+          ))}
+          <p className="pt-1 text-[11px] leading-snug text-surface-400">{t("at_ticked_depts", lang)}</p>
+          {error && <p className="text-[11px] text-red-600">{error}</p>}
+        </div>
+      )}
+    </div>
   );
 }
