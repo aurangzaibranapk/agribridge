@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
+import Link from "next/link";
 import { CreditRequestActions } from "@/app/admin/credit-requests/credit-request-actions";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -13,12 +14,13 @@ export default async function AdminCreditRequestsPage() {
 
   const { data: rawRequests } = await supabase
     .from("credit_requests")
-    .select("id, category, quantity, mrp_rate, base_amount, margin_percentage, total_amount, status, created_at, farmers(full_name, farmer_code), products(name)")
+    .select("id, farmer_id, category, quantity, mrp_rate, base_amount, margin_percentage, total_amount, status, created_at, farmers(full_name, farmer_code), products(name)")
     .order("created_at", { ascending: false })
     .limit(100);
 
   const requests = (rawRequests ?? []).map((r: any) => ({
     id: r.id,
+    farmerId: r.farmer_id,
     category: r.category,
     quantity: Number(r.quantity),
     baseAmount: Number(r.base_amount),
@@ -60,7 +62,13 @@ export default async function AdminCreditRequestsPage() {
             <tbody>
               {requests.map((r) => (
                 <tr key={r.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                  <td className="px-4 py-3 text-surface-700 dark:text-surface-300">{r.farmerName} ({r.farmerCode})</td>
+                  <td className="px-4 py-3 text-surface-700 dark:text-surface-300">
+                    {r.farmerName} ({r.farmerCode})
+                    {/* Manzoor hote hi ye Farmer Credit ke usi khate mein jati hai (party_type='farmer') — sirf raasta. */}
+                    <Link href={`/admin/khata/banda/farmer/${r.farmerId}`} className="block text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
+                      Poora khata
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 capitalize text-surface-600 dark:text-surface-400">{r.category}</td>
                   <td className="px-4 py-3 text-surface-700 dark:text-surface-300">{r.productName}</td>
                   <td className="px-4 py-3 text-right text-surface-600 dark:text-surface-400">{r.quantity}</td>

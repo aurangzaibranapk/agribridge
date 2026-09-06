@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createFarmerLoan, type ActionState } from "@/actions/farmer-loans";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
@@ -47,7 +48,13 @@ export function FarmerLoansClient({ farmers, loans }: { farmers: Farmer[]; loans
           <tbody>
             {loans.map((l) => (
               <tr key={l.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{l.farmer_name} <span className="block text-xs text-surface-400">{l.farmer_code}</span></td>
+                <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                  {l.farmer_name} <span className="block text-xs text-surface-400">{l.farmer_code}</span>
+                  {/* Loan bhi isi bande ke ek khate ka hissa hai (1140 par, party_type='farmer') — sirf raasta. */}
+                  <Link href={`/admin/khata/banda/farmer/${l.farmer_id}`} className="block text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
+                    Poora khata
+                  </Link>
+                </td>
                 <td className="px-3 py-2 text-right text-surface-900 dark:text-white">Rs {l.principal_amount.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {l.weekly_installment.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right font-semibold text-amber-600">Rs {l.outstanding_balance.toLocaleString()}</td>

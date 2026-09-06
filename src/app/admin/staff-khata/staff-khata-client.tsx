@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordStaffKhataDebit, processMonthEndSalary, type ActionState } from "@/actions/staff-khata";
 import { Wallet, X, TrendingUp } from "lucide-react";
@@ -52,12 +53,16 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
                       Rs {b.balance.toLocaleString()}
                     </td>
                     <td className="px-3 py-2">
-                      <div className="flex gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <button onClick={() => setDebitTarget(b)} className="rounded-lg border border-surface-200 px-2 py-1 text-xs text-surface-600 hover:bg-surface-50">{t("at_record_spend", lang)}</button>
                         {b.balance > 0 && (
                           <button onClick={() => setProcessTarget(b)} className="flex items-center gap-1 rounded-lg bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">
                             <TrendingUp className="h-3 w-3" />{t("sk_month_end", lang)}</button>
                         )}
+                        {/* Ye qatar khud pehle se journal mein hai (party_type='staff', khata 2020) — Money Trail wahin se parhta hai. */}
+                        <Link href={`/admin/khata/banda/staff/${b.profile_id}`} className="text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
+                          Poora khata
+                        </Link>
                       </div>
                     </td>
                   </tr>

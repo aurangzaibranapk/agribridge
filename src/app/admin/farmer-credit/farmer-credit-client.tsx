@@ -101,6 +101,20 @@ export function FarmerCreditClient({
                   <td className="px-4 py-3">
                     <Link href={`/admin/farmer-credit/statement?farmer_id=${b.farmer_id}`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
                       <FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
+                    {/*
+                      Poora khata -- doodh, mazdoori, dukan, machinery
+                      sab isi bande ka, ek jagah.
+
+                      Malik (6 September): "wo 6 khaate wale safhe ek
+                      khata ke neeche laa do." Ye credit ledger pehle se
+                      hi usi journal mein likhta hai jo bande ka khata
+                      parhta hai (party_type='farmer', khata 1150) --
+                      is liye yahan sirf RAASTA jorha ja raha hai, koi
+                      naya hisaab nahi. Do jagah ka data ek hi hai; sirf
+                      dikhta do jagah tha.
+                    */}
+                    <Link href={`/admin/khata/banda/farmer/${b.farmer_id}`} className="mt-0.5 flex items-center gap-1 text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
+                      Poora khata (sab activity)</Link>
                   </td>
                 </tr>
               );

@@ -151,15 +151,45 @@ hain.
 Ye nakalein hain, magar in ka hal safha mitane se nahi hota. Chup chaap
 mitane se kaam ruk jata, is liye yahan likhi ja rahi hain.
 
-### 1. Udhaar aur khaate ke chhe safhe
+### 1. Udhaar aur khaate ke chhe safhe — CHECK KIYA GAYA, chaar SAFE nikle, do KHATARNAAK
 
-`/admin/khata` · `/admin/staff-khata` · `/admin/branch-credit` ·
-`/admin/credit-requests` · `/admin/farmer-credit` · `/admin/farmer-loans`
+Malik: *"wo 6 khaate wale safhe ek khata ke neeche laa do to koi nuqsan
+to nahi?"*
 
-Har ek ka apna asal kaam hai (customer, staff, shaakh, kisan), magar
-naam se ye farq nazar nahi aata. **Bande ka ek khata**
-(`/admin/khata/banda/...`) in mein se aksar ka jawab pehle hi de deta
-hai. Malik chahen to in ko us ke neeche laaya ja sakta hai.
+Amal karne se pehle har safha ka asal peechha kiya gaya -- kaunsa kis
+table mein likhta hai, aur kya wo `journal_lines` (wohi jaga jise
+"Bande ka ek khata" parhta hai) mein jata bhi hai ya nahi. Nateeja do
+hisson mein bata:
+
+**Chaar safhe -- ALREADY isi ek khate mein likh rahe the, sirf dikhta
+nahi tha:**
+
+| Safha | Khata | Party |
+|---|---|---|
+| `/admin/farmer-credit` | 1150 (Farmer se lena) | `farmer` |
+| `/admin/farmer-loans` | 1140 (Farmer ko advance) | `farmer` |
+| `/admin/credit-requests` | manzoor hote hi farmer-credit ka hissa | `farmer` |
+| `/admin/staff-khata` | 2020 (Staff ko dena) | `staff` |
+
+In mein KOI khatra nahi tha -- data pehle se ek hi jagah (`journal_lines`)
+tha, sirf har safha apni tang khirki se dekhta tha. Is liye **safha
+mitaya ya mora nahi gaya** (har ek ka apna kaam hai: qism ke hisaab se
+credit dena, request manzoor karna, loan ki weekly installment) --
+sirf har ek par **"Poora khata"** ka ek chhota link laga diya gaya, jo
+seedha `/admin/khata/banda/<qism>/<id>` par le jata hai. Koi hisaab
+naya nahi laga, sirf raasta joRha gaya.
+
+**Do safhe -- ALAG cheez hain, in ko zabardasti "banda ka khata" mein
+DAALNA GHALAT hota:**
+
+| Safha | Wajah |
+|---|---|
+| `/admin/branch-credit` | `party_type = 'branch'` -- ek SHAAKH hai, koi banda nahi. "Bande ka khata" ka safha (`/admin/khata/banda/[qism]/[id]`) sirf farmer/staff/customer/supplier qubool karta hai; branch us mein daalna khud us model ko ghalat kar deta. |
+| `/admin/khata` | Ye "khata hub" hai hi nahi -- ye ek DEALER ka apna safha hai (login kiye hue dealer ko us ke apne customers ki `khata_accounts` dikhata hai). Ye table `journal_lines` mein jata hi NAHI -- kisi action mein is se `postJournal` bulaya hi nahi jata. Isay "banda ka khata" mein daalne ka matlab hota pehle is poore raaste ko ledger se jorna -- wo asal maali kaam hai, safha hilane wala nahi. |
+
+**In dono ko HAATH NAHI lagaya gaya.** Chup chaap "ek jagah la dena" yahan
+wohi ghalti hoti jo aaj din bhar dhoondi ja rahi thi: do alag cheezon ko
+ek dikhana, jab ke un ka asal hisaab do jagah alag alag laga hua hai.
 
 ### 2. Menu mein na aane wale safhe
 
