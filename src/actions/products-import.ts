@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { payAndPost } from "@/lib/ledger/supplier-money";
 import { looksBinary, parseDelimited } from "@/lib/csv";
 import { decideMatch } from "@/lib/product-match";
 
@@ -814,16 +815,17 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       // adaigi jati hai (139). Purchase par adad NAHI likha jata;
       // warna ek din do jagah ka adad alag nikalta hai.
       if (terms.paidNow > 0) {
-        const { error: payErr } = await supabase.from("supplier_payments").insert({
-          supplier_id: supplierId,
-          purchase_id: po.id,
+        const paid = await payAndPost(supabase, {
+          supplierId,
+          purchaseId: po.id,
           amount: terms.paidNow,
-          payment_date: purchaseDate,
-          payment_method: (formData.get("payment_method") as string) || null,
+          paymentDate: purchaseDate,
+          paymentMethod: (formData.get("payment_method") as string) || null,
+          accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
           notes: `Sheet se kharid ${purchaseNumber} ke waqt`,
-          created_by: user.id,
+          createdBy: user.id,
         });
-        if (payErr) stockProblems.push(`Adaigi likhi nahi ja saki: ${payErr.message}`);
+        if ("error" in paid) stockProblems.push(paid.error);
       }
 
       for (const x of withQty) {

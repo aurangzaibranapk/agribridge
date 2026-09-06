@@ -10,18 +10,30 @@ interface DataPoint {
   value: number;
 }
 
+/**
+ * Adad NULL kyun ho sakta hai.
+ *
+ * `number` = gina gaya, yehi adad hai (sifar bhi ho sakta hai, aur sifar
+ * ka matlab "dekh liya, kuch nahi" hota hai).
+ *
+ * `null` = gina hi nahi ja saka -- ledger ka jawab nahi aaya. Aisi jagah
+ * par "Rs 0" likhna is project ki teen dafa dohrayi hui ghalati hai, is
+ * liye wahan "—" likha jata hai aur wajah sath hoti hai.
+ */
+type Adad = number | null;
+
 interface SummaryProps {
   variant?: "summary";
   totalCapitalInvested: number;
   capitalBreakdown: DataPoint[];
-  currentPosition: number;
-  totalBankBalance: number;
+  currentPosition: Adad;
+  totalBankBalance: Adad;
   bankBreakdown: DataPoint[];
-  totalInventoryValue: number;
+  totalInventoryValue: Adad;
   inventoryBreakdown: DataPoint[];
-  totalReceivables: number;
+  totalReceivables: Adad;
   receivablesBreakdown: DataPoint[];
-  totalPayables: number;
+  totalPayables: Adad;
   payablesBreakdown: DataPoint[];
 }
 
@@ -88,7 +100,12 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         <div className="rounded-card border border-surface-200 bg-white p-6 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
           <p className="flex items-center justify-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
             <Scale className="h-4 w-4" />{t("at_position_now", lang)}</p>
-          <p className="mt-2 font-display text-3xl font-bold text-surface-900 dark:text-white">Rs {props.currentPosition.toLocaleString()}</p>
+          <p className="mt-2 font-display text-3xl font-bold text-surface-900 dark:text-white">
+            {props.currentPosition === null ? "—" : `Rs ${props.currentPosition.toLocaleString()}`}
+          </p>
+          {props.currentPosition === null && (
+            <p className="mt-1 text-xs text-amber-600">Ledger ka jawab nahi mila — ye adad bana nahi ja saka.</p>
+          )}
         </div>
       </div>
 
@@ -157,7 +174,7 @@ function ClickCard({
   id: string;
   label: string;
   icon: React.ReactNode;
-  value: number;
+  value: Adad;
   valueColor: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -174,7 +191,10 @@ function ClickCard({
           <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
           {data.length > 0 && (isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />)}
         </div>
-        <p className={`mt-2 font-display font-semibold ${big ? "text-3xl" : "text-xl"} ${valueColor}`}>Rs {value.toLocaleString()}</p>
+        <p className={`mt-2 font-display font-semibold ${big ? "text-3xl" : "text-xl"} ${value === null ? "text-amber-600" : valueColor}`}>
+          {value === null ? "—" : `Rs ${value.toLocaleString()}`}
+        </p>
+        {value === null && <p className="text-[10px] text-amber-600">gina nahi ja saka</p>}
       </button>
 
       {isOpen && data.length > 0 && (

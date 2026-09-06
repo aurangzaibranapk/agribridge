@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { payAndPost } from "@/lib/ledger/supplier-money";
 export interface ActionState {
   error?: string;
   success?: boolean;
@@ -31,16 +32,17 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error } = await supabase.from("supplier_payments").insert({
-    supplier_id: supplierId,
+  const paid = await payAndPost(supabase, {
+    supplierId,
     amount,
-    payment_date: paymentDate,
-    payment_method: paymentMethod,
+    paymentDate,
+    paymentMethod,
+    accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
     notes,
-    slip_url: slipUrl,
-    created_by: user?.id ?? null,
+    slipUrl,
+    createdBy: user?.id ?? null,
   });
-  if (error) return { error: error.message };
+  if ("error" in paid) return { error: paid.error };
   // Payable yahan se NAHI ghataya jata. supplier_payments mein qatar
   // daalte hi trigger khud hisaab dobara laga deta hai (139). Pehle
   // yahan Math.max(0, ...) tha, jo ghalati ko theek nahi karta tha --

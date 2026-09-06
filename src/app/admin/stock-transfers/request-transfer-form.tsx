@@ -93,7 +93,7 @@ export function RequestTransferForm({
    *    ke liye nahi -- aur bhejne ki manzoori us ke baad bhi wahin hai
    *    jahan pehle thi.
    */
-  function bulkFill(visible: { id: string; warehouse_stock: number; selling_price: number }[], mode: "sab" | "khali") {
+  function bulkFill(visible: { id: string; warehouse_stock: number; purchase_price: number }[], mode: "sab" | "khali") {
     setRows((prev) => {
       const next = { ...prev };
       for (const p of visible) {
@@ -105,7 +105,7 @@ export function RequestTransferForm({
         if (p.warehouse_stock <= 0) continue;
         next[p.id] = {
           qty: p.warehouse_stock,
-          price: prev[p.id]?.price ?? p.selling_price,
+          price: prev[p.id]?.price ?? p.purchase_price,
         };
       }
       return next;
@@ -137,6 +137,14 @@ export function RequestTransferForm({
     [rows, products]
   );
 
+  // Jin cheezon ka kharid rate darj hi nahi, un ka Rs 0 likhna jhoot
+  // hota. Rok nahi lagai -- maal to bhejna hi hai -- magar chhupaya bhi
+  // nahi jata.
+  const binaRate = useMemo(
+    () => activeItems.filter((i) => !(i.unit_price > 0)),
+    [activeItems]
+  );
+
   const itemsJson = JSON.stringify(activeItems.map((i) => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })));
   const total = activeItems.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
@@ -144,6 +152,19 @@ export function RequestTransferForm({
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-white">{t("at_shop_to_shop", lang)}</h2>
       <p className="mb-3 text-xs text-surface-400">{t("at_transfer_note", lang)}</p>
+      <p className="mb-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-500 dark:bg-surface-800 dark:text-surface-400">
+        Ye parchi <strong>KHARID rate</strong> par banti hai. Andar ka maal andar hi ja raha hai — is par
+        munafa nahi lagta. Sale rate par ginne se yehi maal kharid ke bill se oonchi qeemat par nazar
+        aata tha.
+      </p>
+      {binaRate.length > 0 && (
+        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          {binaRate.length} cheezon ka kharid rate darj nahi hai — un ki qeemat Rs 0 aayegi. Wo{" "}
+          <strong>sifar ki nahi</strong>, un ka hisaab hi nahi rakha gaya. Pehle Products → Bill Rates par
+          rate bharein: {binaRate.slice(0, 5).map((p) => p.name).join(", ")}
+          {binaRate.length > 5 ? ` +${binaRate.length - 5} aur` : ""}
+        </p>
+      )}
       {state.error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>
       )}
@@ -212,6 +233,7 @@ export function RequestTransferForm({
               rows={rows}
               onUpdateRow={handleUpdateRow}
               bulkFill={bulkFill}
+              priceMode="purchase"
             />
           </div>
         </div>

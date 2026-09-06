@@ -675,3 +675,136 @@ export async function accountLedger(
     lines,
   };
 }
+
+// =====================================================================
+// 6. Karobar ki maujooda haalat -- ek hi jagah se
+// =====================================================================
+/**
+ * Master Dashboard ke paanch adad: paisa, stock, lena, dena, position.
+ *
+ * -------------------------------------------------------------------
+ * YE FUNCTION KYUN BANA
+ *
+ * Master Dashboard ye paanchon adad apne taur par gin raha tha, aur
+ * teen jagah GHALAT gin raha tha:
+ *
+ *   BANK/CASH -- `finance_accounts` mein se sirf `account_type='bank'`
+ *     parhta tha. Cash in Hand (Rs 34,000) aur CBA wallet (Rs 521) us
+ *     shart se bahar the. Screen par Rs 9,545 likha tha, jab ke paisa
+ *     Rs 44,066 mojood tha.
+ *
+ *   TO RECEIVE -- sirf `branch_credit_transactions` parhta tha. Kisan
+ *     ka lena (khata 1150, Rs 80,450) us table mein hota hi nahi.
+ *     Screen par SIFAR likha tha -- aur sifar kehta hai "dekh liya,
+ *     kuch nahi hai", jo yahan jhoot tha.
+ *
+ *   TO PAY -- `suppliers.current_payable` parhta tha, jab ke ledger ka
+ *     khata 2000 kuch aur kehta tha. Do adad, dono theek lagte the.
+ *
+ * Teenon ghaltiyon ki jaR ek hi hai: dashboard ne apna hisaab khud
+ * lagaya. Ab wo yahan se poochta hai, aur yahan hisaab trial balance se
+ * aata hai -- wahi jagah jahan POS, kharid, machinery aur doodh pehle
+ * se likhte hain.
+ *
+ * -------------------------------------------------------------------
+ * JAWAB NA MILE TO SIFAR NAHI JATA
+ *
+ * `error` bhara ho to har adad NULL hai, sifar nahi. Ye is project ki
+ * teen dafa dohrayi hui ghalati hai: rok ke peeche khali jawab ko asal
+ * adad samajh lena. Sifar kehta hai "gina, kuch nahi tha"; NULL kehta
+ * hai "gina hi nahi ja saka".
+ */
+export interface PositionRow {
+  code: string;
+  name: string;
+  amount: number;
+}
+export interface Position {
+  /** Cash + har bank + wallet (1000, 1010-1019). */
+  naqdi: number | null;
+  naqdiRows: PositionRow[];
+  /** Raaste mein ya kisi bande ke haath (1020, 1030). */
+  raasteMein: number | null;
+  raasteMeinRows: PositionRow[];
+  /** Stock (1200, 1210, 1220). */
+  stock: number | null;
+  stockRows: PositionRow[];
+  /** Lena hai (1100, 1110, 1150, 1160, 1170). */
+  lena: number | null;
+  lenaRows: PositionRow[];
+  /** Peshgi di hui (1120, 1130, 1140) -- lena se alag. */
+  peshgi: number | null;
+  peshgiRows: PositionRow[];
+  /** Dena hai -- saare liability khate. */
+  dena: number | null;
+  denaRows: PositionRow[];
+  /** naqdi + raaste + stock + lena + peshgi - dena. */
+  position: number | null;
+  error?: string;
+}
+
+const NAQDI_CODES = new Set(["1000", ...BANK_CODES]);
+const RAASTE_CODES = new Set(["1020", "1030"]);
+const STOCK_CODES = new Set(["1200", "1210", "1220"]);
+const LENA_CODES = new Set(["1100", "1110", "1150", "1160", "1170"]);
+const PESHGI_CODES = new Set(["1120", "1130", "1140"]);
+
+export async function position(asOf: string, branchId?: string | null): Promise<Position> {
+  const khali: Position = {
+    naqdi: null,
+    naqdiRows: [],
+    raasteMein: null,
+    raasteMeinRows: [],
+    stock: null,
+    stockRows: [],
+    lena: null,
+    lenaRows: [],
+    peshgi: null,
+    peshgiRows: [],
+    dena: null,
+    denaRows: [],
+    position: null,
+  };
+
+  const tb = await trialBalance("1900-01-01", asOf, branchId);
+  if (tb.error) return { ...khali, error: tb.error };
+
+  const chuno = (test: (r: TrialRow) => boolean): { total: number; rows: PositionRow[] } => {
+    const rows = tb.rows
+      .filter(test)
+      // Sifar wali qatar fehrist mein nahi aati -- wo sirf lambai barhati
+      // hai. Total mein wo waise bhi kuch nahi jorti.
+      .filter((r) => Math.abs(r.balance) > 0.004)
+      .map((r) => ({ code: r.code, name: r.name, amount: Math.round(r.balance * 100) / 100 }))
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+    return { total: Math.round(rows.reduce((s, r) => s + r.amount, 0) * 100) / 100, rows };
+  };
+
+  const naqdi = chuno((r) => NAQDI_CODES.has(r.code));
+  const raaste = chuno((r) => RAASTE_CODES.has(r.code));
+  const stock = chuno((r) => STOCK_CODES.has(r.code));
+  const lena = chuno((r) => LENA_CODES.has(r.code));
+  const peshgi = chuno((r) => PESHGI_CODES.has(r.code));
+  // Dena: har liability khata. Naam se nahi, qism se -- taake naya
+  // liability khata banne par wo khud is ginti mein aa jaye.
+  const dena = chuno((r) => r.account_type === "liability");
+
+  return {
+    naqdi: naqdi.total,
+    naqdiRows: naqdi.rows,
+    raasteMein: raaste.total,
+    raasteMeinRows: raaste.rows,
+    stock: stock.total,
+    stockRows: stock.rows,
+    lena: lena.total,
+    lenaRows: lena.rows,
+    peshgi: peshgi.total,
+    peshgiRows: peshgi.rows,
+    dena: dena.total,
+    denaRows: dena.rows,
+    position:
+      Math.round(
+        (naqdi.total + raaste.total + stock.total + lena.total + peshgi.total - dena.total) * 100
+      ) / 100,
+  };
+}

@@ -6,6 +6,7 @@ import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
+import { payAndPost } from "@/lib/ledger/supplier-money";
 import { loadUnitAliases } from "@/lib/units";
 import { looksBinary, parseDelimited } from "@/lib/csv";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
@@ -786,16 +787,17 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
 
   // Jo abhi diya, supplier_payments mein -- adaigi ka ek hi darwaza (139).
   if (terms.paidNow > 0) {
-    const { error: payErr } = await supabase.from("supplier_payments").insert({
-      supplier_id: supplierId,
-      purchase_id: po.id,
+    const paid = await payAndPost(supabase, {
+      supplierId,
+      purchaseId: po.id,
       amount: terms.paidNow,
-      payment_date: purchaseDate,
-      payment_method: (formData.get("payment_method") as string) || null,
+      paymentDate: purchaseDate,
+      paymentMethod: (formData.get("payment_method") as string) || null,
+      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
       notes: `Kharid ${purchaseNumber} ke waqt (bill se)`,
-      created_by: user.id,
+      createdBy: user.id,
     });
-    if (payErr) return { error: `Purchase ban gayi magar adaigi likhi nahi ja saki: ${payErr.message}` };
+    if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }
 
   let made = 0;

@@ -721,6 +721,127 @@ export async function postExpenseApproved(args: {
 }
 
 // =====================================================================
+// Kharid -- maal andar aana aur supplier ko dena
+// =====================================================================
+
+/**
+ * Supplier ka maal wusool hua.
+ *
+ * -------------------------------------------------------------------
+ * YE POSTER PEHLE THA HI NAHI
+ *
+ * 6 September ko Live par ye nikla: Rs 112,048 ki kharid receive ho
+ * chuki thi, godam mein maal para tha, `suppliers.current_payable` bhi
+ * theek tha -- magar us ki koi journal entry nahi thi. Nateeja:
+ *
+ *   khata 1200 (Stock)  =  Rs -28   -- sirf POS ki bikri ke credit,
+ *                                      kharid ka koi debit nahi
+ *   khata 2000 (Dena)   =  sirf machinery vendor, supplier nadarad
+ *
+ * Yani Trial Balance, Working Capital, Master Dashboard -- sab us maal
+ * ko dekh hi nahi rahe the jo godam mein maujood tha.
+ *
+ * -------------------------------------------------------------------
+ * RATE: HAMESHA TRADE RATE
+ *
+ * Malik ka usool (6 September): *"supplier se stock aaye ya hum
+ * individual transfer karein, wo hamesha trade rate ke hisaab se count
+ * ho. Supplier payment bhi trade rate se bane aur transfer bhi trade
+ * rate. Jab sale karenge to profit aayega."*
+ *
+ * Is liye stock is bill wale (trade) rate par charhta hai, sale rate par
+ * nahi. Munafa yahan nahi banta -- wo bikri par banta hai, jahan bikri
+ * poore sale rate par likhi jati hai aur lagat (COGS) isi trade rate par
+ * nikalti hai. Stock ko sale rate par charhana wo munafa aaj hi likh
+ * deta, us din jis din abhi kuch bika hi nahi.
+ *
+ * -------------------------------------------------------------------
+ * JITNA AAYA, UTNA -- JITNA MANGWAYA UTNA NAHI
+ *
+ * Raqam wo hai jo GRN ke baad qabool hui (received x unit_cost). Jo
+ * toota ya kam aaya us ka na stock charhta hai na dena banta -- warna
+ * ledger us maal ka wada karta jo kabhi aaya hi nahi.
+ */
+export async function postGoodsReceived(args: {
+  purchaseId: string;
+  purchaseNumber: string | null;
+  supplierId: string | null;
+  /** Qabool shuda raqam: sum(received x unit_cost). */
+  amount: number;
+  /** Kis stock ke khate mein -- anaj aur doodh ke apne khate hain. */
+  stockAccount?: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const tafseel = `Kharid ${args.purchaseNumber ?? args.purchaseId} — maal wusool hua`;
+  return postJournal({
+    description: tafseel,
+    sourceModule: "purchase",
+    sourceId: args.purchaseId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      {
+        account: args.stockAccount ?? ACC.stockGoods,
+        debit: args.amount,
+        memo: "Stock barha (trade rate par)",
+      },
+      {
+        account: ACC.supplierPayable,
+        credit: args.amount,
+        partyType: args.supplierId ? "supplier" : null,
+        partyId: args.supplierId ?? null,
+        memo: tafseel,
+      },
+    ],
+  });
+}
+
+/**
+ * Supplier ko paisa diya.
+ *
+ * Ye bhi pehle ledger tak nahi pahunchta tha: `supplier_payments` mein
+ * qatar parti thi, trigger `current_payable` ghata deta tha, aur cash
+ * kam ho jata tha -- magar ledger mein na dena ghatta tha na paisa.
+ *
+ * Kaunse khate se gaya, ye `accountId` batata hai. Na bataya jaye to
+ * cash -- kyunki adaigi ka sab se aam raasta wohi hai, aur `1000` par
+ * farq raat ko cash close par saamne aa jata hai. Suspense mein daalna
+ * yahan behtar nahi: wahan se koi us ka peechha nahi karta.
+ */
+export async function postSupplierPayment(args: {
+  paymentId: string;
+  supplierId: string;
+  amount: number;
+  /** finance_accounts ki id -- kis khate se nikla. */
+  accountId?: string | null;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  return postJournal({
+    description: args.description,
+    sourceModule: "supplier_payment",
+    sourceId: args.paymentId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      {
+        account: ACC.supplierPayable,
+        debit: args.amount,
+        partyType: "supplier",
+        partyId: args.supplierId,
+        memo: args.description,
+      },
+      { account: gl, credit: args.amount, memo: args.description },
+    ],
+  });
+}
+
+// =====================================================================
 // Bikri
 // =====================================================================
 

@@ -31,11 +31,27 @@ export function ProductCardGrid({
   rows,
   onUpdateRow,
   bulkFill,
+  priceMode = "sale",
 }: {
   products: Product[];
   categories: Category[];
   rows: Record<string, RowState>;
   onUpdateRow: (productId: string, field: keyof RowState, value: number, defaultPrice: number) => void;
+  /**
+   * Har qatar ka rate kahan se aaye.
+   *
+   * "sale" (default) -- jab maal BAHAR ja raha ho: order, bikri.
+   * "purchase" -- jab maal ANDAR hi rahe: ek godam se doosre godam.
+   *
+   * Ye khana is liye bana ke Stock Transfer har cheez ka rate
+   * `selling_price` se bhar raha tha. Andar ka maal andar hi jata hai --
+   * wahan sale rate ka koi matlab nahi, aur us se transfer ki parchi
+   * kharid ke bill se hamesha oonchi banti thi. 4 September ko isi wajah
+   * se ek hi maal do jagah do adad mein nazar aaya: bill Rs 112,048,
+   * transfer ki parchi Rs 109,109 -- aur beech mein "stock kahan gaya"
+   * ka sawal khara ho gaya, jab ke stock poora tha.
+   */
+  priceMode?: "sale" | "purchase";
   /**
    * "Jitna stock hai, sab" wali patti — sirf tab dikhti hai jab bulane
    * wala ye kaam de.
@@ -51,6 +67,8 @@ export function ProductCardGrid({
    */
   bulkFill?: (visible: Product[], mode: "sab" | "khali") => void;
 }) {
+  /** Is safhe par kaunsa rate chalta hai. */
+  const rateOf = (p: Product) => (priceMode === "purchase" ? p.purchase_price : p.selling_price);
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const lang = useLang();
   const [search, setSearch] = useState("");
@@ -66,8 +84,8 @@ export function ProductCardGrid({
     const sorted = [...list];
     if (sortBy === "name_asc") sorted.sort((a, b) => a.name.localeCompare(b.name));
     if (sortBy === "name_desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
-    if (sortBy === "price_asc") sorted.sort((a, b) => a.selling_price - b.selling_price);
-    if (sortBy === "price_desc") sorted.sort((a, b) => b.selling_price - a.selling_price);
+    if (sortBy === "price_asc") sorted.sort((a, b) => rateOf(a) - rateOf(b));
+    if (sortBy === "price_desc") sorted.sort((a, b) => rateOf(b) - rateOf(a));
     if (sortBy === "stock_asc") sorted.sort((a, b) => a.warehouse_stock - b.warehouse_stock);
     if (sortBy === "stock_desc") {
       sorted.sort((a, b) => {
@@ -161,7 +179,7 @@ export function ProductCardGrid({
         {filtered.map((p) => {
           const row = rows[p.id];
           const qty = row?.qty ?? 0;
-          const price = row?.price ?? p.selling_price;
+          const price = row?.price ?? rateOf(p);
           const isActive = qty > 0;
           const outOfStock = p.warehouse_stock <= 0;
           const stockStatus = outOfStock ? "out" : p.warehouse_stock < 10 ? "low" : "ok";
@@ -185,9 +203,19 @@ export function ProductCardGrid({
               </div>
               <p className="line-clamp-2 text-sm font-semibold text-surface-900 dark:text-white">{p.name}</p>
               <p className="text-xs text-surface-400">{p.pack_size ?? ""} {p.brand ? `- ${p.brand}` : ""}</p>
+              {/* Jo rate is safhe par chal raha hai wo GEHRA hai, doosra
+                  halka. Pehle dono ek jaise dikhte the aur banda ye
+                  samajh hi nahi pata tha ke parchi kis rate par ban rahi
+                  hai. */}
               <div className="mt-1.5 space-y-0.5 text-xs">
-                <p className="flex justify-between"><span className="text-surface-400">{t("ao_rate_label", lang)}</span> <span className="font-semibold text-brand-600">Rs {p.selling_price.toLocaleString()}</span></p>
-                <p className="flex justify-between"><span className="text-surface-400">{t("ao_purchase_label", lang)}</span> <span className="text-surface-500">Rs {p.purchase_price.toLocaleString()}</span></p>
+                <p className="flex justify-between">
+                  <span className="text-surface-400">{t("ao_rate_label", lang)}</span>
+                  <span className={priceMode === "sale" ? "font-semibold text-brand-600" : "text-surface-400"}>Rs {p.selling_price.toLocaleString()}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-surface-400">{t("ao_purchase_label", lang)}</span>
+                  <span className={priceMode === "purchase" ? "font-semibold text-brand-600" : "text-surface-500"}>Rs {p.purchase_price.toLocaleString()}</span>
+                </p>
               </div>
               <div className="mt-1.5 flex items-center justify-between text-xs">
                 <span className="text-surface-400">{t("ao_warehouse_label", lang)}</span>
@@ -202,7 +230,7 @@ export function ProductCardGrid({
                   <div className="mt-2 flex items-center justify-center gap-2">
                     <button
                       type="button"
-                      onClick={() => onUpdateRow(p.id, "qty", clampQty(qty - 1, p.warehouse_stock), p.selling_price)}
+                      onClick={() => onUpdateRow(p.id, "qty", clampQty(qty - 1, p.warehouse_stock), rateOf(p))}
                       className="flex h-7 w-7 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50"
                     >
                       <Minus className="h-3.5 w-3.5" />
@@ -211,13 +239,13 @@ export function ProductCardGrid({
                       type="number"
                       value={qty || ""}
                       max={p.warehouse_stock}
-                      onChange={(e) => onUpdateRow(p.id, "qty", clampQty(Number(e.target.value), p.warehouse_stock), p.selling_price)}
+                      onChange={(e) => onUpdateRow(p.id, "qty", clampQty(Number(e.target.value), p.warehouse_stock), rateOf(p))}
                       placeholder="0"
                       className="w-14 rounded-lg border border-surface-200 p-1 text-center text-sm font-semibold"
                     />
                     <button
                       type="button"
-                      onClick={() => onUpdateRow(p.id, "qty", clampQty(qty + 1, p.warehouse_stock), p.selling_price)}
+                      onClick={() => onUpdateRow(p.id, "qty", clampQty(qty + 1, p.warehouse_stock), rateOf(p))}
                       className="flex h-7 w-7 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -229,7 +257,7 @@ export function ProductCardGrid({
                   {isActive && (
                     <button
                       type="button"
-                      onClick={() => onUpdateRow(p.id, "qty", 0, p.selling_price)}
+                      onClick={() => onUpdateRow(p.id, "qty", 0, rateOf(p))}
                       className="mt-2 w-full rounded-lg bg-brand-600 py-1.5 text-xs font-medium text-white hover:bg-red-600"
                     >{t("at_remove_from_order", lang)}</button>
                   )}

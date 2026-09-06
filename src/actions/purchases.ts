@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { payAndPost } from "@/lib/ledger/supplier-money";
+import { postGoodsReceived, failed } from "@/lib/ledger/rules";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 import { closeHandoff, createHandoff } from "@/lib/work-handoff";
@@ -11,6 +13,16 @@ export interface ActionState {
   purchaseId?: string;
   /** Receive ke baad ginti ka khulasa (256). */
   grn?: { received: number; damaged: number; short: number };
+  /**
+   * Kaam ho gaya, magar ek hissa adhoora reh gaya.
+   *
+   * `error` se alag: `error` kehta hai "kuch nahi hua", ye kehta hai
+   * "ho gaya, magar ye dekh lein". Maal andar aa chuka ho aur sirf
+   * ledger ki entry na bani ho -- wahan `error` lautana jhoot hota,
+   * kyunki safha wapas jata aur banda dobara receive karne ki koshish
+   * karta.
+   */
+  warning?: string;
 }
 
 type PurchaseItemInput = {
@@ -98,16 +110,18 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   // adaigi jati hai (139). Purchase par adad NAHI likha jata; warna
   // ek din do jagah ka adad alag nikalta hai.
   if (terms.paidNow > 0) {
-    const { error: payErr } = await supabase.from("supplier_payments").insert({
-      supplier_id: supplierId,
-      purchase_id: purchase.id,
+    const paid = await payAndPost(supabase, {
+      supplierId,
+      purchaseId: purchase.id,
       amount: terms.paidNow,
-      payment_date: purchaseDate,
-      payment_method: (formData.get("payment_method") as string) || null,
+      paymentDate: purchaseDate,
+      paymentMethod: (formData.get("payment_method") as string) || null,
+      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
       notes: `Kharid ${purchaseNumber} ke waqt`,
-      created_by: user?.id ?? null,
+      branchId,
+      createdBy: user?.id ?? null,
     });
-    if (payErr) return { error: `Purchase ban gayi magar adaigi likhi nahi ja saki: ${payErr.message}` };
+    if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }
   for (const item of items) {
     const batchNumber = item.batch_number?.trim() || `${purchaseNumber}-${item.product_id.slice(0, 8)}`;
@@ -393,6 +407,45 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (rateErr) console.error(`rate nahi charha (${row.name}):`, rateErr.message);
   }
 
+  // ===== Ab ledger =====
+  //
+  // Ye qadam pehle tha hi nahi. 6 September ko Live par nikla ke Rs
+  // 112,048 ka maal godam mein para tha, `suppliers.current_payable`
+  // bhi theek tha -- magar ledger ko khabar hi nahi thi: khata 1200
+  // (Stock) Rs -28 par khara tha aur khata 2000 mein supplier ka naam
+  // tak nahi tha.
+  //
+  // Raqam wo hai jo QABOOL hui (received x unit_cost) -- jo toota ya
+  // kam aaya us ka na stock charhta hai na dena banta.
+  //
+  // Rate trade (kharid) rate hai, sale rate nahi. Malik ka usool:
+  // *"supplier se stock aaye ya hum individual transfer karein, wo
+  // hamesha trade rate ke hisaab se count ho... jab sale karenge to
+  // profit aayega."* Munafa yahin likh dena us din nafa dikhata jis din
+  // abhi kuch bika hi nahi.
+  //
+  // Maal WAPAS nahi hota agar entry na bane -- wo andar aa chuka hai
+  // aur ginti likhi ja chuki hai. Magar nakami chhupti bhi nahi: wajah
+  // sath jati hai aur qatar `v_ledger_unposted` par surkh dikhti hai.
+  let ledgerWarning: string | null = null;
+  if (acceptedTotal > 0) {
+    const posted = await postGoodsReceived({
+      purchaseId,
+      purchaseNumber: purchase.purchase_number ?? null,
+      supplierId: purchase.supplier_id ?? null,
+      amount: acceptedTotal,
+      ctx: {
+        createdBy: user?.id ?? null,
+        branchId: purchase.branch_id ?? null,
+        claims: [{ table: "purchases", rowId: purchaseId }],
+      },
+    });
+    if (failed(posted)) {
+      ledgerWarning = `Maal andar aa gaya, magar ledger tak nahi pahuncha: ${posted.error}`;
+      console.error("kharid ledger tak nahi pahunchi:", posted.error);
+    }
+  }
+
   // Godam ka kaam yahan khatam hua.
   await closeHandoff("inventory.receiving", "purchases", purchaseId, user?.id ?? null);
 
@@ -447,7 +500,11 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/inventory/receiving");
-  return { success: true, grn: { received: totalReceived, damaged: totalDamaged, short: totalShort } };
+  return {
+    success: true,
+    grn: { received: totalReceived, damaged: totalDamaged, short: totalShort },
+    warning: ledgerWarning ?? undefined,
+  };
 }
 
 // Delete Purchase - sirf Admin/Owner, reason mandatory. Poori chain
