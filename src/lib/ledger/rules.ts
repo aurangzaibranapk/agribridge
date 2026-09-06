@@ -718,48 +718,22 @@ export async function postBranchCredit(args: {
 // =====================================================================
 
 /**
- * Company ka kharcha manzoor hua.
+ * Kharche ki journal — ye poster HATA diya gaya.
  *
- * Manzoori par darj hota hai, darkhwast par nahi -- jo cheez manzoor
- * nahi hui wo abhi kharcha nahi hai. Doosri taraf "Supplier ko dena"
- * hai, cash nahi: manzoori ka matlab ye nahi ke paisa us waqt nikla.
+ * Malik (6 September): *"Jahan jahan koi bhi [nakal] hai un ko ek ek
+ * kar ke hataoge."*
+ *
+ * `postExpenseApproved` `/admin/company-expenses` ke liye bana tha. Wo
+ * safha ab Paisa & Khata par mor diya gaya hai, aur wahan manzoori ki
+ * journal `actions/kharche.ts` khud banati hai -- kyunke wahan qism
+ * (kharcha / supplier ko adaigi / advance / wasooli) tay karti hai ke
+ * kaunsa khata hilega, aur wo faisla is poster ke bas ka nahi tha.
+ *
+ * Do jagah expense post karne ka matlab hota ke ek din dono alag khaton
+ * mein daalne lagein, aur kisi ko pata bhi na chale. Is liye ek hi
+ * raasta rakha gaya.
  */
-export async function postExpenseApproved(args: {
-  expenseId: string;
-  amount: number;
-  category: string | null;
-  description: string;
-  supplierId?: string | null;
-  ctx: EventContext;
-}): Promise<PostResult> {
-  const isSupplierPayment = (args.category ?? "").toLowerCase().includes("supplier_payment");
 
-  return postJournal({
-    description: args.description,
-    sourceModule: "company_expense",
-    sourceId: args.expenseId,
-    branchId: args.ctx.branchId,
-    entryDate: args.ctx.entryDate,
-    createdBy: args.ctx.createdBy,
-    claims: args.ctx.claims,
-    lines: [
-      {
-        account: expenseAccountFor(args.category),
-        debit: args.amount,
-        partyType: args.supplierId ? "supplier" : null,
-        partyId: args.supplierId ?? null,
-        memo: args.description,
-      },
-      {
-        account: isSupplierPayment ? ACC.cash : ACC.supplierPayable,
-        credit: args.amount,
-        partyType: args.supplierId ? "supplier" : null,
-        partyId: args.supplierId ?? null,
-        memo: args.description,
-      },
-    ],
-  });
-}
 
 // =====================================================================
 // Kharid -- maal andar aana aur supplier ko dena

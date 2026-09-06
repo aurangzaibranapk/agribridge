@@ -65,6 +65,18 @@ nahi. Ab har naam apne safhe par hai.
 
 ---
 
+## A2. Code ke andar ki nakal (safha nahi, magar wohi kharabi)
+
+| Kya | Kyun nakal thi | Ab |
+|---|---|---|
+| `src/actions/company-expenses.ts` | Wohi table (`company_expense_requests`) jis par `actions/kharche.ts` chalti hai. Safha mor jane ke baad is ko koi bulata hi nahi tha. | **Mit gayi** |
+| `postExpenseApproved()` (`lib/ledger/rules.ts`) | Kharche ki journal ka doosra raasta. Paisa & Khata apni journal khud banati hai — kyunke wahan QISM tay karti hai ke kaunsa khata hilega, aur wo faisla is poster ke bas ka nahi tha. | **Mit gaya** (jagah par wajah likhi hai) |
+
+Do jagah expense post karne ka matlab hota ke ek din dono alag khaton
+mein daalne lagein, aur kisi ko pata bhi na chale.
+
+---
+
 ## E. Jo abhi BAQI hai — malik ka faisla chahiye
 
 Ye nakalein hain, magar in ka hal safha mitane se nahi hota. Chup chaap
