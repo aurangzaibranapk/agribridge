@@ -44,6 +44,10 @@ export function failed(result: PostResult): result is { error: string } {
 // Khata code ek jagah -- taake naam se pukara ja sake, number se nahi.
 export const ACC = {
   cash: "1000",
+  // 1010 se 1019 tak har bank ka apna khata. `ACC.bank` un mein pehla
+  // hai aur us ka istemal sirf wahan hota hai jahan bank to maloom ho
+  // magar KAUNSA bank maloom na ho -- warna hamesha
+  // `glForFinanceAccount()` se us account ka apna khata liya jata hai.
   bank: "1010",
   // 1020 bank ke raaste ka paisa hai (bheja, jama nahi hua).
   // 1030 kisi BANDE ke haath ka paisa hai. Dono ka khatra alag hai aur
@@ -119,6 +123,33 @@ export const ACC = {
   grainLoss: "6130",
   suspense: "9999",
 } as const;
+
+/**
+ * Bank ke khate — ek nahi, POORI QATAR.
+ *
+ * Pehle poore nizam mein sirf "1010" tha aur har bank usi mein jata tha.
+ * Us ka natija bank reconcile ke safhe par likha hua tha: *"har bank ka
+ * alag adad nahi -- kyunki ledger mein teenon banks ek hi khate mein
+ * jate hain."* Yani kisi ek bank ko us ke apne statement se milana
+ * MUMKIN HI NAHI THA.
+ *
+ * Ab har bank ka apna khata hai. Magar jahan jahan code ko "kul kitna
+ * bank mein hai" poochna hota hai (Money Trail, handover, reports),
+ * wahan ek khata poochna ab GHALAT jawab deta -- baqi bank ginti mein
+ * aate hi nahi. Is liye har aisi jagah ye poori fehrist parhti hai.
+ *
+ * Naya bank bane to us ka khata isi qatar (1010-1019) mein hona
+ * chahiye, warna wo har us ginti se ghayab reh jayega.
+ */
+export const BANK_CODES = [
+  "1010", "1011", "1012", "1013", "1014",
+  "1015", "1016", "1017", "1018", "1019",
+] as const;
+
+/** Ye khata kisi bank ka hai? */
+export function isBankCode(code: string): boolean {
+  return (BANK_CODES as readonly string[]).includes(code);
+}
 
 /**
  * Finance account (UBL / HBL / Cash in Hand) ka GL khata.

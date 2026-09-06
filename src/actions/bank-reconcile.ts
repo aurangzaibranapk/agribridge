@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
-import { ACC, expenseAccountFor, incomeAccountFor } from "@/lib/ledger/rules";
+import { ACC, expenseAccountFor, incomeAccountFor, glForFinanceAccount } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -128,7 +128,7 @@ export async function bookBankLine(_prev: ActionState, formData: FormData): Prom
 
   const { data: line } = await service
     .from("bank_statement_lines")
-    .select("id, txn_date, description, amount, status")
+    .select("id, txn_date, description, amount, status, account_id")
     .eq("id", lineId)
     .maybeSingle();
 
@@ -137,6 +137,12 @@ export async function bookBankLine(_prev: ActionState, formData: FormData): Prom
 
   const amount = Math.abs(Number(line.amount));
   const moneyIn = Number(line.amount) > 0;
+
+  // Qatar USI bank ke khate par jati hai jis ki statement se aayi hai.
+  // Pehle yahan hamesha ACC.bank (1010) likha jata tha -- yani har bank
+  // ki har qatar ek hi khate mein girti thi, aur phir kisi ek bank ko us
+  // ke apne statement se milana mumkin hi nahi rehta tha.
+  const bankGl = line.account_id ? await glForFinanceAccount(line.account_id as string) : ACC.bank;
 
   const posted = await postJournal({
     description: `Bank: ${line.description}`,
@@ -147,12 +153,12 @@ export async function bookBankLine(_prev: ActionState, formData: FormData): Prom
     backdateReason: "Bank statement se mili hui qatar — bank ki tareekh hi asal tareekh hai.",
     lines: moneyIn
       ? [
-          { account: ACC.bank, debit: amount, memo: line.description },
+          { account: bankGl, debit: amount, memo: line.description },
           { account: incomeAccountFor(category), credit: amount, memo: category },
         ]
       : [
           { account: expenseAccountFor(category), debit: amount, memo: category },
-          { account: ACC.bank, credit: amount, memo: line.description },
+          { account: bankGl, credit: amount, memo: line.description },
         ],
   });
 

@@ -1465,3 +1465,88 @@ Load/Bill ka khana sirf usay dikhta hai jise wo safha khulta hai.
 ### Live par abhi NAHI chali
 
 **327 Testing par hai, Live par nahi.**
+
+---
+
+## 5u. Live run — 6 September (328): har bank ka apna khata
+
+Malik ne Bank Reconcile ka safha dikha kar poocha: *"ye kaise khatam hoga
+farq?"* Safhe par Rs 26,515 ka farq tha aur chaaron bank ke saamne Rs 0.
+
+Safha khud apni majboori likh raha tha: *"har bank ka alag nahi — kyunki
+ledger mein teenon banks ek hi khate (1010) mein jate hain."* Yani kisi
+EK bank ko us ke apne statement se milana **mumkin hi nahi tha**. Farq
+kabhi khatam na hota, chahe kitni mehnat hoti — sawal hi ghalat poocha ja
+raha tha.
+
+### Backup
+
+```
+agribridge-backup-20260906-1120.sql   —   3.9M   —   6 Sep 11:25
+```
+
+### Jo mila
+
+| Entry | Raqam | Asal jagah | Kahan thi |
+|---|---|---|---|
+| TXN-26-000026 | 7,165 | Alfalah | 1010 |
+| TXN-26-000029 | 350 | HBL | 1010 |
+| TXN-26-000027 | 521 | CBA Account | **9999 Suspense** |
+| TXN-26-000007 | 19,000 | **Cash** | 1010 |
+| — | 2,030 | Al Rana Traders | **ledger mein tha hi nahi** |
+
+Rs 19,000 ka machinery advance bank par likha gaya tha; malik ne tasdeeq
+ki ke wo **cash** tha. Us ka cash book wala indraj bhi kabhi bana hi nahi
+tha — yani golak ka adad Rs 19,000 kam bata raha tha.
+
+### DATABASE NE MERA PEHLA RAASTA ROK DIYA — AUR THEEK ROKA
+
+Pehli koshish mein maine `update journal_lines set account_code = ...`
+likha: qatar utha kar doosre khate par rakh dena. Live ne mana kar diya:
+
+```
+Post ho chuki entry badli nahi ja sakti. Reversal entry banayein.
+```
+
+Ye rok 106 mein lagi thi, is jumle ke sath: *"raqam chupke se badal dena
+delete se bhi zyada khatarnak hai: trial balance phir bhi barabar rehta
+hai, is liye kisi ko pata hi nahi chalta."*
+
+Agar wo update chal jata to ledger theek dikhta, magar us mein ye nishan
+kahin na hota ke qatarein hili thin. **Poori migration wapas ho gayi aur
+Live par ek harf nahi badla.** Phir wohi kaam durustagi ki entry se hua —
+purani qatarein apni jagah, nayi un ke sath.
+
+### Natija — har khate ka farq sifar
+
+| Khata | Code | Cash book | Ledger | Farq |
+|---|---|---|---|---|
+| Cash in Hand | 1000 | 34,000 | 34,000 | **0** |
+| UBL | 1010 | 0 | 0 | **0** |
+| Bank Alfalah | 1011 | 7,165 | 7,165 | **0** |
+| HBL | 1012 | 350 | 350 | **0** |
+| Al Rana Traders | 1013 | 2,030 | 2,030 | **0** |
+| CBA Account | 1014 | 521 | 521 | **0** |
+
+Trial Balance barabar (573,978 = 573,978). Suspense **551 → 30**.
+
+### Code: "1010" ab ek khata nahi, ek QATAR (1010–1019)
+
+Paanch jagah `"1010"` ko *the bank* maan kar likha hua tha — Money Trail,
+handover, reports, bank reconcile, crop-lifters. **Sirf naye khate bana
+dene se wo paanch jagahein naye bank ginna band kar detin**: paisa kitab
+mein hota magar Money Trail par nazar na aata. Ab har aisi jagah `BANK_CODES`
+parhti hai.
+
+Aur `bookBankLine` ab qatar **usi bank** ke khate par daalta hai jis ki
+statement se wo aayi — pehle har bank ki har qatar 1010 mein girti thi.
+
+Bank Reconcile ke safhe par ab har account ka apna adad hai: bank ke
+mutabiq, hamare khaton ke mutabiq, aur farq. Jis account ka GL khata darj
+na ho wahan **"GL khata nahi"** likha aata hai — sifar nahi.
+
+### Jo abhi baqi hai
+
+Suspense mein Rs 30 hain: POS ki do adaigiyan (easypaisa Rs 20, QR Rs 10)
+jin ke liye `payment_method_account_map` mein koi khata darj nahi. Ye
+malik ke batane par theek hoga — kaunsa paisa kis khate mein aata hai.

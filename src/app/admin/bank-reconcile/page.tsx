@@ -111,23 +111,55 @@ export default async function BankReconcilePage() {
 
       {compare.accounts.length > 1 && (
         <Card className="p-4">
-          <p className="text-xs text-surface-600 dark:text-surface-400">{t("br_all_banks", lang)}<strong>{t("br_matched_with", lang)}</strong> hai, har bank ka alag nahi — kyunki ledger mein
-            teenon banks ek hi khate (1010) mein jate hain. Har bank ka apna adad chahiye to har account
-            ko apna GL khata dena parega.
+          <p className="text-xs text-surface-600 dark:text-surface-400">
+            Har bank ka apna hisaab — bank ki statement ke mutabiq, aur hamare khaton ke mutabiq.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {compare.accounts.map((a) => (
-              <span
-                key={a.accountId}
-                className="rounded-md border border-surface-200 px-2 py-1 text-xs dark:border-surface-800"
-              >
-                <span className="text-surface-500">{a.accountName}</span>
-                <span className="ml-1.5 font-medium tabular-nums text-surface-900 dark:text-white">
-                  {rs(a.perBank)}
-                </span>
-              </span>
-            ))}
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[32rem] text-sm">
+              <thead className="text-left text-xs text-surface-500">
+                <tr>
+                  <th className="pb-1.5 pe-3">Khata</th>
+                  <th className="pb-1.5 pe-3 text-right">Bank ke mutabiq</th>
+                  <th className="pb-1.5 pe-3 text-right">Hamare khate mein</th>
+                  <th className="pb-1.5 text-right">Farq</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compare.accounts.map((a) => (
+                  <tr key={a.accountId} className="border-t border-surface-100 dark:border-surface-800">
+                    <td className="py-1.5 pe-3">{a.accountName}</td>
+                    <td className="py-1.5 pe-3 text-right tabular-nums">{rs(a.perBank)}</td>
+                    <td className="py-1.5 pe-3 text-right tabular-nums">
+                      {/* NULL = "dekha hi nahi ja sakta", sifar nahi. Is
+                          account ka apna GL khata darj hi nahi. */}
+                      {a.perBooks === null ? (
+                        <span className="text-amber-700 dark:text-amber-400">GL khata nahi</span>
+                      ) : (
+                        rs(a.perBooks)
+                      )}
+                    </td>
+                    <td
+                      className={
+                        "py-1.5 text-right font-medium tabular-nums " +
+                        (a.difference === null
+                          ? "text-surface-400"
+                          : a.difference === 0
+                            ? "text-brand-700 dark:text-brand-300"
+                            : "text-red-600 dark:text-red-400")
+                      }
+                    >
+                      {a.difference === null ? "—" : rs(a.difference)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-surface-500">
+            &ldquo;GL khata nahi&rdquo; ka matlab sifar nahi — us ka matlab hai ke us account ka apna khata
+            darj hi nahi, is liye us ka alag adad nikala hi nahi ja sakta (us ka paisa Suspense mein jata
+            hai). Wo khata Finance → Khaton ki fehrist se darj hota hai.
+          </p>
         </Card>
       )}
 

@@ -52,7 +52,7 @@ export default async function MoneyTrailPage({
 
   const where = [
     { label: "Cash in Hand", value: trail.cash, code: "1000" },
-    { label: "Bank", value: trail.bank, code: "1010" },
+    { label: "Bank", value: trail.bank, code: "1010-1019" },
     { label: "Bank bheja, pahuncha nahi", value: trail.inTransit, code: "1020" },
     { label: "Cash kisi ke haath mein", value: trail.cashWithPerson, code: "1030" },
     { label: "Customer se lena (Khata)", value: trail.receivableCustomers, code: "1100" },

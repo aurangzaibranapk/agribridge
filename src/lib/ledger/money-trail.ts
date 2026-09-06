@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { BANK_CODES } from "@/lib/ledger/rules";
 
 /**
  * "Paisa kahan hai?"
@@ -134,7 +135,9 @@ export interface MoneyTrail {
 
 const GROUPS = {
   cash: ["1000"],
-  bank: ["1010"],
+  // Har bank ka apna khata hai (1010-1019). Ek khata poochne se
+  // baqi bank is ginti se ghayab ho jate the.
+  bank: [...BANK_CODES],
   inTransit: ["1020"],
   cashWithPerson: ["1030"],
   receivableCustomers: ["1100"],

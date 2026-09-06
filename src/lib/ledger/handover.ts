@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { BANK_CODES } from "@/lib/ledger/rules";
 
 /**
  * Cash haath badalne ka hisaab.
@@ -162,7 +163,18 @@ export async function unmatchedBankLines(limit = 100): Promise<BankLine[]> {
 export interface BankAccountTotal {
   accountId: string;
   accountName: string;
+  /** Bank ki statement ke mutabiq. */
   perBank: number;
+  /**
+   * Hamare khate ke mutabiq — is account ke apne GL khate se.
+   *
+   * NULL ka matlab "sifar" NAHI: us ka matlab hai ke is account ka apna
+   * GL khata darj hi nahi, is liye us ka alag adad nikala hi nahi ja
+   * sakta. Aise account ka paisa Suspense (9999) mein jata hai.
+   */
+  perBooks: number | null;
+  /** perBank − perBooks. GL khata na ho to NULL. */
+  difference: number | null;
   unmatchedCount: number;
 }
 
@@ -199,17 +211,38 @@ export async function bankComparison(): Promise<BankCompare> {
   const service = createServiceClient();
 
   const [{ data: accounts }, { data: lines }, { data: journal }] = await Promise.all([
-    service.from("finance_accounts").select("id, name").eq("account_type", "bank"),
+    service.from("finance_accounts").select("id, name, gl_code").eq("account_type", "bank"),
     service.from("bank_statement_lines").select("account_id, amount, status"),
-    service.from("journal_lines").select("debit, credit").eq("account_code", "1010"),
+    // Ek khata nahi -- poori bank ki qatar. Pehle sirf "1010" poocha
+    // jata tha, aur jab har bank ka apna khata bana to baqi bank is
+    // ginti se ghayab ho jate.
+    service.from("journal_lines").select("account_code, debit, credit").in("account_code", [...BANK_CODES]),
   ]);
 
   const perAccount: BankAccountTotal[] = (accounts ?? []).map((a) => {
     const mine = (lines ?? []).filter((l) => l.account_id === a.id);
+    const bank = round2(mine.reduce((s, l) => s + Number(l.amount), 0));
+
+    // Jis account ka apna GL khata darj nahi, us ka alag adad nikala hi
+    // nahi ja sakta. Us surat mein jawab NULL hai -- sifar nahi. Sifar
+    // likh dena ye kehna hota ke "dekh liya, kuch nahi hai", jabke asal
+    // baat ye hai ke dekha hi nahi ja sakta.
+    const code = (a as { gl_code?: string | null }).gl_code ?? null;
+    const books =
+      code == null
+        ? null
+        : round2(
+            (journal ?? [])
+              .filter((l) => (l as { account_code?: string }).account_code === code)
+              .reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0)
+          );
+
     return {
       accountId: a.id,
       accountName: a.name,
-      perBank: round2(mine.reduce((s, l) => s + Number(l.amount), 0)),
+      perBank: bank,
+      perBooks: books,
+      difference: books == null ? null : round2(bank - books),
       unmatchedCount: mine.filter((l) => l.status === "unmatched").length,
     };
   });

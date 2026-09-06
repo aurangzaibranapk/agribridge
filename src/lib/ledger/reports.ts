@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { BANK_CODES } from "@/lib/ledger/rules";
 import { trialBalance, type TrialRow } from "@/lib/ledger/statements";
 
 /**
@@ -15,7 +16,9 @@ import { trialBalance, type TrialRow } from "@/lib/ledger/statements";
  */
 
 /** Cash aur bank ke khate -- inhi mein asal paisa hilta hai. */
-const CASH_CODES = new Set(["1000", "1010", "1020", "1030"]);
+// Bank ab ek khata nahi -- 1010 se 1019 tak har bank ka apna hai. Sirf
+// "1010" likha rehne se baqi bank is ginti se ghayab ho jate.
+const CASH_CODES = new Set(["1000", "1020", "1030", ...BANK_CODES]);
 
 /** Mustaqil asaason ke khate -- ye khareed/farokht "investing" hai. */
 function isFixedAsset(code: string): boolean {
