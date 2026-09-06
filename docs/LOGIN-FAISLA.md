@@ -80,3 +80,107 @@ agar kabhi customer ya vendor ki alag registration bhi aani ho.
 
 Baqi login page abhi bhi **developer ka hissa** hai (malik ka usool,
 6 September). Us mein koi aur cheez AI apni marzi se nahi badlega.
+
+---
+
+# LOGIN LIVE DEPLOYMENT — MANZOOR SHUDA VERSION
+
+**Malik ki manzoori, 6 September.** Local par test ho chuka; **wohi state
+Live par jani hai.**
+
+## Source of truth
+
+| | |
+|---|---|
+| Branch | `claude/code-load-project-structure-fq91y9` |
+| Tested HEAD | `0eeaa4b` |
+
+Login ki tarikh mein chune hue design aur fix:
+
+| Commit | Kya |
+|---|---|
+| `568f57f` | Restore last-good selected AgriBridge login design |
+| `8e02a96` | Fit finalized AgriBridge login within desktop viewport |
+| `0eeaa4b` | Register ka toota link theek |
+
+## Jo HAR HAAL mein qaim rahega
+
+- Login page kisi paste kiye hue / purane code se **replace nahi hoga**
+- Farmer Mobile OTP
+- Email OTP
+- User ID login
+- Farmer aur Admin/Staff/Vendor ke **alag alag** login raaste
+- Urdu / i18n (`LangProvider`, `t(...)`)
+- Role ke hisaab se redirect aur poora auth ka logic
+- Chuna hua "last-good AgriBridge login design"
+- **Google/Facebook abhi NAHI** jorna
+
+## Live par jane se pehle
+
+- Maujooda **Live database ko haath nahi lagana** — na badalna, na reset,
+  na seed, na delete.
+- **Is login ke liye koi migration nahi chahiye.** Agar koi asal dependency
+  nikle to pehle **batana hai**, chalani nahi.
+- Asal kisan, finance, inventory, milk, machinery, orders aur accounting
+  ka data bilkul nahi chhoona.
+
+## Sirf `page.tsx` copy-paste karna GHALAT hoga
+
+Maujooda login OTP, i18n aur auth ki **kai maujooda cheezon se juRa hua**
+hai. Us ka ek adha hissa uthana us jorr ko toR deta hai. Mehfooz raasta
+**test shuda commit / branch** hi hai.
+
+## Cache — aur is par ek durusti
+
+Malik ka andaza tha ke local par jo "bara SVG wala toota safha" aaya wo
+`.next` / browser / service-worker ke purane cache se tha, login ke code
+se nahi. **Pehla hissa bilkul theek hai, doosre mein ek durusti hai:**
+
+`public/sw.js` maujood hai, magar wo **network-first** likha hua hai:
+
+```js
+fetch(event.request).then(...).catch(() => caches.match(event.request))
+```
+
+Yani jab tak internet chal raha ho, wo **purani cheez deta hi nahi** --
+cache sirf tab kaam aati hai jab network waqai na ho. Sath hi
+`skipWaiting()` aur `clients.claim()` hain, is liye naya worker foran
+chalta hai.
+
+**Is liye service worker par shak ghalat jagah le jayega.** Asal wajah
+server par pari **purani `.next`** thi: tar purani files ke ooper likhta
+hai magar mitata nahi, aur purane-naye chunk mil kar app toR dete hain.
+
+Aur Next.js har build par naya `BUILD_ID` deta hai, yani asset ke URL
+khud badal jate hain -- browser ka purana cache khud beasar ho jata hai.
+
+**Deploy ka theek tareeqa:**
+
+1. `rm -rf .next` phir naya build
+2. cPanel par **Stop**
+3. `domains/agribridge` mein **purani `.next` DELETE** -- ye qadam mat
+   chhoRein
+4. `deploy.tar.gz` upload → Extract
+5. **Start**
+6. Browser mein ek dafa **Ctrl+Shift+R** (agar kisi ka purana safha khula
+   ho)
+
+## Production smoke test
+
+1. Login page desktop par theek render
+2. Mobile par theek render
+3. Farmer Mobile OTP login
+4. Email OTP login
+5. User ID login
+6. Admin / Staff login
+7. Vendor login
+8. Urdu / i18n
+9. Farmer registration ka link
+10. Role ke hisaab se redirect
+
+**Agar production par styling tooti nazar aaye to login code rollback ya
+replace NA karein.** Pehle build, static CSS, `.next` aur cache dekhein.
+
+## Purana bheja gaya 2-file wala login
+
+**Discard.** Live par istemal nahi karna.
