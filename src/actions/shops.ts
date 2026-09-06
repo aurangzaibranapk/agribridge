@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 
 /**
@@ -221,6 +222,83 @@ export async function deleteShop(_prev: ActionState, formData: FormData): Promis
   if (!id) return { error: "Dukan ki shanakht nahi mili." };
 
   const { data: shop } = await supabase.from("shops").select("name").eq("id", id).maybeSingle();
+  const naam = shop?.name ?? id;
+
+  /**
+   * Mitana chalta hai -- magar HISAAB kabhi nahi mitta.
+   *
+   * Malik (6 September): *"main agar delete karna chahta hoon to ho
+   * jana chahiye."* Us waqt safha ye jawab de raha tha:
+   *
+   *     update or delete on table "shops" violates foreign key
+   *     constraint "products_shop_id_fkey" on table "products"
+   *
+   * Wo jawab do wajah se bura tha: banda samajh nahi pata ke kya karna
+   * hai, aur us mein ye farq bhi nahi ke kya ROKA ja raha hai.
+   *
+   * Do alag cheezein hain:
+   *
+   *   * **Juri hui cheezein** -- product, gahak, bande, godam. Ye dukan
+   *     ke sath BANDHI hui hain, us ka hisaab nahi. Inhen khol dena
+   *     mehfooz hai: product apni jagah rehta hai, bas kisi dukan ka
+   *     nahi rehta.
+   *
+   *   * **Hisaab** -- bikri, kharid, stock, kharche ki darkhwastein.
+   *     Ye us dukan ke KAAM ka record hai. Ye mitane ka matlab hai
+   *     kitab se ek hissa gayab kar dena, aur wo is nizam mein kabhi
+   *     nahi hota (wohi usool jo ledger par hai).
+   *
+   * Is liye: hisaab ho to mitne se saaf inkaar aur "Band karein" ka
+   * mashwara. Hisaab na ho to juri hui cheezein khol kar dukan mit jati
+   * hai.
+   */
+  const [bikri, puraniBikri, kharid, kharche, stock] = await Promise.all([
+    supabase.from("pos_sales").select("id", { count: "exact", head: true }).eq("shop_id", id),
+    supabase.from("sales").select("id", { count: "exact", head: true }).eq("shop_id", id),
+    supabase.from("purchases").select("id", { count: "exact", head: true }).eq("shop_id", id),
+    supabase.from("company_expense_requests").select("id", { count: "exact", head: true }).eq("shop_id", id),
+    supabase.from("inventory").select("id", { count: "exact", head: true }).eq("shop_id", id).gt("quantity_on_hand", 0),
+  ]);
+
+  // Database ka apna guard (291) stock DUKAN KE GODAM se ginta hai, na
+  // ke `inventory.shop_id` se. Dono raaste dekhne paRte hain -- warna
+  // hamari jaanch guzar jati aur database ka raw paighaam saamne aa
+  // jata, jo bilkul wohi cheez thi jis se malik uljhe.
+  const { data: mereGodam } = await supabase.from("warehouses").select("id").eq("shop_id", id);
+  let godamKaMaal = 0;
+  if ((mereGodam ?? []).length > 0) {
+    const { data: rows } = await supabase
+      .from("inventory")
+      .select("quantity_on_hand")
+      .in("warehouse_id", (mereGodam ?? []).map((w) => w.id));
+    godamKaMaal = (rows ?? []).reduce((sum, r) => sum + Number(r.quantity_on_hand ?? 0), 0);
+  }
+
+  const hisaab: string[] = [];
+  if ((bikri.count ?? 0) > 0) hisaab.push(`${bikri.count} bikri`);
+  if ((puraniBikri.count ?? 0) > 0) hisaab.push(`${puraniBikri.count} purani bikri`);
+  if ((kharid.count ?? 0) > 0) hisaab.push(`${kharid.count} kharid`);
+  if ((kharche.count ?? 0) > 0) hisaab.push(`${kharche.count} kharche ki darkhwast`);
+  if ((stock.count ?? 0) > 0) hisaab.push(`${stock.count} cheezon ka stock`);
+  if (godamKaMaal !== 0) hisaab.push(`godam mein ${godamKaMaal} maal`);
+
+  if (hisaab.length > 0) {
+    return {
+      error: `${naam} ka hisaab maujood hai (${hisaab.join(", ")}) — is liye ye mitayi nahi ja sakti. Mitane ka matlab hota kitab se ye hissa gayab kar dena. Is dukan par kaam band karna ho to "Band karein" istemal karein: wo har jagah se hat jayegi, magar us ka purana hisaab apni jagah rahega.`,
+    };
+  }
+
+  // Hisaab nahi hai -- ab sirf juRi hui cheezein kholni hain.
+  const service = createServiceClient();
+  await Promise.all([
+    service.from("products").update({ shop_id: null }).eq("shop_id", id),
+    service.from("customers").update({ shop_id: null }).eq("shop_id", id),
+    service.from("profiles").update({ shop_id: null }).eq("shop_id", id),
+    service.from("warehouses").update({ shop_id: null }).eq("shop_id", id),
+    // Khali stock ki qatarein -- in mein kuch para hi nahi (upar jaanch
+    // ho chuki), is liye inhen rakhna kisi kaam ka nahi.
+    service.from("inventory").delete().eq("shop_id", id),
+  ]);
 
   const { error } = await supabase.from("shops").delete().eq("id", id);
   if (error) return { error: error.message };
@@ -229,8 +307,8 @@ export async function deleteShop(_prev: ActionState, formData: FormData): Promis
     actionType: "delete",
     module: "shops",
     recordId: id,
-    recordLabel: shop?.name ?? id,
-    description: `Dukan mitayi: ${shop?.name ?? id}`,
+    recordLabel: naam,
+    description: `Dukan mitayi: ${naam} — us se juRi cheezein (product, gahak, bande, godam) khol di gayin; koi hisaab nahi tha.`,
   });
 
   revalidatePath("/admin/shops");

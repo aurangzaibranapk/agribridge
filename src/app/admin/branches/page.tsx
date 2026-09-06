@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Network } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { BranchForm } from "@/app/admin/branches/branch-form";
@@ -56,7 +58,18 @@ export default async function AdminBranchesPage() {
 
   return (
     <div>
-      <PageHeader title={t("br_shops_branches", lang)} description="Your physical shop locations" />
+      <PageHeader
+        title={t("br_shops_branches", lang)}
+        description="Your physical shop locations"
+        actions={
+          <Link
+            href="/admin/branches/tree"
+            className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+          >
+            <Network className="h-4 w-4" /> Darakht dekhein
+          </Link>
+        }
+      />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!branches || branches.length === 0 ? (
