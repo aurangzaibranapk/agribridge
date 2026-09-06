@@ -5,211 +5,142 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
 
-/**
- * LangProvider yahan lagta hai, root layout par nahi. Root layout
- * poori website ka hai; wahan cookies() parhne se har safha dynamic ho
- * jata aur public website ka static rendering khatam ho jata. Login ke
- * safhe khud dynamic hain, is liye qeemat sirf yahin ada hoti hai.
- *
- * Is ke baghair andar wala form useLang() se hamesha default zaban leta
- * -- safha tarjuma shuda lagta, magar Urdu chunne wale bande ko phir
- * bhi Roman milta.
- */
 export default function LoginPage() {
   const lang = getLanguageFromCookies("ur");
+
   return (
     <LangProvider lang={lang}>
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0D2818] px-4 py-6">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#C9A227]/10 blur-3xl" />
-        <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-[#1E4A2E]/40 blur-3xl" />
-      </div>
-
-      <svg
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-64 w-full opacity-[0.09] sm:h-72"
-        viewBox="0 0 1200 300"
-        preserveAspectRatio="xMidYMax slice"
-        fill="none"
-      >
-        <path d="M0 220 L60 160 L130 210 L200 140 L280 205 L350 150 L420 215 L500 170 L1200 170 L1200 300 L0 300 Z" fill="#C9A227" opacity="0.5" />
-
-        <g fill="#C9A227">
-          <rect x="20" y="215" width="220" height="65" />
-          {[...Array(8)].map((_, i) => (
-            <rect key={i} x={20 + i * 30} y="200" width="16" height="15" />
-          ))}
-          <rect x="60" y="180" width="30" height="100" />
-          <rect x="55" y="165" width="40" height="18" />
-        </g>
-
-        <g fill="#C9A227">
-          <rect x="470" y="230" width="260" height="50" />
-          <path d="M540 230 Q540 175 600 175 Q660 175 660 230 Z" />
-          <circle cx="600" cy="168" r="6" />
-          <rect x="596" y="150" width="8" height="20" />
-          <rect x="478" y="150" width="16" height="130" />
-          <path d="M478 150 Q486 132 494 150 Z" />
-          <circle cx="486" cy="126" r="4" />
-          <rect x="706" y="150" width="16" height="130" />
-          <path d="M706 150 Q714 132 722 150 Z" />
-          <circle cx="714" cy="126" r="4" />
-          <path d="M580 280 Q580 250 600 250 Q620 250 620 280 Z" fill="#0D2818" opacity="0.4" />
-        </g>
-
-        <g fill="#C9A227">
-          <rect x="860" y="60" width="14" height="220" />
-          <ellipse cx="867" cy="150" rx="34" ry="16" />
-          <ellipse cx="867" cy="112" rx="20" ry="10" />
-          <path d="M857 60 Q867 30 877 60 Z" />
-        </g>
-
-        <g>
-          <path d="M980 280 Q980 195 1050 195 Q1120 195 1120 280 Z" fill="#C9A227" opacity="0.35" />
-          <path d="M1000 280 Q1000 220 1050 220 Q1100 220 1100 280 Z" fill="#0D2818" />
-          {[1015, 1030, 1050, 1070, 1085].map((x, i) => (
-            <path key={i} d={`M${x} 235 Q${x - 4} 255 ${x} 280`} stroke="#C9A227" strokeWidth="2.5" fill="none" opacity="0.7" />
-          ))}
-        </g>
-
-        <path d="M0 280 Q150 255 300 280 T600 280 T900 275 T1200 280 L1200 300 L0 300 Z" fill="#C9A227" opacity="0.6" />
-      </svg>
-
-      <div className="relative flex w-full max-w-sm flex-col items-stretch lg:max-w-4xl lg:flex-row lg:items-start lg:justify-center lg:gap-8">
-        <div className="w-full lg:max-w-sm">
-        <div className="mb-4 text-center">
-          <div className="mx-auto mb-2">
-            <svg width="46" height="51" viewBox="0 0 220 260" className="mx-auto">
-              <defs>
-                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#F3D98B" />
-                  <stop offset="50%" stopColor="#C9A227" />
-                  <stop offset="100%" stopColor="#E8C767" />
-                </linearGradient>
-              </defs>
-              <polygon points="110,10 190,55 190,145 110,190 30,145 30,55" fill="none" stroke="url(#goldGrad)" strokeWidth="2.5" />
-              <polygon points="110,22 178,60 178,140 110,178 42,140 42,60" fill="#123321" stroke="url(#goldGrad)" strokeWidth="1" />
-              <g transform="translate(110,60)">
-                <path d="M0 90 L0 20" stroke="url(#goldGrad)" strokeWidth="2.5" strokeLinecap="round" />
-                <g fill="url(#goldGrad)">
-                  <ellipse cx="-9" cy="65" rx="6" ry="10" transform="rotate(-32 -9 65)" />
-                  <ellipse cx="9" cy="65" rx="6" ry="10" transform="rotate(32 9 65)" />
-                  <ellipse cx="-10" cy="46" rx="5.6" ry="9.4" transform="rotate(-30 -10 46)" />
-                  <ellipse cx="10" cy="46" rx="5.6" ry="9.4" transform="rotate(30 10 46)" />
-                  <ellipse cx="-9" cy="28" rx="5" ry="8.6" transform="rotate(-28 -9 28)" />
-                  <ellipse cx="9" cy="28" rx="5" ry="8.6" transform="rotate(28 9 28)" />
-                </g>
-                <ellipse cx="0" cy="10" rx="4.6" ry="8.6" fill="url(#goldGrad)" />
-                <path d="M0 90 Q-24 84 -28 66 Q-10 66 0 78 Z" fill="#4A7856" />
-                <path d="M0 90 Q24 84 28 66 Q10 66 0 78 Z" fill="#4A7856" />
+      <main className="min-h-screen bg-[#071d12] lg:grid lg:grid-cols-[46%_54%]">
+        <section className="relative hidden min-h-screen overflow-hidden border-r border-white/10 bg-[#0b2b1a] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute -left-32 -top-28 h-[32rem] w-[32rem] rounded-full bg-[#d4af37]/10 blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-[#2d7046]/30 blur-3xl" />
+            <svg className="absolute inset-x-0 bottom-0 h-[42%] w-full opacity-[0.12]" viewBox="0 0 800 360" preserveAspectRatio="xMidYMax slice" fill="none">
+              <path d="M0 260C120 205 210 285 330 230C450 175 540 260 800 180V360H0V260Z" fill="#d4af37" />
+              <path d="M0 300C150 255 260 330 410 270C560 215 650 280 800 245V360H0V300Z" fill="#2f7448" />
+              <g stroke="#e7c75c" strokeWidth="3" strokeLinecap="round">
+                <path d="M120 315V215" /><path d="M120 240c-25-4-38-20-40-43 25 3 39 18 40 43Z" /><path d="M120 265c25-4 38-20 40-43-25 3-39 18-40 43Z" />
+                <path d="M640 320V205" /><path d="M640 235c-25-4-38-20-40-43 25 3 39 18 40 43Z" /><path d="M640 260c25-4 38-20 40-43-25 3-39 18-40 43Z" />
               </g>
             </svg>
           </div>
-          <h1 className="font-display text-lg font-semibold tracking-tight text-white">{t("au_company", lang)}</h1>
-          <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.3em] text-[#E8C767]">{t("au_brand", lang)}</p>
-          <p className="mt-1 text-xs text-[#9FB8A4]">{t("au_sign_in_title", lang)}</p>
-        </div>
 
-        <div className="relative rounded-2xl border border-white/5 bg-[#FCFAF5] p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] sm:p-5">
-          {/* Band karne ka nishan.
-              Login ho jaye to ye khud hat jata hai -- kyunke tab safha
-              hi badal jata hai. Aur agar banda login nahi karna chahta
-              to usay yahan phansa nahi rehna chahiye: ek nishan par
-              haath rakhe aur website par wapas. Pehle ye kaam neeche
-              likhe ek chhote jumle se hota tha jise koi dekhta hi
-              nahi tha. */}
-          <Link
-            href="/"
-            aria-label={t("au_close_back_site", lang)}
-            title={t("au_close", lang)}
-            className="absolute -right-3 -top-3 flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white text-[#4A5A4D] shadow-lg transition-colors hover:bg-[#0D2818] hover:text-white"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M6 6 L18 18 M18 6 L6 18" />
-            </svg>
-          </Link>
-
-          <Suspense fallback={null}>
-            <LoginForm />
-          </Suspense>
-          {/* Yahan pehle "naye kisan upar wala khana chunein" wala
-              jumla likha tha. Ab wo bemaani hai: form ke andar hi
-              "Member nahi hain? Register karein" maujood hai, aur naya
-              kisan waise bhi apna number likh kar seedha andar aa jata
-              hai (197). Do jagah ek hi baat likhne se safha lamba hota
-              tha -- itna ke card screen se bahar nikal jata. */}
-        </div>
-        </div>
-
-        {/* Teen baatein jo banda code ka intezar karte waqt sochta hai:
-            aayega kahan se, na aaya to kya karun, aur mera number kis ke
-            paas ja raha hai. Ye card un ka jawab pehle hi de deta hai --
-            warna banda pehle rukta hai, phir phone karta hai.
-
-            Chhoti screen par ye form ke NEECHE aata hai, uper nahi:
-            mobile par pehli cheez wohi honi chahiye jo bharni hai. */}
-        {/* Bari screen par ye card WhatsApp/SMS ke do khanon ke BILKUL
-            saamne baithta hai. Pehle ye sab se upar tha aur safhe ka
-            daayan hissa upar se bhara aur neeche se khali lagta tha.
-
-            Ye khisakna nap kar hai, apne aap nahi: is ke upar jo kuch
-            hai (sarkhi, tabs, number ka khana) us ki oonchai tay hai,
-            is liye ek muqarrar faasla hi kaafi hai. Chhoti screen par
-            ye faasla lagta hi nahi -- wahan card form ke NEECHE aata
-            hai, jahan us ki jagah hai. */}
-        <aside className="mt-5 w-full rounded-2xl border border-white/10 bg-[#12301F]/80 p-4 backdrop-blur-sm lg:mt-[19.5rem] lg:max-w-[17rem]">
-          <ul className="space-y-3">
-            {/* "WhatsApp pehle, SMS baad mein" wali baat yahan se hata
-                di gayi -- ab wo unhi do khanon ke neeche likhi hai jin
-                ki wo baat karti hai. Ek hi baat do jagah likhne se
-                parhne wala dono dafa parhta hai. */}
-            {[
-              { icon: <RefreshMark />, title: t("au_tip_resend_title", lang), body: t("au_tip_resend_body", lang) },
-              { icon: <ShieldMark />, title: t("au_tip_safe_title", lang), body: t("au_tip_safe_body", lang) },
-            ].map((tip) => (
-              <li key={tip.title} className="flex gap-3">
-                <span className="mt-0.5 shrink-0 text-[#7FD19A]">{tip.icon}</span>
-                <span>
-                  <span className="block text-[13px] font-semibold text-white">{tip.title}</span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-[#9FB8A4]">{tip.body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      </div>
-
-      {/* Neeche ki patti. Ye bechne wali baat nahi hai -- ye us bande ke
-          liye hai jo pehli dafa apna number kisi website par likh raha
-          hai aur jhijak raha hai. */}
-      <div className="relative mt-6 w-full max-w-4xl border-t border-white/10 pt-3">
-        <div className="grid grid-cols-2 gap-x-5 gap-y-3 text-center sm:grid-cols-4 sm:text-left">
-          {[
-            { icon: <ShieldMark />, title: t("au_foot_safe", lang), sub: t("au_foot_safe_sub", lang) },
-            { icon: <BoltMark />, title: t("au_foot_fast", lang), sub: t("au_foot_fast_sub", lang) },
-            { icon: <WheatMark />, title: t("au_foot_farmer", lang), sub: t("au_foot_farmer_sub", lang) },
-            { icon: <HeadsetMark />, title: t("au_foot_support", lang), sub: t("au_foot_support_sub", lang) },
-          ].map((f) => (
-            <div key={f.title} className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-start sm:gap-2.5">
-              <span className="mt-0.5 shrink-0 text-[#C9A227]">{f.icon}</span>
-              <span>
-                <span className="block text-[13px] font-semibold text-white">{f.title}</span>
-                <span className="block text-[11px] text-[#9FB8A4]">{f.sub}</span>
-              </span>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4">
+              <BrandMark />
+              <div>
+                <p className="font-display text-xl font-semibold text-white">{t("au_company", lang)}</p>
+                <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#e5c65b]">{t("au_brand", lang)}</p>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
+
+            <div className="mt-20 max-w-xl xl:mt-24">
+              <span className="inline-flex rounded-full border border-[#d4af37]/25 bg-[#d4af37]/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-[#efd979]">
+                Intelligent Agriculture Business Platform
+              </span>
+              <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-white xl:text-5xl">
+                Pakistan&apos;s Intelligent Agriculture Business Platform
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-[#b7cbbd] xl:text-lg">
+                Farmer, Retail, Milk, Grain, Machinery aur Finance — sab ek jagah.
+              </p>
+
+              <div className="mt-9 grid max-w-lg grid-cols-2 gap-3">
+                {[
+                  ["Farmer Management", "One Farmer, One Profile"],
+                  ["Retail & Inventory", "POS, stock aur purchasing"],
+                  ["Milk & Grain", "Collection se settlement tak"],
+                  ["Machinery & Finance", "Booking, khata aur payments"],
+                ].map(([title, body]) => (
+                  <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-sm">
+                    <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-[#d4af37]/12 text-[#e5c65b]">
+                      <CheckMark />
+                    </div>
+                    <p className="text-sm font-semibold text-white">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#91aa98]">{body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-xs text-[#91aa98]">
+            <span className="flex items-center gap-2"><ShieldMark /> Secure &amp; Verified</span>
+            <span className="flex items-center gap-2"><BoltMark /> Fast Access</span>
+            <span className="flex items-center gap-2"><HeadsetMark /> Farmer Support</span>
+          </div>
+        </section>
+
+        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f6f7f3] px-4 py-8 sm:px-8 lg:px-12">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#d4af37]/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-[#1e4a2e]/10 blur-3xl" />
+
+          <div className="relative w-full max-w-[470px]">
+            <div className="mb-7 flex items-center justify-between lg:hidden">
+              <div className="flex items-center gap-3">
+                <BrandMark compact />
+                <div>
+                  <p className="font-display text-base font-semibold text-[#123321]">{t("au_company", lang)}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#9a7b16]">{t("au_brand", lang)}</p>
+                </div>
+              </div>
+              <Link href="/" className="rounded-full border border-[#dfe5dc] bg-white px-3 py-2 text-xs font-semibold text-[#385442] shadow-sm">
+                Website
+              </Link>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-[#2f6b45]">Welcome to AgriBridge</p>
+              <h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#102c1c]">Apna account kholain</h2>
+              <p className="mt-2 text-sm leading-6 text-[#66766b]">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p>
+            </div>
+
+            <div className="rounded-[28px] border border-[#e1e6de] bg-[#fffefa] p-5 shadow-[0_24px_70px_-30px_rgba(13,40,24,0.32)] sm:p-7">
+              <Suspense fallback={null}>
+                <LoginForm />
+              </Suspense>
+
+              <div className="mt-6 border-t border-[#e9ece7] pt-4">
+                <div className="flex items-start gap-3 rounded-xl bg-[#f2f7f2] px-3.5 py-3">
+                  <span className="mt-0.5 text-[#2f6b45]"><ShieldMark /></span>
+                  <div>
+                    <p className="text-xs font-semibold text-[#284a34]">Aapki maloomat mehfooz hai</p>
+                    <p className="mt-0.5 text-[11px] leading-5 text-[#708076]">OTP, account aur business data secure access ke sath use hota hai.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-[#758078]">
+              <Link href="/" className="font-medium hover:text-[#1e4a2e]">Website par wapas</Link>
+              <span>•</span>
+              <span>{t("au_foot_safe", lang)}</span>
+              <span>•</span>
+              <span>{t("au_foot_support", lang)}</span>
+            </div>
+          </div>
+        </section>
+      </main>
     </LangProvider>
   );
 }
 
-/* ---- Patti aur card ke nishan. Sab yahin likhe hain: chhoti shaklon
-   ke liye poori library mangwana safhe ko bhaari kar deta hai, aur ye
-   safha wo pehla safha hai jo har bande ko load hota hai. ---- */
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  const size = compact ? "h-11 w-11" : "h-14 w-14";
+  return (
+    <div className={`flex ${size} shrink-0 items-center justify-center rounded-2xl border border-[#d4af37]/30 bg-[#123321] shadow-lg`}>
+      <svg viewBox="0 0 64 64" className="h-9 w-9" fill="none">
+        <path d="M32 5 54 17v25L32 55 10 42V17L32 5Z" stroke="#e5c65b" strokeWidth="2" />
+        <path d="M32 45V20" stroke="#e5c65b" strokeWidth="2" strokeLinecap="round" />
+        <path d="M32 28c-8-1-11-6-11-12 7 1 11 5 11 12ZM32 35c8-1 11-6 11-12-7 1-11 5-11 12Z" fill="#e5c65b" />
+        <path d="M32 45c-8-1-12-5-14-10 8-1 12 3 14 10ZM32 45c8-1 12-5 14-10-8-1-12 3-14 10Z" fill="#4f8a60" />
+      </svg>
+    </div>
+  );
+}
 
 const STROKE = {
-  className: "h-[18px] w-[18px]",
+  className: "h-[17px] w-[17px]",
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
@@ -218,53 +149,18 @@ const STROKE = {
   strokeLinejoin: "round" as const,
 };
 
-function RefreshMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  );
+function CheckMark() {
+  return <svg {...STROKE}><path d="m6 12 4 4 8-9" /></svg>;
 }
 
 function ShieldMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
+  return <svg {...STROKE}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>;
 }
 
 function BoltMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
-    </svg>
-  );
-}
-
-function WheatMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M12 22V9" />
-      <path d="M12 13c-2.5 0-4-1.6-4-4 2.5 0 4 1.6 4 4Z" />
-      <path d="M12 13c2.5 0 4-1.6 4-4-2.5 0-4 1.6-4 4Z" />
-      <path d="M12 8c-2.5 0-4-1.6-4-4 2.5 0 4 1.6 4 4Z" />
-      <path d="M12 8c2.5 0 4-1.6 4-4-2.5 0-4 1.6-4 4Z" />
-    </svg>
-  );
+  return <svg {...STROKE}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" /></svg>;
 }
 
 function HeadsetMark() {
-  return (
-    <svg {...STROKE}>
-      <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
-      <path d="M4 14h3v5H5a1 1 0 0 1-1-1v-4Z" />
-      <path d="M20 14h-3v5h2a1 1 0 0 0 1-1v-4Z" />
-      <path d="M17 19a3 3 0 0 1-3 3h-2" />
-    </svg>
-  );
+  return <svg {...STROKE}><path d="M4 14v-2a8 8 0 0 1 16 0v2" /><path d="M4 14h3v5H5a1 1 0 0 1-1-1v-4Z" /><path d="M20 14h-3v5h2a1 1 0 0 0 1-1v-4Z" /></svg>;
 }
