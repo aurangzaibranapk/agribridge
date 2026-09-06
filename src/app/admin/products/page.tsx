@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Package, Pencil, Upload, Download } from "lucide-react";
+import { Plus, Package, Pencil, Upload, Download, Lightbulb } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { Button, Badge } from "@/components/ui/form";
@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { DeleteButton } from "@/app/admin/products/delete-button";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { canDo } from "@/lib/access/guard";
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 type ProductRow = {
@@ -28,6 +29,21 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
   const isUnrestricted = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
+
+  // Button ab IJAZAT se bandhe hue hain, ohde se nahi.
+  //
+  // Malik (6 September): *"staff sirf products propose kar sake — ye
+  // 'products add' staff ke paas nahi aana chahiye, ye jis ko chahein
+  // hum allow karein."*
+  //
+  // Band button dikhana bande ka waqt bhi zaya karta hai aur bharosa
+  // bhi: wo dabata hai, kuch nahi hota, aur samajh nahi aata kis se
+  // kahe. Is liye jo kaam us ka nahi, us ka button aata hi nahi -- aur
+  // us ki jagah wo raasta aata hai jo us ka HAI: tajweez.
+  const [banaSakta, badalSakta] = await Promise.all([
+    canDo("products", "create"),
+    canDo("products", "edit"),
+  ]);
 
   let query = supabase
     .from("products")
@@ -91,16 +107,20 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
         </div>
       ),
     },
-    {
-      header: "Edit",
-      accessor: (p) => (
-        <Link
-          href={`/admin/products/${p.id}/edit`}
-          className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
-        >
-          <Pencil className="h-3.5 w-3.5" />{t("at_edit", lang)}</Link>
-      ),
-    },
+    ...(badalSakta
+      ? [
+          {
+            header: "Edit",
+            accessor: (p: ProductRow) => (
+              <Link
+                href={`/admin/products/${p.id}/edit`}
+                className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+              >
+                <Pencil className="h-3.5 w-3.5" />{t("at_edit", lang)}</Link>
+            ),
+          } as Column<ProductRow>,
+        ]
+      : []),
     ...(isUnrestricted
       ? [
           {
@@ -117,11 +137,22 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
         description="Products, pricing, and specifications"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/admin/products/import"><Button variant="secondary"><Upload className="h-4 w-4" />Import</Button></Link>
-            <Link href="/admin/products/catalog-export"><Button variant="secondary"><Download className="h-4 w-4" />Export</Button></Link>
-            <Link href="/admin/products/new">
-              <Button><Plus className="h-4 w-4" />{t("c_add_product", lang)}</Button>
-            </Link>
+            {banaSakta ? (
+              <>
+                <Link href="/admin/products/import"><Button variant="secondary"><Upload className="h-4 w-4" />Import</Button></Link>
+                <Link href="/admin/products/catalog-export"><Button variant="secondary"><Download className="h-4 w-4" />Export</Button></Link>
+                <Link href="/admin/products/new">
+                  <Button><Plus className="h-4 w-4" />{t("c_add_product", lang)}</Button>
+                </Link>
+              </>
+            ) : (
+              // Jo cheez khud nahi bana sakta, wo tajweez kar sakta hai.
+              // Ye raasta pehle se maujood hai (propose -> pending ->
+              // manzoori) -- sirf us tak koi darwaza nahi tha.
+              <Link href="/admin/products/propose">
+                <Button variant="secondary"><Lightbulb className="h-4 w-4" />Nayi cheez tajweez karein</Button>
+              </Link>
+            )}
           </div>
         }
       />

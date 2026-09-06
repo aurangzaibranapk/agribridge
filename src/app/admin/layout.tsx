@@ -28,6 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Sidebar dikhegi ya nahi -- ye faisla database mein rakha hai
   // (250). Setting na mile to sidebar rehti hai: navigation ka ghayab
   // ho jana poore daftar ko rok deta hai.
+  // Owner/Admin -- in ke liye department wale card aur chhoti quick
+  // fehrist barqarar rehti hai.
+  let unrestricted = false;
   let showSidebar = true;
   /** "work" = staff wali chhoti sidebar, "none" = sirf cards. */
   let sidebarKind: SidebarKind = "full";
@@ -63,6 +66,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // na pata.
     const nav = await loadNav(user.id, role, lang);
     navGroups = nav.groups;
+    unrestricted = nav.unrestricted;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
 
     // Sidebar ka faisla ijazat ki GINTI par hai (malik ka usool, 5
@@ -103,17 +107,79 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const uniqueItems = allItems.filter((i) => (seenHref.has(i.href) ? false : (seenHref.add(i.href), true)));
   const byHref = new Map(uniqueItems.map((i) => [i.href, i]));
 
-  const quickSide: SideItem[] = (QUICK_BY_ROLE[role] ?? [])
-    .map((k) => byHref.get(`/admin/${k.replace(/\./g, "/")}`))
-    .filter((i): i is SideItem => !!i)
-    .slice(0, 6);
+  /**
+   * Staff ka SAARA kaam sidebar mein -- chhe tak mehdood nahi.
+   *
+   * Malik (6 September), teen alag paighaam, ek hi baat:
+   *
+   *   *"Farmers jab sidebar mein aa raha hai to Milk tag kyun hai —
+   *   staff ke paas nahi hona chahiye."*
+   *   *"Grain ka tag hi nahi banta... to sidebar mein hi aa jaye."*
+   *   *"Sales & Retail mein jo jo staff ko dena hai already sidebar mein
+   *   hai, to ye sara yahan kyun aa raha hai?"*
+   *
+   * Wajah ye thi: sidebar sirf CHHE kaam dikhata tha (`QUICK_BY_ROLE`
+   * ki tayyar fehrist se). Baqi kaam ke liye "department" ke card bante
+   * the -- aur wo card us dashboard ke naam se aate the jis se wo kaam
+   * juRa hua hota hai. Is liye ek "Farmers" ki wajah se poora **Milk**
+   * ka department nazar aa jata tha, aur ek "Produce Orders" ki wajah se
+   * **Grain** ka -- jab ke dukan ka salesman na doodh ka hai na anaj ka.
+   *
+   * Ab jis bande ki ijazat mehdood hai, us ka HAR kaam sidebar mein aa
+   * jata hai, aur department wale card us ke liye bante hi nahi. Owner,
+   * Admin aur Manager ke liye wo card waise hi rehte hain -- wo waqai
+   * department se department chalte hain.
+   */
+  const quickSide: SideItem[] = unrestricted
+    ? (QUICK_BY_ROLE[role] ?? [])
+        .map((k) => byHref.get(`/admin/${k.replace(/\./g, "/")}`))
+        .filter((i): i is SideItem => !!i)
+        .slice(0, 6)
+    : (() => {
+        // Pehle wo kaam jo is ohde ke liye chune hue hain (tarteeb wahi
+        // rehti hai), phir baqi sab -- taake roz wala kaam upar rahe.
+        const chune = (QUICK_BY_ROLE[role] ?? [])
+          .map((k) => byHref.get(`/admin/${k.replace(/\./g, "/")}`))
+          .filter((i): i is SideItem => !!i);
+        const chuneHue = new Set(chune.map((i) => i.href));
+        const baqi = uniqueItems.filter(
+          (i) => !chuneHue.has(i.href) && i.href !== "/admin/my-work" && i.href !== "/admin/my-hr"
+        );
+        return [...chune, ...baqi];
+      })();
 
-  const deptSide: SideItem[] = navGroups
-    .filter((g) => g.key !== "master" && g.items.length > 0)
-    .map((g) => ({ href: `/admin/my-work#${g.key}`, label: g.label, icon: g.icon ?? "LayoutGrid" }));
+  const deptSide: SideItem[] = unrestricted
+    ? navGroups
+        .filter((g) => g.key !== "master" && g.items.length > 0)
+        .map((g) => ({ href: `/admin/my-work#${g.key}`, label: g.label, icon: g.icon ?? "LayoutGrid" }))
+    : [];
 
   const reportsSide = uniqueItems.filter((i) => i.href.startsWith("/admin/reports")).slice(0, 4);
-  const settingsSide = uniqueItems.filter((i) => i.href === "/admin/my-attendance" || i.href === "/admin/my-access" || i.href === "/admin/my-wallet");
+  /**
+   * Staff ka apna hissa -- EK darwaza, teen nahi.
+   *
+   * Malik (6 September): *"My HR mein staff ko apna sab kuch aana
+   * chahiye. Alag se 'My Attendance', 'My Wallet' waghera kuch bhi nahi
+   * aana chahiye — staff ko sab kuch us ke HR mein aana chahiye."*
+   *
+   * Wo theek keh rahe the. "Meri Hazri", "Mera Batwa" aur "Meri Ijazat"
+   * teen alag naam the jo teenon ek hi cheez ke hissay hain: bande ka
+   * apna record. Menu mein teen naam rakhne se banda har dafa sochta
+   * hai ke kaun sa kholoon.
+   *
+   * Ab menu mein sirf **Mera HR** hai. Wo safha khud in teenon ka
+   * darwaza hai (us par "Jaldi wale kaam" mein Meri hazri, Mera batwa,
+   * Chhutti ki darkhwast, Kharcha claim -- sab maujood hain). Safhe
+   * mitaye nahi gaye; sirf menu se un ke alag naam hataye gaye hain.
+   */
+  //
+  // Fehrist se chhaan kar nahi, SEEDHA banaya ja raha hai: "Mera HR"
+  // `ALWAYS` mein hai (har staff ko khulta hai) magar zaroori nahi ke wo
+  // us bande ki feature wali fehrist mein bhi ho. Chhaan kar lene se wo
+  // khana khali reh jata aur menu se ye hissa hi ghayab ho jata.
+  const settingsSide: SideItem[] = [
+    byHref.get("/admin/my-hr") ?? { href: "/admin/my-hr", label: "Mera HR", icon: "UserCircle" },
+  ];
 
   return (
     <LangProvider lang={lang}>
