@@ -1811,6 +1811,7 @@ tasdeeq se pehle Live par koi migration nahi).
 | 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | **baqi** |
 | 349 | Mazdoori, advance ka khud-ba-khud adjust, bande ka ek khata | ✅ (malik ka apna misaal ledger par chala kar dekha) | **baqi** |
 | 350 | Do taraf ki raqam manzoori se katti hai (`party_settlements`) | ✅ | **baqi** |
+| 351 | Manzoori ka waqt (SLA) aur us ka seedha (escalation) | ✅ (teen umar ki qatarein chala kar dekhi gayin) | **baqi** |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 

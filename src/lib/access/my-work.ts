@@ -91,7 +91,7 @@ export const QUICK_BY_ROLE: Record<string, string[]> = {
   owner: ["submissions", "access-requests", "reconciliation", "cash-close", "command-center", "stock-count"],
   super_admin: ["submissions", "access-requests", "users", "permissions", "reconciliation"],
   admin: ["submissions", "access-requests", "users", "permissions", "reconciliation"],
-  manager: ["submissions", "kharche", "stock-count", "cash-close", "reconciliation", "field-watch"],
+  manager: ["verification", "submissions", "kharche", "stock-count", "cash-close", "reconciliation"],
   finance: ["finance", "cash-close", "reconciliation", "bank-reconcile", "suppliers", "staff-khata"],
   sales_staff: ["pos", "kharche", "mazdoori", "khata", "agri-orders", "farmers"],
   warehouse: ["inventory", "stock-count", "stock-ledger", "agri-returns", "purchases"],
