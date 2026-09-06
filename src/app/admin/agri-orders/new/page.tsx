@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewOrderForm } from "./new-order-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { categoriesForShop, type CatNode } from "@/lib/products/shop-kinds";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,34 @@ export default async function NewAgriOrderPage() {
   const supabase = createClient();
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
+
+  // Jis banday ki apni dukan hai, use SIRF apni dukan ka maal.
+  //
+  // Malik: "karyana ke ordering mein karyana hi aana chahiye -- phir
+  // agri inputs ke kyun aa rahe hain?" Yahan koi rok thi hi nahi, is
+  // liye karyana wali dukan ko urea aur poultry feed bhi nazar aate the
+  // -- aur ek galat click se wo maal us dukan mein mangwa liya jata.
+  //
+  // Jis ka koi shop na ho (HQ, admin) us par rok NAHI: use poora maal
+  // dikhna chahiye, kyunki wo har dukan ke liye order karta hai.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let meraShopKind: string | null = null;
+  if (user) {
+    const { data: me } = await supabase.from("profiles").select("shop_id").eq("id", user.id).maybeSingle();
+    if (me?.shop_id) {
+      const { data: shop } = await supabase.from("shops").select("business_type").eq("id", me.shop_id).maybeSingle();
+      meraShopKind = (shop?.business_type as string | null) ?? null;
+    }
+  }
+
+  const { data: sabCategories } = await supabase
+    .from("categories")
+    .select("id, name, parent_category_id");
+
+  const khuliCategories = categoriesForShop(meraShopKind, (sabCategories ?? []) as CatNode[]);
 
   const { data: products } = await supabase
     .from("products")
@@ -32,9 +61,14 @@ export default async function NewAgriOrderPage() {
     }
   }
 
-  const { data: categories } = await supabase.from("categories").select("id, name").order("name");
+  const categories = (sabCategories ?? [])
+    .filter((c) => (khuliCategories ? khuliCategories.has(c.id) : true))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const productsFormatted = (products ?? []).map((p: any) => ({
+  const productsFormatted = (products ?? [])
+    // Jis product ki category is dukan ki nahi, wo yahan aata hi nahi.
+    .filter((p: any) => (khuliCategories ? p.category_id && khuliCategories.has(p.category_id) : true))
+    .map((p: any) => ({
     id: p.id,
     name: p.name,
     pack_size: p.pack_size,
