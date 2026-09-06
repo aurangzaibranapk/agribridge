@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils/format";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import Link from "next/link";
@@ -32,11 +33,29 @@ export default async function AgriReturnsPage() {
 
   const { data: returns } = await supabase
     .from("agri_order_returns")
-    .select("id, return_number, reason, status, total_amount, created_at, branches(name)")
+    .select("id, return_number, reason, status, total_amount, created_at, received_at, created_by, received_by, rejection_reason, branches(name)")
     .order("created_at", { ascending: false })
     .limit(100);
 
   const rows = returns ?? [];
+
+  // Kis stage par kaun -- naam ke sath.
+  //
+  // Malik (6 September): *"return kis stage par kia hua wo track."*
+  //
+  // Table mein `created_by` aur `received_by` pehle se the, magar safhe
+  // par sirf "pending / received" ka thappa nazar aata tha. Us se ye
+  // sawal kabhi jawab nahi paata: kis ne bheja, aur kis ne andar liya?
+  // Wapsi ka jhagRa hamesha isi sawal par hota hai.
+  const bandeIds = [
+    ...new Set(rows.flatMap((r) => [r.created_by, r.received_by]).filter((x): x is string => !!x)),
+  ];
+  const naamMap = new Map<string, string>();
+  if (bandeIds.length > 0) {
+    const { data: log } = await supabase.from("profiles").select("id, full_name").in("id", bandeIds);
+    for (const p of log ?? []) naamMap.set(p.id, p.full_name ?? "—");
+  }
+  const naam = (id: string | null) => (id ? (naamMap.get(id) ?? "—") : "—");
   const pending = rows.filter((r) => r.status === "pending");
   const received = rows.filter((r) => r.status === "received");
   const pendingValue = pending.reduce((sum, r) => sum + Number(r.total_amount), 0);
@@ -82,6 +101,7 @@ export default async function AgriReturnsPage() {
                 <th className="px-3 py-2 font-medium text-surface-500">{t("c_reason", lang)}</th>
                 <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
                 <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500">Kis stage par, kaun</th>
               </tr>
             </thead>
             <tbody>
@@ -99,6 +119,27 @@ export default async function AgriReturnsPage() {
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{REASON_LABEL[r.reason] ?? r.reason}</td>
                     <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {Number(r.total_amount).toLocaleString()}</td>
                     <td className="px-3 py-2"><Badge tone={statusTone(r.status)}>{STATUS_LABEL[r.status] ?? r.status}</Badge></td>
+                    <td className="px-3 py-2 text-[11px] leading-relaxed text-surface-500 dark:text-surface-400">
+                      <span className="block">
+                        Bheja: <b className="font-medium text-surface-700 dark:text-surface-300">{naam(r.created_by)}</b>{" "}
+                        · {formatDate(r.created_at)}
+                      </span>
+                      {r.received_at ? (
+                        <span className="block">
+                          {r.status === "rejected" ? "Radd kia" : "Andar liya"}:{" "}
+                          <b className="font-medium text-surface-700 dark:text-surface-300">{naam(r.received_by)}</b>{" "}
+                          · {formatDate(r.received_at)}
+                        </span>
+                      ) : (
+                        // "Abhi kisi ne dekha nahi" aur "radd ho gaya" do
+                        // alag baatein hain -- dono ko ek jaisa likhna
+                        // wapsi ke jhagRe ka sab se aam sabab hai.
+                        <span className="block text-amber-700 dark:text-amber-400">HQ ne abhi andar nahi liya</span>
+                      )}
+                      {r.rejection_reason && (
+                        <span className="block text-red-600 dark:text-red-400">Wajah: {r.rejection_reason}</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

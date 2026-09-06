@@ -8,7 +8,20 @@ import { notifyRoles, notifyBranch } from "@/lib/notifications";
 import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 import { requireAction } from "@/lib/access/guard";
 
-const HQ_ROLES = ["super_admin", "admin", "owner"];
+/**
+ * Wapsi kaun manzoor karta hai.
+ *
+ * Malik (6 September): *"return basically hamare staff hi banayega, aur
+ * approval manager, admin assistant, admin se hoga."*
+ *
+ * Warehouse yahan se hataya NAHI gaya -- maal WAQAI wohi wapas leta
+ * hai, aur is nizam mein "receive karna" hi wo lamha hai jab stock aur
+ * khata hilte hain. Us se ye haq cheen lena kaam rok deta: maal godam
+ * par khaRa rehta aur koi us ko andar nahi le ja sakta.
+ *
+ * Yani banane wala staff, aur andar lene wala in mein se koi.
+ */
+const HQ_ROLES = ["super_admin", "admin", "owner", "manager", "admin_assistant"];
 
 export interface ActionState {
   error?: string;
