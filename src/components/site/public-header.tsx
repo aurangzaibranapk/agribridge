@@ -1,20 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronRight, Menu, MessageCircle, X } from "lucide-react";
+import { ChevronRight, Menu, X } from "lucide-react";
 
 /**
- * Website ka header -- malik ka final design (6 September).
+ * Website ka header.
  *
- * Das unwan, aur do baatein jaan boojh kar:
+ * -------------------------------------------------------------------
+ * MALIK KI TABDEELIYAN (6 September)
  *
- * 1. **Marketplace `/marketplace` par jata hai, koi naya safha nahi.**
- *    Wo safha pehle se maujood hai. Spec khud kehti hai "REUSE IT".
+ *   *"ye top bara hona chahiye. WhatsApp message hai wo mita dein. Book
+ *   demo mita dein. Kisan AI ke backend AI Doctor laga dein. Ooper jo
+ *   'Al Rana Traders' aur 'Beej se Beej' se wo bhi hata dein. Top bar
+ *   ko thora bara karein aur khoobsurat bana dein."*
  *
- * 2. **Kisan AI `/kisan-ai` par hai magar Crop Doctor `/ai-crop-doctor`
- *    par hi rehta hai.** Naya safha us ka darwaza hai, us ki jagah
- *    nahi -- chalta hua Crop Doctor kisi soorat nahi chhera ja raha.
+ * Chaar cheezein nikal gayin:
+ *
+ * 1. Ooper wali kaali patti (Al Rana Traders • Beej se Bazaar tak).
+ * 2. WhatsApp ka gol button.
+ * 3. "ERP Demo" ka button (yehi wo "book demo" hai).
+ * 4. Un ke sath jane wala `whatsapp` prop -- ab header ko us number ki
+ *    zaroorat hi nahi rahi. Footer apna number khud lata hai.
+ *
+ * -------------------------------------------------------------------
+ * KISAN AI KA DARWAZA AB SEEDHA CROP DOCTOR HAI
+ *
+ * Malik ne do dafa yehi baat kahi: *"yahan Kisan AI se murad hai Crop
+ * Doctor"*, aur *"jo chal nahi rahi wo honi hi nahi chahiye"*.
+ *
+ * Pehle ye `/kisan-ai` par jata tha -- ek darwaza jo aage ek aur darwaze
+ * par le jata tha. Ab seedha `/ai-crop-doctor` par, jo asal mein chalta
+ * hai. Beech ka safha maujood rehta hai; sirf header us se guzarta
+ * nahi.
  */
 const navigation = [
   { label: "Home", href: "/" },
@@ -24,77 +43,73 @@ const navigation = [
   { label: "Grain", href: "/grain" },
   { label: "Machinery", href: "/machinery" },
   { label: "Dairy", href: "/dairy" },
-  { label: "Kisan AI", href: "/kisan-ai" },
+  { label: "Kisan AI", href: "/ai-crop-doctor" },
   { label: "AgriBridge ERP", href: "/erp" },
   { label: "Partner", href: "/partner" },
 ];
 
-export function PublicHeader({ whatsapp }: { whatsapp: string }) {
+export function PublicHeader() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Kaunsa unwan is waqt khula hai. "/" sirf apne aap par lagta hai --
+  // warna har safhe par Home bhi chamakta rehta.
+  function khula(href: string) {
+    return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-      {/* TOP STRIP */}
-      <div className="hidden bg-[#0c2d22] text-white lg:block">
-        <div className="mx-auto flex h-8 max-w-7xl items-center justify-between px-6 text-xs">
-          <p className="text-emerald-50/80">Al Rana Traders • ART AgriBridge</p>
-          <p className="font-semibold text-emerald-100">Beej se Bazaar tak — Business se AI tak</p>
-        </div>
-      </div>
-
-      {/* MAIN HEADER */}
-      <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6 lg:h-[72px] lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex h-20 max-w-7xl items-center px-4 sm:px-6 lg:h-[104px] lg:px-8">
         {/* LOGO */}
-        <Link href="/" className="flex shrink-0 items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 font-black text-white">
+        <Link href="/" className="group flex shrink-0 items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-lg font-black text-white shadow-sm shadow-emerald-900/20 transition group-hover:shadow-md lg:h-14 lg:w-14 lg:text-xl">
             ART
           </div>
           <div className="leading-tight">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 lg:text-[11px]">
               Al Rana Traders
             </p>
-            <p className="text-lg font-black tracking-tight text-slate-950">
+            <p className="text-xl font-black tracking-tight text-slate-950 lg:text-[26px]">
               Agri<span className="text-emerald-700">Bridge</span>
             </p>
           </div>
         </Link>
 
         {/* DESKTOP NAV */}
-        <nav className="ml-auto hidden items-center gap-0.5 xl:flex">
-          {navigation.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-lg px-2.5 py-2 text-[13px] font-semibold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-800"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="ml-auto hidden items-center gap-1 xl:flex">
+          {navigation.map((item) => {
+            const on = khula(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={on ? "page" : undefined}
+                className={`relative rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+                  on ? "text-emerald-800" : "text-slate-600 hover:bg-emerald-50/70 hover:text-emerald-800"
+                }`}
+              >
+                {item.label}
+                {/* Khule unwan ke neeche patli lakeer -- rang par bharosa
+                    na karne wale ke liye bhi nishan maujood rehta hai. */}
+                <span
+                  className={`absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-emerald-600 transition-opacity ${
+                    on ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* DESKTOP ACTIONS */}
-        <div className="ml-auto hidden items-center gap-2 lg:flex xl:ml-4">
+        {/* DESKTOP ACTION */}
+        <div className="ml-auto hidden items-center lg:flex xl:ml-6">
           <Link
             href="/login"
-            className="rounded-lg px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-sm shadow-emerald-900/20 transition hover:bg-emerald-800 hover:shadow-md"
           >
             Login
           </Link>
-          <Link
-            href="/erp"
-            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-800"
-          >
-            ERP Demo
-          </Link>
-          <a
-            href={`https://wa.me/${whatsapp}`}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Contact AgriBridge on WhatsApp"
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-700/20 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
-          >
-            <MessageCircle className="h-5 w-5" />
-          </a>
         </div>
 
         {/* MOBILE BUTTON */}
@@ -103,7 +118,7 @@ export function PublicHeader({ whatsapp }: { whatsapp: string }) {
           onClick={() => setOpen((value) => !value)}
           aria-label="Open navigation"
           aria-expanded={open}
-          className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-800 lg:hidden"
+          className="ml-auto flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-800 lg:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -119,7 +134,12 @@ export function PublicHeader({ whatsapp }: { whatsapp: string }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-emerald-50 hover:text-emerald-800"
+                  aria-current={khula(item.href) ? "page" : undefined}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold transition ${
+                    khula(item.href)
+                      ? "bg-emerald-50 text-emerald-800"
+                      : "text-slate-800 hover:bg-emerald-50 hover:text-emerald-800"
+                  }`}
                 >
                   {item.label}
                   <ChevronRight className="h-4 w-4" />
@@ -127,32 +147,15 @@ export function PublicHeader({ whatsapp }: { whatsapp: string }) {
               ))}
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-4 border-t border-slate-100 pt-4">
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-bold"
+                className="block rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white"
               >
                 Login
               </Link>
-              <Link
-                href="/erp"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white"
-              >
-                ERP Demo
-              </Link>
             </div>
-
-            <a
-              href={`https://wa.me/${whatsapp}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#0c2d22] px-4 py-3 text-sm font-bold text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp AgriBridge
-            </a>
           </nav>
         </div>
       )}

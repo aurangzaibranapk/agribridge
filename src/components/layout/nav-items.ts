@@ -193,6 +193,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/dashboard-manager", label: "Dashboard & Feature Manager", icon: LayoutGrid },
       { href: "/admin/departments", label: "Department aur Ijazat", icon: ShieldCheck },
       { href: "/admin/my-department", label: "Meri Team (Head)", icon: Users },
+      { href: "/admin/staff-access", label: "Staff ki Ijazat", icon: ShieldCheck },
       { href: "/admin/permissions", label: "Ek Banday ki Ijazat", icon: UserCog },
       { href: "/admin/product-permissions", label: "Product Permissions", icon: ShieldCheck },
       { href: "/admin/users", label: "Users & Roles", icon: UserCog },

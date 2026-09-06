@@ -75,34 +75,44 @@ export async function loadUserAccess(profileId: string): Promise<UserAccess | nu
   };
   if (base.unrestricted) return base;
 
-  const now = new Date().toISOString();
+  /**
+   * Ijazat wahin se parhi jati hai jahan se baqi poora system parhta hai.
+   *
+   * -------------------------------------------------------------------
+   * PEHLE YE FEHRIST YAHAN DOBARA JORI JATI THI -- AUR WAHI MASLA THA
+   *
+   * `middleware`, `nav`, `guard`, `delegation` -- sab
+   * `v_user_feature_access` parhte hain. Sirf ye function do table alag
+   * alag parh kar apna hisaab lagata tha.
+   *
+   * Ek hi sawal ke do jawab dene wale, aur wo dono ek din alag ho gaye:
+   * migration 343 ne view se OHDE wala hissa nikal diya (ohda ab
+   * TEMPLATE hai, taala nahi) -- magar ye function seedha
+   * `role_feature_permissions` parhta raha. Nateeja ye hota ke jis bande
+   * se malik ne ijazat kam ki hai, usay menu mein cheez nazar na aati,
+   * magar ye teen jagah wo phir bhi kar leta:
+   *
+   *   - `ledger-reversal` (posted entry ulti karna)
+   *   - `audit-trail`
+   *   - POS
+   *
+   * Yani sab se bhaari teen darwaze usi purani fehrist par khule rehte.
+   *
+   * Ab ye bhi wohi view parhta hai. View ki teen qatarein ek hi feature
+   * par aa sakti hain (ohda, doosra ohda, apni fehrist) -- `merge` unhen
+   * jorta hai, aur waqt ki chhanti view ke andar hi ho chuki hoti hai.
+   */
+  const { data: rows } = await service
+    .from("v_user_feature_access")
+    .select("feature_key, actions, data_scope, is_temporary, expires_at")
+    .eq("profile_id", profileId);
 
-  const [{ data: roleRows }, { data: userRows }] = await Promise.all([
-    service.from("role_feature_permissions").select("feature_key, actions, data_scope").eq("role", profile.role),
-    service
-      .from("user_feature_permissions")
-      .select("feature_key, actions, data_scope, starts_at, expires_at")
-      .eq("profile_id", profileId)
-      // Jo shuru hi nahi hui, ya guzar chuki -- dono ka koi asar nahi.
-      .or(`starts_at.is.null,starts_at.lte.${now}`)
-      .or(`expires_at.is.null,expires_at.gt.${now}`),
-  ]);
-
-  for (const row of roleRows ?? []) {
-    merge(base.grants, row.feature_key, {
+  for (const row of rows ?? []) {
+    merge(base.grants, row.feature_key as string, {
       actions: new Set((row.actions as string[]) as Action[]),
       scope: row.data_scope as DataScope,
-      temporary: false,
-      expiresAt: null,
-    });
-  }
-
-  for (const row of userRows ?? []) {
-    merge(base.grants, row.feature_key, {
-      actions: new Set((row.actions as string[]) as Action[]),
-      scope: row.data_scope as DataScope,
-      temporary: row.expires_at != null,
-      expiresAt: row.expires_at,
+      temporary: row.is_temporary === true,
+      expiresAt: (row.expires_at as string | null) ?? null,
     });
   }
 

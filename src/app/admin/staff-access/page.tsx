@@ -1,0 +1,113 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
+import { StaffAccessClient } from "./staff-access-client";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Staff ki ijazat -- kis ko kya khulta hai.
+ *
+ * Malik (6 September): *"lekin hamein aasani honi chahiye: ye kis stage
+ * par banda aaya hai, usi stage se usay kya kya dena hai wo easy ho."*
+ *
+ * Migration 343 ne ohde ko TEMPLATE bana diya. Us ke baad ijazat ka
+ * waahid darwaza `user_feature_permissions` reh gaya -- aur us mein
+ * kuch daalne ka koi safha maujood hi nahi tha. Ye safha wo darwaza
+ * hai: banda chunein, us ke stage ka template ek dabao mein lagayein,
+ * phir us mein se kam ya zyada karein.
+ */
+export default async function StaffAccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ banda?: string }>;
+}) {
+  const params = await searchParams;
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user?.id ?? "")
+    .maybeSingle();
+
+  // Ijazat baantna sirf malik ke haath mein rehta hai.
+  if (!UNRESTRICTED_ROLES.includes(String(me?.role ?? ""))) redirect("/admin/permissions-denied");
+
+  const service = createServiceClient();
+
+  const [{ data: staff }, { data: features }, { data: templates }] = await Promise.all([
+    service
+      .from("profiles")
+      .select("id, full_name, role, is_active, branch_id, shop_id")
+      .order("is_active", { ascending: false })
+      .order("full_name"),
+    service.from("features").select("key, label, route, is_sensitive").eq("is_active", true).order("label"),
+    service.from("role_feature_permissions").select("role, feature_key"),
+  ]);
+
+  // Kaam ka banda wohi jise ijazat lagti hai. Owner/Admin is fehrist
+  // mein nahi -- un par ye safha asar hi nahi karta, aur unhen yahan
+  // dikhana ye jhoot bolta ke un ki ijazat yahan se badalti hai.
+  const log = (staff ?? []).filter((p) => !UNRESTRICTED_ROLES.includes(String(p.role)));
+
+  // Har template mein kitni cheezein hain -- taake malik ko lagane se
+  // pehle pata ho ke wo kya de raha hai.
+  const templateGinti = new Map<string, number>();
+  (templates ?? []).forEach((r: any) => {
+    templateGinti.set(r.role, (templateGinti.get(r.role) ?? 0) + 1);
+  });
+  const templateFehrist = [...templateGinti.entries()]
+    .map(([role, ginti]) => ({ role, ginti }))
+    .sort((a, b) => a.role.localeCompare(b.role));
+
+  const chunaHua = params.banda && log.some((p) => p.id === params.banda) ? params.banda : null;
+
+  const { data: uskiIjazat } = chunaHua
+    ? await service
+        .from("user_feature_permissions")
+        .select("feature_key, actions, data_scope, expires_at, reason")
+        .eq("profile_id", chunaHua)
+        .order("feature_key")
+    : { data: [] };
+
+  return (
+    <div>
+      <PageHeader
+        title="Staff ki ijazat"
+        description="Banda chunein — us ke stage ka template ek dabao mein lagayein, phir kam ya zyada karein"
+      />
+      {log.length === 0 ? (
+        <EmptyState title="Koi staff nahi mila." />
+      ) : (
+        <StaffAccessClient
+          staff={log.map((p) => ({
+            id: p.id,
+            full_name: p.full_name ?? "(naam nahi)",
+            role: String(p.role),
+            is_active: p.is_active !== false,
+          }))}
+          features={(features ?? []).map((f: any) => ({
+            key: f.key,
+            label: f.label,
+            route: f.route,
+            is_sensitive: f.is_sensitive === true,
+          }))}
+          templates={templateFehrist}
+          chunaHua={chunaHua}
+          uskiIjazat={(uskiIjazat ?? []).map((r: any) => ({
+            feature_key: r.feature_key,
+            actions: (r.actions as string[]) ?? [],
+            data_scope: String(r.data_scope),
+            expires_at: (r.expires_at as string | null) ?? null,
+            reason: (r.reason as string | null) ?? null,
+          }))}
+        />
+      )}
+    </div>
+  );
+}

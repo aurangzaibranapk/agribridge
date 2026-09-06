@@ -16,6 +16,10 @@ import {
   Receipt,
   Smartphone,
   ArrowDownCircle,
+  Package,
+  HandCoins,
+  AlertTriangle,
+  Hourglass,
 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -211,8 +215,10 @@ export default async function SalesReportPage({
 
   const [{ data: stockRows }, { data: productRows }] = await Promise.all([
     godamIds.length > 0
-      ? supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id").in("warehouse_id", godamIds)
-      : Promise.resolve({ data: [] as { product_id: string; quantity_on_hand: number; warehouse_id: string }[] }),
+      ? supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id, updated_at").in("warehouse_id", godamIds)
+      : Promise.resolve({
+          data: [] as { product_id: string; quantity_on_hand: number; warehouse_id: string; updated_at: string }[],
+        }),
     supabase.from("products").select("id, purchase_price").eq("is_deleted", false),
   ]);
 
@@ -220,15 +226,63 @@ export default async function SalesReportPage({
   (productRows ?? []).forEach((p: any) => kharidQeemat.set(p.id, Number(p.purchase_price ?? 0)));
 
   let kulStockQeemat = 0;
+  let kulStockGinti = 0;
   const stockQismWar = new Map<string, number>();
   (stockRows ?? []).forEach((r: any) => {
-    const qeemat = Number(r.quantity_on_hand ?? 0) * (kharidQeemat.get(r.product_id) ?? 0);
+    const ginti = Number(r.quantity_on_hand ?? 0);
+    kulStockGinti += ginti;
+    const qeemat = ginti * (kharidQeemat.get(r.product_id) ?? 0);
     if (qeemat === 0) return;
     kulStockQeemat += qeemat;
     const shopId = godamKiDukan.get(r.warehouse_id) ?? null;
     const qism = shopId ? dukanKiQism.get(shopId) || "(qism darj nahi)" : "HQ godam (kisi dukan ka nahi)";
     stockQismWar.set(qism, (stockQismWar.get(qism) ?? 0) + qeemat);
   });
+
+  /**
+   * Jo maal bahut arse se hila hi nahi.
+   *
+   * Ye "aging" ka takhmeena hai, naap nahi -- aur ye baat safhe par bhi
+   * likhi hui hai. `inventory.updated_at` sirf itna kehta hai ke us
+   * qatar ko aakhri dafa kab chhua gaya; maal kab AAYA tha wo batch aur
+   * stock movements ki fehrist se aata hai. Is liye yahan daawa wohi
+   * kiya ja raha hai jo ye khana waqai jaanta hai: "itne din se hili
+   * nahi" -- "itne din purana maal" nahi.
+   */
+  const BEES_DIN = 20;
+  const purani = new Date(Date.now() - BEES_DIN * 24 * 60 * 60 * 1000);
+  const naHiliQatarein = (stockRows ?? []).filter(
+    (r: any) => Number(r.quantity_on_hand ?? 0) > 0 && r.updated_at && new Date(r.updated_at) < purani
+  ).length;
+
+  /**
+   * Kitna lena hai -- aur kis ki hadd bhar chuki hai.
+   *
+   * Khata branch ke sath juda hai, dukan ke sath nahi. Is liye dukan par
+   * baithe bande ko us ki BRANCH ka lena nazar aata hai, aur ye baat
+   * card par likhi hui hai -- warna wo samajhta hai ye sirf us ki dukan
+   * ka hai.
+   */
+  const meriBranch = (me?.branch_id as string | null) ?? null;
+  let khataQuery = supabase.from("khata_accounts").select("current_balance, credit_limit, branch_id");
+  if (meriDukan && meriBranch) khataQuery = khataQuery.eq("branch_id", meriBranch);
+  else if (branchId) khataQuery = khataQuery.eq("branch_id", branchId);
+  const { data: khaate } = await khataQuery;
+
+  const kulLena = (khaate ?? []).reduce((sum, k: any) => {
+    const baqi = Number(k.current_balance ?? 0);
+    return baqi > 0 ? sum + baqi : sum;
+  }, 0);
+
+  // Hadd 80% se ooper. Jis khaate ki hadd hi darj nahi, wo yahan nahi
+  // ginta -- us ke saamne "0%" likhna wo jhoot hai jis se malik ne mana
+  // kia hai: hadd na hone ka matlab "hadd sifar" nahi.
+  const haddKeQareeb = (khaate ?? []).filter((k: any) => {
+    const hadd = Number(k.credit_limit ?? 0);
+    if (hadd <= 0) return false;
+    return Number(k.current_balance ?? 0) / hadd > 0.8;
+  }).length;
+  const haddWaleKhaate = (khaate ?? []).filter((k: any) => Number(k.credit_limit ?? 0) > 0).length;
 
   /**
    * Karyana aur agri-inputs ka alag hisaab.
@@ -294,9 +348,72 @@ export default async function SalesReportPage({
         </p>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Aaj ka khulasa</p>
+      <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Stock ki qeemat" value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
+        <StatCard
+          label="Stock ki ginti"
+          value={`${kulStockGinti.toLocaleString()} units`}
+          icon={Package}
+          tone="blue"
+        />
         <StatCard label={t("rs_total_sales", lang)} value={rs(totalSales)} icon={TrendingUp} tone="brand" />
-        <StatCard label={t("c_total_stock_value", lang)} value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
+        <StatCard label="Kul lena hai" value={rs(kulLena)} icon={HandCoins} tone="orange" />
+      </div>
+
+      <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Khabardar</p>
+      <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-card border border-amber-200 bg-amber-50 p-4 dark:border-surface-800 dark:bg-surface-900">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300">
+                <Hourglass className="h-3.5 w-3.5" /> Maal jo {BEES_DIN} din se hila nahi
+              </p>
+              <p className="mt-2 font-display text-2xl font-bold tabular-nums text-amber-900 dark:text-amber-200">
+                {naHiliQatarein}
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-200/70 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-surface-800 dark:text-amber-300">
+              Stock dekhein
+            </span>
+          </div>
+          {/* Daawa wohi jo ye khana waqai jaanta hai. */}
+          <p className="mt-2 text-[11px] leading-snug text-amber-800/80 dark:text-amber-400/80">
+            Ye ginti "kitne din se hili nahi" ki hai — "kitne din purana maal" ki nahi. Maal kab aaya tha, wo batch
+            aur stock movement ki fehrist se aata hai.
+          </p>
+        </div>
+
+        <div className="rounded-card border border-sky-200 bg-sky-50 p-4 dark:border-surface-800 dark:bg-surface-900">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-sky-900 dark:text-sky-300">
+                <AlertTriangle className="h-3.5 w-3.5" /> Udhaar ki hadd 80% se ooper
+              </p>
+              <p className="mt-2 font-display text-2xl font-bold tabular-nums text-sky-900 dark:text-sky-200">
+                {haddWaleKhaate === 0 ? "—" : haddKeQareeb}
+              </p>
+            </div>
+            <span className="rounded-full bg-sky-200/70 px-2.5 py-1 text-[11px] font-medium text-sky-900 dark:bg-surface-800 dark:text-sky-300">
+              Hadd ke qareeb
+            </span>
+          </div>
+          {/*
+            Sifar aur "hisaab nahi rakha jata" ek cheez nahi. Jis khaate
+            ki hadd hi darj nahi, wo is ginti mein aa hi nahi sakta -- is
+            liye jab kisi khaate par hadd hai hi nahi to yahan "0" ki
+            jagah "—" likha jata hai.
+          */}
+          <p className="mt-2 text-[11px] leading-snug text-sky-800/80 dark:text-sky-400/80">
+            {haddWaleKhaate === 0
+              ? "Kisi khaate par udhaar ki hadd darj hi nahi — is liye ye ginti banti nahi. Pehle hadd tay karein."
+              : `${haddWaleKhaate} khaaton par hadd darj hai. Jin par hadd nahi, wo is ginti mein nahi.`}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Paisa</p>
+      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Naqad aaya" value={rs(naqadAaya)} icon={Wallet} tone="green" />
         <StatCard label="Udhaar diya" value={rs(udhaarDiya)} icon={CreditCard} tone="warn" />
         <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />

@@ -1,7 +1,6 @@
 import { PublicHeader } from "@/components/site/public-header";
 import { PublicFooter } from "@/components/site/public-footer";
 import { ChatbotWidget } from "@/components/site/chatbot-widget";
-import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 
@@ -39,34 +38,16 @@ import { LangProvider } from "@/lib/i18n/lang-context";
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const lang = getLanguageFromCookies("rm");
 
-  // Try/catch jaan boojh kar.
+  // WhatsApp ka number yahan se nikal gaya (6 September).
   //
-  // 6 September ko POORA admin is se gir gaya tha: layout mein Supabase
-  // ka client try block se BAHAR bana tha, aur env ki ek kami ne har
-  // safhe par 500 kar diya. Ye layout poori public website ka hai --
-  // yahan wo ghalti aur mehngi hai: number na milne ka matlab ye nahi
-  // ke website band ho jaye.
-  //
-  // Number na mile to wo apne fallback par chala jata hai aur baqi safha
-  // jaisa hai waisa chalta rehta hai.
-  let whatsapp = "923331116727";
-  try {
-    const supabase = createClient();
-    const { data: phoneRow } = await supabase
-      .from("website_settings")
-      .select("value")
-      .eq("key", "contact_phone")
-      .maybeSingle();
-    const digits = String(phoneRow?.value ?? "").replace(/\D/g, "");
-    if (digits) whatsapp = digits;
-  } catch (e) {
-    console.error("SiteLayout: contact_phone nahi mila —", e instanceof Error ? e.message : e);
-  }
-
+  // Malik ne header se WhatsApp ka button hata diya, aur us ke sath ye
+  // talaash bhi bekaar ho gayi: footer apna number khud laata hai. Har
+  // safhe par ek aisi query chalate rehna jis ka jawab koi parhta hi
+  // nahi -- wo sirf safha dheema karti hai.
   return (
     <LangProvider lang={lang}>
       <div dir={lang === "ur" ? "rtl" : "ltr"} className="flex min-h-screen flex-col bg-white">
-        <PublicHeader whatsapp={whatsapp} />
+        <PublicHeader />
         <main className="flex-1">{children}</main>
         <PublicFooter />
         <ChatbotWidget />
