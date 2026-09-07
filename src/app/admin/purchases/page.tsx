@@ -19,6 +19,13 @@ const PURCHASE_STATUS: Record<string, TranslationKey> = {
   received: "pu_s_received",
   cancelled: "pu_s_cancelled",
 };
+
+/** Kis ne kya faisla kiya -- list par sidha, review kholay baghair (7 September). */
+const REVIEW_KIND_KEY: Record<string, TranslationKey> = {
+  approve: "pu_rv_k_approve",
+  send_back: "pu_rv_k_send_back",
+  reject: "pu_rv_k_reject",
+};
 export default async function AdminPurchasesPage() {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
@@ -107,6 +114,21 @@ export default async function AdminPurchasesPage() {
         } as PurchaseComment;
       })
       .sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    // Kis ne faisla kiya -- malik (7 September): "sath likha aana
+    // chahiye ke kis ne approval deni hai ya kis ne approve kiya hai."
+    // Faisla khud purchase_comments mein darj hai (approve/send_back/
+    // reject) -- alag se profile poochne ki zaroorat nahi, aakhri
+    // faisla hi asal hai (wapas bheji ke baad dobara manzoori mil sakti
+    // hai).
+    reviewDecision: (() => {
+      const decided = ((p.purchase_comments ?? []) as any[])
+        .filter((c) => ["approve", "send_back", "reject"].includes(c.kind))
+        .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+      const last = decided[decided.length - 1];
+      if (!last) return null;
+      const who = Array.isArray(last.profiles) ? last.profiles[0] : last.profiles;
+      return { name: (who?.full_name as string) ?? "—", kind: last.kind as string };
+    })(),
     // Ginti ke liye lines (256) -- sirf pending par kaam aati hain.
     items: ((p.purchase_items ?? []) as any[]).map((i) => {
       const rel = Array.isArray(i.products) ? i.products[0] : i.products;
@@ -179,8 +201,19 @@ export default async function AdminPurchasesPage() {
                         <div className="flex flex-wrap items-center gap-1">
                           <Badge tone={statusTone(p.status)}>{t(PURCHASE_STATUS[p.status] ?? "pu_status", lang)}</Badge>
                           {/* Manzoori ka darja sirf jab abhi receive na hui ho (259). */}
-                          {p.status === "pending" && p.review_status !== "approved" && <ReviewBadge status={p.review_status} />}
+                          {p.status === "pending" && <ReviewBadge status={p.review_status} />}
                         </div>
+                        {/* Malik (7 September): "sath likha aana chahiye
+                            ke kis ne approval deni hai ya kis ne approve
+                            kiya hai." Faisla ho chuka ho to karne wale ka
+                            naam; abhi baqi ho to kis ohde ki zimmedari hai. */}
+                        {p.status === "pending" && (
+                          <p className="mt-0.5 text-[11px] text-surface-500">
+                            {p.reviewDecision
+                              ? `${p.reviewDecision.name} ${t(REVIEW_KIND_KEY[p.reviewDecision.kind] ?? "pu_rv_k_comment", lang)}`
+                              : t("pu_rv_owner_admin", lang)}
+                          </p>
+                        )}
                         {/* Agla qadam -- ek hi shakl har purchase par (Guided ERP, B). */}
                         <div className="mt-1.5">
                           <NextStepStrip
@@ -204,6 +237,7 @@ export default async function AdminPurchasesPage() {
                               purchaseNumber={p.purchase_number}
                               reviewStatus={p.review_status}
                               comments={p.comments}
+                              items={p.items}
                               canApprove={isAdminLevel}
                             />
                           )}

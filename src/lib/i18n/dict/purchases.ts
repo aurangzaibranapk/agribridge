@@ -219,4 +219,9 @@ export const purchasesDict = {
   pu_rv_k_reject: { en: "rejected", rm: "radd ki", ur: "رد کی" },
   pu_rv_k_resubmit: { en: "resubmitted", rm: "dobara bheji", ur: "دوبارہ بھیجی" },
   pu_rv_k_comment: { en: "wrote", rm: "likha", ur: "لکھا" },
+  pu_rv_k_edit: { en: "changed a line", rm: "line badli", ur: "لائن بدلی" },
+  pu_rv_items_title: { en: "Products in this order", rm: "Is order mein products", ur: "اس آرڈر میں پروڈکٹس" },
+  pu_rv_items_empty: { en: "No products found on this order.", rm: "Is order par koi product nahi mila.", ur: "اس آرڈر پر کوئی پروڈکٹ نہیں ملا۔" },
+  pu_rv_update: { en: "Update", rm: "Update karein", ur: "اپڈیٹ کریں" },
+  pu_rv_owner_admin: { en: "Approval needed: Owner/Admin", rm: "Manzoori chahiye: Owner/Admin", ur: "منظوری چاہیے: مالک/ایڈمن" },
 } as const;

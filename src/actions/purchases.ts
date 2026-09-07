@@ -677,6 +677,106 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 }
 
 /**
+ * Review ke doran line (quantity/rate) mein ghalti nazar aaye to yahin
+ * theek ho jaye (259 ke aage, malik 7 September): *"agar approval deni
+ * hai to products ko view to karna chahiye... kisi ka rate to nahi
+ * ghalat... jo edit kiya wo trackable hona chahiye."*
+ *
+ * Sirf jab tak maal receive NAHI hua -- receive hote hi stock aur
+ * ledger isi purchase ke adad se ban jate hain, us ke baad line badalna
+ * un donon ko asal se alag kar deta. Is liye rok wohi hai jo
+ * `reviewPurchase` mein bhi hai.
+ *
+ * Har badlaav DO jagah jata hai: audit log (jaisa har jagah) aur isi
+ * purchase ki apni baat ki fehrist (`purchase_comments`, kind='edit') --
+ * taake jo bhi is purchase ko review kare, usay doosra safha khole
+ * baghair saaf nazar aaye ke kya badla.
+ */
+export async function updatePurchaseItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const itemId = String(formData.get("item_id") ?? "");
+  const purchaseId = String(formData.get("purchase_id") ?? "");
+  const quantity = Number(formData.get("quantity") ?? "");
+  const unitCost = Number(formData.get("unit_cost") ?? "");
+  if (!itemId || !purchaseId) return { error: "Missing item id." };
+  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "Quantity sahi likhein." };
+  if (!Number.isFinite(unitCost) || unitCost <= 0) return { error: "Rate sahi likhein." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !APPROVERS.includes(me.role)) {
+    return { error: "Purchase ki line sirf Owner/Admin edit kar sakta hai." };
+  }
+
+  const { data: purchase } = await supabase
+    .from("purchases")
+    .select("id, purchase_number, status")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (!purchase) return { error: "Purchase not found." };
+  if (purchase.status !== "pending") {
+    return { error: "Sirf jo purchase abhi receive nahi hui, us ki line badli ja sakti hai." };
+  }
+
+  const { data: item } = await supabase
+    .from("purchase_items")
+    .select("id, quantity, unit_cost, products(name)")
+    .eq("id", itemId)
+    .eq("purchase_id", purchaseId)
+    .maybeSingle();
+  if (!item) return { error: "Line not found." };
+  const rel: any = (item as any).products;
+  const productName: string = (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? "Product";
+
+  const oldQuantity = Number(item.quantity);
+  const oldUnitCost = Number(item.unit_cost);
+  if (oldQuantity === quantity && oldUnitCost === unitCost) return { success: true };
+
+  const { error: itemErr } = await supabase
+    .from("purchase_items")
+    .update({ quantity, unit_cost: unitCost, line_total: quantity * unitCost })
+    .eq("id", itemId);
+  if (itemErr) return { error: itemErr.message };
+
+  // Purchase ka total isi purchase ki SAB lines se dobara gina jata hai
+  // -- sirf is line ka farq jama karna kisi din rounding se alag ho
+  // sakta tha.
+  const { data: allItems } = await supabase.from("purchase_items").select("quantity, unit_cost").eq("purchase_id", purchaseId);
+  const newTotal = (allItems ?? []).reduce((s, i) => s + Number(i.quantity) * Number(i.unit_cost), 0);
+  await supabase.from("purchases").update({ total_amount: newTotal }).eq("id", purchaseId);
+
+  const changes: string[] = [];
+  if (oldQuantity !== quantity) changes.push(`quantity ${oldQuantity} → ${quantity}`);
+  if (oldUnitCost !== unitCost) changes.push(`rate Rs ${oldUnitCost} → Rs ${unitCost}`);
+  const body = `${productName}: ${changes.join(", ")}`;
+
+  await supabase.from("purchase_comments").insert({
+    purchase_id: purchaseId,
+    author_id: user.id,
+    kind: "edit",
+    body,
+  });
+
+  await logAudit({
+    actionType: "update",
+    module: "purchases",
+    recordId: purchaseId,
+    recordLabel: purchase.purchase_number,
+    description: `Review ke doran line badli gayi: ${body}`,
+    changes: {
+      quantity: { pehle: oldQuantity, ab: quantity },
+      unit_cost: { pehle: oldUnitCost, ab: unitCost },
+    },
+  });
+
+  revalidatePath("/admin/purchases");
+  return { success: true };
+}
+
+/**
  * Banane wale ka jawab: baat likhna, aur wapas aayi purchase ko dobara
  * manzoori ke liye bhejna. Koi bhi staff baat likh sakta hai; dobara
  * bhejne ke liye jawab lazmi hai.

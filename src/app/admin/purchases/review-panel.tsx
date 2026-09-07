@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Check, MessageSquare, Undo2, X, XCircle } from "lucide-react";
-import { commentPurchase, reviewPurchase, type ActionState } from "@/actions/purchases";
-import { Badge, Button, Textarea } from "@/components/ui/form";
+import { Check, MessageSquare, Pencil, Undo2, X, XCircle } from "lucide-react";
+import { commentPurchase, reviewPurchase, updatePurchaseItem, type ActionState } from "@/actions/purchases";
+import { Badge, Button, Input, Textarea } from "@/components/ui/form";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -15,6 +15,14 @@ export interface PurchaseComment {
   body: string;
   author: string;
   created_at: string;
+}
+
+export interface PurchaseReviewItem {
+  id: string;
+  name: string;
+  pack_size: string | null;
+  quantity: number;
+  unit_cost: number;
 }
 
 const STATUS_KEY: Record<string, TranslationKey> = {
@@ -30,6 +38,7 @@ const KIND_KEY: Record<string, TranslationKey> = {
   reject: "pu_rv_k_reject",
   resubmit: "pu_rv_k_resubmit",
   comment: "pu_rv_k_comment",
+  edit: "pu_rv_k_edit",
 };
 
 export function ReviewBadge({ status }: { status: string }) {
@@ -48,12 +57,14 @@ export function ReviewPanel({
   purchaseNumber,
   reviewStatus,
   comments,
+  items,
   canApprove,
 }: {
   purchaseId: string;
   purchaseNumber: string;
   reviewStatus: string;
   comments: PurchaseComment[];
+  items: PurchaseReviewItem[];
   canApprove: boolean;
 }) {
   const lang = useLang();
@@ -96,6 +107,22 @@ export function ReviewPanel({
             <div className="mb-3 flex items-center gap-2">
               <ReviewBadge status={reviewStatus} />
               {reviewStatus !== "approved" && <span className="text-xs text-surface-500">{t("pu_rv_not_approved", lang)}</span>}
+            </div>
+
+            {/* Products -- malik (7 September): "approval deni hai to
+                products ko view to karna chahiye, kisi ka rate to nahi
+                ghalat." Pehle Review sirf comment thread aur
+                approve/reject tha -- jo cheez manzoor ki ja rahi thi wo
+                yahan kabhi dikhi hi nahi. */}
+            <p className="mb-1.5 text-xs font-medium text-surface-600 dark:text-surface-400">{t("pu_rv_items_title", lang)}</p>
+            <div className="mb-4 space-y-1.5">
+              {items.length === 0 ? (
+                <p className="text-xs text-surface-400">{t("pu_rv_items_empty", lang)}</p>
+              ) : (
+                items.map((it) => (
+                  <ItemRow key={it.id} purchaseId={purchaseId} item={it} editable={canApprove && !done} />
+                ))
+              )}
             </div>
 
             {/* Baat ka silsila */}
@@ -162,6 +189,68 @@ function ReplyButton({ resubmit, label }: { resubmit: boolean; label: string }) 
   return (
     <Button type="submit" name="resubmit" value={resubmit ? "1" : "0"} variant={resubmit ? "primary" : "secondary"} disabled={pending}>
       {label}
+    </Button>
+  );
+}
+
+/**
+ * Ek line -- quantity aur rate, editable jab tak koi faisla nahi hua.
+ * Badalne ka nishan (Pencil) tabhi jab kuch waqai badla ho, taake khali
+ * yun hi dabana kisi cheez ki "history" na bana de.
+ */
+function ItemRow({ purchaseId, item, editable }: { purchaseId: string; item: PurchaseReviewItem; editable: boolean }) {
+  const lang = useLang();
+  const [state, action] = useFormState(updatePurchaseItem, initialState);
+  const [quantity, setQuantity] = useState(String(item.quantity));
+  const [unitCost, setUnitCost] = useState(String(item.unit_cost));
+  const changed = Number(quantity) !== item.quantity || Number(unitCost) !== item.unit_cost;
+
+  if (!editable) {
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+        <span className="text-surface-700 dark:text-surface-300">
+          {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+        </span>
+        <span className="tabular-nums text-surface-500">
+          {item.quantity} × Rs {item.unit_cost.toLocaleString()} = Rs {(item.quantity * item.unit_cost).toLocaleString()}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+      <input type="hidden" name="purchase_id" value={purchaseId} />
+      <input type="hidden" name="item_id" value={item.id} />
+      <span className="min-w-0 flex-1 truncate text-surface-700 dark:text-surface-300">
+        {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+      </span>
+      <Input
+        name="quantity"
+        inputMode="decimal"
+        value={quantity}
+        onChange={(e) => setQuantity(e.target.value)}
+        className="h-7 w-16 text-right text-xs"
+      />
+      <span className="text-surface-400">×</span>
+      <Input
+        name="unit_cost"
+        inputMode="decimal"
+        value={unitCost}
+        onChange={(e) => setUnitCost(e.target.value)}
+        className="h-7 w-20 text-right text-xs"
+      />
+      {changed && <ItemUpdateButton label={t("pu_rv_update", lang)} />}
+      {state.error && <span className="w-full text-[11px] text-red-600 dark:text-red-400">{state.error}</span>}
+    </form>
+  );
+}
+
+function ItemUpdateButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+      <span className="inline-flex items-center gap-1"><Pencil className="h-3 w-3" /> {pending ? "…" : label}</span>
     </Button>
   );
 }
