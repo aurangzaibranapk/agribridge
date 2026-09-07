@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { StaffAccessClient } from "./staff-access-client";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { STAFF_ROLES } from "@/lib/utils/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,15 @@ export default async function StaffAccessPage({
   const service = createServiceClient();
 
   const [{ data: staff }, { data: features }, { data: templates }] = await Promise.all([
+    // Malik (7 September): "yahan sirf staff aana chahiye aur kuch
+    // nahi." Pehle ye query koi role filter nahi karti thi -- har
+    // profile aa jata tha, farmer aur vendor tak jo kabhi test signup
+    // se ban gaye the. Ijazat sirf staff ko di ja sakti hai, is liye
+    // fehrist bhi sirf unhi ki honi chahiye.
     service
       .from("profiles")
       .select("id, full_name, role, is_active, branch_id, shop_id")
+      .in("role", STAFF_ROLES)
       .order("is_active", { ascending: false })
       .order("full_name"),
     service.from("features").select("key, label, route, is_sensitive").eq("is_active", true).order("label"),

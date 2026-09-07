@@ -91,46 +91,96 @@ async function darwaza() {
       error: "Naqad udhaar dena ya wapas lena sirf Manager, Finance ya Admin ka kaam hai.",
     };
   }
-  return { ok: true as const, userId: user.id, branchId: (me.branch_id as string | null) ?? null };
+  return { ok: true as const, userId: user.id, branchId: (me.branch_id as string | null) ?? null, supabase };
 }
 
 /**
- * Customer dukan se naqad paisa udhaar le gaya.
+ * Kisan ka abhi ka baqi (account 1150, ACC.farmerDue) — `fn_bande_ka_khulasa`
+ * se. Ye service client se nahi chalta (SECURITY DEFINER andar
+ * `fn_is_any_staff()` poochta hai), is liye logged-in bande ka
+ * `supabase` client chahiye.
+ */
+async function farmerKaAbhiKaBaqi(
+  supabase: ReturnType<typeof createClient>,
+  farmerId: string
+): Promise<number> {
+  // `fn_bande_ka_khulasa` migration 348 mein bani -- generated types
+  // abhi taza nahi huyin, is liye rpc() ka apna type is naye function
+  // ko nahi jaanta. Wohi tareeqa jo banda-khata safhe (348) mein hai.
+  const loose = supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { khata_code: string; dena: number }[] | null; error: unknown }>;
+  };
+  const { data } = await loose.rpc("fn_bande_ka_khulasa", { p_party_type: "farmer", p_party_id: farmerId });
+  const row = (data ?? []).find((r) => r.khata_code === ACC.farmerDue);
+  return row ? Number(row.dena ?? 0) : 0;
+}
+
+/**
+ * Customer ya kisan, dukan se naqad paisa udhaar le gaya.
+ *
+ * Malik (7 September): Load & Bill ka udhaar sirf dukan ke customer
+ * tak mehdood nahi — kisan ko bhi naqad udhaar milta hai. Account aur
+ * balance ka raasta har type ka apna hai (customer: `customers` table
+ * ka `current_balance`; kisan: koi alag column nahi, us ka baqi hamesha
+ * ledger se — 1150 par `fn_bande_ka_khulasa`), magar journal/cash-book
+ * ka tareeqa bilkul wohi hai.
  */
 export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): Promise<UdhaarState> {
   const g = await darwaza();
   if (!g.ok) return { error: g.error };
 
-  const customerId = String(formData.get("customer_id") ?? "").trim();
+  const partyType = String(formData.get("party_type") ?? "").trim();
+  const partyId = String(formData.get("party_id") ?? "").trim();
   const rakam = paisa(formData.get("rakam"));
   // "cash" ya kisi finance account ki id.
   const kahanSe = String(formData.get("kahan_se") ?? "cash").trim();
   const wajah = String(formData.get("wajah") ?? "").trim();
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
-  if (!customerId) return { error: "Customer chunein — kis ko paisa diya." };
+  if (partyType !== "customer" && partyType !== "farmer") {
+    return { error: "Customer ya kisan chunein — kis ko paisa diya." };
+  }
+  if (!partyId) return { error: "Customer ya kisan chunein — kis ko paisa diya." };
   if (rakam === null || rakam <= 0) {
     return { error: "Raqam likhein — sifar ka udhaar nahi hota." };
   }
 
   const service = createServiceClient();
-  const { data: customer } = await service
-    .from("customers")
-    .select("id, name, current_balance, credit_limit")
-    .eq("id", customerId)
-    .maybeSingle();
-  if (!customer) return { error: "Customer nahi mila." };
+  let name: string;
+  let abTak: number;
+  let hadd: number | null;
+  const account = partyType === "customer" ? ACC.customerDue : ACC.farmerDue;
+
+  if (partyType === "customer") {
+    const { data: customer } = await service
+      .from("customers")
+      .select("id, name, current_balance, credit_limit")
+      .eq("id", partyId)
+      .maybeSingle();
+    if (!customer) return { error: "Customer nahi mila." };
+    name = customer.name ?? "Customer";
+    abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
+    hadd = customer.credit_limit == null ? null : Number(customer.credit_limit);
+  } else {
+    const { data: farmer } = await service
+      .from("farmers")
+      .select("id, full_name, farmer_code, credit_limit")
+      .eq("id", partyId)
+      .maybeSingle();
+    if (!farmer) return { error: "Kisan nahi mila." };
+    name = farmer.full_name ?? farmer.farmer_code;
+    abTak = await farmerKaAbhiKaBaqi(g.supabase, partyId);
+    hadd = farmer.credit_limit == null ? null : Number(farmer.credit_limit);
+  }
 
   // Hadd ki rok -- magar sirf wahan jahan hadd WAQAI darj hai.
   //
   // `credit_limit` NULL ka matlab hai "hadd tay hi nahi hui", "hadd
-  // sifar hai" nahi. Us ko sifar samajh kar rok laga dena har customer
+  // sifar hai" nahi. Us ko sifar samajh kar rok laga dena har banday
   // ko udhaar se rok deta, aur wo faisla kisi ne kiya hi nahi.
-  const abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
-  const hadd = customer.credit_limit == null ? null : Number(customer.credit_limit);
   if (hadd !== null && abTak + rakam > hadd) {
     return {
-      error: `${customer.name} ki udhaar ki hadd Rs ${hadd.toLocaleString()} hai. Abhi Rs ${abTak.toLocaleString()} chal raha hai — Rs ${rakam.toLocaleString()} aur dene se hadd toot jayegi.`,
+      error: `${name} ki udhaar ki hadd Rs ${hadd.toLocaleString()} hai. Abhi Rs ${abTak.toLocaleString()} chal raha hai — Rs ${rakam.toLocaleString()} aur dene se hadd toot jayegi.`,
     };
   }
 
@@ -140,21 +190,21 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     return { error: "Paisa kis khate se gaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Naqad udhaar — ${customer.name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Naqad udhaar — ${name}${wajah ? ` (${wajah})` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
     sourceModule: "customer_udhaar",
-    sourceId: customerId,
+    sourceId: partyId,
     entryDate: tareekh,
     branchId: g.branchId,
     createdBy: g.userId,
     lines: [
       {
-        account: ACC.customerDue,
+        account,
         debit: rakam,
-        partyType: "customer",
-        partyId: customerId,
+        partyType,
+        partyId,
         memo: tafseel,
       },
       { account: gl, credit: rakam, memo: tafseel },
@@ -179,67 +229,91 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     };
   }
 
-  await service
-    .from("customers")
-    .update({ current_balance: Math.round((abTak + rakam) * 100) / 100 })
-    .eq("id", customerId);
+  // Kisan ka koi alag "balance" column nahi -- us ka baqi hamesha
+  // ledger se ginta hai, is liye yahan update karne ko kuch nahi.
+  if (partyType === "customer") {
+    await service
+      .from("customers")
+      .update({ current_balance: Math.round((abTak + rakam) * 100) / 100 })
+      .eq("id", partyId);
+  }
 
   await logAudit({
     actionType: "create",
     module: "finance",
-    recordId: customerId,
-    recordLabel: customer.name ?? "Customer",
-    description: `Naqad udhaar diya: Rs ${rakam.toLocaleString()} — ${customer.name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
+    recordId: partyId,
+    recordLabel: name,
+    description: `Naqad udhaar diya: Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
   });
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/farmer-credit");
   return {
     success: true,
-    notice: `Rs ${rakam.toLocaleString()} ${customer.name} ke khate par chaRh gaye. Ab un ka baqi Rs ${(abTak + rakam).toLocaleString()} hai.`,
+    notice: `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Ab un ka baqi Rs ${(abTak + rakam).toLocaleString()} hai.`,
   };
 }
 
 /**
- * Customer ne udhaar wapas kiya.
+ * Customer ya kisan ne udhaar wapas kiya.
  *
  * Malik: *"jab customer wo hamein wapas dega to wo bhi indraj hona
- * chahiye ke aaj aaya hai."*
+ * chahiye ke aaj aaya hai."* (7 September: kisan ke liye bhi.)
  */
 export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormData): Promise<UdhaarState> {
   const g = await darwaza();
   if (!g.ok) return { error: g.error };
 
-  const customerId = String(formData.get("customer_id") ?? "").trim();
+  const partyType = String(formData.get("party_type") ?? "").trim();
+  const partyId = String(formData.get("party_id") ?? "").trim();
   const rakam = paisa(formData.get("rakam"));
   const kahanAaya = String(formData.get("kahan_aaya") ?? "cash").trim();
   const wajah = String(formData.get("wajah") ?? "").trim();
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
-  if (!customerId) return { error: "Customer chunein — kis ne paisa diya." };
+  if (partyType !== "customer" && partyType !== "farmer") {
+    return { error: "Customer ya kisan chunein — kis ne paisa diya." };
+  }
+  if (!partyId) return { error: "Customer ya kisan chunein — kis ne paisa diya." };
   if (rakam === null || rakam <= 0) return { error: "Raqam likhein." };
 
   const service = createServiceClient();
-  const { data: customer } = await service
-    .from("customers")
-    .select("id, name, current_balance")
-    .eq("id", customerId)
-    .maybeSingle();
-  if (!customer) return { error: "Customer nahi mila." };
+  let name: string;
+  let abTak: number;
+  const account = partyType === "customer" ? ACC.customerDue : ACC.farmerDue;
 
-  const abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
+  if (partyType === "customer") {
+    const { data: customer } = await service
+      .from("customers")
+      .select("id, name, current_balance")
+      .eq("id", partyId)
+      .maybeSingle();
+    if (!customer) return { error: "Customer nahi mila." };
+    name = customer.name ?? "Customer";
+    abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
+  } else {
+    const { data: farmer } = await service
+      .from("farmers")
+      .select("id, full_name, farmer_code")
+      .eq("id", partyId)
+      .maybeSingle();
+    if (!farmer) return { error: "Kisan nahi mila." };
+    name = farmer.full_name ?? farmer.farmer_code;
+    abTak = await farmerKaAbhiKaBaqi(g.supabase, partyId);
+  }
 
   // Jitna dena hi nahi, us se zyada wapas lena rok diya jata hai.
   //
-  // Wo qatar customer ka balance MANFI kar deti hai, aur manfi baqi ka
-  // matlab hai "dukan us ka paisa daabe baithi hai" -- aur wo baat aksar
-  // ghalat hoti hai; asal wajah ye hoti hai ke kisi aur customer ki
-  // raqam ghalti se is par lag gayi. Waqai advance lena ho to wo alag
-  // cheez hai aur us ka apna khana hai.
+  // Wo qatar balance MANFI kar deti hai, aur manfi baqi ka matlab hai
+  // "dukan us ka paisa daabe baithi hai" -- aur wo baat aksar ghalat
+  // hoti hai; asal wajah ye hoti hai ke kisi aur ki raqam ghalti se is
+  // par lag gayi. Waqai advance lena ho to wo alag cheez hai aur us ka
+  // apna khana hai.
   if (rakam - abTak > 0.005) {
     return {
-      error: `${customer.name} par sirf Rs ${abTak.toLocaleString()} ka udhaar hai — us se zyada wapsi darj nahi hoti. Raqam dobara dekh lein.`,
+      error: `${name} par sirf Rs ${abTak.toLocaleString()} ka udhaar hai — us se zyada wapsi darj nahi hoti. Raqam dobara dekh lein.`,
     };
   }
 
@@ -249,22 +323,22 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     return { error: "Paisa kis khate mein aaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Udhaar ki wapsi — ${customer.name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Udhaar ki wapsi — ${name}${wajah ? ` (${wajah})` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
     sourceModule: "customer_udhaar",
-    sourceId: customerId,
+    sourceId: partyId,
     entryDate: tareekh,
     branchId: g.branchId,
     createdBy: g.userId,
     lines: [
       { account: gl, debit: rakam, memo: tafseel },
       {
-        account: ACC.customerDue,
+        account,
         credit: rakam,
-        partyType: "customer",
-        partyId: customerId,
+        partyType,
+        partyId,
         memo: tafseel,
       },
     ],
@@ -288,27 +362,32 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     };
   }
 
-  await service
-    .from("customers")
-    .update({ current_balance: Math.round((abTak - rakam) * 100) / 100 })
-    .eq("id", customerId);
+  // Kisan ka koi alag "balance" column nahi -- us ka baqi hamesha
+  // ledger se ginta hai.
+  if (partyType === "customer") {
+    await service
+      .from("customers")
+      .update({ current_balance: Math.round((abTak - rakam) * 100) / 100 })
+      .eq("id", partyId);
+  }
 
   await logAudit({
     actionType: "create",
     module: "finance",
-    recordId: customerId,
-    recordLabel: customer.name ?? "Customer",
-    description: `Udhaar wapas aaya: Rs ${rakam.toLocaleString()} — ${customer.name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
+    recordId: partyId,
+    recordLabel: name,
+    description: `Udhaar wapas aaya: Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
   });
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/farmer-credit");
   return {
     success: true,
     notice:
       abTak - rakam < 0.005
-        ? `Rs ${rakam.toLocaleString()} aa gaye. ${customer.name} ka khata ab saaf hai.`
-        : `Rs ${rakam.toLocaleString()} aa gaye. ${customer.name} par ab Rs ${(abTak - rakam).toLocaleString()} baqi hain.`,
+        ? `Rs ${rakam.toLocaleString()} aa gaye. ${name} ka khata ab saaf hai.`
+        : `Rs ${rakam.toLocaleString()} aa gaye. ${name} par ab Rs ${(abTak - rakam).toLocaleString()} baqi hain.`,
   };
 }

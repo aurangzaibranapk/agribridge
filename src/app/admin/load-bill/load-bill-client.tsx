@@ -6,6 +6,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
+import { PersonPicker, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
 import {
   createLoadTransaction,
   attachProviderTid,
@@ -79,6 +80,7 @@ export function LoadBillClient({
   accounts,
   financeAccounts,
   customers,
+  farmers,
   today,
   canReverse,
 }: {
@@ -88,6 +90,7 @@ export function LoadBillClient({
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
   customers: { id: string; name: string; balance: number | null }[];
+  farmers: { id: string; name: string; phone: string | null; cnic: string | null; farmerCode: string }[];
   today: Txn[];
   canReverse: boolean;
 }) {
@@ -111,7 +114,18 @@ export function LoadBillClient({
   const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
   /** Udhaar ke andar do kaam: diya, ya wapas aaya. */
   const [udhaarKaam, setUdhaarKaam] = useState<"diya" | "wapsi">("diya");
-  const [udhaarCustomer, setUdhaarCustomer] = useState("");
+
+  /**
+   * Udhaar dukan ke customer ko bhi milta hai aur kisan ko bhi — is
+   * liye picker donon ko ek hi fehrist mein dikhata hai.
+   */
+  const udhaarPeople: PersonOption[] = useMemo(
+    () => [
+      ...customers.map((c): PersonOption => ({ type: "customer", id: c.id, name: c.name, balance: c.balance })),
+      ...farmers.map((f): PersonOption => ({ type: "farmer", id: f.id, name: f.name, phone: f.phone, cnic: f.cnic, subtitle: f.farmerCode })),
+    ],
+    [customers, farmers]
+  );
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -236,9 +250,7 @@ export function LoadBillClient({
             <UdhaarForm
               kaam={udhaarKaam}
               setKaam={setUdhaarKaam}
-              customerId={udhaarCustomer}
-              setCustomerId={setUdhaarCustomer}
-              customers={customers}
+              people={udhaarPeople}
               financeAccounts={financeAccounts}
               loanAction={loanAction}
               wapsiAction={wapsiAction}
@@ -410,29 +422,25 @@ export function LoadBillClient({
                 Naam ka khana (neeche) is ki jagah nahi le sakta: wo
                 sirf likhai hai, us se kisi ka khata nahi banta. Udhaar
                 us waqt tak udhaar nahi jab tak wo KISI ke naam par na
-                ho. */}
+                ho.
+
+                Malik (7 September): ye khata sirf dukan ke customer ka
+                nahi -- kisan ka bhi hota hai (Mobile Load aur Bill
+                Payment dono ke liye, kyunki dono ka khata khana yahi
+                ek hai). */}
             {method === "khata" && (
               <div>
-                <Label htmlFor="customer_id">Kis ke khate par</Label>
-                <Select id="customer_id" name="customer_id" required>
-                  <option value="">— customer chunein —</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
+                <Label htmlFor="party_id">Kis ke khate par</Label>
+                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" />
                 <p className="mt-1 text-[11px] text-surface-500">
-                  Customer fehrist mein na ho to pehle CRM par us ka indraj karein.
+                  Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.
                 </p>
               </div>
             )}
 
-
-
             <div>
               <Label htmlFor="customer_name">Customer ka naam (marzi ka)</Label>
-              <Input id="customer_name" name="customer_name" placeholder="chhora ja sakta hai" />
+              <NameSuggest id="customer_name" name="customer_name" people={udhaarPeople} placeholder="chhora ja sakta hai" />
             </div>
 
             {/* Saboot -- is poore safhe ki sab se ahem cheez. */}
@@ -691,23 +699,19 @@ export function LoadBillClient({
 function UdhaarForm({
   kaam,
   setKaam,
-  customerId,
-  setCustomerId,
-  customers,
+  people,
   financeAccounts,
   loanAction,
   wapsiAction,
 }: {
   kaam: "diya" | "wapsi";
   setKaam: (k: "diya" | "wapsi") => void;
-  customerId: string;
-  setCustomerId: (id: string) => void;
-  customers: { id: string; name: string; balance: number | null }[];
+  people: PersonOption[];
   financeAccounts: { id: string; name: string }[];
   loanAction: (fd: FormData) => void;
   wapsiAction: (fd: FormData) => void;
 }) {
-  const chuna = customers.find((c) => c.id === customerId) ?? null;
+  const [chuna, setChuna] = useState<PersonOption | null>(null);
   const diya = kaam === "diya";
 
   return (
@@ -736,24 +740,16 @@ function UdhaarForm({
       </div>
 
       <div>
-        <Label htmlFor="udhaar_customer">Kis customer ka</Label>
-        <Select
-          id="udhaar_customer"
-          name="customer_id"
-          required
-          value={customerId}
-          onChange={(e) => setCustomerId(e.target.value)}
-        >
-          <option value="">— customer chunein —</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-        {chuna && (
+        <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
+        <PersonPicker
+          people={people}
+          partyTypeName="party_type"
+          partyIdName="party_id"
+          onChange={setChuna}
+        />
+        {chuna?.type === "customer" && (
           <p className="mt-1 text-xs text-surface-600 dark:text-surface-300">
-            {chuna.balance === null ? (
+            {chuna.balance == null ? (
               <span className="text-surface-400">Is customer ka hisaab abhi shuru nahi hua.</span>
             ) : chuna.balance > 0 ? (
               <>
@@ -765,8 +761,13 @@ function UdhaarForm({
             )}
           </p>
         )}
+        {chuna?.type === "farmer" && (
+          <p className="mt-1 text-xs text-surface-500">
+            Poora baqi darj karte hi neeche check hoga — abhi ka baqi yahan pehle se nahi dikhaya jata.
+          </p>
+        )}
         <p className="mt-1 text-[11px] text-surface-500">
-          Customer fehrist mein na ho to pehle CRM par us ka indraj karein.
+          Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.
         </p>
       </div>
 

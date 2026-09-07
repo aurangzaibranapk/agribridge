@@ -62,16 +62,22 @@ export default async function LoadBillPage({
   const service = createServiceClient();
   const aaj = aajKaKhana();
 
-  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }] = await Promise.all([
-    service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
-    service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
-    service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
-    // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
-    // form mein customer chunne ka khana tha hi nahi -- is liye
-    // "Khata" chunne par server hamesha "customer chunna zaroori hai"
-    // keh kar rok deta tha. Wo khana MARA HUA tha.
-    service.from("customers").select("id, name, current_balance").order("name"),
-  ]);
+  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }] =
+    await Promise.all([
+      service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
+      service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
+      service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
+      // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
+      // form mein customer chunne ka khana tha hi nahi -- is liye
+      // "Khata" chunne par server hamesha "customer chunna zaroori hai"
+      // keh kar rok deta tha. Wo khana MARA HUA tha.
+      service.from("customers").select("id, name, current_balance").order("name"),
+      // Malik (7 September): udhaar kisan ko bhi milta hai, sirf dukan
+      // ke customer ko nahi. Naam ke ilawa mobile aur CNIC bhi laate
+      // hain taake picker un se bhi dhoond sake — sirf naam se dhoondna
+      // sainkron kisanon mein kaam nahi karta.
+      service.from("farmers").select("id, full_name, farmer_code, phone_number, cnic, credit_limit").eq("is_deleted", false).order("full_name"),
+    ]);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
   // nahi, is liye do adad ban hi nahi sakte.
@@ -168,6 +174,13 @@ export default async function LoadBillPage({
             // sifar likh dena "dekh liya, kuch nahi" kehna hai -- aur
             // wo baat yahan sach nahi.
             balance: c.current_balance == null ? null : Number(c.current_balance),
+          }))}
+          farmers={(farmers ?? []).map((f) => ({
+            id: f.id as string,
+            name: (f.full_name as string | null) ?? (f.farmer_code as string),
+            phone: (f.phone_number as string | null) ?? null,
+            cnic: (f.cnic as string | null) ?? null,
+            farmerCode: f.farmer_code as string,
           }))}
           financeAccounts={(financeAccounts ?? []).map((f) => ({
             id: f.id as string,

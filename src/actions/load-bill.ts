@@ -38,7 +38,8 @@ async function receivingLine(
   method: string,
   amount: number,
   financeAccountId: string | null,
-  customerId: string | null,
+  partyType: "customer" | "farmer" | null,
+  partyId: string | null,
   memo: string
 ): Promise<JournalLine | { error: string }> {
   if (method === "cash") return { account: ACC.cash, debit: amount, memo };
@@ -50,8 +51,9 @@ async function receivingLine(
   // par bojh (2040) utna kam ho jata hai.
   if (method === "wallet") return { account: ACC.walletPayable, debit: amount, memo };
   if (method === "khata") {
-    if (!customerId) return { error: "Khate par likhne ke liye customer chunna zaroori hai." };
-    return { account: ACC.customerDue, debit: amount, partyType: "customer", partyId: customerId, memo };
+    if (!partyType || !partyId) return { error: "Khate par likhne ke liye customer ya kisan chunna zaroori hai." };
+    const account = partyType === "farmer" ? ACC.farmerDue : ACC.customerDue;
+    return { account, debit: amount, partyType, partyId, memo };
   }
   return { error: "Adaigi ka tareeqa samajh nahi aaya." };
 }
@@ -160,7 +162,9 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   const serviceCharge = paisa(formData.get("service_charge"));
   const method = String(formData.get("payment_method") ?? "cash").trim();
   const financeAccountId = String(formData.get("finance_account_id") ?? "").trim() || null;
-  const customerId = String(formData.get("customer_id") ?? "").trim() || null;
+  const rawPartyType = String(formData.get("party_type") ?? "").trim();
+  const partyType = rawPartyType === "farmer" ? "farmer" as const : rawPartyType === "customer" ? "customer" as const : null;
+  const partyId = String(formData.get("party_id") ?? "").trim() || null;
   const customerName = String(formData.get("customer_name") ?? "").trim() || null;
   const providerTid = String(formData.get("provider_tid") ?? "").trim() || null;
   const billCategory = String(formData.get("bill_category") ?? "").trim() || null;
@@ -225,7 +229,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
     method,
     total,
     financeAccountId,
-    customerId,
+    partyType,
+    partyId,
     `${kind === "bill" ? "Bill" : "Load"} — ${reference}`
   );
   if ("error" in received) return { error: received.error };
@@ -266,7 +271,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       commission_status: "muntazir",
       payment_method: method,
       finance_account_id: financeAccountId,
-      customer_id: customerId,
+      customer_id: partyType === "customer" ? partyId : null,
+      farmer_id: partyType === "farmer" ? partyId : null,
       customer_name: customerName,
       provider_tid: providerTid,
       // Saboot laga hua ho to seedha darj; warna qatar khud kehti hai ke
