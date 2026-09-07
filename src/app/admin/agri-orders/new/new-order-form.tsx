@@ -164,20 +164,28 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
         {orderFromKind === "branch" && <SourcingSelect branches={branches} />}
       </div>
 
-      {/* Location */}
-      <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_partner_details", lang)}</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <input name="partner_name" placeholder={t("ao_partner_name", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="partner_code" placeholder={t("ao_partner_code", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          {orderFromKind === "branch" && <input name="shop_dealer_name" placeholder={t("ao_shop_dealer_name", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />}
-          <input name="location" placeholder={t("c_location", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="city" placeholder={t("ao_city", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="district" placeholder={t("c_district", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="contact_person" placeholder={t("c_contact_person", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="mobile_number" placeholder={t("c_mobile_number", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+      {/* Location — sirf jab maal COMPANY SE BAHAR (outside supplier) se aa
+          raha ho. Company se ya kisi doosri apni shop se order karte waqt
+          koi "partner" hota hi nahi -- lene wali shop upar "Order To
+          Branch" mein pehle hi chun li gayi hai, aur bhejne wali khud
+          system jaanta hai (SourcingSelect). Staff ko apni hi shop ka pata,
+          shehar, zila khud se dobara likhna past mein isi jagah manga jata
+          tha -- jo maloomat pehle se ERP mein hai, wo dobara nahi maangi
+          jani chahiye ("mere POS se khud collect ho", malik 7 September). */}
+      {orderFromKind === "supplier" && (
+        <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_partner_details", lang)}</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <input name="partner_name" placeholder={t("ao_partner_name", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="partner_code" placeholder={t("ao_partner_code", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="location" placeholder={t("c_location", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="city" placeholder={t("ao_city", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="district" placeholder={t("c_district", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="contact_person" placeholder={t("c_contact_person", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+            <input name="mobile_number" placeholder={t("c_mobile_number", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Product Selection */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
