@@ -80,6 +80,8 @@ export const adminFarmerDict = {
   af_cnic_front: { en: "CNIC Front", rm: "CNIC ka aage wala rukh", ur: "CNIC کا آگے والا رخ" },
   af_cnic_back: { en: "CNIC Back", rm: "CNIC ka peeche wala rukh", ur: "CNIC کا پیچھے والا رخ" },
   af_not_uploaded: { en: "Not uploaded", rm: "Laga hua nahi", ur: "لگا ہوا نہیں" },
+  af_farmer_photo: { en: "Farmer's Photo", rm: "Kisan ki tasveer", ur: "کسان کی تصویر" },
+  af_upload_hint: { en: "Choose a file from your computer or phone to upload — no scanner needed, a clear photo works.", rm: "Apne computer ya phone se file chunein — scanner ki zaroorat nahi, saaf tasveer bhi chal jati hai.", ur: "اپنے کمپیوٹر یا فون سے فائل چنیں — سکینر کی ضرورت نہیں، صاف تصویر بھی کام دے گی۔" },
 } as const;
 
 /**

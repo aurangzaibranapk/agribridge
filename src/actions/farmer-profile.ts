@@ -215,6 +215,26 @@ export async function adminUpdateFarmerDetails(_prev: FarmerProfileState, formDa
     .maybeSingle();
   if (!before) return { error: "Kisan nahi mila." };
 
+  // Kisan khud CNIC ya apni tasveer laga sake, poore portal ka kaam
+  // seekhe baghair -- yehi upload jo `/portal/profile` par khud kisan
+  // karta hai, ab yahan staff ke haath se bhi ho sakta hai.
+  const memberPhoto = formData.get("member_photo");
+  if (memberPhoto instanceof File && memberPhoto.size > 0) {
+    const url = await uploadOne(serviceClient, farmerId, "member_photo", memberPhoto);
+    if (url) updates.member_photo_url = url;
+  }
+  const adminSingleFileFields: Array<[string, string]> = [
+    ["cnic_front_image", "cnic_image_url"],
+    ["cnic_back_image", "cnic_back_image_url"],
+  ];
+  for (const [fieldName, columnName] of adminSingleFileFields) {
+    const file = formData.get(fieldName);
+    if (file instanceof File && file.size > 0) {
+      const url = await uploadOne(serviceClient, farmerId, fieldName, file);
+      if (url) updates[columnName] = url;
+    }
+  }
+
   const { error } = await serviceClient.from("farmers").update(updates).eq("id", farmerId);
   if (error) return { error: error.message };
 
@@ -261,6 +281,9 @@ const FARMER_FIELD_LABELS: Record<string, string> = {
   milk_buyer_name: "Doodh kaun leta hai",
   milk_sale_rate: "Doodh ka rate",
   milk_advance_loan_amount: "Doodh ka advance",
+  member_photo_url: "Kisan ki tasveer",
+  cnic_image_url: "CNIC (aage)",
+  cnic_back_image_url: "CNIC (peeche)",
 };
 
 export async function updateFarmingOverview(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {

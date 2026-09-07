@@ -120,21 +120,30 @@ export function AdminFarmerForm({ farmer }: { farmer: any }) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>{t("af_cnic_front", lang)}</Label>
-            {farmer.cnic_image_url ? (
-              <img src={farmer.cnic_image_url} alt={t("sp_cnic_front", lang)} className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
-            ) : (
-              <p className="text-sm text-surface-400">{t("af_not_uploaded", lang)}</p>
+            {farmer.cnic_image_url && (
+              <img src={farmer.cnic_image_url} alt={t("sp_cnic_front", lang)} className="mt-1 mb-2 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
             )}
+            <Input name="cnic_front_image" type="file" accept="image/*" />
+            {!farmer.cnic_image_url && <p className="mt-1 text-xs text-surface-400">{t("af_not_uploaded", lang)}</p>}
           </div>
           <div>
             <Label>{t("af_cnic_back", lang)}</Label>
-            {farmer.cnic_back_image_url ? (
-              <img src={farmer.cnic_back_image_url} alt={t("sp_cnic_back", lang)} className="mt-1 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
-            ) : (
-              <p className="text-sm text-surface-400">{t("af_not_uploaded", lang)}</p>
+            {farmer.cnic_back_image_url && (
+              <img src={farmer.cnic_back_image_url} alt={t("sp_cnic_back", lang)} className="mt-1 mb-2 h-24 w-40 rounded-lg border border-surface-200 object-cover" />
             )}
+            <Input name="cnic_back_image" type="file" accept="image/*" />
+            {!farmer.cnic_back_image_url && <p className="mt-1 text-xs text-surface-400">{t("af_not_uploaded", lang)}</p>}
+          </div>
+          <div>
+            <Label>{t("af_farmer_photo", lang)}</Label>
+            {farmer.member_photo_url && (
+              <img src={farmer.member_photo_url} alt={t("af_farmer_photo", lang)} className="mt-1 mb-2 h-24 w-24 rounded-lg border border-surface-200 object-cover" />
+            )}
+            <Input name="member_photo" type="file" accept="image/*" />
+            {!farmer.member_photo_url && <p className="mt-1 text-xs text-surface-400">{t("af_not_uploaded", lang)}</p>}
           </div>
         </div>
+        <p className="mt-3 text-xs text-surface-500">{t("af_upload_hint", lang)}</p>
       </div>
 
       <SubmitButton />
