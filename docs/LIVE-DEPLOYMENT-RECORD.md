@@ -2179,34 +2179,48 @@ jaisi jaanch), aur pehle bhi isi tarah verify ho chuka hai. Agar malik
 chahen to in ka bhi ek-ek karke gehra review ho sakta hai, magar wo
 alag, lamba kaam hoga.
 
-## Ab tak ka poora hisaab — ye meri chalti hui fehrist hai (6 September)
+## Ab tak ka poora hisaab — ye meri chalti hui fehrist hai (7 September, taaza)
 
 Malik: *"apni purani memory update kr, us men baqi Jo kam hn wo krin
 tmhara task hg."* Yani ye fehrist ab ek dafa ka kaam nahi — har dafa
 kaam karte waqt ye pehle parhna hai, aur har dafa kuch nayi cheez
 milte ya poori hote hi yahan update karna hai.
 
-**Live par jana baqi hai (backup ki tasdeeq ka intezar) — 19
-migrations:** 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348,
-349, 350, 351, 352, 353, 354, 355, 356 (sab Testing par pass, tarteeb
-upar "chalni baqi migrations" ki table mein hai — 343 se pehle 346
-kabhi nahi).
+**Migrations 338–357 — Live par sab chal chuki hain.** Poori tafseel
+"20 migrations Live par chal gayin (7 September)" wale hisse mein hai.
+Koi migration ab pending nahi.
 
-**Migrations ke baad, ek naya build upload bhi baqi hai** (isi
-sanad ke sab se pehle "Deploy" hisse ke mutabiq — pull, build,
-package, cPanel).
+**Naya build baqi hai (code Live se aage nikal chuka hai):**
 
-**Malik ke faislے ka intezar (code taiyar nahi, sirf sawal khula
-hai):**
-- "Menu mein na aane wale safhe" ka kaam ab poora ho chuka (upar aur
-  `DUPLICATE-SAFAI.md` mein) — koi khula sawal nahi bacha.
+Malik ne pichla build (khata/credit wala) chala liya hai — "load or
+bill pay khata wagira active kr diy hn" — jo commit `d3cd4aa` (Load &
+Bill stage 2) tak ka code tha. Us ke baad ye push hue hain, abhi kisi
+build mein nahi gaye:
+
+| Commit | Kya hai |
+|---|---|
+| `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab (pehle Udhaar ke andar chhupa toggle tha), Service Charge ab Cash/Khata ke baad, PartyStrip mein "Available Credit" saaf dikhta hai |
+
+Agla build lete waqt commit `076885e` shamil hoga — koi alag qadam
+nahi chahiye, sirf agla "pull + build + package" ka jorra.
+
+**Load & Bill redesign ka baqi hissa (code abhi nahi likha):**
+- Bill Payment tab ka provider/bill_category khana abhi bhi purane
+  "Kis cheez ka bill" tareeqe par hai — mainParty engine se customer
+  aana to poora ho chuka (stage 2 se), magar bill-specific fields ka
+  gehra review baqi hai agar malik koi masla nikalen.
+- Sidebar "Customer Ledger" ko Unified Khata ka filtered view banana —
+  malik ka apna future architecture item, shuru nahi hua.
+
+**Malik ke faisle ka intezar (code taiyar nahi, sirf sawal khula hai):**
 - 358 security lint mein se ~350 abhi tak sirf "ye is project ka apna
   tareeqa hai" keh kar chhore gaye, ek-ek karke gehra review nahi hua.
   Agar malik chahen to alag se ye kaam ho sakta hai.
 - `allowed_pages`/`role_page_permissions` girane wali migration ka SQL
   taiyar hai (upar "Purana khana girane wali migration — BAAD mein"),
-  magar jaan boojh kar nahi banai — naya build Live par chalne ki
-  tasdeeq ke baad hi banegi.
+  magar jaan boojh kar nahi banai — naya build Live par chalne aur
+  smoke test pass hone ke baad hi banegi (354 ki naql abhi tazi hai,
+  purana khana abhi ek dafa aur dekh lena behtar hai).
 
 **Koi aur khula, na-poora kaam abhi nazar nahi aaya.** Agla review jab
 bhi ho, is fehrist ko yahin se aage barhana hai, dobara sab kuch parhne
