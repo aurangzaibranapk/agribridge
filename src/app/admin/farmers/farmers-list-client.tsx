@@ -18,6 +18,8 @@ interface Farmer {
   full_name: string;
   farmer_code: string | null;
   phone_number: string | null;
+  cnic: string | null;
+  village: string | null;
   tehsil: string | null;
   district: string | null;
   is_verified: boolean;
@@ -75,6 +77,7 @@ export function FarmersListClient({
               )}
               <th className="px-5 py-3">{t("c_name", lang)}</th>
               <th className="px-5 py-3">{t("fp_contact", lang)}</th>
+              <th className="px-5 py-3">{t("c_cnic", lang)}</th>
               <th className="px-5 py-3">{t("c_location", lang)}</th>
               <th className="px-5 py-3">{t("c_status", lang)}</th>
               <th className="px-5 py-3">{t("c_active", lang)}</th>
@@ -93,7 +96,8 @@ export function FarmersListClient({
                   <p className="text-xs text-surface-400 dark:text-surface-500">{f.farmer_code}</p>
                 </td>
                 <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{f.phone_number}</td>
-                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{[f.tehsil, f.district].filter(Boolean).join(", ") || "-"}</td>
+                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{f.cnic || "-"}</td>
+                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{[f.village, f.tehsil, f.district].filter(Boolean).join(", ") || "-"}</td>
                 <td className="px-5 py-3">
                   {f.is_verified ? (
                     <Badge tone="green">{t("c_verified", lang)}</Badge>
