@@ -5,6 +5,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Store, Package } from "lucide-reac
 import { PnlCharts } from "./pnl-charts";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { shopTrialBalance } from "@/lib/ledger/statements";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,30 @@ export default async function PnlPage({
     const { data: branch } = await supabase.from("branches").select("id, name").eq("id", params.branch_id).maybeSingle();
     const { data: shops } = await supabase.from("shops").select("id, name, business_type").eq("branch_id", params.branch_id).eq("is_active", true);
 
+    // Budget vs asal, saal ke hisaab se (budget saalana hota hai, is
+    // report ki date-range se alag) -- har shop ka apna, GL account ke
+    // hisaab se. Koi nayi table nahi: budget_lines + shopTrialBalance()
+    // (jo already source_id se shop tak pahunchta hai).
+    const budgetYear = new Date(to).getFullYear();
+    const budgetFrom = `${budgetYear}-01-01`;
+    const [{ data: budgetRow }, { data: expenseAccounts }] = await Promise.all([
+      supabase.from("budgets").select("id").eq("year", budgetYear).eq("name", "Saalana budget").maybeSingle(),
+      supabase.from("gl_accounts").select("code").eq("account_type", "expense"),
+    ]);
+    const expenseCodes = new Set((expenseAccounts ?? []).map((a) => a.code as string));
+
+    async function shopBudget(shopId: string): Promise<{ budget: number | null; used: number | null }> {
+      if (!budgetRow) return { budget: null, used: null };
+      const [{ data: lines }, tb] = await Promise.all([
+        supabase.from("budget_lines").select("account_code, annual_amount").eq("budget_id", budgetRow.id).eq("shop_id", shopId),
+        shopTrialBalance(budgetFrom, to, shopId),
+      ]);
+      if (!lines || lines.length === 0) return { budget: null, used: null };
+      const budget = lines.filter((l) => expenseCodes.has(l.account_code as string)).reduce((s, l) => s + Number(l.annual_amount), 0);
+      const used = tb.error ? null : tb.rows.filter((r) => r.account_type === "expense").reduce((s, r) => s + r.balance, 0);
+      return { budget, used };
+    }
+
     const shopRows = await Promise.all(
       (shops ?? []).map(async (shop) => {
         const { data: sales } = await supabase
@@ -198,6 +223,7 @@ export default async function PnlPage({
 
         const expenses = await getExpenseTotals(supabase, { branch_id: params.branch_id!, shop_id: shop.id }, from, to);
         const netProfit = grossProfit - expenses.total;
+        const budget = await shopBudget(shop.id);
 
         return {
           id: shop.id,
@@ -212,6 +238,8 @@ export default async function PnlPage({
           stockInValue,
           expenses,
           netProfit,
+          budget: budget.budget,
+          budgetUsed: budget.used,
         };
       })
     );
@@ -223,6 +251,18 @@ export default async function PnlPage({
     const totalShopExpenses = shopRows.reduce((s, r) => s + r.expenses.total, 0);
     const totalExpenses = totalShopExpenses + branchWideExpenses.total;
     const netProfit = totalGrossProfit - totalExpenses;
+
+    // Branch ka poora budget -- sirf un shopon ka jama jin ka budget
+    // waqai likha gaya hai. Kisi ek shop ka budget na mile to poori
+    // branch ka jama bhi NULL -- adhoora jama pura dikhana jhoot hai.
+    const budgetedShops = shopRows.filter((s) => s.budget !== null);
+    const branchBudget = budgetedShops.length === shopRows.length && shopRows.length > 0
+      ? shopRows.reduce((s, r) => s + (r.budget ?? 0), 0)
+      : null;
+    const branchBudgetUsed =
+      branchBudget !== null && shopRows.every((s) => s.budgetUsed !== null)
+        ? shopRows.reduce((s, r) => s + (r.budgetUsed ?? 0), 0)
+        : null;
 
     return (
       <div>
@@ -277,6 +317,30 @@ export default async function PnlPage({
                 )}
                 {s.expenses.total === 0 && <p className="pl-5 text-xs text-surface-400">{t("rp_no_expense", lang)}</p>}
 
+                {/* Budget na likha ho to yahan kuch nahi -- "0" ya "—"
+                    dikhana ye jhoot kehta hoga ke budget dekh liya gaya
+                    hai. */}
+                {s.budget !== null && (
+                  <>
+                    <div className="mt-2 text-xs font-semibold text-surface-500">{t("rp_budget", lang)}</div>
+                    <div className="flex justify-between pl-5 text-xs"><span className="text-surface-400">{t("bg_annual", lang)}</span><span>Rs {s.budget.toLocaleString()}</span></div>
+                    <div className="flex justify-between pl-5 text-xs">
+                      <span className="text-surface-400">{t("rp_budget_used", lang)}</span>
+                      <span>{s.budgetUsed === null ? "—" : `Rs ${s.budgetUsed.toLocaleString()}`}</span>
+                    </div>
+                    <div className="flex justify-between pl-5 text-xs font-semibold">
+                      <span>{t("rp_budget_available", lang)}</span>
+                      {s.budgetUsed === null ? (
+                        <span className="text-surface-300">—</span>
+                      ) : (
+                        <span className={s.budget - s.budgetUsed >= 0 ? "text-green-600" : "text-red-600"}>
+                          Rs {(s.budget - s.budgetUsed).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 <div className="mt-2 flex justify-between border-t border-surface-100 pt-1 font-bold dark:border-surface-800">
                   <span>{t("rp_net_profit", lang)}</span>
                   <span className={s.netProfit >= 0 ? "text-green-700" : "text-red-700"}>Rs {s.netProfit.toLocaleString()}</span>
@@ -299,6 +363,28 @@ export default async function PnlPage({
             <div className={`flex justify-between border-t border-brand-200 pt-1 text-base font-bold dark:border-brand-800 ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
               <span>{t("rp_net_branch", lang)}</span><span>Rs {netProfit.toLocaleString()}</span>
             </div>
+            {branchBudget !== null && (
+              <>
+                <div className="mt-2 flex justify-between border-t border-brand-200 pt-1 dark:border-brand-800">
+                  <span className="text-surface-500">{t("rp_budget", lang)} ({t("bg_annual", lang)})</span>
+                  <span className="font-medium">Rs {branchBudget.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-surface-500">{t("rp_budget_used", lang)}</span>
+                  <span>{branchBudgetUsed === null ? "—" : `Rs ${branchBudgetUsed.toLocaleString()}`}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>{t("rp_budget_available", lang)}</span>
+                  {branchBudgetUsed === null ? (
+                    <span className="text-surface-300">—</span>
+                  ) : (
+                    <span className={branchBudget - branchBudgetUsed >= 0 ? "text-green-700" : "text-red-700"}>
+                      Rs {(branchBudget - branchBudgetUsed).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
