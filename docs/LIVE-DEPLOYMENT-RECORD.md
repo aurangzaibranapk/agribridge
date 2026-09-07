@@ -2194,6 +2194,7 @@ milte ya poori hote hi yahan update karna hai.
 | # | Kya karti hai | Testing | Live |
 |---|---|---|---|
 | 358 | Stock (1200) ka purana Rs 28 ka farq — Suspense (9999) mein | ✅ (Live-specific 4 POS ID Testing par nahi milin, is liye khud khamoshi se kuch nahi kiya — theek yehi hona chahiye tha) | ⏳ backup ka intezar |
+| 359 | `purchase_comments.kind` check constraint mein 'edit' shamil (Purchase review: items dikhna, qty/rate edit) | ✅ | ⏳ backup ka intezar |
 
 Wajah: Master Dashboard ka banner ("Stock ke do adad barabar nahi").
 Jaanch: `v_ledger_unposted` par koi purchase/supplier_payment unposted
@@ -2217,6 +2218,7 @@ build mein nahi gaye:
 | `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab (pehle Udhaar ke andar chhupa toggle tha), Service Charge ab Cash/Khata ke baad, PartyStrip mein "Available Credit" saaf dikhta hai |
 | `02ff9c2` | Farmer Details ke Documents (CNIC front/back, tasveer) — camera se seedha khenchna + upload se pehle crop (naya `ImageCropField`) |
 | `7a93f85` | Agri Order (New): "Partner Details" sirf bahar wale supplier ke liye — Company/apni shop se order karte waqt ye poora hissa ghayab, staff ko apni maloomat dobara nahi likhni parti |
+| `d0c40f4` | Purchase review: products/qty/rate dikhte hain, wahin se edit ho sakte hain (trackable), aur list par saaf ke kis ne approve/reject/wapas kiya (migration 359 shamil) |
 
 Agla build lete waqt ye dono commits shamil honge — koi alag qadam
 nahi chahiye, sirf agla "pull + build + package" ka jorra.
