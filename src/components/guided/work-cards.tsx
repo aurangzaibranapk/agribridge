@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import * as Icons from "lucide-react";
-import { ChevronDown, ChevronRight, CheckCircle2, ArrowRight } from "lucide-react";
+import { ChevronRight, CheckCircle2, ArrowRight } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 
 /**
@@ -147,6 +147,21 @@ export function useRecent(): [string[], (href: string) => void, () => void] {
 /** Aakhri khola gaya department -- isi browser mein. */
 const LAST_DEPT_KEY = "agribridge:last-dept";
 
+/** Rail mein department ki ginti -- chhota nishan, poora badge nahi. */
+function RailCount({ dept, lang }: { dept: DeptData; lang: Lang }) {
+  if (dept.attention === null) {
+    return <span className="shrink-0 text-[11px] text-surface-400">—</span>;
+  }
+  if (dept.attention > 0) {
+    return (
+      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+        {dept.attention}
+      </span>
+    );
+  }
+  return <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label={t("mw_all_clear", lang)} />;
+}
+
 export function MyWorkBody({
   lang, quick, departments, defaultDept,
 }: {
@@ -159,12 +174,13 @@ export function MyWorkBody({
    */
   defaultDept: string | null;
 }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<string | null>(null);
   const [recent, remember, clearRecent] = useRecent();
 
   // Pehla faisla client par hota hai, server par nahi: aakhri khola gaya
   // department sirf isi browser ko maloom hai. Us ke baghair role ka
-  // apna department, aur wo bhi na ho to sab band.
+  // apna department, aur wo bhi na ho to (ek hi department ho to wohi,
+  // warna) koi nahi -- nazar "Aaj ka kaam" par rehti hai.
   useEffect(() => {
     let key: string | null = null;
     try {
@@ -174,211 +190,197 @@ export function MyWorkBody({
       /* private window -- role wala default chal jayega */
     }
     if (!key && defaultDept && departments.some((d) => d.key === defaultDept)) key = defaultDept;
-    if (key) setOpen({ [key]: true });
+    if (!key && departments.length === 1) key = departments[0].key;
+    setSelected(key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultDept, departments.length]);
 
-  // Malik (7 September): "page ko scroll na karna paray... phir next
-  // kisi aur product par click kare to wo bhi usi page par scroll na
-  // karna paray... page apni jagah se na hile." Ek waqt mein ek hi
-  // department khula rehta hai -- doosra kholte hi pehla khud band ho
-  // jata hai. Warna teen-chaar department khulte khulte safha lamba
-  // hota jata aur banda apna khola hua panel dhoondne ke liye scroll
-  // karta rehta.
-  function toggle(key: string) {
-    setOpen((o) => {
-      const abhiKhula = !!o[key];
-      const next = abhiKhula ? {} : { [key]: true };
-      try {
-        if (!abhiKhula) localStorage.setItem(LAST_DEPT_KEY, key);
-      } catch {
-        /* yaad na rahe to bhi safha chalta rahe */
-      }
-      return next;
-    });
+  /**
+   * Malik (7 September): "page ko scroll na karna paray... phir next
+   * kisi aur product par click kare to wo bhi usi page par scroll na
+   * karna paray... page apni jagah se na hile."
+   *
+   * Pehle department ka card khulte hi apne NEECHE apne auzaar dikhata
+   * tha -- is se poora safha lamba/chhota hota rehta tha aur switch
+   * karte hi scroll position uchhal jati thi. Ab left mein sirf
+   * department ki fehrist hai (rail), aur daayen ek fixed-height panel
+   * -- click karne se sirf ANDAR ka maal badalta hai, safhe ki lambai
+   * nahi. Isi liye poora safha apni jagah se nahi hilta.
+   */
+  function select(key: string) {
+    setSelected(key);
+    try {
+      localStorage.setItem(LAST_DEPT_KEY, key);
+    } catch {
+      /* yaad na rahe to bhi safha chalta rahe */
+    }
   }
 
   const byHref = new Map<string, CardData>();
   for (const d of departments) for (const c of d.tools) byHref.set(c.href, c);
   const recentCards = recent.map((h) => byHref.get(h)).filter((c): c is CardData => !!c);
 
+  const activeDept = departments.find((d) => d.key === selected) ?? null;
+
   return (
     <div className="space-y-4">
-      {/* Ye hissa khali bhi rehta hai to nazar aata hai -- warna safha har
-          naye bande ke liye alag shakl ka lagta hai, aur wo samajh nahi
-          pata ke yahan aata kya hai. */}
-      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
-              {t("mw_recent", lang)}
-            </h2>
-            {/* Ye fehrist khud banti hai; bande ke paas usay mitane ka
-                raasta hona chahiye -- warna ek dafa khola hua safha
-                hamesha uske saamne rehta hai. */}
-            {recentCards.length > 0 && (
-              <button
-                type="button"
-                onClick={clearRecent}
-                className="text-[11px] font-medium text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
-              >
-                {t("mw_recent_clear", lang)}
-              </button>
-            )}
-          </div>
-          {recentCards.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-surface-200 px-4 py-3 text-xs text-surface-400 dark:border-surface-800">
-              {t("mw_recent_empty", lang)}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {recentCards.map((c) => (
+      {/* Aaj ka kaam + haal hi mein istemal -- ek hi patti mein, taake
+          upar zyada jagah na khaayen aur asal kaam (departments) neeche
+          ki taraf jaldi shuru ho. */}
+      <section className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-800 dark:bg-surface-900">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {quick.length === 0 ? (
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {t("mw_quick_clear", lang)}
+              </span>
+            ) : (
+              quick.slice(0, 4).map((c) => (
                 <Link
-                  key={c.href}
+                  key={`q-${c.href}`}
                   href={c.href}
                   onClick={() => remember(c.href)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-surface-700 hover:border-brand-300 hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12.5px] font-medium text-amber-900 hover:border-amber-300 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
                 >
-                  <Icon name={c.icon} className="h-4 w-4 text-brand-600" />
+                  <Icon name={c.icon} className="h-3.5 w-3.5" />
                   {c.label}
+                  {c.badge?.count != null && <span className="tabular-nums">· {c.badge.count}</span>}
                 </Link>
-              ))}
-            </div>
-          )}
-        </section>
+              ))
+            )}
+          </div>
 
-      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
-          {t("mw_quick", lang)}
-        </h2>
-        {quick.length === 0 ? (
-          // Khali qatar dikhane se behtar hai ke banda ek jumle mein dekh
-          // le ke aaj is ke zimme kuch nahi.
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            {t("mw_quick_clear", lang)}
-          </div>
-        ) : (
-          // Ek ya do hi kaam hon to unhen teen ke khaane mein daal kar
-          // baayen kone mein chhota na chhoRein -- card poori chauRai
-          // mein zyada saaf nazar aata hai.
-          <div
-            // Khaane hamesha teen. Ek hi kaam ho to wo darmiyane naap ka
-            // card rehta hai -- poori chauRai ki qatar "kaam ka card"
-            // nahi, "ittila ki patti" lagti hai.
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {quick.map((c) => (
-              <WorkCard key={`q-${c.href}`} card={c} big onOpen={remember} openLabel={t("mw_open_now", lang)} />
-            ))}
-          </div>
-        )}
+          {recentCards.length > 0 && (
+            <>
+              <span className="hidden h-4 w-px bg-surface-200 dark:bg-surface-700 sm:inline-block" />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-surface-400">{t("mw_recent", lang)}:</span>
+                {recentCards.slice(0, 3).map((c) => (
+                  <Link
+                    key={c.href}
+                    href={c.href}
+                    onClick={() => remember(c.href)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-surface-200 px-2.5 py-1 text-[12.5px] font-medium text-surface-600 hover:border-brand-300 hover:text-brand-700 dark:border-surface-700 dark:text-surface-300"
+                  >
+                    <Icon name={c.icon} className="h-3.5 w-3.5 text-brand-600" />
+                    {c.label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={clearRecent}
+                  className="text-[11px] font-medium text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
+                >
+                  {t("mw_recent_clear", lang)}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
-      <section className="rounded-card border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
+      {/*
+       * Departments -- Fixed Split Workspace (malik, 7 September).
+       *
+       * Pehle department ka card khulte hi apne NEECHE poori chauRai
+       * mein auzaar dikhata tha, aur switch karte hi safhe ki lambai
+       * badal jati thi -- scroll position uchhalti thi. Screenshot mein
+       * yehi dikha: Milk khula to Farmers/Grain neeche dhakel gaye.
+       *
+       * Ab left mein sirf department NAAM (rail), daayen ek fixed
+       * min-height panel jis mein sirf ANDAR ka maal badalta hai --
+       * safhe ki lambai department se department badalte hue kabhi
+       * nahi badalti, is liye page apni jagah se nahi hilta. Kisi ek
+       * department mein bahut zyada auzaar hon to sirf PANEL ke andar
+       * scroll hota hai, poora safha nahi.
+       *
+       * Ek hi department ho (chhota role) to rail bekar hai -- seedha
+       * uske auzaar dikha dete hain.
+       */}
+      <section className="overflow-hidden rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
           {t("mw_depts", lang)}
         </h2>
 
-        {/* Chhote, barabar naap ke cards -- teen khaanay, chhoti screen par
-            do, mobile par ek. Card khud kaam nahi kholta, sirf batata hai
-            andar kya hai; kholne ka faisla neeche alag panel karta hai
-            (grid ke andar ek card ka khulna baaki cards ko terha kar deta
-            tha). */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {departments.map((d) => {
-            const isOpen = !!open[d.key];
-            return (
-              <button
-                key={d.key}
-                type="button"
-                onClick={() => toggle(d.key)}
-                aria-expanded={isOpen}
-                className={`flex flex-col items-start rounded-xl border p-4 text-left transition ${
-                  isOpen
-                    ? "border-brand-300 bg-brand-50/50 dark:border-brand-700 dark:bg-brand-950/20"
-                    : "border-surface-200/80 hover:border-brand-300 hover:bg-brand-50/30 dark:border-surface-800 dark:hover:bg-brand-950/20"
-                }`}
-              >
-                <div className="flex w-full items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                    <Icon name={d.icon} className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[13px] font-semibold uppercase tracking-wide text-surface-900 dark:text-surface-100">
-                      {d.label}
+        {departments.length <= 1 ? (
+          <div className="p-4">
+            {departments.length === 1 && <ToolGrid tools={departments[0].tools} onOpen={remember} />}
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row">
+            {/* Rail -- department ki fehrist, khud kaam nahi kholti. */}
+            <div className="flex shrink-0 flex-row overflow-x-auto border-b border-surface-100 dark:border-surface-800 sm:w-56 sm:flex-col sm:overflow-x-visible sm:border-b-0 sm:border-r sm:dark:border-surface-800">
+              {departments.map((d) => {
+                const isSelected = d.key === selected;
+                return (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => select(d.key)}
+                    aria-current={isSelected}
+                    className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap border-b-2 px-4 py-3 text-left transition sm:w-full sm:border-b-0 sm:border-l-2 ${
+                      isSelected
+                        ? "border-brand-500 bg-brand-50/60 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
+                        : "border-transparent text-surface-600 hover:bg-surface-50 dark:text-surface-300 dark:hover:bg-surface-800/60"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                        isSelected ? "bg-white text-brand-600 dark:bg-surface-900" : "bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300"
+                      }`}
+                    >
+                      <Icon name={d.icon} className="h-4 w-4" />
                     </span>
-                    {/* Jhalak: andar kya hai -- warna banda har department
-                        khol kar dekhta hai. */}
-                    {d.preview.length > 0 && (
-                      <span className="block truncate text-[12px] text-surface-500">
-                        {d.preview.join(", ")}
-                        {d.toolCount > d.preview.length ? "…" : ""}
-                      </span>
-                    )}
-                  </span>
-                </div>
+                    <span className="min-w-0 flex-1 text-[13px] font-medium">{d.label}</span>
+                    <RailCount dept={d} lang={lang} />
+                  </button>
+                );
+              })}
+            </div>
 
-                <div className="mt-3 flex w-full items-center justify-between">
-                  <span className="text-xs font-medium tabular-nums text-surface-500">
-                    {t("mw_tools_n", lang).replace("{n}", String(d.toolCount))}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {/* "Sab Theek" ab lafzon mein nahi -- sirf ek chhota
-                        hara nishan. Sifar hone ka matlab yahan waqai
-                        "kuch baqi nahi" hai, is liye ye jhoot nahi. */}
-                    {d.attention === null ? (
-                      <span className="rounded-full bg-surface-100 px-2.5 py-1 text-xs font-medium text-surface-500 dark:bg-surface-800 dark:text-surface-400">
-                        {t("mw_count_unknown", lang)}
-                      </span>
-                    ) : d.attention > 0 ? (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                        {t("mw_need_n", lang).replace("{n}", String(d.attention))}
-                      </span>
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label={t("mw_all_clear", lang)} />
-                    )}
-                    {isOpen ? <ChevronDown className="h-4 w-4 text-surface-400" /> : <ChevronRight className="h-4 w-4 text-surface-400" />}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Khula hua department -- poori chauRai mein, grid ke NEECHE.
-            Grid ke ANDAR khulta to sirf usi khane ka column terha ho
-            jata; yahan poori qatar sath rehti hai. */}
-        {departments
-          .filter((d) => open[d.key])
-          .map((d) => {
-            const sections = new Map<string, CardData[]>();
-            for (const c of d.tools) {
-              const k = c.section ?? "";
-              sections.set(k, [...(sections.get(k) ?? []), c]);
-            }
-            return (
-              <div key={`open-${d.key}`} className="mt-3 rounded-xl border border-surface-200 bg-brand-25 p-4 dark:border-surface-800 dark:bg-surface-950/40">
-                <p className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
-                  <Icon name={d.icon} className="h-4 w-4 text-brand-600" /> {d.label}
-                </p>
-                <div className="space-y-4">
-                  {[...sections.entries()].map(([section, cards]) => (
-                    <div key={section || "_"}>
-                      {section && (
-                        <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-surface-400">{section}</p>
-                      )}
-                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                        {cards.map((c) => (
-                          <WorkCard key={`${d.key}-${c.href}`} card={c} onOpen={remember} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+            {/* Panel -- sirf isi ka maal badalta hai, iski min-height
+                fixed hai taake department switch karne se safhe ki
+                lambai na badle. */}
+            <div className="min-h-[280px] flex-1 overflow-y-auto p-4" style={{ maxHeight: "min(70vh, 640px)" }}>
+              {activeDept ? (
+                <>
+                  <p className="mb-3 text-xs font-medium tabular-nums text-surface-400">
+                    {t("mw_tools_n", lang).replace("{n}", String(activeDept.toolCount))}
+                  </p>
+                  <ToolGrid tools={activeDept.tools} onOpen={remember} />
+                </>
+              ) : (
+                <p className="text-sm text-surface-400">{t("mw_open", lang)}</p>
+              )}
+            </div>
+          </div>
+        )}
       </section>
+    </div>
+  );
+}
+
+/** Ek department ke auzaar -- section ke hisaab se, chhote khaanon mein. */
+function ToolGrid({ tools, onOpen }: { tools: CardData[]; onOpen: (href: string) => void }) {
+  if (tools.length === 0) return null;
+  const sections = new Map<string, CardData[]>();
+  for (const c of tools) {
+    const k = c.section ?? "";
+    sections.set(k, [...(sections.get(k) ?? []), c]);
+  }
+  return (
+    <div className="space-y-4">
+      {[...sections.entries()].map(([section, items]) => (
+        <div key={section || "_"}>
+          {section && <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-surface-400">{section}</p>}
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((c) => (
+              <WorkCard key={c.href} card={c} onOpen={onOpen} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

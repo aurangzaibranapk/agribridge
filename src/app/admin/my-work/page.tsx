@@ -135,16 +135,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   return (
     <div className="mx-auto w-full max-w-[1100px]">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-[28px] font-semibold text-surface-900 dark:text-surface-100">
+      {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
+          greeting, date/time aur score teen alag boxon mein. Ab ek hi
+          patti: naam+role+branch baayen, tareekh/waqt/score daayen, ek
+          satar mein -- taake neeche asal kaam ke liye jagah bache. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
+        <div className="min-w-0">
+          <h1 className="font-display text-[19px] font-semibold leading-tight text-surface-900 dark:text-surface-100">
             {t(greetKey, lang)}, {me.full_name}
           </h1>
-          {/* Upar hamesha ek hi saada jumla. Ginti ka sach neeche "Aaj kya
-              baqi hai" mein hai, jahan har qatar apna adad ya "—" khud
-              dikhati hai -- malik ka kehna theek tha ke salam ke sath
-              "ginti nahi mil saki" likhna banday ko bemani ghabrahat
-              deta hai. */}
           {/* Naam ke neeche: banda kaun hai, kis department mein hai, aur
               kis shaakh par. Malik ka usool (5 September): "Neeche uska
               Role + Department + Branch."
@@ -152,57 +151,51 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               Jo hissa maloom na ho wo LIKHA HI NAHI jata -- khali jagah
               bhar dene ke liye "—" ya koi bana hua naam daal dena us
               bande ko ghalat maloomat deta hai. */}
-          <p className="mt-1.5 text-[15px] text-surface-500">
+          <p className="mt-0.5 truncate text-[13px] text-surface-500">
             {[roleLabel, dept?.label ?? null, branchName].filter(Boolean).join(" · ")}
           </p>
-          <p className="mt-0.5 text-[13px] text-surface-400">{t("mw_subtitle_new", lang)}</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Malik ke reference wala khana: shaakh aur waqt. Waqt Pakistan
-              ka -- server kahin bhi ho, banda apni ghari se milata hai. */}
-          <div className="flex items-center gap-4 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
-            <CalendarDays className="h-5 w-5 shrink-0 text-surface-400" />
-            <div>
-              <p className="text-[15px] font-semibold leading-tight text-surface-900 dark:text-surface-100">{nowDate}</p>
-              {branchName && <p className="mt-0.5 text-xs text-surface-400">{branchName}</p>}
-            </div>
-            <div className="border-l border-surface-200 pl-4 dark:border-surface-700">
-              <p className="text-[15px] font-semibold leading-tight text-surface-900 dark:text-surface-100">{nowTime}</p>
-              <p className="mt-0.5 text-xs text-surface-400">Pakistan Standard Time</p>
-            </div>
-          </div>
-        {scoreRow && (
-          <div className="rounded-card border border-surface-200 bg-white px-4 py-2 text-right dark:border-surface-700 dark:bg-surface-900">
-            <p className="text-[11px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
-            {scoreRow.score == null ? (
-              // Sifar nahi. Engine ne abhi faisla kiya hi nahi.
-              <p className="mt-0.5 text-sm font-medium text-surface-600 dark:text-surface-300">
-                {t("mw_score_building", lang)}
-              </p>
-            ) : (
-              <p className="mt-0.5 flex items-center justify-end gap-2">
-                <span className="text-xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                  {scoreRow.score}
-                </span>
-                {scoreRow.band && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      BAND_TONE[scoreRow.band] ?? "bg-surface-100 text-surface-700"
-                    }`}
-                  >
-                    {scoreRow.band}
+        <div className="flex shrink-0 items-center gap-4">
+          {scoreRow && (
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
+              {scoreRow.score == null ? (
+                // Sifar nahi. Engine ne abhi faisla kiya hi nahi.
+                <p className="text-[13px] font-medium text-surface-600 dark:text-surface-300">
+                  {t("mw_score_building", lang)}
+                </p>
+              ) : (
+                <p className="flex items-center justify-end gap-1.5">
+                  <span className="text-base font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                    {scoreRow.score}
                   </span>
-                )}
-              </p>
-            )}
+                  {scoreRow.band && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        BAND_TONE[scoreRow.band] ?? "bg-surface-100 text-surface-700"
+                      }`}
+                    >
+                      {scoreRow.band}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+          {/* Waqt Pakistan ka -- server kahin bhi ho, banda apni ghari se
+              milata hai. */}
+          <div className="flex items-center gap-2 border-l border-surface-200 pl-4 dark:border-surface-700">
+            <CalendarDays className="h-4 w-4 shrink-0 text-surface-400" />
+            <p className="whitespace-nowrap text-[13px] font-medium text-surface-700 dark:text-surface-200">
+              {nowDate} · {nowTime}
+            </p>
           </div>
-        )}
         </div>
       </div>
 
       {/* Aaj kya baqi hai -- role ke raaston par, click par kaam ke safhe par (B). */}
-      <div className="mb-6 space-y-4">
+      <div className="mb-4 space-y-4">
         {me.training_mode && (
           <TrainingBanner
             lang={lang}
