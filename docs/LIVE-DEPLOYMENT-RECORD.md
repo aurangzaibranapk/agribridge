@@ -2222,6 +2222,17 @@ build mein nahi gaye:
 | `0ae8979` | Propose Product: image upload (maujooda `ProductImageUpload` reuse) + fehrist mein na ho to staff naya category naam likh sake |
 | `7042dab` | Farmer registration ka email confirmation fail (auth.signUp -> admin.createUser) + WhatsApp OTP register page par button |
 | `aff921a` | Login OTP cooldown ke second ab live ginte hain (pehle server ka ek dafa ka adad jyun ka tyun ruk jata tha) |
+| `062f0f3` | WhatsApp: na-maloom number se adhoora "WhatsApp Farmer" nahi banta -- naam+gaon poochne ke baad hi (migration 360) |
+| `319a293` | Mera Kaam: department cards 2-3 column grid, "Sab Theek" sirf hara nishan |
+
+**Dhyan rahe:** "10 se zyada permission par sidebar khud aati hai" wala
+usool (`sidebar-free.ts`) pehle se bana hua hai aur Live par
+`platform_settings.sidebar_free_dashboards` **enabled** bhi hai. Anwar
+ab (10 permissions par) is threshold ki seedh par hai -- rule `>10`
+hai (barabar nahi), is liye 10 par wo "kind: none" (sirf cards, koi
+sidebar nahi) mein aayega, "kind: work" (chhoti sidebar) mein nahi.
+Agar malik chahen ke theek 10 par bhi chhoti sidebar rahe, to
+`SIDEBAR_MIN_ITEMS` ya check `>=` karna hoga.
 
 **Scope badla (7 September, malik ke alfaz): "developer ko mana kar
 diya hua hai, email or WhatsApp OTP sab ap he karo."** Front
