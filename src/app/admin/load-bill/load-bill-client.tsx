@@ -342,33 +342,24 @@ export function LoadBillClient({
               </Select>
             </div>
 
+            {/* Malik (7 September): "Customer select karein... Result
+                Existing Farmer/Member/Customer master se aaye." Ye
+                chunaHua yahin se mobile number aur naam auto-fill karta
+                hai (neeche), aur "khata" method par isi ka party_type/
+                party_id ledger mein jata hai. */}
             <div>
-              <Label htmlFor="provider_id">
-                {kind === "load" ? "Kis network ka load" : "Kis cheez ka bill"}
-              </Label>
-              <Select id="provider_id" name="provider_id" required defaultValue="">
-                <option value="">— chunein —</option>
-                {kaamKeProviders.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
+              <Label htmlFor="main_party">Customer (marzi ka — Guest bhi chal jata hai)</Label>
+              <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
+              {mainParty && (
+                <div className="mt-2">
+                  <PartyStrip person={mainParty} />
+                </div>
+              )}
+              <p className="mt-1 text-[11px] text-surface-500">
+                Fehrist mein na ho to Guest/Walk-in maan kar aage barhein — har mobile-load customer ko
+                farmer banana zaroori nahi.
+              </p>
             </div>
-
-            {kind === "bill" && (
-              <div>
-                <Label htmlFor="bill_category">Bill ki qism</Label>
-                <Select id="bill_category" name="bill_category" defaultValue="">
-                  <option value="">— chunein —</option>
-                  <option value="electricity">Bijli</option>
-                  <option value="gas">Gas</option>
-                  <option value="internet">Internet / PTCL</option>
-                  <option value="postpaid">Mobile postpaid</option>
-                  <option value="other">Deegar</option>
-                </Select>
-              </div>
-            )}
 
             <div>
               <Label htmlFor="reference">
@@ -379,9 +370,67 @@ export function LoadBillClient({
                 name="reference"
                 required
                 inputMode="numeric"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
                 placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
               />
+              {kind === "load" && mainParty?.phone && reference && reference !== mainParty.phone && (
+                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                  Profile number: {mainParty.phone} — load doosre number ({reference}) par ja raha hai.
+                  Financial transaction phir bhi {mainParty.name} ke khate mein hi jayegi.
+                </p>
+              )}
             </div>
+
+            {kind === "load" && (
+              <div>
+                <Label htmlFor="provider_id">Network</Label>
+                <Select
+                  id="provider_id"
+                  name="provider_id"
+                  required
+                  value={providerId}
+                  onChange={(e) => setProviderId(e.target.value)}
+                >
+                  <option value="">— chunein —</option>
+                  {kaamKeProviders.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </Select>
+                {andaza && !providerId && (
+                  <p className="mt-1 text-[11px] text-surface-500">Andaza: {andaza} — sahi na ho to badal dein.</p>
+                )}
+              </div>
+            )}
+
+            {kind === "bill" && (
+              <>
+                <div>
+                  <Label htmlFor="provider_id">Kis cheez ka bill</Label>
+                  <Select id="provider_id" name="provider_id" required defaultValue="">
+                    <option value="">— chunein —</option>
+                    {kaamKeProviders.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="bill_category">Bill ki qism</Label>
+                  <Select id="bill_category" name="bill_category" defaultValue="">
+                    <option value="">— chunein —</option>
+                    <option value="electricity">Bijli</option>
+                    <option value="gas">Gas</option>
+                    <option value="internet">Internet / PTCL</option>
+                    <option value="postpaid">Mobile postpaid</option>
+                    <option value="other">Deegar</option>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <div>
               <Label htmlFor="principal">{kind === "load" ? "Load ki raqam" : "Bill ki raqam"}</Label>
@@ -478,39 +527,25 @@ export function LoadBillClient({
               <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
             </div>
 
-            {/* Khata par likhna hai to KIS ka khata -- ye poochna lazmi
-                hai. Pehle ye khana tha hi nahi: server `customer_id`
-                maangta tha, form bhejta hi nahi tha, aur "Khata" chunne
-                par hamesha "customer chunna zaroori hai" ka jawab aata
-                tha. Yani wo option kabhi kaam kar hi nahi sakta tha.
-
-                Naam ka khana (neeche) is ki jagah nahi le sakta: wo
-                sirf likhai hai, us se kisi ka khata nahi banta. Udhaar
-                us waqt tak udhaar nahi jab tak wo KISI ke naam par na
-                ho.
-
-                Malik (7 September): ye khata sirf dukan ke customer ka
-                nahi -- kisan ka bhi hota hai (Mobile Load aur Bill
-                Payment dono ke liye, kyunki dono ka khata khana yahi
-                ek hai). */}
-            {method === "khata" && (
-              <div>
-                <Label htmlFor="party_id">Kis ke khate par</Label>
-                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
-                {mainParty && (
-                  <div className="mt-2">
-                    <PartyStrip person={mainParty} />
-                  </div>
-                )}
-                <p className="mt-1 text-[11px] text-surface-500">
-                  Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.
-                </p>
-              </div>
-            )}
+            {/* Khata par likhna hai to KIS ka khata -- ye ab upar
+                "Customer" wale khane se hi tay hota hai (7 September ka
+                naya design). Pehle ye sawal sirf method === "khata" par
+                alag se poocha jata tha; ab customer poori transaction
+                ke liye ek hi baar chunte hain, aur wohi party_type/
+                party_id hidden khane (upar wale PersonPicker mein) is
+                udhaar ke ledger mein jate hain -- cash par server
+                khud unhein nazarandaz kar deta hai. */}
 
             <div>
               <Label htmlFor="customer_name">Customer ka naam (marzi ka)</Label>
-              <NameSuggest id="customer_name" name="customer_name" people={udhaarPeople} placeholder="chhora ja sakta hai" />
+              <NameSuggest
+                key={mainParty ? `${mainParty.type}:${mainParty.id}` : "guest"}
+                id="customer_name"
+                name="customer_name"
+                people={udhaarPeople}
+                defaultValue={mainParty?.name ?? ""}
+                placeholder="Guest / Walk-in — chhora ja sakta hai"
+              />
             </div>
 
             {/* Saboot -- is poore safhe ki sab se ahem cheez. */}
