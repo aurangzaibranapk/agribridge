@@ -3,7 +3,7 @@ import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
-import { NeedsAttention } from "@/components/guided/needs-attention";
+import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { buildMyWork, defaultDashboardForRole } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -117,6 +117,22 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const groups = nav.groups.filter((g) => g.items.length > 0);
   const model = await buildMyWork(groups, allowed, me.role, lang);
 
+  // "Needs attention" -- pehle teen alag dabbon mein tha, ab MyWorkBody
+  // ki chhoti patti ka pehla hissa hai (malik, 7 September). Tarteeb
+  // wahi jo pehle NeedsAttention component ke andar thi.
+  const attentionOrder = { red: 0, amber: 1, blue: 2, gray: 3 } as const;
+  const attentionItems = filterAttention(await loadNeedsAttention(), allowed).sort(
+    (a, b) => attentionOrder[a.tone] - attentionOrder[b.tone]
+  );
+  const showAllAttention = searchParams?.all === "1";
+  const attentionTop = (showAllAttention ? attentionItems : attentionItems.slice(0, 4)).map((it) => ({
+    key: it.key,
+    label: t(it.label, lang),
+    count: it.count,
+    tone: it.tone,
+    href: it.href,
+  }));
+
   const { data: branch } = me.branch_id
     ? await supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
     : { data: null };
@@ -194,9 +210,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       </div>
 
-      {/* Aaj kya baqi hai -- role ke raaston par, click par kaam ke safhe par (B). */}
-      <div className="mb-4 space-y-4">
-        {me.training_mode && (
+      {me.training_mode && (
+        <div className="mb-4">
           <TrainingBanner
             lang={lang}
             name={me.full_name}
@@ -206,9 +221,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             moduleTitle={trainingModule?.title ?? null}
             moduleKey={trainingModule?.key ?? null}
           />
-        )}
-        <NeedsAttention lang={lang} allowedRoutes={allowed} variant="strip" showAll={searchParams?.all === "1"} allHref="/admin/my-work?all=1" />
-      </div>
+        </div>
+      )}
 
       {model.totalCards === 0 ? (
         // Ye soorat chhupai nahi jati. Khali safha dekh kar banda samajhta
@@ -221,7 +235,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">{t("mw_nothing_assigned_hint", lang)}</p>
         </div>
       ) : (
-        <MyWorkBody lang={lang} quick={model.quick} departments={model.departments} defaultDept={defaultDashboardForRole(me.role)} />
+        <MyWorkBody
+          lang={lang}
+          quick={model.quick}
+          departments={model.departments}
+          defaultDept={defaultDashboardForRole(me.role)}
+          attention={attentionTop}
+          attentionTotal={attentionItems.length}
+          attentionAllHref={showAllAttention ? null : "/admin/my-work?all=1"}
+        />
       )}
     </div>
   );

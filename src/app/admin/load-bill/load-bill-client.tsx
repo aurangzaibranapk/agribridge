@@ -59,7 +59,8 @@ interface Txn {
   provider: string;
 }
 
-const RAQAM = [50, 100, 200, 500, 1000];
+// Malik (7 September): "50 ka load kabhi nahi hota, minimum 100 rupay hai."
+const RAQAM = [100, 200, 500, 1000];
 
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;

@@ -162,8 +162,16 @@ function RailCount({ dept, lang }: { dept: DeptData; lang: Lang }) {
   return <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label={t("mw_all_clear", lang)} />;
 }
 
+export interface AttentionChip {
+  key: string;
+  label: string;
+  count: number | null;
+  tone: "red" | "amber" | "blue" | "gray";
+  href: string;
+}
+
 export function MyWorkBody({
-  lang, quick, departments, defaultDept,
+  lang, quick, departments, defaultDept, attention, attentionTotal, attentionAllHref,
 }: {
   lang: Lang;
   quick: CardData[];
@@ -173,6 +181,10 @@ export function MyWorkBody({
    * null (manager/owner) = sab band, taake "Aaj ka kaam" par nazar rahe.
    */
   defaultDept: string | null;
+  /** "Needs Attention" -- pehli chaar, pehle se tarjuma shuda. */
+  attention: AttentionChip[];
+  attentionTotal: number;
+  attentionAllHref: string | null;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [recent, remember, clearRecent] = useRecent();
@@ -224,11 +236,41 @@ export function MyWorkBody({
 
   return (
     <div className="space-y-4">
-      {/* Aaj ka kaam + haal hi mein istemal -- ek hi patti mein, taake
-          upar zyada jagah na khaayen aur asal kaam (departments) neeche
-          ki taraf jaldi shuru ho. */}
+      {/* Needs attention + Aaj ka kaam + haal hi mein istemal -- ab TEEN
+          alag bade dabbon mein nahi, ek hi chhoti patti mein (malik, 7
+          September: "ek line mein ya do jagah bane, scroll na ho, sab ek
+          hi page par rahe"). */}
       <section className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-800 dark:bg-surface-900">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {attention.length === 0 ? (
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {t("na_clear", lang)}
+              </span>
+            ) : (
+              <>
+                {attention.map((it) => (
+                  <Link
+                    key={it.key}
+                    href={it.href}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium ${TONE[it.tone]}`}
+                  >
+                    <span className="tabular-nums font-semibold">{it.count ?? "—"}</span>
+                    {it.label}
+                  </Link>
+                ))}
+                {attentionTotal > attention.length && attentionAllHref && (
+                  <Link href={attentionAllHref} className="inline-flex items-center gap-0.5 text-[12px] font-medium text-brand-700 hover:underline dark:text-brand-300">
+                    {t("na_see_all", lang)} <ChevronRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+
+          <span className="hidden h-4 w-px bg-surface-200 dark:bg-surface-700 sm:inline-block" />
+
           <div className="flex flex-wrap items-center gap-2">
             {quick.length === 0 ? (
               <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">
