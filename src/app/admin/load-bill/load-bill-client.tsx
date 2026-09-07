@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -119,16 +119,23 @@ export function LoadBillClient({
   canReverse: boolean;
 }) {
   /**
-   * Teen khane, ek hi safha.
+   * Chaar khane, ek hi safha.
    *
    * Malik (6 September): *"customer ke bana dein, POS ke upar jahan hum
    * load bill kar rahe hain wahan udhaar raqam bhi karein."*
    *
-   * Udhaar ka `kind` nahi hota -- wo load ya bill hai hi nahi. Is liye
-   * `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
+   * Malik (7 September ka spec): wireframe mein "Payment Receive" apna
+   * alag khana hai, "Udhaar" ke andar chhupa hua toggle nahi -- warna
+   * jo paisa wapas aaya (ya jis se overpayment credit banta hai) usay
+   * dhoondne ke liye pehle "Udhaar" khol kar phir andar "Wapas aaya"
+   * dabana parta, jabke ye dono alag kaam hain: ek paisa deta hai, ek
+   * leta hai.
+   *
+   * Udhaar/Payment Receive ka `kind` nahi hota -- wo load ya bill hai hi
+   * nahi. Is liye `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
    */
-  const [tab, setTab] = useState<"load" | "bill" | "udhaar">(shuruKind);
-  const kind: "load" | "bill" = tab === "udhaar" ? "load" : tab;
+  const [tab, setTab] = useState<"load" | "bill" | "udhaar" | "receive">(shuruKind);
+  const kind: "load" | "bill" = tab === "load" || tab === "bill" ? tab : "load";
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
   const [settleState, settleAction] = useFormState(settleBill, initial);
@@ -136,8 +143,6 @@ export function LoadBillClient({
   const [commState, commAction] = useFormState(confirmLoadCommission, initial);
   const [loanState, loanAction] = useFormState(giveCustomerLoan, udhaarInitial);
   const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
-  /** Udhaar ke andar do kaam: diya, ya wapas aaya. */
-  const [udhaarKaam, setUdhaarKaam] = useState<"diya" | "wapsi">("diya");
 
   /**
    * Udhaar dukan ke customer ko bhi milta hai aur kisan ko bhi — is
@@ -284,12 +289,13 @@ export function LoadBillClient({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* -------- Form -------- */}
         <Card>
-          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+          <div className="mb-4 grid gap-2 grid-cols-2 lg:grid-cols-4">
             {(
               [
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
                 { key: "bill", title: "Bill Payment", sub: "Bijli, gas, internet", Icon: FileText },
-                { key: "udhaar", title: "Udhaar", sub: "Naqad diya ya wapas aaya", Icon: HandCoins },
+                { key: "udhaar", title: "Udhaar", sub: "Dukan se naqad gaya", Icon: HandCoins },
+                { key: "receive", title: "Payment Receive", sub: "Wapas aaya / credit jama", Icon: Banknote },
               ] as const
             ).map(({ key, title, sub, Icon }) => (
               <button
@@ -311,10 +317,9 @@ export function LoadBillClient({
             ))}
           </div>
 
-          {tab === "udhaar" ? (
+          {tab === "udhaar" || tab === "receive" ? (
             <UdhaarForm
-              kaam={udhaarKaam}
-              setKaam={setUdhaarKaam}
+              kaam={tab === "udhaar" ? "diya" : "wapsi"}
               people={udhaarPeople}
               financeAccounts={financeAccounts}
               loanAction={loanAction}
@@ -470,21 +475,6 @@ export function LoadBillClient({
             </div>
 
             <div>
-              <Label htmlFor="service_charge">Customer se extra (service charge)</Label>
-              <Input
-                id="service_charge"
-                name="service_charge"
-                inputMode="decimal"
-                value={serviceCharge}
-                onChange={(e) => setServiceCharge(e.target.value)}
-                placeholder="khali chhor dein agar extra nahi liya"
-              />
-              <p className="mt-1 text-[11px] text-surface-500">
-                Khali = customer se kuch extra nahi liya. Sifar likhne ki zaroorat nahi.
-              </p>
-            </div>
-
-            <div>
               <Label htmlFor="paisa_kahan">Payment kahan aayi</Label>
               {/* EK FEHRIST, ASAL KHATON KE SATH.
                   Pehle yahan sirf qism likhi thi -- "Bank / Card",
@@ -525,6 +515,21 @@ export function LoadBillClient({
               </Select>
               <input type="hidden" name="payment_method" value={method} />
               <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
+            </div>
+
+            <div>
+              <Label htmlFor="service_charge">Customer se extra (service charge)</Label>
+              <Input
+                id="service_charge"
+                name="service_charge"
+                inputMode="decimal"
+                value={serviceCharge}
+                onChange={(e) => setServiceCharge(e.target.value)}
+                placeholder="khali chhor dein agar extra nahi liya"
+              />
+              <p className="mt-1 text-[11px] text-surface-500">
+                Khali = customer se kuch extra nahi liya. Sifar likhne ki zaroorat nahi.
+              </p>
             </div>
 
             {/* Khata par likhna hai to KIS ka khata -- ye ab upar
@@ -800,17 +805,20 @@ export function LoadBillClient({
  * 2. **NULL aur sifar alag likhe jate hain.** Jis customer ka hisaab
  *    abhi shuru hi nahi hua us ke saamne "Rs 0" likh dena jhoot hai --
  *    wahan "hisaab shuru nahi hua" likha jata hai.
+ *
+ * `kaam` ab bahar se, tab se tay hota hai ("Udhaar" bnam "Payment
+ * Receive") -- pehle yahan andar ek toggle hota tha, jo malik ke asal
+ * wireframe ("Payment Receive" apna alag khana) se match nahi karta
+ * tha.
  */
 function UdhaarForm({
   kaam,
-  setKaam,
   people,
   financeAccounts,
   loanAction,
   wapsiAction,
 }: {
   kaam: "diya" | "wapsi";
-  setKaam: (k: "diya" | "wapsi") => void;
   people: PersonOption[];
   financeAccounts: { id: string; name: string }[];
   loanAction: (fd: FormData) => void;
@@ -821,29 +829,6 @@ function UdhaarForm({
 
   return (
     <form action={diya ? loanAction : wapsiAction} className="space-y-3">
-      <div className="flex gap-2">
-        {(
-          [
-            { key: "diya", label: "Udhaar diya", sub: "dukan se paisa gaya" },
-            { key: "wapsi", label: "Wapas aaya", sub: "customer ne paisa diya" },
-          ] as const
-        ).map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => setKaam(o.key)}
-            className={`flex-1 rounded-lg border px-3 py-2 text-left transition ${
-              kaam === o.key
-                ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
-                : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
-            }`}
-          >
-            <span className="block text-sm font-semibold text-surface-900 dark:text-white">{o.label}</span>
-            <span className="block text-[11px] text-surface-500">{o.sub}</span>
-          </button>
-        ))}
-      </div>
-
       <div>
         <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
         <PersonPicker

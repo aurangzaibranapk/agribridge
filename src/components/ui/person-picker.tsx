@@ -235,36 +235,48 @@ export function PartyStrip({ person }: { person: PersonOption | null }) {
   if (!person) return null;
 
   const net = khulasa ? Math.round((khulasa.lena - khulasa.dena) * 100) / 100 : 0;
+  // Net manfi = hum is banday ke dene wale hain -- ye pehle se jama
+  // shuda paisa hai, agla load/bill isi mein se kaata ja sakta hai.
+  // Malik chahte the ye har baar dhoond kar nikalna na paray, is liye
+  // yahan khud saaf alag se dikhaya jata hai.
+  const credit = khulasa ? Math.max(0, Math.round((khulasa.dena - khulasa.lena) * 100) / 100) : 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs dark:border-surface-700 dark:bg-surface-800/50">
-      {loading ? (
-        <span className="text-surface-400">Khulasa la rahe hain…</span>
-      ) : khulasa ? (
-        <>
-          <span className="text-red-700 dark:text-red-300">
-            Lena <b className="tabular-nums">Rs {khulasa.lena.toLocaleString()}</b>
-          </span>
-          <span className="text-brand-700 dark:text-brand-300">
-            Dena <b className="tabular-nums">Rs {khulasa.dena.toLocaleString()}</b>
-          </span>
-          <span className="font-medium text-surface-700 dark:text-surface-200">
-            Net{" "}
-            <b className="tabular-nums">
-              Rs {Math.abs(net).toLocaleString()} {net >= 0 ? "Lena" : "Dena"}
-            </b>
-          </span>
-        </>
-      ) : (
-        <span className="text-surface-400">Is {person.type === "farmer" ? "kisan" : "customer"} ka hisaab abhi shuru nahi hua.</span>
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs dark:border-surface-700 dark:bg-surface-800/50">
+        {loading ? (
+          <span className="text-surface-400">Khulasa la rahe hain…</span>
+        ) : khulasa ? (
+          <>
+            <span className="text-red-700 dark:text-red-300">
+              Lena <b className="tabular-nums">Rs {khulasa.lena.toLocaleString()}</b>
+            </span>
+            <span className="text-brand-700 dark:text-brand-300">
+              Dena <b className="tabular-nums">Rs {khulasa.dena.toLocaleString()}</b>
+            </span>
+            <span className="font-medium text-surface-700 dark:text-surface-200">
+              Net{" "}
+              <b className="tabular-nums">
+                Rs {Math.abs(net).toLocaleString()} {net >= 0 ? "Lena" : "Dena"}
+              </b>
+            </span>
+          </>
+        ) : (
+          <span className="text-surface-400">Is {person.type === "farmer" ? "kisan" : "customer"} ka hisaab abhi shuru nahi hua.</span>
+        )}
+        <Link
+          href={`/admin/khata/banda/${person.type}/${person.id}`}
+          target="_blank"
+          className="ml-auto text-brand-600 underline hover:text-brand-700"
+        >
+          Khata dekhein
+        </Link>
+      </div>
+      {credit > 0 && (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+          Available Credit: Rs {credit.toLocaleString()} — is load/bill mein se kata ja sakta hai.
+        </p>
       )}
-      <Link
-        href={`/admin/khata/banda/${person.type}/${person.id}`}
-        target="_blank"
-        className="ml-auto text-brand-600 underline hover:text-brand-700"
-      >
-        Khata dekhein
-      </Link>
     </div>
   );
 }
