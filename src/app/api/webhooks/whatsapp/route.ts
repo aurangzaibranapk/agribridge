@@ -121,23 +121,67 @@ export async function POST(request: NextRequest) {
       .eq("is_deleted", false)
       .maybeSingle();
 
-    if (!farmer) {
-      // farmer_code database khud bharta hai (migration 121).
-      const { data: newFarmer } = await serviceClient
-        .from("farmers")
-        .insert({
-          full_name: `WhatsApp Farmer ${fromPhone.slice(-4)}`,
-          phone_number: fromPhone,
-          whatsapp_number: fromPhone,
-          registration_source: "WHATSAPP",
-        })
-        .select("id, is_profile_complete")
-        .single();
-      farmer = newFarmer;
-    } else {
+    if (farmer) {
       // Purana kisan mil gaya -- us par WhatsApp number darj kar dein
       // taake agli baar seedha isi se mile.
       await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", farmer.id);
+    } else {
+      // Malik (7 September): "aisa farmer nahi banna chahiye. Agar
+      // farmer banna hai to naam, mobile, location ke saath bane --
+      // aisa bilkul na bane." Pehle yahan foran "WhatsApp Farmer 8999"
+      // jaisa khaali record ban jata tha. Ab naam aur gaon pehle
+      // poochhe jate hain (360) -- farmer tab hi banta hai jab teenon
+      // (naam, mobile, gaon) sath maujood hon.
+      const text = message.type === "text" ? message.text.body?.trim() : null;
+      if (!text) {
+        await sendWhatsAppMessage(fromPhone, "Assalam-o-Alaikum! AgriBridge mein khush aamdeed. Sab se pehle apna poora naam likh kar bhejein.");
+        return NextResponse.json({ ok: true });
+      }
+
+      const { data: onboarding } = await serviceClient
+        .from("whatsapp_onboarding")
+        .select("full_name")
+        .eq("phone_key", key ?? "")
+        .maybeSingle();
+
+      if (!onboarding) {
+        await serviceClient.from("whatsapp_onboarding").insert({ phone_key: key ?? "", phone_number: fromPhone });
+        await sendWhatsAppMessage(fromPhone, "Assalam-o-Alaikum! AgriBridge mein khush aamdeed. Sab se pehle apna poora naam likh kar bhejein.");
+        return NextResponse.json({ ok: true });
+      }
+
+      if (!onboarding.full_name) {
+        await serviceClient.from("whatsapp_onboarding").update({ full_name: text }).eq("phone_key", key ?? "");
+        await sendWhatsAppMessage(fromPhone, `Shukriya, ${text}. Ab apna gaon/mauza ka naam likh kar bhejein.`);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Naam aur gaon dono mil gaye -- ab hi, aur sirf ab, farmer banta hai.
+      const { data: newFarmer, error: farmerError } = await serviceClient
+        .from("farmers")
+        .insert({
+          full_name: onboarding.full_name,
+          phone_number: fromPhone,
+          whatsapp_number: fromPhone,
+          village: text,
+          registration_source: "WHATSAPP",
+        })
+        .select("id, is_profile_complete, farmer_code")
+        .single();
+
+      await serviceClient.from("whatsapp_onboarding").delete().eq("phone_key", key ?? "");
+
+      if (farmerError || !newFarmer) {
+        await sendWhatsAppMessage(fromPhone, "Maaf kijiye, registration nahi ho saka. Dobara koshish karein.");
+        return NextResponse.json({ ok: true });
+      }
+
+      farmer = newFarmer;
+      await sendWhatsAppMessage(
+        fromPhone,
+        `Shukriya! Aap ka registration mukammal ho gaya — Farmer ID: ${newFarmer.farmer_code}. Ab aap apna sawal poochh sakte hain.`
+      );
+      return NextResponse.json({ ok: true });
     }
 
     if (!farmer) {

@@ -521,6 +521,13 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "access_requests_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "access_requests_override_by_fkey"
             columns: ["override_by"]
             isOneToOne: false
@@ -5833,8 +5840,16 @@ export type Database = {
           created_at: string
           description: string
           document_url: string | null
+          expense_date: string | null
           expense_number: string
           id: string
+          kind: string
+          paid_from_account_id: string | null
+          party_id: string | null
+          party_name: string | null
+          party_type: string | null
+          received_by_name: string | null
+          received_by_note: string | null
           rejection_reason: string | null
           requested_by: string | null
           shop_id: string | null
@@ -5850,8 +5865,16 @@ export type Database = {
           created_at?: string
           description: string
           document_url?: string | null
+          expense_date?: string | null
           expense_number: string
           id?: string
+          kind?: string
+          paid_from_account_id?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
+          received_by_name?: string | null
+          received_by_note?: string | null
           rejection_reason?: string | null
           requested_by?: string | null
           shop_id?: string | null
@@ -5867,8 +5890,16 @@ export type Database = {
           created_at?: string
           description?: string
           document_url?: string | null
+          expense_date?: string | null
           expense_number?: string
           id?: string
+          kind?: string
+          paid_from_account_id?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
+          received_by_name?: string | null
+          received_by_note?: string | null
           rejection_reason?: string | null
           requested_by?: string | null
           shop_id?: string | null
@@ -5903,6 +5934,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cash_close_missing"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_paid_from_account_id_fkey"
+            columns: ["paid_from_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "company_expense_requests_requested_by_fkey"
@@ -7040,6 +7092,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "features"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "dashboard_features_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
           },
         ]
       }
@@ -9187,6 +9246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "features"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "feature_help_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
           },
           {
             foreignKeyName: "feature_help_updated_by_fkey"
@@ -12289,6 +12355,162 @@ export type Database = {
         }
         Relationships: []
       }
+      labour_work_entries: {
+        Row: {
+          advance_adjusted: number
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          entry_number: string
+          id: string
+          journal_entry_id: string | null
+          party_id: string
+          party_type: string
+          payable_added: number
+          quantity: number | null
+          rate: number | null
+          received_by_name: string | null
+          received_by_note: string | null
+          rejection_reason: string | null
+          shop_id: string | null
+          status: string
+          unit: string | null
+          work_date: string
+          work_detail: string
+        }
+        Insert: {
+          advance_adjusted?: number
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_number: string
+          id?: string
+          journal_entry_id?: string | null
+          party_id: string
+          party_type: string
+          payable_added?: number
+          quantity?: number | null
+          rate?: number | null
+          received_by_name?: string | null
+          received_by_note?: string | null
+          rejection_reason?: string | null
+          shop_id?: string | null
+          status?: string
+          unit?: string | null
+          work_date?: string
+          work_detail: string
+        }
+        Update: {
+          advance_adjusted?: number
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_number?: string
+          id?: string
+          journal_entry_id?: string | null
+          party_id?: string
+          party_type?: string
+          payable_added?: number
+          quantity?: number | null
+          rate?: number | null
+          received_by_name?: string | null
+          received_by_note?: string | null
+          rejection_reason?: string | null
+          shop_id?: string | null
+          status?: string
+          unit?: string | null
+          work_date?: string
+          work_detail?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labour_work_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+        ]
+      }
       land_prep_rates: {
         Row: {
           activity_name: string
@@ -12912,6 +13134,7 @@ export type Database = {
           created_by: string | null
           customer_id: string | null
           customer_name: string | null
+          farmer_id: string | null
           finance_account_id: string | null
           float_settled: boolean
           id: string
@@ -12938,6 +13161,7 @@ export type Database = {
           created_by?: string | null
           customer_id?: string | null
           customer_name?: string | null
+          farmer_id?: string | null
           finance_account_id?: string | null
           float_settled?: boolean
           id?: string
@@ -12964,6 +13188,7 @@ export type Database = {
           created_by?: string | null
           customer_id?: string | null
           customer_name?: string | null
+          farmer_id?: string | null
           finance_account_id?: string | null
           float_settled?: boolean
           id?: string
@@ -13014,6 +13239,104 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_wholesale_shops"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
           },
           {
             foreignKeyName: "load_transactions_finance_account_id_fkey"
@@ -17478,6 +17801,127 @@ export type Database = {
           },
         ]
       }
+      party_settlements: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          dena_khata: string
+          id: string
+          journal_entry_id: string | null
+          lena_khata: string
+          party_id: string
+          party_type: string
+          rejection_reason: string | null
+          settlement_number: string
+          status: string
+          wajah: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dena_khata: string
+          id?: string
+          journal_entry_id?: string | null
+          lena_khata: string
+          party_id: string
+          party_type: string
+          rejection_reason?: string | null
+          settlement_number: string
+          status?: string
+          wajah: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dena_khata?: string
+          id?: string
+          journal_entry_id?: string | null
+          lena_khata?: string
+          party_id?: string
+          party_type?: string
+          rejection_reason?: string | null
+          settlement_number?: string
+          status?: string
+          wajah?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_settlements_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
       password_reset_tokens: {
         Row: {
           created_at: string
@@ -20771,6 +21215,13 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "role_feature_permissions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "role_feature_permissions_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
@@ -21663,6 +22114,21 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      shop_code_counters: {
+        Row: {
+          id: boolean
+          last_number: number
+        }
+        Insert: {
+          id?: boolean
+          last_number?: number
+        }
+        Update: {
+          id?: boolean
+          last_number?: number
+        }
+        Relationships: []
       }
       shop_rent_agreements: {
         Row: {
@@ -24046,6 +24512,13 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "suggestions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "suggestions_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
@@ -24976,6 +25449,13 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "user_feature_permissions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "user_feature_permissions_granted_by_fkey"
             columns: ["granted_by"]
             isOneToOne: false
@@ -25350,6 +25830,45 @@ export type Database = {
           },
         ]
       }
+      verification_sla: {
+        Row: {
+          head_hours: number
+          id: boolean
+          manager_hours: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          head_hours?: number
+          id?: boolean
+          manager_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          head_hours?: number
+          id?: boolean
+          manager_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_sla_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_sla_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -25647,6 +26166,27 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_onboarding: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          phone_key: string
+          phone_number: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          phone_key: string
+          phone_number: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          phone_key?: string
+          phone_number?: string
+        }
+        Relationships: []
+      }
       whatsapp_submission_counters: {
         Row: {
           last_number: number
@@ -25898,11 +26438,25 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "work_handoffs_from_feature_fkey"
+            columns: ["from_feature"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "work_handoffs_to_feature_fkey"
             columns: ["to_feature"]
             isOneToOne: false
             referencedRelation: "features"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "work_handoffs_to_feature_fkey"
+            columns: ["to_feature"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
           },
           {
             foreignKeyName: "work_handoffs_to_profile_id_fkey"
@@ -29065,6 +29619,23 @@ export type Database = {
         }
         Relationships: []
       }
+      v_manzoori_ki_qatar: {
+        Row: {
+          amount: number | null
+          bheja: string | null
+          branch_id: string | null
+          created_at: string | null
+          ghante: number | null
+          head_hours: number | null
+          id: string | null
+          kahan: string | null
+          kahan_ka_naam: string | null
+          manager_hours: number | null
+          number: string | null
+          tafseel: string | null
+        }
+        Relationships: []
+      }
       v_milk_dispatch_watch: {
         Row: {
           chiller: string | null
@@ -29126,11 +29697,25 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "work_handoffs_from_feature_fkey"
+            columns: ["from_feature"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
+          },
+          {
             foreignKeyName: "work_handoffs_to_feature_fkey"
             columns: ["to_feature"]
             isOneToOne: false
             referencedRelation: "features"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "work_handoffs_to_feature_fkey"
+            columns: ["to_feature"]
+            isOneToOne: false
+            referencedRelation: "v_user_feature_access"
+            referencedColumns: ["feature_key"]
           },
         ]
       }
@@ -29926,7 +30511,22 @@ export type Database = {
           profile_id: string | null
           route: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_feature_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_feature_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
       }
       v_vendor_holding_our_cash: {
         Row: {
@@ -30145,6 +30745,10 @@ export type Database = {
         }[]
       }
       fn_apply_bill_line_rate: { Args: { p_line_id: string }; Returns: Json }
+      fn_apply_role_template: {
+        Args: { p_profile: string; p_template: string }
+        Returns: number
+      }
       fn_asset_dep_compute: {
         Args: { p_period: string; p_user?: string }
         Returns: string
@@ -30219,6 +30823,38 @@ export type Database = {
           working_days: number
         }[]
       }
+      fn_bande_ka_khate_par_baqi: {
+        Args: { p_khata: string; p_party_id: string; p_party_type: string }
+        Returns: number
+      }
+      fn_bande_ka_khulasa: {
+        Args: { p_party_id: string; p_party_type: string }
+        Returns: {
+          dena: number
+          khata_code: string
+          khata_naam: string
+          lena: number
+        }[]
+      }
+      fn_bande_ka_saara_lenden: {
+        Args: {
+          p_end?: string
+          p_party_id: string
+          p_party_type: string
+          p_start?: string
+        }
+        Returns: {
+          baqi_par_asar: boolean
+          credit: number
+          debit: number
+          entry_date: string
+          entry_number: string
+          khata_code: string
+          khata_naam: string
+          module: string
+          tafseel: string
+        }[]
+      }
       fn_bump_farmer_code_counter: {
         Args: { p_number: number }
         Returns: undefined
@@ -30280,6 +30916,10 @@ export type Database = {
           purana_baqi: number
           unposted: number
         }[]
+      }
+      fn_farmer_profile_complete: {
+        Args: { f: Database["public"]["Tables"]["farmers"]["Row"] }
+        Returns: boolean
       }
       fn_farmer_profile_status: {
         Args: {
@@ -30457,6 +31097,22 @@ export type Database = {
         Args: { p_machine_id: string }
         Returns: number
       }
+      fn_manzoori_ka_khulasa: {
+        Args: never
+        Returns: {
+          darja: string
+          ginti: number
+          phansi_raqam: number
+          purani_umar: number
+        }[]
+      }
+      fn_mazdoori_haal: {
+        Args: { p_party_id: string; p_party_type: string }
+        Returns: {
+          advance_baqi: number
+          dena_baqi: number
+        }[]
+      }
       fn_merge_categories: {
         Args: { p_from: string; p_into: string; p_reason: string }
         Returns: Json
@@ -30470,6 +31126,7 @@ export type Database = {
       }
       fn_next_load_number: { Args: { p_kind: string }; Returns: string }
       fn_next_machinery_number: { Args: { p_kind: string }; Returns: string }
+      fn_next_shop_code: { Args: never; Returns: string }
       fn_next_suggestion_number: { Args: never; Returns: string }
       fn_owns_loan: {
         Args: { p_loan_id: string; p_loan_type: string }
