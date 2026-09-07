@@ -142,6 +142,7 @@ export const authDict = {
   au_eg_email: { en: "you@example.com", rm: "aap@misal.com", ur: "aap@misal.com" },
   au_with_google: { en: "Continue with Google", rm: "Google se jaari rakhein", ur: "Google سے جاری رکھیں" },
   au_with_facebook: { en: "Continue with Facebook", rm: "Facebook se jaari rakhein", ur: "Facebook سے جاری رکھیں" },
+  au_with_whatsapp: { en: "Continue with WhatsApp (recommended)", rm: "WhatsApp OTP se register karein (aasan)", ur: "واٹس ایپ OTP سے رجسٹر کریں (آسان)" },
 
   // ---- Registration ----
   au_register_farmer: { en: "Register as a Farmer", rm: "Kisan ke tor par registration", ur: "کسان کے طور پر رجسٹریشن" },

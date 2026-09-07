@@ -33,6 +33,20 @@ export function RegisterFarmerForm() {
       <h1 className="font-display text-2xl font-semibold text-surface-900">{t("au_register_farmer", lang)}</h1>
       <p className="mt-1 text-surface-500">{t("au_five_details", lang)}</p>
       <div className="mt-6 space-y-2">
+        {/* Malik (7 September): "WhatsApp authentication bhi active
+            karo" — jab email/password bhi chal jaye to bhi WhatsApp OTP
+            akhri option nahi honi chahiye, upar sab se pehle aur sab se
+            aasan honi chahiye. `/login` par yehi OTP raasta pehle se
+            naye kisan (jin ka record nahi) ka naam/gaon poochh kar khata
+            khud bana deta hai -- wahi raasta yahan dobara nahi likha,
+            seedha wahin bhej diya jata hai. */}
+        <Link
+          href="/login"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1FB959]"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#25D366]">W</span>
+          {t("au_with_whatsapp", lang)}
+        </Link>
         <button
           type="button"
           onClick={() => handleOAuth("google")}

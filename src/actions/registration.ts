@@ -55,19 +55,28 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
   if (phoneMatch) return { error: alreadyRegisteredMessage(phoneMatch) };
   if (emailMatch) return { error: "A farmer with this email is already registered." };
 
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  // `supabase.auth.signUp()` (client-side) makes Supabase's own mailer
+  // try to send a confirmation email as PART of the signup call -- and
+  // if that mailer fails (default Supabase email has a tight quota),
+  // the whole signup fails with "Error sending confirmation email" and
+  // NO user is created at all. We immediately force-confirm the email
+  // right after anyway (line below, previously), so that mailer attempt
+  // was pure dead weight -- it could only make signup fail, never help.
+  // `admin.createUser` (service role) skips it entirely: no email is
+  // sent, the account is created pre-confirmed in one step. Same
+  // pattern already used for WhatsApp-OTP farmer signups (farmer-auth.ts).
+  const { data: createData, error: createError } = await serviceClient.auth.admin.createUser({
     email,
     password,
-    options: { data: { full_name: fullName, phone_number: phoneNumber, role: "farmer" } },
+    email_confirm: true,
+    user_metadata: { full_name: fullName, phone_number: phoneNumber, role: "farmer" },
   });
 
-  if (signUpError) return { error: signUpError.message };
-  if (!signUpData.user) return { error: "Could not create account. Please try again." };
-
-  await serviceClient.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
+  if (createError) return { error: createError.message };
+  if (!createData.user) return { error: "Could not create account. Please try again." };
 
   const { error: farmerError } = await serviceClient.from("farmers").insert({
-    user_id: signUpData.user.id,
+    user_id: createData.user.id,
     full_name: fullName,
     phone_number: phoneNumber,
     email,
