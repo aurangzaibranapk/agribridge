@@ -2216,6 +2216,7 @@ build mein nahi gaye:
 |---|---|
 | `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab (pehle Udhaar ke andar chhupa toggle tha), Service Charge ab Cash/Khata ke baad, PartyStrip mein "Available Credit" saaf dikhta hai |
 | `02ff9c2` | Farmer Details ke Documents (CNIC front/back, tasveer) — camera se seedha khenchna + upload se pehle crop (naya `ImageCropField`) |
+| `7a93f85` | Agri Order (New): "Partner Details" sirf bahar wale supplier ke liye — Company/apni shop se order karte waqt ye poora hissa ghayab, staff ko apni maloomat dobara nahi likhni parti |
 
 Agla build lete waqt ye dono commits shamil honge — koi alag qadam
 nahi chahiye, sirf agla "pull + build + package" ka jorra.
