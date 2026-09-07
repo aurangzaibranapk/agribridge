@@ -2188,7 +2188,22 @@ milte ya poori hote hi yahan update karna hai.
 
 **Migrations 338–357 — Live par sab chal chuki hain.** Poori tafseel
 "20 migrations Live par chal gayin (7 September)" wale hisse mein hai.
-Koi migration ab pending nahi.
+
+**Ek nayi migration Live jane ke liye taiyar hai — backup ki tasdeeq ka intezar:**
+
+| # | Kya karti hai | Testing | Live |
+|---|---|---|---|
+| 358 | Stock (1200) ka purana Rs 28 ka farq — Suspense (9999) mein | ✅ (Live-specific 4 POS ID Testing par nahi milin, is liye khud khamoshi se kuch nahi kiya — theek yehi hona chahiye tha) | ⏳ backup ka intezar |
+
+Wajah: Master Dashboard ka banner ("Stock ke do adad barabar nahi").
+Jaanch: `v_ledger_unposted` par koi purchase/supplier_payment unposted
+NAHI — asal wajah 1200 ki 4 purani POS qatarein hain (4-5 September,
+333 ki fix se pehle) jin ki koi kharid is system se guzri hi nahi thi.
+Malik ki tasdeeq (7 September): Rs 28 ko 9999 (Suspense) mein dalein —
+Bank Reconciliation jaisa hi tareeqa.
+
+**BACKUP TASDEEQ AANE SE PEHLE YE LIVE PAR NAHI CHALEGI**, chahe malik
+"chalao" bhi kahein — P0 usool.
 
 **Naya build baqi hai (code Live se aage nikal chuka hai):**
 
