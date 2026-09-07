@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { loadNav } from "@/lib/access/nav";
+import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
-import { buildMyWork, defaultDashboardForRole } from "@/lib/access/my-work";
+import { NeedsAttention } from "@/components/guided/needs-attention";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
@@ -138,6 +140,34 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     : { data: null };
   const branchName = branch?.name ?? null;
 
+  // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
+  // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
+  // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
+  // dobara dikhaya ja raha hai.
+  const [fourthKpi, recentActivity] = await Promise.all([
+    loadFourthKpi(me.branch_id, allowed, lang),
+    loadRecentActivity(me.branch_id, allowed),
+  ]);
+  const kpis: { key: string; label: string; value: number | null }[] = [
+    { key: "approvals", label: t("mw_kpi_pending_approvals", lang), value: attentionItems.filter((i) => i.tone === "amber").length },
+    { key: "open", label: t("mw_kpi_open_tasks", lang), value: attentionItems.length },
+    { key: "urgent", label: t("mw_kpi_urgent_today", lang), value: attentionItems.filter((i) => i.tone === "red").length },
+    ...(fourthKpi ? [fourthKpi] : []),
+  ];
+
+  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
+  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
+  // chuna hua raasta.
+  const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
+  type QuickAction = { href: string; label: string; icon: string };
+  const quickActions: QuickAction[] = [
+    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
+    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
+    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
+    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
+    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
+  ].filter((x): x is QuickAction => x !== null);
+
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
     timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
@@ -224,6 +254,17 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       )}
 
+      {/* KPI patti -- teen fixed + ek role-specific. Ginti na mile to
+          "—", jhooti sifar nahi (project ka locked usool). */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.key} className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
+            <p className="text-2xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">{k.value ?? "—"}</p>
+            <p className="mt-0.5 text-[12px] text-surface-500">{k.label}</p>
+          </div>
+        ))}
+      </div>
+
       {model.totalCards === 0 ? (
         // Ye soorat chhupai nahi jati. Khali safha dekh kar banda samajhta
         // hai ke nizam kharab hai; asal baat ye hoti hai ke usay abhi tak
@@ -245,6 +286,85 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           attentionAllHref={showAllAttention ? null : "/admin/my-work?all=1"}
         />
       )}
+
+      {/* Aaj ke kaam (poori fehrist) + Jaldi wale kaam, aur Haal ka
+          len-den -- maujooda systems (Needs Attention, permitted routes,
+          asal transactions) se, koi nayi table nahi. */}
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+            <Icons.ClipboardList className="h-4 w-4" /> {t("mw_tasks_title", lang)}
+          </h2>
+          <div className="p-4">
+            <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
+              {quickActions.map((qa) => {
+                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
+                return (
+                  <Link
+                    key={qa.href}
+                    href={qa.href}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <QaIcon className="h-[18px] w-[18px]" />
+                    </span>
+                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}
+            </h2>
+            <div className="divide-y divide-surface-100 dark:divide-surface-800">
+              {recentActivity.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-surface-400">{t("mw_activity_empty", lang)}</p>
+              ) : (
+                recentActivity.map((a) => (
+                  <div key={a.key} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium text-surface-800 dark:text-surface-100">{t(a.labelKey, lang)}</p>
+                      <p className="truncate text-[12px] text-surface-500">
+                        {[a.subtitle, relativeTime(a.createdAt, lang)].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    {a.amount != null && (
+                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                        Rs {a.amount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
+}
+
+/** "5 minute pehle" jaisa halka jumla -- koi library nahi, chhota hisaab. */
+function relativeTime(iso: string, lang: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.max(0, Math.round(diffMs / 60000));
+  const isUrdu = lang === "ur";
+  if (min < 1) return isUrdu ? "ابھی" : "abhi";
+  if (min < 60) return isUrdu ? `${min} منٹ پہلے` : `${min} minute pehle`;
+  const hrs = Math.round(min / 60);
+  if (hrs < 24) return isUrdu ? `${hrs} گھنٹے پہلے` : `${hrs} ghante pehle`;
+  const days = Math.round(hrs / 24);
+  return isUrdu ? `${days} دن پہلے` : `${days} din pehle`;
 }

@@ -62,4 +62,24 @@ export const myWorkDict = {
     rm: "Hisaab ban raha hai",
     ur: "حساب بن رہا ہے",
   },
+
+  // ---- KPI cards, Today's Tasks, Recent Activity, Quick Actions (7 September) ----
+  mw_kpi_pending_approvals: { en: "Pending approvals", rm: "Manzoori baqi", ur: "منظوری باقی" },
+  mw_kpi_open_tasks: { en: "My open tasks", rm: "Mera baqi kaam", ur: "میرا باقی کام" },
+  mw_kpi_urgent_today: { en: "Urgent today", rm: "Aaj zaroori", ur: "آج ضروری" },
+  mw_kpi_farmers_area: { en: "Farmers in my area", rm: "Meri shaakh ke kisan", ur: "میری شاخ کے کسان" },
+
+  mw_tasks_title: { en: "Today's tasks", rm: "Aaj ke kaam", ur: "آج کے کام" },
+  mw_activity_title: { en: "Recent activity", rm: "Haal ka len-den", ur: "حال کا لین دین" },
+  mw_activity_empty: { en: "Nothing recorded yet.", rm: "Abhi tak kuch darj nahi hua.", ur: "ابھی تک کچھ درج نہیں ہوا۔" },
+  mw_activity_sale: { en: "POS sale", rm: "POS bikri", ur: "POS بکری" },
+  mw_activity_expense: { en: "Expense / payment", rm: "Kharcha / adaigi", ur: "خرچہ / ادائیگی" },
+  mw_activity_labour: { en: "Labour work", rm: "Mazdoori", ur: "مزدوری" },
+
+  mw_quick_actions_title: { en: "Quick actions", rm: "Jaldi wale kaam", ur: "جلدی والے کام" },
+  mw_qa_add_farmer: { en: "Add farmer", rm: "Farmer add karein", ur: "فارمر شامل کریں" },
+  mw_qa_add_expense: { en: "Add expense / payment", rm: "Kharcha / Adaigi darj karein", ur: "خرچہ / ادائیگی درج کریں" },
+  mw_qa_create_order: { en: "Create order", rm: "Order banayein", ur: "آرڈر بنائیں" },
+  mw_qa_new_sale: { en: "New sale (POS)", rm: "Nayi bikri (POS)", ur: "نئی بکری (POS)" },
+  mw_qa_receive_payment: { en: "Receive payment", rm: "Payment receive karein", ur: "ادائیگی وصول کریں" },
 } as const;

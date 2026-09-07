@@ -3,6 +3,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { loadRegistry } from "@/lib/access/registry";
 import { loadNeedsAttention, filterAttention, type AttentionItem } from "@/lib/access/needs-attention";
 import type { NavGroupData, NavEntry } from "@/lib/access/nav";
+import { routeAllowed } from "@/lib/access/nav";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 /**
@@ -294,4 +295,100 @@ async function purposeByRoute(lang: Lang): Promise<Map<string, string>> {
     // jhoot nahi.
   }
   return out;
+}
+
+/**
+ * Dashboard ka chautha KPI khana -- role ke hisaab se badalta hai.
+ *
+ * Malik ka spec (7 September): chauthi khani "role-specific" honi
+ * chahiye, aur "fake zero values" kabhi nahi -- na mile to card hi
+ * nahi banta. Filhal sirf ek maal hai: jin ke paas Farmers ka safha
+ * khulta hai, unhein apni shaakh ke kisanon ki asal ginti. Kal koi aur
+ * role-specific khana chahiye ho to yahan aur shaakhein judti hain --
+ * ye function isi liye alag rakha hai.
+ */
+export interface KpiCard {
+  key: string;
+  label: string;
+  value: number | null;
+}
+
+export async function loadFourthKpi(branchId: string | null, allowedRoutes: string[] | null, lang: Lang): Promise<KpiCard | null> {
+  const can = allowedRoutes === null || routeAllowed(allowedRoutes, "/admin/farmers");
+  if (!can) return null;
+  try {
+    const service = createServiceClient();
+    let q = service.from("farmers").select("id", { count: "exact", head: true }).eq("is_deleted", false);
+    if (branchId) q = q.eq("branch_id", branchId);
+    const { count, error } = await q;
+    if (error) return null;
+    return { key: "farmers-area", label: t("mw_kpi_farmers_area", lang), value: count ?? null };
+  } catch {
+    return null;
+  }
+}
+
+export interface ActivityItem {
+  key: string;
+  labelKey: "mw_activity_sale" | "mw_activity_expense" | "mw_activity_labour";
+  subtitle: string | null;
+  amount: number | null;
+  status: string | null;
+  createdAt: string;
+}
+
+/**
+ * "Recent Activity" -- din bhar ka asal len-den, is bande ki shaakh aur
+ * ijazat ke mutabiq. Koi nayi table nahi -- jo tables pehle se maujood
+ * hain unhi se seedha padhta hai, aur wohi safha khulne ki shart lagati
+ * hai jis se ye row aayi (POS Sale ke liye /admin/pos ki ijazat waghera)
+ * -- warna banda aisi cheez dekhta jo us ke apne safhe par khulti hi nahi.
+ */
+export async function loadRecentActivity(branchId: string | null, allowedRoutes: string[] | null): Promise<ActivityItem[]> {
+  const service = createServiceClient();
+  const can = (path: string) => allowedRoutes === null || routeAllowed(allowedRoutes, path);
+  const items: ActivityItem[] = [];
+
+  async function pull(table: string, path: string, scope: (q: any) => any, map: (row: any) => ActivityItem) {
+    if (!can(path)) return;
+    try {
+      let q = service.from(table as never).select("*").order("created_at", { ascending: false }).limit(5);
+      q = scope(q);
+      const { data, error } = await q;
+      if (error || !data) return;
+      for (const row of data as any[]) items.push(map(row));
+    } catch {
+      /* ek zariya na mile to baqi chalte rahen -- poori patti khali nahi honi chahiye */
+    }
+  }
+
+  await Promise.all([
+    pull(
+      "pos_sales",
+      "/admin/pos",
+      (q) => (branchId ? q.eq("branch_id", branchId) : q),
+      (r) => ({ key: `sale-${r.id}`, labelKey: "mw_activity_sale", subtitle: null, amount: r.total_amount, status: r.status, createdAt: r.created_at })
+    ),
+    pull(
+      "company_expense_requests",
+      "/admin/kharche",
+      (q) => (branchId ? q.eq("branch_id", branchId) : q),
+      (r) => ({
+        key: `exp-${r.id}`,
+        labelKey: "mw_activity_expense",
+        subtitle: r.party_name ?? r.category ?? null,
+        amount: r.amount,
+        status: r.status,
+        createdAt: r.created_at,
+      })
+    ),
+    pull(
+      "labour_work_entries",
+      "/admin/kharche",
+      (q) => (branchId ? q.eq("branch_id", branchId) : q),
+      (r) => ({ key: `lab-${r.id}`, labelKey: "mw_activity_labour", subtitle: r.work_detail ?? null, amount: r.amount, status: r.status, createdAt: r.created_at })
+    ),
+  ]);
+
+  return items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 6);
 }
