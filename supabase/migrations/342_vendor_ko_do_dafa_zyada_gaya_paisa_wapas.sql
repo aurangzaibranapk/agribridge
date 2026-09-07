@@ -116,28 +116,50 @@ end $$;
 -- ---------------------------------------------------------------------
 -- Wohi baat jo 338 ne pakri thi: `finance_accounts.current_balance` sirf
 -- `finance_transactions` se nikalta hai. Ledger ulta kar dena kaafi nahi.
-insert into finance_transactions (account_id, transaction_type, category, amount, transaction_date, notes)
-select ft.account_id,
-       'income'::finance_transaction_type,
-       'Machinery Rental - Vendor Payout (wapas)',
-       ft.amount,
-       current_date,
-       'Booking MB-2026-00004 — do dafa zyada darj hui adaigi wapas (342). Asal qatar: ' || ft.id
-  from finance_transactions ft
- where ft.category = 'Machinery Rental - Vendor Payout'
-   and ft.notes like '%MB-2026-00004%'
-   and ft.id not in (
-     select id from finance_transactions
-      where category = 'Machinery Rental - Vendor Payout'
-        and notes like '%MB-2026-00004%'
-      order by created_at
-      limit 1
-   )
-   and not exists (
-     select 1 from finance_transactions x
-      where x.category = 'Machinery Rental - Vendor Payout (wapas)'
-        and x.notes like '%' || ft.id || '%'
-   );
+--
+-- EK QATAR EK STATEMENT MEIN -- ek hi INSERT...SELECT mein do (ya zyada)
+-- qatarein daalna khatarnak nikla: Live par MB-2026-00004 ki 2 zyada
+-- qatarein thin, aur ek sath daalne par `fn_apply_finance_transaction`
+-- ka incremental update doosri qatar par pehli ka naya `current_balance`
+-- nahi parh raha tha -- `fn_guard_finance_balance` ne farq pakar kar rok
+-- diya (Live par 7 September, jab ye migration chali). Testing par kabhi
+-- pakri nahi gayi kyunke wahan MB-2026-00004 ka ye haal kabhi bana hi
+-- nahi tha. Ab har zyada qatar apne ALAG statement mein jati hai, taake
+-- pehli ka balance poora settle ho jaye us se pehle ke doosri chale.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select ft.id, ft.account_id, ft.amount
+      from finance_transactions ft
+     where ft.category = 'Machinery Rental - Vendor Payout'
+       and ft.notes like '%MB-2026-00004%'
+       and ft.id not in (
+         select id from finance_transactions
+          where category = 'Machinery Rental - Vendor Payout'
+            and notes like '%MB-2026-00004%'
+          order by created_at
+          limit 1
+       )
+       and not exists (
+         select 1 from finance_transactions x
+          where x.category = 'Machinery Rental - Vendor Payout (wapas)'
+            and x.notes like '%' || ft.id || '%'
+       )
+     order by ft.id
+  loop
+    insert into finance_transactions (account_id, transaction_type, category, amount, transaction_date, notes)
+    values (
+      r.account_id,
+      'income'::finance_transaction_type,
+      'Machinery Rental - Vendor Payout (wapas)',
+      r.amount,
+      current_date,
+      'Booking MB-2026-00004 — do dafa zyada darj hui adaigi wapas (342). Asal qatar: ' || r.id
+    );
+  end loop;
+end $$;
 
 
 -- ---------------------------------------------------------------------

@@ -1790,33 +1790,60 @@ ghalat adad tha.
   aur `v_cash_book_ledger_farq` — jahan farq ho wahan qatar nazar aaye.
   Khali hona hi theek hai.
 
-## Rokay hue qadam — Live par abhi NAHI chale
+## 20 migrations Live par chal gayin (7 September)
 
-Dono migration **testing par chal chuki hain aur pass hain**. Live par
-tab jayengi jab malik ka **naya backup** aa jaye (P0 rule: backup ki
-tasdeeq se pehle Live par koi migration nahi).
+Malik ne backup liya (`agribridge-backup-20260907-0952.sql`, 4.1M) aur
+"system par aa gaya" kaha. P0 tarteeb ke mutabiq: backup tasdeeq →
+pre-migration ginti → migrations → verification ginti.
 
 | # | Kya karti hai | Testing | Live |
 |---|---|---|---|
-| 338 | Cash Book aur ledger ka milan + farq wala view | ✅ (0 farq) | **baqi** |
-| 339 | Customer ka khata: `fn_customer_ledger`, `fn_customer_baqi`, help | ✅ | **baqi** |
-| 340 | Wade ki tareekh har tabdeeli nahi rokti | ✅ | **baqi** |
-| 341 | Membership ka darja aur udhaar ka taala | ✅ | **baqi** |
-| 342 | Vendor ko do dafa zyada gaya paisa wapas | ✅ | **baqi** |
-| 343 | Ohda TEMPLATE bane, taala nahi + `fn_apply_role_template` | ✅ (har ohde ki ginti waisi hi rahi) | **baqi** |
-| 344 | Sales staff ka template malik ki fehrist par (20 → 9, view+create) | ✅ | **baqi** |
-| 345 | Dukan ka code khud bane (01, 02…) | ✅ | **baqi** |
-| 346 | Ek bande ke ek feature ki EK hi pakki qatar (unique taala) | ✅ (index bana) | **baqi** |
-| 347 | Rozana ka kharcha: banda, khata, tareekh + manzoori ka taala | ✅ | **baqi** |
-| 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | **baqi** |
-| 349 | Mazdoori, advance ka khud-ba-khud adjust, bande ka ek khata | ✅ (malik ka apna misaal ledger par chala kar dekha) | **baqi** |
-| 350 | Do taraf ki raqam manzoori se katti hai (`party_settlements`) | ✅ | **baqi** |
-| 351 | Manzoori ka waqt (SLA) aur us ka seedha (escalation) | ✅ (teen umar ki qatarein chala kar dekhi gayin) | **baqi** |
-| 352 | Khulasa rukh dekhe, khate ki qism nahi (ulta balance chhupta tha) | ✅ | **baqi** |
-| 353 | Live push: realtime ki ijazat + publication | ✅ (saaton table publication mein, replica identity full) | **baqi** |
-| 354 | Purani ijazat (`allowed_pages`) nayi fehrist mein | ✅ (har bande ka har purana safha khula raha — 0 band) | **baqi** |
-| 355 | Naya signup khudbakhud staff nahi banta (default `sales_staff` → `customer`) | ✅ | **baqi** |
-| 356 | `supplier_payment_requests` par RLS policy (pehle darwaza band tha) | ✅ (policy lagi, `pg_policies` se tasdeeq) | **baqi** |
+| 338 | Cash Book aur ledger ka milan + farq wala view | ✅ (0 farq) | ✅ |
+| 339 | Customer ka khata: `fn_customer_ledger`, `fn_customer_baqi`, help | ✅ | ✅ |
+| 340 | Wade ki tareekh har tabdeeli nahi rokti | ✅ | ✅ |
+| 341 | Membership ka darja aur udhaar ka taala | ✅ | ✅ |
+| 342 | Vendor ko do dafa zyada gaya paisa wapas | ✅ | ✅ (neeche dekhein — asal bug Live par hi pakri gayi) |
+| 343 | Ohda TEMPLATE bane, taala nahi + `fn_apply_role_template` | ✅ (har ohde ki ginti waisi hi rahi) | ✅ (Admin Assistant 98→94, Manager 98→125 — koi safha band nahi hua) |
+| 344 | Sales staff ka template malik ki fehrist par (20 → 9, view+create) | ✅ | ✅ |
+| 345 | Dukan ka code khud bane (01, 02…) | ✅ | ✅ (teen dukanein 01/02/03 ban gayin) |
+| 346 | Ek bande ke ek feature ki EK hi pakki qatar (unique taala) | ✅ (index bana) | ✅ |
+| 347 | Rozana ka kharcha: banda, khata, tareekh + manzoori ka taala | ✅ | ✅ |
+| 348 | Kharche ki qism bandhi hui nahi + `fn_bande_ka_saara_lenden` | ✅ (paanch jaanch pass) | ✅ |
+| 349 | Mazdoori, advance ka khud-ba-khud adjust, bande ka ek khata | ✅ (malik ka apna misaal ledger par chala kar dekha) | ✅ |
+| 350 | Do taraf ki raqam manzoori se katti hai (`party_settlements`) | ✅ | ✅ |
+| 351 | Manzoori ka waqt (SLA) aur us ka seedha (escalation) | ✅ (teen umar ki qatarein chala kar dekhi gayin) | ✅ |
+| 352 | Khulasa rukh dekhe, khate ki qism nahi (ulta balance chhupta tha) | ✅ | ✅ |
+| 353 | Live push: realtime ki ijazat + publication | ✅ (saaton table publication mein, replica identity full) | ✅ |
+| 354 | Purani ijazat (`allowed_pages`) nayi fehrist mein | ✅ (har bande ka har purana safha khula raha — 0 band) | ✅ (413 qatarein bani, koi safha band nahi hua) |
+| 355 | Naya signup khudbakhud staff nahi banta (default `sales_staff` → `customer`) | ✅ | ✅ |
+| 356 | `supplier_payment_requests` par RLS policy (pehle darwaza band tha) | ✅ (policy lagi, `pg_policies` se tasdeeq) | ✅ |
+| 357 | Load & Bill ka udhaar kisan ko bhi (`load_transactions.farmer_id`) | ✅ | ✅ |
+
+### 342 ne Live par ek asal, nayi kharabi pakri — batch insert ka masla
+
+342 pehli koshish mein **rukk gayi** (Testing par nahi hoti thi, kyunki
+wahan MB-2026-00004 ka teen-dafa-adaigi wala haal kabhi bana hi nahi
+tha). Ek hi `INSERT ... SELECT` mein do "wapas" (reversal) qatarein ek
+sath daalne par `fn_apply_finance_transaction` ka incremental update
+doosri qatar par pehli ka naya `current_balance` nahi parh raha tha —
+`fn_guard_finance_balance` ne Rs 30,000 ka farq pakar kar poori
+migration rok di. Migration file khud theek ki gayi (ab har qatar apne
+alag `INSERT` statement mein, ek PL/pgSQL loop ke andar) aur dobara
+chalayi — is baar saaf. Verification: "Cash in Hand" ka
+`current_balance` aur `fn_finance_account_true_balance` dono -28,000
+par barabar, `amount_paid_to_vendor` = 24,750 (booking ka sahi hissa).
+
+### Pre/post migration ginti — sab reconcile hui
+
+| Table | Pehle | Baad | Farq ki wajah |
+|---|---|---|---|
+| journal_entries | 43 | 44 | +1 (342 ki durustagi wali entry) |
+| journal_lines | 121 | 124 | +3 (usi entry ki qatarein) |
+| finance_transactions | 17 | 23 | +6 (338 ka milan + 342 ka wapas) |
+| role_feature_permissions | 226 | 222 | -11 (344, sales_staff) +4 (347) +3 (350) |
+| user_feature_permissions | 0 | 413 | 343 + 354 ki naql |
+| v_cash_book_ledger_farq | — | 0 | saaf |
+| customers, farmers, profiles, load_transactions, supplier_payment_requests | — | — | koi farq nahi |
 
 ### 343 aur 346 ki tarteeb — ye ulti nahi ho sakti
 
