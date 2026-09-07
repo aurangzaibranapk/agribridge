@@ -152,6 +152,89 @@ export async function trialBalance(
   };
 }
 
+/**
+ * Ek SHOP ka trial balance -- ledger khud sirf BRANCH tak jaata hai
+ * (`journal_entries.branch_id`), shop tak nahi. Is liye ye seedha
+ * `journal_lines` par shop se filter nahi kar sakta.
+ *
+ * Raasta: har posting apna `source_module` + `source_id` rakhti hai
+ * (`kharche` -> company_expense_requests.id, `pos` -> pos_sales.id),
+ * aur dono tables mein `shop_id` pehle se maujood hai. Pehle un dono se
+ * is shop ke IDs nikalte hain, phir unhi IDs ki entries ka jama karte
+ * hain -- koi naya hisaab nahi, koi schema badlaav nahi.
+ */
+async function shopLines(from: string, to: string, shopId: string) {
+  const service = createServiceClient();
+
+  const [{ data: sales }, { data: expenses }] = await Promise.all([
+    service.from("pos_sales").select("id").eq("shop_id", shopId).gte("created_at", from).lte("created_at", to + "T23:59:59"),
+    service
+      .from("company_expense_requests")
+      .select("id")
+      .eq("shop_id", shopId)
+      .eq("status", "approved")
+      .gte("approved_at", from)
+      .lte("approved_at", to + "T23:59:59"),
+  ]);
+
+  const saleIds = (sales ?? []).map((r) => r.id as string);
+  const expenseIds = (expenses ?? []).map((r) => r.id as string);
+  if (saleIds.length === 0 && expenseIds.length === 0) {
+    return { rows: [] as LineRow[], error: null as string | null };
+  }
+
+  const [posRes, kharcheRes] = await Promise.all([
+    saleIds.length > 0
+      ? service
+          .from("journal_lines")
+          .select("account_code, debit, credit, journal_entries!inner(source_module, source_id)")
+          .eq("journal_entries.source_module", "pos")
+          .in("journal_entries.source_id", saleIds)
+      : { data: [] as unknown[], error: null },
+    expenseIds.length > 0
+      ? service
+          .from("journal_lines")
+          .select("account_code, debit, credit, journal_entries!inner(source_module, source_id)")
+          .eq("journal_entries.source_module", "kharche")
+          .in("journal_entries.source_id", expenseIds)
+      : { data: [] as unknown[], error: null },
+  ]);
+
+  if (posRes.error || kharcheRes.error) {
+    return { rows: null as LineRow[] | null, error: (posRes.error ?? kharcheRes.error)!.message };
+  }
+
+  return { rows: [...(posRes.data ?? []), ...(kharcheRes.data ?? [])] as unknown as LineRow[], error: null as string | null };
+}
+
+export async function shopTrialBalance(from: string, to: string, shopId: string): Promise<TrialBalance> {
+  const [{ list, error: accErr }, { rows, error: lineErr }] = await Promise.all([accounts(), shopLines(from, to, shopId)]);
+
+  if (accErr || lineErr || !rows) {
+    return { rows: [], totalDebit: 0, totalCredit: 0, farq: 0, error: accErr ?? lineErr ?? "maloom nahi" };
+  }
+
+  const dr = new Map<string, number>();
+  const cr = new Map<string, number>();
+  for (const l of rows) {
+    dr.set(l.account_code, (dr.get(l.account_code) ?? 0) + Number(l.debit ?? 0));
+    cr.set(l.account_code, (cr.get(l.account_code) ?? 0) + Number(l.credit ?? 0));
+  }
+
+  const out: TrialRow[] = list
+    .map((a) => {
+      const debit = dr.get(a.code) ?? 0;
+      const credit = cr.get(a.code) ?? 0;
+      return { ...a, debit, credit, balance: a.normal_side === "debit" ? debit - credit : credit - debit };
+    })
+    .filter((r) => r.debit !== 0 || r.credit !== 0);
+
+  const totalDebit = out.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = out.reduce((s, r) => s + r.credit, 0);
+
+  return { rows: out, totalDebit, totalCredit, farq: Math.round((totalDebit - totalCredit) * 100) / 100 };
+}
+
 export interface PnlSection {
   rows: TrialRow[];
   total: number;

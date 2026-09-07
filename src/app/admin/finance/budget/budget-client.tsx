@@ -26,6 +26,8 @@ export function BudgetClient({
   year,
   branchId,
   branches,
+  shopId,
+  shops,
   monthsElapsed,
   rows,
 }: {
@@ -35,12 +37,26 @@ export function BudgetClient({
   /** null = poori company (company-wide budget). */
   branchId: string | null;
   branches: { id: string; name: string }[];
+  /** null = shop tak mehdood nahi -- poori branch (ya poori company). */
+  shopId: string | null;
+  /** Sirf chuni hui branch ke shop -- branchId khali ho to hamesha khali. */
+  shops: { id: string; name: string }[];
   monthsElapsed: number;
   rows: Row[];
 }) {
   const router = useRouter();
   const [state, formAction] = useFormState(saveBudget, initial);
   const [edit, setEdit] = useState(false);
+
+  // Teenon dropdown (saal, branch, shop) isi ek raaste se URL banate
+  // hain -- taake teeno hamesha ek doosre ke sath theek rahen (branch
+  // badalte hi purana shop apne aap chhoot jata hai).
+  function goTo(y: number, b: string | null, s: string | null) {
+    const params = new URLSearchParams({ year: String(y) });
+    if (b) params.set("branch_id", b);
+    if (s) params.set("shop_id", s);
+    router.push(`/admin/finance/budget?${params.toString()}`);
+  }
 
   const rs = (n: number) => Math.round(n).toLocaleString();
   const hissa = monthsElapsed / 12;
@@ -136,10 +152,7 @@ export function BudgetClient({
             className="w-32"
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (v >= 2000 && v <= 2100) {
-                const q = branchId ? `year=${v}&branch_id=${branchId}` : `year=${v}`;
-                router.push(`/admin/finance/budget?${q}`);
-              }
+              if (v >= 2000 && v <= 2100) goTo(v, branchId, null);
             }}
           />
         </div>
@@ -149,16 +162,31 @@ export function BudgetClient({
             <select
               id="branch_pick"
               defaultValue={branchId ?? ""}
-              onChange={(e) => {
-                const q = e.target.value ? `year=${year}&branch_id=${e.target.value}` : `year=${year}`;
-                router.push(`/admin/finance/budget?${q}`);
-              }}
+              onChange={(e) => goTo(year, e.target.value || null, null)}
               className="h-10 w-52 rounded-lg border border-surface-200 bg-white px-2.5 text-sm dark:border-surface-700 dark:bg-surface-900"
             >
               <option value="">{t("bg_all_branches", lang)}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {branchId && shops.length > 0 && (
+          <div>
+            <Label htmlFor="shop_pick">{t("bg_shop", lang)}</Label>
+            <select
+              id="shop_pick"
+              defaultValue={shopId ?? ""}
+              onChange={(e) => goTo(year, branchId, e.target.value || null)}
+              className="h-10 w-52 rounded-lg border border-surface-200 bg-white px-2.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+            >
+              <option value="">{t("bg_whole_branch", lang)}</option>
+              {shops.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
                 </option>
               ))}
             </select>
@@ -177,6 +205,7 @@ export function BudgetClient({
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="year" value={year} />
         <input type="hidden" name="branch_id" value={branchId ?? ""} />
+        <input type="hidden" name="shop_id" value={shopId ?? ""} />
         {table(t("bg_expenses", lang), expense)}
         {table(t("bg_income", lang), income)}
         {edit && (

@@ -4912,6 +4912,7 @@ export type Database = {
           budget_id: string
           id: string
           note: string | null
+          shop_id: string | null
           updated_at: string
         }
         Insert: {
@@ -4921,6 +4922,7 @@ export type Database = {
           budget_id: string
           id?: string
           note?: string | null
+          shop_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -4930,6 +4932,7 @@ export type Database = {
           budget_id?: string
           id?: string
           note?: string | null
+          shop_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4960,6 +4963,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "budgets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
           },
         ]
       }

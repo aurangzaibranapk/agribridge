@@ -156,6 +156,8 @@ export const financeReportsDict = {
   bg_year: { en: "Year", rm: "Saal", ur: "سال" },
   bg_branch: { en: "Branch", rm: "Shaakh", ur: "شاخ" },
   bg_all_branches: { en: "Whole company", rm: "Poori company", ur: "پوری کمپنی" },
+  bg_shop: { en: "Shop", rm: "Dukan", ur: "دکان" },
+  bg_whole_branch: { en: "Whole branch", rm: "Poori shaakh", ur: "پوری شاخ" },
   bg_months: {
     en: "{n} months of this year counted so far",
     rm: "Is saal ke {n} mahine gine gaye hain",
