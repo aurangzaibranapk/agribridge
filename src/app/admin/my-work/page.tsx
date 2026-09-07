@@ -8,6 +8,7 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
+import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -180,6 +181,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
   return (
+    <InPageWorkspace>
     <div className="mx-auto w-full max-w-[1100px]">
       {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
           greeting, date/time aur score teen alag boxon mein. Ab ek hi
@@ -353,6 +355,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       </div>
     </div>
+    </InPageWorkspace>
   );
 }
 

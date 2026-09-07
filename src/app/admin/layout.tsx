@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ChromeGate } from "@/components/layout/chrome-gate";
 import { Suspense } from "react";
 import { GuideOverlay } from "@/components/guided/guide-overlay";
 import { CompactNav } from "@/components/layout/compact-nav";
@@ -187,19 +188,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Chhoti sidebar sirf us bande ko jise das se ZYADA safhe khulte
           hain. Us se kam par safha sirf cards ka rehta hai -- malik ka
           usool. */}
-      {sidebarKind === "work" && user && (
-        <WorkSidebar
-          lang={lang}
-          homeHref={homePageForRole(role)}
-          quick={quickSide}
-          departments={deptSide}
-          reports={reportsSide}
-          settings={settingsSide}
-        />
-      )}
-      {showSidebar && (
-        <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
-      )}
+      {/* ChromeGate: Mera Kaam se ek safha "workspace" overlay ke andar
+          khula ho (?workspace=1) to yahan sidebar dobara nahi banti --
+          overlay ka apna Wapas/title header hi kaafi hai. */}
+      <Suspense fallback={null}>
+        <ChromeGate>
+          {sidebarKind === "work" && user && (
+            <WorkSidebar
+              lang={lang}
+              homeHref={homePageForRole(role)}
+              quick={quickSide}
+              departments={deptSide}
+              reports={reportsSide}
+              settings={settingsSide}
+            />
+          )}
+          {showSidebar && (
+            <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+          )}
+        </ChromeGate>
+      </Suspense>
       {/* min-w-0 -- is ke baghair poora safha daayen se kat jata hai.
           Flex ki qatar mein har bachche ki kam se kam chaurai us ke andar
           ke maal jitni hoti hai (min-width: auto). Yani ek chauri table
@@ -212,18 +220,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           aur CSS ke qaide se us ka overflow-x bhi khud auto ho jata hai.
           Yani table apne dabbe mein khisakti hai, poora safha nahi. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {showSidebar ? (
-          <Topbar
-            subtitle={t("at_website_admin", lang)}
-            searchAction="/admin/dashboard"
-            searchPlaceholder="Search..."
-            notificationsHref="/admin/contact-messages"
-            navGroups={navGroups}
-            lang={lang}
-          />
-        ) : (
-          <CompactNav lang={lang} showPos={showPos} homeHref={homePageForRole(role)} />
-        )}
+        <Suspense fallback={null}>
+          <ChromeGate>
+            {showSidebar ? (
+              <Topbar
+                subtitle={t("at_website_admin", lang)}
+                searchAction="/admin/dashboard"
+                searchPlaceholder="Search..."
+                notificationsHref="/admin/contact-messages"
+                navGroups={navGroups}
+                lang={lang}
+              />
+            ) : (
+              <CompactNav lang={lang} showPos={showPos} homeHref={homePageForRole(role)} />
+            )}
+          </ChromeGate>
+        </Suspense>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
           <p className="mt-8 text-center text-[11px] text-surface-400">{t("at_footer", lang)}</p>
