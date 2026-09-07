@@ -2179,60 +2179,46 @@ jaisi jaanch), aur pehle bhi isi tarah verify ho chuka hai. Agar malik
 chahen to in ka bhi ek-ek karke gehra review ho sakta hai, magar wo
 alag, lamba kaam hoga.
 
-## Ab tak ka poora hisaab — ye meri chalti hui fehrist hai (7 September, taaza)
+## Ab tak ka poora hisaab — ye meri chalti hui fehrist hai (7 September, sham)
 
 Malik: *"apni purani memory update kr, us men baqi Jo kam hn wo krin
 tmhara task hg."* Yani ye fehrist ab ek dafa ka kaam nahi — har dafa
 kaam karte waqt ye pehle parhna hai, aur har dafa kuch nayi cheez
 milte ya poori hote hi yahan update karna hai.
 
-**Migrations 338–357 — Live par sab chal chuki hain.** Poori tafseel
-"20 migrations Live par chal gayin (7 September)" wale hisse mein hai.
+### Database — sab kuch Live par ho chuka
 
-**Ek nayi migration Live jane ke liye taiyar hai — backup ki tasdeeq ka intezar:**
+Migrations 338–360, **sab Live par chal chuki hain aur verify ho chuki
+hain.** (338–357: "20 migrations Live par chal gayin" wale hisse mein;
+358 Stock/Suspense ka Rs 28, 359 Purchase review edit-tracking, 360
+WhatsApp adhoora farmer na bane — teenon isi sitting mein, 4.4M wale
+backup ki chhatri ke neeche.) **Koi migration ab pending nahi.**
 
-| # | Kya karti hai | Testing | Live |
-|---|---|---|---|
-| 358 | Stock (1200) ka purana Rs 28 ka farq — Suspense (9999) mein | ✅ (Live-specific 4 POS ID Testing par nahi milin, is liye khud khamoshi se kuch nahi kiya — theek yehi hona chahiye tha) | ⏳ backup ka intezar |
-| 359 | `purchase_comments.kind` check constraint mein 'edit' shamil (Purchase review: items dikhna, qty/rate edit) | ✅ | ⏳ backup ka intezar |
+### Code — naya build Live se aage nikal chuka, upload chal raha hai
 
-Wajah: Master Dashboard ka banner ("Stock ke do adad barabar nahi").
-Jaanch: `v_ledger_unposted` par koi purchase/supplier_payment unposted
-NAHI — asal wajah 1200 ki 4 purani POS qatarein hain (4-5 September,
-333 ki fix se pehle) jin ki koi kharid is system se guzri hi nahi thi.
-Malik ki tasdeeq (7 September): Rs 28 ko 9999 (Suspense) mein dalein —
-Bank Reconciliation jaisa hi tareeqa.
-
-**BACKUP TASDEEQ AANE SE PEHLE YE LIVE PAR NAHI CHALEGI**, chahe malik
-"chalao" bhi kahein — P0 usool.
-
-**Naya build baqi hai (code Live se aage nikal chuka hai):**
-
-Malik ne pichla build (khata/credit wala) chala liya hai — "load or
-bill pay khata wagira active kr diy hn" — jo commit `d3cd4aa` (Load &
-Bill stage 2) tak ka code tha. Us ke baad ye push hue hain, abhi kisi
-build mein nahi gaye:
+Malik ne pichla build (khata/credit wala, commit `d3cd4aa` tak) chala
+liya tha. Us ke baad se ye sab push ho chuka hai aur **abhi build ho
+kar upload ho raha hai** (7 September sham, malik khud terminal par
+hai):
 
 | Commit | Kya hai |
 |---|---|
-| `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab (pehle Udhaar ke andar chhupa toggle tha), Service Charge ab Cash/Khata ke baad, PartyStrip mein "Available Credit" saaf dikhta hai |
-| `02ff9c2` | Farmer Details ke Documents (CNIC front/back, tasveer) — camera se seedha khenchna + upload se pehle crop (naya `ImageCropField`) |
-| `7a93f85` | Agri Order (New): "Partner Details" sirf bahar wale supplier ke liye — Company/apni shop se order karte waqt ye poora hissa ghayab, staff ko apni maloomat dobara nahi likhni parti |
-| `d0c40f4` | Purchase review: products/qty/rate dikhte hain, wahin se edit ho sakte hain (trackable), aur list par saaf ke kis ne approve/reject/wapas kiya (migration 359 shamil) |
-| `0ae8979` | Propose Product: image upload (maujooda `ProductImageUpload` reuse) + fehrist mein na ho to staff naya category naam likh sake |
-| `7042dab` | Farmer registration ka email confirmation fail (auth.signUp -> admin.createUser) + WhatsApp OTP register page par button |
-| `aff921a` | Login OTP cooldown ke second ab live ginte hain (pehle server ka ek dafa ka adad jyun ka tyun ruk jata tha) |
-| `062f0f3` | WhatsApp: na-maloom number se adhoora "WhatsApp Farmer" nahi banta -- naam+gaon poochne ke baad hi (migration 360) |
-| `319a293` | Mera Kaam: department cards 2-3 column grid, "Sab Theek" sirf hara nishan |
+| `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab, Service Charge Cash/Khata ke baad, PartyStrip mein "Available Credit" |
+| `02ff9c2` | Farmer Details Documents — camera se seedha khenchna + crop (`ImageCropField`) |
+| `7a93f85` | Agri Order (New): "Partner Details" sirf bahar wale supplier ke liye |
+| `d0c40f4` | Purchase review: items dikhna/edit, kis ne approve/reject kiya (migration 359) |
+| `0ae8979` | Propose Product: image upload + naya category likh sakte hain |
+| `7042dab` | Farmer registration email fail fix (admin.createUser) + WhatsApp OTP button |
+| `aff921a` | Login OTP cooldown live ginta hai |
+| `062f0f3` | WhatsApp adhoora farmer nahi banta (migration 360) |
+| `319a293`, `4f1dcd1` | Mera Kaam: department cards grid, "Sab Theek" sirf nishan, ek waqt mein ek hi department khula |
+| `de1f10f` | Isi fehrist ke purane update |
 
-**Dhyan rahe:** "10 se zyada permission par sidebar khud aati hai" wala
-usool (`sidebar-free.ts`) pehle se bana hua hai aur Live par
-`platform_settings.sidebar_free_dashboards` **enabled** bhi hai. Anwar
-ab (10 permissions par) is threshold ki seedh par hai -- rule `>10`
-hai (barabar nahi), is liye 10 par wo "kind: none" (sirf cards, koi
-sidebar nahi) mein aayega, "kind: work" (chhoti sidebar) mein nahi.
-Agar malik chahen ke theek 10 par bhi chhoti sidebar rahe, to
-`SIDEBAR_MIN_ITEMS` ya check `>=` karna hoga.
+**Dhyan rahe:** "10 se zyada permission par sidebar khud aati hai"
+(`sidebar-free.ts`) pehle se bana hua hai, Live ka
+`platform_settings.sidebar_free_dashboards` **enabled** hai. Rule
+`>10` hai (barabar nahi) — Anwar theek 10 par "sirf cards" mein aata
+hai, chhoti sidebar mein nahi.
 
 **Scope badla (7 September, malik ke alfaz): "developer ko mana kar
 diya hua hai, email or WhatsApp OTP sab ap he karo."** Front
@@ -2240,27 +2226,31 @@ website/registration (`src/app/register/**`, `src/app/login/**`) ka
 email/WhatsApp-OTP hissa ab mera hai — baqi front website abhi bhi
 developer ka hai jab tak malik kuch aur na kahein.
 
-Agla build lete waqt ye dono commits shamil honge — koi alag qadam
-nahi chahiye, sirf agla "pull + build + package" ka jorra.
+### Anwar ki permission (staff-access se khud theek ki gayi)
 
-**Load & Bill redesign ka baqi hissa (code abhi nahi likha):**
-- Bill Payment tab ka provider/bill_category khana abhi bhi purane
-  "Kis cheez ka bill" tareeqe par hai — mainParty engine se customer
-  aana to poora ho chuka (stage 2 se), magar bill-specific fields ka
-  gehra review baqi hai agar malik koi masla nikalen.
-- Sidebar "Customer Ledger" ko Unified Khata ka filtered view banana —
-  malik ka apna future architecture item, shuru nahi hua.
+20 se 10 par (sales_staff template) — malik ne khud `/admin/staff-access`
+se kiya. **Khula sawal:** `my-department` ("My Team — Head" ki ijazat)
+ab bhi Anwar ke paas hai, kyunke template lagane se jo pehle se hai wo
+chhua nahi jata. Rakhna hai ya hatana — malik ka faisla baqi hai.
 
-**Malik ke faisle ka intezar (code taiyar nahi, sirf sawal khula hai):**
-- 358 security lint mein se ~350 abhi tak sirf "ye is project ka apna
-  tareeqa hai" keh kar chhore gaye, ek-ek karke gehra review nahi hua.
-  Agar malik chahen to alag se ye kaam ho sakta hai.
-- `allowed_pages`/`role_page_permissions` girane wali migration ka SQL
-  taiyar hai (upar "Purana khana girane wali migration — BAAD mein"),
-  magar jaan boojh kar nahi banai — naya build Live par chalne aur
-  smoke test pass hone ke baad hi banegi (354 ki naql abhi tazi hai,
-  purana khana abhi ek dafa aur dekh lena behtar hai).
+### Malik ke apne khule kaam (mere control se bahar)
 
-**Koi aur khula, na-poora kaam abhi nazar nahi aaya.** Agla review jab
-bhi ho, is fehrist ko yahin se aage barhana hai, dobara sab kuch parhne
-ki zaroorat nahi.
+- **WhatsApp OTP template** — Meta Business Manager mein Authentication
+  category ka template chahiye (naam `WHATSAPP_OTP_TEMPLATE` env mein
+  jayega). Malik dekh rahe hain ke pehle se koi manzoor shuda hai ya
+  naya banana hai.
+- **SendPK / BulkSMS.com.pk** — account ban chuka hai, API Docs abhi
+  dekhne baqi hain. Mil jaye to `src/lib/sms.ts` mein integration
+  likha jayega (abhi stub hai, "SMS provider not configured yet").
+
+### Baad ke liye taiyar, jaan boojh kar abhi nahi banaya
+
+- `allowed_pages`/`role_page_permissions` girane wali migration —
+  SQL taiyar hai, naya build ka smoke test pass hone ke baad banegi.
+- 358 security lint mein se ~350 abhi tak deep-review nahi hue (malik
+  chahen to alag kaam).
+- Load & Bill: Bill Payment tab ka bill-specific fields ka gehra
+  review; sidebar "Customer Ledger" ko Unified Khata ka filtered view
+  banana (malik ka apna future item).
+
+**Agla review jab bhi ho, is fehrist ko yahin se aage barhana hai.**
