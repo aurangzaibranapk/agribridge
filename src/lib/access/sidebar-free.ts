@@ -28,18 +28,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 const DEFAULT_MASTER_ROLES = ["owner", "super_admin", "admin"];
 
 /**
- * Is se ZYADA safhe hon to chhoti sidebar khud aa jati hai.
- *
- * Malik ka usool (5 September): "1-10 permissions: isi clean card
- * dashboard se kaam kare, sidebar nahi. 10 se zyada permissions:
- * dashboard same rahe, lekin us staff ke authorized modules ka dynamic
- * sidebar automatically activate ho jaye."
- *
- * Wajah saaf hai: paanch cheezon ke liye sidebar sirf jagah khaati hai
- * -- cards saamne hain, do click ki zaroorat nahi. Magar bees cheezon
- * par card ka safha khud ek fehrist ban jata hai, aur us mein se apna
- * kaam dhoondna wohi mushkil hai jis se bachne ke liye cards banaye
- * gaye the.
+ * Malik ka pehla usool (5 September) ye tha: "1-10 permissions: sidebar
+ * nahi, 10 se zyada: sidebar khud aa jaye." Malik ne 7 September ko ye
+ * badal diya: *"sabko hamesha sidebar chahiye"* -- kam features wale
+ * staff (Anwar jaisa, 10 features) ko bhi ab chhoti sidebar milti hai,
+ * itemCount ka hisaab nahi lagaya jata. Purana threshold isi liye ab
+ * istemal nahi hota -- yahan sirf yaadgaar chhoड़ा gaya hai.
  */
 export const SIDEBAR_MIN_ITEMS = 10;
 
@@ -81,11 +75,12 @@ export async function sidebarModeFor(role: string, itemCount = 0): Promise<Sideb
     const isMaster = roles.includes(role);
     if (isMaster) return { kind: "full", showSidebar: true, isMaster: true };
 
-    // Ginti ijazat se aati hai, role se nahi. Isi liye do bande ek hi
-    // role par alag alag safha dekh sakte hain -- aur yehi theek hai:
-    // sidebar us ke apne kaam ke hisaab se aati hai, us ke laqab ke
-    // hisaab se nahi.
-    return { kind: itemCount > SIDEBAR_MIN_ITEMS ? "work" : "none", showSidebar: false, isMaster: false };
+    // Malik (7 September): "sabko hamesha sidebar chahiye" -- kam
+    // features wala staff bhi ab chhoti "work" sidebar leta hai, ginti
+    // ka hisaab nahi lagaya jata. itemCount parameter ab sirf caller ke
+    // liye rakha hua hai (aane wale kal kisi wajah se dobara chahiye ho).
+    void itemCount;
+    return { kind: "work", showSidebar: false, isMaster: false };
   } catch {
     // Setting na mile to purani sidebar chalti hai -- navigation ka
     // ghayab ho jana poore daftar ko rok deta hai.
