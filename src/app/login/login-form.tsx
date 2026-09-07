@@ -123,13 +123,29 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  /**
+   * Malik (7 September): "ye second jo rukay hain wo chalna chahiye,
+   * pata to chale kitna second ho gaye hain" -- pehle server ka bheja
+   * hua adad ek dafa likh kar rukk jata tha, screen par ginta nahi tha.
+   * Ab yahin, client par, har second kam hota hai.
+   */
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => setAsking(false), [askState]);
   useEffect(() => { if (checkState.success) { router.push("/portal/dashboard"); router.refresh(); } }, [checkState.success, router]);
+  useEffect(() => {
+    if (askState.retryAfterSeconds) setCooldown(askState.retryAfterSeconds);
+  }, [askState]);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   const usingEmail = email.trim().length > 0;
   const phoneSent = askState.otpSent || checkState.otpSent;
   const needsProfile = checkState.needsProfile ?? askState.needsProfile ?? false;
+  const cooldownMessage = cooldown > 0 ? `Thora intezar karein — ${cooldown} second baad dobara bhej sakte hain.` : null;
 
   async function sendEmailCode(address: string) {
     setEmailBusy(true); setEmailError(null);
@@ -164,20 +180,26 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     <div>
       <div className="mb-4"><StepBadge>2</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">OTP verify karein</span></div>
       <form action={checkAction} className="space-y-4">
-        {(checkState.error || askState.error) ? <Alert tone="error">{checkState.error ?? askState.error}</Alert> : <Alert>Code {askState.sentVia === "sms" ? "SMS" : "WhatsApp"} par bhej diya gaya{askState.knownName ? ` — ${askState.knownName}` : ""}.</Alert>}
+        {(checkState.error || cooldownMessage || askState.error) ? <Alert tone="error">{checkState.error ?? cooldownMessage ?? askState.error}</Alert> : <Alert>Code {askState.sentVia === "sms" ? "SMS" : "WhatsApp"} par bhej diya gaya{askState.knownName ? ` — ${askState.knownName}` : ""}.</Alert>}
         <input type="hidden" name="phone" value={phone} />
         <div><Label htmlFor="code">{t("au_six_digit_code", lang)}</Label><Input id="code" name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} /></div>
         {needsProfile && <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3"><p className="text-xs font-semibold text-amber-800">{t("au_first_time_number", lang)}</p><div><Label htmlFor="full_name">{t("au_your_name", lang)}</Label><Input id="full_name" name="full_name" required placeholder={t("au_eg_name", lang)} className={FIELD} /></div><div><Label htmlFor="village">{t("au_village", lang)}</Label><Input id="village" name="village" placeholder={t("au_eg_village", lang)} className={FIELD} /></div></div>}
         <SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." />
       </form>
-      <form action={askAction} className="mt-3"><input type="hidden" name="phone" value={phone} /><input type="hidden" name="channel" value={askState.sentVia === "whatsapp" ? "sms" : "whatsapp"} /><button type="submit" className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">{t("au_code_not_received", lang)}</button></form>
+      <form action={askAction} className="mt-3">
+        <input type="hidden" name="phone" value={phone} />
+        <input type="hidden" name="channel" value={askState.sentVia === "whatsapp" ? "sms" : "whatsapp"} />
+        <button type="submit" disabled={cooldown > 0} className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline disabled:cursor-not-allowed disabled:text-surface-400 disabled:no-underline">
+          {cooldown > 0 ? `${cooldown} second mein dobara bhej sakte hain` : t("au_code_not_received", lang)}
+        </button>
+      </form>
     </div>
   );
 
   return (
     <>
       <form action={(fd: FormData) => { const typedEmail = String(fd.get("email") ?? "").trim(); if (typedEmail) { void sendEmailCode(typedEmail); return; } setAsking(true); askAction(fd); }} className="space-y-4">
-        {(askState.error || emailError) && <Alert tone="error">{askState.error ?? emailError}</Alert>}
+        {(cooldownMessage || askState.error || emailError) && <Alert tone="error">{cooldownMessage ?? askState.error ?? emailError}</Alert>}
         <div>
           <div className="mb-1.5 flex items-center justify-between"><Label htmlFor="phone">{t("au_mobile_userid", lang)}</Label><span className="text-[11px] font-medium text-surface-400">Recommended</span></div>
           <div className="flex gap-2"><div className="flex h-12 items-center rounded-xl border border-surface-200 bg-surface-50 px-3 text-sm font-semibold text-surface-600">+92</div><Input id="phone" name="phone" inputMode="numeric" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="300 1234567" className={`${FIELD} min-w-0 flex-1`} /></div>
@@ -188,7 +210,12 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
         <Divider label={t("au_ya", lang)} />
 
         <div><Label htmlFor="email">{t("au_email_userid", lang)}</Label><Input id="email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className={FIELD} /><p className="mt-1.5 text-[11px] leading-relaxed text-surface-400">{t("au_email_code_note", lang)}</p></div>
-        <SubmitBtn label={t("au_send_otp", lang)} busy="Bheja ja raha hai..." pending={emailBusy || asking} />
+        <SubmitBtn
+          label={t("au_send_otp", lang)}
+          busy="Bheja ja raha hai..."
+          pending={emailBusy || asking || cooldown > 0}
+          pendingLabel={cooldown > 0 ? `${cooldown} second baad` : undefined}
+        />
       </form>
 
       <p className="mt-4 text-center text-[13px] text-surface-600">{t("au_not_member", lang)} <Link href="/register/farmer" className="font-semibold text-[#1E4A2E] hover:underline">{t("au_register_now", lang)}</Link></p>
@@ -205,10 +232,22 @@ function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
   return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="username">{t("pm_user_id", lang)}</Label><Input id="username" name="username" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
 }
 
-function SubmitBtn({ label, busy, pending: extraPending = false }: { label: string; busy: string; pending?: boolean }) {
+function SubmitBtn({
+  label,
+  busy,
+  pending: extraPending = false,
+  pendingLabel,
+}: {
+  label: string;
+  busy: string;
+  pending?: boolean;
+  /** extraPending ki apni wajah ho (jaise cooldown) to "busy" ki jagah ye dikhta hai. */
+  pendingLabel?: string;
+}) {
   const { pending } = useFormStatus();
   const waiting = pending || extraPending;
-  return <Button type="submit" disabled={waiting} className={BIG_BTN}>{waiting ? busy : label}</Button>;
+  const text = pending ? busy : extraPending ? pendingLabel ?? busy : label;
+  return <Button type="submit" disabled={waiting} className={BIG_BTN}>{text}</Button>;
 }
 
 function Alert({ children, tone = "success" }: { children: React.ReactNode; tone?: "success" | "error" }) {

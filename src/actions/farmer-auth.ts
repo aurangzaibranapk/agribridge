@@ -41,6 +41,14 @@ export interface FarmerAuthState {
   success?: boolean;
   /** Purana kisan mila to us ka naam, taake screen us se baat kar sake. */
   knownName?: string;
+  /**
+   * Cooldown rok lage to itne second baad dobara mangwaya ja sakta hai.
+   * Malik (7 September): "ye second jo rukay hain wo chalna chahiye" --
+   * pehle ye adad ek dafa `error` ke andar text mein likha jata tha aur
+   * screen par jyun ka tyun rukka rehta, ginta nahi tha. Screen (client)
+   * isi adad se apna live countdown chalata hai.
+   */
+  retryAfterSeconds?: number;
 }
 
 /** Kisan ke login ka banawati email -- hamesha ek hi qaide se. */
@@ -72,7 +80,7 @@ export async function requestFarmerOtp(
   const match = await findFarmerByPhone(service, phone);
 
   const sent = await sendFarmerOtp(phone, channel);
-  if (!sent.ok) return { error: sent.error };
+  if (!sent.ok) return { error: sent.error, retryAfterSeconds: sent.retryAfterSeconds };
 
   return {
     otpSent: true,
