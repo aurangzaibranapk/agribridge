@@ -46,6 +46,8 @@ export const catalogUsersDict = {
     ur: "چیز تجویز ہو گئی — ایڈمن تصدیق کرے گا تو لائیو ہوگی۔",
   },
   pd_pack_size_eg2: { en: "e.g. 1kg, 500g", rm: "misal: 1kg, 500g", ur: "مثال: 1kg، 500g" },
+  pd_new_category: { en: "— not in list, add new —", rm: "— fehrist mein nahi, naya likhein —", ur: "— فہرست میں نہیں، نیا لکھیں —" },
+  pd_new_category_ph: { en: "New category name", rm: "Naye category ka naam", ur: "نئی کیٹیگری کا نام" },
   pd_image: { en: "Product Image", rm: "Cheez ki tasveer", ur: "چیز کی تصویر" },
   pd_remove_image: { en: "Remove image", rm: "Tasveer hatayein", ur: "تصویر ہٹائیں" },
   pd_catalog_export: { en: "Product Catalog Export", rm: "Cheezon ki fehrist nikaalein", ur: "چیزوں کی فہرست نکالیں" },

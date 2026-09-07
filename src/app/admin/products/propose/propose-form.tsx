@@ -1,10 +1,13 @@
 "use client";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { staffProposeProduct, type ActionState } from "@/actions/product-permissions";
+import { ProductImageUpload } from "@/app/admin/products/new/product-image-upload";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
+const NEW_CATEGORY = "__new__";
 
 interface Category {
   id: string;
@@ -14,6 +17,7 @@ interface Category {
 export function ProposeForm({ categories }: { categories: Category[] }) {
   const [state, formAction] = useFormState(staffProposeProduct, initialState);
   const lang = useLang();
+  const [categoryChoice, setCategoryChoice] = useState("");
 
   return (
     <div className="mx-auto max-w-md rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -26,12 +30,31 @@ export function ProposeForm({ categories }: { categories: Category[] }) {
         </div>
         <div>
           <label className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("c_category", lang)}</label>
-          <select name="category_id" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+          {/* Malik (7 September): "category agar hamari list mein ho to
+              theek, agar na ho to staff category bhi new add kar sake."
+              Fehrist mein na mile to yahin naya naam likh kar bhej dein --
+              admin verify karte waqt dekh lega, dobara naya category
+              banane ka safha khulnay ki zaroorat nahi. */}
+          <select
+            name="category_id"
+            value={categoryChoice}
+            onChange={(e) => setCategoryChoice(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          >
             <option value="">- Select Karein -</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
+            <option value={NEW_CATEGORY}>{t("pd_new_category", lang)}</option>
           </select>
+          {categoryChoice === NEW_CATEGORY && (
+            <input
+              name="new_category_name"
+              required
+              placeholder={t("pd_new_category_ph", lang)}
+              className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            />
+          )}
         </div>
         <div>
           <label className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("c_pack_size", lang)}</label>
@@ -41,6 +64,7 @@ export function ProposeForm({ categories }: { categories: Category[] }) {
           <label className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("at_proposed_rate_req", lang)}</label>
           <input type="number" step="0.01" name="proposed_price" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
+        <ProductImageUpload />
         <SubmitButton />
       </form>
     </div>
