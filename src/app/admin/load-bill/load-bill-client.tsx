@@ -6,7 +6,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
-import { PersonPicker, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
+import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
 import {
   createLoadTransaction,
   attachProviderTid,
@@ -126,6 +126,7 @@ export function LoadBillClient({
     ],
     [customers, farmers]
   );
+  const [khataParty, setKhataParty] = useState<PersonOption | null>(null);
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -431,7 +432,12 @@ export function LoadBillClient({
             {method === "khata" && (
               <div>
                 <Label htmlFor="party_id">Kis ke khate par</Label>
-                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" />
+                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setKhataParty} />
+                {khataParty && (
+                  <div className="mt-2">
+                    <PartyStrip person={khataParty} />
+                  </div>
+                )}
                 <p className="mt-1 text-[11px] text-surface-500">
                   Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.
                 </p>
@@ -747,24 +753,10 @@ function UdhaarForm({
           partyIdName="party_id"
           onChange={setChuna}
         />
-        {chuna?.type === "customer" && (
-          <p className="mt-1 text-xs text-surface-600 dark:text-surface-300">
-            {chuna.balance == null ? (
-              <span className="text-surface-400">Is customer ka hisaab abhi shuru nahi hua.</span>
-            ) : chuna.balance > 0 ? (
-              <>
-                Abhi <b className="tabular-nums text-red-700 dark:text-red-300">{rs(chuna.balance)}</b> ka
-                udhaar chal raha hai.
-              </>
-            ) : (
-              <span className="text-brand-700 dark:text-brand-300">Khata saaf hai — koi udhaar baqi nahi.</span>
-            )}
-          </p>
-        )}
-        {chuna?.type === "farmer" && (
-          <p className="mt-1 text-xs text-surface-500">
-            Poora baqi darj karte hi neeche check hoga — abhi ka baqi yahan pehle se nahi dikhaya jata.
-          </p>
+        {chuna && (
+          <div className="mt-2">
+            <PartyStrip person={chuna} />
+          </div>
         )}
         <p className="mt-1 text-[11px] text-surface-500">
           Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.

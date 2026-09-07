@@ -95,6 +95,41 @@ async function darwaza() {
 }
 
 /**
+ * Kisi bande ka poora khulasa — Lena, Dena, Net — form ke andar hi
+ * dikhane ke liye.
+ *
+ * Malik (7 September): *"Customer select hote hi form ke andar ek
+ * compact strip aa jaye... Staff ko doosra page kholne ki zarurat
+ * nahi."*
+ *
+ * Ye sirf DEKHNE ke liye hai, isi liye `giveCustomerLoan` wale role ka
+ * taala yahan nahi -- koi bhi staff bande ka khulasa dekh sakta hai,
+ * udhaar dena/lena alag ijazat hai.
+ */
+export async function bandeKaKhulasaDekhein(
+  partyType: "customer" | "farmer",
+  partyId: string
+): Promise<{ lena: number; dena: number } | { error: string }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const loose = supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { lena: number; dena: number }[] | null; error: unknown }>;
+  };
+  const { data, error } = await loose.rpc("fn_bande_ka_khulasa", { p_party_type: partyType, p_party_id: partyId });
+  if (error) return { error: "Khulasa nahi mil saka." };
+
+  const rows = data ?? [];
+  return {
+    lena: Math.round(rows.reduce((s, r) => s + Number(r.lena ?? 0), 0) * 100) / 100,
+    dena: Math.round(rows.reduce((s, r) => s + Number(r.dena ?? 0), 0) * 100) / 100,
+  };
+}
+
+/**
  * Kisan ka abhi ka baqi (account 1150, ACC.farmerDue) — `fn_bande_ka_khulasa`
  * se. Ye service client se nahi chalta (SECURITY DEFINER andar
  * `fn_is_any_staff()` poochta hai), is liye logged-in bande ka
@@ -250,9 +285,16 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
+  // Agar is bande ke paas pehle se credit tha (zyada wapsi se), to naya
+  // udhaar khud usi credit mein se katta hai -- ledger ka apna hisaab,
+  // alag se kuch adjust nahi karna parta.
+  const abTakBaad = Math.round((abTak + rakam) * 100) / 100;
   return {
     success: true,
-    notice: `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Ab un ka baqi Rs ${(abTak + rakam).toLocaleString()} hai.`,
+    notice:
+      abTakBaad < -0.005
+        ? `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Purana credit isi mein se kat gaya — ab bhi Rs ${Math.abs(abTakBaad).toLocaleString()} credit baqi hai.`
+        : `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Ab un ka baqi Rs ${abTakBaad.toLocaleString()} hai.`,
   };
 }
 
@@ -304,18 +346,17 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     abTak = await farmerKaAbhiKaBaqi(g.supabase, partyId);
   }
 
-  // Jitna dena hi nahi, us se zyada wapas lena rok diya jata hai.
+  // Malik (7 September): "System Rs900 ko gayab nahi karega aur payment
+  // reject bhi nahi karega... Rs900 -> Customer Advance/Credit."
   //
-  // Wo qatar balance MANFI kar deti hai, aur manfi baqi ka matlab hai
-  // "dukan us ka paisa daabe baithi hai" -- aur wo baat aksar ghalat
-  // hoti hai; asal wajah ye hoti hai ke kisi aur ki raqam ghalti se is
-  // par lag gayi. Waqai advance lena ho to wo alag cheez hai aur us ka
-  // apna khana hai.
-  if (rakam - abTak > 0.005) {
-    return {
-      error: `${name} par sirf Rs ${abTak.toLocaleString()} ka udhaar hai — us se zyada wapsi darj nahi hoti. Raqam dobara dekh lein.`,
-    };
-  }
+  // Pehle yahan udhaar se zyada wapsi rok di jati thi — us waqt ka usool
+  // ye tha ke zyada raqam aksar kisi AUR customer ki ghalti se lag jati
+  // hai. Ab faisla ulat gaya: zyada aane wala paisa gum nahi hota, khud
+  // isi khate mein CREDIT (manfi baqi) ban jata hai — agli udhaar ya
+  // agla kharcha khud isi credit se pehle katega (1100/1150 ka net
+  // balance jo bhi ho, wohi sach hai; koi alag "advance" table nahi
+  // banai, warna do jagah paisa track hone lagta).
+  const zyada = rakam - abTak > 0.005 ? Math.round((rakam - abTak) * 100) / 100 : 0;
 
   const naqad = kahanAaya === "cash";
   const gl = naqad ? ACC.cash : await glForFinanceAccount(kahanAaya);
@@ -383,11 +424,14 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
+  const bacha = Math.round((abTak - rakam) * 100) / 100;
   return {
     success: true,
     notice:
-      abTak - rakam < 0.005
-        ? `Rs ${rakam.toLocaleString()} aa gaye. ${name} ka khata ab saaf hai.`
-        : `Rs ${rakam.toLocaleString()} aa gaye. ${name} par ab Rs ${(abTak - rakam).toLocaleString()} baqi hain.`,
+      zyada > 0
+        ? `Rs ${rakam.toLocaleString()} aa gaye. Rs ${abTak.toLocaleString()} udhaar saaf hua, Rs ${zyada.toLocaleString()} ${name} ke credit mein jama — agli dafa udhaar ya kharche mein khud katega.`
+        : bacha < 0.005
+          ? `Rs ${rakam.toLocaleString()} aa gaye. ${name} ka khata ab saaf hai.`
+          : `Rs ${rakam.toLocaleString()} aa gaye. ${name} par ab Rs ${bacha.toLocaleString()} baqi hain.`,
   };
 }

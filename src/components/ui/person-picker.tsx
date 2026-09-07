@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Search, User } from "lucide-react";
+import { bandeKaKhulasaDekhein } from "@/actions/customer-udhaar";
 
 export interface PersonOption {
   type: "farmer" | "customer";
@@ -197,6 +199,72 @@ export function NameSuggest({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/**
+ * Banda chunte hi Lena/Dena/Net yahin nazar aa jaye — safha dobara
+ * kholne ki zaroorat nahi.
+ *
+ * Malik (7 September): *"Customer select hote hi form ke andar ek
+ * compact strip aa jaye... Staff ko doosra page kholne ki zarurat
+ * nahi."*
+ */
+export function PartyStrip({ person }: { person: PersonOption | null }) {
+  const [khulasa, setKhulasa] = useState<{ lena: number; dena: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!person || (person.type !== "customer" && person.type !== "farmer")) {
+      setKhulasa(null);
+      return;
+    }
+    let zinda = true;
+    setLoading(true);
+    bandeKaKhulasaDekhein(person.type, person.id).then((res) => {
+      if (!zinda) return;
+      setLoading(false);
+      setKhulasa("error" in res ? null : res);
+    });
+    return () => {
+      zinda = false;
+    };
+  }, [person]);
+
+  if (!person) return null;
+
+  const net = khulasa ? Math.round((khulasa.lena - khulasa.dena) * 100) / 100 : 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs dark:border-surface-700 dark:bg-surface-800/50">
+      {loading ? (
+        <span className="text-surface-400">Khulasa la rahe hain…</span>
+      ) : khulasa ? (
+        <>
+          <span className="text-red-700 dark:text-red-300">
+            Lena <b className="tabular-nums">Rs {khulasa.lena.toLocaleString()}</b>
+          </span>
+          <span className="text-brand-700 dark:text-brand-300">
+            Dena <b className="tabular-nums">Rs {khulasa.dena.toLocaleString()}</b>
+          </span>
+          <span className="font-medium text-surface-700 dark:text-surface-200">
+            Net{" "}
+            <b className="tabular-nums">
+              Rs {Math.abs(net).toLocaleString()} {net >= 0 ? "Lena" : "Dena"}
+            </b>
+          </span>
+        </>
+      ) : (
+        <span className="text-surface-400">Is {person.type === "farmer" ? "kisan" : "customer"} ka hisaab abhi shuru nahi hua.</span>
+      )}
+      <Link
+        href={`/admin/khata/banda/${person.type}/${person.id}`}
+        target="_blank"
+        className="ml-auto text-brand-600 underline hover:text-brand-700"
+      >
+        Khata dekhein
+      </Link>
     </div>
   );
 }
