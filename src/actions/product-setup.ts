@@ -61,28 +61,40 @@ export async function saveSetupQueue(_prev: SetupState, formData: FormData): Pro
     const barcodeRaw = String(formData.get(`barcode_${id}`) ?? "").trim();
     const approve = formData.get(`verify_${id}`) === "on";
     const makeInternal = formData.get(`mkbc_${id}`) === "on";
+    // Naam aur expiry ka khana hamesha bhara hua aata hai (khana khud
+    // maujooda qeemat se shuru hota hai), is liye "kuch badla ya nahi"
+    // ka faisla maujooda qatar se milaan kar ke hi ho sakta hai --
+    // sirf "khali hai ya nahi" dekhna kaafi nahi.
+    const nameRaw = String(formData.get(`name_${id}`) ?? "").trim();
+    const expiryRaw = String(formData.get(`expiry_${id}`) ?? "").trim();
 
-    if (sale === null && trade === null && !barcodeRaw && !approve && !makeInternal) continue;
+    const { data: p } = await supabase
+      .from("products")
+      .select("name, is_verified, barcode, expiry_date")
+      .eq("id", id)
+      .maybeSingle();
+    if (!p) continue;
+
+    const nameChanged = nameRaw !== "" && nameRaw !== p.name;
+    const expiryChanged = expiryRaw !== "" && expiryRaw !== (p.expiry_date ?? "");
+
+    if (sale === null && trade === null && !barcodeRaw && !approve && !makeInternal && !nameChanged && !expiryChanged) continue;
 
     // Apna barcode (261): company ka nahi likha to system ka EAN-13.
     if (makeInternal && !barcodeRaw) {
       const { error: bcErr } = await supabase.rpc("fn_assign_internal_barcode", { p_product_id: id });
       if (bcErr) {
         problems.push(`${id.slice(0, 8)}: apna barcode nahi bana: ${bcErr.message}`);
-      } else if (sale === null && trade === null && !approve) {
+      } else if (sale === null && trade === null && !approve && !nameChanged && !expiryChanged) {
         saved += 1;
         continue;
       }
     }
 
-    const { data: p } = await supabase
-      .from("products")
-      .select("name, is_verified, barcode")
-      .eq("id", id)
-      .maybeSingle();
-    if (!p) continue;
-
     const update: Record<string, unknown> = {};
+
+    if (nameChanged) update.name = nameRaw;
+    if (expiryChanged) update.expiry_date = expiryRaw;
 
     if (sale !== null) {
       if (sale === 0) {

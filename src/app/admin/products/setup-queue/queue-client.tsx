@@ -210,7 +210,7 @@ export function QueueClient({
                       <tr key={r.id} className="border-b border-surface-100 align-top">
                         <td className="py-2 pr-2 font-medium">
                           <input type="hidden" name="id" value={r.id} />
-                          {r.name}
+                          <Input name={`name_${r.id}`} defaultValue={r.name} className="h-8 min-w-[10rem] font-medium" />
                           {r.packSize && <span className="block text-xs font-normal text-surface-500">{r.packSize}</span>}
                           {r.mrpPrice != null && <span className="block text-xs font-normal text-surface-400">MRP {r.mrpPrice.toLocaleString()}</span>}
                         </td>
@@ -252,15 +252,16 @@ export function QueueClient({
                           )}
                         </td>
                         <td className="py-2 pr-2 text-xs">
-                          {r.expiryDate ? (
-                            <span className={r.expired ? "font-medium text-red-600" : r.expirySoon ? "text-amber-700" : "text-surface-500"}>
-                              {r.expiryDate}
-                              {r.daysLeft != null && (r.expired || r.expirySoon) && (
-                                <span className="block">{r.daysLeft < 0 ? t("inv_expired", lang) : `${r.daysLeft} ${t("inv_days", lang)}`}</span>
-                              )}
+                          <Input
+                            name={`expiry_${r.id}`}
+                            type="date"
+                            defaultValue={r.expiryDate ?? ""}
+                            className={`h-8 ${r.expired ? "text-red-600" : r.expirySoon ? "text-amber-700" : ""}`}
+                          />
+                          {r.daysLeft != null && (r.expired || r.expirySoon) && (
+                            <span className={`mt-1 block ${r.expired ? "font-medium text-red-600" : "text-amber-700"}`}>
+                              {r.daysLeft < 0 ? t("inv_expired", lang) : `${r.daysLeft} ${t("inv_days", lang)}`}
                             </span>
-                          ) : (
-                            <span className="text-surface-400">—</span>
                           )}
                         </td>
                         <td className="py-2 text-xs">
