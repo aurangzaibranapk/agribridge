@@ -1,13 +1,16 @@
 import MyWorkReferencePage, { dynamic } from "../my-work-reference/page";
+import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 
 export { dynamic };
 
 /**
- * Testing dashboard: use the approved screenshot-style staff dashboard
- * directly on /admin/my-work so staff see the reference design on their
- * normal landing route. The reference page keeps existing permissions,
- * real needs-attention counts, recent activity and current ERP routes.
+ * Testing dashboard: screenshot-style staff dashboard on /admin/my-work.
+ * Internal dashboard cards/links open inside the same fixed workspace so
+ * the dashboard behind them does not move or require page scrolling.
  *
  * No database change. Testing branch only.
  */
-export default MyWorkReferencePage;
+export default async function MyWorkPage() {
+  const dashboard = await MyWorkReferencePage();
+  return <InPageWorkspace>{dashboard}</InPageWorkspace>;
+}
