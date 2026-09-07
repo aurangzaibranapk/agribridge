@@ -2220,6 +2220,13 @@ build mein nahi gaye:
 | `7a93f85` | Agri Order (New): "Partner Details" sirf bahar wale supplier ke liye — Company/apni shop se order karte waqt ye poora hissa ghayab, staff ko apni maloomat dobara nahi likhni parti |
 | `d0c40f4` | Purchase review: products/qty/rate dikhte hain, wahin se edit ho sakte hain (trackable), aur list par saaf ke kis ne approve/reject/wapas kiya (migration 359 shamil) |
 | `0ae8979` | Propose Product: image upload (maujooda `ProductImageUpload` reuse) + fehrist mein na ho to staff naya category naam likh sake |
+| `7042dab` | Farmer registration ka email confirmation fail (auth.signUp -> admin.createUser) + WhatsApp OTP register page par button |
+
+**Scope badla (7 September, malik ke alfaz): "developer ko mana kar
+diya hua hai, email or WhatsApp OTP sab ap he karo."** Front
+website/registration (`src/app/register/**`, `src/app/login/**`) ka
+email/WhatsApp-OTP hissa ab mera hai — baqi front website abhi bhi
+developer ka hai jab tak malik kuch aur na kahein.
 
 Agla build lete waqt ye dono commits shamil honge — koi alag qadam
 nahi chahiye, sirf agla "pull + build + package" ka jorra.
