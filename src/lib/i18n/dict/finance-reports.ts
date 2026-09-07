@@ -154,6 +154,8 @@ export const financeReportsDict = {
   bg_back: { en: "Finance", rm: "Maali markaz", ur: "مالی مرکز" },
   bg_error: { en: "Could not load", rm: "Jawab nahi mil saka", ur: "جواب نہیں مل سکا" },
   bg_year: { en: "Year", rm: "Saal", ur: "سال" },
+  bg_branch: { en: "Branch", rm: "Shaakh", ur: "شاخ" },
+  bg_all_branches: { en: "Whole company", rm: "Poori company", ur: "پوری کمپنی" },
   bg_months: {
     en: "{n} months of this year counted so far",
     rm: "Is saal ke {n} mahine gine gaye hain",

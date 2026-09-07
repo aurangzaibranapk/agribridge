@@ -4908,6 +4908,7 @@ export type Database = {
         Row: {
           account_code: string
           annual_amount: number
+          branch_id: string | null
           budget_id: string
           id: string
           note: string | null
@@ -4916,6 +4917,7 @@ export type Database = {
         Insert: {
           account_code: string
           annual_amount: number
+          branch_id?: string | null
           budget_id: string
           id?: string
           note?: string | null
@@ -4924,6 +4926,7 @@ export type Database = {
         Update: {
           account_code?: string
           annual_amount?: number
+          branch_id?: string | null
           budget_id?: string
           id?: string
           note?: string | null
@@ -4936,6 +4939,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gl_accounts"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "budget_lines_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
           },
           {
             foreignKeyName: "budget_lines_budget_id_fkey"

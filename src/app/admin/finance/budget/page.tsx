@@ -20,7 +20,7 @@ const VIEW_ROLES = [...RUN_ROLES, "manager"];
  * baant liya jata hai (mahinon ke hisaab se) -- ye TAKREEBAN hai, aur
  * safhe par saaf likha hai ke takreeban hai.
  */
-export default async function BudgetPage({ searchParams }: { searchParams: { year?: string } }) {
+export default async function BudgetPage({ searchParams }: { searchParams: { year?: string; branch_id?: string } }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
@@ -36,6 +36,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: { yea
 
   const ab = new Date();
   const year = Number(searchParams.year ?? ab.getFullYear());
+  const branchId = searchParams.branch_id?.trim() || null;
   const shuru = `${year}-01-01`;
   const aaj = ab.toISOString().slice(0, 10);
   const khatam = year === ab.getFullYear() ? aaj : `${year}-12-31`;
@@ -45,7 +46,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: { yea
     year === ab.getFullYear() ? ab.getMonth() + 1 : year < ab.getFullYear() ? 12 : 0;
 
   const service = createServiceClient();
-  const [{ data: accounts, error: accErr }, { data: budget }, tb] = await Promise.all([
+  const [{ data: accounts, error: accErr }, { data: budget }, tb, { data: branches }] = await Promise.all([
     service
       .from("gl_accounts")
       .select("code, name, account_type")
@@ -53,11 +54,18 @@ export default async function BudgetPage({ searchParams }: { searchParams: { yea
       .in("account_type", ["income", "expense"])
       .order("sort_order"),
     service.from("budgets").select("id").eq("year", year).eq("name", "Saalana budget").maybeSingle(),
-    trialBalance(shuru, khatam),
+    // Branch chuni ho to muqabla usi branch ke journal entries se --
+    // trialBalance() ye pehle se sambhalta hai.
+    trialBalance(shuru, khatam, branchId),
+    service.from("branches").select("id, name").eq("is_active", true).order("name"),
   ]);
 
-  const { data: lines } = budget
-    ? await service.from("budget_lines").select("account_code, annual_amount").eq("budget_id", budget.id)
+  let linesQuery = budget
+    ? service.from("budget_lines").select("account_code, annual_amount").eq("budget_id", budget.id)
+    : null;
+  if (linesQuery) linesQuery = branchId ? linesQuery.eq("branch_id", branchId) : linesQuery.is("branch_id", null);
+  const { data: lines } = linesQuery
+    ? await linesQuery
     : { data: [] as { account_code: string; annual_amount: number }[] };
 
   const budgetBy = new Map((lines ?? []).map((l) => [l.account_code as string, Number(l.annual_amount)]));
@@ -89,6 +97,8 @@ export default async function BudgetPage({ searchParams }: { searchParams: { yea
         lang={lang}
         canEdit={RUN_ROLES.includes(me.role)}
         year={year}
+        branchId={branchId}
+        branches={branches ?? []}
         monthsElapsed={guzreMahine}
         rows={(accounts ?? []).map((a) => ({
           code: a.code as string,

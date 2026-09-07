@@ -24,12 +24,17 @@ export function BudgetClient({
   lang,
   canEdit,
   year,
+  branchId,
+  branches,
   monthsElapsed,
   rows,
 }: {
   lang: Lang;
   canEdit: boolean;
   year: number;
+  /** null = poori company (company-wide budget). */
+  branchId: string | null;
+  branches: { id: string; name: string }[];
   monthsElapsed: number;
   rows: Row[];
 }) {
@@ -131,10 +136,34 @@ export function BudgetClient({
             className="w-32"
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (v >= 2000 && v <= 2100) router.push(`/admin/finance/budget?year=${v}`);
+              if (v >= 2000 && v <= 2100) {
+                const q = branchId ? `year=${v}&branch_id=${branchId}` : `year=${v}`;
+                router.push(`/admin/finance/budget?${q}`);
+              }
             }}
           />
         </div>
+        {branches.length > 0 && (
+          <div>
+            <Label htmlFor="branch_pick">{t("bg_branch", lang)}</Label>
+            <select
+              id="branch_pick"
+              defaultValue={branchId ?? ""}
+              onChange={(e) => {
+                const q = e.target.value ? `year=${year}&branch_id=${e.target.value}` : `year=${year}`;
+                router.push(`/admin/finance/budget?${q}`);
+              }}
+              className="h-10 w-52 rounded-lg border border-surface-200 bg-white px-2.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+            >
+              <option value="">{t("bg_all_branches", lang)}</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <p className="text-xs text-surface-500">
           {t("bg_months", lang).replace("{n}", String(monthsElapsed))}
         </p>
@@ -147,6 +176,7 @@ export function BudgetClient({
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="year" value={year} />
+        <input type="hidden" name="branch_id" value={branchId ?? ""} />
         {table(t("bg_expenses", lang), expense)}
         {table(t("bg_income", lang), income)}
         {edit && (

@@ -35,6 +35,12 @@ export async function saveBudget(_prev: BudgetState, formData: FormData): Promis
   const year = Math.round(Number(formData.get("year") ?? 0));
   if (!year || year < 2000 || year > 2100) return { error: "Saal chunein." };
 
+  // Khali (company-wide) ya kisi branch ka apna budget. Malik (7
+  // September): branch ke andar kai shop hain, aur har branch ka
+  // consolidated budget alag ho sakta hai.
+  const branchIdRaw = String(formData.get("branch_id") ?? "").trim();
+  const branchId = branchIdRaw === "" ? null : branchIdRaw;
+
   const service = createServiceClient();
   let budgetId: string;
   const { data: maujood } = await service
@@ -59,7 +65,7 @@ export async function saveBudget(_prev: BudgetState, formData: FormData): Promis
   // Form se: amt_<code>. Khali khana matlab "is khate par budget nahi" --
   // us ki qatar mita di jati hai, sifar nahi likhi jati. Sifar ka matlab
   // "is khate par kuch nahi lagna chahiye" hai, jo alag baat hai.
-  const rakhni: { budget_id: string; account_code: string; annual_amount: number }[] = [];
+  const rakhni: { budget_id: string; account_code: string; annual_amount: number; branch_id: string | null }[] = [];
   const hatani: string[] = [];
   for (const [key, value] of formData.entries()) {
     if (!key.startsWith("amt_")) continue;
@@ -71,15 +77,17 @@ export async function saveBudget(_prev: BudgetState, formData: FormData): Promis
     }
     const n = Number(raw);
     if (!Number.isFinite(n) || n < 0) return { error: `Khata ${code}: adad theek nahi.` };
-    rakhni.push({ budget_id: budgetId, account_code: code, annual_amount: n });
+    rakhni.push({ budget_id: budgetId, account_code: code, annual_amount: n, branch_id: branchId });
   }
 
   if (hatani.length > 0) {
-    const { error } = await service.from("budget_lines").delete().eq("budget_id", budgetId).in("account_code", hatani);
+    let del = service.from("budget_lines").delete().eq("budget_id", budgetId).in("account_code", hatani);
+    del = branchId === null ? del.is("branch_id", null) : del.eq("branch_id", branchId);
+    const { error } = await del;
     if (error) return { error: error.message };
   }
   if (rakhni.length > 0) {
-    const { error } = await service.from("budget_lines").upsert(rakhni, { onConflict: "budget_id,account_code" });
+    const { error } = await service.from("budget_lines").upsert(rakhni, { onConflict: "budget_id,account_code,branch_id" });
     if (error) return { error: error.message };
   }
 
@@ -88,7 +96,7 @@ export async function saveBudget(_prev: BudgetState, formData: FormData): Promis
     module: "finance",
     recordId: budgetId,
     recordLabel: `Budget ${year}`,
-    description: `Budget ${year} likha gaya — ${rakhni.length} khaton par adad`,
+    description: `Budget ${year}${branchId ? " (branch)" : " (company-wide)"} likha gaya — ${rakhni.length} khaton par adad`,
   });
 
   revalidatePath("/admin/finance/budget");
