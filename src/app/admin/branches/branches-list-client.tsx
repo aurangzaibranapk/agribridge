@@ -41,6 +41,7 @@ const QISM_LABEL: Record<string, string> = {
   grain_procurement: "Anaj",
   dairy: "Doodh",
   machinery_fleet: "Machinery",
+  vet: "Vet",
 };
 
 export function BranchesListClient({

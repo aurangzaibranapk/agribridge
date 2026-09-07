@@ -64,6 +64,7 @@ export default async function BranchTreePage() {
     grain_procurement: "Anaj",
     dairy: "Doodh",
     machinery_fleet: "Machinery",
+    vet: "Vet",
   };
 
   const sabShops = shops ?? [];

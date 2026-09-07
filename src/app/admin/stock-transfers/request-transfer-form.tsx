@@ -29,6 +29,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   grain_procurement: "Grain",
   dairy: "Dairy",
   machinery_fleet: "Machinery",
+  vet: "Vets",
 };
 
 export function RequestTransferForm({

@@ -44,6 +44,7 @@ export const branchOpsDict = {
   sh_dairy: { en: "Dairy", rm: "Doodh", ur: "دودھ" },
   sh_grain: { en: "Grain Procurement", rm: "Anaj ki kharidari", ur: "اناج کی خریداری" },
   sh_machinery: { en: "Machinery & Fleet", rm: "Machinery aur gaariyan", ur: "مشینری اور گاڑیاں" },
+  sh_vet: { en: "Vets", rm: "Vet (jaanwaron ka ilaj)", ur: "ویٹ (جانوروں کا علاج)" },
   sh_agri_inputs: { en: "Agri Inputs (fertilizer / pesticide / feed)", rm: "Kheti ka saman (khaad / zehr / wanda)", ur: "کھیتی کا سامان (کھاد / زہر / ونڈا)" },
 
   // Dukan ki tafseel badalna, halat, aur mitana (291)

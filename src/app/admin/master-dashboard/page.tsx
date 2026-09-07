@@ -180,7 +180,7 @@ export default async function MasterDashboardPage() {
   // Position bhi ledger se. Jawab na mile to NULL -- sifar nahi.
   const currentPosition = haalat.position;
 
-  const noDataYetBusinesses = ["grain_procurement", "machinery_fleet"];
+  const noDataYetBusinesses = ["grain_procurement", "machinery_fleet", "vet"];
 
   return (
     <div>

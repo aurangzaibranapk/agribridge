@@ -15,6 +15,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   grain_procurement: "Grain",
   dairy: "Dairy",
   machinery_fleet: "Machinery",
+  vet: "Vets",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -165,8 +166,14 @@ export default async function PnlPage({
         supabase.from("budget_lines").select("account_code, annual_amount").eq("budget_id", budgetRow.id).eq("shop_id", shopId),
         shopTrialBalance(budgetFrom, to, shopId),
       ]);
-      if (!lines || lines.length === 0) return { budget: null, used: null };
-      const budget = lines.filter((l) => expenseCodes.has(l.account_code as string)).reduce((s, l) => s + Number(l.annual_amount), 0);
+      // Sirf EXPENSE khaton ka budget maayne rakhta hai yahan (Available =
+      // kitna kharchne ki ijazat bachi). Is shop ke liye koi expense-khata
+      // budget mein likha hi nahi -- to "Rs 0" nahi, budget hi nahi (NULL).
+      // Sifar kehta "0 rakha gaya"; NULL kehta "likha hi nahi" -- dono
+      // alag baatein hain.
+      const expenseLines = (lines ?? []).filter((l) => expenseCodes.has(l.account_code as string));
+      if (expenseLines.length === 0) return { budget: null, used: null };
+      const budget = expenseLines.reduce((s, l) => s + Number(l.annual_amount), 0);
       const used = tb.error ? null : tb.rows.filter((r) => r.account_type === "expense").reduce((s, r) => s + r.balance, 0);
       return { budget, used };
     }
