@@ -270,78 +270,106 @@ export function MyWorkBody({
         <h2 className="mb-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500">
           {t("mw_depts", lang)}
         </h2>
-        <div className="space-y-2">
+
+        {/* Chhote, barabar naap ke cards -- teen khaanay, chhoti screen par
+            do, mobile par ek. Card khud kaam nahi kholta, sirf batata hai
+            andar kya hai; kholne ka faisla neeche alag panel karta hai
+            (grid ke andar ek card ka khulna baaki cards ko terha kar deta
+            tha). */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {departments.map((d) => {
             const isOpen = !!open[d.key];
-            const sections = new Map<string, CardData[]>();
-            for (const c of d.tools) {
-              const k = c.section ?? "";
-              sections.set(k, [...(sections.get(k) ?? []), c]);
-            }
-
             return (
-              <div key={d.key} className="overflow-hidden rounded-xl border border-surface-200/80 transition hover:border-brand-300 hover:bg-brand-50/30 dark:border-surface-800 dark:hover:bg-brand-950/20">
-                <button
-                  type="button"
-                  onClick={() => toggle(d.key)}
-                  className="flex w-full items-center gap-4 px-4 py-4 text-left"
-                  aria-expanded={isOpen}
-                >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                    <Icon name={d.icon} className="h-[22px] w-[22px]" />
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => toggle(d.key)}
+                aria-expanded={isOpen}
+                className={`flex flex-col items-start rounded-xl border p-4 text-left transition ${
+                  isOpen
+                    ? "border-brand-300 bg-brand-50/50 dark:border-brand-700 dark:bg-brand-950/20"
+                    : "border-surface-200/80 hover:border-brand-300 hover:bg-brand-50/30 dark:border-surface-800 dark:hover:bg-brand-950/20"
+                }`}
+              >
+                <div className="flex w-full items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                    <Icon name={d.icon} className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display text-base font-semibold text-surface-900 dark:text-surface-100">{d.label}</span>
+                    <span className="block font-display text-[13px] font-semibold uppercase tracking-wide text-surface-900 dark:text-surface-100">
+                      {d.label}
+                    </span>
                     {/* Jhalak: andar kya hai -- warna banda har department
                         khol kar dekhta hai. */}
                     {d.preview.length > 0 && (
-                      <span className="mt-1 block truncate text-[13px] text-surface-500">
+                      <span className="block truncate text-[12px] text-surface-500">
                         {d.preview.join(", ")}
                         {d.toolCount > d.preview.length ? "…" : ""}
                       </span>
                     )}
                   </span>
-                  <span className="hidden shrink-0 rounded-full bg-surface-100 px-3 py-1.5 text-xs font-medium tabular-nums text-surface-600 sm:inline-block dark:bg-surface-800 dark:text-surface-300">
+                </div>
+
+                <div className="mt-3 flex w-full items-center justify-between">
+                  <span className="text-xs font-medium tabular-nums text-surface-500">
                     {t("mw_tools_n", lang).replace("{n}", String(d.toolCount))}
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                      d.attention === null
-                        ? "bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-400"
-                        : d.attention > 0
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                    }`}
-                  >
-                    {d.attention === null
-                      ? t("mw_count_unknown", lang)
-                      : d.attention > 0
-                        ? t("mw_need_n", lang).replace("{n}", String(d.attention))
-                        : t("mw_all_clear", lang)}
+                  <span className="flex items-center gap-1.5">
+                    {/* "Sab Theek" ab lafzon mein nahi -- sirf ek chhota
+                        hara nishan. Sifar hone ka matlab yahan waqai
+                        "kuch baqi nahi" hai, is liye ye jhoot nahi. */}
+                    {d.attention === null ? (
+                      <span className="rounded-full bg-surface-100 px-2.5 py-1 text-xs font-medium text-surface-500 dark:bg-surface-800 dark:text-surface-400">
+                        {t("mw_count_unknown", lang)}
+                      </span>
+                    ) : d.attention > 0 ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                        {t("mw_need_n", lang).replace("{n}", String(d.attention))}
+                      </span>
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label={t("mw_all_clear", lang)} />
+                    )}
+                    {isOpen ? <ChevronDown className="h-4 w-4 text-surface-400" /> : <ChevronRight className="h-4 w-4 text-surface-400" />}
                   </span>
-                  {isOpen ? <ChevronDown className="h-4 w-4 text-surface-400" /> : <ChevronRight className="h-4 w-4 text-surface-400" />}
-                </button>
-
-                {isOpen && (
-                  <div className="space-y-4 border-t border-surface-200 bg-brand-25 px-3.5 py-4 dark:border-surface-800 dark:bg-surface-950/40">
-                    {[...sections.entries()].map(([section, cards]) => (
-                      <div key={section || "_"}>
-                        {section && (
-                          <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-surface-400">{section}</p>
-                        )}
-                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                          {cards.map((c) => (
-                            <WorkCard key={`${d.key}-${c.href}`} card={c} onOpen={remember} />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                </div>
+              </button>
             );
           })}
         </div>
+
+        {/* Khula hua department -- poori chauRai mein, grid ke NEECHE.
+            Grid ke ANDAR khulta to sirf usi khane ka column terha ho
+            jata; yahan poori qatar sath rehti hai. */}
+        {departments
+          .filter((d) => open[d.key])
+          .map((d) => {
+            const sections = new Map<string, CardData[]>();
+            for (const c of d.tools) {
+              const k = c.section ?? "";
+              sections.set(k, [...(sections.get(k) ?? []), c]);
+            }
+            return (
+              <div key={`open-${d.key}`} className="mt-3 rounded-xl border border-surface-200 bg-brand-25 p-4 dark:border-surface-800 dark:bg-surface-950/40">
+                <p className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
+                  <Icon name={d.icon} className="h-4 w-4 text-brand-600" /> {d.label}
+                </p>
+                <div className="space-y-4">
+                  {[...sections.entries()].map(([section, cards]) => (
+                    <div key={section || "_"}>
+                      {section && (
+                        <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-surface-400">{section}</p>
+                      )}
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {cards.map((c) => (
+                          <WorkCard key={`${d.key}-${c.href}`} card={c} onOpen={remember} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
       </section>
     </div>
   );
