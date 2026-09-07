@@ -2200,8 +2200,9 @@ build mein nahi gaye:
 | Commit | Kya hai |
 |---|---|
 | `076885e` | Load & Bill stage 3 — "Payment Receive" apna tab (pehle Udhaar ke andar chhupa toggle tha), Service Charge ab Cash/Khata ke baad, PartyStrip mein "Available Credit" saaf dikhta hai |
+| `02ff9c2` | Farmer Details ke Documents (CNIC front/back, tasveer) — camera se seedha khenchna + upload se pehle crop (naya `ImageCropField`) |
 
-Agla build lete waqt commit `076885e` shamil hoga — koi alag qadam
+Agla build lete waqt ye dono commits shamil honge — koi alag qadam
 nahi chahiye, sirf agla "pull + build + package" ka jorra.
 
 **Load & Bill redesign ka baqi hissa (code abhi nahi likha):**
