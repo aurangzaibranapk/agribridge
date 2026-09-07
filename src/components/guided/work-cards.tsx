@@ -178,11 +178,19 @@ export function MyWorkBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultDept, departments.length]);
 
+  // Malik (7 September): "page ko scroll na karna paray... phir next
+  // kisi aur product par click kare to wo bhi usi page par scroll na
+  // karna paray... page apni jagah se na hile." Ek waqt mein ek hi
+  // department khula rehta hai -- doosra kholte hi pehla khud band ho
+  // jata hai. Warna teen-chaar department khulte khulte safha lamba
+  // hota jata aur banda apna khola hua panel dhoondne ke liye scroll
+  // karta rehta.
   function toggle(key: string) {
     setOpen((o) => {
-      const next = { ...o, [key]: !o[key] };
+      const abhiKhula = !!o[key];
+      const next = abhiKhula ? {} : { [key]: true };
       try {
-        if (next[key]) localStorage.setItem(LAST_DEPT_KEY, key);
+        if (!abhiKhula) localStorage.setItem(LAST_DEPT_KEY, key);
       } catch {
         /* yaad na rahe to bhi safha chalta rahe */
       }
