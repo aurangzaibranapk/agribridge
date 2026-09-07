@@ -1,5 +1,4 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { BANK_CODES } from "@/lib/ledger/rules";
 
 /**
  * Cash haath badalne ka hisaab.
@@ -210,13 +209,28 @@ export interface BankCompare {
 export async function bankComparison(): Promise<BankCompare> {
   const service = createServiceClient();
 
-  const [{ data: accounts }, { data: lines }, { data: journal }] = await Promise.all([
-    service.from("finance_accounts").select("id, name, gl_code").eq("account_type", "bank"),
+  const { data: accounts } = await service
+    .from("finance_accounts")
+    .select("id, name, gl_code")
+    .eq("account_type", "bank");
+
+  // Sirf UNHI khaton ke code, jo waqai "bank" hain -- poori 1010-1019
+  // ki range nahi. Pehle poori range poochi jati thi, aur us mein
+  // JazzCash/Easypaisa/QR/Kisan Card/CBA jaise merchant-wallet khate
+  // bhi aa jate the (unka gl_code isi range mein hai, magar unka
+  // account_type "bank" nahi). Nateeja: upar ka kul farq neeche ki
+  // fehrist ke jorr se hamesha zyada nikalta -- farq ka hissa aisi
+  // qataron ka hota jo is safhe par kabhi dikhti hi nahi thin, kyunke
+  // un ka koi bank statement paste hi nahi hota.
+  const bankCodes = (accounts ?? [])
+    .map((a) => (a as { gl_code?: string | null }).gl_code)
+    .filter((c): c is string => !!c);
+
+  const [{ data: lines }, { data: journal }] = await Promise.all([
     service.from("bank_statement_lines").select("account_id, amount, status"),
-    // Ek khata nahi -- poori bank ki qatar. Pehle sirf "1010" poocha
-    // jata tha, aur jab har bank ka apna khata bana to baqi bank is
-    // ginti se ghayab ho jate.
-    service.from("journal_lines").select("account_code, debit, credit").in("account_code", [...BANK_CODES]),
+    bankCodes.length > 0
+      ? service.from("journal_lines").select("account_code, debit, credit").in("account_code", bankCodes)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const perAccount: BankAccountTotal[] = (accounts ?? []).map((a) => {
@@ -247,7 +261,10 @@ export async function bankComparison(): Promise<BankCompare> {
     };
   });
 
-  const perBank = round2((lines ?? []).reduce((s, l) => s + Number(l.amount), 0));
+  const bankAccountIds = new Set((accounts ?? []).map((a) => a.id));
+  const perBank = round2(
+    (lines ?? []).filter((l) => bankAccountIds.has(l.account_id)).reduce((s, l) => s + Number(l.amount), 0)
+  );
   const perBooks = round2(
     (journal ?? []).reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0)
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins } from "lucide-react";
@@ -65,6 +65,30 @@ function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * Number ke pehle chaar hindson se network ka ANDAZA -- pakka jawab
+ * nahi (number portability ki wajah se koi bhi prefix hamesha sach
+ * nahi bolta). Sirf ek shuruaat, staff hamesha badal sakta hai.
+ */
+const NETWORK_PREFIX: Record<string, string> = {
+  "0300": "Jazz", "0301": "Jazz", "0302": "Jazz", "0303": "Jazz", "0304": "Jazz",
+  "0305": "Jazz", "0306": "Jazz", "0307": "Jazz", "0308": "Jazz", "0309": "Jazz",
+  "0310": "Zong", "0311": "Zong", "0312": "Zong", "0313": "Zong", "0314": "Zong",
+  "0315": "Zong", "0316": "Zong", "0317": "Zong", "0318": "Zong", "0319": "Zong",
+  "0320": "Jazz", "0321": "Jazz", "0322": "Jazz", "0323": "Jazz", "0324": "Jazz",
+  "0325": "Jazz", "0326": "Jazz", "0327": "Jazz", "0328": "Jazz", "0329": "Jazz",
+  "0330": "Ufone", "0331": "Ufone", "0332": "Ufone", "0333": "Jazz", "0334": "Jazz",
+  "0335": "Ufone", "0336": "Ufone", "0337": "Ufone",
+  "0340": "Telenor", "0341": "Telenor", "0342": "Telenor", "0343": "Telenor",
+  "0344": "Telenor", "0345": "Telenor", "0346": "Telenor", "0347": "Telenor",
+};
+
+function andazaNetwork(mobile: string): string | null {
+  const digits = mobile.replace(/\D/g, "");
+  const prefix = digits.slice(0, 4);
+  return NETWORK_PREFIX[prefix] ?? null;
+}
+
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
@@ -126,7 +150,15 @@ export function LoadBillClient({
     ],
     [customers, farmers]
   );
-  const [khataParty, setKhataParty] = useState<PersonOption | null>(null);
+  /**
+   * Customer/kisan — ab sirf khata ke liye nahi, poori transaction ke
+   * liye ek hi jagah se chuna jata hai (7 September ka naya design).
+   * Mobile number aur naam isi se auto-fill hote hain; ledger ka
+   * party_type/party_id bhi yahin se jate hain (server sirf "khata"
+   * method par inhein istemal karta hai, baqi par khamoshi se nazarandaz
+   * kar deta hai — is liye hamesha bhejna mehfooz hai).
+   */
+  const [mainParty, setMainParty] = useState<PersonOption | null>(null);
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -146,6 +178,38 @@ export function LoadBillClient({
   const [accountId, setAccountId] = useState(kaamKeAccounts[0]?.id ?? accounts[0]?.id ?? "");
   const [principal, setPrincipal] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
+  const [reference, setReference] = useState("");
+
+  // Customer chunte hi mobile number khud bhar jata hai -- magar sirf
+  // Mobile Load ke liye (Bill Payment ka "reference" consumer number
+  // hai, kisi ka mobile nahi), aur sirf jab khana khali ho, taake staff
+  // ka apna likha number na mit jaye.
+  useEffect(() => {
+    if (kind === "load" && mainParty?.phone && !reference) {
+      setReference(mainParty.phone);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainParty]);
+
+  // Network ka andaza number ke pehle chaar hindson se — sirf Jazz,
+  // Zong, Ufone, Telenor tak, aur sirf TAJVEEZ hai. Number portability
+  // ki wajah se hamesha sach nahi hoga, is liye staff hamesha badal
+  // sakta hai.
+  const andaza = useMemo(() => andazaNetwork(reference), [reference]);
+  const [providerId, setProviderId] = useState("");
+
+  useEffect(() => {
+    if (kind !== "load" || !andaza || providerId) return;
+    const milgaya = kaamKeProviders.find((p) => p.name.toLowerCase().includes(andaza.toLowerCase()));
+    if (milgaya) setProviderId(milgaya.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [andaza, kind]);
+
+  // Tab badalte hi provider ki fehrist badal jati hai (load vs bill) —
+  // purana chuna hua provider doosri fehrist mein hoga hi nahi.
+  useEffect(() => {
+    setProviderId("");
+  }, [kind]);
   /**
    * Ek hi khane se do cheezein.
    *
@@ -432,10 +496,10 @@ export function LoadBillClient({
             {method === "khata" && (
               <div>
                 <Label htmlFor="party_id">Kis ke khate par</Label>
-                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setKhataParty} />
-                {khataParty && (
+                <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
+                {mainParty && (
                   <div className="mt-2">
-                    <PartyStrip person={khataParty} />
+                    <PartyStrip person={mainParty} />
                   </div>
                 )}
                 <p className="mt-1 text-[11px] text-surface-500">
