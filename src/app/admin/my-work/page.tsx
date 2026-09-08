@@ -297,7 +297,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
             <Icons.ClipboardList className="h-4 w-4" /> {t("mw_tasks_title", lang)}
           </h2>
-          <div className="p-4">
+          {/* Malik (8 September): "page kabhi scroll na karni paRe." Is
+              fehrist ki lambai yahan tak seemit -- agar zyada items hon
+              to sirf ISI dabbe ke andar scroll ho, poora safha nahi. */}
+          <div className="overflow-y-auto p-4" style={{ maxHeight: "min(50vh, 420px)" }}>
             <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact />
           </div>
         </div>
@@ -330,7 +333,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
               <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}
             </h2>
-            <div className="divide-y divide-surface-100 dark:divide-surface-800">
+            <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(35vh, 300px)" }}>
               {recentActivity.length === 0 ? (
                 <p className="px-5 py-4 text-sm text-surface-400">{t("mw_activity_empty", lang)}</p>
               ) : (
