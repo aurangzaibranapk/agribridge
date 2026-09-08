@@ -2419,15 +2419,38 @@ branch ki priced entries dekh/verify/reject kar sakta tha. Ab
 Koi migration nahi — sirf `src/actions/milk-chiller.ts` aur
 `verify/page.tsx` mein code fix. `tsc`/`build` clean.
 
+### Orders — jaanch mukammal, ek asal bug mila aur theek hua (8 September, raat, code-only)
+
+"Orders" asal mein CHAAR alag features hain, ek nahi: `agri-orders`
+(branch/HQ B2B — fertilizer/seed), `agri-returns`, `bridge-orders` +
+`dealer-orders` (kisan se dealer marketplace), `produce-orders` (kisan
+ki fasal ka buyer ko becha jana).
+
+- **`agri-orders`**: is mein 3-marhala tasdeeq (`sales_verified` →
+  `finance_verified` → `approved`) **pehle se bana hua hai** — apna
+  raasta (`getOrderPermissions()`) hai, `requireAction` nahi, magar
+  kaam karta hai aur SoD bhi lagi hui hai (274). Kuch banana baqi nahi.
+- **`agri-returns`**: pehle se `requireAction` istemal karta hai.
+- **`bridge-orders` + `produce-orders`**: **asal bug mila** —
+  `adminVerifyOrder`, `adminMarkDelivered`, `recordOrderAdvancePayment`
+  (bridge) aur `adminVerifyProduceOrder`, `adminMarkProduceDelivered`
+  (produce) mein koi permission check hi nahi tha. RLS ki wajah se
+  bahar wale nahi kar sakte the, magar HR/warehouse/milk_collection/
+  procurement jaisi departments (jin ka marketplace se koi taalluq
+  nahi) bhi kar sakti thin — `recordOrderAdvancePayment` to
+  `finance_transactions` mein qatar bhi daalta hai. Ab
+  owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
+  Koi migration nahi — sirf code. `tsc`/`build` clean.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
-1. Verify→approve pattern baqi modules mein: POS Return, Orders,
-   Machinery. (Kharche, Stock Count, Purchases mukammal; Milk ka verify
-   pehle se tha, branch-scope bug theek ho gaya.) POS Return ka
-   structure baqi se alag hai (manager PIN se atomic authorize + foran
-   stock/ledger post — verify stage add karna matlab DB function ko
-   "create pending" + "post on approve" mein split karna, bara
-   structural kaam).
+1. Verify→approve pattern baqi modules mein: POS Return, Machinery.
+   (Kharche, Stock Count, Purchases mukammal; Milk ka verify pehle se
+   tha, branch-scope bug theek ho gaya; Orders ki jaanch mukammal, ek
+   permission bug theek hua.) POS Return ka structure baqi se alag hai
+   (manager PIN se atomic authorize + foran stock/ledger post — verify
+   stage add karna matlab DB function ko "create pending" + "post on
+   approve" mein split karna, bara structural kaam).
 2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
