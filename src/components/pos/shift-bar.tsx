@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Landmark, UserRound } from "lucide-react";
-import { closeShift, getShiftSummary, shiftCashRecipients, bankAccountsForDeposit, type ActionState } from "@/actions/pos-counters";
+import { Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send } from "lucide-react";
+import { closeShift, getShiftSummary, shiftCashRecipients, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
-import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
 
 const KHALI: ActionState = {};
@@ -46,18 +45,12 @@ export function ShiftCashHandoverForm({
   branchId: string | null;
   countedCash: number;
 }) {
-  const [mode, setMode] = useState<"person" | "bank">("person");
   const [recipients, setRecipients] = useState<{ id: string; name: string; role: string }[] | null>(null);
-  const [banks, setBanks] = useState<{ id: string; name: string }[] | null>(null);
-  const [slipUrl, setSlipUrl] = useState("");
   const [handoverState, handoverAction] = useFormState(sendCash, HANDOVER_KHALI);
 
   useEffect(() => {
     shiftCashRecipients(branchId).then((r) => {
       if (!("error" in r)) setRecipients(r);
-    });
-    bankAccountsForDeposit().then((r) => {
-      if (!("error" in r)) setBanks(r);
     });
   }, [branchId]);
 
@@ -69,17 +62,14 @@ export function ShiftCashHandoverForm({
     );
   }
 
-  if (recipients === null || banks === null) return null;
-  if (recipients.length === 0 && banks.length === 0) {
+  if (recipients === null) return null;
+  if (recipients.length === 0) {
     return (
       <p className="text-xs text-surface-400">
-        Is branch ka koi Manager/Finance ya bank khata nahi mila — cash apne paas rakhein, ya khud Cash Handover se bhejein.
+        Is branch ka koi Manager ya Finance nahi mila — cash apne paas rakhein, ya khud Cash Handover se bhejein.
       </p>
     );
   }
-  // Ek hi raasta maujood ho to poochhna hi bekaar hai -- wo raasta khud
-  // chun liya jata hai.
-  const effectiveMode = recipients.length === 0 ? "bank" : banks.length === 0 ? "person" : mode;
 
   return (
     <form action={handoverAction} className="space-y-2 rounded-xl border border-surface-200 p-3 dark:border-surface-700">
@@ -87,74 +77,25 @@ export function ShiftCashHandoverForm({
       <input type="hidden" name="amount" value={countedCash} />
       <input type="hidden" name="shift_id" value={shiftId} />
       <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
-        Yehi Rs {Math.round(countedCash).toLocaleString()} kaise bhejein?
+        Yehi Rs {Math.round(countedCash).toLocaleString()} kis ko bhejein?
       </p>
-
-      {recipients.length > 0 && banks.length > 0 && (
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => setMode("person")}
-            className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
-              mode === "person"
-                ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
-                : "border-surface-200 text-surface-500 dark:border-surface-700"
-            }`}
-          >
-            <UserRound className="h-3.5 w-3.5" /> Manager/Finance
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("bank")}
-            className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
-              mode === "bank"
-                ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
-                : "border-surface-200 text-surface-500 dark:border-surface-700"
-            }`}
-          >
-            <Landmark className="h-3.5 w-3.5" /> Bank Jama
-          </button>
-        </div>
-      )}
-
-      {effectiveMode === "person" ? (
-        <select
-          name="to_profile_id"
-          required
-          className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
-        >
-          {recipients.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name} ({r.role === "manager" ? "Manager" : "Finance"})
-            </option>
-          ))}
-        </select>
-      ) : (
-        <>
-          <select
-            name="to_account_id"
-            required
-            className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
-          >
-            {banks!.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <PaymentSlipUpload onUploaded={setSlipUrl} />
-          {!slipUrl && (
-            <p className="text-[11px] text-surface-400">Bhejne se pehle deposit slip upload karein — lazmi hai.</p>
-          )}
-        </>
-      )}
-
+      <select
+        name="to_profile_id"
+        required
+        className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+      >
+        {recipients.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name} ({r.role === "manager" ? "Manager" : "Finance"})
+          </option>
+        ))}
+      </select>
       {handoverState.error && (
         <p className="flex items-start gap-1.5 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.error}
         </p>
       )}
-      <SendButton disabled={effectiveMode === "bank" && !slipUrl} />
+      <SendButton />
     </form>
   );
 }

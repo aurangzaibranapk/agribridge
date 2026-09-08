@@ -355,12 +355,3 @@ export async function shiftCashRecipients(
   }));
 }
 
-/** Bank khaton ki fehrist -- shift close se seedha khud jama karane ke liye. */
-export async function bankAccountsForDeposit(): Promise<{ id: string; name: string }[] | { error: string }> {
-  const who = await main();
-  if ("error" in who) return { error: who.error ?? "Login zaroori hai." };
-
-  const service = createServiceClient();
-  const { data } = await service.from("finance_accounts").select("id, name").eq("account_type", "bank").order("name");
-  return (data ?? []).map((r) => ({ id: r.id, name: r.name }));
-}

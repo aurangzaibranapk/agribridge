@@ -5282,7 +5282,6 @@ export type Database = {
           carrier_note: string | null
           carrier_profile_id: string | null
           created_at: string
-          deposit_slip_url: string | null
           difference: number | null
           difference_reason: string | null
           from_branch_id: string | null
@@ -5297,7 +5296,6 @@ export type Database = {
           sent_note: string | null
           shift_id: string | null
           status: string
-          to_account_id: string | null
           to_branch_id: string | null
           to_profile_id: string | null
         }
@@ -5307,7 +5305,6 @@ export type Database = {
           carrier_note?: string | null
           carrier_profile_id?: string | null
           created_at?: string
-          deposit_slip_url?: string | null
           difference?: number | null
           difference_reason?: string | null
           from_branch_id?: string | null
@@ -5322,7 +5319,6 @@ export type Database = {
           sent_note?: string | null
           shift_id?: string | null
           status?: string
-          to_account_id?: string | null
           to_branch_id?: string | null
           to_profile_id?: string | null
         }
@@ -5332,7 +5328,6 @@ export type Database = {
           carrier_note?: string | null
           carrier_profile_id?: string | null
           created_at?: string
-          deposit_slip_url?: string | null
           difference?: number | null
           difference_reason?: string | null
           from_branch_id?: string | null
@@ -5347,7 +5342,6 @@ export type Database = {
           sent_note?: string | null
           shift_id?: string | null
           status?: string
-          to_account_id?: string | null
           to_branch_id?: string | null
           to_profile_id?: string | null
         }
@@ -5456,27 +5450,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pos_shifts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_handovers_to_account_id_fkey"
-            columns: ["to_account_id"]
-            isOneToOne: false
-            referencedRelation: "finance_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_handovers_to_account_id_fkey"
-            columns: ["to_account_id"]
-            isOneToOne: false
-            referencedRelation: "v_cash_book_ledger_farq"
-            referencedColumns: ["account_id"]
-          },
-          {
-            foreignKeyName: "cash_handovers_to_account_id_fkey"
-            columns: ["to_account_id"]
-            isOneToOne: false
-            referencedRelation: "v_finance_balance_check"
-            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "cash_handovers_to_branch_id_fkey"
@@ -18183,6 +18156,171 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_collection_deposits: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          branch_id: string
+          created_at: string
+          deposit_date: string
+          deposit_number: string
+          finance_entry_id: string | null
+          finance_note: string | null
+          id: string
+          outstanding_after: number | null
+          outstanding_before: number
+          shop_id: string
+          slip_url: string
+          staff_id: string
+          staff_note: string | null
+          status: string
+          submitted_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          branch_id: string
+          created_at?: string
+          deposit_date: string
+          deposit_number: string
+          finance_entry_id?: string | null
+          finance_note?: string | null
+          id?: string
+          outstanding_after?: number | null
+          outstanding_before: number
+          shop_id: string
+          slip_url: string
+          staff_id: string
+          staff_note?: string | null
+          status?: string
+          submitted_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          branch_id?: string
+          created_at?: string
+          deposit_date?: string
+          deposit_number?: string
+          finance_entry_id?: string | null
+          finance_note?: string | null
+          id?: string
+          outstanding_after?: number | null
+          outstanding_before?: number
+          shop_id?: string
+          slip_url?: string
+          staff_id?: string
+          staff_note?: string | null
+          status?: string
+          submitted_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       pos_counter_staff: {
         Row: {
           counter_id: string
@@ -18362,6 +18500,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pos_deposit_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
       }
       pos_return_code_attempts: {
         Row: {
