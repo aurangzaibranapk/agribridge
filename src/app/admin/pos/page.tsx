@@ -33,7 +33,7 @@ export default async function PosPage() {
   let warehouseId: string | null = null;
   let activeCounterId: string | null = null;
   let activeCounterName: string | null = null;
-  let openShiftInfo: { id: string; shiftNumber: string; openedAt: string } | null = null;
+  let openShiftInfo: { id: string; shiftNumber: string; openedAt: string; openingCash: number } | null = null;
 
   if (!dealer) {
     const { data: profile } = await supabase
@@ -73,7 +73,7 @@ export default async function PosPage() {
     if (myCounters.length > 0) {
       const { data: openShift } = await supabase
         .from("pos_shifts")
-        .select("id, shift_number, counter_id, opened_at")
+        .select("id, shift_number, counter_id, opened_at, opening_cash")
         .eq("staff_id", user.id)
         .eq("status", "open")
         .maybeSingle();
@@ -92,7 +92,12 @@ export default async function PosPage() {
       warehouseId = counterRow?.warehouse_id ?? null;
       activeCounterId = active.id;
       activeCounterName = active.name;
-      openShiftInfo = { id: openShift!.id, shiftNumber: openShift!.shift_number, openedAt: openShift!.opened_at };
+      openShiftInfo = {
+        id: openShift!.id,
+        shiftNumber: openShift!.shift_number,
+        openedAt: openShift!.opened_at,
+        openingCash: Number(openShift!.opening_cash),
+      };
     } else if (profile?.branch_id) {
       // ---------------------------------------------------------------
       // PURANA raasta -- 366 se pehle jaisa tha, ek harf nahi badla.
@@ -376,6 +381,7 @@ export default async function PosPage() {
           shiftNumber={openShiftInfo.shiftNumber}
           counterName={activeCounterName}
           shopName={shopName ?? "—"}
+          openingCash={openShiftInfo.openingCash}
           openedAt={openShiftInfo.openedAt}
         />
       )}

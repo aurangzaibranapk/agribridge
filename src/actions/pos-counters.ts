@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { computeShiftCash, type ShiftCashSummary } from "@/lib/pos/shift-cash";
 
 export interface ActionState {
   error?: string;
@@ -239,6 +240,27 @@ export async function openShift(_prev: ActionState, formData: FormData): Promise
 }
 
 /**
+ * Shift Close se PEHLE dikhane ke liye -- "system khud bataye kitni sale
+ * hui hai", bina staff se pehle physical cash maangte hue. Malik (8
+ * September): "system ko khud balance batana chahiye, kya sale hui hai."
+ *
+ * Yehi hisaab `closeShift` bhi istemal karta hai (computeShiftCash) --
+ * dikhaya gaya adad aur band karte waqt ginta gaya adad kabhi alag nahi
+ * ho sakte.
+ */
+export async function getShiftSummary(shiftId: string): Promise<ShiftCashSummary | { error: string }> {
+  const who = await main();
+  if ("error" in who) return { error: who.error ?? "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const { data: shift } = await service.from("pos_shifts").select("opening_cash, staff_id").eq("id", shiftId).maybeSingle();
+  if (!shift) return { error: "Shift nahi mila." };
+  if (shift.staff_id !== who.userId && !who.unrestricted) return { error: "Sirf apna shift dekh sakte hain." };
+
+  return computeShiftCash(shiftId, Number(shift.opening_cash));
+}
+
+/**
  * Shift Close -- Phase 6. Expected cash = opening + is shift ki cash
  * sales − isi shift ki sale par hui cash returns. (Cash Recovery aur
  * "other valid movement" abhi is hisaab mein shamil NAHI -- POS abhi
@@ -265,22 +287,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   if (shift.status !== "open") return { error: "Ye shift pehle hi band ho chuka hai." };
   if (shift.staff_id !== who.userId && !who.unrestricted) return { error: "Sirf apna shift band kar sakte hain." };
 
-  const { data: shiftSales } = await service.from("pos_sales").select("id, cash_paid").eq("shift_id", shiftId);
-  const rows = shiftSales ?? [];
-  const cashSalesTotal = rows.reduce((s, r) => s + Number(r.cash_paid ?? 0), 0);
-  const saleIds = rows.map((r) => r.id);
-
-  let cashReturnsTotal = 0;
-  if (saleIds.length > 0) {
-    const { data: returns } = await service
-      .from("pos_returns")
-      .select("total_amount, refund_method")
-      .in("sale_id", saleIds)
-      .eq("refund_method", "cash");
-    cashReturnsTotal = (returns ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
-  }
-
-  const expectedCash = Number(shift.opening_cash) + cashSalesTotal - cashReturnsTotal;
+  const { expectedCash } = await computeShiftCash(shiftId, Number(shift.opening_cash));
   const difference = Math.round((countedCash - expectedCash) * 100) / 100;
 
   const { error } = await service
