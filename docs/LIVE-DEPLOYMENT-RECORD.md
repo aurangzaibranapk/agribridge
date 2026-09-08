@@ -2316,16 +2316,49 @@ gaya" kehte hi poori fehrist ek sath ban sake.
 - `npx tsc --noEmit`: 71 (baseline se koi izafa nahi). `npm run build`:
   kamyab.
 
+### Migration 371 bhi isi fehrist mein (8 September, raat)
+
+Task 3 (cash-custody) mukammal ho gaya — Testing par test ho chuka,
+Live par abhi nahi gayi. Do raaste, malik ke apne alfaz se: pehle
+"manager lagate hain to uski branch ki hadd tak verify" (6 September),
+phir "sale staff wo cash khud bank sy deposit krwa k slip upload kr
+day ... Jis KO finance verify kr k ... outstanding khatam kr day" (8
+September, raat).
+
+- `cash_handovers` ab `to_account_id` (bank khata) aur
+  `deposit_slip_url` bhi le sakta hai — `to_profile_id` (banda) ki
+  jagah, kabhi dono nahi (DB check constraint).
+- `sendCash`/`receiveCash` mein pehli dafa `requireAction("cash-handover")`
+  laga — is se pehle koi check hi nahi tha, kisi ko bhi seedha call
+  kiya ja sakta tha.
+- **Asal bug mila**: `role_feature_permissions` update karna staff tak
+  khud nahi pahunchta — `fn_apply_role_template` sirf UN features ke
+  liye row banata hai jin ka us bande ke paas ABHI EK BHI row nahi;
+  purana row (chahe adhoora/stale ho) chhua nahi jata. Is wajah se
+  Kharche/Stock-Count ka `verify` bhi kuch managers tak nahi pahuncha
+  tha — migration 371 mein teen targeted resync UPDATE/INSERT se theek
+  kiya (sirf manager/finance/sales_staff, sirf 3 mutasir features —
+  kisi doosri jagah ki manual customization nahi chhui, jaise warehouse
+  role ka stock-count 'approve' jo jaan boojh kar diya gaya tha).
+- Shift Close ki modal mein ab "Manager/Finance ko bhejein" YA "Bank
+  Jama" ka toggle. Bank wale raaste mein `PaymentSlipUpload` (maujooda
+  component) se slip lazmi hai.
+- Outstanding "baqi hai" banner (POS page par, Counter-picker par bhi)
+  — Manager/Finance ko bheja gaya cash SEND par clear hota hai (jaisa
+  pehle tha); bank deposit SIRF Finance ki tasdeeq (verify) par clear
+  hota hai — malik ke alfaz ke mutabiq jaan boojh kar alag rakha gaya.
+- `npx tsc --noEmit`: 71 (baseline). `npm run build`: kamyab. DB
+  check-constraint aur delete-guard dono SQL se simulate kar ke confirm
+  kiye.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
-1. Verify→approve pattern baqi modules mein: Purchases, Cash Handover,
-   POS Return, Milk, Orders, Machinery.
-2. Cash-custody deep integration (Shift Close ka counted cash →
-   `cash_handovers`) — khula sawal: `cash_handovers` sirf
-   owner/super_admin/admin/manager/finance ke liye hai, sales_staff
-   ke liye nahi, jab ke shift close karne wala aksar sales_staff hota
-   hai. Owner se poochhna hai.
-3. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
+1. Verify→approve pattern baqi modules mein: Purchases, POS Return,
+   Milk, Orders, Machinery.
+2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
    se nahi.
+3. Bank Deposit ka Money Trail/reports review abhi nahi hua — naya
+   `bank_deposit_pending` party sirf 1030 ke andar hai, purane "Cash
+   raaste mein" ke reports isay dekhte hain ya nahi, ek nazar chahiye.
