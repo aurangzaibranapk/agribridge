@@ -2351,10 +2351,21 @@ September, raat).
   check-constraint aur delete-guard dono SQL se simulate kar ke confirm
   kiye.
 
+### Migration 372 (8 September, raat) — Purchases
+
+Manager apni branch ki purchase verify kar sakta hai (naya
+`review_status='verified'`); Owner/Admin final manzoor/wapas/radd
+karte hain, tasdeeq ke baghair bhi. `reviewPurchase` mein pehli dafa
+`requireAction("purchases","approve")` — is se pehle sirf hardcoded
+role-array tha, `role_feature_permissions` mein 'purchases' feature ke
+liye koi row hi nahi thi. Resubmit par purani tasdeeq bhi saaf hoti
+hai. Testing par SoD trigger (`trg_sod_self_approval`) aur dono naye
+CHECK constraints confirm ho chuke.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
-1. Verify→approve pattern baqi modules mein: Purchases, POS Return,
-   Milk, Orders, Machinery.
+1. Verify→approve pattern baqi modules mein: POS Return, Milk, Orders,
+   Machinery.
 2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
