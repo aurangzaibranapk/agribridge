@@ -130,6 +130,7 @@ export function PosClient({
   groups = [],
   customers,
   branchId = null,
+  counterId = null,
   rateBaqiCount = 0,
   perms,
   lang,
@@ -149,6 +150,12 @@ export function PosClient({
    * Kis shaakh ka counter hai -- wapsi ki fehrist isi se chhanti hai.
    */
   branchId?: string | null;
+  /**
+   * POS Counter (366/367) -- diya jaye to bikri usi counter ke khule
+   * Shift se juRti hai. Jis staff ke paas koi counter assign nahi, us
+   * ke liye ye hamesha null rehta hai -- purana kaam waisa hi.
+   */
+  counterId?: string | null;
   /**
    * Kitni cheezein sirf is liye nahi dikh rahin ke un ka rate abhi
    * darj nahi hua (252). Ye adad chhupaya nahi jata -- warna banda
@@ -528,6 +535,7 @@ export function PosClient({
         .map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
       discount: chhoot,
       discountReason: discountReason.trim(),
+      counterId,
     });
 
     const data = result.saleId;

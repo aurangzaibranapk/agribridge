@@ -57,6 +57,8 @@ export async function posCheckout(input: {
   /** Bill par chhoRi hui raqam. 0 = discount diya hi nahi. */
   discount?: number;
   discountReason?: string;
+  /** POS Counter (366/367) -- diya jaye to staff ke khule Shift se sale juRti hai. */
+  counterId?: string | null;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
@@ -108,6 +110,7 @@ export async function posCheckout(input: {
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
     p_discount_reason: discount > 0 ? discountReason : undefined,
+    p_counter_id: input.counterId ?? undefined,
   });
 
   const saleId = saleIdRaw as string | null;

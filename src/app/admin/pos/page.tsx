@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BINA_QISM } from "@/lib/pos/constants";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
+import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
+import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
@@ -29,13 +31,72 @@ export default async function PosPage() {
   let branch: { id: string; name: string } | null = null;
   let shopName: string | null = null;
   let warehouseId: string | null = null;
+  let activeCounterId: string | null = null;
+  let activeCounterName: string | null = null;
+  let openShiftInfo: { id: string; shiftNumber: string; openedAt: string } | null = null;
+
   if (!dealer) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("branch_id, shop_id")
       .eq("id", user.id)
       .maybeSingle();
-    if (profile?.branch_id) {
+
+    /**
+     * POS Counter (366/367): agar is staff ko kisi counter ki ijazat
+     * hai, to shop wahan se tay hoti hai -- profile.shop_id se nahi.
+     *
+     * Jis staff ke paas AAJ koi counter assign nahi (yani har koi jab
+     * tak koi Manager use kisi counter par nahi laga deta), us ke liye
+     * ye poora hissa khali rehta hai aur neeche wala PURANA raasta
+     * bilkul waisa hi chalta hai jaisa 366 se pehle chalta tha.
+     */
+    const { data: myCounterRows } = await supabase
+      .from("pos_counter_staff")
+      .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name))")
+      .eq("profile_id", user.id)
+      .eq("is_active", true)
+      .eq("pos_counters.is_active", true);
+
+    const myCounters = ((myCounterRows ?? []) as any[])
+      .map((r) => (Array.isArray(r.pos_counters) ? r.pos_counters[0] : r.pos_counters))
+      .filter(Boolean)
+      .map((c: any) => ({
+        id: c.id as string,
+        name: c.name as string,
+        branchId: c.branch_id as string,
+        shopId: c.shop_id as string,
+        branchName: (Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name) ?? "—",
+        shopName: (Array.isArray(c.shops) ? c.shops[0]?.name : c.shops?.name) ?? "—",
+      }));
+
+    if (myCounters.length > 0) {
+      const { data: openShift } = await supabase
+        .from("pos_shifts")
+        .select("id, shift_number, counter_id, opened_at")
+        .eq("staff_id", user.id)
+        .eq("status", "open")
+        .maybeSingle();
+
+      const active = openShift ? myCounters.find((c) => c.id === openShift.counter_id) : undefined;
+
+      if (!active) {
+        // Koi shift khula nahi -- POS/inventory dikhane se pehle
+        // counter chunwana aur Shift Open karwana zaroori hai (Phase 6).
+        return <CounterShiftPicker counters={myCounters} />;
+      }
+
+      const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
+      branch = { id: active.branchId, name: active.branchName };
+      shopName = active.shopName;
+      warehouseId = counterRow?.warehouse_id ?? null;
+      activeCounterId = active.id;
+      activeCounterName = active.name;
+      openShiftInfo = { id: openShift!.id, shiftNumber: openShift!.shift_number, openedAt: openShift!.opened_at };
+    } else if (profile?.branch_id) {
+      // ---------------------------------------------------------------
+      // PURANA raasta -- 366 se pehle jaisa tha, ek harf nahi badla.
+      // ---------------------------------------------------------------
       const { data: branchRow } = await supabase.from("branches").select("name").eq("id", profile.branch_id).maybeSingle();
       branch = { id: profile.branch_id, name: branchRow?.name ?? "Branch" };
 
@@ -309,6 +370,15 @@ export default async function PosPage() {
    */
   return (
     <>
+      {openShiftInfo && activeCounterName && (
+        <ShiftBar
+          shiftId={openShiftInfo.id}
+          shiftNumber={openShiftInfo.shiftNumber}
+          counterName={activeCounterName}
+          shopName={shopName ?? "—"}
+          openedAt={openShiftInfo.openedAt}
+        />
+      )}
       <PosClient
         lang={lang}
         sellerName={sellerName}
@@ -316,6 +386,7 @@ export default async function PosPage() {
         groups={groups}
         customers={rawCustomers ?? []}
         branchId={branch?.id ?? null}
+        counterId={activeCounterId}
         rateBaqiCount={rateBaqiCount}
         perms={perms}
       />
