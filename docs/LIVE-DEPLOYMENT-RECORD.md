@@ -2254,3 +2254,78 @@ chhua nahi jata. Rakhna hai ya hatana — malik ka faisla baqi hai.
   banana (malik ka apna future item).
 
 **Agla review jab bhi ho, is fehrist ko yahin se aage barhana hai.**
+
+---
+
+## Rokay hue kaam — 8 September (Budget/Vet, Kharche tasdeeq, POS Counter/Shift, Stock Count tasdeeq)
+
+Ye sab **Testing par chal chuka hai** (`hwaiuwxqldxsoukkfefn`), migration
+361 se 370 tak — koi bhi Live par abhi tak NAHI gayi (tasdeeq shuda,
+`schema_migrations` mein 361–370 sirf Testing par hain). Owner poore
+waqt system par active the (browser se khud test karte rahe), is liye
+command hold rahi — ab yahan likh di gayi hai taake "system par aa
+gaya" kehte hi poori fehrist ek sath ban sake.
+
+### Migrations jo Live par jani hain (361–370, isi tarteeb mein)
+
+| # | Kya karti hai |
+|---|---|
+| **361** | Budget ab branch ke hisaab se bhi likha ja sakta hai. |
+| **362** | Budget Shop (business unit) tak — Karyana/Agri Inputs/Vets/Milk/Grain. |
+| **363** | "Vets" naya business type — Karyana/Agri Inputs/Dairy/Grain ke barabar. |
+| **364** | Kharche: Branch Manager sirf apni branch ki TASDEEQ karta hai (naya action `verify`), final MANZOORI Finance/Owner/Admin karte hain. `company_expense_requests.verified_by/verified_at`, status mein `verified` juRa, SoD rule (requested_by/verified_by). |
+| **365** | `audit_logs.action_type` check constraint mein `verify` shamil. |
+| **366** | POS Counter + Shift ka poora schema: `pos_counters`, `pos_counter_staff`, `pos_shifts`, `pos_shift_counters`; `pos_sales.counter_id/shift_id`; `create_pos_sale` mein optional `p_counter_id` (purana raasta jaisa tha waisa hi rehta hai). |
+| **367** | 'pos-counters' feature/dashboard/ijazat/madad register. |
+| **368** | **Bug fix** — 366 ne naye tables par RLS lagai magar GRANT dena bhool gaya; is se POS seedha khulta tha, counter/shift poochta hi nahi tha (owner ne khud pakRa, screenshot ke sath). Ab `grant select,insert,update,delete` lag chuki. |
+| **369** | 'reports.pos-shifts' feature register (Shift Report ka safha). |
+| **370** | Stock Count: Kharche wala tareeqa yahan bhi. Manager apni branch ki ginti TASDEEQ karta hai (naya `verify`), Finance/Owner FINAL post karte hain. **Asal bug mila aur theek kiya**: `postCount` mein koi permission check hi nahi tha — kisi bhi logged-in bande ko rok nahi sakti thi, chahe 272 mein manager ka 'approve' role-table se hata diya gaya ho (wo faisla sirf kaghaz par tha). Ab `requireAction("stock-count","approve")` lagi. |
+
+### Code (isi ke sath jana hai — commits, purane se naye)
+
+| Commit | Kya hai |
+|---|---|
+| `ea10cea` | Budget ab branch ke hisaab se (361 ke sath) |
+| `52ccb05` | Budget Shop tak (362 ke sath) |
+| `16a8d8a` | Branch P&L par Budget \| Used \| Available |
+| `486fe6d` | "Vet" naya business type (363 ke sath) |
+| `40cc3c2` | Branch Dashboard — "Branches" ki fehrist se seedha |
+| `cdace81` | Kharche: Branch Manager tasdeeq, final manzoori alag (364 ke sath) |
+| `8ef233c` | Branch Dashboard: Quick Links (Milk/Grain/Machinery/Sales/Inventory/Purchase/Finance/HR) — sirf Branch Dashboard ke andar, sidebar nahi badli |
+| `ffbb990`, `1b0e50b`, `6a7e499` | POS Counter + Shift: schema, management page, /admin/pos par Smart Opening (366–367 ke sath) |
+| `f70f883` | Fix: POS Counter tables ka missing GRANT (368) |
+| `2e13ce1` | POS Shift: khud-batata cash summary + professional Open/Close design (Waseela reference se, apna design) |
+| `0a6b275` | POS Shift Report (369) + cash-figure ka bug fix — `cash_paid` khud "cash" nahi tha, ab `pos_sale_payment_details` se asal cash aata hai |
+| `b4f9e30` | Sales Report: har shop ka alag hisaab + shop-level filter |
+| `582a1bc` | POS: `requireAction("pos","create")` gate — dealer sale is se mustasna |
+| `58b57a3` | Stock Count: Branch Manager tasdeeq (370) |
+
+### Testing rigor — jo ho chuka
+
+- Kharche verify→manzoor: owner ne khud test kiya, PASS.
+- POS Counter/Shift: owner ne khud browser se kholne/band karne ka
+  poora chakkar chalaya; do asal bug isi se pakre gaye (GRANT wala,
+  aur cash-figure wala) — dono theek.
+- Stock Count verify→post: `set role authenticated` se JWT
+  impersonation ke zariye simulate kiya (jaisa Kharche/POS mein hua
+  tha) — manager (apni branch, khud nahi) verify kar saka; khud apni
+  ginti verify karna DB trigger + app dono se rukta hai; Finance ne
+  verified ginti post ki; financial-record delete-guard (`fn_stock_count_guard`)
+  bhi confirm hua ke test qatar mitane nahi deta — theek yehi chahiye
+  tha.
+- `npx tsc --noEmit`: 71 (baseline se koi izafa nahi). `npm run build`:
+  kamyab.
+
+### Abhi baqi (isi "4 kaam" ki fehrist se)
+
+1. Verify→approve pattern baqi modules mein: Purchases, Cash Handover,
+   POS Return, Milk, Orders, Machinery.
+2. Cash-custody deep integration (Shift Close ka counted cash →
+   `cash_handovers`) — khula sawal: `cash_handovers` sirf
+   owner/super_admin/admin/manager/finance ke liye hai, sales_staff
+   ke liye nahi, jab ke shift close karne wala aksar sales_staff hota
+   hai. Owner se poochhna hai.
+3. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
+   koshish, return ka shift ke saath link, branch consolidation bina
+   dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
+   se nahi.
