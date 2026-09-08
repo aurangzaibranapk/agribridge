@@ -100,6 +100,7 @@ export function KharcheClient({
   darjKarSakta,
   manzoorKarSakta,
   taseeqKarSakta,
+  showCompanyBalances = true,
 }: {
   rows: Qatar[];
   mazdooriRows: MazdooriQatar[];
@@ -111,6 +112,13 @@ export function KharcheClient({
   manzoorKarSakta: boolean;
   /** Branch Manager: sirf apni branch ki tasdeeq -- final manzoori nahi. */
   taseeqKarSakta: boolean;
+  /**
+   * Shop par baithe staff ko company ka combined balance nahi dikhana
+   * (malik, 8 September) -- us ki apni shop ka hisaab safhe ke upar
+   * alag se dikhta hai. Dropdown ke liye `khaate` phir bhi chahiye
+   * (paid_from_account_id chunne ke liye), sirf ye strip chhupti hai.
+   */
+  showCompanyBalances?: boolean;
 }) {
   const [darjState, darjAction] = useFormState(kharchaDarj, KHALI);
   const [manzoorState, manzoorAction] = useFormState(kharchaManzoor, KHALI);
@@ -254,6 +262,7 @@ export function KharcheClient({
         dukan ke apne nahi. Chhupa dene se dukan par baitha banda samajhta
         ke ye us ki apni golak hai.
       */}
+      {showCompanyBalances && (
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
           <Wallet className="h-3.5 w-3.5" /> Is waqt khaton mein
@@ -281,6 +290,7 @@ export function KharcheClient({
           )}
         </p>
       </div>
+      )}
 
       {darjKarSakta && (
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">

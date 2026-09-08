@@ -2466,6 +2466,51 @@ total se milata tha, discount/tax ko netting kiye baghair.
   dobara AI se na parhwaye. Us bill ki apni lines theek hain, sirf
   discrepancy banner cosmetic tha.
 
+### My Work — Today's Tasks/Recent Activity ki apni scroll (8 September, raat, code-only)
+
+Malik: "kabhi page scroll na karni paRe." Ye do fehristein (Today's Tasks,
+Recent Activity) ab apni seemit height tak mehdood hain — zyada items
+hon to sirf usi dabbe ke andar scroll ho, poora `/admin/my-work` safha
+nahi (department panel par ye pattern pehle se 7 September ko laga tha).
+Quick Actions/Create Order/Add Farmer ka "isi page ke andar khulna"
+pehle se `InPageWorkspace` (7 September) se ho raha hai — koi tabdeeli
+nahi chahiye thi, malik ne khud confirm kiya. `tsc`/`build` clean.
+
+### Paisa & Khata — shop ka apna payment-method hisaab (8 September, raat, code-only)
+
+Anwar (Sales Staff) ka "Paisa & Khata" safha khola to "Is waqt khaton
+mein" **poori company ka combined balance** dikha raha tha (Cash in
+Hand Rs −28,000 samet) — safha khud likhta hai "ye khate poori company
+ke hain, har dukan ke apne nahi" (jaan boojh kar, 6 September). Malik
+ka aitraaz theek tha: shop par baithe staff ko sirf **apni shop** ka,
+**payment-method ke hisaab se** (Cash/Easypaisa/JazzCash/Bank), chuni
+hui date-range ka hisaab chahiye — company ka total nahi, aur branch ka
+bhi nahi (malik ne khud confirm kiya: ek branch mein 1 se zyada shop
+ho sakti hain).
+
+- Naya `src/lib/pos/shop-payment-methods.ts` — `pos_sales.shop_id` +
+  date range se `pos_sale_payment_details` (payment-method ke hisaab
+  se sale), minus isi shop ke **manzoor-shuda** `company_expense_requests`
+  (`paid_from_account_id` → `payment_method_account_map` se method
+  tak). Koi naya migration nahi — `company_expense_requests.shop_id`
+  pehle se maujood hai aur `kharchaDarj` pehle se bharta hai.
+- `/admin/kharche` par shop-scoped staff (jin ka `profiles.shop_id` set
+  hai) ko naya section (date filter + table) dikhta hai; company-wide
+  "Is waqt khaton mein" strip un se chhup jati hai (`showCompanyBalances`
+  prop) — magar account-dropdown (`khaate`) waisa hi rehta hai, wo
+  form ke liye chahiye.
+- `tsc` (71) aur `build` clean.
+
+**Ek zaroori rukawat mili, Testing par:** Anwar ka `profiles.shop_id`
+abhi **NULL** hai. `create_pos_sale` (purana raasta) `pos_sales.shop_id`
+usi waqt ke logged-in staff ke `profiles.shop_id` se leta hai — shop_id
+na ho to sale bhi kisi shop se nahi juRti (Testing par maujood teen
+purani sales isi wajah se `shop_id = NULL` hain). **Is feature ka kaam
+karna is par mabni hai ke har shop wale staff ka `profiles.shop_id`
+`Admin → Users` (shop-selector) se bhara ho.** Jo sale is assign hone se
+PEHLE ho chuki, wo hamesha `shop_id = NULL` rahegi (peechhe jaa kar theek
+nahi ho sakti) — sirf assign hone ke BAAD ki sales is hisaab mein aayengi.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
 1. Verify→approve pattern baqi modules mein: POS Return, Machinery.

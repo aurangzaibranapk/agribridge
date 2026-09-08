@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { PageHeader } from "@/components/ui/layout-primitives";
+import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { KharcheClient } from "./kharche-client";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { billQismKaLabel } from "@/lib/kharche";
-import { ArrowDownCircle, ArrowUpCircle, Clock } from "lucide-react";
+import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
+import { ArrowDownCircle, ArrowUpCircle, Clock, Wallet } from "lucide-react";
 import { LiveRefresh } from "@/components/live/live-refresh";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,11 @@ const MANZOORI_WALE = ["admin_assistant", "finance"];
  * rakhne se banda HAR cash-out ko kharcha samajhne lagta hai, aur wohi
  * ghalti P&L mein nafa kam dikhati hai.
  */
-export default async function KharchePage() {
+export default async function KharchePage({
+  searchParams,
+}: {
+  searchParams?: { from?: string; to?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -174,6 +179,29 @@ export default async function KharchePage() {
   const aajAaya = aajKe.filter((r) => !GAYE.includes(r.kind)).reduce((s, r) => s + r.amount, 0);
   const intezarKiRaqam = intezar.reduce((s, r) => s + r.amount, 0);
 
+  /**
+   * Shop par baithe staff ke liye apni shop ka payment-method-wise
+   * hisaab (malik, 8 September): "Is waqt khaton mein" poori company ka
+   * combined balance hai, jo shop wale bande ke liye ghalat cheez hai --
+   * us ki apni shop nahi. Ye hissa branch ka nahi, SIRF shop ka hai
+   * (malik ne khud confirm kiya: ek branch mein ek se zyada shop hoti
+   * hain).
+   *
+   * Date range khud chun sakte hain (malik: "filter ho, jab jo marzi ho
+   * check kar lein") -- default AAJ.
+   */
+  const shopScoped = !sabKuchWala && Boolean(me?.shop_id);
+  const todayStr = aaj;
+  const fromDate = searchParams?.from || todayStr;
+  const toDate = searchParams?.to || todayStr;
+  const [shopBreakdown, shopRow] = shopScoped
+    ? await Promise.all([
+        shopPaymentMethodBreakdown(me!.shop_id as string, fromDate, toDate),
+        service.from("shops").select("name").eq("id", me!.shop_id as string).maybeSingle(),
+      ])
+    : [null, null];
+  const shopName = shopRow && "data" in shopRow ? (shopRow.data?.name as string | undefined) ?? null : null;
+
   return (
     <div>
       <PageHeader
@@ -195,9 +223,84 @@ export default async function KharchePage() {
         />
       </div>
 
+      {shopScoped && (
+        <Card className="mt-4">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
+            <Wallet className="h-3.5 w-3.5" /> {shopName ?? "Meri Dukan"} ka hisaab — payment method ke hisaab se
+          </p>
+
+          <form className="mb-3 flex flex-wrap items-end gap-2 text-sm" method="GET">
+            <div>
+              <label className="mb-1 block text-[11px] text-surface-500">Se</label>
+              <input
+                type="date"
+                name="from"
+                defaultValue={fromDate}
+                className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-800"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] text-surface-500">Tak</label>
+              <input
+                type="date"
+                name="to"
+                defaultValue={toDate}
+                className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-800"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Dekhein
+            </button>
+          </form>
+
+          {shopBreakdown && shopBreakdown.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-surface-400">
+                    <th className="pb-1.5 pr-4">Payment Method</th>
+                    <th className="pb-1.5 pr-4 text-right">Sale</th>
+                    <th className="pb-1.5 pr-4 text-right">Kharcha/Adaigi</th>
+                    <th className="pb-1.5 text-right">Bacha</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+                  {shopBreakdown.map((r) => (
+                    <tr key={r.method}>
+                      <td className="py-1.5 pr-4">{r.label}</td>
+                      <td className="py-1.5 pr-4 text-right tabular-nums text-emerald-700 dark:text-emerald-400">
+                        Rs {r.sales.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 pr-4 text-right tabular-nums text-surface-600 dark:text-surface-300">
+                        {r.expenseNet >= 0 ? "+" : ""}
+                        Rs {r.expenseNet.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 text-right tabular-nums font-semibold text-surface-900 dark:text-surface-100">
+                        Rs {r.net.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-surface-400">Is date range mein is shop ki koi POS sale nahi mili.</p>
+          )}
+
+          <p className="mt-2 text-[11px] leading-snug text-surface-400">
+            Ye sirf {shopName ?? "isi dukan"} ka hisaab hai — kisi doosri shop ya branch ka nahi. Sirf manzoor-shuda
+            kharcha/adaigi hi ghata jata hai; manzoori ka intezar wali qatarein abhi shamil nahi.
+          </p>
+        </Card>
+      )}
+
       <KharcheClient
         rows={rows}
         mazdooriRows={mazdooriRows}
+        showCompanyBalances={!shopScoped}
         khaate={(khaate ?? []).map((k: any) => ({
           id: k.id,
           name: k.name,
