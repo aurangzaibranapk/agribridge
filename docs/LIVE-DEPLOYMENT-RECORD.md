@@ -2362,10 +2362,58 @@ liye koi row hi nahi thi. Resubmit par purani tasdeeq bhi saaf hoti
 hai. Testing par SoD trigger (`trg_sod_self_approval`) aur dono naye
 CHECK constraints confirm ho chuke.
 
+### Migration 373 (8 September, raat) — POS Collection Outstanding & Bank Deposit Verification
+
+Malik ka naya, mukammal spec (20+ sections): POS cash sale != company
+ka bank receipt. Jab tak staff bank mein jama na karaye aur Finance us
+ki slip tasdeeq na kare, wo raqam "POS Collection Outstanding" mein
+khari rehti hai. Ye migration 371 ke shift-tied ad-hoc bank-deposit
+hisse (`cash_handovers.to_account_id`) ko replace karti hai — poora,
+standalone nizam:
+
+- Naya `pos_collection_deposits` table. **Outstanding kahin store nahi
+  hota** (double-settle ka khatra mitane ke liye, malik ka apna
+  usool) — hamesha live compute: (POS cash sales − cash returns) −
+  (sirf APPROVED deposits). Sirf CASH — digital tareeqe alag.
+- Submit → Pending → Finance Approve (Outstanding minus, yehi
+  settlement point) ya Reject (Outstanding waisa hi, dobara jama kara
+  sakte hain).
+- Notifications: maujooda nizam (`src/lib/notifications.ts`) reuse —
+  Finance + submitter ki branch ka Manager (sirf usi branch, naya
+  `notifyBranchManagers`) + Admin/Assistant Admin + CEO (naya
+  `notifyPositionHolders`, ohde se — role se nahi, 334 ka design).
+- `/admin/my-collection` (staff), `/admin/finance/pos-deposits`
+  (Finance).
+- Duplicate-settlement guard, SoD (khud tasdeeq nahi), delete/mutation
+  guard — teenon DB se test kiye (approve dobara chalane se 0 rows).
+
+**Ye sirf Phase 1 hai** (core money-safety + submit/verify/reject
+lifecycle). **Abhi baqi**:
+1. Dashboard ki gehrai (Finance ke filters: branch/shop/staff/bank/
+   tareekh/status; "Today's Approved", "Rejected/Needs Correction"
+   summary cards).
+2. Notification click → seedha us record par (abhi list page tak hi
+   jata hai, khaas record highlight/open nahi hota).
+3. Multi-branch manager (ek profile ka sirf ek `branch_id` hota hai —
+   koi manager do branches ka na ho sakta abhi).
+4. **Ek zaroori note jo malik ko batana hai**: POS cash sale hote hi
+   `finance_transactions` (poorana, alag mechanism — journal_lines/GL
+   se juda nahi) "Cash in Hand" khud foran barha deta hai
+   (`create_pos_sale`). Ye naya Outstanding nizam is se ALAG, PARALLEL
+   hisaab hai — dono ek doosre ko update nahi karte. Approval par jo
+   ledger entry jati hai (Cash in Hand → Bank transfer,
+   `finance_transactions` ke zariye) sahi hai, magar "Cash Book ek hi
+   jagah se" (127) ka poora reconciliation is Outstanding se abhi
+   nahi juda — ye ek gehra, pehle se maujood architecture sawal hai
+   jo is Phase mein chhua nahi gaya.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
 1. Verify→approve pattern baqi modules mein: POS Return, Milk, Orders,
-   Machinery.
+   Machinery. POS Return ka structure baqi teenon se alag hai (manager
+   PIN se atomic authorize + foran stock/ledger post — verify stage
+   add karna matlab DB function ko "create pending" + "post on
+   approve" mein split karna, bara structural kaam).
 2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
