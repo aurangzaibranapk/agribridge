@@ -505,3 +505,92 @@ export async function shopCashControl(shopId: string, fromDate: string, toDate: 
         : "Sab shifts band hain.",
   };
 }
+
+export interface BranchShop360Row {
+  shopId: string;
+  shopName: string;
+  stockValue: number | null;
+  cashDigitalTotal: number;
+  cashDifference: number;
+  openShifts: number;
+  outstanding: number;
+  netOwnerEquity: number;
+}
+
+export interface BranchConsolidated360 {
+  shops: BranchShop360Row[];
+  totalStockValue: number;
+  totalCashDigital: number;
+  totalCashDifference: number;
+  totalOpenShifts: number;
+  totalOutstanding: number;
+  totalNetOwnerEquity: number;
+  /** Ek hi adad, poori branch ke liye -- shop ke hisaab se dobara nahi ginta (double count na ho). */
+  receivableBranchLevel: number | null;
+  note: string;
+}
+
+/**
+ * Phase 5 — Branch Consolidation. Har shop ka apna, independently
+ * durust hisaab (upar wale functions) hi jama kiya jata hai -- koi
+ * naya "branch-level" formula nahi likha, is liye shop-to-shop internal
+ * stock transfer consolidated total ko phoola nahi sakta (wo sirf
+ * jagah badalta hai, kul stock waisa hi rehta hai). Receivable ek hi
+ * dafa liya jata hai (kisi ek shop se) -- wo khud branch-level hai,
+ * har shop ke liye dobara jorna usay N guna kar deta.
+ */
+export async function branchConsolidated360(branchId: string, date: string): Promise<BranchConsolidated360> {
+  const service = createServiceClient();
+  const { data: shops } = await service.from("shops").select("id, name").eq("branch_id", branchId).eq("is_active", true).order("name");
+  const shopList = shops ?? [];
+
+  if (shopList.length === 0) {
+    return {
+      shops: [],
+      totalStockValue: 0,
+      totalCashDigital: 0,
+      totalCashDifference: 0,
+      totalOpenShifts: 0,
+      totalOutstanding: 0,
+      totalNetOwnerEquity: 0,
+      receivableBranchLevel: null,
+      note: "Is branch mein koi active shop nahi mili.",
+    };
+  }
+
+  const rows: BranchShop360Row[] = [];
+  let receivableBranchLevel: number | null = null;
+
+  for (const s of shopList) {
+    const [money, cashControl, outstanding, investment] = await Promise.all([
+      shopWhereIsMyMoney(s.id),
+      shopCashControl(s.id, date, date),
+      shopCollectionOutstanding(s.id),
+      shopInvestmentPosition(s.id),
+    ]);
+    if (receivableBranchLevel == null) receivableBranchLevel = money.receivableBranchLevel;
+
+    rows.push({
+      shopId: s.id,
+      shopName: s.name,
+      stockValue: money.stockValueApprox,
+      cashDigitalTotal: money.cashDigitalTotal,
+      cashDifference: cashControl.fullDifference,
+      openShifts: cashControl.openShiftsCount,
+      outstanding: outstanding.outstanding,
+      netOwnerEquity: investment.netOwnerEquity,
+    });
+  }
+
+  return {
+    shops: rows,
+    totalStockValue: round2(rows.reduce((s, r) => s + (r.stockValue ?? 0), 0)),
+    totalCashDigital: round2(rows.reduce((s, r) => s + r.cashDigitalTotal, 0)),
+    totalCashDifference: round2(rows.reduce((s, r) => s + r.cashDifference, 0)),
+    totalOpenShifts: rows.reduce((s, r) => s + r.openShifts, 0),
+    totalOutstanding: round2(rows.reduce((s, r) => s + r.outstanding, 0)),
+    totalNetOwnerEquity: round2(rows.reduce((s, r) => s + r.netOwnerEquity, 0)),
+    receivableBranchLevel,
+    note: "Receivable poori branch ka ek hi adad hai -- har shop ke liye dobara nahi jorha gaya (double-count na ho).",
+  };
+}

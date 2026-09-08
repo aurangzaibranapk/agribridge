@@ -118,6 +118,46 @@ export default async function Shop360Page({
     shopStockPosition(shopId, date, date),
   ]);
 
+  /**
+   * Needs Attention (Phase 5) -- maujooda numbers se hi, koi nayi
+   * ginti nahi. Sifar/khali kabhi "sab theek hai" nahi -- ginti na ho
+   * to chip hi nahi banta.
+   */
+  const alerts: { key: string; label: string; tone: "red" | "amber"; href: string }[] = [];
+  if (cashControl.openShiftsCount > 0) {
+    alerts.push({ key: "open-shift", label: `${cashControl.openShiftsCount} shift khuli hai`, tone: "amber", href: "/admin/pos" });
+  }
+  if (cashControl.openShiftsCount === 0 && Math.abs(cashControl.fullDifference) >= 1) {
+    alerts.push({
+      key: "cash-diff",
+      label: `Cash farq Rs ${Math.abs(cashControl.fullDifference).toLocaleString()}`,
+      tone: "red",
+      href: "/admin/reports/pos-shifts",
+    });
+  }
+  if (outstanding.pendingDeposits > 0) {
+    alerts.push({
+      key: "pending-deposit",
+      label: `Rs ${outstanding.pendingDeposits.toLocaleString()} deposit tasdeeq ka intezar`,
+      tone: "amber",
+      href: "/admin/finance/pos-deposits",
+    });
+  }
+  if (outstanding.outstanding > 0) {
+    alerts.push({
+      key: "cash-outstanding",
+      label: `Rs ${outstanding.outstanding.toLocaleString()} bank jama baqi`,
+      tone: "amber",
+      href: "/admin/my-collection",
+    });
+  }
+  if (stock.outOfStockCount > 0) {
+    alerts.push({ key: "out-of-stock", label: `${stock.outOfStockCount} item out of stock`, tone: "red", href: "/admin/products" });
+  }
+  if (stock.lowStockCount > 0) {
+    alerts.push({ key: "low-stock", label: `${stock.lowStockCount} item low stock`, tone: "amber", href: "/admin/products" });
+  }
+
   return (
     <div>
       <PageHeader
@@ -148,31 +188,61 @@ export default async function Shop360Page({
         </form>
       )}
 
+      {/* ---- Needs Attention (Phase 5) ---- */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {alerts.length === 0 ? (
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-700">
+            Sab saaf — kuch bhi tawajjo nahi chahta.
+          </span>
+        ) : (
+          alerts.map((a) => (
+            <Link
+              key={a.key}
+              href={a.href}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium ${
+                a.tone === "red" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"
+              }`}
+            >
+              {a.label}
+            </Link>
+          ))
+        )}
+      </div>
+
       {/* ---- Paisa Kahan Hai? ---- */}
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
         <PieChart className="h-4 w-4" /> Paisa Kahan Hai?
       </h2>
       <div className="mb-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Stock (maal)"
-          value={money.stockValueApprox == null ? "—" : `Rs. ${money.stockValueApprox.toLocaleString()}`}
-          icon={ShoppingCart}
-          tone="blue"
-        />
-        <StatCard label="Cash/Bank/Digital (lifetime)" value={`Rs. ${money.cashDigitalTotal.toLocaleString()}`} icon={Wallet} tone="green" />
-        <StatCard
-          label="Customer Receivable (poori BRANCH)"
-          value={money.receivableBranchLevel == null ? "—" : `Rs. ${money.receivableBranchLevel.toLocaleString()}`}
-          icon={Receipt}
-          tone="orange"
-        />
-        <StatCard
-          label="POS Cash Outstanding (bank jama baqi)"
-          value={`Rs. ${outstanding.outstanding.toLocaleString()}`}
-          icon={PiggyBank}
-          tone="purple"
-        />
+        <Link href="/admin/reports/inventory">
+          <StatCard
+            label="Stock (maal, FIFO cost)"
+            value={money.stockValueApprox == null ? "—" : `Rs. ${money.stockValueApprox.toLocaleString()}`}
+            icon={ShoppingCart}
+            tone="blue"
+          />
+        </Link>
+        <Link href="/admin/kharche">
+          <StatCard label="Cash/Bank/Digital (lifetime)" value={`Rs. ${money.cashDigitalTotal.toLocaleString()}`} icon={Wallet} tone="green" />
+        </Link>
+        <Link href="/admin/crm">
+          <StatCard
+            label="Customer Receivable (poori BRANCH)"
+            value={money.receivableBranchLevel == null ? "—" : `Rs. ${money.receivableBranchLevel.toLocaleString()}`}
+            icon={Receipt}
+            tone="orange"
+          />
+        </Link>
+        <Link href="/admin/my-collection">
+          <StatCard
+            label="POS Cash Outstanding (bank jama baqi)"
+            value={`Rs. ${outstanding.outstanding.toLocaleString()}`}
+            icon={PiggyBank}
+            tone="purple"
+          />
+        </Link>
       </div>
+      <p className="mb-2 text-[11px] text-surface-400">Har card apne source safhe par le jata hai — asal transactions wahan.</p>
 
       <Card className="mb-4">
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Cash/Bank/Digital — payment method ke hisaab se (lifetime)</p>
@@ -238,6 +308,9 @@ export default async function Shop360Page({
         <p className="mt-2 flex items-start gap-1 text-[11px] leading-snug text-surface-400">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {investment.note}
         </p>
+        <Link href="/admin/kharche" className="mt-2 inline-block text-xs text-brand-700 underline">
+          Entries dekhein — Paisa &amp; Khata →
+        </Link>
       </Card>
 
       {/* ---- Date filter for the day-flow sections ---- */}
@@ -343,6 +416,9 @@ export default async function Shop360Page({
           is liye unhein "match" mein shamil nahi kiya — sirf "Paisa Kahan Hai" mein tracked dikhte hain. Stock ka match Phase 2E (FIFO cost) ke
           baad, agar us period mein Stock Count hua ho.
         </p>
+        <Link href="/admin/reports/pos-shifts" className="mt-2 inline-block text-xs text-brand-700 underline">
+          Har shift ki tafseel dekhein →
+        </Link>
       </Card>
 
       {/* ---- Aaj ki Sale ---- */}
@@ -436,6 +512,9 @@ export default async function Shop360Page({
           </span>
         </div>
         <p className="mt-2 text-[11px] text-surface-400">{stock.note}</p>
+        <Link href="/admin/reports/inventory" className="mt-2 inline-block text-xs text-brand-700 underline">
+          Product-wise stock dekhein →
+        </Link>
       </Card>
 
       <p className="text-center text-xs text-surface-400">

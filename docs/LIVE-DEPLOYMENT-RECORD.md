@@ -2442,6 +2442,33 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Phase 5: Alerts, drill-downs, Branch Consolidation
+
+Spec ka aakhri hissa. Koi migration nahi.
+
+- **Needs Attention** strip -- maujooda numbers se hi (khuli shifts, cash
+  farq, pending deposit, POS outstanding, low/out-of-stock). Sifar/khali
+  ho to chip hi nahi banta.
+- **Drill-downs** -- "Paisa Kahan Hai" ke 4 StatCard ab apne source safhe
+  par le jate hain (`/admin/kharche`, `/admin/crm`, `/admin/my-collection`,
+  `/admin/reports/inventory`); Investment/Cash Control/Stock cards ke
+  neeche bhi "detail dekhein" link.
+- **Branch Consolidation** -- `branchConsolidated360()`: har shop ka
+  apna, independently durust hisaab (upar wale saare functions) hi
+  jama kiya, koi naya "branch-level" formula nahi likha -- is liye
+  internal shop-to-shop stock transfer consolidated total ko phoola
+  nahi sakta (sirf jagah badalta hai). Receivable ek hi dafa liya jata
+  hai (khud branch-level hai) -- har shop ke liye dobara jorna N guna
+  kar deta, is liye nahi kiya.
+- `/admin/branches/[id]/dashboard` (jo pehle se PnL reuse karta tha) mein
+  ab Shop 360 Consolidated table bhi -- har shop ka naam click karke
+  `/admin/shop-360?shop_id=` par apna poora hisaab.
+- `tsc` (71) aur `build` clean.
+
+**Poora malik ka 21-section spec (Phase 1 se 5 tak) mukammal — Testing
+par. Live abhi tak nahi chhua. Malik ka browser smoke-test (Phase 1
+wala) abhi bhi baqi hai.**
+
 ### Shop 360 — Phase 2E: Stock Position + FIFO Cost, koi migration nahi
 
 Malik ka "Option 2" ka sequence yahan mukammal hua. Stock Value ab
