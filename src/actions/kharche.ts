@@ -52,7 +52,12 @@ export interface ActionState {
  * mein aa jati, aur us ko nikalne ke liye ulti qatar banani parti.
  */
 
-const MANZOORI_WALE = ["manager", "admin_assistant", "finance"];
+/**
+ * Manzoor kaun kar sakta hai -- 8 September ke baad "manager" is mein
+ * nahi (wo ab sirf apni branch ki TASDEEQ karta hai, `kharchaVerify` se).
+ * Legacy fallback isi liye sirf finance/admin_assistant tak.
+ */
+const MANZOORI_WALE = ["admin_assistant", "finance"];
 
 /**
  * Is bande par mazdoori ka kya haal hai -- ledger se.
@@ -253,6 +258,65 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
 }
 
 /**
+ * Tasdeeq — Branch Manager ka kaam, sirf apni branch ki hadd tak.
+ *
+ * Malik (8 September): "manager lagate hain to uski branch ki hadd tak
+ * jitni bhi verification hogi wo karega, lekin final wo approach nahi
+ * karega." Ye is liye ALAG function hai `kharchaManzoor` se -- tasdeeq
+ * kitab mein kuch nahi likhti, sirf agla marhala kholti hai. Kitab aur
+ * Cash Book sirf FINAL manzoori (neeche) par hilte hain.
+ */
+export async function kharchaVerify(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await main();
+  if ("error" in who) return { error: who.error };
+
+  const guard = await requireAction("kharche", "verify");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Kharche ki qatar nahi mili." };
+
+  const service = createServiceClient();
+  const { data: kharcha } = await service
+    .from("company_expense_requests")
+    .select("expense_number, status, branch_id, requested_by")
+    .eq("id", id)
+    .maybeSingle();
+  if (!kharcha) return { error: "Ye kharcha nahi mila." };
+  if (kharcha.status !== "pending") {
+    return { error: "Ye ab tasdeeq ke marhale mein nahi hai (pehle hi tasdeeq/manzoor/radd ho chuka)." };
+  }
+
+  // Apni branch ki hadd -- 'all' scope (Finance/Owner/Admin) ke liye rok nahi.
+  if (!caller.unrestricted && caller.scope !== "all") {
+    if (!caller.branchId || kharcha.branch_id !== caller.branchId) {
+      return { error: "Ye kharcha aapki branch ka nahi hai — sirf apni branch ki tasdeeq kar sakte hain." };
+    }
+  }
+  if (kharcha.requested_by === who.userId) {
+    return { error: "Apni banayi hui request khud tasdeeq nahi kar sakte — doosra authorized banda kare." };
+  }
+
+  const { error } = await service
+    .from("company_expense_requests")
+    .update({ status: "verified", verified_by: who.userId, verified_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "verify",
+    module: "kharche",
+    recordId: id,
+    recordLabel: kharcha.expense_number,
+    description: `Branch Manager ki tasdeeq — ab Finance/Admin/Owner ki final manzoori ka intezar.`,
+  });
+
+  revalidatePath("/admin/kharche");
+  return { success: true, message: `${kharcha.expense_number} tasdeeq ho gaya — ab final manzoori ka intezar hai.` };
+}
+
+/**
  * Manzoori — aur teen jagah ek sath hilti hain.
  *
  * Tarteeb ahem hai: pehle LEDGER, phir Cash Book. Ledger na bane to
@@ -269,7 +333,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
     // Purane raaste wale ke liye ohde ki fehrist bhi dekhi jati hai --
     // warna nayi feature key aane se pehle wale manager ruk jate.
     if (!MANZOORI_WALE.includes(who.role) && !["owner", "super_admin", "admin"].includes(who.role)) {
-      return { error: "Manzoori sirf Manager, Admin Assistant, Finance ya Admin de sakta hai." };
+      return { error: "Final manzoori sirf Admin Assistant, Finance ya Owner/Admin de sakta hai (Manager sirf tasdeeq karta hai)." };
     }
   }
 

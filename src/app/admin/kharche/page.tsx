@@ -11,7 +11,7 @@ import { LiveRefresh } from "@/components/live/live-refresh";
 
 export const dynamic = "force-dynamic";
 
-const MANZOORI_WALE = ["manager", "admin_assistant", "finance"];
+const MANZOORI_WALE = ["admin_assistant", "finance"];
 
 /**
  * Kharche aur adaigi — din bhar ka har len-den ek jagah.
@@ -45,6 +45,8 @@ export default async function KharchePage() {
   const sabKuchWala = UNRESTRICTED_ROLES.includes(role);
   const manzoorKarSakta =
     sabKuchWala || MANZOORI_WALE.includes(role) || (await canDo("kharche", "approve"));
+  // Branch Manager: sirf apni branch ki tasdeeq (verify) -- final manzoori nahi.
+  const taseeqKarSakta = !manzoorKarSakta && (await canDo("kharche", "verify"));
   const darjKarSakta = sabKuchWala || (await canDo("kharche", "create"));
 
   const service = createServiceClient();
@@ -158,7 +160,9 @@ export default async function KharchePage() {
   const khataNaam = new Map<string, string>();
   (khaate ?? []).forEach((k: any) => khataNaam.set(k.id, k.name));
 
-  const intezar = rows.filter((r) => r.status === "pending");
+  // 'verified' -- Branch Manager ki tasdeeq ho chuki, final manzoori
+  // ka intezar hai (abhi bhi "intezar" mein ginna chahiye).
+  const intezar = rows.filter((r) => r.status === "pending" || r.status === "verified");
   const manzoor = rows.filter((r) => r.status === "approved");
 
   // Aaj ka hisaab -- rukh ke hisaab se, "kharcha" aur "paisa gaya" ek
@@ -216,6 +220,7 @@ export default async function KharchePage() {
         khataNaam={Object.fromEntries(khataNaam)}
         darjKarSakta={darjKarSakta}
         manzoorKarSakta={manzoorKarSakta}
+        taseeqKarSakta={taseeqKarSakta}
       />
     </div>
   );

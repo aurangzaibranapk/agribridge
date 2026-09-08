@@ -368,6 +368,7 @@ export type BandeKiQism = (typeof BANDE_KI_QISMEIN)[number]["value"];
 /** Manzoori ke darje — kis stage par hai. */
 export const HALAT_LABEL: Record<string, string> = {
   pending: "Manzoori ka intezar",
+  verified: "Tasdeeq shuda — final manzoori ka intezar",
   approved: "Manzoor — kitab mein darj",
   rejected: "Radd",
 };

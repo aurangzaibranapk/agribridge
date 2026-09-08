@@ -5889,6 +5889,8 @@ export type Database = {
           shop_id: string | null
           status: string
           supplier_id: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           amount: number
@@ -5914,6 +5916,8 @@ export type Database = {
           shop_id?: string | null
           status?: string
           supplier_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           amount?: number
@@ -5939,8 +5943,17 @@ export type Database = {
           shop_id?: string | null
           status?: string
           supplier_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "company_expense_requests_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_expense_requests_approved_by_fkey"
             columns: ["approved_by"]

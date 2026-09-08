@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
-type ActionType = "create" | "update" | "delete" | "approve" | "reject" | "login" | "logout" | "view";
+type ActionType = "create" | "update" | "delete" | "approve" | "reject" | "verify" | "login" | "logout" | "view";
 
 interface LogAuditParams {
   actionType: ActionType;

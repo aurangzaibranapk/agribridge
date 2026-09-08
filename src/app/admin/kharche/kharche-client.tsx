@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Check, X, Plus, Paperclip, Info, Wallet, ExternalLink, HardHat } from "lucide-react";
-import { kharchaDarj, kharchaManzoor, kharchaRadd, type ActionState } from "@/actions/kharche";
+import { kharchaDarj, kharchaManzoor, kharchaVerify, kharchaRadd, type ActionState } from "@/actions/kharche";
 import { mazdooriDarj, mazdooriManzoor, mazdooriRadd, bandeKaHaal } from "@/actions/mazdoori";
 import {
   KHARCHA_QISMEIN,
@@ -99,6 +99,7 @@ export function KharcheClient({
   khataNaam,
   darjKarSakta,
   manzoorKarSakta,
+  taseeqKarSakta,
 }: {
   rows: Qatar[];
   mazdooriRows: MazdooriQatar[];
@@ -108,9 +109,12 @@ export function KharcheClient({
   khataNaam: Record<string, string>;
   darjKarSakta: boolean;
   manzoorKarSakta: boolean;
+  /** Branch Manager: sirf apni branch ki tasdeeq -- final manzoori nahi. */
+  taseeqKarSakta: boolean;
 }) {
   const [darjState, darjAction] = useFormState(kharchaDarj, KHALI);
   const [manzoorState, manzoorAction] = useFormState(kharchaManzoor, KHALI);
+  const [taseeqState, taseeqAction] = useFormState(kharchaVerify, KHALI);
   const [raddState, raddAction] = useFormState(kharchaRadd, KHALI);
 
   const [mazdoorDarjState, mazdoorDarjAction] = useFormState(mazdooriDarj, KHALI);
@@ -174,6 +178,7 @@ export function KharcheClient({
   const paighaam =
     darjState.message ??
     manzoorState.message ??
+    taseeqState.message ??
     raddState.message ??
     mazdoorDarjState.message ??
     mazdoorManzoorState.message ??
@@ -181,6 +186,7 @@ export function KharcheClient({
   const kharabi =
     darjState.error ??
     manzoorState.error ??
+    taseeqState.error ??
     raddState.error ??
     mazdoorDarjState.error ??
     mazdoorManzoorState.error ??
@@ -845,7 +851,7 @@ export function KharcheClient({
                   <th className="py-2 pr-3">Khata</th>
                   <th className="py-2 pr-3 text-right">Raqam</th>
                   <th className="py-2 pr-3">Halat</th>
-                  {manzoorKarSakta && <th className="py-2 pr-3">Faisla</th>}
+                  {(manzoorKarSakta || taseeqKarSakta) && <th className="py-2 pr-3">Faisla</th>}
                 </tr>
               </thead>
               <tbody>
@@ -902,7 +908,9 @@ export function KharcheClient({
                               ? "bg-emerald-100 text-emerald-800 dark:bg-surface-800 dark:text-emerald-300"
                               : r.status === "rejected"
                                 ? "bg-red-100 text-red-800 dark:bg-surface-800 dark:text-red-300"
-                                : "bg-amber-100 text-amber-800 dark:bg-surface-800 dark:text-amber-300"
+                                : r.status === "verified"
+                                  ? "bg-sky-100 text-sky-800 dark:bg-surface-800 dark:text-sky-300"
+                                  : "bg-amber-100 text-amber-800 dark:bg-surface-800 dark:text-amber-300"
                           }`}
                         >
                           {HALAT_LABEL[r.status] ?? r.status}
@@ -911,15 +919,46 @@ export function KharcheClient({
                           <span className="mt-1 block text-[11px] text-red-600">{r.rejection_reason}</span>
                         )}
                       </td>
-                      {manzoorKarSakta && (
+                      {(manzoorKarSakta || taseeqKarSakta) && (
                         <td className="py-2 pr-3">
-                          {r.status === "pending" ? (
+                          {manzoorKarSakta && (r.status === "pending" || r.status === "verified") ? (
                             <div className="flex flex-col gap-1">
                               <form action={manzoorAction}>
                                 <input type="hidden" name="id" value={r.id} />
                                 <Dabao tone="hara">
                                   <span className="inline-flex items-center gap-1">
                                     <Check className="h-3 w-3" /> Manzoor
+                                  </span>
+                                </Dabao>
+                              </form>
+                              {raddKaunsa === r.id ? (
+                                <form action={raddAction} className="flex flex-col gap-1">
+                                  <input type="hidden" name="id" value={r.id} />
+                                  <input
+                                    name="rejection_reason"
+                                    required
+                                    placeholder="Wajah"
+                                    className="w-32 rounded-lg border border-surface-200 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
+                                  />
+                                  <Dabao tone="laal">Radd karein</Dabao>
+                                </form>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setRaddKaunsa(r.id)}
+                                  className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800"
+                                >
+                                  Radd
+                                </button>
+                              )}
+                            </div>
+                          ) : !manzoorKarSakta && taseeqKarSakta && r.status === "pending" ? (
+                            <div className="flex flex-col gap-1">
+                              <form action={taseeqAction}>
+                                <input type="hidden" name="id" value={r.id} />
+                                <Dabao tone="hara">
+                                  <span className="inline-flex items-center gap-1">
+                                    <Check className="h-3 w-3" /> Tasdeeq
                                   </span>
                                 </Dabao>
                               </form>
