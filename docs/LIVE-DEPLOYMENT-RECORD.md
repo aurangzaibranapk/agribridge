@@ -2407,13 +2407,27 @@ lifecycle). **Abhi baqi**:
    nahi juda — ye ek gehra, pehle se maujood architecture sawal hai
    jo is Phase mein chhua nahi gaya.
 
+### Milk — branch-scope bug theek hui (8 September, raat, code-only — koi migration nahi)
+
+Milk collection ka verify stage pehle se bana hua tha (purani session,
+migration 101/104/274) — theek se, sirf EK asal bug ke saath: manager
+"apni branch tak" (`data_scope='own_branch'`) tasdeeq karne wala tha,
+magar `verifyMilkEntries` aur `/admin/milk-collection/verify` ki query
+dono mein ye rok kahin lagu nahi hoti thi — koi bhi manager KISI BHI
+branch ki priced entries dekh/verify/reject kar sakta tha. Ab
+`requireAction`ka `caller.branchId`/`scope` dono jagah check hota hai.
+Koi migration nahi — sirf `src/actions/milk-chiller.ts` aur
+`verify/page.tsx` mein code fix. `tsc`/`build` clean.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
-1. Verify→approve pattern baqi modules mein: POS Return, Milk, Orders,
-   Machinery. POS Return ka structure baqi teenon se alag hai (manager
-   PIN se atomic authorize + foran stock/ledger post — verify stage
-   add karna matlab DB function ko "create pending" + "post on
-   approve" mein split karna, bara structural kaam).
+1. Verify→approve pattern baqi modules mein: POS Return, Orders,
+   Machinery. (Kharche, Stock Count, Purchases mukammal; Milk ka verify
+   pehle se tha, branch-scope bug theek ho gaya.) POS Return ka
+   structure baqi se alag hai (manager PIN se atomic authorize + foran
+   stock/ledger post — verify stage add karna matlab DB function ko
+   "create pending" + "post on approve" mein split karna, bara
+   structural kaam).
 2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
