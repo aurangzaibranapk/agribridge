@@ -27,6 +27,8 @@ export interface Caller {
   userId: string;
   role: string;
   branchId: string | null;
+  /** `own_shop` scope ke liye -- pehle ye khana hi nahi tha (374 mein pakra gaya). */
+  shopId: string | null;
   unrestricted: boolean;
   /** Feature wali ijazat mili hi nahi -- purani rok par bharosa karo. */
   legacy: boolean;
@@ -44,7 +46,7 @@ export async function requireAction(featureKey: string, action: Action): Promise
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, is_active, branch_id")
+    .select("role, is_active, branch_id, shop_id")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile?.is_active) return { error: "Ye account fa'aal nahi hai." };
@@ -55,6 +57,7 @@ export async function requireAction(featureKey: string, action: Action): Promise
         userId: user.id,
         role: profile.role,
         branchId: profile.branch_id,
+        shopId: (profile as { shop_id?: string | null }).shop_id ?? null,
         unrestricted: true,
         legacy: false,
         scope: "all",
@@ -72,6 +75,7 @@ export async function requireAction(featureKey: string, action: Action): Promise
     userId: user.id,
     role: profile.role,
     branchId: profile.branch_id,
+    shopId: (profile as { shop_id?: string | null }).shop_id ?? null,
     unrestricted: false,
   };
 
@@ -139,8 +143,8 @@ export function applyScope<T extends { eq: (column: string, value: string) => T 
     return query.eq(columns.owner, caller.userId);
   }
 
-  if (caller.scope === "own_shop" && columns.shop && caller.branchId) {
-    return query.eq(columns.shop, caller.branchId);
+  if (caller.scope === "own_shop" && columns.shop && caller.shopId) {
+    return query.eq(columns.shop, caller.shopId);
   }
 
   if (columns.branch && caller.branchId) {

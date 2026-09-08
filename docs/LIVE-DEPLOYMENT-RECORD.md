@@ -2510,6 +2510,42 @@ banana confirm hua:
   chhote/khali hain, magar query khud sahi hai).
 - **Live par abhi NAHI gayi** — migration 374 sirf Testing par.
 
+### Shop 360 — Owner ki checklist se DO cheezein pakri gayin (8 September, raat)
+
+Malik ne browser smoke-test se pehle apna checklist bheja (scope
+isolation, `applyScope` bug abhi theek karo). Dono check kiye:
+
+1. **Asal bug (theek ho gaya)**: `page.tsx` mein Manager ke liye
+   `?shop_id=` URL parameter ki **koi validation nahi thi** — `canPick`
+   list sirf UI dropdown ke liye thi, jo shop_id asal mein load hota
+   wo query se seedha aata tha. Koi bhi Manager URL mein **doosri
+   branch ki kisi bhi shop ki id** daal kar us ka poora maali data
+   dekh sakta tha (spec ka "Test 7: bina ijazat URL access"). Ab
+   Manager ka `shop_id` sirf us ki apni branch ki shops (`pickableShops`)
+   mein se hi chuna ja sakta hai — bahar ki id mile to khud us ki
+   pehli shop par wapas girta hai. Unrestricted (Owner/Admin/Finance)
+   ke liye khula rehta hai, jaan boojh kar (un ka scope "all" hi hai).
+2. **`applyScope()` ka `own_shop` bug** (373 mein note kiya tha,
+   "kahin bulaya nahi jata" is liye be-asar) — ab theek kar diya, malik
+   ke kehne par: `Caller` mein naya `shopId` field (`requireAction` se
+   profile ka `shop_id` bhi aata hai ab), `applyScope`'s `own_shop`
+   branch ab `caller.shopId` se filter karta hai, `caller.branchId` se
+   nahi. Koi doosri jagah asar nahi paRa (function abhi bhi kahin
+   bulaya nahi jata, sirf ab agar future mein bulaya jaye to sahi
+   kaam karega).
+3. Testing par SQL se Manager ki `pickableShops` fehrist verify ki
+   (Mahabali branch → sirf Mahabali ki 2 shops, doosri branch ki
+   "Kisan Karyan 157" shops bahar) — is se confirm hua ke fix sahi
+   set par lagu hoti hai.
+4. **Browser mein khud test nahi ho saka** — is session mein koi
+   `.env`/Supabase keys nahi hain aur na hi staff accounts ke passwords,
+   is liye Playwright se real login karke asal safha khud nahi khol
+   saka. Ye hamesha malik apne browser se khud karte hain (jaisa POS
+   Counter/Shift aur Stock Count mein pehle bhi hua) — malik ki
+   checklist (scope, labels, date filter, totals match) ab bhi khule
+   hain, unko dekhna baqi hai.
+- `tsc` (71) aur `build` clean is fix ke baad bhi.
+
 ### Bill AI-reading — discount/tax save-path ka gap theek hua (8 September, raat, code-only)
 
 Live par bill-rates ka ek asal safha khola (JX0098807, Hamid Traders)

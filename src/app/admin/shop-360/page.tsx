@@ -63,7 +63,17 @@ export default async function Shop360Page({
   }
 
   const canPick = pickableShops.length > 0;
-  const shopId = canPick ? searchParams?.shop_id || me.shop_id || pickableShops[0]?.id || null : me.shop_id;
+  // `?shop_id=` sirf UNRESTRICTED ke liye khula chhorna theek hai (un ka
+  // scope "all" hi hai). Manager ke liye ye check zaroori hai -- warna
+  // URL mein doosri branch ki shop ki id daal kar us ka poora maali data
+  // dekha ja sakta tha (own_branch ka matlab hi ye tha ke ROK lage).
+  const requestedShopId = searchParams?.shop_id || null;
+  const allowedIds = new Set(pickableShops.map((s) => s.id));
+  const shopId = isUnrestricted
+    ? requestedShopId || me.shop_id || pickableShops[0]?.id || null
+    : canPick
+      ? (requestedShopId && allowedIds.has(requestedShopId) ? requestedShopId : me.shop_id || pickableShops[0]?.id || null)
+      : me.shop_id;
 
   if (!shopId) {
     return (
