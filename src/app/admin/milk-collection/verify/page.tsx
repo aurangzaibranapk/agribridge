@@ -16,7 +16,7 @@ export default async function MilkVerifyPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const { data: me } = user
-    ? await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle()
+    ? await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle()
     : { data: null };
 
   if (!me?.is_active || !VERIFY_ROLES.includes(me.role)) {
@@ -25,13 +25,16 @@ export default async function MilkVerifyPage() {
 
   const mayVerify = await canDo("milk-collection.verify", "verify");
 
-  const { data: rows } = await supabase
+  // Manager: sirf apni branch ki entries -- 104 mein data_scope
+  // 'own_branch' seed hui thi magar yahan ab tak lagu nahi thi.
+  let query = supabase
     .from("milk_entries")
     .select("id, collection_number, quantity_liters, fat_percentage, ts_value, total_amount, route_name, entry_channel, collection_source, flags, possible_duplicate_of, entry_date, shift, farmers(full_name, farmer_code)")
-    .eq("status", "priced")
-    .order("entry_date", { ascending: false })
-    .order("created_at")
-    .limit(200);
+    .eq("status", "priced");
+  if (me.role === "manager" && me.branch_id) {
+    query = query.eq("branch_id", me.branch_id);
+  }
+  const { data: rows } = await query.order("entry_date", { ascending: false }).order("created_at").limit(200);
 
   const entries: PricedEntry[] = (rows ?? []).map((row) => {
     const farmer = Array.isArray(row.farmers) ? row.farmers[0] : row.farmers;

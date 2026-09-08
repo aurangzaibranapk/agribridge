@@ -256,7 +256,21 @@ export async function verifyMilkEntries(_prev: ActionState, formData: FormData):
   }
 
   const service = createServiceClient();
-  const { error } = await service
+
+  // Manager: sirf apni branch. `data_scope='own_branch'` seed to
+  // migration 104 mein hai, magar ab tak kahin lagu nahi hoti thi --
+  // manager kisi bhi branch ki entries verify/reject kar sakta tha.
+  const milkCaller = gate.caller;
+  if (!milkCaller.unrestricted && milkCaller.scope !== "all") {
+    if (!milkCaller.branchId) return { error: "Aapki apni branch tay nahi hai." };
+    const { data: entries } = await service.from("milk_entries").select("id, branch_id").in("id", ids);
+    const outsideBranch = (entries ?? []).some((e) => e.branch_id !== milkCaller.branchId);
+    if (outsideBranch) {
+      return { error: "Kuch entries aapki branch ki nahi hain — sirf apni branch ki tasdeeq kar sakte hain." };
+    }
+  }
+
+  let query = service
     .from("milk_entries")
     .update({
       status: decision,
@@ -269,6 +283,10 @@ export async function verifyMilkEntries(_prev: ActionState, formData: FormData):
     // faisla kar dein to doosra khali haath lautta hai, badalta kuch
     // nahi.
     .eq("status", "priced");
+  if (!milkCaller.unrestricted && milkCaller.scope !== "all" && milkCaller.branchId) {
+    query = query.eq("branch_id", milkCaller.branchId);
+  }
+  const { error } = await query;
 
   if (error) return { error: error.message };
 
