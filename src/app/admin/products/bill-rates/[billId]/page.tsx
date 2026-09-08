@@ -36,7 +36,7 @@ export default async function BillRatePage({ params }: { params: { billId: strin
   const { data: bill } = await supabase
     .from("supplier_bill_reads")
     .select(
-      "id, bill_number, bill_date, bill_total, supplier_name_raw, supplier_id, purchase_id, image_url, source, status, ai_read_at, created_at, suppliers(name)"
+      "id, bill_number, bill_date, bill_total, discount_amount, tax_amount, tax_label, other_charges, supplier_name_raw, supplier_id, purchase_id, image_url, source, status, ai_read_at, created_at, suppliers(name)"
     )
     .eq("id", params.billId)
     .maybeSingle();
@@ -139,6 +139,10 @@ export default async function BillRatePage({ params }: { params: { billId: strin
           linesFound: f.lines_found,
         }))}
         billTotal={bill.bill_total == null ? null : Number(bill.bill_total)}
+        discountAmount={bill.discount_amount == null ? null : Number(bill.discount_amount)}
+        taxAmount={bill.tax_amount == null ? null : Number(bill.tax_amount)}
+        taxLabel={bill.tax_label}
+        otherCharges={bill.other_charges == null ? null : Number(bill.other_charges)}
         linesTotal={linesTotal}
         aiRead={Boolean(bill.ai_read_at)}
         lines={(lines ?? []).map((l) => ({

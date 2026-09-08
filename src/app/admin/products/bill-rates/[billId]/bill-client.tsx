@@ -437,6 +437,10 @@ export function BillClient({
   isAdminLevel,
   canDelete,
   billTotal,
+  discountAmount,
+  taxAmount,
+  taxLabel,
+  otherCharges,
   linesTotal,
   aiRead,
   lines,
@@ -455,6 +459,10 @@ export function BillClient({
   isAdminLevel: boolean;
   canDelete: boolean;
   billTotal: number | null;
+  discountAmount: number | null;
+  taxAmount: number | null;
+  taxLabel: string | null;
+  otherCharges: number | null;
   linesTotal: number;
   aiRead: boolean;
   lines: Line[];
@@ -469,11 +477,14 @@ export function BillClient({
   const draft = lines.filter((l) => l.status === "draft").length;
   const applied = lines.filter((l) => l.status === "applied").length;
 
-  // Rs 1 tak ka farq gol karne ka hota hai; us se zyada ka matlab hai
-  // koi qatar chhoot gayi.
+  // Bill ka total sirf qataron ka jorh nahi -- discount ghatta hai,
+  // tax aur other charges jurhte hain (318/319 se columns hain, magar
+  // save hi nahi hote the -- ab hote hain). Netted total hi asal
+  // muwazna hai; Rs 1 tak ka farq gol karne ka hota hai.
+  const nettedTotal = linesTotal - (discountAmount ?? 0) + (taxAmount ?? 0) + (otherCharges ?? 0);
   const mismatch =
-    billTotal != null && linesTotal > 0 && Math.abs(billTotal - linesTotal) > 1
-      ? Math.abs(billTotal - linesTotal)
+    billTotal != null && linesTotal > 0 && Math.abs(billTotal - nettedTotal) > 1
+      ? Math.abs(billTotal - nettedTotal)
       : null;
 
   return (
@@ -494,10 +505,18 @@ export function BillClient({
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
             {t("pf_bill_mismatch", lang)
-              .replace("{lines}", linesTotal.toLocaleString())
+              .replace("{lines}", nettedTotal.toLocaleString())
               .replace("{total}", billTotal?.toLocaleString() ?? "—")
               .replace("{diff}", mismatch.toLocaleString())}
           </p>
+          {(discountAmount || taxAmount || otherCharges) && (
+            <p className="mt-1 text-xs text-amber-800">
+              Qataron ka jorh {linesTotal.toLocaleString()}
+              {discountAmount ? ` − discount ${discountAmount.toLocaleString()}` : ""}
+              {taxAmount ? ` + ${taxLabel || "tax"} ${taxAmount.toLocaleString()}` : ""}
+              {otherCharges ? ` + other charges ${otherCharges.toLocaleString()}` : ""}
+            </p>
+          )}
         </Card>
       )}
 

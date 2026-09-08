@@ -186,11 +186,24 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
   let readAny = false;
   let binaRate = 0;
   const failedPages: number[] = [];
-  const head: { supplierName: string | null; billNumber: string | null; billDate: string | null; billTotal: number | null } = {
+  const head: {
+    supplierName: string | null;
+    billNumber: string | null;
+    billDate: string | null;
+    billTotal: number | null;
+    discountTotal: number | null;
+    taxAmount: number | null;
+    taxLabel: string | null;
+    otherCharges: number | null;
+  } = {
     supplierName: null,
     billNumber: null,
     billDate: null,
     billTotal: null,
+    discountTotal: null,
+    taxAmount: null,
+    taxLabel: null,
+    otherCharges: null,
   };
 
   for (let i = 0; i < files.length; i++) {
@@ -218,6 +231,14 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
     head.billNumber ??= reading.billNumber;
     head.billDate ??= reading.billDate;
     head.billTotal ??= reading.billTotal;
+    // 318 ka masla yehi tha -- AI ye char khane parh leta hai
+    // (bill-lines-client.ts), magar yahan kabhi save hi nahi hote the.
+    // Isi wajah se "qatarein poori theek, farq discount/tax ki wajah se
+    // hai" wala bill hamesha "shayad qatar chhoot gayi" dikhata rehta.
+    head.discountTotal ??= reading.discountTotal;
+    head.taxAmount ??= reading.taxAmount;
+    head.taxLabel ??= reading.taxLabel;
+    head.otherCharges ??= reading.otherCharges;
 
     const rows = reading.lines.map((line) => {
       lineNo += 1;
@@ -258,6 +279,10 @@ export async function createBillFromFiles(_prev: BillRateState, formData: FormDa
         bill_number: head.billNumber,
         bill_date: head.billDate,
         bill_total: head.billTotal,
+        discount_amount: head.discountTotal,
+        tax_amount: head.taxAmount,
+        tax_label: head.taxLabel,
+        other_charges: head.otherCharges,
         ai_read_at: new Date().toISOString(),
       })
       .eq("id", bill.id);
