@@ -10,6 +10,7 @@ export interface ActionState {
   error?: string;
   success?: boolean;
   message?: string;
+  countedCash?: number;
 }
 
 async function main() {
@@ -315,9 +316,51 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   revalidatePath("/admin/pos");
   return {
     success: true,
+    countedCash,
     message:
       difference === 0
         ? "Shift band — cash poora milta hai."
         : `Shift band — farq Rs ${difference.toLocaleString()} (${difference > 0 ? "zyada" : "kam"}).`,
   };
+}
+
+/**
+ * Shift Close ke baad "cash kis ko bhejein" ki fehrist -- Malik ka kaam
+ * #3 (8 September): counted cash seedha maujooda Cash Handover raaste
+ * (`sendCash`) se Manager/Finance ko jaye, nayi cheez banaye baghair.
+ *
+ * Sirf is branch ka Manager, aur poori company ka Finance -- poori
+ * staff fehrist nahi, warna galat bande ko bhej dena aasan ho jata.
+ */
+export async function shiftCashRecipients(
+  branchId: string | null
+): Promise<{ id: string; name: string; role: string }[] | { error: string }> {
+  const who = await main();
+  if ("error" in who) return { error: who.error ?? "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const orParts = ["role.eq.finance"];
+  if (branchId) orParts.push(`and(role.eq.manager,branch_id.eq.${branchId})`);
+  const { data } = await service
+    .from("profiles")
+    .select("id, full_name, role")
+    .eq("is_active", true)
+    .or(orParts.join(","))
+    .order("role");
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.full_name ?? "—",
+    role: r.role,
+  }));
+}
+
+/** Bank khaton ki fehrist -- shift close se seedha khud jama karane ke liye. */
+export async function bankAccountsForDeposit(): Promise<{ id: string; name: string }[] | { error: string }> {
+  const who = await main();
+  if ("error" in who) return { error: who.error ?? "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const { data } = await service.from("finance_accounts").select("id, name").eq("account_type", "bank").order("name");
+  return (data ?? []).map((r) => ({ id: r.id, name: r.name }));
 }

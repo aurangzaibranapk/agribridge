@@ -1,14 +1,162 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt } from "lucide-react";
-import { closeShift, getShiftSummary, type ActionState } from "@/actions/pos-counters";
+import { Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Landmark, UserRound } from "lucide-react";
+import { closeShift, getShiftSummary, shiftCashRecipients, bankAccountsForDeposit, type ActionState } from "@/actions/pos-counters";
+import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
+import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
 
 const KHALI: ActionState = {};
+const HANDOVER_KHALI: HandoverState = {};
 
 function rs(n: number): string {
   return `Rs ${Math.round(n).toLocaleString()}`;
+}
+
+function SendButton({ disabled }: { disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-50"
+    >
+      <Send className="h-4 w-4" />
+      {pending ? "Bheja ja raha hai..." : "Cash Bhejein"}
+    </button>
+  );
+}
+
+/**
+ * Shift band hone ke BAAD -- counted cash seedha Cash Handover ke
+ * maujooda raaste se Manager/Finance ko bhej dena, alag safhe par jaye
+ * baghair. Malik ka kaam #3 (8 September).
+ *
+ * Sirf apni custody se bhejta hai (`from_source=my_custody`) -- branch
+ * ke khate ka option yahan nahi, wo Manager/Finance ke apne Cash
+ * Handover safhe par hai.
+ */
+export function ShiftCashHandoverForm({
+  shiftId,
+  branchId,
+  countedCash,
+}: {
+  shiftId: string;
+  branchId: string | null;
+  countedCash: number;
+}) {
+  const [mode, setMode] = useState<"person" | "bank">("person");
+  const [recipients, setRecipients] = useState<{ id: string; name: string; role: string }[] | null>(null);
+  const [banks, setBanks] = useState<{ id: string; name: string }[] | null>(null);
+  const [slipUrl, setSlipUrl] = useState("");
+  const [handoverState, handoverAction] = useFormState(sendCash, HANDOVER_KHALI);
+
+  useEffect(() => {
+    shiftCashRecipients(branchId).then((r) => {
+      if (!("error" in r)) setRecipients(r);
+    });
+    bankAccountsForDeposit().then((r) => {
+      if (!("error" in r)) setBanks(r);
+    });
+  }, [branchId]);
+
+  if (handoverState.success) {
+    return (
+      <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.message}
+      </p>
+    );
+  }
+
+  if (recipients === null || banks === null) return null;
+  if (recipients.length === 0 && banks.length === 0) {
+    return (
+      <p className="text-xs text-surface-400">
+        Is branch ka koi Manager/Finance ya bank khata nahi mila — cash apne paas rakhein, ya khud Cash Handover se bhejein.
+      </p>
+    );
+  }
+  // Ek hi raasta maujood ho to poochhna hi bekaar hai -- wo raasta khud
+  // chun liya jata hai.
+  const effectiveMode = recipients.length === 0 ? "bank" : banks.length === 0 ? "person" : mode;
+
+  return (
+    <form action={handoverAction} className="space-y-2 rounded-xl border border-surface-200 p-3 dark:border-surface-700">
+      <input type="hidden" name="from_source" value="my_custody" />
+      <input type="hidden" name="amount" value={countedCash} />
+      <input type="hidden" name="shift_id" value={shiftId} />
+      <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
+        Yehi Rs {Math.round(countedCash).toLocaleString()} kaise bhejein?
+      </p>
+
+      {recipients.length > 0 && banks.length > 0 && (
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMode("person")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+              mode === "person"
+                ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            <UserRound className="h-3.5 w-3.5" /> Manager/Finance
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("bank")}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+              mode === "bank"
+                ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            <Landmark className="h-3.5 w-3.5" /> Bank Jama
+          </button>
+        </div>
+      )}
+
+      {effectiveMode === "person" ? (
+        <select
+          name="to_profile_id"
+          required
+          className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+        >
+          {recipients.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name} ({r.role === "manager" ? "Manager" : "Finance"})
+            </option>
+          ))}
+        </select>
+      ) : (
+        <>
+          <select
+            name="to_account_id"
+            required
+            className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+          >
+            {banks!.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <PaymentSlipUpload onUploaded={setSlipUrl} />
+          {!slipUrl && (
+            <p className="text-[11px] text-surface-400">Bhejne se pehle deposit slip upload karein — lazmi hai.</p>
+          )}
+        </>
+      )}
+
+      {handoverState.error && (
+        <p className="flex items-start gap-1.5 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.error}
+        </p>
+      )}
+      <SendButton disabled={effectiveMode === "bank" && !slipUrl} />
+    </form>
+  );
 }
 
 function CloseButton() {
@@ -40,6 +188,7 @@ export function ShiftBar({
   shopName,
   openingCash,
   openedAt,
+  branchId,
 }: {
   shiftId: string;
   shiftNumber: string;
@@ -47,6 +196,7 @@ export function ShiftBar({
   shopName: string;
   openingCash: number;
   openedAt: string;
+  branchId: string | null;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [state, action] = useFormState(closeShift, KHALI);
@@ -126,12 +276,19 @@ export function ShiftBar({
             </div>
 
             {state.success ? (
-              <div className="px-5 py-6 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              <div className="px-5 py-6">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
-                <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
-                <p className="mt-3 text-xs text-surface-400">Safha refresh ho raha hai...</p>
+                {state.countedCash != null && state.countedCash > 0 && (
+                  <div className="mt-3">
+                    <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} countedCash={state.countedCash} />
+                  </div>
+                )}
+                <p className="mt-3 text-center text-xs text-surface-400">Band karein — safha refresh ho jayega.</p>
               </div>
             ) : (
               <form action={action} className="space-y-4 px-5 py-5">

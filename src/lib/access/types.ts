@@ -9,7 +9,7 @@
  */
 
 /** Us feature par banda kya kar sakta hai. */
-export const ACTIONS = ["view", "create", "edit", "verify", "approve", "reject", "export", "assign"] as const;
+export const ACTIONS = ["view", "create", "edit", "verify", "approve", "reject", "export", "assign", "send", "receive"] as const;
 export type Action = (typeof ACTIONS)[number];
 
 export const ACTION_LABEL: Record<Action, string> = {
@@ -21,6 +21,8 @@ export const ACTION_LABEL: Record<Action, string> = {
   reject: "Reject",
   export: "Export",
   assign: "Kisi ko dena",
+  send: "Bhejna",
+  receive: "Wusool karna",
 };
 
 /** Kis ka data dikhega. */

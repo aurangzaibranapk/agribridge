@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
-import { SendCashForm, ReceiveCard } from "./handover-client";
-import { cashInTransit, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
-import { AlertTriangle, CheckCircle2, Send, HandCoins, Clock } from "lucide-react";
+import { SendCashForm, ReceiveCard, BankDepositCard } from "./handover-client";
+import { cashInTransit, recentHandovers, bankDepositsAwaitingVerification, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
+import { AlertTriangle, CheckCircle2, Send, HandCoins, Clock, FileImage } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,11 @@ export default async function CashHandoverPage() {
     );
   }
 
-  const [{ data: peopleRows }, { data: branchRows }, transit, history] = await Promise.all([
+  // Bank deposit ki slip -- sirf Finance (ya Owner/Admin) tasdeeq karte
+  // hain. Malik (8 September): "Jis KO finance verify kr k."
+  const canVerifyDeposits = ["owner", "super_admin", "admin", "finance"].includes(me.role);
+
+  const [{ data: peopleRows }, { data: branchRows }, transit, history, bankDeposits] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, role")
@@ -48,6 +52,7 @@ export default async function CashHandoverPage() {
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     cashInTransit(),
     recentHandovers(40),
+    canVerifyDeposits ? bankDepositsAwaitingVerification() : Promise.resolve([]),
   ]);
 
   const people = (peopleRows ?? []).map((p) => ({
@@ -111,6 +116,31 @@ export default async function CashHandoverPage() {
           </div>
         </div>
       </Card>
+
+      {/* ---- Bank deposit slips (Finance ki tasdeeq ka intezar) ---- */}
+      {bankDeposits.length > 0 && (
+        <div>
+          <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
+            <FileImage className="h-3.5 w-3.5" /> Bank Deposit Slips — Tasdeeq ka intezar ({bankDeposits.length})
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {bankDeposits.map((d) => (
+              <BankDepositCard
+                key={d.id}
+                deposit={{
+                  id: d.id,
+                  amount: d.amount,
+                  sentBy: d.sentBy,
+                  bankAccountName: d.bankAccountName,
+                  slipUrl: d.slipUrl,
+                  note: d.note,
+                  daysOld: d.daysOld,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ---- Mere naam aaya hua cash ---- */}
       {awaitingMe.length > 0 && (

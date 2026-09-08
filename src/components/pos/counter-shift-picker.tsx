@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ChevronRight, Store, Wallet, Lock } from "lucide-react";
 import { openShift, type ActionState } from "@/actions/pos-counters";
+import { ShiftCashHandoverForm } from "@/components/pos/shift-bar";
 
 const KHALI: ActionState = {};
 
@@ -35,7 +36,14 @@ function OpenShiftButton() {
  * design reference (Waseela POS) ki tarah saaf aur professional --
  * apna rang-roop (brand green, surface tokens) barqarar rakh kar.
  */
-export function CounterShiftPicker({ counters }: { counters: Counter[] }) {
+export function CounterShiftPicker({
+  counters,
+  pendingHandover,
+}: {
+  counters: Counter[];
+  /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
+  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null } | null;
+}) {
   const [chosen, setChosen] = useState<Counter | null>(counters.length === 1 ? counters[0] : null);
   const [state, action] = useFormState(openShift, KHALI);
 
@@ -43,6 +51,18 @@ export function CounterShiftPicker({ counters }: { counters: Counter[] }) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
+          {pendingHandover && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-400">
+                Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+              </p>
+              <ShiftCashHandoverForm
+                shiftId={pendingHandover.shiftId}
+                branchId={pendingHandover.branchId}
+                countedCash={pendingHandover.countedCash}
+              />
+            </div>
+          )}
           <div className="mb-8 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 dark:bg-brand-950/30">
               <Store className="h-6 w-6 text-brand-600" />
@@ -76,7 +96,19 @@ export function CounterShiftPicker({ counters }: { counters: Counter[] }) {
   }
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 px-4 py-12">
+      {pendingHandover && (
+        <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-400">
+            Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+          </p>
+          <ShiftCashHandoverForm
+            shiftId={pendingHandover.shiftId}
+            branchId={pendingHandover.branchId}
+            countedCash={pendingHandover.countedCash}
+          />
+        </div>
+      )}
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-lg dark:border-surface-800 dark:bg-surface-900">
         <div className="border-b border-surface-100 bg-gradient-to-br from-brand-50 to-white px-6 py-6 text-center dark:border-surface-800 dark:from-brand-950/20 dark:to-surface-900">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-brand-100 dark:bg-surface-900 dark:ring-brand-900/40">

@@ -125,6 +125,46 @@ export async function awaitingMe(profileId: string): Promise<HandoverRow[]> {
   return all.filter((h) => mine.has(h.id));
 }
 
+export interface BankDepositRow {
+  id: string;
+  amount: number;
+  sentAt: string;
+  daysOld: number;
+  sentBy: string | null;
+  bankAccountName: string | null;
+  slipUrl: string | null;
+  note: string | null;
+}
+
+/**
+ * Sales staff ne khud bank mein jama kara ke slip upload ki -- ab
+ * Finance ki tasdeeq ka intezar hai (malik, 8 September).
+ */
+export async function bankDepositsAwaitingVerification(): Promise<BankDepositRow[]> {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("cash_handovers")
+    .select(
+      `id, amount_sent, sent_at, sent_note, deposit_slip_url,
+       sender:profiles!cash_handovers_from_profile_id_fkey(full_name),
+       account:finance_accounts(name)`
+    )
+    .not("to_account_id", "is", null)
+    .eq("status", "sent")
+    .order("sent_at", { ascending: true });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    amount: Number(r.amount_sent),
+    sentAt: r.sent_at,
+    daysOld: Math.floor((Date.now() - new Date(r.sent_at).getTime()) / 86_400_000),
+    sentBy: (r.sender as { full_name: string | null } | null)?.full_name ?? null,
+    bankAccountName: (r.account as { name: string } | null)?.name ?? null,
+    slipUrl: r.deposit_slip_url,
+    note: r.sent_note,
+  }));
+}
+
 // =====================================================================
 // Bank
 // =====================================================================

@@ -5282,6 +5282,7 @@ export type Database = {
           carrier_note: string | null
           carrier_profile_id: string | null
           created_at: string
+          deposit_slip_url: string | null
           difference: number | null
           difference_reason: string | null
           from_branch_id: string | null
@@ -5294,9 +5295,11 @@ export type Database = {
           sent_at: string
           sent_entry_id: string | null
           sent_note: string | null
+          shift_id: string | null
           status: string
+          to_account_id: string | null
           to_branch_id: string | null
-          to_profile_id: string
+          to_profile_id: string | null
         }
         Insert: {
           amount_received?: number | null
@@ -5304,6 +5307,7 @@ export type Database = {
           carrier_note?: string | null
           carrier_profile_id?: string | null
           created_at?: string
+          deposit_slip_url?: string | null
           difference?: number | null
           difference_reason?: string | null
           from_branch_id?: string | null
@@ -5316,9 +5320,11 @@ export type Database = {
           sent_at?: string
           sent_entry_id?: string | null
           sent_note?: string | null
+          shift_id?: string | null
           status?: string
+          to_account_id?: string | null
           to_branch_id?: string | null
-          to_profile_id: string
+          to_profile_id?: string | null
         }
         Update: {
           amount_received?: number | null
@@ -5326,6 +5332,7 @@ export type Database = {
           carrier_note?: string | null
           carrier_profile_id?: string | null
           created_at?: string
+          deposit_slip_url?: string | null
           difference?: number | null
           difference_reason?: string | null
           from_branch_id?: string | null
@@ -5338,9 +5345,11 @@ export type Database = {
           sent_at?: string
           sent_entry_id?: string | null
           sent_note?: string | null
+          shift_id?: string | null
           status?: string
+          to_account_id?: string | null
           to_branch_id?: string | null
-          to_profile_id?: string
+          to_profile_id?: string | null
         }
         Relationships: [
           {
@@ -5440,6 +5449,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_machinery_vendor_payments"
             referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "cash_handovers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
           },
           {
             foreignKeyName: "cash_handovers_to_branch_id_fkey"
@@ -5948,13 +5985,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "company_expense_requests_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "company_expense_requests_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
@@ -6051,6 +6081,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_supplier_payable_vs_ledger"
             referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_expense_requests_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -18139,6 +18183,186 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_counter_staff: {
+        Row: {
+          counter_id: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          profile_id: string
+        }
+        Insert: {
+          counter_id: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id: string
+        }
+        Update: {
+          counter_id?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counter_staff_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      pos_counters: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          shop_id: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          shop_id: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          shop_id?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_return_code_attempts: {
         Row: {
           attempted_at: string
@@ -18640,188 +18864,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pos_counters: {
-        Row: {
-          branch_id: string
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          name: string
-          organization_id: string | null
-          shop_id: string
-          updated_at: string
-          warehouse_id: string | null
-        }
-        Insert: {
-          branch_id: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          organization_id?: string | null
-          shop_id: string
-          updated_at?: string
-          warehouse_id?: string | null
-        }
-        Update: {
-          branch_id?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          organization_id?: string | null
-          shop_id?: string
-          updated_at?: string
-          warehouse_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pos_counters_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_counters_shop_id_fkey"
-            columns: ["shop_id"]
-            isOneToOne: false
-            referencedRelation: "shops"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_counters_warehouse_id_fkey"
-            columns: ["warehouse_id"]
-            isOneToOne: false
-            referencedRelation: "warehouses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_counters_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pos_counter_staff: {
-        Row: {
-          counter_id: string
-          created_at: string
-          granted_by: string | null
-          id: string
-          is_active: boolean
-          profile_id: string
-        }
-        Insert: {
-          counter_id: string
-          created_at?: string
-          granted_by?: string | null
-          id?: string
-          is_active?: boolean
-          profile_id: string
-        }
-        Update: {
-          counter_id?: string
-          created_at?: string
-          granted_by?: string | null
-          id?: string
-          is_active?: boolean
-          profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pos_counter_staff_counter_id_fkey"
-            columns: ["counter_id"]
-            isOneToOne: false
-            referencedRelation: "pos_counters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_counter_staff_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pos_shift_counters: {
-        Row: { last_number: number; year: number }
-        Insert: { last_number?: number; year: number }
-        Update: { last_number?: number; year?: number }
-        Relationships: []
-      }
-      pos_shifts: {
-        Row: {
-          closed_at: string | null
-          closed_by: string | null
-          closing_note: string | null
-          counted_cash: number | null
-          counter_id: string
-          created_at: string
-          difference: number | null
-          expected_cash: number | null
-          id: string
-          opened_at: string
-          opening_cash: number
-          shift_number: string
-          staff_id: string
-          status: string
-        }
-        Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
-          closing_note?: string | null
-          counted_cash?: number | null
-          counter_id: string
-          created_at?: string
-          difference?: number | null
-          expected_cash?: number | null
-          id?: string
-          opened_at?: string
-          opening_cash?: number
-          shift_number: string
-          staff_id: string
-          status?: string
-        }
-        Update: {
-          closed_at?: string | null
-          closed_by?: string | null
-          closing_note?: string | null
-          counted_cash?: number | null
-          counter_id?: string
-          created_at?: string
-          difference?: number | null
-          expected_cash?: number | null
-          id?: string
-          opened_at?: string
-          opening_cash?: number
-          shift_number?: string
-          staff_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pos_shifts_counter_id_fkey"
-            columns: ["counter_id"]
-            isOneToOne: false
-            referencedRelation: "pos_counters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_shifts_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pos_sales: {
         Row: {
           branch_id: string | null
@@ -18891,20 +18933,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "pos_sales_counter_id_fkey"
-            columns: ["counter_id"]
-            isOneToOne: false
-            referencedRelation: "pos_counters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pos_sales_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "pos_shifts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "pos_sales_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -18917,6 +18945,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cash_close_missing"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_sales_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pos_sales_crm_customer_id_fkey"
@@ -18947,6 +18982,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pos_sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pos_sales_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
@@ -18959,6 +19001,125 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_shop_replenishment"
             referencedColumns: ["shop_id"]
+          },
+        ]
+      }
+      pos_shift_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      pos_shifts: {
+        Row: {
+          cash_handover_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closing_note: string | null
+          counted_cash: number | null
+          counter_id: string
+          created_at: string
+          difference: number | null
+          expected_cash: number | null
+          id: string
+          opened_at: string
+          opening_cash: number
+          shift_number: string
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          cash_handover_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number: string
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          cash_handover_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id?: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number?: string
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_shifts_cash_handover_id_fkey"
+            columns: ["cash_handover_id"]
+            isOneToOne: false
+            referencedRelation: "cash_handovers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_cash_handover_id_fkey"
+            columns: ["cash_handover_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_in_transit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -23841,6 +24002,8 @@ export type Database = {
           started_by: string
           status: string
           total_difference_value: number | null
+          verified_at: string | null
+          verified_by: string | null
           warehouse_id: string
         }
         Insert: {
@@ -23855,6 +24018,8 @@ export type Database = {
           started_by: string
           status?: string
           total_difference_value?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
           warehouse_id: string
         }
         Update: {
@@ -23869,6 +24034,8 @@ export type Database = {
           started_by?: string
           status?: string
           total_difference_value?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
           warehouse_id?: string
         }
         Relationships: [
@@ -23917,6 +24084,20 @@ export type Database = {
           {
             foreignKeyName: "stock_counts_started_by_fkey"
             columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "stock_counts_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_verified_by_fkey"
+            columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "v_cash_custody"
             referencedColumns: ["profile_id"]

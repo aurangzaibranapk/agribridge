@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { sendCash, receiveCash, type ActionState } from "@/actions/cash-handover";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FileImage } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -280,6 +280,131 @@ export function ReceiveCard({
 
       <div className="mt-3">
         <Submit label={t("ch_record_receipt", lang)} blocked={!entered || needsReason} />
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Bank deposit ki slip -- Finance yahan tasdeeq karta hai. Malik (8
+ * September): "sale staff wo cash khud bank sy deposit krwa k slip
+ * upload kr day ... Jis KO finance verify kr k ... outstanding khatam
+ * kr day." Wusooli wala kaam (`receiveCash`) yahan bhi istemal hota
+ * hai -- sirf yahan koi "banda" nahi, slip ki tasdeeq hai.
+ */
+export function BankDepositCard({
+  deposit,
+}: {
+  deposit: {
+    id: string;
+    amount: number;
+    sentBy: string | null;
+    bankAccountName: string | null;
+    slipUrl: string | null;
+    note: string | null;
+    daysOld: number;
+  };
+}) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(receiveCash, initialState);
+  const [received, setReceived] = useState("");
+  const [reason, setReason] = useState("");
+
+  const got = Number(received);
+  const entered = received.trim() !== "" && Number.isFinite(got);
+  const difference = entered ? Math.round((got - deposit.amount) * 100) / 100 : 0;
+  const needsReason = entered && difference !== 0 && reason.trim().length < 5;
+
+  return (
+    <form
+      action={formAction}
+      className="rounded-card border border-sky-300 bg-sky-50/50 p-4 dark:border-sky-800 dark:bg-sky-950/20"
+    >
+      <input type="hidden" name="handover_id" value={deposit.id} />
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-xl font-bold text-surface-900 dark:text-white">{rs(deposit.amount)}</p>
+          <p className="mt-0.5 text-xs text-surface-600 dark:text-surface-400">
+            {deposit.sentBy ?? "—"} → {deposit.bankAccountName ?? "—"}
+          </p>
+          {deposit.note && <p className="mt-0.5 text-xs text-surface-500">{deposit.note}</p>}
+          {deposit.slipUrl && (
+            <a
+              href={deposit.slipUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline dark:text-sky-400"
+            >
+              <FileImage className="h-3.5 w-3.5" /> Slip dekhein
+            </a>
+          )}
+        </div>
+        {deposit.daysOld >= 2 && (
+          <span className="shrink-0 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-950/40 dark:text-red-400">
+            {deposit.daysOld} {t("ch_days_ago", lang)}
+          </span>
+        )}
+      </div>
+
+      <label className="mt-3 block">
+        <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">
+          Slip par kitni raqam likhi hai
+        </span>
+        <input
+          name="amount_received"
+          type="number"
+          min={0}
+          step="0.01"
+          required
+          inputMode="numeric"
+          value={received}
+          onChange={(e) => setReceived(e.target.value)}
+          className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+        />
+      </label>
+
+      {entered && difference !== 0 && (
+        <>
+          <p className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-red-800 dark:text-red-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              {rs(Math.abs(difference))} {difference < 0 ? t("cc_short", lang) : t("cc_over", lang)} {t("ch_received_word", lang)}
+            </span>
+          </p>
+          <label className="mt-2 block">
+            <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">
+              {t("ch_what_happened", lang)} <span className="text-red-600">{t("ch_required", lang)}</span>
+            </span>
+            <input
+              name="difference_reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={255}
+              placeholder={t("ch_unknown_reason_ph", lang)}
+              className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            />
+          </label>
+        </>
+      )}
+
+      {entered && difference === 0 && (
+        <p className="mt-2 text-sm font-medium text-green-800 dark:text-green-400">{t("ch_all_matched", lang)}</p>
+      )}
+
+      {state.error && (
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400">
+          {state.error}
+        </p>
+      )}
+      {state.success && (
+        <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950/30 dark:text-green-400">
+          {state.message}
+        </p>
+      )}
+
+      <div className="mt-3">
+        <Submit label="Slip Tasdeeq Karein" blocked={!entered || needsReason} />
       </div>
     </form>
   );
