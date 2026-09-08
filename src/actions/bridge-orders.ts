@@ -9,6 +9,29 @@ export interface ActionState {
   orderId?: string;
 }
 
+/**
+ * Staff-only kaam (verify/deliver/payment). Farmer/dealer wale raaste
+ * (place/respond/dispatch) RLS se hi mehfooz hain (`dealer_update_own_
+ * assigned_orders`, `farmer_own_bridge_orders`) -- yahan koi naya check
+ * nahi.
+ *
+ * Ye teen kaam ab tak koi bhi login-shuda staff kar sakta tha (RLS
+ * `tenant_scoped_access` naun departments tak khula hai) -- HR, warehouse,
+ * milk_collection, procurement ka is marketplace se koi taalluq nahi.
+ */
+const MARKETPLACE_STAFF = ["owner", "super_admin", "admin", "manager", "finance", "sales_staff"];
+
+async function marketplaceStaff(supabase: ReturnType<typeof createClient>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!profile?.is_active) return { error: "Ye account fa'aal nahi hai." };
+  if (!MARKETPLACE_STAFF.includes(profile.role)) return { error: "Aapko is kaam ki ijazat nahi hai." };
+  return { userId: user.id };
+}
+
 type OrderItemInput = {
   product_id: string;
   quantity: number;
@@ -148,6 +171,9 @@ export async function dealerDispatchOrder(_prev: ActionState, formData: FormData
 
 export async function adminVerifyOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const who = await marketplaceStaff(supabase);
+  if ("error" in who) return { error: who.error };
+
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -160,6 +186,9 @@ export async function adminVerifyOrder(_prev: ActionState, formData: FormData): 
 
 export async function adminMarkDelivered(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const who = await marketplaceStaff(supabase);
+  if ("error" in who) return { error: who.error };
+
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -172,6 +201,9 @@ export async function adminMarkDelivered(_prev: ActionState, formData: FormData)
 
 export async function recordOrderAdvancePayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const who = await marketplaceStaff(supabase);
+  if ("error" in who) return { error: who.error };
+
   const orderId = String(formData.get("order_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
   const accountId = (formData.get("account_id") as string) || null;
@@ -186,10 +218,6 @@ export async function recordOrderAdvancePayment(_prev: ActionState, formData: Fo
   const remaining = Number(order.advance_required) - Number(order.advance_paid);
   if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} baaqi hai.` };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   await supabase
     .from("bridge_orders")
     .update({ advance_paid: Number(order.advance_paid) + amount, last_payment_method: paymentMethod })
@@ -202,7 +230,7 @@ export async function recordOrderAdvancePayment(_prev: ActionState, formData: Fo
     amount,
     transaction_date: aajKaKhana(),
     notes: `Order ${order.order_number} - Advance payment (${paymentMethod})`,
-    created_by: user?.id ?? null,
+    created_by: who.userId,
   });
   // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
   // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
