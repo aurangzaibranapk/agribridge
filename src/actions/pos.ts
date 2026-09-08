@@ -5,6 +5,7 @@ import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
 import type { Json } from "@/lib/types/database.types";
 import { loadPosPermissions } from "@/lib/pos/permissions";
+import { requireAction } from "@/lib/access/guard";
 
 export interface PosCheckoutState {
   error?: string;
@@ -64,6 +65,18 @@ export async function posCheckout(input: {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Feature-level ijazat -- sirf branch/shop wale staff par (dealer
+  // apna alag darwaza hai, `dealers` table se, is nizam ka hissa nahi).
+  // Legacy fallback (koi permission row hi nahi) chup chaap guzarne
+  // deta hai -- purana kaam nahi tootega.
+  if (user) {
+    const { data: dealerRow } = await supabase.from("dealers").select("id").eq("user_id", user.id).eq("is_active", true).maybeSingle();
+    if (!dealerRow) {
+      const guard = await requireAction("pos", "create");
+      if ("error" in guard) return { error: guard.error };
+    }
+  }
 
   // Rate ki rok -- safhe par nahi, YAHAN.
   //
