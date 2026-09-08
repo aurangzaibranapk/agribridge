@@ -20999,6 +20999,8 @@ export type Database = {
           supplier_bill_no: string | null
           supplier_id: string
           total_amount: number
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -21025,6 +21027,8 @@ export type Database = {
           supplier_bill_no?: string | null
           supplier_id: string
           total_amount?: number
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           branch_id?: string | null
@@ -21051,6 +21055,8 @@ export type Database = {
           supplier_bill_no?: string | null
           supplier_id?: string
           total_amount?: number
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -21136,6 +21142,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_supplier_payable_vs_ledger"
             referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "purchases_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
           },
         ]
       }

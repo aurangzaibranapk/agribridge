@@ -7,10 +7,12 @@ import { postGoodsReceived, failed } from "@/lib/ledger/rules";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 import { closeHandoff, createHandoff } from "@/lib/work-handoff";
+import { requireAction } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  message?: string;
   purchaseId?: string;
   /** Receive ke baad ginti ka khulasa (256). */
   grn?: { received: number; damaged: number; short: number };
@@ -596,10 +598,9 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
-  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
-  if (!me?.is_active || !APPROVERS.includes(me.role)) {
-    return { error: "Purchase manzoor ya wapas sirf Owner/Admin kar sakta hai." };
-  }
+
+  const guard = await requireAction("purchases", "approve");
+  if ("error" in guard) return { error: "Purchase manzoor ya wapas sirf Owner/Admin kar sakta hai." };
 
   const { data: purchase } = await supabase
     .from("purchases")
@@ -674,6 +675,70 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory/receiving");
   return { success: true };
+}
+
+/**
+ * Tasdeeq -- Branch Manager ka kaam, sirf apni branch ki hadd tak (372,
+ * Kharche 364 / Stock Count 370 wala tareeqa). Final manzoori nahi
+ * badalti -- sirf agla marhala kholta hai. `reviewPurchase` hi asal
+ * approve/send_back/reject karta hai, tasdeeq ke baghair bhi.
+ */
+export async function verifyPurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const purchaseId = String(formData.get("purchase_id") ?? "");
+  if (!purchaseId) return { error: "Missing purchase id." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const guard = await requireAction("purchases", "verify");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  const { data: purchase } = await supabase
+    .from("purchases")
+    .select("id, purchase_number, status, review_status, branch_id, created_by")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (!purchase) return { error: "Purchase not found." };
+  if (purchase.status !== "pending" || purchase.review_status !== "submitted") {
+    return { error: "Ye ab tasdeeq ke marhale mein nahi hai (pehle hi tasdeeq/manzoor/wapas/radd ho chuka)." };
+  }
+
+  if (!caller.unrestricted && caller.scope !== "all") {
+    if (!caller.branchId || purchase.branch_id !== caller.branchId) {
+      return { error: "Ye purchase aapki branch ki nahi hai — sirf apni branch ki tasdeeq kar sakte hain." };
+    }
+  }
+  if (purchase.created_by === user.id) {
+    return { error: "Apni banayi hui purchase khud tasdeeq nahi kar sakte — doosra authorized banda kare." };
+  }
+
+  const { error } = await supabase
+    .from("purchases")
+    .update({ review_status: "verified", verified_by: user.id, verified_at: new Date().toISOString() })
+    .eq("id", purchaseId);
+  if (error) return { error: error.message };
+
+  await supabase.from("purchase_comments").insert({
+    purchase_id: purchaseId,
+    author_id: user.id,
+    kind: "verify",
+    body: "Tasdeeq",
+  });
+
+  await logAudit({
+    actionType: "verify",
+    module: "purchases",
+    recordId: purchaseId,
+    recordLabel: purchase.purchase_number,
+    description: "Branch Manager ki tasdeeq — ab Owner/Admin ki final manzoori ka intezar.",
+  });
+
+  revalidatePath("/admin/purchases");
+  return { success: true, message: "Tasdeeq ho gayi — ab final manzoori ka intezar hai." };
 }
 
 /**
@@ -805,9 +870,11 @@ export async function commentPurchase(_prev: ActionState, formData: FormData): P
     if (purchase.status !== "pending" || purchase.review_status !== "sent_back") {
       return { error: "Sirf wapas aayi hui purchase dobara bheji ja sakti hai." };
     }
+    // Tasdeeq bhi saaf -- content badal chuki, purani tasdeeq ab us par
+    // nahi lagti. Manager ko dobara dekhna hoga.
     const { error } = await supabase
       .from("purchases")
-      .update({ review_status: "submitted", reviewed_by: null, reviewed_at: null })
+      .update({ review_status: "submitted", reviewed_by: null, reviewed_at: null, verified_by: null, verified_at: null })
       .eq("id", purchaseId);
     if (error) return { error: error.message };
   }

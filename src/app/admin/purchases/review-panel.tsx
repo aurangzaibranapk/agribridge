@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Check, MessageSquare, Pencil, Undo2, X, XCircle } from "lucide-react";
-import { commentPurchase, reviewPurchase, updatePurchaseItem, type ActionState } from "@/actions/purchases";
+import { Check, MessageSquare, Pencil, ShieldCheck, Undo2, X, XCircle } from "lucide-react";
+import { commentPurchase, reviewPurchase, verifyPurchase, updatePurchaseItem, type ActionState } from "@/actions/purchases";
 import { Badge, Button, Input, Textarea } from "@/components/ui/form";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -27,6 +27,7 @@ export interface PurchaseReviewItem {
 
 const STATUS_KEY: Record<string, TranslationKey> = {
   submitted: "pu_rv_submitted",
+  verified: "pu_rv_verified",
   sent_back: "pu_rv_sent_back",
   approved: "pu_rv_approved",
   rejected: "pu_rv_rejected",
@@ -39,11 +40,13 @@ const KIND_KEY: Record<string, TranslationKey> = {
   resubmit: "pu_rv_k_resubmit",
   comment: "pu_rv_k_comment",
   edit: "pu_rv_k_edit",
+  verify: "pu_rv_k_verify",
 };
 
 export function ReviewBadge({ status }: { status: string }) {
   const lang = useLang();
-  const tone = status === "approved" ? "green" : status === "sent_back" ? "amber" : status === "rejected" ? "red" : "gray";
+  const tone =
+    status === "approved" ? "green" : status === "verified" ? "blue" : status === "sent_back" ? "amber" : status === "rejected" ? "red" : "gray";
   return <Badge tone={tone}>{t(STATUS_KEY[status] ?? "pu_rv_submitted", lang)}</Badge>;
 }
 
@@ -59,6 +62,7 @@ export function ReviewPanel({
   comments,
   items,
   canApprove,
+  canVerify = false,
 }: {
   purchaseId: string;
   purchaseNumber: string;
@@ -66,12 +70,16 @@ export function ReviewPanel({
   comments: PurchaseComment[];
   items: PurchaseReviewItem[];
   canApprove: boolean;
+  /** Branch Manager: sirf apni branch ki tasdeeq -- final manzoori nahi. */
+  canVerify?: boolean;
 }) {
   const lang = useLang();
   const [open, setOpen] = useState(false);
   const [rvState, rvAction] = useFormState(reviewPurchase, initialState);
+  const [vrState, vrAction] = useFormState(verifyPurchase, initialState);
   const [cmState, cmAction] = useFormState(commentPurchase, initialState);
-  const done = rvState.success || cmState.success;
+  const done = rvState.success || vrState.success || cmState.success;
+  const showVerify = canVerify && !canApprove && reviewStatus === "submitted";
 
   useEffect(() => {
     if (done) {
@@ -157,16 +165,30 @@ export function ReviewPanel({
                   <Decision value="reject" label={t("pu_rv_reject", lang)} icon={<XCircle className="h-4 w-4" />} variant="danger" />
                 </div>
               </form>
-            ) : (
-              <form action={cmAction} className="space-y-3">
+            ) : showVerify ? (
+              <form action={vrAction} className="space-y-3">
                 <input type="hidden" name="purchase_id" value={purchaseId} />
-                <Textarea name="comment" rows={3} placeholder={t("pu_rv_comment", lang)} required />
-                {cmState.error && <p className="text-sm text-red-600 dark:text-red-400">{cmState.error}</p>}
+                <p className="text-xs text-surface-500">{t("pu_rv_waiting_approval", lang)}</p>
+                {vrState.error && <p className="text-sm text-red-600 dark:text-red-400">{vrState.error}</p>}
                 <div className="flex flex-wrap gap-2">
-                  <ReplyButton resubmit={false} label={t("pu_rv_reply", lang)} />
-                  {reviewStatus === "sent_back" && <ReplyButton resubmit label={t("pu_rv_resubmit", lang)} />}
+                  <VerifyButton label={t("pu_rv_verify", lang)} />
                 </div>
               </form>
+            ) : (
+              <>
+                {canVerify && reviewStatus === "verified" && (
+                  <p className="mb-3 text-xs text-surface-500">{t("pu_rv_waiting_approval", lang)}</p>
+                )}
+                <form action={cmAction} className="space-y-3">
+                  <input type="hidden" name="purchase_id" value={purchaseId} />
+                  <Textarea name="comment" rows={3} placeholder={t("pu_rv_comment", lang)} required />
+                  {cmState.error && <p className="text-sm text-red-600 dark:text-red-400">{cmState.error}</p>}
+                  <div className="flex flex-wrap gap-2">
+                    <ReplyButton resubmit={false} label={t("pu_rv_reply", lang)} />
+                    {reviewStatus === "sent_back" && <ReplyButton resubmit label={t("pu_rv_resubmit", lang)} />}
+                  </div>
+                </form>
+              </>
             )}
           </div>
         </div>
@@ -180,6 +202,17 @@ function Decision({ value, label, icon, variant = "primary" }: { value: string; 
   return (
     <Button type="submit" name="decision" value={value} variant={variant} disabled={pending}>
       <span className="inline-flex items-center gap-1.5">{icon} {label}</span>
+    </Button>
+  );
+}
+
+function VerifyButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="primary" disabled={pending}>
+      <span className="inline-flex items-center gap-1.5">
+        <ShieldCheck className="h-4 w-4" /> {pending ? "…" : label}
+      </span>
     </Button>
   );
 }

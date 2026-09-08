@@ -224,4 +224,12 @@ export const purchasesDict = {
   pu_rv_items_empty: { en: "No products found on this order.", rm: "Is order par koi product nahi mila.", ur: "اس آرڈر پر کوئی پروڈکٹ نہیں ملا۔" },
   pu_rv_update: { en: "Update", rm: "Update karein", ur: "اپڈیٹ کریں" },
   pu_rv_owner_admin: { en: "Approval needed: Owner/Admin", rm: "Manzoori chahiye: Owner/Admin", ur: "منظوری چاہیے: مالک/ایڈمن" },
+  pu_rv_verified: { en: "Verified by manager", rm: "Manager ki tasdeeq shuda", ur: "منیجر کی تصدیق شدہ" },
+  pu_rv_verify: { en: "Verify", rm: "Tasdeeq karein", ur: "تصدیق کریں" },
+  pu_rv_k_verify: { en: "verified", rm: "tasdeeq ki", ur: "تصدیق کی" },
+  pu_rv_waiting_approval: {
+    en: "Verified — waiting for Owner/Admin's final approval.",
+    rm: "Tasdeeq shuda — Owner/Admin ke final manzoori ka intezar hai.",
+    ur: "تصدیق شدہ — مالک/ایڈمن کی فائنل منظوری کا انتظار ہے۔",
+  },
 } as const;

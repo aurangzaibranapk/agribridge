@@ -25,6 +25,7 @@ const REVIEW_KIND_KEY: Record<string, TranslationKey> = {
   approve: "pu_rv_k_approve",
   send_back: "pu_rv_k_send_back",
   reject: "pu_rv_k_reject",
+  verify: "pu_rv_k_verify",
 };
 export default async function AdminPurchasesPage() {
   const supabase = createClient();
@@ -41,6 +42,9 @@ export default async function AdminPurchasesPage() {
     .maybeSingle();
 
   const isAdminLevel = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "owner";
+  // Branch Manager: sirf apni branch ki purchase ki tasdeeq (372) --
+  // RLS khud us ki nazar sirf apni branch tak mehdood karta hai.
+  const canVerify = profile?.role === "manager";
   const staffBranchRel: any = (profile as any)?.branches;
   const staffBranchName = Array.isArray(staffBranchRel) ? staffBranchRel[0]?.name : staffBranchRel?.name;
 
@@ -122,7 +126,7 @@ export default async function AdminPurchasesPage() {
     // hai).
     reviewDecision: (() => {
       const decided = ((p.purchase_comments ?? []) as any[])
-        .filter((c) => ["approve", "send_back", "reject"].includes(c.kind))
+        .filter((c) => ["approve", "send_back", "reject", "verify"].includes(c.kind))
         .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
       const last = decided[decided.length - 1];
       if (!last) return null;
@@ -239,6 +243,7 @@ export default async function AdminPurchasesPage() {
                               comments={p.comments}
                               items={p.items}
                               canApprove={isAdminLevel}
+                              canVerify={canVerify}
                             />
                           )}
                         </div>
