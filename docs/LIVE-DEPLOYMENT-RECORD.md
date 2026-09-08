@@ -2442,6 +2442,30 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Phase 2E: Stock Position + FIFO Cost, koi migration nahi
+
+Malik ka "Option 2" ka sequence yahan mukammal hua. Stock Value ab
+`stock_batches.unit_cost * remaining_quantity` (FIFO) se — Phase 1 mein
+`products.purchase_price` (maujooda, ek hi rate) se andaza tha, jo
+ghalat ho sakta tha agar ek product ke do batch alag rate par khareede
+gaye hon. **Ab wohi hisaab jo POS ki COGS bhi istemal karti hai** — is
+liye Shop 360 ka Stock Value aur P&L ka COGS ek hi jagah se aate hain,
+do alag nahi.
+
+- `shopStockPosition()` — Stock Value (FIFO), Total Qty, Received/Sold
+  (`stock_movements.movement_type = purchase_in/sale_out`), Low
+  Stock/Out of Stock (`products.min_stock_threshold` se).
+- `shopWhereIsMyMoney()` ka Stock number ab isi se aata hai (do jagah
+  do alag Stock number nahi).
+- Testing par SQL se verify kiya (Mahabali Karyana Shop, 6 batches, FIFO
+  value Rs 2,916,000 — join sahi chal rahi hai).
+- Koi migration nahi. `tsc` (71) aur `build` clean.
+
+**Poora Option 2 sequence (Phase 2A-2E) mukammal, sab Testing par, Live
+abhi tak nahi chhua.** Baqi: drill-downs, alerts, Branch consolidation
+(Phase 5) — aur malik ka pehle se ruka hua browser smoke-test abhi bhi
+baqi hai.
+
 ### Shop 360 — Phase 2D: Full Cash Match, koi migration nahi
 
 Malik ka faisla (Khata sale ka masla): Option 1 -- Khata/Bank/Digital ko

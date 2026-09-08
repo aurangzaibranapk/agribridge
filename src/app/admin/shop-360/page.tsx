@@ -7,7 +7,7 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { StatCard } from "@/components/dashboard/stat-card";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
-import { shopWhereIsMyMoney, shopTodayFlow, shopCashControl, shopCollectionOutstanding, shopInvestmentPosition } from "@/lib/pos/shop-360";
+import { shopWhereIsMyMoney, shopTodayFlow, shopCashControl, shopCollectionOutstanding, shopInvestmentPosition, shopStockPosition } from "@/lib/pos/shop-360";
 
 export const dynamic = "force-dynamic";
 
@@ -109,12 +109,13 @@ export default async function Shop360Page({
           : today;
   const matchTo = period === "custom" ? searchParams?.match_to || today : today;
 
-  const [money, flow, cashControl, outstanding, investment] = await Promise.all([
+  const [money, flow, cashControl, outstanding, investment, stock] = await Promise.all([
     shopWhereIsMyMoney(shopId),
     shopTodayFlow(shopId, date),
     shopCashControl(shopId, matchFrom, matchTo),
     shopCollectionOutstanding(shopId),
     shopInvestmentPosition(shopId),
+    shopStockPosition(shopId, date, date),
   ]);
 
   return (
@@ -403,9 +404,43 @@ export default async function Shop360Page({
         <p className="mt-2 text-[11px] text-surface-400">Sirf MANZOOR-shuda kharcha ginta hai — manzoori ke intezar wali qatarein shamil nahi.</p>
       </Card>
 
+      {/* ---- Stock Position (Phase 2E) ---- */}
+      <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
+        <ShoppingCart className="h-4 w-4" /> Stock Position — {date === today ? "aaj" : date}
+      </h2>
+      <Card className="mb-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
+          <div>
+            <p className="text-[11px] text-surface-400">Stock Value (FIFO cost)</p>
+            <p className="font-semibold tabular-nums">{stock.stockValueFifo == null ? "—" : `Rs ${stock.stockValueFifo.toLocaleString()}`}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Total Qty</p>
+            <p className="font-semibold tabular-nums">{stock.stockQuantity.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Received (is din)</p>
+            <p className="font-semibold tabular-nums text-emerald-700">+{stock.receivedInPeriod.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Sold (is din)</p>
+            <p className="font-semibold tabular-nums text-surface-700 dark:text-surface-200">−{stock.soldInPeriod.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <span className={stock.lowStockCount > 0 ? "text-amber-700" : "text-surface-500"}>
+            Low Stock: <b className="tabular-nums">{stock.lowStockCount}</b> items
+          </span>
+          <span className={stock.outOfStockCount > 0 ? "text-red-700" : "text-surface-500"}>
+            Out of Stock: <b className="tabular-nums">{stock.outOfStockCount}</b> items
+          </span>
+        </div>
+        <p className="mt-2 text-[11px] text-surface-400">{stock.note}</p>
+      </Card>
+
       <p className="text-center text-xs text-surface-400">
-        Phase 1 + 2 ka hissa yahan hai (Cash Control, POS Outstanding) — Daily Match/Reconciliation, Stock ka asal FIFO cost aur
-        Investment/Withdrawal agle hisson mein aayenge.{" "}
+        Phase 1 + 2 (A-E) yahan hai — Cash Control, POS Outstanding, Investment/Withdrawal, Full Cash Match, Stock/FIFO Cost. Baqi (drill-downs,
+        alerts, Branch consolidation) agle hisson mein aayenge.{" "}
         <Link href="/admin/kharche" className="underline">
           Paisa &amp; Khata
         </Link>

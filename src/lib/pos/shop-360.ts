@@ -132,8 +132,8 @@ export interface ShopWhereIsMyMoney {
 }
 
 /**
- * "Paisa Kahan Hai?" -- Stock + Cash/Bank/Digital (lifetime, is shop
- * ki) + Receivable (branch tak) + Payable (abhi nahi).
+ * "Paisa Kahan Hai?" -- Stock (FIFO cost, Phase 2E) + Cash/Bank/Digital
+ * (lifetime, is shop ki) + Receivable (branch tak) + Payable (abhi nahi).
  */
 export async function shopWhereIsMyMoney(shopId: string): Promise<ShopWhereIsMyMoney> {
   const service = createServiceClient();
@@ -145,30 +145,15 @@ export async function shopWhereIsMyMoney(shopId: string): Promise<ShopWhereIsMyM
   const fromDate = shop?.created_at ? String(shop.created_at).slice(0, 10) : "2020-01-01";
   const today = new Date().toISOString().slice(0, 10);
 
-  const [warehouseRes, byMethod, receivable] = await Promise.all([
-    service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle(),
+  const [stock, byMethod, receivable] = await Promise.all([
+    shopStockPosition(shopId, today, today),
     shopPaymentMethodBreakdown(shopId, fromDate, today),
     branchId ? branchReceivableFromLedger(branchId) : Promise.resolve(null),
   ]);
 
-  let stockValueApprox: number | null = null;
-  const warehouseId = warehouseRes.data?.id as string | undefined;
-  if (warehouseId) {
-    const { data: invRows } = await service
-      .from("inventory")
-      .select("quantity_on_hand, products(purchase_price)")
-      .eq("warehouse_id", warehouseId);
-    stockValueApprox = round2(
-      (invRows ?? []).reduce((sum, r: any) => {
-        const product = Array.isArray(r.products) ? r.products[0] : r.products;
-        return sum + Number(r.quantity_on_hand ?? 0) * Number(product?.purchase_price ?? 0);
-      }, 0)
-    );
-  }
-
   return {
-    stockValueApprox,
-    stockValueNote: "Abhi maal ki maujooda price se (MRP/selling nahi, purchase price) -- asal FIFO cost Phase 2 mein.",
+    stockValueApprox: stock.stockValueFifo,
+    stockValueNote: "FIFO cost se (stock_batches.unit_cost) -- MRP/selling price se nahi.",
     byPaymentMethod: byMethod,
     cashDigitalTotal: round2(byMethod.reduce((s, r) => s + r.net, 0)),
     receivableBranchLevel: receivable,
@@ -176,6 +161,94 @@ export async function shopWhereIsMyMoney(shopId: string): Promise<ShopWhereIsMyM
       "Ledger (account 1100) se, is shop ki poori BRANCH tak -- shop tak nahi, kyunke Load & Bill ka udhaar/wasooli sirf branch tak darj hota hai, shop tag nahi karta.",
     payable: null,
     payableNote: "Abhi shop-wise track nahi hoti -- purchases shop se reliably linked nahi hain. Branch/company level Finance ke safhe par dekhein.",
+  };
+}
+
+export interface ShopStockPosition {
+  /** stock_batches.unit_cost se (FIFO) -- NULL agar is shop ka warehouse hi nahi mila. */
+  stockValueFifo: number | null;
+  stockQuantity: number;
+  receivedInPeriod: number;
+  soldInPeriod: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  note: string;
+}
+
+/**
+ * Phase 2E — Stock Position, asal cost (FIFO) se.
+ *
+ * Pehle (Phase 1) `products.purchase_price` (maujooda, ek hi rate) se
+ * andaza lagaya jata tha -- ghalat tha agar ek product ke do batch alag
+ * rate par khareede gaye hon. Ab `stock_batches.unit_cost *
+ * remaining_quantity` -- wohi cost jo POS ki COGS bhi istemal karti
+ * hai (FIFO), is liye Shop 360 ka Stock Value aur P&L ka COGS ek hi
+ * hisaab se aate hain, do alag nahi.
+ */
+export async function shopStockPosition(shopId: string, fromDate: string, toDate: string): Promise<ShopStockPosition> {
+  const service = createServiceClient();
+
+  const { data: wh } = await service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle();
+  const warehouseId = wh?.id as string | undefined;
+  if (!warehouseId) {
+    return {
+      stockValueFifo: null,
+      stockQuantity: 0,
+      receivedInPeriod: 0,
+      soldInPeriod: 0,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      note: "Is shop ka warehouse nahi mila -- stock ka hisaab nahi laga sakte.",
+    };
+  }
+
+  const [{ data: batches }, { data: invRows }] = await Promise.all([
+    service.from("stock_batches").select("remaining_quantity, unit_cost").eq("warehouse_id", warehouseId),
+    service.from("inventory").select("id, quantity_on_hand, products(min_stock_threshold)").eq("warehouse_id", warehouseId),
+  ]);
+
+  const stockValueFifo = round2(
+    (batches ?? []).reduce((s, b) => s + Number(b.remaining_quantity ?? 0) * Number(b.unit_cost ?? 0), 0)
+  );
+
+  const rows = (invRows ?? []) as { id: string; quantity_on_hand: number; products: { min_stock_threshold: number | null } | { min_stock_threshold: number | null }[] | null }[];
+  const stockQuantity = round2(rows.reduce((s, r) => s + Number(r.quantity_on_hand ?? 0), 0));
+
+  let lowStockCount = 0;
+  let outOfStockCount = 0;
+  for (const r of rows) {
+    const qty = Number(r.quantity_on_hand ?? 0);
+    const product = Array.isArray(r.products) ? r.products[0] : r.products;
+    const threshold = product?.min_stock_threshold != null ? Number(product.min_stock_threshold) : null;
+    if (qty <= 0) outOfStockCount += 1;
+    else if (threshold != null && qty <= threshold) lowStockCount += 1;
+  }
+
+  const inventoryIds = rows.map((r) => r.id);
+  let receivedInPeriod = 0;
+  let soldInPeriod = 0;
+  if (inventoryIds.length > 0) {
+    const { data: movements } = await service
+      .from("stock_movements")
+      .select("movement_type, quantity")
+      .in("inventory_id", inventoryIds)
+      .gte("created_at", `${fromDate}T00:00:00`)
+      .lte("created_at", `${toDate}T23:59:59.999`);
+    for (const m of (movements ?? []) as { movement_type: string; quantity: number }[]) {
+      const qty = Number(m.quantity ?? 0);
+      if (m.movement_type === "purchase_in") receivedInPeriod += qty;
+      else if (m.movement_type === "sale_out") soldInPeriod += qty;
+    }
+  }
+
+  return {
+    stockValueFifo,
+    stockQuantity,
+    receivedInPeriod: round2(receivedInPeriod),
+    soldInPeriod: round2(soldInPeriod),
+    lowStockCount,
+    outOfStockCount,
+    note: "Stock Value FIFO cost se (stock_batches) -- wohi hisaab jo POS ki COGS bhi istemal karti hai.",
   };
 }
 
