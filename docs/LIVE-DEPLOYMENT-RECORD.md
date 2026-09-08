@@ -2442,6 +2442,30 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Bill AI-reading — discount/tax save-path ka gap theek hua (8 September, raat, code-only)
+
+Live par bill-rates ka ek asal safha khola (JX0098807, Hamid Traders)
+to discrepancy banner Rs 1,500.09 ka farq dikha raha tha jab ke saari
+qatarein theek lag rahi thin. Wajah: AI Gemini se discount/tax/other
+charges theek parh leta hai (318 ke columns Live par bhi maujood hain),
+magar `saveBillReading` (supplier-bill-rates.ts) ye teen cheezein
+`supplier_bill_reads` mein likhta hi nahi tha — khamoshi se gir jati
+thin. Aur discrepancy warning bhi qataron ke raw jorh ko seedha bill
+total se milata tha, discount/tax ko netting kiye baghair.
+
+- `src/actions/supplier-bill-rates.ts` — `head` accumulator ab
+  `discountTotal`/`taxAmount`/`taxLabel`/`otherCharges` bhi le kar
+  save karta hai.
+- `page.tsx` + `bill-client.tsx` — ye chaar khane ab `BillClient` tak
+  pahunchte hain; mismatch ab `linesTotal − discount + tax + other
+  charges` ko bill total se milata hai, raw jorh ko nahi.
+- Koi migration nahi (318 ke columns pehle se hain, sirf khali reh
+  rahe the) — sirf code. `tsc` (71, purane jitne hi) aur `build` clean.
+- **JX0098807 khud abhi bhi purana hai** (ye bill fix se PEHLE parha
+  gaya tha) — us ka discount/tax NULL hi rahega jab tak koi is bill ko
+  dobara AI se na parhwaye. Us bill ki apni lines theek hain, sirf
+  discrepancy banner cosmetic tha.
+
 ### Abhi baqi (isi "4 kaam" ki fehrist se)
 
 1. Verify→approve pattern baqi modules mein: POS Return, Machinery.
