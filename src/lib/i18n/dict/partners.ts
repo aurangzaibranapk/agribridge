@@ -23,6 +23,7 @@ export const partnersDict = {
   br_name: { en: "Branch Name", rm: "Shakh ka naam", ur: "شاخ کا نام" },
   br_main: { en: "Main", rm: "Markazi", ur: "مرکزی" },
   br_blocked: { en: "Blocked", rm: "Bandh", ur: "بند" },
+  br_dashboard: { en: "Dashboard", rm: "Dashboard", ur: "ڈیش بورڈ" },
   br_reason_label: { en: "Reason:", rm: "Wajah:", ur: "وجہ:" },
   br_reason_field: { en: "Reason", rm: "Wajah", ur: "وجہ" },
   br_reason_eg: { en: "e.g. payment issue, licence expired", rm: "misal: adaigi ka masla, licence khatam ho gaya", ur: "مثال: ادائیگی کا مسئلہ، لائسنس ختم ہو گیا" },

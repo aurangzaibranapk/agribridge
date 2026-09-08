@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
-import { Users, FileText, CheckSquare, Store, Plus } from "lucide-react";
+import { Users, FileText, CheckSquare, Store, Plus, LayoutDashboard } from "lucide-react";
 import { DeleteBranchButton } from "./delete-branch-button";
 import { BranchStatusManager } from "./branch-status-manager";
 import { EditBranchButton } from "./edit-branch-modal";
@@ -87,7 +87,9 @@ export function BranchesListClient({
                   )}
                   <div>
                     <p className="flex items-center gap-2 font-medium text-surface-900 dark:text-white">
-                      {b.name}
+                      <Link href={`/admin/branches/${b.id}/dashboard`} className="hover:text-brand-700 hover:underline">
+                        {b.name}
+                      </Link>
                       <EditBranchButton branch={b} />
                       {b.is_main_branch && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("br_main", lang)}</span>}
                       {b.status === "suspended" && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">{t("c_suspended", lang)}</span>}
@@ -98,6 +100,8 @@ export function BranchesListClient({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Link href={`/admin/branches/${b.id}/dashboard`} className="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
+                    <LayoutDashboard className="h-3.5 w-3.5" />{t("br_dashboard", lang)}</Link>
                   <Link href={`/admin/branches/${b.id}/statement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs text-surface-600 hover:bg-surface-50">
                     <FileText className="h-3.5 w-3.5" />{t("at_statement", lang)}</Link>
                   <BranchStatusManager branchId={b.id} status={b.status} />
