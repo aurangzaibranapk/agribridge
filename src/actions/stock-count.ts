@@ -5,6 +5,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { REASON_MIN } from "@/lib/ledger/stock-count";
+import { requireAction } from "@/lib/access/guard";
+import { logAudit } from "@/lib/audit";
 
 export interface ActionState {
   error?: string;
@@ -141,6 +143,72 @@ export async function saveCounts(_prev: ActionState, formData: FormData): Promis
 }
 
 /**
+ * Tasdeeq -- Branch Manager ka kaam, sirf apni branch ki hadd tak.
+ *
+ * Malik (8 September): Kharche wala tareeqa (364) yahan bhi. Ye
+ * inventory ya ledger ko haath nahi lagata -- sirf agla marhala kholta
+ * hai. Post (neeche) hi wo jagah hai jahan asal maal/paisa hilta hai.
+ */
+export async function verifyCount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+
+  const countId = String(formData.get("count_id") ?? "");
+  if (!countId) return { error: "Ginti nahi mili." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const guard = await requireAction("stock-count", "verify");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  const { data: count } = await service
+    .from("stock_counts")
+    .select("id, status, started_by, warehouses(branch_id)")
+    .eq("id", countId)
+    .maybeSingle();
+  if (!count) return { error: "Ginti nahi mili." };
+  if (count.status !== "counting") {
+    return { error: "Ye ab tasdeeq ke marhale mein nahi hai (pehle hi tasdeeq/post ho chuka)." };
+  }
+
+  const warehouseBranch = (count.warehouses as { branch_id: string } | null)?.branch_id ?? null;
+  if (!caller.unrestricted && caller.scope !== "all") {
+    if (!caller.branchId || warehouseBranch !== caller.branchId) {
+      return { error: "Ye ginti aapki branch ki nahi hai — sirf apni branch ki tasdeeq kar sakte hain." };
+    }
+  }
+  if (count.started_by === user.id) {
+    return { error: "Apni shuru ki hui ginti khud tasdeeq nahi kar sakte — doosra authorized banda kare." };
+  }
+
+  const { data: lines } = await service.from("stock_count_lines").select("counted_qty").eq("count_id", countId);
+  const unfilled = (lines ?? []).filter((l) => l.counted_qty === null);
+  if (unfilled.length > 0) {
+    return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Tasdeeq se pehle poori ginti lazmi hai.` };
+  }
+
+  const { error } = await service
+    .from("stock_counts")
+    .update({ status: "verified", verified_by: user.id, verified_at: new Date().toISOString() })
+    .eq("id", countId);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "verify",
+    module: "stock-count",
+    recordId: countId,
+    description: "Branch Manager ki tasdeeq — ab Finance/Admin/Owner ki final post ka intezar.",
+  });
+
+  revalidatePath("/admin/stock-count");
+  return { success: true, message: "Tasdeeq ho gayi — ab final post ka intezar hai." };
+}
+
+/**
  * Milaan aur mukammal karna.
  *
  * Ab dono adad saamne aate hain. Jahan farq ho wahan wajah lazmi hai.
@@ -153,6 +221,10 @@ export async function saveCounts(_prev: ActionState, formData: FormData): Promis
  *      hai: is ke baghair inventory to theek ho jati magar us maal ki
  *      qeemat kahin se ghayab ho jati -- yani kaghaz par kaarobar us se
  *      zyada munafa dikhata jitna hua.
+ *
+ * Malik ka #1 kaam: yahan pehle koi permission check hi nahi tha --
+ * kisi bhi logged-in bande ko rok nahi sakti thi (272 ka role-table
+ * faisla sirf kaghaz par tha, code kabhi poochta hi nahi tha).
  */
 export async function postCount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -166,13 +238,18 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
 
+  const guard = await requireAction("stock-count", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const { data: count } = await service
     .from("stock_counts")
     .select("id, status, warehouse_id, warehouses(name, branch_id)")
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  if (count.status !== "counting") return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
+  if (count.status !== "counting" && count.status !== "verified") {
+    return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
+  }
 
   const { data: lines } = await service
     .from("stock_count_lines")

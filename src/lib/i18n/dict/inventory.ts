@@ -256,6 +256,17 @@ export const stockCountDict = {
     ur: 'مکمل کرنے پر اسٹاک گنے ہوئے عدد پر سیٹ ہو جائے گا اور نقصان "اسٹاک کا نقصان" کھاتے میں چلا جائے گا۔ اس کے بعد یہ گنتی بدلی نہیں جا سکتی۔',
   },
   sc_finish_review: { en: "Complete the review", rm: "Milaan mukammal karein", ur: "ملان مکمل کریں" },
+  sc_verify_review: { en: "Verify (branch manager)", rm: "Tasdeeq karein (apni branch)", ur: "تصدیق کریں (اپنی برانچ)" },
+  sc_waiting_verify: {
+    en: "Waiting for the branch manager's verification.",
+    rm: "Branch Manager ki tasdeeq ka intezar hai.",
+    ur: "برانچ مینیجر کی تصدیق کا انتظار ہے۔",
+  },
+  sc_waiting_post: {
+    en: "Verified — waiting for Finance/Owner to finish the review.",
+    rm: "Tasdeeq shuda — Finance/Owner ke final post ka intezar hai.",
+    ur: "تصدیق شدہ — فنانس/مالک کے فائنل پوسٹ کا انتظار ہے۔",
+  },
 
   // --- Stock ledger ---
   sl_title: { en: "Stock Ledger", rm: "Stock ka Ledger", ur: "اسٹاک کا لیجر" },

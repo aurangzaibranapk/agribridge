@@ -50,6 +50,8 @@ export interface OpenCount {
   allCounted: boolean;
   /** Milaan ke qabil (sab bhar gayi) magar abhi post nahi hui. */
   needsReview: boolean;
+  /** 'counting' | 'verified' -- 'posted' ho jaye to yahan aati hi nahi. */
+  status: string;
 }
 
 /**
@@ -65,11 +67,14 @@ export async function openCount(
 ): Promise<OpenCount | null> {
   const service = createServiceClient();
 
+  // 'verified' (370: Branch Manager ki tasdeeq) yahan bhi aati hai --
+  // warna tasdeeq shuda ginti finance/owner ko dikhna hi band ho jati,
+  // aur wo usay post kabhi nahi kar sakte.
   const { data: header } = await service
     .from("stock_counts")
-    .select("id, warehouse_id, count_date, started_at, warehouses(name), profiles(full_name)")
+    .select("id, warehouse_id, count_date, started_at, status, warehouses(name), profiles(full_name)")
     .eq("warehouse_id", warehouseId)
-    .eq("status", "counting")
+    .in("status", ["counting", "verified"])
     .maybeSingle();
 
   if (!header) return null;
@@ -112,6 +117,7 @@ export async function openCount(
     lines,
     allCounted,
     needsReview: allCounted,
+    status: header.status,
   };
 }
 

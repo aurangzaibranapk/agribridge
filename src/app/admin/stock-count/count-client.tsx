@@ -1,6 +1,6 @@
 "use client";
 import { useFormState, useFormStatus } from "react-dom";
-import { startCount, saveCounts, postCount, type ActionState } from "@/actions/stock-count";
+import { startCount, saveCounts, postCount, verifyCount, type ActionState } from "@/actions/stock-count";
 import { EyeOff, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -152,6 +152,9 @@ export function CountingSheet({
 export function ReviewSheet({
   countId,
   lines,
+  status,
+  canVerify,
+  canApprove,
 }: {
   countId: string;
   lines: {
@@ -164,14 +167,27 @@ export function ReviewSheet({
     unitCost: number;
     reason: string | null;
   }[];
+  /** 'counting' | 'verified'. */
+  status: string;
+  /** Branch Manager: sirf apni branch ki tasdeeq -- final post nahi. */
+  canVerify: boolean;
+  canApprove: boolean;
 }) {
   const lang = useLang();
-  const [state, formAction] = useFormState(postCount, initialState);
+  const [postState, postAction] = useFormState(postCount, initialState);
+  const [verifyState, verifyAction] = useFormState(verifyCount, initialState);
+  const state = canApprove ? postState : verifyState;
   const gaps = lines.filter((l) => (l.difference ?? 0) !== 0);
   const matched = lines.length - gaps.length;
+  // Tasdeeq ke baad reason ke khane already bhare/lock -- dobara wajah
+  // maangna Manager se ho chuka kaam dobara karwana hota.
+  const readOnlyReasons = status === "verified" && !canApprove;
+
+  const canAct = canApprove || canVerify;
+  const formAction = canApprove ? postAction : verifyAction;
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form action={canAct ? formAction : undefined} className="space-y-3">
       <input type="hidden" name="count_id" value={countId} />
 
       <p className="text-sm text-surface-600 dark:text-surface-400">
@@ -201,12 +217,13 @@ export function ReviewSheet({
                       <span className="text-surface-800 dark:text-surface-200">{l.productName}</span>
                       <input
                         name={`reason_${l.id}`}
-                        required
+                        required={!readOnlyReasons}
+                        readOnly={readOnlyReasons}
                         minLength={5}
                         maxLength={255}
                         defaultValue={l.reason ?? ""}
                         placeholder={t("sc_what_happened", lang)}
-                        className="mt-1 w-full rounded-lg border border-surface-300 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
+                        className="mt-1 w-full rounded-lg border border-surface-300 px-2 py-1 text-xs read-only:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:read-only:bg-surface-800"
                       />
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-surface-500">{l.expected}</td>
@@ -237,8 +254,19 @@ export function ReviewSheet({
         {t("sc_post_note", lang)}
       </p>
 
-      <Feedback state={state} />
-      <Submit label={t("sc_finish_review", lang)} variant={gaps.length > 0 ? "amber" : "brand"} />
+      {canAct ? (
+        <>
+          <Feedback state={state} />
+          <Submit
+            label={canApprove ? t("sc_finish_review", lang) : t("sc_verify_review", lang)}
+            variant={gaps.length > 0 ? "amber" : "brand"}
+          />
+        </>
+      ) : (
+        <p className="rounded-lg bg-surface-100 px-3 py-2 text-sm text-surface-600 dark:bg-surface-800 dark:text-surface-400">
+          {status === "verified" ? t("sc_waiting_post", lang) : t("sc_waiting_verify", lang)}
+        </p>
+      )}
     </form>
   );
 }

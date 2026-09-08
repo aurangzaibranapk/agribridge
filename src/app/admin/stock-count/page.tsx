@@ -12,6 +12,8 @@ import {
 } from "@/lib/ledger/stock-count";
 import { ScheduleSection } from "./schedule-client";
 import { AlertTriangle, CheckCircle2, PackageSearch, EyeOff } from "lucide-react";
+import { canDo } from "@/lib/access/guard";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +86,11 @@ export default async function StockCountPage({
   // kabhi nahi -- yehi is poore amal ki jaan hai.
   const reviewing = params.step === "review";
   const current = selected ? await openCount(selected, reviewing) : null;
+
+  // Branch Manager: apni branch ki tasdeeq. Finance/Owner: final post.
+  const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
+  const canApprove = sabKuchWala || (await canDo("stock-count", "approve"));
+  const canVerify = !canApprove && (await canDo("stock-count", "verify"));
 
   const [history, overdue] = await Promise.all([recentCounts(15), overdueCounts()]);
 
@@ -167,7 +174,12 @@ export default async function StockCountPage({
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-semibold text-surface-900 dark:text-white">
-                      {current.warehouseName} — {reviewing ? t("sc_review", lang) : t("sc_counting", lang)}
+                      {current.warehouseName} —{" "}
+                      {reviewing
+                        ? current.status === "verified"
+                          ? "Tasdeeq shuda — final post ka intezar"
+                          : t("sc_review", lang)
+                        : t("sc_counting", lang)}
                     </h2>
                     <p className="text-xs text-surface-500">
                       {current.countDate} • {current.lines.length} {t("sc_items", lang)}
@@ -193,7 +205,13 @@ export default async function StockCountPage({
                 </div>
 
                 {reviewing ? (
-                  <ReviewSheet countId={current.id} lines={current.lines} />
+                  <ReviewSheet
+                    countId={current.id}
+                    lines={current.lines}
+                    status={current.status}
+                    canVerify={canVerify}
+                    canApprove={canApprove}
+                  />
                 ) : (
                   <CountingSheet
                     countId={current.id}
