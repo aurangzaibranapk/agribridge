@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
+import { ShopFilter } from "@/components/dashboard/shop-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import {
@@ -34,7 +35,7 @@ function rs(n: number) {
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; shop?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
@@ -68,6 +69,12 @@ export default async function SalesReportPage({
   const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
   const meriDukan = !sabKuchWala ? ((me?.shop_id as string | null) ?? null) : null;
   const branchId = meriDukan ? "" : params.branch || "";
+  // Ek Branch ke andar kai shops (Karyana, Agri Inputs, Vets...) hoti
+  // hain -- "qism" (business_type) ke hisaab se pehle se alag hoti thi,
+  // magar do shops ek hi qism ki hon to wo ek qatar mein mil jati thin.
+  // Malik: "har shop ka alag alag check karna ho to kaise ho ga" -- is
+  // liye shop-level filter aur alag breakdown, dono.
+  const shopId = meriDukan ? "" : params.shop || "";
 
   const [{ data: branches }, { data: dukanein }] = await Promise.all([
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
@@ -80,6 +87,7 @@ export default async function SalesReportPage({
     dukanKiQism.set(d.id, String(d.business_type ?? ""));
     dukanKaNaam.set(d.id, String(d.name ?? ""));
   });
+  const shopsForBranch = branchId ? (dukanein ?? []).filter((d) => d.branch_id === branchId) : [];
 
   let salesQuery = supabase
     .from("pos_sales")
@@ -90,6 +98,7 @@ export default async function SalesReportPage({
     .lte("created_at", end.toISOString())
     .order("created_at", { ascending: false });
   if (meriDukan) salesQuery = salesQuery.eq("shop_id", meriDukan);
+  else if (shopId) salesQuery = salesQuery.eq("shop_id", shopId);
   else if (branchId) salesQuery = salesQuery.eq("branch_id", branchId);
 
   const { data: sales } = await salesQuery.limit(200);
@@ -322,6 +331,27 @@ export default async function SalesReportPage({
   };
   const bikriKiFehrist = [...bikriQismWar.entries()].sort((a, b) => b[1].raqam - a[1].raqam);
 
+  /**
+   * Har SHOP ka alag hisaab -- qism (business_type) se nahi.
+   *
+   * Malik: "har shop ka alag alag check karna ho to kis shop par kitna
+   * hua hai." Do shops ek hi qism ki (jaise do Karyana shops) ho to
+   * upar wali "qism" wali fehrist unhen ek qatar mein mila deti --
+   * yahan har shop apni ALAG qatar mein hai, chahe qism koi bhi ho.
+   */
+  const bikriDukanWar = new Map<string, { raqam: number; naqad: number; udhaar: number; ginti: number }>();
+  (sales ?? []).forEach((s: any) => {
+    if (!s.shop_id) return;
+    const pehle = bikriDukanWar.get(s.shop_id) ?? { raqam: 0, naqad: 0, udhaar: 0, ginti: 0 };
+    bikriDukanWar.set(s.shop_id, {
+      raqam: pehle.raqam + Number(s.total_amount ?? 0),
+      naqad: pehle.naqad + Number(s.cash_paid ?? 0),
+      udhaar: pehle.udhaar + Number(s.khata_amount ?? 0),
+      ginti: pehle.ginti + 1,
+    });
+  });
+  const dukanKiFehrist = [...bikriDukanWar.entries()].sort((a, b) => b[1].raqam - a[1].raqam);
+
   const totalSales = (sales ?? []).reduce((sum, s) => sum + Number(s.total_amount ?? 0), 0);
   const totalCount = (sales ?? []).length;
   const avgSale = totalCount > 0 ? totalSales / totalCount : 0;
@@ -353,6 +383,9 @@ export default async function SalesReportPage({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <DateRangeFilter current={range} />
         {!meriDukan && <BranchFilter branches={branches ?? []} current={branchId} />}
+        {!meriDukan && branchId && shopsForBranch.length > 0 && (
+          <ShopFilter shops={shopsForBranch.map((d) => ({ id: d.id, name: d.name }))} current={shopId} />
+        )}
       </div>
 
       {!sabKuchWala && !meriDukan && (
@@ -466,6 +499,42 @@ export default async function SalesReportPage({
             </table>
           )}
         </div>
+
+        {/* Har SHOP ka alag hisaab -- sirf jab kisi ek dukan tak mehdood na ho */}
+        {!meriDukan && !shopId && dukanKiFehrist.length > 0 && (
+          <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900 lg:col-span-2">
+            <h2 className="mb-1 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              Har Shop ka Alag Hisaab
+            </h2>
+            <p className="mb-4 text-xs text-surface-400">
+              Ek Branch ke andar har shop apni alag qatar mein — do shop ki qism ek ho bhi to yahan mile nahi.
+            </p>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-surface-100 text-xs text-surface-500 dark:border-surface-800">
+                  <th className="py-2 pr-3">Shop</th>
+                  <th className="py-2 pr-3 text-right">Parchi</th>
+                  <th className="py-2 pr-3 text-right">Naqad Aaya</th>
+                  <th className="py-2 pr-3 text-right">Udhaar Diya</th>
+                  <th className="py-2 text-right">Total Sale</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dukanKiFehrist.map(([shopIdKey, v]) => (
+                  <tr key={shopIdKey} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
+                    <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">{dukanKaNaam.get(shopIdKey) ?? "—"}</td>
+                    <td className="py-2 pr-3 text-right text-xs text-surface-400 tabular-nums">{v.ginti}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{rs(v.naqad)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-amber-700 dark:text-amber-400">
+                      {v.udhaar > 0 ? rs(v.udhaar) : "—"}
+                    </td>
+                    <td className="py-2 text-right font-medium tabular-nums text-surface-900 dark:text-white">{rs(v.raqam)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Karyana / Agri — dukan ki qism ke hisaab se */}
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
