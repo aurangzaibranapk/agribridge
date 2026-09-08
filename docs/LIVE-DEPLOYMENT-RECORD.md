@@ -2442,6 +2442,74 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Business Position, Phase 1 (8 September, raat, migration 374 — Testing par)
+
+Malik ka poora spec (21 sections): "Maine is shop mein total kitna
+paisa lagaya tha, aaj mera paisa kis kis jagah pada hai, kitna
+kama/chala gaya, aur koi difference hai to woh kahan gaya?" — Phase-wise
+banana confirm hua:
+
+1. Paisa Kahan Hai + Aaj ki Sale + Recovery + Expense (ye, abhi)
+2. Cash Control + Stock Position + FIFO Cost Value
+3. Investment / Capital / Owner Withdrawal
+4. Aaj Ka Milaan / Full Reconciliation
+5. Drill-downs, alerts, Branch consolidation, UI polish
+
+**Audit pehle (malik ke apne usool se) — 4 parallel audits, poori tasveer:**
+
+- **Shop P&L 90% pehle se bana hua hai** (`/admin/reports/pnl?branch_id=`)
+  — Revenue/COGS/Gross Profit/Expenses/Net Profit/Budget, seedha reuse.
+  "Kisan Card" pehle se ek payment method/account hai (naya nahi).
+  Per-shift cash expected/counted/difference pehle se hai (366) — sirf
+  shop/din tak jorna baqi (Phase 2).
+- **Customer khata ke TEEN alag numbers the** (`khata_accounts`,
+  `customers.current_balance`, ledger) — code mein khud likha hua
+  risk tha. **Malik ka faisla: ledger (`journal_lines` account 1100)
+  hi asal sach — baqi do sirf cache/display, kabhi authority nahi.**
+  Mismatch ho to "Needs Attention" mein flag karna hai (Phase 5).
+- **Supplier payable abhi shop tak nahi** (purchases reliably shop-linked
+  nahi) — **malik ka faisla: shortcut nahi lena, "—" dikhana jab tak
+  purchase-to-shop linkage na ho.**
+- **Investment/Capital/Owner Withdrawal per-shop bilkul nahi hai**
+  (`ownerCapital`/`ownerDrawings` account codes bane hain magar kabhi
+  istemal nahi hote) — Phase 3 mein naya banega.
+- **Stock Value abhi FIFO cost se nahi, current price se hai** (Phase 1
+  mein wahi purana tareeqa reuse kiya, saaf label ke sath; Phase 2 mein
+  FIFO cost aayega).
+- `position()` function (Master Dashboard) branch tak hi jata hai, shop
+  tak nahi — shop ke liye parallel hisaab likha (`shopWhereIsMyMoney`),
+  `position()` chhua nahi.
+
+**Phase 1 ka code:**
+
+- Naya `src/lib/pos/shop-360.ts` — `shopWhereIsMyMoney()` (stock value,
+  lifetime cash/bank/digital by payment method, branch-level receivable
+  ledger se, payable "—") aur `shopTodayFlow()` (din ki sale/recovery/
+  expense, sab shop-tagged data se — koi naya finance table nahi).
+- Naya safha `/admin/shop-360` (feature key `shop-360`, dashboard
+  `sales`) — sales_staff apni shop tak (`own_shop`), manager apni
+  branch ki shops (`own_branch`), finance sab (`all`), Owner/Admin
+  unrestricted.
+- Migration 374: feature/dashboard_features/role_feature_permissions/
+  feature_help, aur maujooda profiles ke liye `user_feature_permissions`
+  resync (naya feature_key, `fn_apply_role_template` khali jagah hi
+  bharta hai).
+- **Ek asal hadd, chhupai nahi ja rahi**: customer udhaar/wasooli DO
+  raaston se darj hoti hai — `customer-udhaar.ts` (Load & Bill, sirf
+  BRANCH tak, shop tag nahi karta) aur kharche.ts ka
+  "customer_se_wasooli" qism (Paisa & Khata, shop tak). Is liye Aaj ki
+  Recovery is safhe par SIRF Paisa & Khata wali ginti hai — Load & Bill
+  se ki gayi wasooli shamil nahi (safhe par likha hua hai).
+- **Dead code mila (theek nahi kiya, bas note)**: `applyScope()` mein
+  `own_shop` scope `caller.branchId` se shop column filter karta hai —
+  ghalat hota (branch_id shop_id se kabhi match nahi karega), magar ye
+  function **kahin bulaya hi nahi jata** — koi live asar nahi.
+- `tsc` (71, purana jitne hi) aur `build` clean. Testing par SQL se
+  warehouse→shop, expense→shop, aur branch-receivable ke joins verify
+  kiye — sab structurally theek (data abhi kam hai, is liye numbers
+  chhote/khali hain, magar query khud sahi hai).
+- **Live par abhi NAHI gayi** — migration 374 sirf Testing par.
+
 ### Bill AI-reading — discount/tax save-path ka gap theek hua (8 September, raat, code-only)
 
 Live par bill-rates ka ek asal safha khola (JX0098807, Hamid Traders)
