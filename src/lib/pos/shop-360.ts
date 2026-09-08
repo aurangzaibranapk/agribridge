@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { billQismKaLabel } from "@/lib/kharche";
 import { ACC } from "@/lib/ledger/rules";
 import { shopPaymentMethodBreakdown, type ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
+import { computeShiftCash } from "@/lib/pos/shift-cash";
 
 /**
  * Shop 360 — Business Position (malik ka poora spec, 8 September, raat).
@@ -36,6 +37,22 @@ function round2(v: number): number {
   return Math.round((v + Number.EPSILON) * 100) / 100;
 }
 
+const METHOD_LABEL: Record<string, string> = {
+  cash: "Cash", bank_transfer: "Bank Transfer", card: "Card", jazzcash: "JazzCash",
+  easypaisa: "Easypaisa", qr: "QR", khata: "Khata (udhaar)",
+};
+
+/** `paid_from_account_id` → payment_method, sab jagah wohi ek naqsha. */
+async function accountToMethodMap(): Promise<Map<string, string>> {
+  const service = createServiceClient();
+  const { data: mapRows } = await service.from("payment_method_account_map").select("payment_method, finance_account_id");
+  const map = new Map<string, string>();
+  for (const m of (mapRows ?? []) as { payment_method: string; finance_account_id: string | null }[]) {
+    if (m.finance_account_id) map.set(m.finance_account_id, m.payment_method);
+  }
+  return map;
+}
+
 export interface ShopFlowRow {
   total: number;
   byMethod: ShopPaymentMethodRow[];
@@ -68,16 +85,7 @@ export async function shopTodayFlow(shopId: string, date: string): Promise<ShopT
     .eq("expense_date", date);
 
   const rows = (expenseRows ?? []) as { kind: string; category: string | null; amount: number; paid_from_account_id: string | null }[];
-
-  const { data: mapRows } = await service.from("payment_method_account_map").select("payment_method, finance_account_id");
-  const accountToMethod = new Map<string, string>();
-  for (const m of (mapRows ?? []) as { payment_method: string; finance_account_id: string | null }[]) {
-    if (m.finance_account_id) accountToMethod.set(m.finance_account_id, m.payment_method);
-  }
-  const METHOD_LABEL: Record<string, string> = {
-    cash: "Cash", bank_transfer: "Bank Transfer", card: "Card", jazzcash: "JazzCash",
-    easypaisa: "Easypaisa", qr: "QR", khata: "Khata (udhaar)",
-  };
+  const accountToMethod = await accountToMethodMap();
 
   // Recovery -- alag kinds, sirf Paisa & Khata se.
   const recoveryRows = rows.filter((r) => RECOVERY_KINDS.includes(r.kind));
@@ -187,4 +195,168 @@ async function branchReceivableFromLedger(branchId: string): Promise<number> {
 
   const total = (lines ?? []).reduce((s, l) => s + (Number(l.debit ?? 0) - Number(l.credit ?? 0)), 0);
   return round2(total);
+}
+
+/**
+ * Phase 2 — Shop-wise Outstanding (jo migration 373 mein staff-wise
+ * bana tha, wohi formula, sirf shop ki poori jama).
+ *
+ * Malik ka usool jaisa hai waisa: duplicate nahi, "sirf jama karne ka
+ * tareeqa alag" -- data wahi (pos_sale_payment_details, pos_returns,
+ * pos_collection_deposits), staff ke bajaye shop tak jama.
+ */
+export interface ShopCollectionOutstanding {
+  /** Lifetime cash sale minus cash returns, is shop mein (sab staff mila kar). */
+  totalCashCollected: number;
+  approvedDeposits: number;
+  pendingDeposits: number;
+  /** totalCashCollected − approvedDeposits. */
+  outstanding: number;
+}
+
+export async function shopCollectionOutstanding(shopId: string): Promise<ShopCollectionOutstanding> {
+  const service = createServiceClient();
+
+  const { data: sales } = await service.from("pos_sales").select("id").eq("shop_id", shopId);
+  const saleIds = (sales ?? []).map((s) => s.id as string);
+
+  const [{ data: payments }, { data: returns }, { data: deposits }] = await Promise.all([
+    saleIds.length > 0
+      ? service.from("pos_sale_payment_details").select("amount").eq("payment_method", "cash").in("sale_id", saleIds)
+      : Promise.resolve({ data: [] as { amount: number }[] }),
+    saleIds.length > 0
+      ? service.from("pos_returns").select("total_amount").eq("refund_method", "cash").in("sale_id", saleIds)
+      : Promise.resolve({ data: [] as { total_amount: number }[] }),
+    service.from("pos_collection_deposits").select("amount, status").eq("shop_id", shopId),
+  ]);
+
+  const cash = (payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const returned = (returns ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+  const totalCashCollected = round2(cash - returned);
+
+  const depositRows = (deposits ?? []) as { amount: number; status: string }[];
+  const approvedDeposits = round2(depositRows.filter((d) => d.status === "approved").reduce((s, d) => s + Number(d.amount ?? 0), 0));
+  const pendingDeposits = round2(depositRows.filter((d) => d.status === "pending").reduce((s, d) => s + Number(d.amount ?? 0), 0));
+
+  return {
+    totalCashCollected,
+    approvedDeposits,
+    pendingDeposits,
+    outstanding: round2(totalCashCollected - approvedDeposits),
+  };
+}
+
+export interface ShopCashControl {
+  openShiftsCount: number;
+  closedShiftsCount: number;
+  /** Band shifts ka jama -- POS Shift close par jo asal mein darj hua. */
+  openingCashClosed: number;
+  expectedCashClosed: number;
+  countedCashClosed: number;
+  differenceClosed: number;
+  /** Khule shifts ka "abhi tak ka andaza" -- physical count abhi nahi hua. */
+  openShiftsLiveExpected: number;
+  /** Sirf CASH tareeqe se -- context ke liye, Expected Cash mein abhi shamil nahi. */
+  cashSalesToday: number;
+  cashRecoveryToday: number;
+  cashExpensesToday: number;
+  note: string;
+}
+
+/**
+ * Cash Control -- is shop ke POS counters ki is din ki shifts jama kar
+ * ke. `pos_shifts.expected_cash`/`counted_cash`/`difference` WOHI adad
+ * hain jo staff ne Shift Close par asal mein darj kiye -- yahan dobara
+ * nahi ginte, sirf jama karte hain (taake shop-level number aur staff
+ * ka apna shift-level number kabhi alag na ho).
+ *
+ * Khula shift ka `expected_cash` abhi database mein nahi likha (sirf
+ * Close par likha jata hai) -- is liye khule shifts ke liye `computeShiftCash`
+ * se LIVE andaza nikala jata hai (wohi function jo POS ka apna "abhi tak
+ * ki sale" preview istemal karta hai), aur "abhi tak ka andaza" ke tor
+ * par ALAG dikhaya jata hai -- band shifts ke asal difference ke sath
+ * kabhi mix nahi kiya jata, kyunke khule shift ka physical count hi
+ * nahi hua.
+ *
+ * Cash Recovery aur Cash Expenses is waqt `expected_cash` mein SHAMIL
+ * NAHI (khud POS Shift close ka apna hisaab bhi inhein nahi ginta --
+ * `src/lib/pos/shift-cash.ts` mein likha hua hai) -- yahan sirf context
+ * ke tor par dikhaye jate hain. Phase 4 (Aaj Ka Milaan) mein poora
+ * reconciliation banega jahan ye sab jama honge.
+ */
+export async function shopCashControl(shopId: string, date: string): Promise<ShopCashControl> {
+  const service = createServiceClient();
+
+  const { data: counters } = await service.from("pos_counters").select("id").eq("shop_id", shopId);
+  const counterIds = (counters ?? []).map((c) => c.id as string);
+
+  let shifts: { id: string; status: string; opening_cash: number; expected_cash: number | null; counted_cash: number | null; difference: number | null }[] = [];
+  if (counterIds.length > 0) {
+    const dayStart = `${date}T00:00:00`;
+    const dayEnd = `${date}T23:59:59.999`;
+    const { data } = await service
+      .from("pos_shifts")
+      .select("id, status, opening_cash, expected_cash, counted_cash, difference")
+      .in("counter_id", counterIds)
+      .gte("opened_at", dayStart)
+      .lte("opened_at", dayEnd);
+    shifts = data ?? [];
+  }
+
+  const closed = shifts.filter((s) => s.status === "closed");
+  const open = shifts.filter((s) => s.status !== "closed");
+
+  const openingCashClosed = round2(closed.reduce((s, r) => s + Number(r.opening_cash ?? 0), 0));
+  const expectedCashClosed = round2(closed.reduce((s, r) => s + Number(r.expected_cash ?? 0), 0));
+  const countedCashClosed = round2(closed.reduce((s, r) => s + Number(r.counted_cash ?? 0), 0));
+  const differenceClosed = round2(closed.reduce((s, r) => s + Number(r.difference ?? 0), 0));
+
+  let openShiftsLiveExpected = 0;
+  for (const s of open) {
+    const live = await computeShiftCash(s.id, Number(s.opening_cash ?? 0));
+    openShiftsLiveExpected += live.expectedCash;
+  }
+  openShiftsLiveExpected = round2(openShiftsLiveExpected);
+
+  const [salesByMethod, mapRows] = await Promise.all([
+    shopPaymentMethodBreakdown(shopId, date, date),
+    (async () => {
+      const accountToMethod = await accountToMethodMap();
+      const { data: expenseRows } = await service
+        .from("company_expense_requests")
+        .select("kind, amount, paid_from_account_id")
+        .eq("shop_id", shopId)
+        .eq("status", "approved")
+        .eq("expense_date", date);
+      return { accountToMethod, rows: (expenseRows ?? []) as { kind: string; amount: number; paid_from_account_id: string | null }[] };
+    })(),
+  ]);
+
+  const cashSalesToday = round2(salesByMethod.find((r) => r.method === "cash")?.sales ?? 0);
+
+  let cashRecoveryToday = 0;
+  let cashExpensesToday = 0;
+  for (const r of mapRows.rows) {
+    const method = r.paid_from_account_id ? mapRows.accountToMethod.get(r.paid_from_account_id) : null;
+    if (method !== "cash") continue;
+    if (RECOVERY_KINDS.includes(r.kind)) cashRecoveryToday += Number(r.amount ?? 0);
+    else if (GAYE_KINDS.includes(r.kind)) cashExpensesToday += Number(r.amount ?? 0);
+  }
+
+  return {
+    openShiftsCount: open.length,
+    closedShiftsCount: closed.length,
+    openingCashClosed,
+    expectedCashClosed,
+    countedCashClosed,
+    differenceClosed,
+    openShiftsLiveExpected: round2(openShiftsLiveExpected),
+    cashSalesToday,
+    cashRecoveryToday: round2(cashRecoveryToday),
+    cashExpensesToday: round2(cashExpensesToday),
+    note:
+      open.length > 0
+        ? `${open.length} shift abhi khuli hai -- us ka physical count abhi nahi hua, is liye difference mein shamil nahi.`
+        : "Sab shifts band hain.",
+  };
 }

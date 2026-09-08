@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PieChart, Wallet, ShoppingCart, RotateCcw, Receipt, AlertTriangle } from "lucide-react";
+import { PieChart, Wallet, ShoppingCart, RotateCcw, Receipt, AlertTriangle, Banknote, PiggyBank } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
-import { shopWhereIsMyMoney, shopTodayFlow } from "@/lib/pos/shop-360";
+import { shopWhereIsMyMoney, shopTodayFlow, shopCashControl, shopCollectionOutstanding } from "@/lib/pos/shop-360";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +94,12 @@ export default async function Shop360Page({
   const today = new Date().toISOString().slice(0, 10);
   const date = searchParams?.date || today;
 
-  const [money, flow] = await Promise.all([shopWhereIsMyMoney(shopId), shopTodayFlow(shopId, date)]);
+  const [money, flow, cashControl, outstanding] = await Promise.all([
+    shopWhereIsMyMoney(shopId),
+    shopTodayFlow(shopId, date),
+    shopCashControl(shopId, date),
+    shopCollectionOutstanding(shopId),
+  ]);
 
   return (
     <div>
@@ -130,7 +135,7 @@ export default async function Shop360Page({
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
         <PieChart className="h-4 w-4" /> Paisa Kahan Hai?
       </h2>
-      <div className="mb-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Stock (maal)"
           value={money.stockValueApprox == null ? "—" : `Rs. ${money.stockValueApprox.toLocaleString()}`}
@@ -143,6 +148,12 @@ export default async function Shop360Page({
           value={money.receivableBranchLevel == null ? "—" : `Rs. ${money.receivableBranchLevel.toLocaleString()}`}
           icon={Receipt}
           tone="orange"
+        />
+        <StatCard
+          label="POS Cash Outstanding (bank jama baqi)"
+          value={`Rs. ${outstanding.outstanding.toLocaleString()}`}
+          icon={PiggyBank}
+          tone="purple"
         />
       </div>
 
@@ -180,6 +191,11 @@ export default async function Shop360Page({
           <li className="flex items-start gap-1"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {money.stockValueNote}</li>
           <li className="flex items-start gap-1"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {money.receivableNote}</li>
           <li className="flex items-start gap-1"><AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {money.payableNote}</li>
+          <li className="flex items-start gap-1">
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+            POS Cash Outstanding = lifetime cash sale (Rs {outstanding.totalCashCollected.toLocaleString()}) minus Finance-manzoor-shuda bank deposits
+            (Rs {outstanding.approvedDeposits.toLocaleString()}) — pending deposits (Rs {outstanding.pendingDeposits.toLocaleString()}) tasdeeq hone tak shamil nahi.
+          </li>
         </ul>
       </Card>
 
@@ -199,6 +215,51 @@ export default async function Shop360Page({
           Dekhein
         </button>
       </form>
+
+      {/* ---- Cash Control ---- */}
+      <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
+        <Banknote className="h-4 w-4" /> Cash Control — {date === today ? "aaj" : date}
+      </h2>
+      <Card className="mb-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
+          <div>
+            <p className="text-[11px] text-surface-400">Band Shifts</p>
+            <p className="font-semibold tabular-nums">{cashControl.closedShiftsCount}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Opening Cash</p>
+            <p className="font-semibold tabular-nums">Rs {cashControl.openingCashClosed.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Expected Cash</p>
+            <p className="font-semibold tabular-nums">Rs {cashControl.expectedCashClosed.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Physical (Counted) Cash</p>
+            <p className="font-semibold tabular-nums">Rs {cashControl.countedCashClosed.toLocaleString()}</p>
+          </div>
+        </div>
+        <p className={`mt-3 text-sm font-semibold ${Math.abs(cashControl.differenceClosed) < 1 ? "text-emerald-700" : "text-red-700"}`}>
+          Difference: {cashControl.differenceClosed >= 0 ? "+" : ""}Rs {cashControl.differenceClosed.toLocaleString()}
+          {Math.abs(cashControl.differenceClosed) < 1 && " — Sab Mil Gaya"}
+        </p>
+        {cashControl.openShiftsCount > 0 && (
+          <p className="mt-1 text-sm text-amber-700">
+            {cashControl.openShiftsCount} shift abhi khuli hai — abhi tak ka andaza Rs {cashControl.openShiftsLiveExpected.toLocaleString()} (physical
+            count band hone par hi malum hoga, upar wale Difference mein shamil nahi).
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-surface-500">
+          <span>Cash Sale: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashSalesToday.toLocaleString()}</b></span>
+          <span>Cash Recovery: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashRecoveryToday.toLocaleString()}</b></span>
+          <span>Cash Expense: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashExpensesToday.toLocaleString()}</b></span>
+        </div>
+        <p className="mt-2 flex items-start gap-1 text-[11px] leading-snug text-surface-400">
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+          Expected Cash abhi sirf opening + cash sale − cash return se hai (POS Shift Close ka apna hisaab) — Cash Recovery/Expense (upar context ke
+          tor par dikhaye) abhi is mein shamil nahi. Phase 4 (Aaj Ka Milaan) mein poora reconciliation banega.
+        </p>
+      </Card>
 
       {/* ---- Aaj ki Sale ---- */}
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
@@ -260,7 +321,8 @@ export default async function Shop360Page({
       </Card>
 
       <p className="text-center text-xs text-surface-400">
-        Ye Phase 1 hai — Cash Control, Stock ka asal cost, Investment/Withdrawal aur "Aaj Ka Milaan" (poori reconciliation) agle phases mein aayenge.{" "}
+        Phase 1 + 2 ka hissa yahan hai (Cash Control, POS Outstanding) — Daily Match/Reconciliation, Stock ka asal FIFO cost aur
+        Investment/Withdrawal agle hisson mein aayenge.{" "}
         <Link href="/admin/kharche" className="underline">
           Paisa &amp; Khata
         </Link>

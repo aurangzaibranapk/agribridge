@@ -2442,6 +2442,33 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Phase 2 shuru (Cash Control + POS Outstanding), koi migration nahi
+
+Malik ki tarteeb: Cash Control → Shop-wise Outstanding/Deposit Verification
+→ Daily Match → Stock Position → FIFO Cost. Pehle do abhi ban gaye,
+**"duplicate nahi karna"** ke usool se dono maujooda data/formula reuse
+karte hain:
+
+- **`shopCollectionOutstanding()`** — migration 373 (POS Collection
+  Outstanding) ka wohi formula (`pos_sale_payment_details`,
+  `pos_returns`, `pos_collection_deposits`), sirf staff ke bajaye
+  **shop ki poori jama**. Koi naya table/hisaab nahi.
+- **`shopCashControl()`** — `pos_shifts.expected_cash`/`counted_cash`/
+  `difference` **wohi adad jo POS Shift Close par asal mein darj hue**
+  (dobara nahi ginte, sirf shop/din tak jama). Khuli shifts ka
+  "abhi tak ka andaza" `computeShiftCash()` se (wohi function jo POS
+  ka apna live preview istemal karta hai) — **band shifts ke difference
+  ke sath kabhi mix nahi kiya**, kyunke khuli shift ka physical count
+  hi nahi hua.
+- **Ek asal hadd, saaf likhi gayi**: Cash Recovery aur Cash Expense abhi
+  `Expected Cash` mein shamil NAHI — khud POS Shift Close ka apna
+  hisaab (`src/lib/pos/shift-cash.ts`) bhi inhein nahi ginta. Context
+  ke tor par dikhaye jate hain, Phase 4 (Aaj Ka Milaan) mein jama honge.
+- Testing par asal data se verify kiya (Mahabali Karyana Shop, 8
+  September ki 2 shifts — 1 band Rs 4,000 farq wali, 1 khuli) — query
+  sahi rows utha rahi hai.
+- Koi migration nahi. `tsc` (71) aur `build` clean.
+
 ### Shop 360 — Business Position, Phase 1 (8 September, raat, migration 374 — Testing par)
 
 Malik ka poora spec (21 sections): "Maine is shop mein total kitna
