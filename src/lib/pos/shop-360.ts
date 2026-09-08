@@ -197,6 +197,48 @@ async function branchReceivableFromLedger(branchId: string): Promise<number> {
   return round2(total);
 }
 
+export interface ShopInvestmentPosition {
+  /** Lifetime, sab dafa mila kar -- "opening" vs "additional" alag nahi rakha, wo faisla khud data mein nahi hai. */
+  totalInvestment: number;
+  totalWithdrawals: number;
+  /** totalInvestment − totalWithdrawals. */
+  netOwnerEquity: number;
+  entryCount: number;
+  note: string;
+}
+
+/**
+ * Phase 2C — Investment/Withdrawal. `company_expense_requests` ke naye
+ * kind (`malik_ka_sarmaya`/`malik_ne_nikala`, migration 375) se, sirf
+ * MANZOOR-shuda -- Paisa & Khata ka wohi purana usool.
+ *
+ * "Retained Profit" aur "Current Equity" abhi is mein NAHI (in ke liye
+ * shop ki lifetime P&L chahiye, jo Phase 2E ke baad hi bharosemand
+ * hogi) -- yahan sirf Investment/Withdrawal ka asal, ledger-based hisaab.
+ */
+export async function shopInvestmentPosition(shopId: string): Promise<ShopInvestmentPosition> {
+  const service = createServiceClient();
+
+  const { data: rows } = await service
+    .from("company_expense_requests")
+    .select("kind, amount")
+    .eq("shop_id", shopId)
+    .eq("status", "approved")
+    .in("kind", ["malik_ka_sarmaya", "malik_ne_nikala"]);
+
+  const entries = (rows ?? []) as { kind: string; amount: number }[];
+  const totalInvestment = round2(entries.filter((r) => r.kind === "malik_ka_sarmaya").reduce((s, r) => s + Number(r.amount ?? 0), 0));
+  const totalWithdrawals = round2(entries.filter((r) => r.kind === "malik_ne_nikala").reduce((s, r) => s + Number(r.amount ?? 0), 0));
+
+  return {
+    totalInvestment,
+    totalWithdrawals,
+    netOwnerEquity: round2(totalInvestment - totalWithdrawals),
+    entryCount: entries.length,
+    note: "Sirf Paisa & Khata ke zariye darj shuda, Finance/Owner se manzoor-shuda entries. \"Opening\" aur \"Additional\" mein farq nahi kiya — wo faisla khud data mein maujood nahi. Retained Profit/Current Equity abhi shamil nahi (Stock/FIFO ke baad, Phase 2E).",
+  };
+}
+
 /**
  * Phase 2 — Shop-wise Outstanding (jo migration 373 mein staff-wise
  * bana tha, wohi formula, sirf shop ki poori jama).

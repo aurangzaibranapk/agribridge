@@ -7,7 +7,7 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { StatCard } from "@/components/dashboard/stat-card";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
-import { shopWhereIsMyMoney, shopTodayFlow, shopCashControl, shopCollectionOutstanding } from "@/lib/pos/shop-360";
+import { shopWhereIsMyMoney, shopTodayFlow, shopCashControl, shopCollectionOutstanding, shopInvestmentPosition } from "@/lib/pos/shop-360";
 
 export const dynamic = "force-dynamic";
 
@@ -94,11 +94,12 @@ export default async function Shop360Page({
   const today = new Date().toISOString().slice(0, 10);
   const date = searchParams?.date || today;
 
-  const [money, flow, cashControl, outstanding] = await Promise.all([
+  const [money, flow, cashControl, outstanding, investment] = await Promise.all([
     shopWhereIsMyMoney(shopId),
     shopTodayFlow(shopId, date),
     shopCashControl(shopId, date),
     shopCollectionOutstanding(shopId),
+    shopInvestmentPosition(shopId),
   ]);
 
   return (
@@ -197,6 +198,30 @@ export default async function Shop360Page({
             (Rs {outstanding.approvedDeposits.toLocaleString()}) — pending deposits (Rs {outstanding.pendingDeposits.toLocaleString()}) tasdeeq hone tak shamil nahi.
           </li>
         </ul>
+      </Card>
+
+      {/* ---- Investment Position ---- */}
+      <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
+        <PiggyBank className="h-4 w-4" /> Investment Position
+      </h2>
+      <Card className="mb-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
+          <div>
+            <p className="text-[11px] text-surface-400">Investment (lifetime)</p>
+            <p className="font-semibold tabular-nums text-emerald-700">Rs {investment.totalInvestment.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Withdrawals (lifetime)</p>
+            <p className="font-semibold tabular-nums text-red-700">Rs {investment.totalWithdrawals.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-surface-400">Net Owner Equity</p>
+            <p className="font-semibold tabular-nums">Rs {investment.netOwnerEquity.toLocaleString()}</p>
+          </div>
+        </div>
+        <p className="mt-2 flex items-start gap-1 text-[11px] leading-snug text-surface-400">
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {investment.note}
+        </p>
       </Card>
 
       {/* ---- Date filter for the day-flow sections ---- */}

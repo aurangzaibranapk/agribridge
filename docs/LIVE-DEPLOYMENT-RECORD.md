@@ -2442,6 +2442,37 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Phase 2C: Investment/Withdrawal (migration 375 — Testing par)
+
+Malik ka faisla (Option 2, poora usool): "Investment/Withdrawal ke liye
+agar existing accounting/money-trail tables suitable hain to unhi ko
+reuse karein. Nayi parallel ledger/table sirf isliye na banayein ke
+Shop-360 ko number chahiye."
+
+Amal: koi nayi table nahi — Paisa & Khata (`company_expense_requests`)
+ki `kind` fehrist mein sirf **do naye kind** (`src/lib/kharche.ts`):
+`malik_ka_sarmaya` (Investment In) aur `malik_ne_nikala` (Withdrawal).
+Fayda: shop_id, approval chain (pending→verified→approved), aur ledger
+posting (`postJournal`) sab pehle se bane bane milte hain — koi naya
+code nahi likhna paRa is hisse ke liye. `ACC.ownerCapital` (3000) aur
+`ACC.ownerDrawings` (3100) — do account codes jo pehle se `ledger/rules.ts`
+mein maujood thay magar **kabhi istemal nahi hue** (dead code) — ab
+pehli dafa asal mein post karenge.
+
+- Migration 375: `chk_kharcha_kind` constraint mein do naye kind add.
+- `shopInvestmentPosition()` — Investment/Withdrawal lifetime totals,
+  sirf MANZOOR-shuda. "Opening" vs "Additional Investment" mein farq
+  nahi kiya (wo faisla khud data mein nahi hai — sab "Investment"
+  ek hi jama). Retained Profit/Current Equity abhi shamil nahi.
+- Ye naye kind `shopPaymentMethodBreakdown()` (Phase 1, "Paisa Kahan
+  Hai") mein KHUD BA KHUD shamil ho gaye (wo function har kind ka
+  `rukh` dekh kar netta hai) — is liye lifetime Cash/Bank/Digital ka
+  hisaab bhi ab investment/withdrawal ka asar rakhta hai, alag se
+  kuch jorna nahi paRa.
+- Testing par asal insert-test kiya (dono kind, saare constraints ke
+  sath) — pass hua, cleanup se hata diya.
+- `tsc` (71) aur `build` clean.
+
 ### Shop 360 — Phase 2 shuru (Cash Control + POS Outstanding), koi migration nahi
 
 Malik ki tarteeb: Cash Control → Shop-wise Outstanding/Deposit Verification

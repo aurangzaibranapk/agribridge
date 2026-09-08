@@ -202,6 +202,28 @@ export const KHARCHA_QISMEIN: KharchaQism[] = [
       "Jitni mazdoori baqi thi wo kat jayegi. Us se ZYADA diya to baqi raqam nayi advance ban kar us par charh jayegi — kharcha nahi.",
     asalKharcha: false,
   },
+  /**
+   * Shop 360 — Investment/Withdrawal (malik, 8 September, Phase 2C).
+   *
+   * Malik ka usool: "nayi parallel ledger/table sirf isliye na banayein
+   * ke Shop 360 ko number chahiye" -- is liye ye alag table nahi, ISI
+   * kharche ke raaste ki do nayi qismein hain. Fayda: shop_id, approval
+   * chain, aur ledger posting (`postJournal`) sab pehle se bane bane
+   * milte hain -- aur `ACC.ownerDrawings` (3100) jo pehle kabhi
+   * istemal nahi hua (dead code tha), ab pehli dafa asal mein postega.
+   */
+  {
+    value: "malik_ne_nikala",
+    khaana: "paisa_diya",
+    label: "Malik ne shop se nikala (withdrawal)",
+    rukh: "gaya",
+    saamneWalaKhata: ACC.ownerDrawings,
+    bandaKahanSe: null,
+    bandaZaroori: false,
+    partyType: null,
+    asar: "Ye kharcha NAHI — malik ne apne liye nikala, is se shop ka nafa kam nahi hota, sirf equity kam hoti hai.",
+    asalKharcha: false,
+  },
 
   // ---------------- PAISA AAYA ----------------
   {
@@ -250,6 +272,18 @@ export const KHARCHA_QISMEIN: KharchaQism[] = [
     bandaZaroori: false,
     partyType: null,
     asar: "Ye asal aamdani hai — nafe mein shamil hogi.",
+    asalKharcha: false,
+  },
+  {
+    value: "malik_ka_sarmaya",
+    khaana: "paisa_mila",
+    label: "Malik ka sarmaya (investment/capital in)",
+    rukh: "aaya",
+    saamneWalaKhata: ACC.ownerCapital,
+    bandaKahanSe: null,
+    bandaZaroori: false,
+    partyType: null,
+    asar: "Ye aamdani NAHI — malik ka apna paisa is shop mein dala gaya, equity barhi hai.",
     asalKharcha: false,
   },
 ];
