@@ -298,15 +298,29 @@ export interface ShopCashControl {
   differenceClosed: number;
   /** Khule shifts ka "abhi tak ka andaza" -- physical count abhi nahi hua. */
   openShiftsLiveExpected: number;
-  /** Sirf CASH tareeqe se -- context ke liye, Expected Cash mein abhi shamil nahi. */
+  /** Sirf CASH tareeqe se -- context ke liye. */
   cashSalesToday: number;
   cashRecoveryToday: number;
   cashExpensesToday: number;
+  /** Phase 2C se -- sirf CASH method wale investment/withdrawal. */
+  cashInvestmentToday: number;
+  cashWithdrawalToday: number;
+  /**
+   * Phase 2D — asal, poora hisaab: `differenceClosed` (POS Shift Close
+   * ka apna hisaab) mein se Recovery/Investment ghata kar aur Withdrawal
+   * jorh kar. Wajah: Recovery/Investment/Withdrawal ka paisa bhi USI
+   * golak mein jata/aata hai jo shift close par ginti hoti hai, magar
+   * Shift Close ka apna formula (`shift-cash.ts`) inhein jaanta hi nahi
+   * -- is liye jo "farq" wo dikhata hai, us mein ye teen cheezein bhi
+   * shamil hoti hain, ghalti nahi hoti. Yahan unhein ALAG kar ke asal,
+   * baqi bacha hua (WAQAI unexplained) farq nikalte hain.
+   */
+  fullDifference: number;
   note: string;
 }
 
 /**
- * Cash Control -- is shop ke POS counters ki is din ki shifts jama kar
+ * Cash Control -- is shop ke POS counters ki (from..to) shifts jama kar
  * ke. `pos_shifts.expected_cash`/`counted_cash`/`difference` WOHI adad
  * hain jo staff ne Shift Close par asal mein darj kiye -- yahan dobara
  * nahi ginte, sirf jama karte hain (taake shop-level number aur staff
@@ -320,13 +334,14 @@ export interface ShopCashControl {
  * kabhi mix nahi kiya jata, kyunke khule shift ka physical count hi
  * nahi hua.
  *
- * Cash Recovery aur Cash Expenses is waqt `expected_cash` mein SHAMIL
- * NAHI (khud POS Shift close ka apna hisaab bhi inhein nahi ginta --
- * `src/lib/pos/shift-cash.ts` mein likha hua hai) -- yahan sirf context
- * ke tor par dikhaye jate hain. Phase 4 (Aaj Ka Milaan) mein poora
- * reconciliation banega jahan ye sab jama honge.
+ * Din, hafta, mahina ya custom range -- `from`/`to` barabar ho to ek
+ * din, warna poora arsa. Har shift ka `difference` apne aap mein
+ * mukammal/durust hisaab hai (us shift ke apne opening/counted se), is
+ * liye kai din ki shifts ka `difference` jama karna bhi durust hai --
+ * "opening cash" jama karna sirf malumati hai, hisaab mein istemal
+ * nahi hota.
  */
-export async function shopCashControl(shopId: string, date: string): Promise<ShopCashControl> {
+export async function shopCashControl(shopId: string, fromDate: string, toDate: string): Promise<ShopCashControl> {
   const service = createServiceClient();
 
   const { data: counters } = await service.from("pos_counters").select("id").eq("shop_id", shopId);
@@ -334,14 +349,14 @@ export async function shopCashControl(shopId: string, date: string): Promise<Sho
 
   let shifts: { id: string; status: string; opening_cash: number; expected_cash: number | null; counted_cash: number | null; difference: number | null }[] = [];
   if (counterIds.length > 0) {
-    const dayStart = `${date}T00:00:00`;
-    const dayEnd = `${date}T23:59:59.999`;
+    const rangeStart = `${fromDate}T00:00:00`;
+    const rangeEnd = `${toDate}T23:59:59.999`;
     const { data } = await service
       .from("pos_shifts")
       .select("id, status, opening_cash, expected_cash, counted_cash, difference")
       .in("counter_id", counterIds)
-      .gte("opened_at", dayStart)
-      .lte("opened_at", dayEnd);
+      .gte("opened_at", rangeStart)
+      .lte("opened_at", rangeEnd);
     shifts = data ?? [];
   }
 
@@ -361,7 +376,7 @@ export async function shopCashControl(shopId: string, date: string): Promise<Sho
   openShiftsLiveExpected = round2(openShiftsLiveExpected);
 
   const [salesByMethod, mapRows] = await Promise.all([
-    shopPaymentMethodBreakdown(shopId, date, date),
+    shopPaymentMethodBreakdown(shopId, fromDate, toDate),
     (async () => {
       const accountToMethod = await accountToMethodMap();
       const { data: expenseRows } = await service
@@ -369,7 +384,8 @@ export async function shopCashControl(shopId: string, date: string): Promise<Sho
         .select("kind, amount, paid_from_account_id")
         .eq("shop_id", shopId)
         .eq("status", "approved")
-        .eq("expense_date", date);
+        .gte("expense_date", fromDate)
+        .lte("expense_date", toDate);
       return { accountToMethod, rows: (expenseRows ?? []) as { kind: string; amount: number; paid_from_account_id: string | null }[] };
     })(),
   ]);
@@ -378,12 +394,23 @@ export async function shopCashControl(shopId: string, date: string): Promise<Sho
 
   let cashRecoveryToday = 0;
   let cashExpensesToday = 0;
+  let cashInvestmentToday = 0;
+  let cashWithdrawalToday = 0;
   for (const r of mapRows.rows) {
     const method = r.paid_from_account_id ? mapRows.accountToMethod.get(r.paid_from_account_id) : null;
     if (method !== "cash") continue;
-    if (RECOVERY_KINDS.includes(r.kind)) cashRecoveryToday += Number(r.amount ?? 0);
-    else if (GAYE_KINDS.includes(r.kind)) cashExpensesToday += Number(r.amount ?? 0);
+    const amt = Number(r.amount ?? 0);
+    if (RECOVERY_KINDS.includes(r.kind)) cashRecoveryToday += amt;
+    else if (GAYE_KINDS.includes(r.kind)) cashExpensesToday += amt;
+    else if (r.kind === "malik_ka_sarmaya") cashInvestmentToday += amt;
+    else if (r.kind === "malik_ne_nikala") cashWithdrawalToday += amt;
   }
+
+  // Asal farq: shift close ka apna farq, minus Recovery/Investment (jo
+  // golak mein aaya magar shift ke formula ko maloom nahi tha), plus
+  // Withdrawal (jo golak se nikla magar shift ke formula ko maloom nahi
+  // tha). Jo bacha, wohi WAQAI puchhne wala farq hai.
+  const fullDifference = round2(differenceClosed - cashRecoveryToday - cashInvestmentToday + cashWithdrawalToday);
 
   return {
     openShiftsCount: open.length,
@@ -396,6 +423,9 @@ export async function shopCashControl(shopId: string, date: string): Promise<Sho
     cashSalesToday,
     cashRecoveryToday: round2(cashRecoveryToday),
     cashExpensesToday: round2(cashExpensesToday),
+    cashInvestmentToday: round2(cashInvestmentToday),
+    cashWithdrawalToday: round2(cashWithdrawalToday),
+    fullDifference,
     note:
       open.length > 0
         ? `${open.length} shift abhi khuli hai -- us ka physical count abhi nahi hua, is liye difference mein shamil nahi.`

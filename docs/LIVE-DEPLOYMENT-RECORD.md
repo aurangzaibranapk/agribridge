@@ -2442,6 +2442,35 @@ ki fasal ka buyer ko becha jana).
   owner/super_admin/admin/manager/finance/sales_staff tak mehdood.
   Koi migration nahi — sirf code. `tsc`/`build` clean.
 
+### Shop 360 — Phase 2D: Full Cash Match, koi migration nahi
+
+Malik ka faisla (Khata sale ka masla): Option 1 -- Khata/Bank/Digital ko
+is match se BAHAR rakha, kyunke un ka is shop par koi independent
+(physically verified) tasdeeq nahi hoti. **Sirf CASH ka match asal
+mein ban sakta hai** -- kyunke sirf CASH hi POS Shift Close par
+physically ginti hoti hai.
+
+Asal insight (jarurat se pehle socha gaya tha): `pos_shifts.difference`
+(Shift Close ka apna hisaab) khud sahi hai apni jagah par -- masla ye
+tha ke wo Recovery/Investment/Withdrawal ko jaanta hi nahi (ye teen
+cheezein bhi usi golak mein aate/jate hain jo shift close par ginti
+hoti hai). Is liye "Full Match" naya hisaab nahi hai, sirf:
+
+  Full Difference = differenceClosed − cashRecovery − cashInvestment + cashWithdrawal
+
+- `shopCashControl()` ab **date RANGE** leta hai (din/hafta/mahina/
+  custom) -- har shift ka `difference` apne aap mein mukammal hisaab
+  hai, is liye kai din ki shifts ka difference jama karna bhi durust
+  hai (koi dobara-ginti nahi).
+- Naye fields: `cashInvestmentToday`, `cashWithdrawalToday`,
+  `fullDifference`. Safhe par Period selector (Aaj/Hafta/Mahina/Custom).
+- **Khuli shift ho to Full Match "honestly incomplete"** likha jata
+  hai, jhoota "Sab Mil Gaya" nahi dikhaya jata.
+- Bank/Digital/Khata "Paisa Kahan Hai" mein tracked hain magar is Match
+  mein shamil NAHI (safhe par saaf likha) -- Stock ka match Phase 2E
+  ke baad, agar us period mein Stock Count hua ho.
+- Koi migration nahi. `tsc` (71) aur `build` clean.
+
 ### Shop 360 — Phase 2C: Investment/Withdrawal (migration 375 — Testing par)
 
 Malik ka faisla (Option 2, poora usool): "Investment/Withdrawal ke liye

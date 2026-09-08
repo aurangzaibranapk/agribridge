@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function Shop360Page({
   searchParams,
 }: {
-  searchParams?: { shop_id?: string; date?: string };
+  searchParams?: { shop_id?: string; date?: string; period?: string; match_from?: string; match_to?: string };
 }) {
   const supabase = createClient();
   const {
@@ -94,10 +94,25 @@ export default async function Shop360Page({
   const today = new Date().toISOString().slice(0, 10);
   const date = searchParams?.date || today;
 
+  // Full Cash Match ka apna period -- Aaj / Is Hafte / Is Mahine / Custom.
+  // Malik: "selected Day/Week/Month/Custom Range par ye sab accounted hon."
+  const period = searchParams?.period || "day";
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const matchFrom =
+    period === "custom"
+      ? searchParams?.match_from || today
+      : period === "week"
+        ? daysAgo(6)
+        : period === "month"
+          ? monthStart
+          : today;
+  const matchTo = period === "custom" ? searchParams?.match_to || today : today;
+
   const [money, flow, cashControl, outstanding, investment] = await Promise.all([
     shopWhereIsMyMoney(shopId),
     shopTodayFlow(shopId, date),
-    shopCashControl(shopId, date),
+    shopCashControl(shopId, matchFrom, matchTo),
     shopCollectionOutstanding(shopId),
     shopInvestmentPosition(shopId),
   ]);
@@ -241,11 +256,44 @@ export default async function Shop360Page({
         </button>
       </form>
 
-      {/* ---- Cash Control ---- */}
+      {/* ---- Cash Control + Full Cash Match (Phase 2A + 2D) ---- */}
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
-        <Banknote className="h-4 w-4" /> Cash Control — {date === today ? "aaj" : date}
+        <Banknote className="h-4 w-4" /> Cash Control — {matchFrom === matchTo ? matchFrom : `${matchFrom} se ${matchTo}`}
       </h2>
       <Card className="mb-4">
+        <form method="GET" className="mb-3 flex flex-wrap items-end gap-2 text-sm">
+          {canPick && <input type="hidden" name="shop_id" value={shopId} />}
+          <input type="hidden" name="date" value={date} />
+          <div>
+            <label className="mb-1 block text-[11px] text-surface-500">Period</label>
+            <select
+              name="period"
+              defaultValue={period}
+              className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-800"
+            >
+              <option value="day">Aaj</option>
+              <option value="week">Is Hafte (7 din)</option>
+              <option value="month">Is Mahine</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          {period === "custom" && (
+            <>
+              <div>
+                <label className="mb-1 block text-[11px] text-surface-500">Se</label>
+                <input type="date" name="match_from" defaultValue={matchFrom} className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-800" />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] text-surface-500">Tak</label>
+                <input type="date" name="match_to" defaultValue={matchTo} className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-800" />
+              </div>
+            </>
+          )}
+          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+            Dekhein
+          </button>
+        </form>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
           <div>
             <p className="text-[11px] text-surface-400">Band Shifts</p>
@@ -256,7 +304,7 @@ export default async function Shop360Page({
             <p className="font-semibold tabular-nums">Rs {cashControl.openingCashClosed.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-[11px] text-surface-400">Expected Cash</p>
+            <p className="text-[11px] text-surface-400">Expected Cash (POS Shift ka apna)</p>
             <p className="font-semibold tabular-nums">Rs {cashControl.expectedCashClosed.toLocaleString()}</p>
           </div>
           <div>
@@ -264,25 +312,35 @@ export default async function Shop360Page({
             <p className="font-semibold tabular-nums">Rs {cashControl.countedCashClosed.toLocaleString()}</p>
           </div>
         </div>
-        <p className={`mt-3 text-sm font-semibold ${Math.abs(cashControl.differenceClosed) < 1 ? "text-emerald-700" : "text-red-700"}`}>
-          Difference: {cashControl.differenceClosed >= 0 ? "+" : ""}Rs {cashControl.differenceClosed.toLocaleString()}
-          {Math.abs(cashControl.differenceClosed) < 1 && " — Sab Mil Gaya"}
-        </p>
-        {cashControl.openShiftsCount > 0 && (
-          <p className="mt-1 text-sm text-amber-700">
-            {cashControl.openShiftsCount} shift abhi khuli hai — abhi tak ka andaza Rs {cashControl.openShiftsLiveExpected.toLocaleString()} (physical
-            count band hone par hi malum hoga, upar wale Difference mein shamil nahi).
-          </p>
-        )}
+
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-surface-500">
           <span>Cash Sale: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashSalesToday.toLocaleString()}</b></span>
-          <span>Cash Recovery: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashRecoveryToday.toLocaleString()}</b></span>
+          <span>Cash Recovery: <b className="tabular-nums text-emerald-700">+Rs {cashControl.cashRecoveryToday.toLocaleString()}</b></span>
+          <span>Cash Investment: <b className="tabular-nums text-emerald-700">+Rs {cashControl.cashInvestmentToday.toLocaleString()}</b></span>
           <span>Cash Expense: <b className="tabular-nums text-surface-700 dark:text-surface-200">Rs {cashControl.cashExpensesToday.toLocaleString()}</b></span>
+          <span>Cash Withdrawal: <b className="tabular-nums text-red-700">−Rs {cashControl.cashWithdrawalToday.toLocaleString()}</b></span>
         </div>
+
+        <div className="mt-4 rounded-lg border border-surface-200 bg-surface-50 p-3 dark:border-surface-700 dark:bg-surface-800/60">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-surface-400">Full Cash Match (POS Shift farq − Recovery/Investment + Withdrawal)</p>
+          <p className={`mt-1 text-base font-semibold ${Math.abs(cashControl.fullDifference) < 1 && cashControl.openShiftsCount === 0 ? "text-emerald-700" : "text-red-700"}`}>
+            {cashControl.openShiftsCount === 0 && Math.abs(cashControl.fullDifference) < 1
+              ? "🟢 Sab Mil Gaya — Difference Rs 0"
+              : `🔴 Difference: ${cashControl.fullDifference >= 0 ? "+" : ""}Rs ${cashControl.fullDifference.toLocaleString()}`}
+          </p>
+          {cashControl.openShiftsCount > 0 && (
+            <p className="mt-1 text-sm text-amber-700">
+              {cashControl.openShiftsCount} shift abhi khuli hai — jab tak band nahi hoti, Full Match honestly incomplete hai (physical count abhi
+              nahi hua). Abhi tak ka andaza Rs {cashControl.openShiftsLiveExpected.toLocaleString()}.
+            </p>
+          )}
+        </div>
+
         <p className="mt-2 flex items-start gap-1 text-[11px] leading-snug text-surface-400">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-          Expected Cash abhi sirf opening + cash sale − cash return se hai (POS Shift Close ka apna hisaab) — Cash Recovery/Expense (upar context ke
-          tor par dikhaye) abhi is mein shamil nahi. Phase 4 (Aaj Ka Milaan) mein poora reconciliation banega.
+          Ye sirf CASH ka match hai — Bank/Digital/Khata ka is shop par koi independent (physically verified/bank-statement) tasdeeq nahi hoti abhi,
+          is liye unhein "match" mein shamil nahi kiya — sirf "Paisa Kahan Hai" mein tracked dikhte hain. Stock ka match Phase 2E (FIFO cost) ke
+          baad, agar us period mein Stock Count hua ho.
         </p>
       </Card>
 
