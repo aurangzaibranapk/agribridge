@@ -93,7 +93,7 @@ export function ShiftBar({
             <>
               <span className="text-brand-300">·</span>
               <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-brand-700 shadow-sm dark:bg-surface-900 dark:text-brand-300">
-                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · {rs(summary.cashSalesTotal)} cash
+                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · {rs(summary.totalSales)}
               </span>
             </>
           )}
@@ -139,22 +139,38 @@ export function ShiftBar({
 
                 {/* System khud bataye -- staff se pehle sawal nahi. */}
                 <div className="space-y-1.5 rounded-xl bg-surface-50 px-4 py-3 text-xs dark:bg-surface-800">
-                  <div className="flex items-center justify-between text-surface-500">
-                    <span>Opening Cash</span>
-                    <span className="tabular-nums">{rs(openingCash)}</span>
+                  <div className="flex items-center justify-between text-surface-700 dark:text-surface-300">
+                    <span className="font-medium">Total Sale ({summary?.saleCount ?? "…"})</span>
+                    <span className="tabular-nums font-medium">{summary ? rs(summary.totalSales) : "…"}</span>
                   </div>
-                  <div className="flex items-center justify-between text-surface-500">
-                    <span>Cash Sales ({summary?.saleCount ?? "…"})</span>
-                    <span className="tabular-nums">{summary ? `+ ${rs(summary.cashSalesTotal)}` : "…"}</span>
+                  <div className="ml-2 flex items-center justify-between text-surface-500">
+                    <span>— Cash</span>
+                    <span className="tabular-nums">{summary ? rs(summary.cashSalesTotal) : "…"}</span>
                   </div>
+                  {(summary?.digitalTotal ?? 0) > 0 && (
+                    <div className="ml-2 flex items-center justify-between text-surface-500">
+                      <span>— Digital (Bank/Easypaisa/JazzCash/Card)</span>
+                      <span className="tabular-nums">{rs(summary!.digitalTotal)}</span>
+                    </div>
+                  )}
+                  {(summary?.khataTotal ?? 0) > 0 && (
+                    <div className="ml-2 flex items-center justify-between text-surface-500">
+                      <span>— Khata (Outstanding)</span>
+                      <span className="tabular-nums">{rs(summary!.khataTotal)}</span>
+                    </div>
+                  )}
                   {(summary?.cashReturnsTotal ?? 0) > 0 && (
                     <div className="flex items-center justify-between text-surface-500">
                       <span>Cash Returns</span>
                       <span className="tabular-nums">− {rs(summary!.cashReturnsTotal)}</span>
                     </div>
                   )}
-                  <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1.5 font-semibold text-surface-900 dark:border-surface-700 dark:text-white">
-                    <span>Expected Cash</span>
+                  <div className="mt-1.5 flex items-center justify-between border-t border-surface-200 pt-1.5 text-surface-500 dark:border-surface-700">
+                    <span>Opening Cash</span>
+                    <span className="tabular-nums">{rs(openingCash)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-surface-200 pt-1.5 font-semibold text-surface-900 dark:border-surface-700 dark:text-white">
+                    <span>Expected Cash (golak mein hona chahiye)</span>
                     <span className="tabular-nums">{summary ? rs(summary.expectedCash) : "…"}</span>
                   </div>
                 </div>
