@@ -18640,10 +18640,193 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_counters: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          shop_id: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          shop_id: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          shop_id?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_counter_staff: {
+        Row: {
+          counter_id: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          profile_id: string
+        }
+        Insert: {
+          counter_id: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id: string
+        }
+        Update: {
+          counter_id?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counter_staff_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_shift_counters: {
+        Row: { last_number: number; year: number }
+        Insert: { last_number?: number; year: number }
+        Update: { last_number?: number; year?: number }
+        Relationships: []
+      }
+      pos_shifts: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_note: string | null
+          counted_cash: number | null
+          counter_id: string
+          created_at: string
+          difference: number | null
+          expected_cash: number | null
+          id: string
+          opened_at: string
+          opening_cash: number
+          shift_number: string
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number: string
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id?: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number?: string
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_shifts_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_sales: {
         Row: {
           branch_id: string | null
           cash_paid: number
+          counter_id: string | null
           created_at: string
           created_by: string | null
           crm_customer_id: string | null
@@ -18656,6 +18839,7 @@ export type Database = {
           khata_amount: number
           payment_mode: string
           profit: number | null
+          shift_id: string | null
           shop_id: string | null
           status: string
           total_amount: number
@@ -18664,6 +18848,7 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           cash_paid?: number
+          counter_id?: string | null
           created_at?: string
           created_by?: string | null
           crm_customer_id?: string | null
@@ -18676,6 +18861,7 @@ export type Database = {
           khata_amount?: number
           payment_mode: string
           profit?: number | null
+          shift_id?: string | null
           shop_id?: string | null
           status?: string
           total_amount: number
@@ -18684,6 +18870,7 @@ export type Database = {
         Update: {
           branch_id?: string | null
           cash_paid?: number
+          counter_id?: string | null
           created_at?: string
           created_by?: string | null
           crm_customer_id?: string | null
@@ -18696,12 +18883,27 @@ export type Database = {
           khata_amount?: number
           payment_mode?: string
           profit?: number | null
+          shift_id?: string | null
           shop_id?: string | null
           status?: string
           total_amount?: number
           total_cogs?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pos_sales_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pos_sales_branch_id_fkey"
             columns: ["branch_id"]
@@ -30756,6 +30958,7 @@ export type Database = {
       create_pos_sale: {
         Args: {
           p_cash_paid: number
+          p_counter_id?: string
           p_customer_id: string
           p_discount?: number
           p_discount_reason?: string
