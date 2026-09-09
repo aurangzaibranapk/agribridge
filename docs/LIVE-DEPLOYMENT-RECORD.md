@@ -3022,3 +3022,44 @@ nahi. Code review + SQL-level verification (permissions, is_main_branch
 ginti) hua hai, jhoota "browser test hua" nahi kaha ja raha.
 
 `tsc` (71, baseline) aur `build` clean, dono commits mein.
+
+### Owner ka spec Test 8 — Return ka Shift ke saath link (commit `46d2f56`, migration 380 — Testing par)
+
+Asal gap: `pos_returns` par `shift_id` column hi nahi tha. Shift-close
+ka expected-cash hisaab (`computeShiftCash`) sirf wo cash refund dekh
+pata tha jis ki ASAL BIKRI isi shift mein hui thi (`sale_id IN (isi
+shift ki saleIds)` se query). Gahak AKSAR pichhle din/shift ki bikri
+wapas karta hai — us ka naqad refund AAJ ke golak se nikalta hai, magar
+purani sale is shift ki saleIds mein hoti hi nahi. Nateeja: shift-close
+par "expected cash" hamesha zyada dikhta, aur staff apni jaib se di
+gayi raqam ka koi hisaab nahi pata sakta.
+
+**Hal** — `create_pos_sale` (366) wala hi tareeqa: naya OPTIONAL
+`p_counter_id` `fn_pos_return_lines` mein, us se staff ka khula Shift
+khud mil jata hai aur `pos_returns.shift_id` par likh diya jata hai.
+Counter na diya jaye (purana raasta) to `shift_id` NULL rehta hai —
+kaam nahi tootega.
+
+- Migration 380: `pos_returns.shift_id` (+ index).
+- `returnPosSaleLines` → `pos-return.tsx` → `pos-client.tsx`: `counterId`
+  thread kiya, taake return submit hote waqt apna counter bhej sake.
+- `computeShiftCash` aur POS Shift Report (`aggregateShiftCash` ka bulk
+  caller): return ab `shift_id` se seedha poocha jata hai, `sale_id`
+  join se nahi — taake purani shift ki bikri ka AAJ ka cash refund bhi
+  is shift ke hisaab mein aaye.
+
+**Testing par teen soorat JWT impersonation se tasdeeq (sab rollback):**
+(A) counter + khula shift diya → `shift_id` sahi capture hua. (B)
+counter nahi diya (purana raasta) → `shift_id` NULL. (C) counter diya
+magar us par staff ka shift khula nahi → exception, refund hota hi
+nahi.
+
+**Jo is round mein NAHI hua (disclose):** legacy whole-sale return
+raasta (`fn_pos_return`, `returnPosSale` action, sirf
+`/admin/pos/returns` admin page istemal karta hai) ko shift se link
+nahi kiya gaya — sirf line-item wala asal POS raasta
+(`fn_pos_return_lines`, `pos-return.tsx`, jo counter/POS se chalta hai)
+theek hua hai. Agar legacy raasta kabhi counter/shift context se chale
+to wahi gap wahan bhi hai.
+
+`tsc` (71, baseline) aur `build` clean.
