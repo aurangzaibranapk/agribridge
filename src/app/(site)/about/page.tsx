@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { Target, Eye, Gem } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About Al Rana Traders",
+  description: "Learn about Al Rana Traders and AgriBridge, a Pakistan agriculture platform focused on farmers, quality agriculture services, markets and digital agriculture.",
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (
