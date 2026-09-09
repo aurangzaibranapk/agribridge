@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { canDo } from "@/lib/access/guard";
+import { Card } from "@/components/ui/layout-primitives";
 import { ClaimsClient } from "./claims-client";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,14 @@ export const dynamic = "force-dynamic";
 export default async function AdvanceClaimsPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+
+  if (!(await canDo("machinery-rental.advance-claims", "verify"))) {
+    return (
+      <Card>
+        <p className="text-sm">Aapko is safhe ki ijazat nahi hai.</p>
+      </Card>
+    );
+  }
 
   const [{ data: claims }, { data: accounts }] = await Promise.all([
     supabase.from("v_machinery_advance_claims").select("*").order("claimed_at"),

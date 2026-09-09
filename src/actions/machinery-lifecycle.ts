@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 import { createClient } from "@/lib/supabase/server";
+import { requireAction } from "@/lib/access/guard";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
@@ -714,6 +715,9 @@ export async function recordAdvance(_prev: ActionState, formData: FormData): Pro
  * sawal yahan hai.
  */
 export async function verifyAdvanceClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("machinery-rental.advance-claims", "verify");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const paymentId = str(formData, "payment_id");
@@ -3032,6 +3036,9 @@ export async function clearPaymentPromise(_prev: ActionState, formData: FormData
  * hota hai. Jo adad hamari team ne dekha wohi bill mein jata hai.
  */
 export async function verifyWorkClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("machinery-rental.work-claims", "verify");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const workId = str(formData, "work_id");
@@ -3168,6 +3175,9 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
  * apne safhe par nazar aati hai, aur wohi agli dafa ghalti rokti hai.
  */
 export async function verifyVendorCollection(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("machinery-rental.work-claims", "verify");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const paymentId = str(formData, "payment_id");
@@ -3388,6 +3398,9 @@ export async function cancelFuelLog(_prev: ActionState, formData: FormData): Pro
 }
 
 export async function verifyFuelClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("machinery-rental.work-claims", "verify");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const fuelId = str(formData, "fuel_id");

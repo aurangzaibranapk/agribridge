@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { canDo } from "@/lib/access/guard";
+import { Card } from "@/components/ui/layout-primitives";
 import { WorkClaimsClient } from "./work-claims-client";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,14 @@ export const dynamic = "force-dynamic";
 export default async function WorkClaimsPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+
+  if (!(await canDo("machinery-rental.work-claims", "verify"))) {
+    return (
+      <Card>
+        <p className="text-sm">Aapko is safhe ki ijazat nahi hai.</p>
+      </Card>
+    );
+  }
 
   // Vendor ke teenon dawe ek hi safhe par. Alag safha banane se wo
   // qatar kabhi nahi dekhi jati jo teesre safhe par ho -- aur jo dawa
