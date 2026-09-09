@@ -7,17 +7,13 @@ export const dynamic = "force-dynamic";
 /**
  * Canonical Shop 360 entry point.
  *
- * The old report-heavy screen has been retired from this route because it
- * could show FIFO as the main stock figure and could look "all clear" while
- * shop-level receivable/bank verification was incomplete. The new hierarchy
- * keeps one control model:
+ * Keep every destination UNDER /admin/shop-360 so the existing permission
+ * route continues to protect the whole Shop 360 workspace. This avoids
+ * creating new sidebar/permission keys just for internal drill-down pages.
  *
  * Staff -> own Shop Match
  * Branch Manager -> own Branch Reconciliation
  * Finance/Admin/Owner -> Organization Reconciliation
- *
- * Existing source modules (cash control, POS outstanding, investment,
- * expenses, deposits, etc.) remain reused by the destination pages.
  */
 export default async function Shop360Entry() {
   const supabase = createClient();
@@ -36,12 +32,12 @@ export default async function Shop360Entry() {
   if (!me) redirect("/login");
 
   if (UNRESTRICTED_ROLES.includes(me.role) || me.role === "finance") {
-    redirect("/admin/shop-360-org");
+    redirect("/admin/shop-360/org");
   }
 
   if (me.role === "manager") {
-    redirect("/admin/shop-360-branch");
+    redirect("/admin/shop-360/branch");
   }
 
-  redirect("/admin/shop-360-match");
+  redirect("/admin/shop-360/match");
 }
