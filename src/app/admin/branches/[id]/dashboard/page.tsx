@@ -83,7 +83,7 @@ async function BranchShop360Summary({ branchId }: { branchId: string }) {
             {c.shops.map((s) => (
               <tr key={s.shopId}>
                 <td className="py-1.5 pr-4">
-                  <Link href={`/admin/shop-360?shop_id=${s.shopId}`} className="text-brand-700 underline">
+                  <Link href={`/admin/shop-360/match?shop_id=${s.shopId}`} className="text-brand-700 underline">
                     {s.shopName}
                   </Link>
                   {s.openShifts > 0 && <span className="ml-1 text-amber-700">({s.openShifts} khuli)</span>}
