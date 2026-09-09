@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Menu, X } from "lucide-react";
 
@@ -20,12 +20,31 @@ const NAV = [
 export function MobileSiteNav() {
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
   return (
     <div className="xl:hidden">
       <button
         type="button"
         aria-label="Open navigation"
         aria-expanded={open}
+        aria-controls="mobile-site-navigation"
         onClick={() => setOpen(true)}
         className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-100 bg-white text-surface-800 shadow-sm transition hover:bg-emerald-50 dark:border-surface-800 dark:bg-surface-950 dark:text-white"
       >
@@ -35,6 +54,7 @@ export function MobileSiteNav() {
       {open && (
         <div className="fixed inset-0 z-[100] bg-black/35 backdrop-blur-[2px]" role="presentation" onClick={() => setOpen(false)}>
           <div
+            id="mobile-site-navigation"
             role="dialog"
             aria-modal="true"
             aria-label="Site navigation"
