@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils/format";
+
+export const metadata: Metadata = {
+  title: "Agriculture Products",
+  description: "Browse agriculture products from AgriBridge including seeds, fertilizers and crop protection products available through Al Rana Traders.",
+  alternates: { canonical: "/products" },
+};
 
 export const dynamic = "force-dynamic";
 
