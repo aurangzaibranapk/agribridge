@@ -58,7 +58,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-surface-800 bg-[#1a1f36] lg:flex lg:flex-col">
+    <aside className="hidden h-screen min-h-0 w-64 shrink-0 overflow-hidden border-r border-surface-800 bg-[#1a1f36] lg:flex lg:flex-col">
       <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
         <div>
@@ -66,7 +66,7 @@ export function Sidebar({
           <p className="text-xs text-surface-400">{subtitle}</p>
         </div>
       </Link>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
         {(isUnrestricted || (allowedPages ?? []).includes(DASHBOARD_ITEM.href)) && homeHref !== DASHBOARD_ITEM.href && (
           <Link
             href={DASHBOARD_ITEM.href}
