@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { MarketplaceClient } from "./marketplace-client";
+
+export const metadata: Metadata = {
+  title: "Agriculture Marketplace",
+  description: "Explore the AgriBridge agriculture marketplace for available farm products and agriculture supplies in Pakistan.",
+  alternates: { canonical: "/marketplace" },
+};
 
 export const dynamic = "force-dynamic";
 
