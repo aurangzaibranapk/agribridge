@@ -275,6 +275,45 @@ export async function branchZeroLeakageSummary(branchId: string, fromDate: strin
   const anyIncomplete = rows.some((r) => r.status === "incomplete");
   const anyDifference = rows.some((r) => r.status === "difference" || Math.abs(r.cashDifference) >= 1);
 
+  // Test 9 (Zero-Leakage spec) — poori consolidation `shop_id` se chalti
+  // hai (har shop wala query `.eq("shop_id", shopId)`), is liye do shops
+  // ke darmiyan koi raqam DOUBLE nahi ginti -- har row sirf ek hi shop ki
+  // query se match karti hai. Magar `pos_sales.shop_id` aur
+  // `company_expense_requests.shop_id` DB mein nullable hain -- agar
+  // koi bikri/kharcha branch se jura ho magar kisi shop se nahi (shop_id
+  // khali), to wo kisi bhi shop ki query mein kabhi aata hi nahi, aur ye
+  // rollup use bhi kabhi nahi dekhta. Ye "double count" nahi, "invisible"
+  // hai -- aur "sifar" se bhi zyada khatarnak, kyunke koi blocker bhi
+  // nahi lagta. Yahan isay pakar kar disclose kiya jata hai.
+  const [{ data: orphanSales }, { data: orphanExpenses }] = await Promise.all([
+    service
+      .from("pos_sales")
+      .select("id, total_amount")
+      .eq("branch_id", branchId)
+      .is("shop_id", null)
+      .in("status", ["completed", "partially_returned"])
+      .gte("created_at", `${fromDate}T00:00:00`)
+      .lte("created_at", `${toDate}T23:59:59.999`),
+    service
+      .from("company_expense_requests")
+      .select("id, amount")
+      .eq("branch_id", branchId)
+      .is("shop_id", null)
+      .eq("status", "approved")
+      .gte("expense_date", fromDate)
+      .lte("expense_date", toDate),
+  ]);
+
+  const blockers: string[] = [];
+  const orphanSalesTotal = round2((orphanSales ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0));
+  const orphanExpensesTotal = round2((orphanExpenses ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0));
+  if ((orphanSales?.length ?? 0) > 0) {
+    blockers.push(`${orphanSales!.length} bikri (Rs ${orphanSalesTotal.toLocaleString()}) is branch se juri hai magar kisi shop se nahi (shop_id khali) -- upar ki totals mein shamil NAHI hain.`);
+  }
+  if ((orphanExpenses?.length ?? 0) > 0) {
+    blockers.push(`${orphanExpenses!.length} manzoor-shuda kharcha/sarmaya entry (Rs ${orphanExpensesTotal.toLocaleString()}) is branch se juri hai magar kisi shop se nahi (shop_id khali) -- upar ki totals mein shamil NAHI hain.`);
+  }
+
   return {
     shops: rows,
     totalSales: round2(rows.reduce((s, r) => s + r.sales, 0)),
@@ -283,7 +322,8 @@ export async function branchZeroLeakageSummary(branchId: string, fromDate: strin
     totalPendingDeposit: round2(rows.reduce((s, r) => s + r.pendingDeposit, 0)),
     totalVerifiedDeposit: round2(rows.reduce((s, r) => s + r.verifiedDeposit, 0)),
     totalCashDifference: round2(rows.reduce((s, r) => s + r.cashDifference, 0)),
-    status: anyIncomplete ? "incomplete" as const : anyDifference ? "difference" as const : "matched" as const,
+    blockers,
+    status: anyIncomplete || blockers.length > 0 ? "incomplete" as const : anyDifference ? "difference" as const : "matched" as const,
   };
 }
 
@@ -306,6 +346,7 @@ export async function organizationZeroLeakageSummary(fromDate: string, toDate: s
   const { data: branches } = await service.from("branches").select("id,name").order("name");
   const rows: OrganizationZeroLeakageRow[] = [];
 
+  const blockers: string[] = [];
   for (const branch of branches ?? []) {
     const summary = await branchZeroLeakageSummary(branch.id, fromDate, toDate);
     rows.push({
@@ -320,6 +361,7 @@ export async function organizationZeroLeakageSummary(fromDate: string, toDate: s
       cashDifference: summary.totalCashDifference,
       status: summary.status,
     });
+    for (const b of summary.blockers) blockers.push(`${branch.name}: ${b}`);
   }
 
   const anyIncomplete = rows.some((r) => r.status === "incomplete");
@@ -334,6 +376,7 @@ export async function organizationZeroLeakageSummary(fromDate: string, toDate: s
     totalPendingDeposit: round2(rows.reduce((s, r) => s + r.pendingDeposit, 0)),
     totalVerifiedDeposit: round2(rows.reduce((s, r) => s + r.verifiedDeposit, 0)),
     totalCashDifference: round2(rows.reduce((s, r) => s + r.cashDifference, 0)),
+    blockers,
     status: anyIncomplete ? "incomplete" as const : anyDifference ? "difference" as const : "matched" as const,
   };
 }

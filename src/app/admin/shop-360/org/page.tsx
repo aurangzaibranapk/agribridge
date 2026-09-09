@@ -50,6 +50,7 @@ export default async function OrganizationShop360Page({ searchParams }: { search
         <div className="text-right"><p className="text-xs text-surface-500">Cash Difference (not Full Business Difference)</p><p className="text-2xl font-bold tabular-nums">{money(summary.totalCashDifference)}</p></div>
       </div>
       {summary.status === "incomplete" && <p className="mt-3 flex items-center gap-2 text-xs text-amber-800"><AlertTriangle className="h-4 w-4"/>Kam az kam ek branch/shop ka required source incomplete hai. Organization ko Fully Matched nahi dikhaya ja sakta.</p>}
+      {summary.blockers.length > 0 && <ul className="mt-2 space-y-1">{summary.blockers.map((b, i) => <li key={i} className="flex items-start gap-2 text-xs text-amber-800"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{b}</li>)}</ul>}
     </Card>
 
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
