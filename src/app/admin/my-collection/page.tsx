@@ -6,16 +6,17 @@ import { MyCollectionClient } from "./my-collection-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function MyCollectionPage() {
+export default async function MyCollectionPage({ searchParams }: { searchParams?: { deposit_id?: string } }) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const highlightId = searchParams?.deposit_id || undefined;
   const [shops, history, banks] = await Promise.all([
     myCollectionOutstanding(),
-    myDepositHistory(),
+    myDepositHistory(20, highlightId),
     bankAccountsForCollectionDeposit(),
   ]);
 
@@ -42,6 +43,7 @@ export default async function MyCollectionPage() {
           shops={shops}
           history={"error" in history ? [] : history}
           banks={"error" in banks ? [] : banks}
+          highlightId={highlightId}
         />
       )}
     </div>

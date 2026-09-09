@@ -112,7 +112,7 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
   const staffName = staffProfile?.full_name ?? "Staff";
   const title = "New Bank Deposit Pending Approval";
   const message = `${outstanding.shopName} — Rs ${amount.toLocaleString()}. Submitted by: ${staffName} (${depositNumber}).`;
-  const link = "/admin/finance/pos-deposits";
+  const link = `/admin/finance/pos-deposits?deposit_id=${row.id}`;
 
   await Promise.all([
     notifyRole("finance", title, message, link),
@@ -208,7 +208,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
       deposit.staff_id,
       "Deposit Rejected",
       `Rs ${Number(deposit.amount).toLocaleString()} verify nahi ho sake. Reason: ${financeNote}`,
-      "/admin/my-collection"
+      `/admin/my-collection?deposit_id=${depositId}`
     );
 
     revalidatePath("/admin/finance/pos-deposits");
@@ -280,7 +280,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
     deposit.staff_id,
     "Deposit Approved",
     `Rs ${Number(deposit.amount).toLocaleString()} Finance ne verify kar diye hain. Remaining POS Outstanding: Rs ${(outstandingAfter?.outstanding ?? 0).toLocaleString()}.`,
-    "/admin/my-collection"
+    `/admin/my-collection?deposit_id=${depositId}`
   );
 
   revalidatePath("/admin/finance/pos-deposits");
@@ -291,56 +291,197 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
 export interface PendingDepositRow {
   id: string;
   depositNumber: string;
+  status: string;
+  staffId: string;
   staffName: string;
+  shopId: string;
   shopName: string;
+  branchId: string;
   branchName: string;
+  bankAccountId: string;
   amount: number;
   bankAccountName: string;
   depositDate: string;
   slipUrl: string;
   staffNote: string | null;
+  financeNote: string | null;
   outstandingBefore: number;
   submittedAt: string;
 }
 
-/** Finance ki safha -- pending deposits, poori tafseel ke sath. */
-export async function pendingCollectionDeposits(): Promise<PendingDepositRow[] | { error: string }> {
+export interface DepositFilters {
+  status?: "pending" | "approved" | "rejected" | "all";
+  branchId?: string;
+  shopId?: string;
+  staffId?: string;
+  bankAccountId?: string;
+  from?: string;
+  to?: string;
+  /** Notification deep-link -- filters se guzray baghair yehi ek record. */
+  depositId?: string;
+}
+
+const DEPOSIT_SELECT = `id, deposit_number, status, staff_id, shop_id, branch_id, bank_account_id, amount, deposit_date,
+   slip_url, staff_note, finance_note, outstanding_before, submitted_at,
+   staff:profiles!pos_collection_deposits_staff_id_fkey(full_name),
+   shop:shops(name),
+   branch:branches(name),
+   bank:finance_accounts(name)`;
+
+function mapDepositRow(r: Record<string, unknown>): PendingDepositRow {
+  return {
+    id: r.id as string,
+    depositNumber: r.deposit_number as string,
+    status: r.status as string,
+    staffId: r.staff_id as string,
+    staffName: (r.staff as { full_name: string | null } | null)?.full_name ?? "—",
+    shopId: r.shop_id as string,
+    shopName: (r.shop as { name: string } | null)?.name ?? "—",
+    branchId: r.branch_id as string,
+    branchName: (r.branch as { name: string } | null)?.name ?? "—",
+    bankAccountId: r.bank_account_id as string,
+    amount: Number(r.amount),
+    bankAccountName: (r.bank as { name: string } | null)?.name ?? "—",
+    depositDate: r.deposit_date as string,
+    slipUrl: r.slip_url as string,
+    staffNote: r.staff_note as string | null,
+    financeNote: r.finance_note as string | null,
+    outstandingBefore: Number(r.outstanding_before),
+    submittedAt: r.submitted_at as string,
+  };
+}
+
+/**
+ * Finance ki safha -- filters ke sath (branch/shop/staff/bank/tareekh/
+ * status). `depositId` diya ho (notification se aaya) to us record ko
+ * filters se guzaray baghair alag se laya jata hai, taake "sirf pending
+ * dikhta hai" ki wajah se notification wala record gayab na ho jaye.
+ */
+export async function collectionDepositsForFinance(
+  filters: DepositFilters = {}
+): Promise<{ rows: PendingDepositRow[]; highlighted: PendingDepositRow | null } | { error: string }> {
   const guard = await requireAction("pos-collection.verify", "view");
   if ("error" in guard) return { error: guard.error };
   const { caller } = guard;
 
   const service = createServiceClient();
-  let query = service
-    .from("pos_collection_deposits")
-    .select(
-      `id, deposit_number, amount, deposit_date, slip_url, staff_note, outstanding_before, submitted_at,
-       staff:profiles!pos_collection_deposits_staff_id_fkey(full_name),
-       shop:shops(name),
-       branch:branches(name),
-       bank:finance_accounts(name)`
-    )
-    .eq("status", "pending")
-    .order("submitted_at", { ascending: true });
+  const scoped = !caller.unrestricted && caller.scope !== "all" && caller.branchId;
 
-  if (!caller.unrestricted && caller.scope !== "all" && caller.branchId) {
-    query = query.eq("branch_id", caller.branchId);
-  }
+  let query = service.from("pos_collection_deposits").select(DEPOSIT_SELECT);
+  const status = filters.status ?? "pending";
+  if (status !== "all") query = query.eq("status", status);
+  if (scoped) query = query.eq("branch_id", caller.branchId as string);
+  if (filters.branchId) query = query.eq("branch_id", filters.branchId);
+  if (filters.shopId) query = query.eq("shop_id", filters.shopId);
+  if (filters.staffId) query = query.eq("staff_id", filters.staffId);
+  if (filters.bankAccountId) query = query.eq("bank_account_id", filters.bankAccountId);
+  if (filters.from) query = query.gte("deposit_date", filters.from);
+  if (filters.to) query = query.lte("deposit_date", filters.to);
+  query = query.order("submitted_at", { ascending: status === "pending" });
 
   const { data } = await query;
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    depositNumber: r.deposit_number,
-    staffName: (r.staff as { full_name: string | null } | null)?.full_name ?? "—",
-    shopName: (r.shop as { name: string } | null)?.name ?? "—",
-    branchName: (r.branch as { name: string } | null)?.name ?? "—",
-    amount: Number(r.amount),
-    bankAccountName: (r.bank as { name: string } | null)?.name ?? "—",
-    depositDate: r.deposit_date,
-    slipUrl: r.slip_url,
-    staffNote: r.staff_note,
-    outstandingBefore: Number(r.outstanding_before),
-    submittedAt: r.submitted_at,
-  }));
+  const rows = (data ?? []).map((r) => mapDepositRow(r as unknown as Record<string, unknown>));
+
+  let highlighted: PendingDepositRow | null = null;
+  if (filters.depositId && !rows.some((r) => r.id === filters.depositId)) {
+    let hq = service.from("pos_collection_deposits").select(DEPOSIT_SELECT).eq("id", filters.depositId);
+    if (scoped) hq = hq.eq("branch_id", caller.branchId as string);
+    const { data: hRow } = await hq.maybeSingle();
+    if (hRow) highlighted = mapDepositRow(hRow as unknown as Record<string, unknown>);
+  }
+
+  return { rows, highlighted };
+}
+
+export interface DepositSummary {
+  todayApprovedAmount: number;
+  todayApprovedCount: number;
+  pendingAmount: number;
+  pendingCount: number;
+  rejectedNeedsCorrectionCount: number;
+}
+
+/** Dashboard cards -- "Today's Approved" aur "Rejected/Needs Correction". */
+export async function collectionDepositSummary(): Promise<DepositSummary | { error: string }> {
+  const guard = await requireAction("pos-collection.verify", "view");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  const service = createServiceClient();
+  const scoped = !caller.unrestricted && caller.scope !== "all" && caller.branchId;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const base = () => {
+    let q = service.from("pos_collection_deposits").select("amount, status, verified_at");
+    if (scoped) q = q.eq("branch_id", caller.branchId as string);
+    return q;
+  };
+
+  const [{ data: approvedToday }, { data: pending }, { count: rejectedCount }] = await Promise.all([
+    base().eq("status", "approved").gte("verified_at", `${today}T00:00:00`).lte("verified_at", `${today}T23:59:59.999`),
+    base().eq("status", "pending"),
+    (() => {
+      let q = service.from("pos_collection_deposits").select("id", { count: "exact", head: true }).eq("status", "rejected");
+      if (scoped) q = q.eq("branch_id", caller.branchId as string);
+      return q;
+    })(),
+  ]);
+
+  return {
+    todayApprovedAmount: round2((approvedToday ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0)),
+    todayApprovedCount: (approvedToday ?? []).length,
+    pendingAmount: round2((pending ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0)),
+    pendingCount: (pending ?? []).length,
+    rejectedNeedsCorrectionCount: rejectedCount ?? 0,
+  };
+}
+
+export interface DepositFilterOptions {
+  branches: { id: string; name: string }[];
+  shops: { id: string; name: string }[];
+  staff: { id: string; name: string }[];
+  bankAccounts: { id: string; name: string }[];
+}
+
+/** Filter dropdowns -- caller ki scope ke andar hi (branch-locked manager ko doosri branch ki fehrist nahi dikhti). */
+export async function collectionDepositFilterOptions(): Promise<DepositFilterOptions | { error: string }> {
+  const guard = await requireAction("pos-collection.verify", "view");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  const service = createServiceClient();
+  const scoped = !caller.unrestricted && caller.scope !== "all" && caller.branchId;
+
+  const [{ data: branches }, shopsQ, { data: bankAccounts }, { data: depositRows }] = await Promise.all([
+    scoped
+      ? service.from("branches").select("id,name").eq("id", caller.branchId as string)
+      : service.from("branches").select("id,name").order("name"),
+    scoped
+      ? service.from("shops").select("id,name").eq("branch_id", caller.branchId as string).order("name")
+      : service.from("shops").select("id,name").order("name"),
+    service.from("finance_accounts").select("id, name").eq("account_type", "bank").order("name"),
+    (() => {
+      let q = service
+        .from("pos_collection_deposits")
+        .select("staff_id, staff:profiles!pos_collection_deposits_staff_id_fkey(full_name)");
+      if (scoped) q = q.eq("branch_id", caller.branchId as string);
+      return q;
+    })(),
+  ]);
+  const shops = shopsQ.data ?? [];
+
+  const staffMap = new Map<string, string>();
+  for (const r of depositRows ?? []) {
+    const name = (r.staff as { full_name: string | null } | null)?.full_name;
+    if (r.staff_id && name) staffMap.set(r.staff_id as string, name);
+  }
+
+  return {
+    branches: branches ?? [],
+    shops,
+    bankAccounts: bankAccounts ?? [],
+    staff: [...staffMap.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+  };
 }
 
 export interface MyDepositHistoryRow {
@@ -353,8 +494,15 @@ export interface MyDepositHistoryRow {
   financeNote: string | null;
 }
 
-/** Staff ki apni deposit history -- dashboard par "Recent Deposits". */
-export async function myDepositHistory(limit = 20): Promise<MyDepositHistoryRow[] | { error: string }> {
+/**
+ * Staff ki apni deposit history -- dashboard par "Recent Deposits".
+ *
+ * `highlightId` (notification se aaya deposit) agar default `limit` se
+ * bahar ho (purani deposit) to bhi alag se le kar list ke saamne laga
+ * diya jata hai -- warna notification click karne par record kahin
+ * milta hi nahi.
+ */
+export async function myDepositHistory(limit = 20, highlightId?: string | null): Promise<MyDepositHistoryRow[] | { error: string }> {
   const supabase = createClient();
   const {
     data: { user },
@@ -369,7 +517,18 @@ export async function myDepositHistory(limit = 20): Promise<MyDepositHistoryRow[
     .order("submitted_at", { ascending: false })
     .limit(limit);
 
-  return (data ?? []).map((r) => ({
+  let rows = data ?? [];
+  if (highlightId && !rows.some((r) => r.id === highlightId)) {
+    const { data: extra } = await service
+      .from("pos_collection_deposits")
+      .select("id, deposit_number, amount, status, finance_note, submitted_at, shop:shops(name)")
+      .eq("staff_id", user.id)
+      .eq("id", highlightId)
+      .maybeSingle();
+    if (extra) rows = [extra, ...rows];
+  }
+
+  return rows.map((r) => ({
     id: r.id,
     depositNumber: r.deposit_number,
     amount: Number(r.amount),

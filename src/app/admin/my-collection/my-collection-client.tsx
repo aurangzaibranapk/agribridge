@@ -148,10 +148,12 @@ export function MyCollectionClient({
   shops,
   history,
   banks,
+  highlightId,
 }: {
   shops: StaffShopOutstanding[];
   history: MyDepositHistoryRow[];
   banks: { id: string; name: string }[];
+  highlightId?: string;
 }) {
   const [openShop, setOpenShop] = useState<StaffShopOutstanding | null>(null);
 
@@ -216,7 +218,10 @@ export function MyCollectionClient({
         ) : (
           <ul className="divide-y divide-surface-100 dark:divide-surface-800">
             {history.map((h) => (
-              <li key={h.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+              <li
+                key={h.id}
+                className={`flex items-start justify-between gap-3 px-4 py-2.5 ${h.id === highlightId ? "bg-brand-50/70 dark:bg-brand-950/20" : ""}`}
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-surface-900 dark:text-white">
                     {rs(h.amount)} <span className="text-xs font-normal text-surface-400">· {h.shopName}</span>
