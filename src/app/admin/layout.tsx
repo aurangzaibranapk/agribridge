@@ -1,8 +1,21 @@
+import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MessagesWidget } from "@/components/layout/messages-widget";
 import { createClient } from "@/lib/supabase/server";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nocache: true,
+  },
+};
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const {
