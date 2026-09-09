@@ -3063,3 +3063,29 @@ theek hua hai. Agar legacy raasta kabhi counter/shift context se chale
 to wahi gap wahan bhi hai.
 
 `tsc` (71, baseline) aur `build` clean.
+
+### Owner ka spec Test 9 — Branch/Organization consolidation, double-count nahi (commit `e559ade`, code-only)
+
+Verify kiya: `branchZeroLeakageSummary`/`organizationZeroLeakageSummary`
+ka har underlying source `shop_id` (ya usi se juri counter_id/sale_id)
+se poocha jata hai — har row EK hi shop ki query se match karti hai, do
+shops ke darmiyan koi raqam double nahi ginti. Schema se bhi tasdeeq:
+`pos_collection_deposits.shop_id` NOT NULL, `warehouses.shop_id`
+per-shop unique.
+
+**Isi audit mein ek asal, alag gap mila (double count nahi, "invisible"
+— jo is tool ke maqsad ke liye us se bhi bura hai):** `pos_sales.shop_id`
+aur `company_expense_requests.shop_id` database mein NULLABLE hain.
+Testing par 3 bikri (Rs 28,500) maujood hain jo branch se juri hain
+magar kisi shop se nahi — is poori rollup mein kabhi nazar nahi aatin,
+na kisi total mein na kisi blocker mein.
+
+Hal: `branchZeroLeakageSummary` ab har branch ke apne `shop_id is null`
+bikri/kharcha alag se poochta hai aur naye `blockers` array mein
+disclose karta hai — status ab tak "matched" nahi ho sakta jab tak ye
+khali na hon. `organizationZeroLeakageSummary` har branch ke blockers
+aage barhata hai. Dono UI safhe (`/admin/shop-360/branch`,
+`/admin/shop-360/org`) ab ye dikhate hain.
+
+Testing par direct SQL se tasdeeq: naye query ne 3 orphan sales (Rs
+28,500) sahi pakri. `tsc` (71, baseline) aur `build` clean.
