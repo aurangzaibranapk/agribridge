@@ -29,15 +29,31 @@ export interface ShopPaymentMethodRow {
   net: number;
 }
 
-const METHOD_LABEL: Record<string, string> = {
-  cash: "Cash",
-  bank_transfer: "Bank Transfer",
-  card: "Card",
-  jazzcash: "JazzCash",
-  easypaisa: "Easypaisa",
-  qr: "QR",
-  khata: "Khata (udhaar)",
-};
+/**
+ * POS counter ki asal payment-method fehrist.
+ *
+ * Zero-Leakage screen par sirf woh methods dikhana jin par sale hui ho
+ * ghalat impression deta hai ke baqi methods POS mein maujood hi nahi.
+ * Is liye ye tamam POS methods har dafa pre-seed hote hain; sale na ho to
+ * un ki value Rs 0 rehti hai.
+ *
+ * Ye keys src/components/pos/pos-client.tsx ke PAYMENT_METHODS ke barabar
+ * rakhi gayi hain. "card" ka matlab yahan Kisan Card hai, aam bank card
+ * nahi.
+ */
+const POS_METHODS: { method: string; label: string }[] = [
+  { method: "cash", label: "Cash" },
+  { method: "bank_transfer", label: "Bank" },
+  { method: "card", label: "Kisan Card" },
+  { method: "jazzcash", label: "JazzCash" },
+  { method: "easypaisa", label: "Easypaisa" },
+  { method: "qr", label: "QR" },
+  { method: "khata", label: "Khata" },
+];
+
+const METHOD_LABEL: Record<string, string> = Object.fromEntries(
+  POS_METHODS.map((m) => [m.method, m.label])
+);
 
 export async function shopPaymentMethodBreakdown(
   shopId: string,
@@ -75,7 +91,12 @@ export async function shopPaymentMethodBreakdown(
     if (m.finance_account_id) accountToMethod.set(m.finance_account_id, m.payment_method);
   }
 
-  const buckets = new Map<string, { sales: number; expenseNet: number }>();
+  // Har POS method pehle se maujood ho — beshak is period mein us par
+  // aik bhi sale na hui ho. Unknown/new DB methods agar milen to woh bhi
+  // neeche khud add ho jayen, taake naya method chup na jaye.
+  const buckets = new Map<string, { sales: number; expenseNet: number }>(
+    POS_METHODS.map((m) => [m.method, { sales: 0, expenseNet: 0 }])
+  );
   const bucket = (method: string) => {
     const cur = buckets.get(method) ?? { sales: 0, expenseNet: 0 };
     buckets.set(method, cur);
@@ -98,6 +119,8 @@ export async function shopPaymentMethodBreakdown(
     bucket(method).expenseNet += sign * Number(e.amount ?? 0);
   }
 
+  const order = new Map(POS_METHODS.map((m, i) => [m.method, i]));
+
   return [...buckets.entries()]
     .map(([method, v]) => ({
       method,
@@ -106,5 +129,5 @@ export async function shopPaymentMethodBreakdown(
       expenseNet: Math.round(v.expenseNet * 100) / 100,
       net: Math.round((v.sales + v.expenseNet) * 100) / 100,
     }))
-    .sort((a, b) => b.sales - a.sales);
+    .sort((a, b) => (order.get(a.method) ?? 999) - (order.get(b.method) ?? 999));
 }
