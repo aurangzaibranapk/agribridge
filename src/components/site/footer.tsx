@@ -1,89 +1,77 @@
 import Link from "next/link";
-import { Facebook, Youtube, Music2, Phone, MapPin, MessageCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { Leaf } from "lucide-react";
 
-const SOCIALS = [
-  { icon: Facebook, href: "https://www.facebook.com/share/18y1poYepQ/", label: "Facebook" },
-  { icon: Music2, href: "https://www.tiktok.com/@kisanecomahabali", label: "TikTok" },
-  { icon: Youtube, href: "https://www.youtube.com/@alranatraders", label: "YouTube" },
-];
+const quickLinks = [
+  ["Home", "/"],
+  ["Agriculture", "/#services"],
+  ["Kisan Services", "/#services"],
+  ["Marketplace", "/#services"],
+  ["Grain", "/#services"],
+  ["Machinery", "/#services"],
+  ["Dairy", "/#services"],
+  ["Farm Products", "/#farm-products"],
+  ["Kisan AI", "/ai-crop-doctor"],
+  ["Partner", "/contact"],
+] as const;
 
-async function getSetting(supabase: ReturnType<typeof createClient>, key: string, fallback: string) {
-  const { data } = await supabase.from("website_settings").select("value").eq("key", key).single();
-  return data?.value ? String(data.value).replace(/^"|"$/g, "") : fallback;
-}
+const companyLinks = [
+  ["About Us", "/about"],
+  ["Our Mission", "/about"],
+  ["Our Team", "/about"],
+  ["Partner With Us", "/contact"],
+  ["Contact", "/contact"],
+] as const;
 
 export async function SiteFooter() {
-  const supabase = createClient();
-  const [phone, address] = await Promise.all([
-    getSetting(supabase, "contact_phone", ""),
-    getSetting(supabase, "contact_address", ""),
-  ]);
-  const whatsappDigits = phone.replace(/\D/g, "");
-
   return (
-    <footer className="border-t border-surface-200 bg-surface-900 text-surface-200">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-5">
-          <div className="sm:col-span-2">
-            <p className="font-display text-lg font-semibold text-white">Al Rana Traders</p>
-            <p className="mt-2 text-sm text-surface-400">Agriculture inputs, trusted by farmers across Pakistan — bridged, verified, delivered.</p>
-
-            <div className="mt-4 space-y-1.5 text-sm text-surface-400">
-              {phone && (
-                <a href={`tel:${phone}`} className="flex items-center gap-2 hover:text-white">
-                  <Phone className="h-4 w-4 shrink-0" /> {phone}
-                </a>
-              )}
-              {address && (
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0" /> {address}
-                </p>
-              )}
-              {whatsappDigits && (
-                <a
-                  href={`https://wa.me/${whatsappDigits}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-green-400 hover:text-green-300"
-                >
-                  <MessageCircle className="h-4 w-4 shrink-0" /> Chat on WhatsApp
-                </a>
-              )}
+    <footer className="border-t border-emerald-100 bg-[#F3F7EE] text-[#123629]">
+      <div className="mx-auto max-w-[1500px] px-5 py-10 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_1.35fr_.8fr_1fr]">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700 text-sm font-black text-white shadow-sm">ART</div>
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-slate-500">Al Rana Traders</p>
+                <p className="font-display text-2xl font-black">Agri<span className="text-emerald-700">Bridge</span></p>
+              </div>
             </div>
+            <p className="mt-4 max-w-xs text-sm leading-6 text-slate-600">Digital Agriculture for a Better Tomorrow.</p>
+          </div>
 
-            <div className="mt-4 flex gap-3">
-              {SOCIALS.map((s) => (
-                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label} className="text-surface-400 hover:text-white">
-                  <s.icon className="h-4 w-4" />
-                </a>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-[0.08em] text-[#123629]">Quick Links</h3>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {quickLinks.map(([label, href]) => (
+                <Link key={`${label}-${href}`} href={href} className="rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-bold text-white transition hover:bg-emerald-800">
+                  {label}
+                </Link>
               ))}
             </div>
           </div>
+
           <div>
-            <p className="text-sm font-medium text-white">Explore</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/products" className="hover:text-white">Products</Link></li>
-              <li><Link href="/faq" className="hover:text-white">FAQ</Link></li>
-            </ul>
+            <h3 className="text-sm font-black uppercase tracking-[0.08em] text-[#123629]">Our Company</h3>
+            <div className="mt-3 grid gap-2">
+              {companyLinks.map(([label, href]) => (
+                <Link key={`${label}-${href}`} href={href} className="rounded-lg bg-[#BDE8C4] px-3 py-2 text-center text-xs font-bold text-[#17452F] transition hover:bg-[#A7DCB0]">
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-white">Company</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/about" className="hover:text-white">About Us</Link></li>
-              <li><Link href="/register/farmer" className="hover:text-white">Farmer Registration</Link></li>
-              <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">Legal</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/privacy-policy" className="hover:text-white">Privacy Policy</Link></li>
-              <li><Link href="/terms-and-conditions" className="hover:text-white">Terms & Conditions</Link></li>
-            </ul>
+
+          <div className="flex items-center justify-center rounded-3xl border border-emerald-100 bg-white/70 p-6 text-center shadow-sm">
+            <div>
+              <Leaf className="mx-auto h-14 w-14 text-emerald-700" />
+              <p className="mt-3 text-2xl font-black leading-tight text-emerald-800">Digital Farms<br/>Stronger Pakistan</p>
+            </div>
           </div>
         </div>
-        <p className="mt-8 border-t border-surface-800 pt-6 text-xs text-surface-500">© {new Date().getFullYear()} Al Rana Traders. All rights reserved.</p>
+
+        <div className="mt-8 flex flex-col gap-3 border-t border-emerald-200 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Al Rana Traders (AgriBridge). All rights reserved.</p>
+          <p>Zarurat se zindagi tak — AgriBridge ke saath.</p>
+        </div>
       </div>
     </footer>
   );
