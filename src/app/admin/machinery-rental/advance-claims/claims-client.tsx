@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { verifyAdvanceClaim, type ActionState } from "@/actions/machinery-lifecycle";
+import { verifyAdvanceClaim, approveAdvanceClaim, type ActionState } from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
 
@@ -24,26 +24,46 @@ interface Claim {
 
 export function ClaimsClient({
   claims,
+  pendingApproval,
   accounts,
+  canApprove,
 }: {
   claims: Claim[];
+  pendingApproval: Claim[];
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  canApprove: boolean;
 }) {
   const lang = useLang();
 
-  if (claims.length === 0) {
-    return (
-      <p className="rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-surface-400 dark:border-surface-800 dark:bg-surface-900">
-        {t("ac_empty", lang)}
-      </p>
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      {claims.map((c) => (
-        <ClaimCard key={c.paymentId} claim={c} accounts={accounts} />
-      ))}
+    <div className="space-y-6">
+      {canApprove && pendingApproval.length > 0 && (
+        <div>
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-600">
+            Manager Tasdeeq Shuda — Final Manzoori Baqi ({pendingApproval.length})
+          </p>
+          <div className="space-y-3">
+            {pendingApproval.map((c) => (
+              <ClaimCard key={c.paymentId} claim={c} accounts={accounts} stage="approve" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        {canApprove && <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Manager Tasdeeq Ka Intezar</p>}
+        {claims.length === 0 ? (
+          <p className="rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-surface-400 dark:border-surface-800 dark:bg-surface-900">
+            {t("ac_empty", lang)}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {claims.map((c) => (
+              <ClaimCard key={c.paymentId} claim={c} accounts={accounts} stage="verify" />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -51,16 +71,22 @@ export function ClaimsClient({
 function ClaimCard({
   claim,
   accounts,
+  stage,
 }: {
   claim: Claim;
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  stage: "verify" | "approve";
 }) {
   const lang = useLang();
-  const [state, action] = useFormState(verifyAdvanceClaim, initialState);
+  const [state, action] = useFormState(stage === "approve" ? approveAdvanceClaim : verifyAdvanceClaim, initialState);
   const [mode, setMode] = useState<"" | "accept" | "reject">("");
 
   return (
-    <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+    <div
+      className={`rounded-card border bg-white p-4 shadow-card dark:bg-surface-900 ${
+        stage === "approve" ? "border-amber-300 dark:border-amber-800" : "border-surface-200 dark:border-surface-800"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
@@ -105,7 +131,7 @@ function ClaimCard({
       )}
       {state.success && (
         <p className="mt-2 rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
-          {t("ac_done", lang)}
+          {state.notice ?? t("ac_done", lang)}
         </p>
       )}
 
@@ -117,7 +143,7 @@ function ClaimCard({
                 onClick={() => setMode("accept")}
                 className="flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
-                {t("ac_accept", lang)}
+                {stage === "approve" ? "Final Manzoor" : t("ac_accept", lang)}
               </button>
               <button
                 onClick={() => setMode("reject")}
@@ -132,20 +158,26 @@ function ClaimCard({
             <form action={action} className="mt-3 space-y-2">
               <input type="hidden" name="payment_id" value={claim.paymentId} />
               <input type="hidden" name="decision" value="accept" />
-              <label className="block text-xs font-medium text-surface-600">{t("ac_which_account", lang)}</label>
-              <select
-                name="finance_account_id"
-                required
-                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-              >
-                <option value="">-</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
+              {stage === "approve" ? (
+                <>
+                  <label className="block text-xs font-medium text-surface-600">{t("ac_which_account", lang)}</label>
+                  <select
+                    name="finance_account_id"
+                    required
+                    className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+                  >
+                    <option value="">-</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="text-xs text-surface-500">Sirf iqrar — Finance/Owner khata select kar ke final manzoori karega.</p>
+              )}
               <p className="text-xs text-surface-500">{t("ac_accept_hint", lang)}</p>
               <div className="flex gap-2">
-                <Submit label={t("ac_confirm", lang)} />
+                <Submit label={stage === "approve" ? "Final Manzoor Karein" : t("ac_confirm", lang)} />
                 <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
                   {t("ac_cancel", lang)}
                 </button>

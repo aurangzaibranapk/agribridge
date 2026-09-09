@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { canDo } from "@/lib/access/guard";
@@ -18,12 +19,22 @@ export const dynamic = "force-dynamic";
  *
  * Yahan tak pohanchne wala raqba abhi bill mein NAHI ginta. Yehi is
  * qatar ka poora maqsad hai.
+ *
+ * Do marhala (9 September): fuel aur vendor-collection ke dawon mein
+ * Manager pehle iqrar karta hai (claimed -> manager_confirmed, koi
+ * ledger post nahi), phir Finance/Owner FINAL manzoor karta hai
+ * (manager_confirmed -> verified). Work claim (raqba) mein paisa post
+ * hota hi nahi -- wo ek hi qadam mein rehta hai.
  */
 export default async function WorkClaimsPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  if (!(await canDo("machinery-rental.work-claims", "verify"))) {
+  const [canVerify, canApprove] = await Promise.all([
+    canDo("machinery-rental.work-claims", "verify"),
+    canDo("machinery-rental.work-claims", "approve"),
+  ]);
+  if (!canVerify && !canApprove) {
     return (
       <Card>
         <p className="text-sm">Aapko is safhe ki ijazat nahi hai.</p>
@@ -31,15 +42,75 @@ export default async function WorkClaimsPage() {
     );
   }
 
+  const service = createServiceClient();
+
   // Vendor ke teenon dawe ek hi safhe par. Alag safha banane se wo
   // qatar kabhi nahi dekhi jati jo teesre safhe par ho -- aur jo dawa
   // dekha na jaye wo hamesha "abhi tasdeeq baqi" hi rehta hai.
-  const [{ data: claims }, { data: fuelClaims }, { data: cashClaims }, { data: accounts }] = await Promise.all([
-    supabase.from("v_machinery_work_claims").select("*").order("work_date"),
-    supabase.from("v_machinery_fuel_claims").select("*").order("log_date"),
-    supabase.from("v_machinery_vendor_collection_claims").select("*").order("payment_date"),
-    supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
-  ]);
+  const [{ data: claims }, { data: fuelClaims }, { data: cashClaims }, { data: fuelPendingRows }, { data: cashPendingRows }, { data: accounts }] =
+    await Promise.all([
+      canVerify ? supabase.from("v_machinery_work_claims").select("*").order("work_date") : Promise.resolve({ data: [] }),
+      canVerify ? supabase.from("v_machinery_fuel_claims").select("*").order("log_date") : Promise.resolve({ data: [] }),
+      canVerify ? supabase.from("v_machinery_vendor_collection_claims").select("*").order("payment_date") : Promise.resolve({ data: [] }),
+      canApprove
+        ? service
+            .from("machinery_fuel_logs")
+            .select(
+              "id, booking_id, litres, amount, paid_by, notes, manager_confirmed_at, machinery_bookings(booking_number, farmer_id, vendor_id, farmers(full_name), machinery_vendors(vendor_name))"
+            )
+            .eq("verification_status", "manager_confirmed")
+            .order("manager_confirmed_at")
+        : Promise.resolve({ data: [] }),
+      canApprove
+        ? service
+            .from("machinery_payments")
+            .select(
+              "id, booking_id, amount, reference, vendor_settlement, manager_confirmed_at, collected_by_vendor_id, machinery_bookings(booking_number, vendor_id, farmers(full_name), machinery_bills(balance_payable)), machinery_vendors!machinery_payments_collected_by_vendor_id_fkey(vendor_name)"
+            )
+            .eq("method", "vendor_collected")
+            .eq("verification_status", "manager_confirmed")
+            .order("manager_confirmed_at")
+        : Promise.resolve({ data: [] }),
+      supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
+    ]);
+
+  const fuelPendingApproval = (fuelPendingRows ?? []).map((r) => {
+    const booking = Array.isArray(r.machinery_bookings) ? r.machinery_bookings[0] : r.machinery_bookings;
+    const farmer = booking ? (Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers) : null;
+    const vendor = booking ? (Array.isArray(booking.machinery_vendors) ? booking.machinery_vendors[0] : booking.machinery_vendors) : null;
+    return {
+      fuelId: r.id as string,
+      bookingId: r.booking_id as string,
+      bookingNumber: (booking?.booking_number as string) ?? "—",
+      farmerName: (farmer?.full_name as string | null) ?? "—",
+      vendorName: (vendor?.vendor_name as string | null) ?? "—",
+      logDate: (r.manager_confirmed_at as string) ?? "",
+      litres: r.litres === null ? null : Number(r.litres),
+      amount: Number(r.amount),
+      paidBy: r.paid_by as string,
+      notes: r.notes as string | null,
+      daysOld: null,
+    };
+  });
+
+  const cashPendingApproval = (cashPendingRows ?? []).map((r) => {
+    const booking = Array.isArray(r.machinery_bookings) ? r.machinery_bookings[0] : r.machinery_bookings;
+    const farmer = booking ? (Array.isArray(booking.farmers) ? booking.farmers[0] : booking.farmers) : null;
+    const bill = booking ? (Array.isArray(booking.machinery_bills) ? booking.machinery_bills[0] : booking.machinery_bills) : null;
+    const vendor = Array.isArray(r.machinery_vendors) ? r.machinery_vendors[0] : r.machinery_vendors;
+    return {
+      paymentId: r.id as string,
+      bookingId: r.booking_id as string,
+      bookingNumber: (booking?.booking_number as string) ?? "—",
+      farmerName: (farmer?.full_name as string | null) ?? "—",
+      vendorName: (vendor?.vendor_name as string | null) ?? "—",
+      amount: Number(r.amount ?? 0),
+      paymentDate: (r.manager_confirmed_at as string) ?? "",
+      settlement: (r.vendor_settlement as string | null) ?? null,
+      reference: (r.reference as string | null) ?? null,
+      billBalance: Number(bill?.balance_payable ?? 0),
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -84,6 +155,7 @@ export default async function WorkClaimsPage() {
           notes: c.notes as string | null,
           daysOld: c.din_purane === null ? null : Number(c.din_purane),
         }))}
+        fuelPendingApproval={fuelPendingApproval}
         cashClaims={(cashClaims ?? []).map((c) => ({
           paymentId: c.payment_id as string,
           bookingId: c.booking_id as string,
@@ -96,7 +168,9 @@ export default async function WorkClaimsPage() {
           reference: (c.reference as string | null) ?? null,
           billBalance: Number(c.bill_ka_baqi ?? 0),
         }))}
+        cashPendingApproval={cashPendingApproval}
         accounts={accounts ?? []}
+        canApprove={canApprove}
       />
     </div>
   );

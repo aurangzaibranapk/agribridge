@@ -2,7 +2,14 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { verifyWorkClaim, verifyFuelClaim, verifyVendorCollection, type ActionState } from "@/actions/machinery-lifecycle";
+import {
+  verifyWorkClaim,
+  verifyFuelClaim,
+  approveFuelClaim,
+  verifyVendorCollection,
+  approveVendorCollection,
+  type ActionState,
+} from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
 
@@ -57,17 +64,30 @@ interface CashClaim {
 export function WorkClaimsClient({
   claims,
   fuelClaims,
+  fuelPendingApproval,
   cashClaims,
+  cashPendingApproval,
   accounts,
+  canApprove,
 }: {
   claims: Claim[];
   fuelClaims: FuelClaim[];
+  fuelPendingApproval: FuelClaim[];
   cashClaims: CashClaim[];
+  cashPendingApproval: CashClaim[];
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  canApprove: boolean;
 }) {
   const lang = useLang();
 
-  if (claims.length === 0 && fuelClaims.length === 0 && cashClaims.length === 0) {
+  const nothing =
+    claims.length === 0 &&
+    fuelClaims.length === 0 &&
+    fuelPendingApproval.length === 0 &&
+    cashClaims.length === 0 &&
+    cashPendingApproval.length === 0;
+
+  if (nothing) {
     return (
       <p className="rounded-card border border-surface-200 bg-white px-3 py-8 text-center text-surface-400 dark:border-surface-800 dark:bg-surface-900">
         {t("wc_empty", lang)}
@@ -77,6 +97,20 @@ export function WorkClaimsClient({
 
   return (
     <div className="space-y-6">
+      {canApprove && (fuelPendingApproval.length > 0 || cashPendingApproval.length > 0) && (
+        <div className="space-y-3">
+          <h2 className="flex items-center gap-1.5 font-display text-sm font-semibold text-amber-600">
+            Manager Tasdeeq Shuda — Final Manzoori Baqi
+          </h2>
+          {cashPendingApproval.map((c) => (
+            <CashClaimCard key={c.paymentId} claim={c} stage="approve" />
+          ))}
+          {fuelPendingApproval.map((c) => (
+            <FuelClaimCard key={c.fuelId} claim={c} accounts={accounts} stage="approve" />
+          ))}
+        </div>
+      )}
+
       {claims.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-display text-sm font-semibold text-surface-700 dark:text-surface-300">
@@ -94,7 +128,7 @@ export function WorkClaimsClient({
             {t("wc_section_fuel", lang)}
           </h2>
           {fuelClaims.map((c) => (
-            <FuelClaimCard key={c.fuelId} claim={c} accounts={accounts} />
+            <FuelClaimCard key={c.fuelId} claim={c} accounts={accounts} stage="verify" />
           ))}
         </div>
       )}
@@ -105,7 +139,7 @@ export function WorkClaimsClient({
             {t("wc_section_cash", lang)}
           </h2>
           {cashClaims.map((c) => (
-            <CashClaimCard key={c.paymentId} claim={c} />
+            <CashClaimCard key={c.paymentId} claim={c} stage="verify" />
           ))}
         </div>
       )}
@@ -126,9 +160,9 @@ export function WorkClaimsClient({
  * waisa khara hai. Is liye rad karne ki wajah likhna lazmi hai -- wo
  * vendor ko us ke apne safhe par nazar aati hai.
  */
-function CashClaimCard({ claim }: { claim: CashClaim }) {
+function CashClaimCard({ claim, stage }: { claim: CashClaim; stage: "verify" | "approve" }) {
   const lang = useLang();
-  const [state, action] = useFormState(verifyVendorCollection, initialState);
+  const [state, action] = useFormState(stage === "approve" ? approveVendorCollection : verifyVendorCollection, initialState);
   const [rejecting, setRejecting] = useState(false);
 
   if (state.success) {
@@ -194,7 +228,7 @@ function CashClaimCard({ claim }: { claim: CashClaim }) {
               value="accept"
               className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
-              {t("wc_accept", lang)}
+              {stage === "approve" ? "Final Manzoor" : t("wc_accept", lang)}
             </button>
             <button
               type="button"
@@ -213,16 +247,22 @@ function CashClaimCard({ claim }: { claim: CashClaim }) {
 function FuelClaimCard({
   claim,
   accounts,
+  stage,
 }: {
   claim: FuelClaim;
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  stage: "verify" | "approve";
 }) {
   const lang = useLang();
-  const [state, action] = useFormState(verifyFuelClaim, initialState);
+  const [state, action] = useFormState(stage === "approve" ? approveFuelClaim : verifyFuelClaim, initialState);
   const [mode, setMode] = useState<"" | "accept" | "reject">("");
 
   return (
-    <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+    <div
+      className={`rounded-card border bg-white p-4 shadow-card dark:bg-surface-900 ${
+        stage === "approve" ? "border-amber-300 dark:border-amber-800" : "border-surface-200 dark:border-surface-800"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
@@ -262,7 +302,7 @@ function FuelClaimCard({
       )}
       {state.success && (
         <p className="mt-2 rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
-          {t("ac_done", lang)}
+          {state.notice ?? t("ac_done", lang)}
         </p>
       )}
 
@@ -274,7 +314,7 @@ function FuelClaimCard({
                 onClick={() => setMode("accept")}
                 className="flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
-                {t("wc_fuel_accept", lang)}
+                {stage === "approve" ? "Final Manzoor" : t("wc_fuel_accept", lang)}
               </button>
               <button
                 onClick={() => setMode("reject")}
@@ -289,10 +329,10 @@ function FuelClaimCard({
             <form action={action} className="mt-3 space-y-2">
               <input type="hidden" name="fuel_id" value={claim.fuelId} />
               <input type="hidden" name="decision" value="accept" />
-              {/* Khata sirf ART wale diesel par. Vendor ko ye pata hi
-                  nahi hota ke paisa kis khate se nikla -- wo sawal
-                  yahin ka hai. */}
-              {claim.paidBy === "company" ? (
+              {/* Khata sirf ART wale diesel par, aur sirf FINAL approve
+                  step par -- Manager ke iqrar mein khate ka sawal hi
+                  nahi hota, wo ilm Finance ke paas hota hai. */}
+              {stage === "approve" && claim.paidBy === "company" ? (
                 <>
                   <label className="block text-xs font-medium text-surface-600">{t("mc_diesel_account", lang)}</label>
                   <select
@@ -307,11 +347,13 @@ function FuelClaimCard({
                   </select>
                   <p className="text-xs text-surface-500">{t("wc_fuel_accept_hint", lang)}</p>
                 </>
+              ) : stage === "verify" ? (
+                <p className="text-xs text-surface-500">Sirf iqrar — Finance/Owner khata select kar ke (agar ART ka ho) final manzoori karega.</p>
               ) : (
                 <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
               )}
               <div className="flex gap-2">
-                <Submit label={t("ac_confirm", lang)} />
+                <Submit label={stage === "approve" ? "Final Manzoor Karein" : t("ac_confirm", lang)} />
                 <button type="button" onClick={() => setMode("")} className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700">
                   {t("ac_cancel", lang)}
                 </button>

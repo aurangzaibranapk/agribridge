@@ -15016,6 +15016,8 @@ export type Database = {
           id: string
           litres: number | null
           log_date: string
+          manager_confirmed_at: string | null
+          manager_confirmed_by: string | null
           notes: string | null
           paid_by: string
           rate_per_litre: number | null
@@ -15042,6 +15044,8 @@ export type Database = {
           id?: string
           litres?: number | null
           log_date?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
           notes?: string | null
           paid_by: string
           rate_per_litre?: number | null
@@ -15068,6 +15072,8 @@ export type Database = {
           id?: string
           litres?: number | null
           log_date?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
           notes?: string | null
           paid_by?: string
           rate_per_litre?: number | null
@@ -15529,6 +15535,8 @@ export type Database = {
           finance_account_id: string | null
           id: string
           kind: string
+          manager_confirmed_at: string | null
+          manager_confirmed_by: string | null
           method: string
           payment_date: string
           proof_url: string | null
@@ -15556,6 +15564,8 @@ export type Database = {
           finance_account_id?: string | null
           id?: string
           kind: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
           method: string
           payment_date?: string
           proof_url?: string | null
@@ -15583,6 +15593,8 @@ export type Database = {
           finance_account_id?: string | null
           id?: string
           kind?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
           method?: string
           payment_date?: string
           proof_url?: string | null
