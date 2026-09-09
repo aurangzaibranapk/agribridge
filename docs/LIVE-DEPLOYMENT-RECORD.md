@@ -3089,3 +3089,61 @@ aage barhata hai. Dono UI safhe (`/admin/shop-360/branch`,
 
 Testing par direct SQL se tasdeeq: naye query ne 3 orphan sales (Rs
 28,500) sahi pakri. `tsc` (71, baseline) aur `build` clean.
+
+### Owner ka spec Test 10 — Audit trail, Shop 360 money-flow actions (commit `010b273`, code-only)
+
+Verify kiya: har money-flow action `logAudit()` (cross-module Audit Log,
+`audit_logs`) mein darj hota hai ya nahi. Zyada tar theek: POS
+Collection deposit submit/verify/approve/reject, POS Counter/Shift
+open/close, Kharcha darj/verify/manzoor/radd, Mazdoori darj/manzoor/
+radd, Agri-Returns receive/reject — sab pehle se darj karte hain.
+
+Do asal gap mile, dono real paisa move karte hain, dono `audit_logs`
+mein kabhi nahi jate the:
+
+1. **POS Return** (`returnPosSale`, `returnPosSaleLines`) — refund
+   wapas jata hai, stock wapas aata hai, magar `logAudit` kabhi nahi
+   bulaya jata tha. Ab dono ke success par darj hota hai.
+2. **Machinery advance/vendor/fuel claims** (verify + approve, chhe
+   function) — sirf booking ki apni timeline
+   (`machinery_booking_events`) mein darj hota tha, jo sirf usi booking
+   ke safhe par nazar aati hai; cross-module Audit Log par Manager
+   tasdeeq/Finance final manzoori/rad kabhi nazar nahi aate the. 12 nayi
+   `logAudit` call sites (har function ke accept + reject dono raaston
+   par).
+
+**Disclose:** `verifyWorkClaim` (raqba/measurement correction, kabhi
+ledger nahi chhuta) is round mein shamil nahi — "money-flow" ki hadd se
+bahar.
+
+`tsc` (71, baseline) aur `build` clean.
+
+## Bug list se char fix — mukammal (9 September)
+
+Malik ke "no 1, 2, 3 fix karo... no 4 ko test sary mukamal karo" ka
+poora jawab — jo docs mein 4 khuli hui bugs thi, sab yahan band hain:
+
+1. **Bank Deposit → Ledger gap** — commit `340b4fc`.
+2. **Machinery verify/approve do alag qadam** — commit `f266e54`.
+3. **Manager apni branch tak, branch ki sari shops** — commit `8fa3e84`.
+4. **Owner ke Zero-Leakage spec ke Test 7–10** — sab char mukammal:
+   - Test 7 (bina ijazat URL/API access) — commit `d22f1e5`.
+   - Test 8 (Return ka Shift ke saath link) — commit `46d2f56`.
+   - Test 9 (Branch/Org consolidation, double-count nahi) — commit
+     `e559ade` (isi mein ek asal, alag "invisible sales" gap bhi mila
+     aur band hua).
+   - Test 10 (Audit trail, money-flow actions) — commit `010b273`.
+
+Har ek `tsc` (71, baseline) aur `build` clean se guzra hai. Jo is
+poori fehrist mein disclose ho kar bhi jaan boojh kar NAHI chhua gaya
+(scope se bahar, agli dafa ke liye):
+
+- Legacy whole-sale POS return (`fn_pos_return`, `/admin/pos/returns`
+  admin page) — shift-link (Test 8) sirf line-item wale asal raaste
+  (`fn_pos_return_lines`) mein hua.
+- `verifyWorkClaim` (machinery raqba correction) — audit trail (Test
+  10) sirf money-flow actions tak mehdood.
+- Poori app-wide RLS audit — sirf Shop 360/POS ki do tables (378, 379)
+  is round mein tang hui.
+- Testing DB par `is_main_branch=true` do branches (test seed data,
+  Live par asar nahi — Test 3/No 3 ke commit mein disclose hua).
