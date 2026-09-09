@@ -6,10 +6,13 @@ import { requireAction } from "@/lib/access/guard";
 import { logAudit } from "@/lib/audit";
 import { staffOutstandingByShop, staffShopOutstanding, type StaffShopOutstanding } from "@/lib/pos/collection-outstanding";
 import { notifyRole, notifyRoles, notifyBranchManagers, notifyPositionHolders, notifyUser } from "@/lib/notifications";
+import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
+import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  notice?: string;
   message?: string;
 }
 
@@ -226,40 +229,67 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
   if (error) return { error: error.message };
   if (!updated || updated.length === 0) return { error: "Ye deposit pehle hi process ho chuki hai." };
 
-  // Cash-in-Hand pehle hi POS sale ke waqt "mil gaya" maan liya jata
-  // hai (`finance_transactions`, `create_pos_sale`) -- yahan wohi raqam
-  // BANK mein transfer ho rahi hai (Cash in Hand se), asal bill dobara
-  // nahi ban raha. Isi wajah se `postJournal` (1030 wala Custody
-  // system) nahi, `finance_transactions` (POS sale wala hi raasta)
-  // istemal ho raha hai -- dono taraf ka hisaab ek hi tareeqe mein
-  // rahe.
+  // Cash Book (`finance_transactions`) yahan bhi likha jata hai, jaisa
+  // pehle se hota tha -- staff ka rozana Cash Book isi se banta hai.
+  //
+  // Magar sirf isi mein likhna kaafi nahi. Asal ledger (`journal_lines`,
+  // jahan se Trial Balance aur Money Trail banti hai) ko is transfer ka
+  // kabhi pata nahi chalta tha -- 1000 (Cash in Hand) hamesha zyada aur
+  // bank khata hamesha kam dikhta rehta, har manzoor shuda deposit ke
+  // baad (9 September, malik ki ijazat se theek kiya). Ab dono ek sath
+  // post hote hain, aur `claims` se finance_transactions ki dono qatarein
+  // isi journal entry se judti hain -- kal ye deposit reverse ho to
+  // Cash Book khud-ba-khud ulta bhi hoga (`reverseJournal` isi daawe se
+  // dhoondta hai).
   const { data: depositRow } = await service
     .from("pos_collection_deposits")
     .select("bank_account_id")
     .eq("id", depositId)
     .maybeSingle();
   const { data: cashAccount } = await service.from("finance_accounts").select("id").eq("account_type", "cash").limit(1).maybeSingle();
+
+  let ledgerNotice: string | undefined;
   if (cashAccount && depositRow) {
-    await service.from("finance_transactions").insert([
-      {
-        account_id: cashAccount.id,
-        transaction_type: "transfer_out",
-        category: "pos_collection_deposit",
-        amount: Number(deposit.amount),
-        transaction_date: new Date().toISOString().slice(0, 10),
-        notes: `POS Collection Deposit ${deposit.deposit_number} — bank mein transfer.`,
-        created_by: user.id,
-      },
-      {
-        account_id: depositRow.bank_account_id,
-        transaction_type: "transfer_in",
-        category: "pos_collection_deposit",
-        amount: Number(deposit.amount),
-        transaction_date: new Date().toISOString().slice(0, 10),
-        notes: `POS Collection Deposit ${deposit.deposit_number} — POS se aaya.`,
-        created_by: user.id,
-      },
-    ]);
+    const { data: cashBookRows } = await service
+      .from("finance_transactions")
+      .insert([
+        {
+          account_id: cashAccount.id,
+          transaction_type: "transfer_out",
+          category: "pos_collection_deposit",
+          amount: Number(deposit.amount),
+          transaction_date: new Date().toISOString().slice(0, 10),
+          notes: `POS Collection Deposit ${deposit.deposit_number} — bank mein transfer.`,
+          created_by: user.id,
+        },
+        {
+          account_id: depositRow.bank_account_id,
+          transaction_type: "transfer_in",
+          category: "pos_collection_deposit",
+          amount: Number(deposit.amount),
+          transaction_date: new Date().toISOString().slice(0, 10),
+          notes: `POS Collection Deposit ${deposit.deposit_number} — POS se aaya.`,
+          created_by: user.id,
+        },
+      ])
+      .select("id");
+
+    const claims: SourceClaim[] = (cashBookRows ?? []).map((r) => ({ table: "finance_transactions", rowId: r.id }));
+    const bankGl = await glForFinanceAccount(depositRow.bank_account_id);
+    const lines: JournalLine[] = [
+      { account: bankGl, debit: Number(deposit.amount), memo: `POS Collection Deposit ${deposit.deposit_number}` },
+      { account: ACC.cash, credit: Number(deposit.amount), memo: `POS Collection Deposit ${deposit.deposit_number} — bank mein jama` },
+    ];
+    const posted = await postJournal({
+      description: `POS Collection Deposit ${deposit.deposit_number} manzoor`,
+      sourceModule: "pos-collection",
+      sourceId: depositId,
+      branchId: deposit.branch_id,
+      createdBy: user.id,
+      lines,
+      claims,
+    });
+    if (failed(posted)) ledgerNotice = `Deposit manzoor ho gayi magar ledger mein nahi ja saki: ${posted.error}`;
   }
 
   const outstandingAfter = await staffShopOutstanding(deposit.staff_id, deposit.shop_id);
@@ -273,7 +303,9 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
     module: "pos-collection",
     recordId: depositId,
     recordLabel: deposit.deposit_number,
-    description: `Deposit manzoor — Rs ${Number(deposit.amount).toLocaleString()}. Outstanding ab Rs ${(outstandingAfter?.outstanding ?? 0).toLocaleString()}.`,
+    description: `Deposit manzoor — Rs ${Number(deposit.amount).toLocaleString()}. Outstanding ab Rs ${(outstandingAfter?.outstanding ?? 0).toLocaleString()}.${
+      ledgerNotice ? ` (${ledgerNotice})` : ""
+    }`,
   });
 
   await notifyUser(
@@ -282,6 +314,12 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
     `Rs ${Number(deposit.amount).toLocaleString()} Finance ne verify kar diye hain. Remaining POS Outstanding: Rs ${(outstandingAfter?.outstanding ?? 0).toLocaleString()}.`,
     `/admin/my-collection?deposit_id=${depositId}`
   );
+
+  if (ledgerNotice) {
+    revalidatePath("/admin/finance/pos-deposits");
+    revalidatePath("/admin/my-collection");
+    return { success: true, notice: ledgerNotice, message: `${deposit.deposit_number} manzoor ho gayi — magar ${ledgerNotice}` };
+  }
 
   revalidatePath("/admin/finance/pos-deposits");
   revalidatePath("/admin/my-collection");
