@@ -2815,3 +2815,88 @@ Upload/Extract/Start — is machine se us ke hosting panel tak koi seedha
 raasta nahi hai. Smoke test list PR #3 comment mein pehle se maujood hai
 (Cash/Bank/Kisan Card/Khata full/Split Cash+Khata sale, Shop 360 Today/
 Custom date, Staff/Manager/Admin routing).
+
+### 5o-ii. End-to-end verification + ek asal bug theek (9 September, thodi der baad)
+
+Malik ka agla hukm: "sirf review nahi, poora finish + verify + merge-ready
+karo." Isi Testing-branch code par (koi naya feature nahi, sirf jo already
+merge hua us ki gehri jaanch):
+
+**Verify kiya (code-level):**
+- `pos-client.tsx` ka `rebalanceKhata()` — Full Khata aur Partial+Khata
+  dono soorat mein sahi amount deta hai; discount badalne par `deyRaqam`
+  ke through khud dobara chalta hai.
+- Overpayment: Live aur Testing dono ka `handleCheckout` **HARF-BA-HARF
+  wohi hai** (`Math.abs(remaining) > 0.5` par checkout rukta hai, "Zyada
+  Amount" sirf label). Poore repo mein koi alag "Customer Jama/Advance"
+  table ya raasta hai hi nahi (Live mein bhi nahi) — is liye "preserve"
+  karne ke liye kuch badla nahi, jo tha wohi hai.
+- `checkRates`/`checkCredit`/discount permission — sab server-side, safhe
+  ki UI ek darwaza hai jo bypass ho sakta hai, is liye asal rok yahin hai.
+- 7 payment methods (Cash/Bank/Kisan Card/JazzCash/Easypaisa/QR/Khata)
+  dono jagah (POS aur Shop 360 payment summary) ek jaisi list se aate
+  hain.
+
+**Testing DB (hwaiuwxqldxsoukkfefn) par SQL se asal data verify kiya**
+(browser login is session mein possible nahi — koi `.env`/staff password
+nahi): "Kisan Karyana Mahabali - Karyana Shop" (Anwar ki shop) par
+payment-details total Rs 31,900, stock ka selling-rate movement-based
+sale_out Rs 60,400 — farq maujood hai (current selling_price purani
+sale ke waqt ke rate se mukhtalif ho sakta hai), aur code khud isay
+"Kisi layer mein farq hai" dikhata hai, jhoota "Matched" nahi — yehi
+chahiye tha. Formulas crash nahi hote, warehouse na ho (2 shops mein
+nahi hai) to bhi "Shop warehouse nahi mila" ke sath gracefully "—"
+dikhate hain.
+
+**Asal bug mila aur theek hua — routing:**
+
+`shop-360-match`, `shop-360-branch`, `shop-360-org` **alag top-level
+routes** thay (hyphen se), jab ke `/admin/shop-360/match` etc. sirf un
+se `export ... from` kar rahe thay. Registry ka `featureForPath()`
+(`src/lib/access/registry.ts:148`) sirf `pathname === route` ya
+`pathname.startsWith(route + "/")` se match karta hai — feature ka
+registered route `/admin/shop-360` hai. Nested paths (`/admin/shop-360/
+match`) is se match ho jate hain, magar hyphenated siblings
+(`/admin/shop-360-match`) **kabhi nahi** (hyphen, slash nahi). Nateeja:
+un safhon par "? Samjhein" (feature_help) kaam nahi karta tha — is
+project ke apne usool "Feature kab poora hai" (Help ✓ har naye safhe
+ke sath) ki khilaf-warzi.
+
+Isi ke sath ek doosra asal bug: `BranchShop360Summary`
+(`branches/[id]/dashboard/page.tsx`) ka per-shop link
+`/admin/shop-360?shop_id=X` tha. Root entry (`/admin/shop-360/page.tsx`)
+role dekh kar redirect karta hai magar **query params forward nahi
+karta** — is liye Owner/Admin/Finance ke liye ye link us shop ki
+tafseel ki jagah seedha Organization-wide summary par le jata tha
+(`shop_id` gum ho jata tha).
+
+**Hal (koi naya migration nahi, sirf routing):** hyphenated sibling
+routes hata kar sab `/admin/shop-360/{match,branch,org}` mein
+consolidate kiya; branch→match aur org→branch cross-links, aur branch
+page ka apna redirect, sab nested path par; Branch Dashboard ka link
+`/admin/shop-360/match?shop_id=X` kiya. Commit `ef64443`.
+
+**Verification is fix ke baad:** `npx tsc --noEmit` — 71 errors, **theek
+usi tarah jaisi documented purani baseline hai** (farmer-ai-processor.ts,
+kisan-knowledge-tools.ts, khata-client.tsx, audit.ts, receipt-modal.tsx,
+portal/dashboard — koi bhi shop-360/POS se related nahi, koi naya error
+nahi). `npm run build` — clean (exit 0), build output mein sirf 4
+routes: `/admin/shop-360`, `/admin/shop-360/branch`,
+`/admin/shop-360/match`, `/admin/shop-360/org` (pehle 4 aur bhi thay,
+duplicate).
+
+**Merge commit:** `ef64443` (`claude/code-load-project-structure-fq91y9`
+par, jo pehle se PR #3 ka merge `c702a85` le chuka tha).
+
+**Jo is session mein NAHI ho saka:** asal browser smoke test (login kar
+ke Cash/Bank/Khata sale, receipt, Shop 360 UI click-through) — is
+session mein koi `.env`/Supabase key ya staff password nahi hai, is
+liye Playwright se real login nahi ho saka. Ye hamesha malik apne
+browser se khud karta hai. Jo kiya gaya (code review + SQL-level data
+verify + build/tsc) us ka daira upload se pehle isi record mein saaf
+likha hai — "smoke test hua" jhoot nahi bolna.
+
+**cPanel deployment (naya package bana kar bhej diya gaya, isi commit
+`ef64443` se):** Setup Node.js App → **Stop** → File Manager →
+`domains/agribridge` → naya `deploy.tar.gz` upload (overwrite) →
+right-click **Extract** → **Start**. Koi migration nahi.
