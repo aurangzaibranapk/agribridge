@@ -87,17 +87,10 @@ export function Sidebar({
           const groupActive = group.items.some((item) => isActive(item.href));
           return (
             <div key={group.key}>
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.label)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                  groupActive ? "text-brand-300" : "text-surface-400 hover:text-surface-200"
-                )}
-              >
-                <span>{group.label}</span>
-                {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              </button>
+              <div className={cn("flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors", groupActive ? "text-brand-300" : "text-surface-400 hover:text-surface-200")}>
+                {isUnrestricted ? <Link href={group.key === "master" ? "/admin/command-center" : group.key === "reports" ? "/admin/reports" : `/admin/department-dashboard/${group.key}`} className="min-w-0 flex-1 truncate px-3 py-2">{group.label}</Link> : <button type="button" onClick={() => toggleGroup(group.label)} className="min-w-0 flex-1 truncate px-3 py-2 text-left uppercase">{group.label}</button>}
+                <button type="button" onClick={() => toggleGroup(group.label)} aria-label={`${group.label} menu`} className="p-2 pr-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>
+              </div>
               {isOpen && (
                 <div className="space-y-0.5 pb-1">
                   {group.items.map((item, index) => {
