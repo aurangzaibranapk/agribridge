@@ -68,9 +68,17 @@ export async function returnPosSale(_prev: ReturnState, formData: FormData): Pro
 
   const { data: row } = await supabase
     .from("pos_returns")
-    .select("return_number")
+    .select("return_number, total_amount")
     .eq("id", returnId as string)
     .maybeSingle();
+
+  await logAudit({
+    actionType: "approve",
+    module: "pos_returns",
+    recordId: returnId as string,
+    recordLabel: row?.return_number,
+    description: `POS wapsi (poori bikri) — Rs ${Number(row?.total_amount ?? 0).toLocaleString()}, wajah: ${reason}`,
+  });
 
   return { success: true, returnNumber: row?.return_number, notice: posted ?? undefined };
 }
@@ -153,9 +161,17 @@ export async function returnPosSaleLines(input: {
 
   const { data: row } = await supabase
     .from("pos_returns")
-    .select("return_number")
+    .select("return_number, total_amount")
     .eq("id", returnId as string)
     .maybeSingle();
+
+  await logAudit({
+    actionType: "approve",
+    module: "pos_returns",
+    recordId: returnId as string,
+    recordLabel: row?.return_number,
+    description: `POS wapsi (${lines.length} qatar) — Rs ${Number(row?.total_amount ?? 0).toLocaleString()}, wajah: ${input.reason.trim()}`,
+  });
 
   return { success: true, returnNumber: row?.return_number, notice: posted ?? undefined };
 }

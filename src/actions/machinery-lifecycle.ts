@@ -761,6 +761,12 @@ export async function verifyAdvanceClaim(_prev: ActionState, formData: FormData)
       note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa rad: ${reason}`,
       actorId,
     });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.advance-claims",
+      recordId: paymentId,
+      description: `Advance dawa rad — Rs ${Number(payment.amount).toLocaleString()}, wajah: ${reason}`,
+    });
     revalidateAll(payment.booking_id);
     return { success: true };
   }
@@ -780,6 +786,12 @@ export async function verifyAdvanceClaim(_prev: ActionState, formData: FormData)
     eventType: "advance_claim_manager_confirmed",
     note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa Manager ne tasdeeq kiya — Finance/Owner ki final manzoori baqi.`,
     actorId,
+  });
+  await logAudit({
+    actionType: "verify",
+    module: "machinery-rental.advance-claims",
+    recordId: paymentId,
+    description: `Advance dawa Manager tasdeeq — Rs ${Number(payment.amount).toLocaleString()}, final manzoori baqi.`,
   });
 
   revalidateAll(payment.booking_id);
@@ -836,6 +848,12 @@ export async function approveAdvanceClaim(_prev: ActionState, formData: FormData
       note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa (Manager-tasdeeq shuda) Finance/Owner ne rad kiya: ${reason}`,
       actorId,
     });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.advance-claims",
+      recordId: paymentId,
+      description: `Advance dawa (Manager-tasdeeq shuda) Finance/Owner ne rad kiya — Rs ${Number(payment.amount).toLocaleString()}, wajah: ${reason}`,
+    });
     revalidateAll(payment.booking_id);
     return { success: true };
   }
@@ -886,6 +904,12 @@ export async function approveAdvanceClaim(_prev: ActionState, formData: FormData
     eventType: "advance_claim_verified",
     note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa FINAL manzoor — ledger mein chala gaya.`,
     actorId,
+  });
+  await logAudit({
+    actionType: "approve",
+    module: "machinery-rental.advance-claims",
+    recordId: paymentId,
+    description: `Advance dawa FINAL manzoor — Rs ${Number(payment.amount).toLocaleString()}, ledger mein gaya.`,
   });
 
   revalidateAll(payment.booking_id);
@@ -3297,6 +3321,12 @@ export async function verifyVendorCollection(_prev: ActionState, formData: FormD
       note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa rad: ${reason}`,
       actorId,
     });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.work-claims",
+      recordId: paymentId,
+      description: `Vendor collection dawa rad — Rs ${Number(payment.amount).toLocaleString()}, wajah: ${reason}`,
+    });
     revalidateAll(payment.booking_id);
     return { success: true, notice: "Dawa rad kar diya gaya." };
   }
@@ -3321,6 +3351,12 @@ export async function verifyVendorCollection(_prev: ActionState, formData: FormD
     eventType: "vendor_collection_manager_confirmed",
     note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa Manager ne tasdeeq kiya — Finance/Owner ki final manzoori baqi.`,
     actorId,
+  });
+  await logAudit({
+    actionType: "verify",
+    module: "machinery-rental.work-claims",
+    recordId: paymentId,
+    description: `Vendor collection dawa Manager tasdeeq — Rs ${Number(payment.amount).toLocaleString()}, final manzoori baqi.`,
   });
 
   revalidateAll(payment.booking_id);
@@ -3376,6 +3412,12 @@ export async function approveVendorCollection(_prev: ActionState, formData: Form
       eventType: "vendor_collection_rejected",
       note: `Rs ${Number(payment.amount).toLocaleString()} ka dawa (Manager-tasdeeq shuda) Finance/Owner ne rad kiya: ${reason}`,
       actorId,
+    });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.work-claims",
+      recordId: paymentId,
+      description: `Vendor collection dawa (Manager-tasdeeq shuda) Finance/Owner ne rad kiya — Rs ${Number(payment.amount).toLocaleString()}, wajah: ${reason}`,
     });
     revalidateAll(payment.booking_id);
     return { success: true, notice: "Dawa rad kar diya gaya." };
@@ -3434,6 +3476,12 @@ export async function approveVendorCollection(_prev: ActionState, formData: Form
         ? `Rs ${Number(payment.amount).toLocaleString()} kisan ne vendor ko diya — vendor ne apne hisse mein rakh liya (FINAL manzoor)`
         : `Rs ${Number(payment.amount).toLocaleString()} kisan ne vendor ko diya — vendor ne hamein dena hai (FINAL manzoor)`,
     actorId,
+  });
+  await logAudit({
+    actionType: "approve",
+    module: "machinery-rental.work-claims",
+    recordId: paymentId,
+    description: `Vendor collection dawa FINAL manzoor — Rs ${Number(payment.amount).toLocaleString()}, ledger mein gaya.`,
   });
 
   revalidateAll(payment.booking_id);
@@ -3593,6 +3641,12 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
       note: `Vendor ka diesel rad: ${reason}`,
       actorId,
     });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.work-claims",
+      recordId: fuelId,
+      description: `Fuel dawa rad — Rs ${Number(log.amount).toLocaleString()}, wajah: ${reason}`,
+    });
     revalidateAll(log.booking_id);
     return { success: true };
   }
@@ -3612,6 +3666,12 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
     eventType: "fuel_claim_manager_confirmed",
     note: `Vendor ka diesel Manager ne tasdeeq kiya — Rs ${Number(log.amount).toLocaleString()}. Finance/Owner ki final manzoori baqi.`,
     actorId,
+  });
+  await logAudit({
+    actionType: "verify",
+    module: "machinery-rental.work-claims",
+    recordId: fuelId,
+    description: `Fuel dawa Manager tasdeeq — Rs ${Number(log.amount).toLocaleString()}, final manzoori baqi.`,
   });
 
   revalidateAll(log.booking_id);
@@ -3667,6 +3727,12 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
       note: `Vendor ka diesel (Manager-tasdeeq shuda) Finance/Owner ne rad kiya: ${reason}`,
       actorId,
     });
+    await logAudit({
+      actionType: "reject",
+      module: "machinery-rental.work-claims",
+      recordId: fuelId,
+      description: `Fuel dawa (Manager-tasdeeq shuda) Finance/Owner ne rad kiya — Rs ${Number(log.amount).toLocaleString()}, wajah: ${reason}`,
+    });
     revalidateAll(log.booking_id);
     return { success: true };
   }
@@ -3717,6 +3783,14 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
       log.paid_by === "company" ? "ART" : log.paid_by === "vendor" ? "vendor" : "kisan"
     })`,
     actorId,
+  });
+  await logAudit({
+    actionType: "approve",
+    module: "machinery-rental.work-claims",
+    recordId: fuelId,
+    description: `Fuel dawa FINAL manzoor — Rs ${Number(log.amount).toLocaleString()} (${
+      log.paid_by === "company" ? "ART" : log.paid_by === "vendor" ? "vendor" : "kisan"
+    })`,
   });
 
   revalidateAll(log.booking_id);
