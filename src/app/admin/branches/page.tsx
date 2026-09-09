@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Network } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
@@ -6,23 +7,38 @@ import { BranchForm } from "@/app/admin/branches/branch-form";
 import { BranchesListClient } from "@/app/admin/branches/branches-list-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBranchesPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
-  const { data: branches } = await supabase
+
+  // Manager/sales_staff sirf apni branch dekhen -- ye fehrist ab tak
+  // HAR role ko poori company (sab branches, sab shops, sab staff)
+  // dikhati thi, koi filter nahi tha.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: me } = await supabase.from("profiles").select("role, branch_id").eq("id", user.id).maybeSingle();
+  if (!me) redirect("/login");
+  const broad = UNRESTRICTED_ROLES.includes(me.role) || me.role === "finance";
+
+  let branchQuery = supabase
     .from("branches")
     .select("id, name, district, tehsil, address, is_main_branch, status, status_reason")
     .order("is_main_branch", { ascending: false })
     .order("name");
+  if (!broad) branchQuery = me.branch_id ? branchQuery.eq("id", me.branch_id) : branchQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+  const { data: branches } = await branchQuery;
 
-  const { data: staff } = await supabase
+  let staffQuery = supabase
     .from("profiles")
     .select("id, full_name, role, branch_id")
     .in("role", ["manager", "sales_staff"])
     .eq("is_active", true);
+  if (!broad) staffQuery = me.branch_id ? staffQuery.eq("branch_id", me.branch_id) : staffQuery.eq("branch_id", "00000000-0000-0000-0000-000000000000");
+  const { data: staff } = await staffQuery;
 
   // Har shaakh ki apni dukanein.
   //
@@ -35,10 +51,13 @@ export default async function AdminBranchesPage() {
   // dono bilkul ek jaisi nazar aati thin. Malik ne khali wali chun li,
   // aur Shop ka khana khali hi raha. Kisi safhe par ye likha hi nahi tha
   // ke kis shaakh ke neeche kya hai.
-  const { data: shops } = await supabase
-    .from("shops")
-    .select("id, name, business_type, branch_id, is_active")
-    .order("name");
+  //
+  // Shops bhi apni branch tak -- warna doosri branch ki dukanein
+  // (naam/type) client-side props mein pahunch jati hain, chahe UI
+  // unhen render na kare.
+  let shopsQuery = supabase.from("shops").select("id, name, business_type, branch_id, is_active").order("name");
+  if (!broad) shopsQuery = me.branch_id ? shopsQuery.eq("branch_id", me.branch_id) : shopsQuery.eq("branch_id", "00000000-0000-0000-0000-000000000000");
+  const { data: shops } = await shopsQuery;
 
   const shopsByBranch: Record<string, { id: string; name: string; business_type: string; is_active: boolean }[]> = {};
   (shops ?? []).forEach((sh) => {

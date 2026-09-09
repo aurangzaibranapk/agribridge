@@ -51,6 +51,19 @@ export async function applyFatAction(_prev: ActionState, formData: FormData): Pr
   if (!entryId) return { error: "Entry nahi mili." };
   if (!(fat > 0) || fat > 15) return { error: "FAT sahi likhein (0 se 15 ke darmiyan)." };
 
+  // Manager: sirf apni branch. `verifyOrRejectEntries` mein yehi bug
+  // mil kar theek hua tha (own_branch seed hone ke bawajood kahin lagu
+  // nahi hoti thi) -- yahan wohi bug tha, theek nahi hua tha.
+  const fatCaller = gate.caller;
+  if (!fatCaller.unrestricted && fatCaller.scope !== "all") {
+    if (!fatCaller.branchId) return { error: "Aapki apni branch tay nahi hai." };
+    const service = createServiceClient();
+    const { data: entry } = await service.from("milk_entries").select("branch_id").eq("id", entryId).maybeSingle();
+    if (!entry || entry.branch_id !== fatCaller.branchId) {
+      return { error: "Ye entry aapki branch ki nahi hai." };
+    }
+  }
+
   const result = await applyFat(entryId, fat, who.userId);
   if ("error" in result) return { error: result.error };
 
@@ -101,6 +114,13 @@ export async function applyFatToBatch(_prev: ActionState, formData: FormData): P
     .eq("collection_source", "mca_field")
     .eq("status", "pending_fat");
   query = route ? query.eq("route_name", route) : query.is("route_name", null);
+
+  // Manager: sirf apni branch ka route/batch.
+  const fatCaller = gate.caller;
+  if (!fatCaller.unrestricted && fatCaller.scope !== "all") {
+    if (!fatCaller.branchId) return { error: "Aapki apni branch tay nahi hai." };
+    query = query.eq("branch_id", fatCaller.branchId);
+  }
 
   const { data: entries } = await query;
   if (!entries || entries.length === 0) return { error: "Is route mein FAT ke intezar wali koi entry nahi." };

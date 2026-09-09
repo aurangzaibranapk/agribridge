@@ -146,10 +146,23 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("role, branch_id").eq("id", user?.id ?? "").maybeSingle();
   const role = profile?.role ?? "";
   if (!HQ_ROLES.includes(role) && role !== "warehouse") {
     return { error: "Sirf HQ warehouse/admin return receive kar sakta hai." };
+  }
+
+  // "Manager" yahan sirf HQ (is_main_branch) ka manager -- receive
+  // karna wahi lamha hai jab shop ka khata kam hota hai, is liye jis
+  // shop ka return hai USI shop ka manager use khud receive nahi kar
+  // sakta (apna hi refund apne aap manzoor karna). Pehle koi check
+  // hi nahi tha -- kisi bhi branch ka manager kisi bhi doosri shop ka
+  // return receive kar sakta tha.
+  if (role === "manager") {
+    const { data: hq } = await supabase.from("branches").select("id").eq("is_main_branch", true).maybeSingle();
+    if (!hq || profile?.branch_id !== hq.id) {
+      return { error: "Sirf HQ (main branch) ka manager return receive kar sakta hai." };
+    }
   }
 
   // Receive hote hi stock hilta hai aur shop ka khata kam hota hai --
@@ -231,13 +244,19 @@ export async function rejectReturn(_prev: ActionState, formData: FormData): Prom
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("role, branch_id").eq("id", user?.id ?? "").maybeSingle();
   const role = profile?.role ?? "";
   const gate = await requireAction("agri-returns", "reject");
   if ("error" in gate) return { error: gate.error };
 
   if (!HQ_ROLES.includes(role) && role !== "warehouse") {
     return { error: "Sirf HQ warehouse/admin return reject kar sakta hai." };
+  }
+  if (role === "manager") {
+    const { data: hq } = await supabase.from("branches").select("id").eq("is_main_branch", true).maybeSingle();
+    if (!hq || profile?.branch_id !== hq.id) {
+      return { error: "Sirf HQ (main branch) ka manager return reject kar sakta hai." };
+    }
   }
 
   const { data: ret } = await supabase.from("agri_order_returns").select("return_number, branch_id, status").eq("id", returnId).maybeSingle();

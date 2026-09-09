@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Droplet, Wheat, Tractor, ShoppingCart, Warehouse, Truck, Wallet, Users, AlertTriangle } from "lucide-react";
 import PnlPage from "@/app/admin/reports/pnl/page";
 import { Card } from "@/components/ui/layout-primitives";
 import { branchConsolidated360 } from "@/lib/pos/shop-360";
+import { createClient } from "@/lib/supabase/server";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +124,20 @@ async function BranchShop360Summary({ branchId }: { branchId: string }) {
 
 export default async function BranchDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // Manager/sales_staff sirf apni branch ka dashboard khol sakte hain
+  // -- URL mein doosri branch ka id daal kar us ka poora Budget/Sales/
+  // Stock/Kharcha data dekhna is se pehle mumkin tha (koi auth check
+  // hi nahi tha).
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: me } = await supabase.from("profiles").select("role, branch_id").eq("id", user.id).maybeSingle();
+  if (!me) redirect("/login");
+  const broad = UNRESTRICTED_ROLES.includes(me.role) || me.role === "finance";
+  if (!broad && me.branch_id !== id) {
+    redirect(me.branch_id ? `/admin/branches/${me.branch_id}/dashboard` : "/admin/branches");
+  }
 
   return (
     <div>

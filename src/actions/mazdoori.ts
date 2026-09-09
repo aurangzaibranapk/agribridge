@@ -254,6 +254,12 @@ export async function mazdooriManzoor(_prev: ActionState, formData: FormData): P
   if (!k) return { error: "Ye qatar nahi mili." };
   if (k.status === "approved") return { error: "Ye pehle hi manzoor ho chuki hai." };
   if (k.status === "rejected") return { error: "Ye radd ho chuki hai." };
+  // Manager sirf apni branch ki qatar manzoor kar sakta -- ye rok
+  // pehle nahi thi, koi bhi manager kisi bhi branch ki mazdoori manzoor
+  // kar sakta tha.
+  if (who.role === "manager" && k.branch_id !== who.branchId) {
+    return { error: "Ye qatar aap ki branch ki nahi hai." };
+  }
 
   const amount = Number(k.amount ?? 0);
   if (amount <= 0) return { error: "Raqam sifar hai — ye qatar post nahi ho sakti." };
@@ -358,11 +364,14 @@ export async function mazdooriRadd(_prev: ActionState, formData: FormData): Prom
   if (!wajah) return { error: "Wajah likhein — us ke baghair darj karne wale ko pata nahi chalta ke kya theek karna hai." };
 
   const { data: k } = (await mazdooriTable()
-    .select("entry_number, status")
+    .select("entry_number, status, branch_id")
     .eq("id", id)
     .maybeSingle()) as { data: any };
   if (!k) return { error: "Ye qatar nahi mili." };
   if (k.status === "approved") return { error: "Ye manzoor ho kar kitab mein ja chuki hai — ulti qatar banayein." };
+  if (who.role === "manager" && k.branch_id !== who.branchId) {
+    return { error: "Ye qatar aap ki branch ki nahi hai." };
+  }
 
   const { error } = await mazdooriTable()
     .update({ status: "rejected", rejection_reason: wajah })

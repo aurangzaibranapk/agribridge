@@ -544,12 +544,22 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
   const service = createServiceClient();
   const { data: kharcha } = await service
     .from("company_expense_requests")
-    .select("expense_number, status")
+    .select("expense_number, status, branch_id")
     .eq("id", id)
     .maybeSingle();
   if (!kharcha) return { error: "Ye kharcha nahi mila." };
   if (kharcha.status === "approved") {
     return { error: "Ye manzoor ho kar kitab mein ja chuka hai. Radd nahi hota — ulti qatar banayein." };
+  }
+
+  // Apni branch ki hadd -- 'all' scope (Finance/Owner/Admin) ke liye
+  // rok nahi. `requireAction("kharche","reject")` manager ko 'reject'
+  // deta hai (364), is liye upar wala legacy-fallback kabhi nahi chalta
+  // aur ye check bina is ke kabhi lagti hi nahi thi.
+  if (!("error" in guard) && !guard.caller.unrestricted && guard.caller.scope !== "all") {
+    if (!guard.caller.branchId || kharcha.branch_id !== guard.caller.branchId) {
+      return { error: "Ye kharcha aapki branch ka nahi hai — sirf apni branch ki request radd kar sakte hain." };
+    }
   }
 
   const { error } = await service
