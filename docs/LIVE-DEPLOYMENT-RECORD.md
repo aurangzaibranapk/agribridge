@@ -2960,3 +2960,65 @@ likha hai — "smoke test hua" jhoot nahi bolna.
 `ef64443` se):** Setup Node.js App → **Stop** → File Manager →
 `domains/agribridge` → naya `deploy.tar.gz` upload (overwrite) →
 right-click **Extract** → **Start**. Koi migration nahi.
+
+---
+
+## 5p. "No 1, 2, 3 fix karo" — Bug list se teen fix (9 September, raat)
+
+Malik ne pehle poochha "kon kon se bug abhi fix nahi kiye" — jawab
+diya gaya (4 khule item), phir hukm mila: **No 1 (Bank Deposit Ledger)
+fix ho chuka (upar, 5o mein); No 2 (Machinery verify→approve) aur No 3
+(Manager apni branch tak) is round mein fix hue, test kiye gaye.**
+
+### No 2 — Machinery: verify aur approve ab do alag qadam (commit `f266e54`)
+
+Migration 377. Poori tafseel commit message mein. Khulasa: advance
+claim, vendor collection, aur fuel claim (company-paid) — teenon EK
+qadam mein verify hote hi ledger post ho jate the. Ab beech mein
+`manager_confirmed` (Manager ka sirf iqrar, ledger post nahi) aur phir
+Finance/Owner ka `approve` (khata poochta hai, asal ledger post yahin).
+`verified` ka MATLAB nahi badla — 14+ purani migrations ke views/
+triggers isay chhedhna nahi paRa.
+
+**Test (Testing par, SQL, rollback ke sath):** dono tables
+(`machinery_payments`, `machinery_fuel_logs`) par poora transition
+chain — claimed→manager_confirmed (✓), manager_confirmed→rejected→
+manager_confirmed (✓), manager_confirmed→verified (✓, verified_at khud
+laga), verified→manager_confirmed (✗ purana guard sahi rokta hai — no
+regression). `tsc`/`build` clean.
+
+**Abhi bhi baqi:** POS Return ka apna do-marhala split (docs mein pehle
+se likha "structure alag hai — manager PIN se atomic authorize + foran
+stock/ledger post"; is round mein nahi chhua gaya, alag se dekhna hai).
+Work claim (raqba correction) mein paisa post hota hi nahi, is liye us
+ko split nahi kiya — jaan boojh kar.
+
+### No 3 — Manager apni branch tak, branch ki sari shops (commit `8fa3e84`)
+
+Ek dedicated Explore agent se poora audit karaya ("manager ko sirf
+apni branch access ho, branch mein sari shops access hon"). Natija: 7
+jagah `role_feature_permissions`/`data_scope='own_branch'` declare tha
+magar function/page kabhi check karta hi nahi tha — bilkul wohi pattern
+jo Shop 360 mein (374) pehle pakra gaya tha.
+
+Poori tafseel commit message mein. Sab se nazuk teen: **Branch
+Dashboard, Branch Statement, aur Branches list** — teenon mein koi
+auth check hi NAHI thi, koi bhi manager URL se kisi bhi doosri branch
+ka data khol sakta tha. Baqi chaar: mazdoori manzoor/radd, kharche
+radd, milk chiller FAT (single + batch), agri-returns receive/reject.
+
+**Ek data-integrity baat jo test karte waqt mili (bug nahi, sirf
+Testing seed data):** Testing par `is_main_branch=true` do branches par
+lagi hai ("Main Branch [TEST]" dono par) — agri-returns ka
+`hqWarehouseId()` (aur mera naya check) `.maybeSingle()` istemal karta
+hai, jo do qatarein milne par khali/error deta hai. **Live par sirf EK
+`is_main_branch=true` branch hai** (verify kiya, "Main Branch Mahabali")
+— is liye Live par asar nahi. Testing par duplicate seed data hai,
+saaf karna ho to malik bataye kaunsi asal HQ hai.
+
+**Jo is round mein NAHI ho saka:** asal browser test (Manager login kar
+ke doosri branch ka URL try karna) — is session mein koi credentials
+nahi. Code review + SQL-level verification (permissions, is_main_branch
+ginti) hua hai, jhoota "browser test hua" nahi kaha ja raha.
+
+`tsc` (71, baseline) aur `build` clean, dono commits mein.
