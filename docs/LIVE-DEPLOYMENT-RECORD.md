@@ -2787,7 +2787,7 @@ nahi ho sakti) — sirf assign hone ke BAAD ki sales is hisaab mein aayengi.
    `bank_deposit_pending` party sirf 1030 ke andar hai, purane "Cash
    raaste mein" ke reports isay dekhte hain ya nahi, ek nazar chahiye.
 
-### Review (9 September) — asal gap mil gaya, FIX NAHI kiya (malik ka faisla chahiye)
+### Review (9 September) — asal gap mil gaya, phir theek ho gaya (commit `340b4fc`)
 
 Review kar li. **1030 (`cashWithPerson`, "Cash raaste mein") ka is se
 koi taalluq nahi** — wo sirf `cash_handovers` (bande ke haath paisa)
@@ -2809,19 +2809,26 @@ mein Dr/Cr daalta hai — `postJournal` **kabhi nahi bulaya jata**. Nateeja:
   shuda POS deposit ke baad — bilkul isi project ke purane "do register"
   wale pattern (127, 139) ki tarah.
 
-**Ye is session mein theek NAHI ki gayi** — jaan boojh kar. 373 ke apne
-"Abhi baqi" mein pehle se likha tha ke ye "gehra, pehle se maujood
-architecture sawal hai jo is Phase mein chhua nahi gaya" — matlab wajah
-se rok kar rakha gaya tha, sirf bhoola nahi gaya. Fix (approve step par
-`postJournal` se Dr bank / Cr 1000 bhi post karna) seedha lagta hai,
-magar do sawal malik ke faisle ke hain:
-1. `finance_transactions` insert **hatana** hai ya **sath rakhna** —
-   agar sath rakha to wapas "do register" ban jata hai, sirf jagah badal
-   jati hai.
-2. Ab tak jo deposits already approve ho chuki hain (Testing par),
-   un ka backfill (retroactive journal entry) chahiye ya nahi —
-   warna Live par jaate hi purani approved deposits ka gap chhup jayega
-   aur nayi hi sirf theek hongi.
+**Malik ka hukm:** "No 1 fix karo, ledger mein jana chahiye." Theek kar
+diya:
+
+- `finance_transactions` (Cash Book) insert **hataya nahi, sath rakha**
+  — staff ka rozana Cash Book isi se banta hai. "Do register" na bane,
+  is liye dono ab isi ek journal entry se jure hain: `postJournal` (Dr
+  bank GL, Cr 1000) aur us ki `claims` list dono `finance_transactions`
+  rows ko isi entry se link karti hai — bilkul `postSaleToLedger` wala
+  tareeqa. Fayda: kal ye deposit reverse ho to `reverseJournal` Cash
+  Book ko khud-ba-khud ulta bhi kar dega (usi daawe se dhoondta hai).
+- Ledger post fail ho (kabhi ho sakta hai) to deposit phir bhi manzoor
+  rehta hai (Outstanding pehle hi kam ho chuka), magar Finance/staff dono
+  ko saaf notice milta hai — chhupaya nahi jata.
+- **Backfill ki zaroorat nahi paRi**: Testing par jo ek deposit
+  (`DEP-TEST-00001`) pehle se `approved` thi, us ka koi
+  `finance_transactions` row bhi nahi tha — seedha test-seed data thi,
+  asal user-flow se nahi bani. Koi asal deposit abhi backfill talab
+  nahi.
+- Koi migration nahi — code-only. `tsc` (71, baseline) aur `build`
+  clean.
 
 ---
 
