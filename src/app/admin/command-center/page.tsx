@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card } from "@/components/ui/layout-primitives";
+import { Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals } from "@/lib/command-center";
 import {
   AlertTriangle,
@@ -78,33 +78,45 @@ export default async function CommandCenterPage() {
     return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
 
-  const [money, depts, alerts] = await Promise.all([loadMoneyToday(), loadDeptKpis(lang), loadAlerts()]);
+  const [money, depts, alerts, entityCounts] = await Promise.all([
+    loadMoneyToday(),
+    loadDeptKpis(lang),
+    loadAlerts(),
+    Promise.all(
+      ["branches", "shops", "farmers", "suppliers", "dealers", "buyers"].map(async (table) => {
+        const { count, error } = await supabase.from(table).select("id", { count: "exact", head: true });
+        return error ? null : count;
+      })
+    ),
+  ]);
   const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
 
   const topTiles = [
-    { label: "Today Sales", value: rs(money.revenue), href: "/admin/pos", icon: CircleDollarSign },
-    { label: "Today Expenses", value: rs(money.expenses), href: "/admin/company-expenses", icon: ReceiptText },
-    { label: "Net Position", value: rs(money.net), href: "/admin/reports/pnl", icon: TrendingUp, danger: money.net < 0 },
-    { label: "Cash Position", value: rs(money.cash), href: "/admin/finance", icon: Wallet },
-    { label: "Receivables", value: rs(money.receivable), href: "/admin/branch-credit", icon: CreditCard },
+    { label: "Today Sales", value: rs(money.revenue), href: "/admin/pos", icon: CircleDollarSign, iconClass: "bg-emerald-50 text-emerald-700" },
+    { label: "Today Expenses", value: rs(money.expenses), href: "/admin/company-expenses", icon: ReceiptText, iconClass: "bg-rose-50 text-rose-600" },
+    { label: "Net Position", value: rs(money.net), href: "/admin/reports/pnl", icon: TrendingUp, danger: money.net < 0, iconClass: "bg-emerald-50 text-emerald-700" },
+    { label: "Cash Position", value: rs(money.cash), href: "/admin/finance", icon: Wallet, iconClass: "bg-blue-50 text-blue-600" },
+    { label: "Receivables", value: rs(money.receivable), href: "/admin/branch-credit", icon: CreditCard, iconClass: "bg-amber-50 text-amber-700" },
   ];
 
   const entityLinks = [
-    { label: "Branches", href: "/admin/branches", icon: Building2 },
-    { label: "Shops", href: "/admin/shops", icon: Store },
-    { label: "Farmers", href: "/admin/farmers", icon: Users },
-    { label: "Suppliers", href: "/admin/suppliers", icon: Package },
-    { label: "Dealers", href: "/admin/dealers", icon: Users },
-    { label: "Buyers", href: "/admin/buyers", icon: Users },
+    { label: "Branches", href: "/admin/branches", icon: Building2, count: entityCounts[0] },
+    { label: "Shops", href: "/admin/shops", icon: Store, count: entityCounts[1] },
+    { label: "Farmers", href: "/admin/farmers", icon: Users, count: entityCounts[2] },
+    { label: "Suppliers", href: "/admin/suppliers", icon: Package, count: entityCounts[3] },
+    { label: "Dealers", href: "/admin/dealers", icon: Users, count: entityCounts[4] },
+    { label: "Buyers", href: "/admin/buyers", icon: Users, count: entityCounts[5] },
   ];
 
   return (
-    <div className="space-y-3 2xl:h-[calc(100vh-6.25rem)] 2xl:overflow-hidden">
-      <PageHeader
-        title="Master Command"
-        description="Al Rana Traders — organization, departments, finance aur controls ek nazar mein"
-        actions={
+    <div className="mx-auto w-full max-w-[1800px] space-y-3 2xl:h-[calc(100vh-7rem)] 2xl:overflow-hidden">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-surface-900 dark:text-white">Owner Command Center</h1>
+          <p className="mt-0.5 text-sm text-surface-500">Today&apos;s money, department performance aur zaroori actions — ek nazar mein.</p>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
           <LiveRefresh
             tables={[
               "pos_sales",
@@ -116,8 +128,8 @@ export default async function CommandCenterPage() {
               "finance_transactions",
             ]}
           />
-        }
-      />
+        </div>
+      </div>
 
       {/* Primary business position */}
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -125,16 +137,16 @@ export default async function CommandCenterPage() {
           const Icon = tile.icon;
           return (
             <Link key={tile.label} href={tile.href}>
-              <Card className="h-full p-3 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
+              <Card className="h-full min-h-[88px] p-3.5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-medium text-surface-500">{tile.label}</p>
-                    <p className={`mt-0.5 text-lg font-bold tabular-nums ${tile.danger ? "text-red-600" : "text-surface-900 dark:text-white"}`}>
+                    <p className="text-[11px] font-medium text-surface-500">{tile.label}</p>
+                    <p className={`mt-1 text-xl font-bold tracking-tight tabular-nums ${tile.danger ? "text-red-600" : "text-surface-900 dark:text-white"}`}>
                       {tile.value}
                     </p>
                   </div>
-                  <span className="rounded-lg bg-brand-50 p-1.5 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">
-                    <Icon className="h-4 w-4" />
+                  <span className={`rounded-xl p-2.5 ${tile.iconClass} dark:bg-surface-800`}>
+                    <Icon className="h-5 w-5" />
                   </span>
                 </div>
               </Card>
@@ -143,10 +155,10 @@ export default async function CommandCenterPage() {
         })}
       </div>
 
-      <div className="grid gap-3 2xl:min-h-0 2xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid gap-3 2xl:min-h-0 2xl:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="grid content-start gap-3 xl:grid-cols-2">
           {/* Department overview */}
-          <Card className="p-3 xl:col-span-2">
+          <Card className="p-3.5 xl:col-span-2">
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Department Overview</h2>
@@ -155,19 +167,19 @@ export default async function CommandCenterPage() {
               <Link href="/admin/master-dashboard" className="text-xs font-medium text-brand-700 hover:underline">View details →</Link>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {depts.map((d) => {
                 const Icon = deptIcon[d.key] ?? Package;
                 return (
-                  <Link key={d.key} href={d.href} className="rounded-xl border border-surface-200 p-2.5 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800 dark:hover:bg-surface-900">
+                  <Link key={d.key} href={d.href} className="group rounded-xl border border-surface-200 p-3 transition hover:border-brand-300 hover:bg-brand-25 hover:shadow-sm dark:border-surface-800 dark:hover:bg-surface-900">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-surface-900 dark:text-white">
-                        <span className="rounded-lg bg-surface-100 p-1.5 text-brand-700 dark:bg-surface-800 dark:text-brand-300"><Icon className="h-4 w-4" /></span>
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-surface-900 dark:text-white">
+                        <span className="rounded-lg bg-brand-50 p-2 text-brand-700 dark:bg-surface-800 dark:text-brand-300"><Icon className="h-4 w-4" /></span>
                         {d.label}
                       </span>
                       {d.pending > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">{d.pending}</span>}
                     </div>
-                    <div className="mt-2 grid grid-cols-2 gap-y-0.5 text-[11px]">
+                    <div className="mt-2.5 grid grid-cols-2 gap-y-1 text-[11px]">
                       <span className="text-surface-400">Revenue</span><span className="text-right font-semibold tabular-nums">{rs(d.revenue)}</span>
                       <span className="text-surface-400">Cost</span><span className="text-right tabular-nums">{rs(d.directCost)}</span>
                       <span className="text-surface-400">P&L</span><span className={`text-right font-semibold tabular-nums ${d.profit != null && d.profit < 0 ? "text-red-600" : "text-green-700 dark:text-green-400"}`}>{rs(d.profit)}</span>
@@ -180,7 +192,7 @@ export default async function CommandCenterPage() {
           </Card>
 
           {/* Core master entities */}
-          <Card className="p-3">
+          <Card className="p-3.5">
             <div className="mb-2">
               <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Business Structure & Parties</h2>
               <p className="text-xs text-surface-500">Canonical masters — duplicate menus ke baghair</p>
@@ -190,7 +202,7 @@ export default async function CommandCenterPage() {
                 const Icon = entity.icon;
                 return (
                   <Link key={entity.label} href={entity.href} className="flex items-center justify-between rounded-lg border border-surface-200 px-2.5 py-2 text-xs font-medium text-surface-800 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800 dark:text-surface-200">
-                    <span className="flex items-center gap-2"><Icon className="h-4 w-4 text-brand-600" />{entity.label}</span>
+                    <span className="flex items-center gap-2"><span className="rounded-md bg-brand-50 p-1.5 text-brand-700 dark:bg-surface-800"><Icon className="h-3.5 w-3.5" /></span><span>{entity.label}<strong className="ml-1.5 text-surface-900 dark:text-white">{entity.count ?? "—"}</strong></span></span>
                     <ArrowRight className="h-3.5 w-3.5 text-surface-300" />
                   </Link>
                 );
@@ -199,7 +211,7 @@ export default async function CommandCenterPage() {
           </Card>
 
           {/* Control row */}
-          <Card className="p-3">
+          <Card className="p-3.5">
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Control & Compliance</h2>
@@ -218,7 +230,7 @@ export default async function CommandCenterPage() {
           </Card>
 
           {/* Bridge AI */}
-          <Card className="p-3">
+          <Card className="p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-white"><Sparkles className="h-4 w-4 text-brand-600"/>Bridge AI</h2>
@@ -235,7 +247,7 @@ export default async function CommandCenterPage() {
           </Card>
 
           {/* Book totals */}
-          <Card className="p-3">
+          <Card className="p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div><h2 className="font-display text-base font-semibold">Department Book Totals</h2><p className="text-xs text-surface-500">Sirf complete departments ka consolidated result</p></div>
               <span className="text-xs text-surface-400">Margin {pct(totals.revenue > 0 ? (totals.net / totals.revenue) * 100 : null)}</span>
@@ -252,7 +264,7 @@ export default async function CommandCenterPage() {
 
         {/* Right management rail */}
         <aside className="space-y-3 2xl:min-h-0">
-          <Card className="p-3">
+          <Card className="border-t-2 border-t-amber-400 p-3.5">
             <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-sm font-semibold">Attention Queue</h2><Link href="/admin/submissions" className="text-[11px] text-brand-700 hover:underline">View all</Link></div>
             <div className="space-y-1.5">
               {alerts.slice(0, 4).map((alert, i) => (
@@ -265,7 +277,7 @@ export default async function CommandCenterPage() {
             </div>
           </Card>
 
-          <Card className="p-3">
+          <Card className="border-t-2 border-t-brand-500 p-3.5">
             <h2 className="mb-2 font-display text-sm font-semibold">Management Insight</h2>
             <ul className="space-y-2">
               {lines.slice(0, 3).map((line, i) => (
@@ -277,7 +289,7 @@ export default async function CommandCenterPage() {
             </ul>
           </Card>
 
-          <Card className="p-3">
+          <Card className="border-t-2 border-t-blue-500 p-3.5">
             <h2 className="mb-2 font-display text-sm font-semibold">Quick Control</h2>
             <div className="grid grid-cols-2 gap-1 text-xs">
               <Link href="/admin/money-trail" className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-surface-50 dark:hover:bg-surface-900"><span className="flex items-center gap-2"><Scale className="h-3.5 w-3.5 text-brand-600"/>Money Trail</span></Link>
