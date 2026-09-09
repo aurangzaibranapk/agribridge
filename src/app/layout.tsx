@@ -6,8 +6,36 @@ const sans = Nunito_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const display = Manrope({ subsets: ["latin"], variable: "--font-display" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 export const metadata: Metadata = {
-  title: "AgriBridge | Pakistan's Digital Agriculture Platform",
-  description: "AgriBridge by Al Rana Traders connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital agriculture services.",
+  metadataBase: new URL("https://alranatraders.pk"),
+  title: {
+    default: "AgriBridge | Pakistan's Digital Agriculture Platform",
+    template: "%s | AgriBridge",
+  },
+  description: "AgriBridge by Al Rana Traders connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products, Kisan AI and digital agriculture services in Pakistan.",
+  keywords: [
+    "AgriBridge",
+    "digital agriculture Pakistan",
+    "farmer services Pakistan",
+    "agriculture inputs",
+    "farm machinery booking",
+    "grain marketplace",
+    "dairy services",
+    "Kisan AI",
+    "Al Rana Traders",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_PK",
+    siteName: "AgriBridge",
+    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
+    description: "Connecting farmers, agriculture inputs, machinery, dairy, grain, markets and digital agriculture services across Pakistan.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
+    description: "Digital agriculture services connecting farmers, inputs, machinery, dairy, grain and markets in Pakistan.",
+  },
+  robots: { index: true, follow: true },
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "AgriBridge" },
 };
