@@ -18789,6 +18789,7 @@ export type Database = {
           refund_method: string | null
           return_number: string
           sale_id: string
+          shift_id: string | null
           total_amount: number
         }
         Insert: {
@@ -18805,6 +18806,7 @@ export type Database = {
           refund_method?: string | null
           return_number: string
           sale_id: string
+          shift_id?: string | null
           total_amount: number
         }
         Update: {
@@ -18821,6 +18823,7 @@ export type Database = {
           refund_method?: string | null
           return_number?: string
           sale_id?: string
+          shift_id?: string | null
           total_amount?: number
         }
         Relationships: [
@@ -18879,6 +18882,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_pos_returns_today"
             referencedColumns: ["sale_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -31755,6 +31765,7 @@ export type Database = {
       }
       fn_pos_return_lines: {
         Args: {
+          p_counter_id?: string
           p_lines: Json
           p_manager_code: string
           p_note: string

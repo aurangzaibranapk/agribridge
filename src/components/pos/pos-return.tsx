@@ -56,10 +56,12 @@ type Condition = (typeof CONDITIONS)[number];
 export function PosReturn({
   lang,
   branchId,
+  counterId,
   onDone,
 }: {
   lang: Lang;
   branchId: string | null;
+  counterId?: string | null;
   onDone: () => void;
 }) {
   const supabase = createClient();
@@ -275,6 +277,7 @@ export function PosReturn({
       refundMethod,
       note: note.trim() || null,
       managerCode: managerCode.trim(),
+      counterId,
     });
     setSubmitting(false);
 

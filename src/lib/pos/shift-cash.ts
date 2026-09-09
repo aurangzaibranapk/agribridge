@@ -79,15 +79,25 @@ export function aggregateShiftCash(
  */
 export async function computeShiftCash(shiftId: string, openingCash: number): Promise<ShiftCashSummary> {
   const service = createServiceClient();
-  const { data: shiftSales } = await service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId);
+
+  // Return `sale_id` se nahi, `shift_id` se poochha jata hai (380) --
+  // aaj ki shift mein KAL ki bikri ka cash refund bhi golak se nikalta
+  // hai. `sale_id IN (isi shift ki sales)` wala purana tareeqa aisi
+  // wapsiyan bilkul chhoR deta tha, aur shift "kam" nazar aati bina
+  // wajah bataye.
+  const [{ data: shiftSales }, { data: returns }] = await Promise.all([
+    service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
+    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId).eq("refund_method", "cash"),
+  ]);
   const rows = shiftSales ?? [];
-  if (rows.length === 0) return emptySummary(openingCash);
+  const returnRows = returns ?? [];
+  if (rows.length === 0 && returnRows.length === 0) return emptySummary(openingCash);
 
   const saleIds = rows.map((r) => r.id);
-  const [{ data: payments }, { data: returns }] = await Promise.all([
-    service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds),
-    service.from("pos_returns").select("total_amount, refund_method").in("sale_id", saleIds).eq("refund_method", "cash"),
-  ]);
+  const { data: payments } =
+    saleIds.length > 0
+      ? await service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
+      : { data: [] as { payment_method: string | null; amount: number | string | null }[] };
 
-  return aggregateShiftCash(openingCash, rows, payments ?? [], returns ?? []);
+  return aggregateShiftCash(openingCash, rows, payments ?? [], returnRows);
 }

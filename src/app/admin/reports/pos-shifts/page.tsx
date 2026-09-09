@@ -76,13 +76,18 @@ export default async function PosShiftReportPage({
     ? await service.from("pos_sales").select("id, shift_id, total_amount, khata_amount").in("shift_id", shiftIds)
     : { data: [] as { id: string; shift_id: string; total_amount: number; khata_amount: number }[] };
   const saleIds = (allSales ?? []).map((s) => s.id);
+  // Return `sale_id` se nahi, `shift_id` se jama hota hai (380) -- aaj ki
+  // shift mein kal ki bikri ka cash refund bhi golak se nikalta hai.
+  // `sale_id` wala purana jorr aisi wapsiyan asal bikri wali (purani)
+  // shift mein daal deta, jo ke ghalat hai jab wapsi kisi baad ki shift
+  // mein hui ho.
   const [{ data: allPayments }, { data: allReturns }] = await Promise.all([
     saleIds.length
       ? service.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
       : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[] }),
-    saleIds.length
-      ? service.from("pos_returns").select("sale_id, total_amount, refund_method").in("sale_id", saleIds).eq("refund_method", "cash")
-      : Promise.resolve({ data: [] as { sale_id: string; total_amount: number; refund_method: string }[] }),
+    shiftIds.length
+      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds).eq("refund_method", "cash")
+      : Promise.resolve({ data: [] as { shift_id: string | null; total_amount: number; refund_method: string }[] }),
   ]);
 
   const salesByShift = new Map<string, typeof allSales>();
@@ -98,11 +103,12 @@ export default async function PosShiftReportPage({
     arr.push(p);
     paymentsBySale.set(p.sale_id, arr);
   });
-  const returnsBySale = new Map<string, { total_amount: number }[]>();
+  const returnsByShift = new Map<string, { total_amount: number }[]>();
   (allReturns ?? []).forEach((r) => {
-    const arr = returnsBySale.get(r.sale_id) ?? [];
+    if (!r.shift_id) return;
+    const arr = returnsByShift.get(r.shift_id) ?? [];
     arr.push(r);
-    returnsBySale.set(r.sale_id, arr);
+    returnsByShift.set(r.shift_id, arr);
   });
 
   const rows = shifts.map((s) => {
@@ -111,7 +117,7 @@ export default async function PosShiftReportPage({
     const shop = Array.isArray(counter?.shops) ? counter.shops[0] : counter?.shops;
     const mySales = (salesByShift.get(s.id) ?? []) as { id: string; total_amount: number; khata_amount: number }[];
     const myPayments = mySales.flatMap((sale) => paymentsBySale.get(sale.id) ?? []);
-    const myReturns = mySales.flatMap((sale) => returnsBySale.get(sale.id) ?? []);
+    const myReturns = returnsByShift.get(s.id) ?? [];
     const live = aggregateShiftCash(Number(s.opening_cash), mySales, myPayments, myReturns);
 
     const isClosed = s.status === "closed";

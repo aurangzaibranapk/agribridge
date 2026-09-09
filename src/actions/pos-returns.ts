@@ -95,6 +95,14 @@ export async function returnPosSaleLines(input: {
   refundMethod: string;
   note?: string | null;
   managerCode: string;
+  /**
+   * Counter jahan se ye wapsi ho rahi hai -- taake wapsi usi shift se
+   * jur jaye jo abhi khuli hai (380), chahe asal bikri kisi purani
+   * shift/din ki ho. Na diya jaye to `shift_id` NULL rehta hai aur ye
+   * wapsi kisi shift ke cash hisaab mein nahi aati -- purane raaste
+   * (jahan counter maloom nahi) ke liye yehi theek hai.
+   */
+  counterId?: string | null;
 }): Promise<ReturnState> {
   const supabase = createClient();
   const {
@@ -125,6 +133,7 @@ export async function returnPosSaleLines(input: {
     p_refund_method: input.refundMethod,
     p_note: (input.note ?? null) as unknown as string,
     p_manager_code: input.managerCode.trim(),
+    p_counter_id: (input.counterId ?? null) as unknown as string,
   });
 
   if (error) return { error: error.message };

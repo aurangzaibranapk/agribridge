@@ -450,7 +450,7 @@ export function PosClient({
             <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
           </span>
         </div>
-        <PosReturn lang={lang} branchId={branchId} onDone={() => setMode("sale")} />
+        <PosReturn lang={lang} branchId={branchId} counterId={counterId} onDone={() => setMode("sale")} />
       </div>
     );
   }
