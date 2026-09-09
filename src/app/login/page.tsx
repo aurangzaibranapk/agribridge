@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
+
+export const metadata: Metadata = {
+  title: "Login",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nocache: true,
+  },
+};
 
 export default function LoginPage() {
   return (
