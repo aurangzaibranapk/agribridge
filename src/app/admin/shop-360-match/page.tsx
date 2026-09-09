@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { Shop360PaymentSummary } from "@/components/shop-360/payment-summary";
+import { Shop360StockSaleMatch } from "@/components/shop-360/stock-sale-match";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { shopZeroLeakageSnapshot } from "@/lib/pos/shop-zero-leakage";
@@ -86,6 +87,22 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
       <Card><ReceiptText className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Customer Khata — Shop Level</p><p className="text-xl font-bold">—</p><p className="mt-1 text-[11px] text-amber-700">Source abhi branch tak; fake allocation nahi.</p></Card>
       <Card><Landmark className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Collection Outstanding</p><p className="text-xl font-bold">{money(snap.deposits.outstanding)}</p><p className="mt-1 text-[11px] text-surface-400">Finance approval tak settle nahi.</p></Card>
     </div>
+
+    <Card>
+      <Shop360StockSaleMatch
+        openingValue={snap.stockSaleMatch.openingValue}
+        stockInValue={snap.stockSaleMatch.stockInValue}
+        stockSaleOutValue={snap.stockSaleMatch.stockSaleOutValue}
+        otherStockOutValue={snap.stockSaleMatch.otherStockOutValue}
+        expectedClosingValue={snap.stockSaleMatch.expectedClosingValue}
+        actualClosingValue={snap.stockSaleMatch.actualClosingValue}
+        stockDifference={snap.stockSaleMatch.stockDifference}
+        posSalesValue={snap.stockSaleMatch.posSalesValue}
+        posVsStockSaleDifference={snap.stockSaleMatch.posVsStockSaleDifference}
+        verifiedDeposit={snap.deposits.approvedDeposits}
+        outstanding={snap.deposits.outstanding}
+      />
+    </Card>
 
     <Card>
       <Shop360PaymentSummary
