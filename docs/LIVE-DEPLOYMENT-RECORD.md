@@ -2769,3 +2769,49 @@ nahi ho sakti) — sirf assign hone ke BAAD ki sales is hisaab mein aayengi.
 3. Bank Deposit ka Money Trail/reports review abhi nahi hua — naya
    `bank_deposit_pending` party sirf 1030 ke andar hai, purane "Cash
    raaste mein" ke reports isay dekhte hain ya nahi, ek nazar chahiye.
+
+---
+
+## 5o. Shop 360 Zero-Leakage + POS Khata auto-fill — Testing branch merge + build package (9 September)
+
+Malik ne khud Testing par login kar ke check kiya, phir hukm diya: "khud
+bhi check kar lo, aur Live par build package bana do."
+
+**Kya hua:**
+
+1. `testing/shop-360-zero-leakage` branch (PR #3) verify kiya — 23
+   commits, 12 files (1035 +, 1510 −). `create_pos_sale` (DB function)
+   mein koi migration/change nahi — **koi nayi migration is deploy mein
+   nahi hai**. Overpayment/"Zyada Amount" sirf UI label hai, koi alag
+   "Jama" table kahin nahi (Live aur Testing dono mein) — ye sirf
+   arithmetic hai (payment lines ka jorh bill se zyada), is liye DB-level
+   risk kam hai.
+2. `npm run build` Testing branch par saaf (exit 0).
+3. Fast-forward merge `testing/shop-360-zero-leakage` →
+   `claude/code-load-project-structure-fq91y9` (base wahi tha jahan
+   testing branch se nikli thi, is liye conflict koi nahi) aur push kiya.
+   PR #3 GitHub par khud-ba-khud merged ho gaya.
+4. `deploy.tar.gz` (9.5M) isi build se bana kar seedha malik ko bheja
+   gaya — cPanel par sirf **Stop → Upload (overwrite) → Extract →
+   Start** karna hai; koi migration is dafa **nahi** chalani.
+
+**Naya kya hai is build mein:**
+- `/admin/shop-360` ab role ke mutabiq route karta hai: Staff →
+  `/admin/shop-360/match`, Branch Manager → `/admin/shop-360/branch`,
+  Admin/Finance → `/admin/shop-360/org`.
+- Shop 360 ka hero ab "Shop Match" (selling-rate stock valuation primary,
+  FIFO secondary) — Opening/Stock In/Sold/Other Out/Expected vs Actual
+  Closing/Stock Difference/POS Sale vs Stock Sold Difference.
+- POS: Khata field ab **read-only, auto-fill** (bill − discount − baqi
+  payment methods = Khata). Walk-in customer Khata istemal nahi kar
+  sakta. Payment-method boxes (Cash/Bank/Kisan Card/JazzCash/Easypaisa/
+  QR/Khata) hamesha dikhte hain, chahe zero hon.
+- Customer Khata card ab selected-period ka shop POS Khata dikhata hai;
+  Collection Outstanding sirf cash custody/deposit liability hai — dono
+  ko jama nahi kiya jata (lifecycle states alag hain).
+
+**Malik khud abhi bhi karega (mera access nahi hai):** cPanel Stop/
+Upload/Extract/Start — is machine se us ke hosting panel tak koi seedha
+raasta nahi hai. Smoke test list PR #3 comment mein pehle se maujood hai
+(Cash/Bank/Kisan Card/Khata full/Split Cash+Khata sale, Shop 360 Today/
+Custom date, Staff/Manager/Admin routing).
