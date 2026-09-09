@@ -2,7 +2,25 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals } from "@/lib/command-center";
-import { AlertTriangle, CheckCircle2, ArrowRight, TrendingUp, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
+  Boxes,
+  Building2,
+  CheckCircle2,
+  CircleDollarSign,
+  CreditCard,
+  Landmark,
+  Package,
+  ReceiptText,
+  Scale,
+  Sparkles,
+  Store,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -11,13 +29,6 @@ export const dynamic = "force-dynamic";
 
 const OWNER_ROLES = ["owner", "super_admin", "admin"];
 
-/**
- * Rs 0 aur "—" ek cheez nahi.
- *
- * Rs 0 kehta hai "dekh liya, kuch nahi hua". "—" kehta hai "is ka
- * hisaab hi nahi rakha jata". Is project mein ye farq teen dafa ghalat
- * adad de chuka hai, is liye yahan sirf ek jagah tay hota hai.
- */
 function rs(value: number | null): string {
   if (value == null) return "—";
   return `Rs ${Math.round(value).toLocaleString()}`;
@@ -28,7 +39,6 @@ function pct(value: number | null): string {
   return `${value.toFixed(1)}%`;
 }
 
-/** **bold** wale hisse ko asal bold mein badal deta hai. */
 function withBold(text: string) {
   return text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
     part.startsWith("**") && part.endsWith("**") ? (
@@ -40,6 +50,19 @@ function withBold(text: string) {
     )
   );
 }
+
+const deptIcon: Record<string, typeof Package> = {
+  sales: CircleDollarSign,
+  retail: CircleDollarSign,
+  procurement: Package,
+  grain: Package,
+  milk: Wallet,
+  dairy: Wallet,
+  machinery: Boxes,
+  purchases: ReceiptText,
+  inventory: Boxes,
+  fleet: Building2,
+};
 
 export default async function CommandCenterPage() {
   const lang = getLanguageFromCookies("rm");
@@ -59,28 +82,29 @@ export default async function CommandCenterPage() {
   const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
 
-  const moneyTiles = [
-    { label: t("cc_t_sales", lang), value: rs(money.revenue), href: "/admin/pos" },
-    { label: t("cc_t_expenses", lang), value: rs(money.expenses), href: "/admin/company-expenses" },
-    { label: t("cc_t_profit", lang), value: rs(money.net), href: "/admin/reports/pnl", tone: money.net < 0 ? "red" : "green" },
-    { label: t("cc_t_cash", lang), value: rs(money.cash), href: "/admin/finance" },
-    { label: t("cc_t_receivable", lang), value: rs(money.receivable), href: "/admin/branch-credit" },
+  const topTiles = [
+    { label: "Today Sales", value: rs(money.revenue), href: "/admin/pos", icon: CircleDollarSign },
+    { label: "Today Expenses", value: rs(money.expenses), href: "/admin/company-expenses", icon: ReceiptText },
+    { label: "Net Position", value: rs(money.net), href: "/admin/reports/pnl", icon: TrendingUp, danger: money.net < 0 },
+    { label: "Cash Position", value: rs(money.cash), href: "/admin/finance", icon: Wallet },
+    { label: "Receivables", value: rs(money.receivable), href: "/admin/branch-credit", icon: CreditCard },
+  ];
+
+  const entityLinks = [
+    { label: "Branches", href: "/admin/branches", icon: Building2 },
+    { label: "Shops", href: "/admin/shops", icon: Store },
+    { label: "Farmers", href: "/admin/farmers", icon: Users },
+    { label: "Suppliers", href: "/admin/suppliers", icon: Package },
+    { label: "Dealers", href: "/admin/dealers", icon: Users },
+    { label: "Buyers", href: "/admin/buyers", icon: Users },
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
-        title={t("cc_title", lang)}
-        description={t("cc_subtitle", lang)}
+        title="Master Command"
+        description="Al Rana Traders — organization, departments, finance aur controls ek nazar mein"
         actions={
-          /*
-            Malik: *"hamein har kaam realtime mein chahiye na — hamein ye
-            nahi chahiye ke 10 din ke baad pata chale."*
-
-            Ye safha ab khud taaza hota rehta hai. Jin tables par nazar
-            hai, wo wohi hain jin se is safhe ke adad bante hain -- baqi
-            par nazar rakhne ka matlab hota bekaar mein safha khinchna.
-          */
           <LiveRefresh
             tables={[
               "pos_sales",
@@ -95,231 +119,178 @@ export default async function CommandCenterPage() {
         }
       />
 
-      {/* ---- Aaj ---- */}
-      <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_today", lang)}</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          {moneyTiles.map((tile) => (
+      {/* Primary business position */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {topTiles.map((tile) => {
+          const Icon = tile.icon;
+          return (
             <Link key={tile.label} href={tile.href}>
-              <Card className="h-full p-4 transition hover:border-brand-400">
-                <p className="text-xs text-surface-500">{tile.label}</p>
-                <p
-                  className={`mt-1 text-xl font-semibold ${
-                    tile.tone === "red"
-                      ? "text-red-600"
-                      : tile.tone === "green"
-                        ? "text-green-700 dark:text-green-400"
-                        : "text-surface-900 dark:text-white"
-                  }`}
-                >
-                  {tile.value}
-                </p>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* ---- Departments ---- */}
-      <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_dept_this_month", lang)}</h2>
-
-        {/* Chaar card -- sirf un departments se jin ka hisaab poora hai. */}
-        <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Card className="p-4">
-            <p className="text-xs text-surface-500">{t("cc_total_revenue", lang)}</p>
-            <p className="mt-1 text-xl font-semibold text-surface-900 dark:text-white">{rs(totals.revenue)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-surface-500">{t("cc_total_cost", lang)}</p>
-            <p className="mt-1 text-xl font-semibold text-surface-900 dark:text-white">{rs(totals.cost)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-surface-500">{t("cc_net", lang)}</p>
-            <p
-              className={`mt-1 text-xl font-semibold ${
-                totals.net < 0 ? "text-red-600" : "text-green-700 dark:text-green-400"
-              }`}
-            >
-              {rs(totals.net)}
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-surface-500">{t("cc_needs_attention_count", lang)}</p>
-            <p
-              className={`mt-1 text-xl font-semibold ${
-                totals.attention > 0 ? "text-amber-600" : "text-surface-900 dark:text-white"
-              }`}
-            >
-              {totals.attention}
-            </p>
-          </Card>
-        </div>
-
-        {/* Adhoore department chup chaap sifar nahi ginte -- saaf likha jata
-            hai ke wo in totals mein hain hi nahi. */}
-        <p className="mb-2 px-1 text-xs text-surface-400">
-          {t("cc_only_complete", lang)}
-          {totals.excluded.length > 0 && (
-            <span className="text-amber-700 dark:text-amber-500">
-              {" "}
-              {t("cc_excluded", lang).replace("{names}", totals.excluded.join(", "))}
-            </span>
-          )}
-        </p>
-
-        <Card className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
-              <tr>
-                <th className="px-4 py-2 font-medium">{t("c_department", lang)}</th>
-                <th className="px-4 py-2 font-medium">{t("cc_work", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_income", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_direct_cost", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_other_expense", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_profit_loss", lang)}</th>
-                <th className="px-4 py-2 text-right font-medium">{t("cc_margin", lang)}</th>
-                <th className="px-4 py-2 font-medium">{t("cc_attention_col", lang)}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
-              {depts.map((d) => (
-                <tr key={d.key} className="transition hover:bg-brand-25 dark:hover:bg-surface-900/40">
-                  <td className="px-4 py-3 align-top">
-                    <Link href={d.href} className="font-medium text-surface-900 hover:underline dark:text-white">
-                      {d.label}
-                    </Link>
-                    {d.state === "incomplete" && (
-                      <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30">
-                        {t("cc_incomplete", lang)}
-                      </span>
-                    )}
-                    {d.note && <p className="mt-0.5 max-w-sm text-xs text-surface-400">{d.note}</p>}
-                  </td>
-
-                  <td className="px-4 py-3 align-top text-surface-600 dark:text-surface-400">
-                    <div className="flex flex-wrap gap-1">
-                      {d.work.map((chip) => (
-                        <span
-                          key={chip}
-                          className="rounded-full bg-surface-100 px-2 py-0.5 text-xs dark:bg-surface-800"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
-                    {rs(d.revenue)}
-                  </td>
-                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
-                    {rs(d.directCost)}
-                  </td>
-                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-700 dark:text-surface-300">
-                    {d.otherExpense == null ? (
-                      <span className="text-surface-300" title={t("cc_untracked", lang)}>
-                        —
-                      </span>
-                    ) : (
-                      rs(d.otherExpense)
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 text-right align-top">
-                    <span
-                      className={`font-semibold tabular-nums ${
-                        d.profit == null
-                          ? "text-surface-400"
-                          : d.profit < 0
-                            ? "text-red-600"
-                            : "text-green-700 dark:text-green-400"
-                      }`}
-                    >
-                      {rs(d.profit)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right align-top tabular-nums text-surface-500">{pct(d.margin)}</td>
-
-                  <td className="px-4 py-3 align-top">
-                    {d.pending > 0 ? (
-                      <Link
-                        href={d.pendingHref ?? d.href}
-                        className="inline-flex items-start gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800 hover:underline dark:bg-amber-950/30 dark:text-amber-400"
-                      >
-                        <span className="font-semibold">{d.pending}</span>
-                        <span className="max-w-[13rem]">{d.pendingReason}</span>
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-surface-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      </div>
-
-      {/* ---- Nateeja ---- */}
-      <div>
-        <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
-          <Sparkles className="h-3.5 w-3.5 text-brand-600" />
-          {t("cc_insight", lang)}
-        </h2>
-        <Card className="p-4">
-          <ul className="space-y-2">
-            {lines.map((line, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300">
-                <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-                <span>{withBold(line)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 border-t border-surface-200 pt-2 text-xs text-surface-400 dark:border-surface-800">
-            {t("cc_from_books", lang)}
-          </p>
-        </Card>
-      </div>
-
-      {/* ---- Alerts ---- */}
-      <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("cc_attention", lang)}</h2>
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-          {alerts.map((alert, i) => (
-            <Link key={i} href={alert.href}>
-              <Card
-                className={`flex h-full items-start gap-3 p-3 transition hover:border-brand-400 ${
-                  alert.tone === "red"
-                    ? "border-l-4 border-l-red-500"
-                    : alert.tone === "amber"
-                      ? "border-l-4 border-l-amber-500"
-                      : "border-l-4 border-l-green-500"
-                }`}
-              >
-                {alert.tone === "green" ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                ) : (
-                  <AlertTriangle
-                    className={`mt-0.5 h-4 w-4 shrink-0 ${alert.tone === "red" ? "text-red-600" : "text-amber-600"}`}
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-surface-900 dark:text-white">{alert.title}</p>
-                  <p className="text-xs text-surface-500">{alert.detail}</p>
+              <Card className="h-full p-4 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-surface-500">{tile.label}</p>
+                    <p className={`mt-1 text-xl font-bold tabular-nums ${tile.danger ? "text-red-600" : "text-surface-900 dark:text-white"}`}>
+                      {tile.value}
+                    </p>
+                  </div>
+                  <span className="rounded-xl bg-brand-50 p-2 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">
+                    <Icon className="h-5 w-5" />
+                  </span>
                 </div>
-                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-surface-300" />
               </Card>
             </Link>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <p className="px-1 text-xs text-surface-400">
-        Tafseel ke liye:{" "}
-        <Link href="/admin/master-dashboard" className="underline">{t("md_title", lang)}</Link>{" "}
-        (bank, inventory aur receivables ka poora hisaab) •{" "}
-        <Link href="/admin/reports/pnl" className="underline">{t("cc_shop_pl", lang)}</Link>
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-4">
+          {/* Department overview */}
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Department Overview</h2>
+                <p className="text-xs text-surface-500">Current month — real departmental books</p>
+              </div>
+              <Link href="/admin/master-dashboard" className="text-xs font-medium text-brand-700 hover:underline">View details →</Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {depts.map((d) => {
+                const Icon = deptIcon[d.key] ?? Package;
+                return (
+                  <Link key={d.key} href={d.href} className="rounded-xl border border-surface-200 p-3 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800 dark:hover:bg-surface-900">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-surface-900 dark:text-white">
+                        <span className="rounded-lg bg-surface-100 p-1.5 text-brand-700 dark:bg-surface-800 dark:text-brand-300"><Icon className="h-4 w-4" /></span>
+                        {d.label}
+                      </span>
+                      {d.pending > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">{d.pending}</span>}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-y-1 text-xs">
+                      <span className="text-surface-400">Revenue</span><span className="text-right font-semibold tabular-nums">{rs(d.revenue)}</span>
+                      <span className="text-surface-400">Cost</span><span className="text-right tabular-nums">{rs(d.directCost)}</span>
+                      <span className="text-surface-400">P&L</span><span className={`text-right font-semibold tabular-nums ${d.profit != null && d.profit < 0 ? "text-red-600" : "text-green-700 dark:text-green-400"}`}>{rs(d.profit)}</span>
+                    </div>
+                    {d.state === "incomplete" && <p className="mt-2 text-[10px] text-amber-700">Reconciliation incomplete</p>}
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Core master entities */}
+          <Card className="p-4">
+            <div className="mb-3">
+              <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Business Structure & Parties</h2>
+              <p className="text-xs text-surface-500">Canonical masters — duplicate menus ke baghair</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              {entityLinks.map((entity) => {
+                const Icon = entity.icon;
+                return (
+                  <Link key={entity.label} href={entity.href} className="flex items-center justify-between rounded-xl border border-surface-200 px-3 py-3 text-sm font-medium text-surface-800 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800 dark:text-surface-200">
+                    <span className="flex items-center gap-2"><Icon className="h-4 w-4 text-brand-600" />{entity.label}</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-surface-300" />
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Control row */}
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Control & Compliance</h2>
+                <p className="text-xs text-surface-500">Sirf wo cheezein jo action mangti hain</p>
+              </div>
+              <Link href="/admin/reports/audit" className="text-xs font-medium text-brand-700 hover:underline">Audit Center →</Link>
+            </div>
+            <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+              <Link href="/admin/submissions" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><Bell className="h-4 w-4 text-amber-600"/><p className="mt-2 text-xs text-surface-500">Pending Approvals</p><p className="text-lg font-bold">{alerts.filter(a => a.tone !== "green").length}</p></Link>
+              <Link href="/admin/reconciliation" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><Scale className="h-4 w-4 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Reconciliation</p><p className="text-sm font-semibold">Review</p></Link>
+              <Link href="/admin/cash-close" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><Wallet className="h-4 w-4 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Cash Closing</p><p className="text-sm font-semibold">Control</p></Link>
+              <Link href="/admin/stock-count" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><Boxes className="h-4 w-4 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Stock Count</p><p className="text-sm font-semibold">Verify</p></Link>
+              <Link href="/admin/shop-360" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><Store className="h-4 w-4 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Shop 360</p><p className="text-sm font-semibold">Zero Leakage</p></Link>
+              <Link href="/admin/field-watch" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><AlertTriangle className="h-4 w-4 text-red-600"/><p className="mt-2 text-xs text-surface-500">Field Watch</p><p className="text-sm font-semibold">Exceptions</p></Link>
+            </div>
+          </Card>
+
+          {/* Bridge AI */}
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-white"><Sparkles className="h-4 w-4 text-brand-600"/>Bridge AI</h2>
+                <p className="text-xs text-surface-500">Suggestions, actions aur human escalation</p>
+              </div>
+              <Link href="/admin/bridge-ai" className="text-xs font-medium text-brand-700 hover:underline">Open Bridge AI →</Link>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <Link href="/admin/bridge-ai/activity-log" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><p className="text-xs text-surface-500">AI Activity</p><p className="mt-1 font-semibold">Activity Log</p></Link>
+              <Link href="/admin/bridge-ai/action-requests" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><p className="text-xs text-surface-500">Pending AI Actions</p><p className="mt-1 font-semibold">Review Queue</p></Link>
+              <Link href="/admin/ai-suggestions" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><p className="text-xs text-surface-500">Suggestions</p><p className="mt-1 font-semibold">Purchase Intelligence</p></Link>
+              <Link href="/admin/ai-instructions" className="rounded-xl border border-surface-200 p-3 dark:border-surface-800"><p className="text-xs text-surface-500">Controls</p><p className="mt-1 font-semibold">AI Instructions</p></Link>
+            </div>
+          </Card>
+
+          {/* Book totals */}
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div><h2 className="font-display text-base font-semibold">Department Book Totals</h2><p className="text-xs text-surface-500">Sirf complete departments ka consolidated result</p></div>
+              <span className="text-xs text-surface-400">Margin {pct(totals.revenue > 0 ? (totals.net / totals.revenue) * 100 : null)}</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900"><p className="text-xs text-surface-500">Revenue</p><p className="mt-1 text-lg font-bold">{rs(totals.revenue)}</p></div>
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900"><p className="text-xs text-surface-500">Direct Cost</p><p className="mt-1 text-lg font-bold">{rs(totals.cost)}</p></div>
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900"><p className="text-xs text-surface-500">Net</p><p className={`mt-1 text-lg font-bold ${totals.net < 0 ? "text-red-600" : "text-green-700 dark:text-green-400"}`}>{rs(totals.net)}</p></div>
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900"><p className="text-xs text-surface-500">Needs Attention</p><p className="mt-1 text-lg font-bold">{totals.attention}</p></div>
+            </div>
+            {totals.excluded.length > 0 && <p className="mt-3 text-xs text-amber-700">Incomplete totals excluded: {totals.excluded.join(", ")}</p>}
+          </Card>
+        </div>
+
+        {/* Right management rail */}
+        <aside className="space-y-4">
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between"><h2 className="font-display text-sm font-semibold">Attention Queue</h2><Link href="/admin/submissions" className="text-[11px] text-brand-700 hover:underline">View all</Link></div>
+            <div className="space-y-2">
+              {alerts.slice(0, 6).map((alert, i) => (
+                <Link key={`${alert.href}-${i}`} href={alert.href} className="flex items-start gap-2 rounded-lg border border-surface-100 p-2.5 transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-900">
+                  {alert.tone === "green" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600"/> : <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${alert.tone === "red" ? "text-red-600" : "text-amber-600"}`}/>} 
+                  <div className="min-w-0"><p className="text-xs font-semibold text-surface-900 dark:text-white">{alert.title}</p><p className="mt-0.5 line-clamp-2 text-[11px] text-surface-500">{alert.detail}</p></div>
+                </Link>
+              ))}
+              {alerts.length === 0 && <p className="py-4 text-center text-xs text-surface-400">No current alerts.</p>}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="mb-3 font-display text-sm font-semibold">Management Insight</h2>
+            <ul className="space-y-3">
+              {lines.slice(0, 6).map((line, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-surface-600 dark:text-surface-300">
+                  <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" />
+                  <span>{withBold(line)}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="mb-3 font-display text-sm font-semibold">Quick Control</h2>
+            <div className="space-y-1.5 text-sm">
+              <Link href="/admin/money-trail" className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-surface-50 dark:hover:bg-surface-900"><span className="flex items-center gap-2"><Scale className="h-4 w-4 text-brand-600"/>Money Trail</span><ArrowRight className="h-3.5 w-3.5 text-surface-300"/></Link>
+              <Link href="/admin/finance/banks" className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-surface-50 dark:hover:bg-surface-900"><span className="flex items-center gap-2"><Landmark className="h-4 w-4 text-brand-600"/>Banks</span><ArrowRight className="h-3.5 w-3.5 text-surface-300"/></Link>
+              <Link href="/admin/inventory" className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-surface-50 dark:hover:bg-surface-900"><span className="flex items-center gap-2"><Boxes className="h-4 w-4 text-brand-600"/>Inventory</span><ArrowRight className="h-3.5 w-3.5 text-surface-300"/></Link>
+              <Link href="/admin/reports" className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-surface-50 dark:hover:bg-surface-900"><span className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand-600"/>Reports</span><ArrowRight className="h-3.5 w-3.5 text-surface-300"/></Link>
+            </div>
+          </Card>
+        </aside>
+      </div>
+
+      <p className="px-1 text-[11px] text-surface-400">
+        Rule: dashboard par sirf real system data dikhaya gaya hai. Jis cheez ka reliable source available nahi, us ka fake Rs 0 ya fake count nahi banaya gaya.
       </p>
     </div>
   );
