@@ -16,9 +16,9 @@ import {
 const services = [
   { title: "Agri Inputs", text: "Fertilizers, Seeds, Pesticides & More", href: "/products", icon: Sprout },
   { title: "Kisan Services", text: "Farm Support & Advisory", href: "/contact", icon: UserRound },
-  { title: "Marketplace", text: "Buy & Sell Agriculture Products", href: "/products", icon: ShoppingCart },
+  { title: "Marketplace", text: "Buy & Sell Agriculture Products", href: "/marketplace", icon: ShoppingCart },
   { title: "Grain", text: "Procurement & Trading", href: "/contact", icon: Wheat },
-  { title: "Machinery", text: "Booking & Rental Farm Equipment", href: "/contact", icon: Tractor },
+  { title: "Machinery", text: "Booking & Rental Farm Equipment", href: "/book-machinery", icon: Tractor },
   { title: "Dairy", text: "Milk Collection & Dairy Services", href: "/contact", icon: Droplets },
   { title: "Farm Products", text: "Desi Ghee & More From Our Farm", href: "#farm-products", icon: Leaf },
   { title: "Kisan AI", text: "Crop Advisory, Weather & Market", href: "/ai-crop-doctor", icon: Bot },
