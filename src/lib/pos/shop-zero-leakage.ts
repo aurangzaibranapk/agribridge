@@ -4,6 +4,8 @@ import { shopPaymentMethodBreakdown, type ShopPaymentMethodRow } from "@/lib/pos
 
 const round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 const GAYE_KINDS = ["kharcha", "supplier_ko_diya", "staff_ko_advance", "kisan_ko_advance", "mazdoor_ko_advance", "mazdoori_ki_adaigi"];
+const STOCK_IN_TYPES = new Set(["purchase_in", "transfer_in", "adjustment_increase", "return_in"]);
+const STOCK_OUT_TYPES = new Set(["sale_out", "transfer_out", "adjustment_decrease", "damaged_out", "expired_out"]);
 
 export interface SellingStockPosition {
   value: number | null;
@@ -15,6 +17,19 @@ export interface SellingStockPosition {
 export interface ShopPeriodFlow {
   sales: { total: number; byMethod: ShopPaymentMethodRow[] };
   expenses: { total: number };
+}
+
+export interface StockSaleMatch {
+  openingValue: number | null;
+  stockInValue: number | null;
+  stockSaleOutValue: number | null;
+  otherStockOutValue: number | null;
+  expectedClosingValue: number | null;
+  actualClosingValue: number | null;
+  stockDifference: number | null;
+  posSalesValue: number;
+  posVsStockSaleDifference: number | null;
+  note: string;
 }
 
 /** Main Shop Match uses SELLING RATE, not FIFO cost. */
@@ -77,6 +92,122 @@ export async function shopPeriodFlow(shopId: string, fromDate: string, toDate: s
   };
 }
 
+/**
+ * Selling-rate stock equation for the selected period.
+ * Opening + stock in - sale out - other stock out = expected closing.
+ * Actual closing comes from inventory. If the append-only stock ledger is
+ * complete, expected and actual should match. POS sale is shown separately
+ * so discount/rate variance or a missing sale_out movement cannot hide.
+ */
+export async function shopStockSaleMatch(
+  shopId: string,
+  fromDate: string,
+  toDate: string,
+  posSalesValue: number
+): Promise<StockSaleMatch> {
+  const service = createServiceClient();
+  const { data: wh } = await service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle();
+  if (!wh?.id) {
+    return {
+      openingValue: null, stockInValue: null, stockSaleOutValue: null, otherStockOutValue: null,
+      expectedClosingValue: null, actualClosingValue: null, stockDifference: null,
+      posSalesValue, posVsStockSaleDifference: null, note: "Shop warehouse nahi mila.",
+    };
+  }
+
+  const { data: invRows } = await service
+    .from("inventory")
+    .select("id, quantity_on_hand, products(selling_price)")
+    .eq("warehouse_id", wh.id);
+
+  const inventory = (invRows ?? []).map((r) => {
+    const joined = r.products as unknown as { selling_price?: number | null } | { selling_price?: number | null }[] | null;
+    const product = Array.isArray(joined) ? joined[0] : joined;
+    return {
+      id: r.id as string,
+      currentQty: Number(r.quantity_on_hand ?? 0),
+      price: product?.selling_price == null ? null : Number(product.selling_price),
+    };
+  });
+
+  if (inventory.some((r) => r.currentQty > 0 && (!r.price || r.price <= 0))) {
+    return {
+      openingValue: null, stockInValue: null, stockSaleOutValue: null, otherStockOutValue: null,
+      expectedClosingValue: null, actualClosingValue: null, stockDifference: null,
+      posSalesValue, posVsStockSaleDifference: null,
+      note: "Kuch stocked items ka selling rate missing hai; stock-sale match safe nahi.",
+    };
+  }
+
+  const ids = inventory.map((r) => r.id);
+  const byInventory = new Map<string, { movement_type: string; quantity: number; balance_after: number; created_at: string }[]>();
+  if (ids.length > 0) {
+    const { data: movements } = await service
+      .from("stock_movements")
+      .select("inventory_id, movement_type, quantity, balance_after, created_at")
+      .in("inventory_id", ids)
+      .gte("created_at", `${fromDate}T00:00:00`)
+      .lte("created_at", `${toDate}T23:59:59.999`)
+      .order("created_at", { ascending: true });
+
+    for (const m of (movements ?? []) as { inventory_id: string; movement_type: string; quantity: number; balance_after: number; created_at: string }[]) {
+      const arr = byInventory.get(m.inventory_id) ?? [];
+      arr.push({ movement_type: m.movement_type, quantity: Number(m.quantity ?? 0), balance_after: Number(m.balance_after ?? 0), created_at: m.created_at });
+      byInventory.set(m.inventory_id, arr);
+    }
+  }
+
+  let openingValue = 0;
+  let stockInValue = 0;
+  let saleOutValue = 0;
+  let otherOutValue = 0;
+  let expectedClosingValue = 0;
+  let actualClosingValue = 0;
+
+  for (const inv of inventory) {
+    const price = Number(inv.price ?? 0);
+    const ms = byInventory.get(inv.id) ?? [];
+    let openingQty = inv.currentQty;
+    if (ms.length > 0) {
+      const first = ms[0];
+      if (STOCK_IN_TYPES.has(first.movement_type)) openingQty = first.balance_after - first.quantity;
+      else if (STOCK_OUT_TYPES.has(first.movement_type)) openingQty = first.balance_after + first.quantity;
+      else openingQty = first.balance_after;
+    }
+
+    let expectedQty = openingQty;
+    for (const m of ms) {
+      if (STOCK_IN_TYPES.has(m.movement_type)) {
+        expectedQty += m.quantity;
+        stockInValue += m.quantity * price;
+      } else if (STOCK_OUT_TYPES.has(m.movement_type)) {
+        expectedQty -= m.quantity;
+        if (m.movement_type === "sale_out") saleOutValue += m.quantity * price;
+        else otherOutValue += m.quantity * price;
+      }
+    }
+
+    openingValue += openingQty * price;
+    expectedClosingValue += expectedQty * price;
+    actualClosingValue += inv.currentQty * price;
+  }
+
+  const stockDifference = actualClosingValue - expectedClosingValue;
+  const posVsStockSaleDifference = posSalesValue - saleOutValue;
+  return {
+    openingValue: round2(openingValue),
+    stockInValue: round2(stockInValue),
+    stockSaleOutValue: round2(saleOutValue),
+    otherStockOutValue: round2(otherOutValue),
+    expectedClosingValue: round2(expectedClosingValue),
+    actualClosingValue: round2(actualClosingValue),
+    stockDifference: round2(stockDifference),
+    posSalesValue: round2(posSalesValue),
+    posVsStockSaleDifference: round2(posVsStockSaleDifference),
+    note: "Selling-rate stock ledger match. POS sale alag compare hoti hai taa-ke discount/rate variance chhup na jaye.",
+  };
+}
+
 export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, toDate: string) {
   const [stock, flow, cash, deposits, investment] = await Promise.all([
     shopSellingStockPosition(shopId),
@@ -85,14 +216,21 @@ export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, 
     shopCollectionOutstanding(shopId),
     shopInvestmentPosition(shopId),
   ]);
+  const stockSaleMatch = await shopStockSaleMatch(shopId, fromDate, toDate, flow.sales.total);
 
   const blockers: string[] = [];
   if (stock.value == null) blockers.push(stock.note);
+  if (stockSaleMatch.stockDifference == null) blockers.push(stockSaleMatch.note);
+  else if (Math.abs(stockSaleMatch.stockDifference) >= 1) blockers.push(`Stock ledger difference Rs ${Math.abs(stockSaleMatch.stockDifference).toLocaleString()}.`);
+  if (stockSaleMatch.posVsStockSaleDifference != null && Math.abs(stockSaleMatch.posVsStockSaleDifference) >= 1) {
+    blockers.push(`POS sale aur selling-rate sale_out mein Rs ${Math.abs(stockSaleMatch.posVsStockSaleDifference).toLocaleString()} farq hai; discount/rate/movement verify karein.`);
+  }
   blockers.push("Customer Khata/Receivable abhi har source se shop-level attributable nahi hai.");
   if (cash.openShiftsCount > 0) blockers.push(`${cash.openShiftsCount} POS shift abhi khuli hai; physical cash final nahi.`);
 
   return {
     stock,
+    stockSaleMatch,
     flow,
     cash,
     deposits,
@@ -162,11 +300,7 @@ export interface OrganizationZeroLeakageRow {
   status: "matched" | "difference" | "incomplete";
 }
 
-/**
- * Organization view intentionally aggregates branch summaries only.
- * It does not invent a second accounting formula and therefore keeps
- * the drill-down chain Company -> Branch -> Shop as the single truth.
- */
+/** Organization aggregate reuses the branch truth; no second formula. */
 export async function organizationZeroLeakageSummary(fromDate: string, toDate: string) {
   const service = createServiceClient();
   const { data: branches } = await service.from("branches").select("id,name").order("name");
