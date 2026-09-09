@@ -86,9 +86,6 @@ export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, 
     shopInvestmentPosition(shopId),
   ]);
 
-  // Shop-level customer receivable is deliberately NOT invented here.
-  // Existing Load & Bill receivable is branch-level, so Full Shop Match
-  // remains incomplete until every receivable source is shop-attributable.
   const blockers: string[] = [];
   if (stock.value == null) blockers.push(stock.note);
   blockers.push("Customer Khata/Receivable abhi har source se shop-level attributable nahi hai.");
@@ -142,6 +139,61 @@ export async function branchZeroLeakageSummary(branchId: string, fromDate: strin
 
   return {
     shops: rows,
+    totalSales: round2(rows.reduce((s, r) => s + r.sales, 0)),
+    totalSellingStock: rows.some((r) => r.sellingStock == null) ? null : round2(rows.reduce((s, r) => s + Number(r.sellingStock ?? 0), 0)),
+    totalOutstanding: round2(rows.reduce((s, r) => s + r.outstanding, 0)),
+    totalPendingDeposit: round2(rows.reduce((s, r) => s + r.pendingDeposit, 0)),
+    totalVerifiedDeposit: round2(rows.reduce((s, r) => s + r.verifiedDeposit, 0)),
+    totalCashDifference: round2(rows.reduce((s, r) => s + r.cashDifference, 0)),
+    status: anyIncomplete ? "incomplete" as const : anyDifference ? "difference" as const : "matched" as const,
+  };
+}
+
+export interface OrganizationZeroLeakageRow {
+  branchId: string;
+  branchName: string;
+  shopCount: number;
+  sales: number;
+  sellingStock: number | null;
+  outstanding: number;
+  pendingDeposit: number;
+  verifiedDeposit: number;
+  cashDifference: number;
+  status: "matched" | "difference" | "incomplete";
+}
+
+/**
+ * Organization view intentionally aggregates branch summaries only.
+ * It does not invent a second accounting formula and therefore keeps
+ * the drill-down chain Company -> Branch -> Shop as the single truth.
+ */
+export async function organizationZeroLeakageSummary(fromDate: string, toDate: string) {
+  const service = createServiceClient();
+  const { data: branches } = await service.from("branches").select("id,name").order("name");
+  const rows: OrganizationZeroLeakageRow[] = [];
+
+  for (const branch of branches ?? []) {
+    const summary = await branchZeroLeakageSummary(branch.id, fromDate, toDate);
+    rows.push({
+      branchId: branch.id,
+      branchName: branch.name,
+      shopCount: summary.shops.length,
+      sales: summary.totalSales,
+      sellingStock: summary.totalSellingStock,
+      outstanding: summary.totalOutstanding,
+      pendingDeposit: summary.totalPendingDeposit,
+      verifiedDeposit: summary.totalVerifiedDeposit,
+      cashDifference: summary.totalCashDifference,
+      status: summary.status,
+    });
+  }
+
+  const anyIncomplete = rows.some((r) => r.status === "incomplete");
+  const anyDifference = rows.some((r) => r.status === "difference" || Math.abs(r.cashDifference) >= 1);
+
+  return {
+    branches: rows,
+    totalShops: rows.reduce((s, r) => s + r.shopCount, 0),
     totalSales: round2(rows.reduce((s, r) => s + r.sales, 0)),
     totalSellingStock: rows.some((r) => r.sellingStock == null) ? null : round2(rows.reduce((s, r) => s + Number(r.sellingStock ?? 0), 0)),
     totalOutstanding: round2(rows.reduce((s, r) => s + r.outstanding, 0)),
