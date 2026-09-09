@@ -1,4 +1,7 @@
-import { Landmark, ReceiptText, WalletCards } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, ChevronUp, Landmark, ReceiptText, WalletCards } from "lucide-react";
 
 export interface PaymentSummaryRow {
   method: string;
@@ -31,27 +34,28 @@ export function Shop360PaymentSummary({
   pendingDeposit: number;
   outstanding: number;
 }) {
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+
   const creditSale = rows
     .filter((r) => CREDIT_METHODS.has(r.method))
     .reduce((sum, r) => sum + Number(r.sales || 0), 0);
   const collectedSale = totalSales - creditSale;
-  const methodCount = rows.filter((r) => Number(r.sales || 0) !== 0).length;
-  const totalExpenseNet = rows.reduce((sum, r) => sum + Number(r.expenseNet || 0), 0);
-  const totalNet = rows.reduce((sum, r) => sum + Number(r.net || 0), 0);
+  const usedCount = rows.filter((r) => Number(r.sales || 0) !== 0).length;
+  const selected = selectedMethod ? rows.find((r) => r.method === selectedMethod) ?? null : null;
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h3 className="flex items-center gap-2 font-semibold">
             <WalletCards className="h-4 w-4" /> Sale & Payment Summary
           </h3>
           <p className="mt-1 text-xs text-surface-500">
-            Selected period mein kitni sale hui, kitni payment receive hui aur kitna Khata bana — sab ek jagah.
+            Har payment method ka total box mein jama hota rahega. Box par click karein to us method ki detail neeche khul jayegi.
           </p>
         </div>
         <span className="rounded-full bg-surface-100 px-2.5 py-1 text-xs font-medium text-surface-600">
-          {methodCount} payment method{methodCount === 1 ? "" : "s"} used
+          {rows.length} methods · {usedCount} used
         </span>
       </div>
 
@@ -59,17 +63,17 @@ export function Shop360PaymentSummary({
         <div className="rounded-xl border border-surface-200 bg-white p-3">
           <p className="text-xs text-surface-500">Total Sale Value</p>
           <p className="mt-1 text-lg font-bold tabular-nums">{money(totalSales)}</p>
-          <p className="mt-1 text-[11px] text-surface-400">Cash + bank/digital + card + khata.</p>
+          <p className="mt-1 text-[11px] text-surface-400">Tamam payment methods + Khata.</p>
         </div>
         <div className="rounded-xl border border-surface-200 bg-white p-3">
           <p className="text-xs text-surface-500">Payment Received</p>
           <p className="mt-1 text-lg font-bold tabular-nums">{money(collectedSale)}</p>
-          <p className="mt-1 text-[11px] text-surface-400">Khata/credit ko receive payment mein include nahi kiya.</p>
+          <p className="mt-1 text-[11px] text-surface-400">Khata/credit is amount mein shamil nahi.</p>
         </div>
         <div className="rounded-xl border border-surface-200 bg-white p-3">
           <p className="text-xs text-surface-500">Khata / Credit Sale</p>
           <p className="mt-1 text-lg font-bold tabular-nums">{money(creditSale)}</p>
-          <p className="mt-1 text-[11px] text-surface-400">Sale hui, payment abhi customer se leni hai.</p>
+          <p className="mt-1 text-[11px] text-surface-400">Sale hui, payment customer se leni hai.</p>
         </div>
         <div className="rounded-xl border border-surface-200 bg-white p-3">
           <p className="text-xs text-surface-500">Finance Verified Deposit</p>
@@ -83,40 +87,65 @@ export function Shop360PaymentSummary({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-surface-200 bg-white">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead>
-            <tr className="border-b bg-surface-50 text-left text-xs uppercase tracking-wide text-surface-500">
-              <th className="px-4 py-2.5">Payment Method</th>
-              <th className="px-4 py-2.5">Type</th>
-              <th className="px-4 py-2.5 text-right">Sale / Payment Value</th>
-              <th className="px-4 py-2.5 text-right">Expense / Adjustment</th>
-              <th className="px-4 py-2.5 text-right">Net Position</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-5 text-center text-surface-400">Is selected period mein koi POS sale/payment nahi mili.</td></tr>
-            ) : rows.map((r) => (
-              <tr key={r.method} className="border-b border-surface-100 last:border-0">
-                <td className="px-4 py-2.5 font-medium">{r.label}</td>
-                <td className="px-4 py-2.5 text-surface-500">{methodKind(r.method)}</td>
-                <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{money(r.sales)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{money(r.expenseNet)}</td>
-                <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{money(r.net)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t bg-surface-50 font-semibold">
-              <td className="px-4 py-2.5" colSpan={2}>Total</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{money(totalSales)}</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{money(totalExpenseNet)}</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{money(totalNet)}</td>
-            </tr>
-          </tfoot>
-        </table>
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold">Payment Methods</h4>
+            <p className="text-[11px] text-surface-400">Box mein sirf selected period ka jama sale/payment balance.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          {rows.map((r) => {
+            const active = selectedMethod === r.method;
+            return (
+              <button
+                key={r.method}
+                type="button"
+                onClick={() => setSelectedMethod(active ? null : r.method)}
+                className={`rounded-xl border p-3 text-left transition hover:border-brand-300 hover:shadow-sm ${
+                  active ? "border-brand-400 bg-brand-50/60" : "border-surface-200 bg-white"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-medium text-surface-600">{r.label}</p>
+                  {active ? <ChevronUp className="h-4 w-4 text-brand-600" /> : <ChevronDown className="h-4 w-4 text-surface-400" />}
+                </div>
+                <p className="mt-2 text-lg font-bold tabular-nums text-surface-900">{money(r.sales)}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {selected && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-100 pb-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-surface-500">Selected Payment Method</p>
+              <h4 className="text-base font-semibold">{selected.label}</h4>
+            </div>
+            <p className="text-lg font-bold tabular-nums">{money(selected.sales)}</p>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3 text-sm">
+            <div className="rounded-lg bg-white p-3">
+              <p className="text-xs text-surface-500">Type</p>
+              <p className="mt-1 font-semibold">{methodKind(selected.method)}</p>
+            </div>
+            <div className="rounded-lg bg-white p-3">
+              <p className="text-xs text-surface-500">Expense / Adjustment</p>
+              <p className="mt-1 font-semibold tabular-nums">{money(selected.expenseNet)}</p>
+            </div>
+            <div className="rounded-lg bg-white p-3">
+              <p className="text-xs text-surface-500">Net Position</p>
+              <p className="mt-1 font-semibold tabular-nums">{money(selected.net)}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[11px] text-surface-500">
+            Agla step transaction drill-down hai: isi method ki sale-wise entries, bill/reference aur staff detail yahin neeche dikhayi ja sakti hai jab source rows attach hon.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-3 text-xs">
         <div className="rounded-lg bg-surface-50 p-3"><Landmark className="mr-1 inline h-4 w-4" />Pending Finance Deposit: <b>{money(pendingDeposit)}</b></div>
