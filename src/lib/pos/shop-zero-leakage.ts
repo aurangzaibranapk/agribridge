@@ -1,7 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { shopTodayFlow, shopCashControl, shopCollectionOutstanding, shopInvestmentPosition } from "@/lib/pos/shop-360";
+import { shopCashControl, shopCollectionOutstanding, shopInvestmentPosition } from "@/lib/pos/shop-360";
+import { shopPaymentMethodBreakdown, type ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
 
 const round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+const GAYE_KINDS = ["kharcha", "supplier_ko_diya", "staff_ko_advance", "kisan_ko_advance", "mazdoor_ko_advance", "mazdoori_ki_adaigi"];
 
 export interface SellingStockPosition {
   value: number | null;
@@ -10,10 +12,12 @@ export interface SellingStockPosition {
   note: string;
 }
 
-/**
- * Main Shop Match uses SELLING RATE, not FIFO cost.
- * FIFO remains available in Shop 360 for COGS/profit reporting.
- */
+export interface ShopPeriodFlow {
+  sales: { total: number; byMethod: ShopPaymentMethodRow[] };
+  expenses: { total: number };
+}
+
+/** Main Shop Match uses SELLING RATE, not FIFO cost. */
 export async function shopSellingStockPosition(shopId: string): Promise<SellingStockPosition> {
   const service = createServiceClient();
   const { data: wh } = await service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle();
@@ -47,10 +51,36 @@ export async function shopSellingStockPosition(shopId: string): Promise<SellingS
   };
 }
 
+/** Selected date range ka real sale + approved expense flow. */
+export async function shopPeriodFlow(shopId: string, fromDate: string, toDate: string): Promise<ShopPeriodFlow> {
+  const service = createServiceClient();
+  const [byMethod, expenseResult] = await Promise.all([
+    shopPaymentMethodBreakdown(shopId, fromDate, toDate),
+    service
+      .from("company_expense_requests")
+      .select("kind, amount")
+      .eq("shop_id", shopId)
+      .eq("status", "approved")
+      .in("kind", GAYE_KINDS)
+      .gte("expense_date", fromDate)
+      .lte("expense_date", toDate),
+  ]);
+
+  return {
+    sales: {
+      total: round2(byMethod.reduce((sum, row) => sum + Number(row.sales ?? 0), 0)),
+      byMethod,
+    },
+    expenses: {
+      total: round2((expenseResult.data ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0)),
+    },
+  };
+}
+
 export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, toDate: string) {
   const [stock, flow, cash, deposits, investment] = await Promise.all([
     shopSellingStockPosition(shopId),
-    shopTodayFlow(shopId, toDate),
+    shopPeriodFlow(shopId, fromDate, toDate),
     shopCashControl(shopId, fromDate, toDate),
     shopCollectionOutstanding(shopId),
     shopInvestmentPosition(shopId),
@@ -72,5 +102,52 @@ export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, 
     investment,
     status: blockers.length ? "incomplete" as const : (Math.abs(cash.fullDifference) < 1 ? "matched" as const : "difference" as const),
     blockers,
+  };
+}
+
+export interface BranchZeroLeakageRow {
+  shopId: string;
+  shopName: string;
+  sales: number;
+  sellingStock: number | null;
+  outstanding: number;
+  pendingDeposit: number;
+  verifiedDeposit: number;
+  cashDifference: number;
+  status: "matched" | "difference" | "incomplete";
+}
+
+export async function branchZeroLeakageSummary(branchId: string, fromDate: string, toDate: string) {
+  const service = createServiceClient();
+  const { data: shops } = await service.from("shops").select("id,name").eq("branch_id", branchId).eq("is_active", true).order("name");
+  const rows: BranchZeroLeakageRow[] = [];
+
+  for (const shop of shops ?? []) {
+    const snap = await shopZeroLeakageSnapshot(shop.id, fromDate, toDate);
+    rows.push({
+      shopId: shop.id,
+      shopName: shop.name,
+      sales: snap.flow.sales.total,
+      sellingStock: snap.stock.value,
+      outstanding: snap.deposits.outstanding,
+      pendingDeposit: snap.deposits.pendingDeposits,
+      verifiedDeposit: snap.deposits.approvedDeposits,
+      cashDifference: snap.cash.fullDifference,
+      status: snap.status,
+    });
+  }
+
+  const anyIncomplete = rows.some((r) => r.status === "incomplete");
+  const anyDifference = rows.some((r) => r.status === "difference" || Math.abs(r.cashDifference) >= 1);
+
+  return {
+    shops: rows,
+    totalSales: round2(rows.reduce((s, r) => s + r.sales, 0)),
+    totalSellingStock: rows.some((r) => r.sellingStock == null) ? null : round2(rows.reduce((s, r) => s + Number(r.sellingStock ?? 0), 0)),
+    totalOutstanding: round2(rows.reduce((s, r) => s + r.outstanding, 0)),
+    totalPendingDeposit: round2(rows.reduce((s, r) => s + r.pendingDeposit, 0)),
+    totalVerifiedDeposit: round2(rows.reduce((s, r) => s + r.verifiedDeposit, 0)),
+    totalCashDifference: round2(rows.reduce((s, r) => s + r.cashDifference, 0)),
+    status: anyIncomplete ? "incomplete" as const : anyDifference ? "difference" as const : "matched" as const,
   };
 }
