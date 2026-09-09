@@ -2773,6 +2773,42 @@ nahi ho sakti) — sirf assign hone ke BAAD ki sales is hisaab mein aayengi.
    `bank_deposit_pending` party sirf 1030 ke andar hai, purane "Cash
    raaste mein" ke reports isay dekhte hain ya nahi, ek nazar chahiye.
 
+### Review (9 September) — asal gap mil gaya, FIX NAHI kiya (malik ka faisla chahiye)
+
+Review kar li. **1030 (`cashWithPerson`, "Cash raaste mein") ka is se
+koi taalluq nahi** — wo sirf `cash_handovers` (bande ke haath paisa)
+istemal karta hai. Asal masla is se bara hai:
+
+`verifyCollectionDeposit` ke approve step mein (`src/actions/pos-collection.ts`)
+jab Finance ek POS Collection Deposit manzoor karta hai, wo sirf
+**`finance_transactions`** (purana, `journal_lines` se na juda mechanism)
+mein Dr/Cr daalta hai — `postJournal` **kabhi nahi bulaya jata**. Nateeja:
+
+- POS cash sale hote hi `postSaleToLedger` khud Dr **1000 (Cash in
+  Hand)** ledger mein daal deta hai (theek).
+- Jab wohi cash asal mein bank mein jama ho jaye aur Finance verify
+  kare, ledger (journal_lines) mein **kabhi 1000 se ghatta nahi aur bank
+  khate (1010-1019) mein kabhi charhta nahi.**
+- Trial Balance "balanced" hi dikhta rehta hai (kyunke koi ghalat entry
+  nahi bani — bas koi entry hi nahi bani), magar **Money Trail ka "Cash
+  in Hand" hamesha zyada aur "Bank" hamesha kam dikhega**, har manzoor
+  shuda POS deposit ke baad — bilkul isi project ke purane "do register"
+  wale pattern (127, 139) ki tarah.
+
+**Ye is session mein theek NAHI ki gayi** — jaan boojh kar. 373 ke apne
+"Abhi baqi" mein pehle se likha tha ke ye "gehra, pehle se maujood
+architecture sawal hai jo is Phase mein chhua nahi gaya" — matlab wajah
+se rok kar rakha gaya tha, sirf bhoola nahi gaya. Fix (approve step par
+`postJournal` se Dr bank / Cr 1000 bhi post karna) seedha lagta hai,
+magar do sawal malik ke faisle ke hain:
+1. `finance_transactions` insert **hatana** hai ya **sath rakhna** —
+   agar sath rakha to wapas "do register" ban jata hai, sirf jagah badal
+   jati hai.
+2. Ab tak jo deposits already approve ho chuki hain (Testing par),
+   un ka backfill (retroactive journal entry) chahiye ya nahi —
+   warna Live par jaate hi purani approved deposits ka gap chhup jayega
+   aur nayi hi sirf theek hongi.
+
 ---
 
 ## 5o. Shop 360 Zero-Leakage + POS Khata auto-fill — Testing branch merge + build package (9 September)
