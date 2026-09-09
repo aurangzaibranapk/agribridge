@@ -64,7 +64,7 @@ export default async function BranchShop360Page({ searchParams }: { searchParams
     <Card className={`border-2 ${statusClass}`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-xs font-semibold uppercase tracking-wider text-surface-500">Branch Verification Status</p><h2 className="mt-1 text-xl font-bold">{summary.status === "matched" ? "Branch Fully Matched" : summary.status === "difference" ? "Branch Difference Found" : "Branch Reconciliation Incomplete"}</h2><p className="mt-1 text-sm text-surface-600">{from} → {to}</p></div>
-        <div className="text-right"><p className="text-xs text-surface-500">Total Cash Difference</p><p className="text-2xl font-bold tabular-nums">{money(summary.totalCashDifference)}</p></div>
+        <div className="text-right"><p className="text-xs text-surface-500">Cash Difference (not Full Shop Difference)</p><p className="text-2xl font-bold tabular-nums">{money(summary.totalCashDifference)}</p></div>
       </div>
       {summary.status === "incomplete" && <p className="mt-3 flex items-center gap-2 text-xs text-amber-800"><AlertTriangle className="h-4 w-4"/>Kam az kam ek shop ka required source/verification incomplete hai; branch ko Fully Matched nahi dikhaya ja sakta.</p>}
     </Card>
@@ -84,6 +84,6 @@ export default async function BranchShop360Page({ searchParams }: { searchParams
 
     <Card><div className="grid gap-3 sm:grid-cols-3 text-sm"><div><p className="text-xs text-surface-500">Finance Verified Deposits</p><b>{money(summary.totalVerifiedDeposit)}</b></div><div><p className="text-xs text-surface-500">Pending Finance Verification</p><b>{money(summary.totalPendingDeposit)}</b></div><div><p className="text-xs text-surface-500">Remaining Shop/Staff Outstanding</p><b>{money(summary.totalOutstanding)}</b></div></div></Card>
 
-    <div className="rounded-xl border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600"><CheckCircle2 className="mr-1 inline h-4 w-4"/>Branch Manager sirf apni assigned branch dekh sakta hai. Shop drill-down bhi server-side scope ke andar hai.</div>
+    <div className="rounded-xl border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600"><CheckCircle2 className="mr-1 inline h-4 w-4"/>Branch Manager sirf apni assigned branch dekh sakta hai. Shop drill-down bhi server-side scope ke andar hai. Green status sirf tab allowed hai jab har shop ka status complete aur matched ho.</div>
   </div>;
 }
