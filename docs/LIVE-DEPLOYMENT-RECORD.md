@@ -2764,7 +2764,21 @@ nahi ho sakti) — sirf assign hone ke BAAD ki sales is hisaab mein aayengi.
    permission bug theek hua.) POS Return ka structure baqi se alag hai
    (manager PIN se atomic authorize + foran stock/ledger post — verify
    stage add karna matlab DB function ko "create pending" + "post on
-   approve" mein split karna, bara structural kaam).
+   approve" mein split karna, bara structural kaam). **Machinery ka
+   do-marhala split abhi bhi baqi hai** (single-step verify hi final
+   hai), magar us se ALAG, zyada zaroori ek cheez mil kar theek ho
+   chuki (9 September, migration 376, commit `48b6e0c`): poore
+   `machinery-lifecycle.ts` ke CHAAR verify functions (advance claim,
+   work claim, vendor collection, fuel claim) mein `requireAction`
+   bulaya hi nahi jata tha — koi bhi logged-in banda (HR, warehouse,
+   milk_collection, procurement) kisan/vendor ke dawe accept/reject kar
+   sakta tha. Ab sirf manager/finance (aur khali 'machinery' role
+   template) ke paas 'verify' hai; `machinery_bookings` par `branch_id`
+   column nahi hai is liye scope jaan boojh kar 'all' rakha gaya
+   (jhoothi 'own_branch' rok se behtar). Testing par `v_user_feature_access`
+   se confirm: HR/warehouse/procurement/milk_collection/sales_staff/
+   admin_assistant ke paas ye do feature_key nahi (aur wo "legacy" bhi
+   nahi, is liye rok lagu hogi).
 2. Owner ke asal spec ke Test 7–10 (bina ijazat URL/API access ki
    koshish, return ka shift ke saath link, branch consolidation bina
    dohra ginte, poora audit trace) — abhi sirf SQL simulation se, browser
