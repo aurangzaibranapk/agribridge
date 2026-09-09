@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, CheckCircle2, CircleDollarSign, Landmark, Package, ReceiptText, Scale, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDollarSign, Landmark, Package, ReceiptText, Scale } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
+import { Shop360PaymentSummary } from "@/components/shop-360/payment-summary";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { shopZeroLeakageSnapshot } from "@/lib/pos/shop-zero-leakage";
@@ -40,8 +41,8 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
       : me.shop_id;
   if (!shopId) return <EmptyState title="Shop assign nahi hai" description="Admin se profile par shop assign karwain." />;
 
-  if (!broad && me.role !== "manager" && shopId !== me.shop_id) redirect("/admin/shop-360-match");
-  if (!broad && me.role === "manager" && !allowed.has(shopId)) redirect("/admin/shop-360-match");
+  if (!broad && me.role !== "manager" && shopId !== me.shop_id) redirect("/admin/shop-360/match");
+  if (!broad && me.role === "manager" && !allowed.has(shopId)) redirect("/admin/shop-360/match");
 
   const { data: shop } = await service.from("shops").select("name, branch_id, branches(name)").eq("id", shopId).maybeSingle();
   const shopName = shop?.name ?? "Shop";
@@ -57,8 +58,8 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
   const snap = await shopZeroLeakageSnapshot(shopId, from, to);
 
   const cashMethod = snap.flow.sales.byMethod.find(x => x.method === "cash")?.sales ?? 0;
-  const khataMethod = snap.flow.sales.byMethod.find(x => x.method === "khata")?.sales ?? 0;
-  const digital = snap.flow.sales.byMethod.filter(x => !["cash","khata"].includes(x.method)).reduce((s,x) => s + x.sales, 0);
+  const khataMethod = snap.flow.sales.byMethod.find(x => ["khata", "credit", "customer_credit", "udhaar"].includes(x.method))?.sales ?? 0;
+  const digital = snap.flow.sales.byMethod.filter(x => !["cash","khata","credit","customer_credit","udhaar"].includes(x.method)).reduce((s,x) => s + x.sales, 0);
   const statusClass = snap.status === "matched" ? "border-emerald-300 bg-emerald-50" : snap.status === "difference" ? "border-red-300 bg-red-50" : "border-amber-300 bg-amber-50";
 
   return <div className="space-y-5">
@@ -81,14 +82,24 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
 
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Card><Package className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Closing Stock — Selling Rate</p><p className="text-xl font-bold">{money(snap.stock.value)}</p><p className="mt-1 text-[11px] text-surface-400">FIFO nahi; main match selling_price par.</p></Card>
-      <Card><CircleDollarSign className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Selected Period Sales</p><p className="text-xl font-bold">{money(snap.flow.sales.total)}</p><p className="mt-1 text-[11px] text-surface-400">Payment methods ka total.</p></Card>
+      <Card><CircleDollarSign className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Selected Period Sales</p><p className="text-xl font-bold">{money(snap.flow.sales.total)}</p><p className="mt-1 text-[11px] text-surface-400">Tamam payment methods ka sale total.</p></Card>
       <Card><ReceiptText className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Customer Khata — Shop Level</p><p className="text-xl font-bold">—</p><p className="mt-1 text-[11px] text-amber-700">Source abhi branch tak; fake allocation nahi.</p></Card>
       <Card><Landmark className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Collection Outstanding</p><p className="text-xl font-bold">{money(snap.deposits.outstanding)}</p><p className="mt-1 text-[11px] text-surface-400">Finance approval tak settle nahi.</p></Card>
     </div>
 
+    <Card>
+      <Shop360PaymentSummary
+        rows={snap.flow.sales.byMethod}
+        totalSales={snap.flow.sales.total}
+        verifiedDeposit={snap.deposits.approvedDeposits}
+        pendingDeposit={snap.deposits.pendingDeposits}
+        outstanding={snap.deposits.outstanding}
+      />
+    </Card>
+
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card><h3 className="mb-3 flex items-center gap-2 font-semibold"><WalletCards className="h-4 w-4"/>Sales — Payment Method Match</h3><div className="space-y-2 text-sm">{snap.flow.sales.byMethod.length ? snap.flow.sales.byMethod.map(r => <div key={r.method} className="flex justify-between border-b border-surface-100 pb-2"><span>{r.label}</span><strong>{money(r.sales)}</strong></div>) : <p className="text-surface-400">Is period mein sale nahi.</p>}<div className="flex justify-between pt-1 font-bold"><span>Total POS Sales</span><span>{money(snap.flow.sales.total)}</span></div></div></Card>
       <Card><h3 className="mb-3 flex items-center gap-2 font-semibold"><Scale className="h-4 w-4"/>Cash Control</h3><div className="grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-surface-500">Cash Sales</p><b>{money(cashMethod)}</b></div><div><p className="text-xs text-surface-500">Cash Recovery</p><b>{money(snap.cash.cashRecoveryToday)}</b></div><div><p className="text-xs text-surface-500">Approved Cash Expense</p><b>{money(snap.cash.cashExpensesToday)}</b></div><div><p className="text-xs text-surface-500">Physical Count Difference</p><b>{money(snap.cash.fullDifference)}</b></div></div>{snap.cash.openShiftsCount > 0 && <p className="mt-3 text-xs text-amber-700">{snap.cash.openShiftsCount} shift open — final cash match pending.</p>}</Card>
+      <Card><h3 className="mb-3 font-semibold">Selected Period Quick Breakdown</h3><div className="grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-surface-500">Cash Sale</p><b>{money(cashMethod)}</b></div><div><p className="text-xs text-surface-500">Bank / Digital / Card Sale</p><b>{money(digital)}</b></div><div><p className="text-xs text-surface-500">Khata / Credit Sale</p><b>{money(khataMethod)}</b></div><div><p className="text-xs text-surface-500">Approved Expenses</p><b>{money(snap.flow.expenses.total)}</b></div></div></Card>
     </div>
 
     <Card><h3 className="mb-3 font-semibold">Paisa / Value Kahan Hai?</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm"><div><p className="text-xs text-surface-500">Stock — Selling Rate</p><b>{money(snap.stock.value)}</b></div><div><p className="text-xs text-surface-500">Cash Sale — Selected Period</p><b>{money(cashMethod)}</b></div><div><p className="text-xs text-surface-500">Bank / Digital Sale — Selected Period</p><b>{money(digital)}</b></div><div><p className="text-xs text-surface-500">Khata Sale — Selected Period</p><b>{money(khataMethod)}</b></div><div><p className="text-xs text-surface-500">Approved Expenses — Selected Period</p><b>{money(snap.flow.expenses.total)}</b></div><div><p className="text-xs text-surface-500">Deposit Pending Finance</p><b>{money(snap.deposits.pendingDeposits)}</b></div><div><p className="text-xs text-surface-500">Finance Verified Deposit</p><b>{money(snap.deposits.approvedDeposits)}</b></div><div><p className="text-xs text-surface-500">Remaining Outstanding</p><b>{money(snap.deposits.outstanding)}</b></div></div><p className="mt-3 text-[11px] text-surface-400">Flows aur states ko jor kar fake total nahi banaya gaya. Pending deposit, verified deposit aur outstanding ek hi collection lifecycle ke different states hain.</p></Card>
