@@ -6,8 +6,8 @@ const sans = Nunito_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const display = Manrope({ subsets: ["latin"], variable: "--font-display" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 export const metadata: Metadata = {
-  title: "Al Rana Traders - AgriBridge",
-  description: "Enterprise Agriculture ERP for Al Rana Traders - AgriBridge",
+  title: "AgriBridge | Pakistan's Digital Agriculture Platform",
+  description: "AgriBridge by Al Rana Traders connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital agriculture services.",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "AgriBridge" },
 };
