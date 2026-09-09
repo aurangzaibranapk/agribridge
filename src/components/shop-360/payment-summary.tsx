@@ -91,7 +91,25 @@ export function Shop360PaymentSummary({
         <div className="mb-2 flex items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold">Payment Methods</h4>
-            <p className="text-[11px] text-surface-400">Box mein sirf selected period ka jama sale/payment balance.</p>
+            <p className="text-[11px] text-surface-400">Box mein selected period ka jama balance. Neeche 3 totals hamesha clear rahenge.</p>
+          </div>
+        </div>
+
+        <div className="mb-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-surface-200 bg-surface-50 p-3">
+            <p className="text-xs font-medium text-surface-500">Total Sale</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{money(totalSales)}</p>
+            <p className="mt-1 text-[11px] text-surface-400">Paid + Udhaar dono.</p>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+            <p className="text-xs font-medium text-amber-700">Total Udhaar / Khata</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{money(creditSale)}</p>
+            <p className="mt-1 text-[11px] text-amber-700/70">Customer se abhi lena hai.</p>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+            <p className="text-xs font-medium text-emerald-700">Payment Methods Total</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{money(collectedSale)}</p>
+            <p className="mt-1 text-[11px] text-emerald-700/70">Cash + Bank + Kisan Card + Digital; Khata exclude.</p>
           </div>
         </div>
 
