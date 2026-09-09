@@ -84,8 +84,8 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Card><Package className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Closing Stock — Selling Rate</p><p className="text-xl font-bold">{money(snap.stock.value)}</p><p className="mt-1 text-[11px] text-surface-400">FIFO nahi; main match selling_price par.</p></Card>
       <Card><CircleDollarSign className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Selected Period Sales</p><p className="text-xl font-bold">{money(snap.flow.sales.total)}</p><p className="mt-1 text-[11px] text-surface-400">Tamam payment methods ka sale total.</p></Card>
-      <Card><ReceiptText className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Customer Khata — Shop Level</p><p className="text-xl font-bold">—</p><p className="mt-1 text-[11px] text-amber-700">Source abhi branch tak; fake allocation nahi.</p></Card>
-      <Card><Landmark className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Collection Outstanding</p><p className="text-xl font-bold">{money(snap.deposits.outstanding)}</p><p className="mt-1 text-[11px] text-surface-400">Finance approval tak settle nahi.</p></Card>
+      <Card><ReceiptText className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Customer Khata — Selected Period</p><p className="text-xl font-bold">{money(khataMethod)}</p><p className="mt-1 text-[11px] text-surface-400">Is shop ki POS Khata/Udhaar sale. Ye payment receive nahi hui; customer se leni hai.</p></Card>
+      <Card><Landmark className="h-5 w-5 text-brand-600"/><p className="mt-2 text-xs text-surface-500">Collection Outstanding</p><p className="text-xl font-bold">{money(snap.deposits.outstanding)}</p><p className="mt-1 text-[11px] text-surface-400">Sirf collected cash jo Finance approval/deposit tak settle nahi hua.</p></Card>
     </div>
 
     <Card>
