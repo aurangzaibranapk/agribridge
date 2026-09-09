@@ -112,7 +112,7 @@ export function WorkSidebar({
   }
 
   return (
-    <aside className="hidden w-[15rem] shrink-0 flex-col border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
+    <aside className="hidden h-screen min-h-0 w-[15rem] shrink-0 flex-col overflow-hidden border-r border-surface-200 bg-white lg:flex dark:border-surface-800 dark:bg-surface-900">
       <Link href={homeHref} className="flex items-center gap-2.5 border-b border-surface-200 px-4 py-4 dark:border-surface-800">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
           <Sprout className="h-5 w-5" />
@@ -125,7 +125,7 @@ export function WorkSidebar({
         </span>
       </Link>
 
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">
         <div className="mb-4 space-y-0.5">
           <Row item={{ href: homeHref, label: t("mw_title", lang), icon: "Home" }} />
         </div>
