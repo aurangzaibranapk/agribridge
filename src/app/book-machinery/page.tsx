@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { GeneralBookingForm } from "./form";
+
+export const metadata: Metadata = {
+  title: "Farm Machinery Booking",
+  description: "Book farm machinery through AgriBridge for agriculture operations and field work in Pakistan.",
+  alternates: { canonical: "/book-machinery" },
+};
 
 export const dynamic = "force-dynamic";
 
