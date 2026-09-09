@@ -2388,14 +2388,17 @@ standalone nizam:
   guard — teenon DB se test kiye (approve dobara chalane se 0 rows).
 
 **Ye sirf Phase 1 hai** (core money-safety + submit/verify/reject
-lifecycle). **Abhi baqi**:
-1. Dashboard ki gehrai (Finance ke filters: branch/shop/staff/bank/
-   tareekh/status; "Today's Approved", "Rejected/Needs Correction"
-   summary cards).
-2. Notification click → seedha us record par (abhi list page tak hi
-   jata hai, khaas record highlight/open nahi hota).
+lifecycle). **Abhi baqi thay, 1 aur 2 ab ho chuke (9 September, commit
+`12b2637`, koi migration nahi)**:
+1. ✅ Dashboard ki gehrai — `/admin/finance/pos-deposits` par ab status
+   (pending/approved/rejected/all) + branch/shop/staff/bank/date filters,
+   aur "Today's Approved" / "Pending Verification" / "Rejected-Needs
+   Correction" summary cards.
+2. ✅ Notification click → seedha us record par — link mein `deposit_id`
+   jata hai, Finance aur staff (`/admin/my-collection`) dono taraf record
+   highlight ho kar dikhta hai, filters se bahar ho tab bhi.
 3. Multi-branch manager (ek profile ka sirf ek `branch_id` hota hai —
-   koi manager do branches ka na ho sakta abhi).
+   koi manager do branches ka na ho sakta abhi). **Abhi baqi.**
 4. **Ek zaroori note jo malik ko batana hai**: POS cash sale hote hi
    `finance_transactions` (poorana, alag mechanism — journal_lines/GL
    se juda nahi) "Cash in Hand" khud foran barha deta hai
