@@ -2,6 +2,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { checkFarmerUsername, setFarmerUsername, type UsernameState } from "@/actions/farmer-auth";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -32,6 +33,8 @@ export function UsernameCard({ current }: { current: string | null }) {
   const [name, setName] = useState("");
   const [hint, setHint] = useState<{ ok: boolean; text: string } | null>(null);
   const [checking, startCheck] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordAgain, setShowPasswordAgain] = useState(false);
 
   // Refresh render ke andar nahi. Render sirf shakl banata hai; wahan
   // kaam karna har dobara banne par phir chal jata hai.
@@ -99,25 +102,45 @@ export function UsernameCard({ current }: { current: string | null }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="password" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password", lang)}</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pr-9 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
+                aria-label={showPassword ? "Password chhupayein" : "Password dikhayein"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label htmlFor="password_confirm" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password_again", lang)}</label>
-            <input
-              id="password_confirm"
-              name="password_confirm"
-              type="password"
-              required
-              minLength={6}
-              className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm"
-            />
+            <div className="relative">
+              <input
+                id="password_confirm"
+                name="password_confirm"
+                type={showPasswordAgain ? "text" : "password"}
+                required
+                minLength={6}
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pr-9 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswordAgain((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
+                aria-label={showPasswordAgain ? "Password chhupayein" : "Password dikhayein"}
+              >
+                {showPasswordAgain ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
         </div>
 

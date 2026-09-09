@@ -117,11 +117,11 @@ export const portalMoreDict = {
   pm_your_user_id: { en: "Your User ID", rm: "Aap ki User ID", ur: "آپ کی یوزر آئی ڈی" },
   pm_make_user_id: { en: "Create your User ID", rm: "Apni User ID banayein", ur: "اپنی یوزر آئی ڈی بنائیں" },
   pm_user_id: { en: "User ID", rm: "User ID", ur: "یوزر آئی ڈی" },
-  pm_eg_username: { en: "e.g. aurangzeb", rm: "misal: aurangzeb", ur: "مثال: aurangzeb" },
+  pm_eg_username: { en: "e.g. Aurangzeb Khan, or aurangzeb@gmail.com", rm: "misal: Aurangzeb Khan, ya aurangzeb@gmail.com", ur: "مثال: Aurangzeb Khan, یا aurangzeb@gmail.com" },
   pm_user_id_rule: {
-    en: "Start with a small letter, 4 to 20 characters. Only letters, digits, dot and underscore.",
-    rm: "Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.",
-    ur: "چھوٹے حرف سے شروع، 4 سے 20 تک۔ صرف حرف، ہندسے، نقطہ اور انڈر سکور۔",
+    en: "4 to 50 characters. Your name, email, or any easy-to-remember ID works.",
+    rm: "4 se 50 harf tak. Naam, email, ya koi bhi asaan shanakht rakh sakte hain.",
+    ur: "4 سے 50 حرف تک۔ نام، ای میل، یا کوئی بھی آسان شناخت رکھ سکتے ہیں۔",
   },
   pm_user_id_once: {
     en: "The User ID is created once. To change it, contact the office.",

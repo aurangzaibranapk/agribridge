@@ -236,10 +236,10 @@ export interface UsernameState {
  */
 export async function checkFarmerUsername(raw: string): Promise<{ ok: boolean; reason?: string }> {
   const name = raw.trim().toLowerCase();
-  if (!/^[a-z][a-z0-9._]{3,19}$/.test(name)) {
+  if (!/^[a-z0-9][a-z0-9._@ -]{3,49}$/.test(name)) {
     return {
       ok: false,
-      reason: "Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.",
+      reason: "4 se 50 harf tak. Naam, email, ya koi bhi asaan shanakht rakh sakte hain.",
     };
   }
 
@@ -287,7 +287,7 @@ export async function setFarmerUsername(
   const jumla: Record<string, string> = {
     koi_kisan_nahi: "Aap ka kisan khata nahi mila.",
     pehle_se_bana: "Aap ki User ID pehle se bani hui hai. Badalni ho to daftar se raabta karein.",
-    shakl_ghalat: "Chhote harf se shuru, 4 se 20 tak. Sirf harf, hindse, nuqta aur underscore.",
+    shakl_ghalat: "4 se 50 harf tak. Naam, email, ya koi bhi asaan shanakht rakh sakte hain.",
     mahfooz_naam: "Ye naam nahi mil sakta.",
     kisi_aur_ka: "Ye naam abhi abhi kisi aur ne le liya. Koi doosra naam rakhein.",
   };
