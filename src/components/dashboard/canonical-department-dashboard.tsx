@@ -4,14 +4,25 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, CheckCircle2, LayoutGrid, Sparkles } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { iconByName } from "@/lib/access/icons";
+import { blueprintFor } from "@/lib/dashboard-blueprints";
 
 type Item = { href: string; label: string; icon: string | null; description?: string | null; section?: string | null };
 type Tile = { label: string; value: string; hint?: string; href?: string; tone?: "normal" | "warn" | "alert" };
 
 const COLORS = ["#1f6b3a", "#2f80ed", "#f2a93b", "#7559c9", "#d64545"];
 
-export function CanonicalDepartmentDashboard({ label, description, icon, items, tiles }: { label: string; description: string; icon: string | null; items: Item[]; tiles: Tile[] }) {
+const ACCENTS = {
+  green: { icon: "bg-emerald-50 text-emerald-700", bar: "#1f8a4c", wash: "from-emerald-50/80" },
+  blue: { icon: "bg-blue-50 text-blue-700", bar: "#2f80ed", wash: "from-blue-50/80" },
+  amber: { icon: "bg-amber-50 text-amber-700", bar: "#e59c25", wash: "from-amber-50/80" },
+  violet: { icon: "bg-violet-50 text-violet-700", bar: "#7559c9", wash: "from-violet-50/80" },
+  rose: { icon: "bg-rose-50 text-rose-700", bar: "#d64545", wash: "from-rose-50/80" },
+};
+
+export function CanonicalDepartmentDashboard({ dashboardKey, label, description, icon, items, tiles }: { dashboardKey: string; label: string; description: string; icon: string | null; items: Item[]; tiles: Tile[] }) {
   const Icon = iconByName(icon);
+  const blueprint = blueprintFor(dashboardKey);
+  const accent = ACCENTS[blueprint.accent];
   const sections = [...new Set(items.map((i) => i.section || "Operations"))].map((section) => ({ section, value: items.filter((i) => (i.section || "Operations") === section).length }));
   const reports = items.filter((i) => i.href.includes("report"));
   const primary = items.filter((i) => !i.href.includes("report")).slice(0, 8);
@@ -24,10 +35,10 @@ export function CanonicalDepartmentDashboard({ label, description, icon, items, 
 
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-3 2xl:h-[calc(100vh-7rem)] 2xl:overflow-hidden">
-      <div className="flex items-start justify-between gap-4">
+      <div className={`flex items-start justify-between gap-4 rounded-2xl bg-gradient-to-r ${accent.wash} to-transparent p-3`}>
         <div className="flex items-center gap-3">
-          <span className="rounded-xl bg-brand-50 p-2.5 text-brand-700 dark:bg-surface-800"><Icon className="h-6 w-6" /></span>
-          <div><h1 className="font-display text-2xl font-bold tracking-tight text-surface-900 dark:text-white">{label} Dashboard</h1><p className="mt-0.5 text-sm text-surface-500">{description}</p></div>
+          <span className={`rounded-xl p-2.5 ${accent.icon} dark:bg-surface-800`}><Icon className="h-6 w-6" /></span>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-surface-400">{blueprint.eyebrow}</p><h1 className="font-display text-2xl font-bold tracking-tight text-surface-900 dark:text-white">{label} Dashboard</h1><p className="mt-0.5 text-sm text-surface-500">{description}</p></div>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />Live workspace</span>
       </div>
@@ -41,20 +52,20 @@ export function CanonicalDepartmentDashboard({ label, description, icon, items, 
 
       <div className="grid gap-3 xl:grid-cols-[1.45fr_.75fr]">
         <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-sm font-bold"><LayoutGrid className="h-4 w-4 text-brand-600" />Department Operations</h2><p className="text-[11px] text-surface-500">Aap ke permissions ke mutabiq available work</p></div><span className="text-[10px] text-surface-400">{items.length} features</span></div>
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-sm font-bold"><LayoutGrid className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.operationsTitle}</h2><p className="text-[11px] text-surface-500">{blueprint.operationsHint}</p></div><span className="text-[10px] text-surface-400">{items.length} features</span></div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{primary.map((item) => { const ItemIcon = iconByName(item.icon); return <Link key={item.href} href={item.href} className="group rounded-xl border border-surface-200 p-3 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800"><div className="flex items-center justify-between"><span className="rounded-lg bg-brand-50 p-2 text-brand-700 dark:bg-surface-800"><ItemIcon className="h-4 w-4" /></span><ArrowRight className="h-3.5 w-3.5 text-surface-300 group-hover:text-brand-600" /></div><p className="mt-2 text-xs font-bold text-surface-900 dark:text-white">{item.label}</p><p className="mt-0.5 line-clamp-2 text-[10px] text-surface-500">{item.description || item.section || "Department operation"}</p></Link>; })}</div>
           {primary.length === 0 && <p className="py-12 text-center text-xs text-surface-400">Is department ke features abhi assign nahi hue.</p>}
         </section>
 
         <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="flex items-center gap-2 text-sm font-bold"><BarChart3 className="h-4 w-4 text-brand-600" />Work Structure</h2>
+          <h2 className="flex items-center gap-2 text-sm font-bold"><BarChart3 className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.chartTitle}</h2>
           <div className="grid h-[220px] grid-cols-[1.1fr_1fr] items-center"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={sections.length ? sections : [{ section: "No features", value: 1 }]} dataKey="value" nameKey="section" innerRadius="48%" outerRadius="78%">{(sections.length ? sections : [{ section: "No features", value: 1 }]).map((_, i) => <Cell key={i} fill={sections.length ? COLORS[i % COLORS.length] : "#e2e8e3"} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer><div className="space-y-2">{sections.map((s, i) => <div key={s.section} className="flex items-center justify-between gap-2 text-[10px]"><span className="flex min-w-0 items-center gap-2"><i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length] }} /><span className="truncate">{s.section}</span></span><strong>{s.value}</strong></div>)}</div></div>
         </section>
       </div>
 
       <div className="grid gap-3 xl:grid-cols-[1.3fr_.7fr]">
-        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><h2 className="mb-2 text-sm font-bold">Department Coverage</h2><div className="h-[150px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={sections} layout="vertical" margin={{ left: 10, right: 20 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8e3" /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 9 }} /><YAxis type="category" dataKey="section" width={90} tick={{ fontSize: 9 }} /><Tooltip /><Bar dataKey="value" name="Features" fill="#1f6b3a" radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></div></section>
-        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><div className="mb-2 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4 text-brand-600" />Quick Access</h2></div><div className="space-y-1.5">{items.slice(8, 13).map((item) => <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2 text-xs hover:bg-surface-50 dark:border-surface-800"><span>{item.label}</span><ArrowRight className="h-3.5 w-3.5 text-surface-300" /></Link>)}{items.length <= 8 && <p className="py-8 text-center text-xs text-surface-400">Primary operations upar available hain.</p>}</div></section>
+        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><h2 className="mb-2 text-sm font-bold">{blueprint.coverageTitle}</h2><div className="h-[150px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={sections} layout="vertical" margin={{ left: 10, right: 20 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8e3" /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 9 }} /><YAxis type="category" dataKey="section" width={90} tick={{ fontSize: 9 }} /><Tooltip /><Bar dataKey="value" name="Features" fill={accent.bar} radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></div></section>
+        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><div className="mb-2 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.quickTitle}</h2></div><div className="space-y-1.5">{items.slice(8, 13).map((item) => <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2 text-xs hover:bg-surface-50 dark:border-surface-800"><span>{item.label}</span><ArrowRight className="h-3.5 w-3.5 text-surface-300" /></Link>)}{items.length <= 8 && <p className="py-8 text-center text-xs text-surface-400">Primary operations upar available hain.</p>}</div></section>
       </div>
     </div>
   );
