@@ -25246,6 +25246,7 @@ export type Database = {
           page_no: number | null
           problem: string | null
           product_id: string | null
+          mrp_rate: number | null
           qty: number | null
           rate: number | null
           raw_text: string | null
@@ -25269,6 +25270,7 @@ export type Database = {
           page_no?: number | null
           problem?: string | null
           product_id?: string | null
+          mrp_rate?: number | null
           qty?: number | null
           rate?: number | null
           raw_text?: string | null
@@ -25292,6 +25294,7 @@ export type Database = {
           page_no?: number | null
           problem?: string | null
           product_id?: string | null
+          mrp_rate?: number | null
           qty?: number | null
           rate?: number | null
           raw_text?: string | null

@@ -50,6 +50,8 @@ interface Line {
   wholesaleRate: number | null;
   /** Bill se sale (counter, 1 unit) rate bhi (382). Khali = ye rate mat chhuo. */
   saleRate: number | null;
+  /** Bill se MRP (khata/udhar) rate bhi (387). Khali = ye rate mat chhuo. */
+  mrpRate: number | null;
 }
 
 /**
@@ -357,6 +359,26 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
             />
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana sale rate waisa hi rahega.
+            </p>
+          </div>
+          {/* MRP (khata/udhar) rate -- isi qatar se (387). Malik (10
+              September): "yahan MRP rate ya khata rate set karna hai,
+              udhar wale bande ko MRP rate lage." */}
+          <div>
+            <Label htmlFor={`mrp-${line.id}`}>MRP rate (khata/udhar)</Label>
+            <Input
+              id={`mrp-${line.id}`}
+              name="mrp_rate"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={line.mrpRate ?? ""}
+              disabled={locked}
+              placeholder="khali chhorein to na badle"
+              className="text-base"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Khali chhor dein to is cheez ka purana MRP rate waisa hi rahega.
             </p>
           </div>
         </div>
