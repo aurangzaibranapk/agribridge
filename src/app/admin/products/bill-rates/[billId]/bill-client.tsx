@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { PaymentTermsFields } from "@/components/purchases/payment-terms-fields";
+import { NextStepStrip, purchaseSteps } from "@/components/guided/next-step";
 
 const initial: BillRateState = {};
 
@@ -493,7 +494,7 @@ export function BillClient({
   products: Product[];
 }) {
   const [applyState, applyAction] = useFormState(applyBillRates, initial);
-  const [poState, poAction] = useFormState(createPurchaseFromBill, initial as BillRateState & { purchaseId?: string });
+  const [poState, poAction] = useFormState(createPurchaseFromBill, initial as BillRateState & { purchaseId?: string; reviewStatus?: string });
   const [showBill, setShowBill] = useState(true);
 
   const done = billStatus === "applied";
@@ -680,14 +681,30 @@ export function BillClient({
 
             {poState.error && <p className="mt-2 text-sm text-red-700">{poState.error}</p>}
             {poState.success && (
-              <p className="mt-2 text-sm text-emerald-800">
-                {poState.notice}{" "}
+              <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                  {poState.notice}{" "}
+                  {poState.purchaseId && (
+                    <Link href="/admin/purchases" className="underline">
+                      {t("pf_po_open", lang)}
+                    </Link>
+                  )}
+                </p>
+                {/* Agla qadam -- ab kaam kis ke paas hai (Guided ERP, B),
+                    isi shakl mein jo Purchases list par bhi nazar aati hai. */}
                 {poState.purchaseId && (
-                  <Link href="/admin/purchases" className="underline">
-                    {t("pf_po_open", lang)}
-                  </Link>
+                  <div className="mt-1.5">
+                    <NextStepStrip
+                      compact
+                      steps={purchaseSteps(
+                        { status: "pending", review_status: poState.reviewStatus ?? "submitted" },
+                        { draft: t("ns_p_draft", lang), approval: t("ns_p_approval", lang), receive: t("ns_p_receive", lang), setup: t("ns_p_setup", lang), ready: t("ns_p_ready", lang) },
+                        false
+                      )}
+                    />
+                  </div>
                 )}
-              </p>
+              </div>
             )}
           </Card>
 

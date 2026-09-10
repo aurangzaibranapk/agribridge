@@ -11,6 +11,7 @@ import { payAndPost } from "@/lib/ledger/supplier-money";
 import { loadUnitAliases } from "@/lib/units";
 import { looksBinary, parseDelimited } from "@/lib/csv";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
+import { createHandoff } from "@/lib/work-handoff";
 
 /**
  * Supplier ke bill se trade rate charhane ka kaam.
@@ -719,7 +720,7 @@ export async function discardBillRead(_prev: BillRateState, formData: FormData):
  * charhta. Wo Receive dabne par hota hai -- approval aur warehouse ka
  * maal do alag baatein hain.
  */
-export async function createPurchaseFromBill(_prev: BillRateState, formData: FormData): Promise<BillRateState & { purchaseId?: string }> {
+export async function createPurchaseFromBill(_prev: BillRateState, formData: FormData): Promise<BillRateState & { purchaseId?: string; reviewStatus?: string }> {
   const { supabase, user, ok } = await gate();
   if (!user) return { error: "Login karein." };
   if (!ok) return { error: "Purchase banana sirf Owner, Admin ya Warehouse wale ka kaam hai." };
@@ -797,8 +798,11 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
       // na stock, na dena.
       status: "pending",
-      // AI ka draft: manzoori ke baghair receive nahi (259).
-      review_status: "submitted",
+      // AI ka draft: manzoori ke baghair receive nahi (259) -- magar jo
+      // khud approver hai (Owner/Admin) us se dobara khud se manzoori
+      // maangna faaltu qadam hai; /admin/purchases/new isi tarah karta
+      // hai, ye bhi wahi karta hai.
+      review_status: isAdminLevel ? "approved" : "submitted",
       total_amount: totalAmount,
       payment_terms: terms.terms,
       credit_days: terms.creditDays,
@@ -891,16 +895,38 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     description: `Supplier ke bill se purchase bani — ${made} qatarein, Rs ${totalAmount.toLocaleString()}`,
   });
 
+  // Khud approver hai to manzoori usi waqt ho chuki -- ab kaam Godam ka
+  // hai, aur usay khabar khud jani chahiye (jaisa /admin/purchases/new
+  // ke manzoori-raaste par hota hai) -- warna warehouse wala tab tak
+  // intezar karta jab tak koi usay phone na kare.
+  if (isAdminLevel) {
+    await createHandoff({
+      from: "purchases",
+      to: "inventory.receiving",
+      route: "/admin/inventory/receiving",
+      roles: ["warehouse", "manager", "admin", "owner", "super_admin"],
+      recordTable: "purchases",
+      recordId: po.id,
+      recordLabel: purchaseNumber,
+      branchId,
+      title: `Kharid manzoor hui — ${purchaseNumber}`,
+      message: `Ab maal ginna baqi hai. Receiving par "Maal Aa Gaya" karne se hi stock charhega aur supplier ka dena banega.`,
+      byProfileId: user.id,
+    });
+  }
+
   paths(billId);
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/inventory/receiving");
 
   return {
     success: true,
     billId,
     purchaseId: po.id,
     applied: made,
+    reviewStatus: isAdminLevel ? "approved" : "submitted",
     notice:
       `Purchase ${purchaseNumber} ban gayi — ${made} qatarein, Rs ${totalAmount.toLocaleString()}. Maal aane par Purchases par ja kar Receive dabayein.` +
       (problems.length ? ` Masle: ${problems.slice(0, 3).join(" | ")}` : ""),
