@@ -178,8 +178,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // `ALWAYS` mein hai (har staff ko khulta hai) magar zaroori nahi ke wo
   // us bande ki feature wali fehrist mein bhi ho. Chhaan kar lene se wo
   // khana khali reh jata aur menu se ye hissa hi ghayab ho jata.
+  // "Meri Ijazatein" (my-access) bhi SEEDHA banaya ja raha hai, "Mera
+  // HR" ki tarah -- ye bhi `ALWAYS` mein hai (har staff ko khulta hai)
+  // magar us bande ki feature wali fehrist mein hona zaroori nahi. Malik
+  // (10 September): staff ko apni ijazat maangne ka raasta hamesha nazar
+  // aana chahiye -- URL jaante hue bhi khul jana kaafi nahi, menu mein
+  // ek permanent tag hona chahiye.
   const settingsSide: SideItem[] = [
     byHref.get("/admin/my-hr") ?? { href: "/admin/my-hr", label: "Mera HR", icon: "UserCircle" },
+    byHref.get("/admin/my-access") ?? { href: "/admin/my-access", label: t("ma_title", lang), icon: "KeyRound" },
   ];
 
   return (
