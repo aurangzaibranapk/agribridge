@@ -23,5 +23,5 @@ export default async function CanonicalDashboardPage({ params }: { params: Promi
   const group = nav.groups.find((g) => g.key === key);
   if (!group) notFound();
   const tiles = await tilesFor(TILE_ALIASES[key] ?? key, profile.branch_id);
-  return <CanonicalDepartmentDashboard label={group.label} description={group.description || `${group.label} operations, performance aur controls`} icon={group.icon ?? null} items={group.items} tiles={tiles} />;
+  return <CanonicalDepartmentDashboard dashboardKey={key} label={group.label} description={group.description || `${group.label} operations, performance aur controls`} icon={group.icon ?? null} items={group.items} tiles={tiles} />;
 }
