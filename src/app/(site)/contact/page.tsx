@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { Mail, MapPin, Clock, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ContactForm } from "@/app/(site)/contact/contact-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+
+export const metadata: Metadata = {
+  title: "Contact & Partnership",
+  description: "Contact Al Rana Traders and AgriBridge for agriculture products, farmer services, machinery, dairy, grain, marketplace and partnership enquiries in Pakistan.",
+  alternates: { canonical: "/contact" },
+};
 
 export const dynamic = "force-dynamic";
 

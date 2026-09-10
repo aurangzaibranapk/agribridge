@@ -1,91 +1,80 @@
 import Link from "next/link";
-import { Facebook, Youtube, Music2, Phone, MapPin, MessageCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { t } from "@/lib/i18n/translations";
-import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { Leaf } from "lucide-react";
 
-const SOCIALS = [
-  { icon: Facebook, href: "https://www.facebook.com/share/18y1poYepQ/", label: "Facebook" },
-  { icon: Music2, href: "https://www.tiktok.com/@kisanecomahabali", label: "TikTok" },
-  { icon: Youtube, href: "https://www.youtube.com/@alranatraders", label: "YouTube" },
-];
+const quickLinks = [
+  ["Home", "/"],
+  ["Agriculture", "/#services"],
+  ["Kisan Services", "/#services"],
+  ["Marketplace", "/marketplace"],
+  ["Grain", "/#services"],
+  ["Machinery", "/book-machinery"],
+  ["Dairy", "/#services"],
+  ["Farm Products", "/#farm-products"],
+  ["Kisan AI", "/ai-crop-doctor"],
+  ["Partner", "/contact"],
+] as const;
 
-async function getSetting(supabase: ReturnType<typeof createClient>, key: string, fallback: string) {
-  const { data } = await supabase.from("website_settings").select("value").eq("key", key).single();
-  return data?.value ? String(data.value).replace(/^"|"$/g, "") : fallback;
-}
+const companyLinks = [
+  ["About Us", "/about"],
+  ["Our Mission", "/about"],
+  ["Our Team", "/about"],
+  ["Partner With Us", "/contact"],
+  ["Contact", "/contact"],
+] as const;
 
 export async function SiteFooter() {
-  const lang = getLanguageFromCookies("rm");
-  const supabase = createClient();
-  const [phone, address] = await Promise.all([
-    getSetting(supabase, "contact_phone", ""),
-    getSetting(supabase, "contact_address", ""),
-  ]);
-  const whatsappDigits = phone.replace(/\D/g, "");
-
   return (
-    <footer className="border-t border-surface-200 bg-surface-900 text-surface-200">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-5">
-          <div className="sm:col-span-2">
-            <p className="font-display text-lg font-semibold text-white">{t("sh_company", lang)}</p>
-            <p className="mt-2 text-sm text-surface-400">{t("sf_tagline", lang)}</p>
-
-            <div className="mt-4 space-y-1.5 text-sm text-surface-400">
-              {phone && (
-                <a href={`tel:${phone}`} className="flex items-center gap-2 hover:text-white">
-                  <Phone className="h-4 w-4 shrink-0" /> {phone}
-                </a>
-              )}
-              {address && (
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0" /> {address}
-                </p>
-              )}
-              {whatsappDigits && (
-                <a
-                  href={`https://wa.me/${whatsappDigits}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-green-400 hover:text-green-300"
-                >
-                  <MessageCircle className="h-4 w-4 shrink-0" />{t("sf_whatsapp", lang)}</a>
-              )}
+    <footer className="border-t border-emerald-100 bg-[#F3F7EE] text-[#123629]">
+      <div className="mx-auto max-w-[1500px] px-4 py-7 sm:px-5 sm:py-9 lg:px-8 lg:py-10">
+        <div className="grid gap-6 sm:gap-7 lg:grid-cols-[1.1fr_1.35fr_.8fr_1fr] lg:gap-8">
+          <div className="flex items-center justify-between gap-4 lg:block">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-xs font-black text-white shadow-sm sm:h-14 sm:w-14 sm:text-sm">ART</div>
+              <div className="min-w-0">
+                <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500 sm:text-xs sm:tracking-[0.2em]">Al Rana Traders</p>
+                <p className="font-display text-xl font-black sm:text-2xl">Agri<span className="text-emerald-700">Bridge</span></p>
+              </div>
             </div>
+            <p className="hidden max-w-xs text-right text-xs leading-5 text-slate-600 sm:block lg:mt-4 lg:text-left lg:text-sm lg:leading-6">Digital Agriculture for a Better Tomorrow.</p>
+          </div>
 
-            <div className="mt-4 flex gap-3">
-              {SOCIALS.map((s) => (
-                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label} className="text-surface-400 hover:text-white">
-                  <s.icon className="h-4 w-4" />
-                </a>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-[0.08em] text-[#123629] sm:text-sm">Quick Links</h3>
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3">
+              {quickLinks.map(([label, href]) => (
+                <Link key={`${label}-${href}`} href={href} className="flex min-h-9 items-center justify-center rounded-xl bg-emerald-700 px-2.5 py-2 text-center text-[11px] font-bold leading-tight text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 sm:min-h-10 sm:px-3 sm:text-xs">
+                  {label}
+                </Link>
               ))}
             </div>
           </div>
+
           <div>
-            <p className="text-sm font-medium text-white">{t("sf_explore", lang)}</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/products" className="hover:text-white">{t("sf_products", lang)}</Link></li>
-              <li><Link href="/faq" className="hover:text-white">{t("sf_faq", lang)}</Link></li>
-            </ul>
+            <h3 className="text-xs font-black uppercase tracking-[0.08em] text-[#123629] sm:text-sm">Our Company</h3>
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3 lg:grid-cols-1">
+              {companyLinks.map(([label, href]) => (
+                <Link key={`${label}-${href}`} href={href} className="flex min-h-9 items-center justify-center rounded-xl bg-[#BDE8C4] px-2.5 py-2 text-center text-[11px] font-bold leading-tight text-[#17452F] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#A7DCB0] sm:min-h-10 sm:px-3 sm:text-xs">
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-white">{t("sf_company", lang)}</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/about" className="hover:text-white">{t("sf_about", lang)}</Link></li>
-              <li><Link href="/register/farmer" className="hover:text-white">{t("sf_farmer_reg", lang)}</Link></li>
-              <li><Link href="/contact" className="hover:text-white">{t("sf_contact", lang)}</Link></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">{t("sf_legal", lang)}</p>
-            <ul className="mt-2 space-y-1 text-sm text-surface-400">
-              <li><Link href="/privacy-policy" className="hover:text-white">{t("sf_privacy", lang)}</Link></li>
-              <li><Link href="/terms-and-conditions" className="hover:text-white">{t("sf_terms", lang)}</Link></li>
-            </ul>
+
+          <div className="flex items-center justify-center rounded-3xl border border-emerald-100 bg-white/75 p-5 text-center shadow-sm sm:p-6">
+            <div className="flex items-center gap-4 lg:block">
+              <Leaf className="h-11 w-11 shrink-0 text-emerald-700 sm:h-14 sm:w-14 lg:mx-auto" />
+              <div className="text-left lg:text-center">
+                <p className="text-xl font-black leading-tight text-emerald-800 sm:text-2xl lg:mt-3">Digital Farms<br/>Stronger Pakistan</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500 sm:hidden">Digital Agriculture for a Better Tomorrow.</p>
+              </div>
+            </div>
           </div>
         </div>
-        <p className="mt-8 border-t border-surface-800 pt-6 text-xs text-surface-500">© {new Date().getFullYear()} Al Rana Traders. All rights reserved.</p>
+
+        <div className="mt-6 flex flex-col gap-2 border-t border-emerald-200 pt-4 text-center text-[10px] leading-5 text-slate-500 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5 sm:text-left sm:text-xs">
+          <p>© {new Date().getFullYear()} Al Rana Traders (AgriBridge). All rights reserved.</p>
+          <p>Zarurat se zindagi tak — AgriBridge ke saath.</p>
+        </div>
       </div>
     </footer>
   );

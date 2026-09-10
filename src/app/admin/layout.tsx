@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ChromeGate } from "@/components/layout/chrome-gate";
@@ -15,7 +16,19 @@ import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nocache: true,
+  },
+};
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   // Admin panel Roman se shuru hota hai -- abhi wahan yahi likha hua hai,

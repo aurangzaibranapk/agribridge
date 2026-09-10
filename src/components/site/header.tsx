@@ -1,88 +1,48 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/form";
-import { SearchBar } from "@/components/site/search-bar";
-import { MobileNav } from "@/components/site/mobile-nav";
-import { ArtLogo } from "@/components/brand/art-logo";
-import { t } from "@/lib/i18n/translations";
-import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { Search } from "lucide-react";
+import { MobileSiteNav } from "@/components/site/mobile-site-nav";
 
-/**
- * Website ki navigation.
- *
- * Malik ki spec (6 September) ke mutabiq das unwan. Do baatein jaan
- * boojh kar:
- *
- * 1. **Marketplace `/marketplace` par jata hai, koi naya safha nahi.**
- *    Wo safha pehle se maujood hai. Spec khud kehti hai "REUSE IT --
- *    avoid /marketplace2": ek hi karobar ka nizam hona chahiye, us ki
- *    naqal nahi.
- *
- * 2. **Kisan AI `/kisan-ai` par hai magar Crop Doctor `/ai-crop-doctor`
- *    par hi rehta hai.** Naya safha us ka darwaza hai, us ki jagah
- *    nahi -- chalta hua Crop Doctor kisi soorat nahi chhera ja raha.
- *
- * `MOBILE_NAV` mein kuch cheezein zyada hain (Products, Blog, About,
- * Contact). Wajah: phone par upar koi jagah nahi bachti, magar menu ke
- * andar poori fehrist rakhi ja sakti hai -- aur wahan un tak pahunchne
- * ka koi aur raasta hai bhi nahi.
- */
 const NAV = [
   { href: "/", label: "Home" },
-  { href: "/agriculture", label: "Agriculture" },
-  { href: "/kisan-services", label: "Kisan Services" },
+  { href: "/#services", label: "Agriculture" },
+  { href: "/#services", label: "Kisan Services" },
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/grain", label: "Grain" },
-  { href: "/machinery", label: "Machinery" },
-  { href: "/dairy", label: "Dairy" },
-  { href: "/kisan-ai", label: "Kisan AI" },
-  { href: "/erp", label: "AgriBridge ERP" },
-  { href: "/partner", label: "Partner" },
-];
-
-const MOBILE_NAV = [
-  ...NAV,
-  { href: "/products", label: "Products" },
-  { href: "/services", label: "Services" },
-  { href: "/blog", label: "Blog" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "/#services", label: "Grain" },
+  { href: "/book-machinery", label: "Machinery" },
+  { href: "/#services", label: "Dairy" },
+  { href: "/#farm-products", label: "Farm Products" },
+  { href: "/ai-crop-doctor", label: "Kisan AI" },
+  { href: "/contact", label: "Partner" },
 ];
 
 export function SiteHeader() {
-  const lang = getLanguageFromCookies("rm");
   return (
-    <header className="sticky top-0 z-40 border-b border-[#C9A227]/20 bg-white/95 shadow-[0_1px_0_0_rgba(201,162,39,0.08)] backdrop-blur dark:border-surface-800 dark:bg-surface-950/90">
-      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-3 px-4 xl:gap-5">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <ArtLogo width={38} />
-          <div className="hidden sm:block">
-            <span className="block font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">{t("sh_company", lang)}</span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[#A9791A]">{t("sh_brand", lang)}</span>
+    <header className="sticky top-0 z-40 border-b border-emerald-100 bg-white/95 backdrop-blur dark:border-surface-800 dark:bg-surface-950/95">
+      <div className="mx-auto flex h-[4.5rem] max-w-[1500px] items-center gap-3 px-3 sm:px-4 lg:px-7">
+        <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-base font-black text-white shadow-sm sm:h-11 sm:w-11 sm:text-xl">ART</div>
+          <div className="min-w-0">
+            <span className="block truncate text-[8px] font-semibold uppercase tracking-[0.2em] text-surface-500 sm:text-[10px] sm:tracking-[0.28em]">Al Rana Traders</span>
+            <span className="block truncate font-display text-lg font-bold leading-tight text-surface-950 sm:text-xl dark:text-white">Agri<span className="text-emerald-700">Bridge</span></span>
           </div>
         </Link>
-        <nav className="hidden items-center gap-3 lg:flex xl:gap-4">
+
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-5">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group relative whitespace-nowrap py-1 text-[13px] font-medium text-surface-600 hover:text-[#1E4A2E] xl:text-sm dark:text-surface-300 dark:hover:text-brand-400"
-            >
+            <Link key={`${item.href}-${item.label}`} href={item.href} className="group relative whitespace-nowrap py-2 text-xs font-semibold text-surface-700 transition hover:text-emerald-700 2xl:text-sm dark:text-surface-300">
               {item.label}
-              <span className="absolute -bottom-0.5 left-0 h-[2px] w-0 bg-[#C9A227] transition-all duration-300 group-hover:w-full" />
+              <span className="absolute inset-x-0 -bottom-0.5 mx-auto h-0.5 w-0 rounded-full bg-emerald-600 transition-all group-hover:w-full" />
             </Link>
           ))}
         </nav>
-        <div className="hidden w-40 2xl:block">
-          <SearchBar />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link href="/login" className="hidden sm:block">
-            <Button variant="secondary" size="sm">{t("sh_sign_in", lang)}</Button>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Link href="/products" aria-label="Search products" className="hidden h-10 w-10 items-center justify-center rounded-full bg-surface-100 text-surface-700 transition hover:bg-emerald-50 hover:text-emerald-700 md:flex dark:bg-surface-900 dark:text-surface-200">
+            <Search className="h-4 w-4" />
           </Link>
-          <Link href="/register/farmer" className="hidden sm:block">
-            <Button size="sm" className="bg-[#1E4A2E] hover:bg-[#163A23]">{t("sh_register", lang)}</Button>
-          </Link>
-          <MobileNav items={MOBILE_NAV} />
+          <Link href="/contact" className="hidden rounded-xl border border-emerald-600 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 md:inline-flex dark:bg-surface-950 dark:text-emerald-300">Contact Us</Link>
+          <Link href="/login" className="hidden rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 sm:inline-flex xl:inline-flex">Login</Link>
+          <MobileSiteNav />
         </div>
       </div>
     </header>

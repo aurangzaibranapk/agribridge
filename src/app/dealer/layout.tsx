@@ -1,5 +1,22 @@
+import type { Metadata } from "next";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
+
+// Private portal -- Google ke liye band. Public website ka koi safha
+// isay index nahi karega, aur AgriBridge ka public "sitemap" is ka
+// zikr bhi nahi karta.
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noarchive: true,
+    },
+  },
+};
 
 /**
  * LangProvider -- warna andar ka har client component useLang() se
@@ -16,7 +33,7 @@ import { LangProvider } from "@/lib/i18n/lang-context";
  * dir bhi yahin se: Urdu daayen se bayen chalti hai, aur ye baat poore
  * safhe par ek sath lagni chahiye.
  */
-export default function PortalLangLayout({ children }: { children: React.ReactNode }) {
+export default function DealerLayout({ children }: { children: React.ReactNode }) {
   const lang = getLanguageFromCookies("rm");
   return (
     <LangProvider lang={lang}>

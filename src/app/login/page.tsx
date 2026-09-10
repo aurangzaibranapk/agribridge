@@ -1,9 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
+
+export const metadata: Metadata = {
+  title: "Login",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nocache: true,
+  },
+};
 
 export default function LoginPage() {
   const lang = getLanguageFromCookies("ur");
@@ -85,7 +96,6 @@ export default function LoginPage() {
     </LangProvider>
   );
 }
-
 function TrustItem({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) { return <div className="flex min-w-0 items-center gap-3 px-4"><span className="text-[#d7f47a]">{icon}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{title}</p><p className="mt-0.5 truncate text-[11px] text-white/80">{body}</p></div></div>; }
 function FooterItem({ icon, label, href }: { icon: React.ReactNode; label: string; href?: string }) { const content = <><span className="text-[#23643e]">{icon}</span><span className="font-semibold">{label}</span></>; const cls = "flex min-w-0 items-center justify-center gap-2 px-2 text-center text-[11px] sm:text-xs"; return href ? <Link href={href} className={`${cls} hover:text-[#0d3d28]`}>{content}</Link> : <div className={cls}>{content}</div>; }
 function BrandMark({ compact = false }: { compact?: boolean }) { const size = compact ? "h-11 w-11" : "h-14 w-14"; return <div className={`flex ${size} shrink-0 items-center justify-center rounded-2xl border border-[#d4af37]/35 bg-[#123d2a] shadow-lg`}><svg viewBox="0 0 64 64" className="h-9 w-9" fill="none"><path d="M32 5 54 17v25L32 55 10 42V17L32 5Z" stroke="#e5c65b" strokeWidth="2"/><path d="M32 45V20" stroke="#e5c65b" strokeWidth="2" strokeLinecap="round"/><path d="M32 28c-8-1-11-6-11-12 7 1 11 5 11 12ZM32 35c8-1 11-6 11-12-7 1-11 5-11 12Z" fill="#e5c65b"/><path d="M32 45c-8-1-12-5-14-10 8-1 12 3 14 10ZM32 45c8-1 12-5 14-10-8-1-12 3-14 10Z" fill="#6ea36f"/></svg></div>; }
