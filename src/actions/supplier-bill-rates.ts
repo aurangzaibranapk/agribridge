@@ -491,6 +491,8 @@ export async function saveBillLine(_prev: BillRateState, formData: FormData): Pr
   // matlab deta hai) -- is liye sifar yahan qabool nahi hota.
   const wholesaleRaw = num("wholesale_rate");
   const wholesale = wholesaleRaw && wholesaleRaw > 0 ? wholesaleRaw : null;
+  const saleRaw = num("sale_rate");
+  const sale = saleRaw && saleRaw > 0 ? saleRaw : null;
 
   // "Ready" ka matlab: ye qatar charhne layak hai. Bina product ya
   // bina rate ke wo dawa jhooti hai -- database bhi yahi kehta hai.
@@ -503,6 +505,7 @@ export async function saveBillLine(_prev: BillRateState, formData: FormData): Pr
       qty,
       rate,
       wholesale_rate: wholesale,
+      sale_rate: sale,
       product_id: productId,
       // Andaze wala milaan Save par "confirmed" ho jata hai -- banda dekh
       // kar aage barha, yehi tasdeeq hai (H).

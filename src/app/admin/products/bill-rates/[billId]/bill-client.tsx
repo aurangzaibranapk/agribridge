@@ -47,6 +47,8 @@ interface Line {
   appliedRate: number | null;
   /** Bill se wholesale rate bhi (319). Khali = ye rate mat chhuo. */
   wholesaleRate: number | null;
+  /** Bill se sale (counter, 1 unit) rate bhi (382). Khali = ye rate mat chhuo. */
+  saleRate: number | null;
 }
 
 /**
@@ -332,6 +334,28 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
             />
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana wholesale rate waisa hi rahega.
+            </p>
+          </div>
+          {/* Sale rate -- counter par 1 unit bechne ka rate, wholesale ki
+              tarah isi qatar se (382). Malik (10 September): "trade rate
+              ke sath hi ye bhi yahan lag jana chahiye" -- warna banda
+              alag se Rate Baqi safha khol kar yaad rakhta, aur wo
+              product tab tak counter par sifar (muft) para rehta. */}
+          <div>
+            <Label htmlFor={`sl-${line.id}`}>Sale rate (1 unit)</Label>
+            <Input
+              id={`sl-${line.id}`}
+              name="sale_rate"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={line.saleRate ?? ""}
+              disabled={locked}
+              placeholder="khali chhorein to na badle"
+              className="text-base"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Khali chhor dein to is cheez ka purana sale rate waisa hi rahega.
             </p>
           </div>
         </div>

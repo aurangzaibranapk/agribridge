@@ -25243,6 +25243,7 @@ export type Database = {
           qty: number | null
           rate: number | null
           raw_text: string | null
+          sale_rate: number | null
           status: string
           updated_at: string
           wholesale_rate: number | null
@@ -25265,6 +25266,7 @@ export type Database = {
           qty?: number | null
           rate?: number | null
           raw_text?: string | null
+          sale_rate?: number | null
           status?: string
           updated_at?: string
           wholesale_rate?: number | null
@@ -25287,6 +25289,7 @@ export type Database = {
           qty?: number | null
           rate?: number | null
           raw_text?: string | null
+          sale_rate?: number | null
           status?: string
           updated_at?: string
           wholesale_rate?: number | null
