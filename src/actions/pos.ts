@@ -66,6 +66,19 @@ export async function posCheckout(input: {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Farmer ko POS ki customer fehrist mein dikhaya jata hai "farmer:<id>"
+  // jaisi banawati ID se (384) -- asal customers.id nahi, kyunke us waqt
+  // tak us farmer ka koi Customer record bana hi nahi hota. Yahan, sab se
+  // pehle, use asal customers.id mein badal dete hain -- taake neeche
+  // rate/udhaar ki jaanch aur create_pos_sale ko hamesha ek asal, valid
+  // customer ID hi mile, kabhi "farmer:..." jaisi string na jaye (wo
+  // uuid khane mein seedha jaate hi bikri gira degi).
+  if (input.customerId?.startsWith("farmer:")) {
+    const resolved = await resolveFarmerCustomerId(input.customerId.slice("farmer:".length));
+    if (!resolved) return { error: "Is farmer ka Customer record nahi ban saka. Dobara koshish karein." };
+    input = { ...input, customerId: resolved };
+  }
+
   // Feature-level ijazat -- sirf branch/shop wale staff par (dealer
   // apna alag darwaza hai, `dealers` table se, is nizam ka hissa nahi).
   // Legacy fallback (koi permission row hi nahi) chup chaap guzarne
@@ -138,6 +151,44 @@ export async function posCheckout(input: {
   if (posted) return { saleId, notice: posted };
 
   return { saleId };
+}
+
+/**
+ * Farmer ke apne record se, ek juRa hua Customer record -- ya to pehle
+ * se bana hua wapas de deta hai, ya pehli dafa bana deta hai (384).
+ *
+ * Farmer ka WALLET (jo hum use dete hain) bilkul nahi chhua jata -- ye
+ * naya Customer record sirf itna karta hai ke farmer POS ke KHATA/udhaar
+ * nizam mein bhi shamil ho sake, apne naam/phone/CNIC ke sath.
+ */
+async function resolveFarmerCustomerId(farmerId: string): Promise<string | null> {
+  const service = createServiceClient();
+
+  const { data: existing } = await service.from("customers").select("id").eq("farmer_id", farmerId).maybeSingle();
+  if (existing) return existing.id;
+
+  const { data: farmer } = await service.from("farmers").select("full_name, phone_number, cnic").eq("id", farmerId).eq("is_deleted", false).maybeSingle();
+  if (!farmer?.phone_number) return null;
+
+  const { data: created, error } = await service
+    .from("customers")
+    .insert({
+      name: farmer.full_name ?? "Farmer",
+      phone_number: farmer.phone_number,
+      cnic: farmer.cnic,
+      farmer_id: farmerId,
+      customer_type: "retail",
+    })
+    .select("id")
+    .single();
+  // Ek hi lamhe mein do bill isi farmer ke liye ban rahe hon to unique
+  // index (384) doosri koshish ko yahin rok deta hai -- us soorat mein
+  // pehli wali qatar dobara dhoond lete hain, nayi nahi banate.
+  if (error) {
+    const { data: retry } = await service.from("customers").select("id").eq("farmer_id", farmerId).maybeSingle();
+    return retry?.id ?? null;
+  }
+  return created?.id ?? null;
 }
 
 /**

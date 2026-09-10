@@ -7035,6 +7035,7 @@ export type Database = {
           current_balance: number
           customer_type: string
           email: string | null
+          farmer_id: string | null
           id: string
           is_active: boolean
           is_deleted: boolean
@@ -7055,6 +7056,7 @@ export type Database = {
           current_balance?: number
           customer_type?: string
           email?: string | null
+          farmer_id?: string | null
           id?: string
           is_active?: boolean
           is_deleted?: boolean
@@ -7075,6 +7077,7 @@ export type Database = {
           current_balance?: number
           customer_type?: string
           email?: string | null
+          farmer_id?: string | null
           id?: string
           is_active?: boolean
           is_deleted?: boolean

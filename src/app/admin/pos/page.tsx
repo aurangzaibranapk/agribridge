@@ -164,6 +164,7 @@ export default async function PosPage() {
         id: string;
         name: string;
         phone: string | null;
+        cnic?: string | null;
         balance?: number | null;
         creditLimit?: number | null;
         isWholesaleShop: boolean;
@@ -225,7 +226,7 @@ export default async function PosPage() {
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
-      .select("id, name, phone_number, cnic, customer_type, current_balance, credit_limit")
+      .select("id, name, phone_number, cnic, customer_type, current_balance, credit_limit, farmer_id")
       .order("name");
     rawCustomers = (cust ?? []).map((c: any) => ({
       id: c.id,
@@ -241,6 +242,31 @@ export default async function PosPage() {
       balance: c.current_balance == null ? null : Number(c.current_balance),
       isWholesaleShop: c.customer_type === "wholesale_shop",
     }));
+
+    // Farmer khud POS mein customer ki tarah dhoonda ja sake (384) --
+    // malik ka hukm (10 September). Jis farmer ka Customer record pehle
+    // se bana hua hai (upar wali fehrist mein aa chuka), use yahan
+    // dobara nahi dikhate -- ek hi banda do dafa nazar aana confusion
+    // banata. "farmer:<id>" wali banawati ID posCheckout khud asal
+    // customers.id mein badal deti hai, pehli khareed par.
+    const linkedFarmerIds = new Set((cust ?? []).map((c: any) => c.farmer_id).filter(Boolean));
+    const { data: farmersRaw } = await supabase
+      .from("farmers")
+      .select("id, full_name, phone_number, cnic")
+      .eq("is_deleted", false)
+      .order("full_name");
+    for (const f of farmersRaw ?? []) {
+      if (linkedFarmerIds.has(f.id)) continue;
+      rawCustomers.push({
+        id: `farmer:${f.id}`,
+        name: f.full_name ?? "Farmer",
+        phone: f.phone_number,
+        cnic: f.cnic,
+        creditLimit: null,
+        balance: null,
+        isWholesaleShop: false,
+      });
+    }
   }
   const inventory = (rawInventory ?? []).map((item: any) => ({
     id: item.id,
