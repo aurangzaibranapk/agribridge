@@ -132,7 +132,15 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => setAsking(false), [askState]);
-  useEffect(() => { if (checkState.success) { router.push("/portal/dashboard"); router.refresh(); } }, [checkState.success, router]);
+  useEffect(() => {
+    if (!checkState.success) return;
+    // Malik (10 September): OTP se andar aane ke baad sab se pehle wo
+    // page khule jahan password aur User ID banti hai -- dashboard nahi.
+    // Jis ki User ID pehle se bani hui hai us ke liye ye qadam guzar
+    // chuka, seedha dashboard.
+    router.push(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
+    router.refresh();
+  }, [checkState.success, checkState.hasUsername, router]);
   useEffect(() => {
     if (askState.retryAfterSeconds) setCooldown(askState.retryAfterSeconds);
   }, [askState]);

@@ -39,6 +39,14 @@ export interface FarmerAuthState {
   needsProfile?: boolean;
   /** Sab ho gaya -- portal khul sakta hai. */
   success?: boolean;
+  /**
+   * Is kisan ki apni User ID (username) pehle se bani hui hai ya nahi.
+   * Nahi bani to login ke baad seedha profile (jahan User ID/password
+   * banane ka khana sab se pehle hai) par bhejte hain, dashboard par
+   * nahi -- malik ka hukm (10 September): OTP se andar aane ke baad
+   * sab se pehle wahi page khule jahan password aur User ID banti hai.
+   */
+  hasUsername?: boolean;
   /** Purana kisan mila to us ka naam, taake screen us se baat kar sake. */
   knownName?: string;
   /**
@@ -200,7 +208,15 @@ export async function verifyFarmerOtp(
   });
   if (sessionError) return { error: "Session nahi ban saka. Dobara koshish karein." };
 
-  return { success: true };
+  // Naya kisan ho ya username kabhi banaya hi na ho -- dono soorat mein
+  // "nahi bani". Purane kisan ke liye seedha poochh lete hain.
+  let hasUsername = false;
+  if (match) {
+    const { data: existing } = await service.from("farmers").select("username").eq("id", match.id).maybeSingle();
+    hasUsername = Boolean(existing?.username);
+  }
+
+  return { success: true, hasUsername };
 }
 
 async function farmerUserId(
