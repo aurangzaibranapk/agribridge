@@ -750,6 +750,25 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
   const supplierId = bill.supplier_id ?? (String(formData.get("supplier_id") ?? "").trim() || null);
   if (!supplierId) return { error: "Supplier chunein — purchase ke liye zaroori hai, dena usi ka charhta hai." };
 
+  // Ek bill number, ek hi bill-upload se purchase ban sakti hai (289) --
+  // isi bill (billId) se dobara-dobara purchase banna theek hai (10
+  // September: lines batches mein ready hoti hain), magar KISI AUR bill
+  // upload se yehi bill number dobara purchase nahi bana sakta -- wahi
+  // 4 September wali ghalti (ek sheet teen dafa charhi, dena teen guna).
+  if (bill.bill_number && bill.bill_number.trim()) {
+    const { data: dupeBill } = await supabase
+      .from("supplier_bill_reads")
+      .select("id")
+      .eq("supplier_id", supplierId)
+      .ilike("bill_number", bill.bill_number.trim())
+      .not("purchase_id", "is", null)
+      .neq("id", billId)
+      .maybeSingle();
+    if (dupeBill) {
+      return { error: `Ye bill number (${bill.bill_number}) is supplier ke liye pehle hi kisi aur bill-upload se purchase ban chuki hai — dobara nahi ban sakti.` };
+    }
+  }
+
   // Branch: wohi qaida jo purchases/new par hai.
   const { data: profile } = await supabase
     .from("profiles")
@@ -896,12 +915,15 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     .in("status", ["draft", "ready"]);
   const billFullyDone = (pendingCount ?? 0) === 0;
 
+  // supplier_id yahin se pehli dafa theek hota hai jab bill khud us ke
+  // bina bani thi (form se chuna gaya) -- warna ye khana khaali reh
+  // jata aur upar wali dobara-bill-number ki jaanch kaam nahi karti.
   await supabase
     .from("supplier_bill_reads")
     .update(
       billFullyDone
-        ? { purchase_id: po.id, status: "applied", applied_at: new Date().toISOString(), applied_by: user.id }
-        : { purchase_id: po.id }
+        ? { purchase_id: po.id, supplier_id: supplierId, status: "applied", applied_at: new Date().toISOString(), applied_by: user.id }
+        : { purchase_id: po.id, supplier_id: supplierId }
     )
     .eq("id", billId);
 
