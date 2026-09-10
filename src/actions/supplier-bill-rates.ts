@@ -737,8 +737,13 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     .eq("id", billId)
     .maybeSingle();
   if (!bill) return { error: "Bill nahi mila." };
-  if (bill.purchase_id) return { error: "Is bill se purchase pehle hi ban chuki hai." };
-  if (bill.status === "applied") return { error: "Is bill ke rate pehle hi charh chuke hain — purchase ab alag se /admin/purchases/new par banayein." };
+  // Purani rok: ek bill se sirf EK hi purchase, chahe us waqt bill ki
+  // saari lines "ready" na hui hon (10 September, real case: 11 lines
+  // ke bill mein sirf 1 line ready thi, purchase ban gayi, aur baqi 10
+  // hamesha ke liye phans gayin). Ab bill sirf tab "applied" hota hai
+  // jab ADD lines nipat chuki hon (neeche) -- is liye yahan sirf wo
+  // asal rok kaafi hai.
+  if (bill.status === "applied") return { error: "Is bill ki saari lines pehle hi charh chuki hain." };
 
   // Supplier: bill par ho to wohi, warna form se. Bina supplier ke
   // purchase nahi banti -- dena kis ka charhega?
@@ -880,14 +885,24 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     made += 1;
   }
 
+  // Bill sirf tab "applied" (band) hota hai jab uski koi line na "draft"
+  // na "ready" mein bachi ho -- warna jo lines abhi tayyar nahi thi
+  // (product ya rate abhi chunna baqi tha) hamesha ke liye phans jati
+  // hain, kyunke "applied" bill se dobara purchase nahi ban sakti.
+  const { count: pendingCount } = await supabase
+    .from("supplier_bill_lines")
+    .select("id", { count: "exact", head: true })
+    .eq("bill_read_id", billId)
+    .in("status", ["draft", "ready"]);
+  const billFullyDone = (pendingCount ?? 0) === 0;
+
   await supabase
     .from("supplier_bill_reads")
-    .update({
-      purchase_id: po.id,
-      status: "applied",
-      applied_at: new Date().toISOString(),
-      applied_by: user.id,
-    })
+    .update(
+      billFullyDone
+        ? { purchase_id: po.id, status: "applied", applied_at: new Date().toISOString(), applied_by: user.id }
+        : { purchase_id: po.id }
+    )
     .eq("id", billId);
 
   await logAudit({
@@ -932,6 +947,9 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     reviewStatus: isAdminLevel ? "approved" : "submitted",
     notice:
       `Purchase ${purchaseNumber} ban gayi — ${made} qatarein, Rs ${totalAmount.toLocaleString()}. Maal aane par Purchases par ja kar Receive dabayein.` +
+      (billFullyDone
+        ? ""
+        : ` Is bill ki ${pendingCount} aur lines abhi tayyar nahi thi (product/rate baqi) — unhen bhar kar "Make the purchase" dobara dabayein, alag purchase ban jayegi.`) +
       (problems.length ? ` Masle: ${problems.slice(0, 3).join(" | ")}` : ""),
   };
 }
