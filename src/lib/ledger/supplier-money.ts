@@ -46,6 +46,8 @@ export async function payAndPost(
     purchaseId?: string | null;
     branchId?: string | null;
     createdBy: string | null;
+    /** Purani tareekh ki adaigi ho to wajah — warna ledger post nahi hoti. */
+    backdateReason?: string | null;
   }
 ): Promise<{ paymentId: string } | { error: string }> {
   const { data: row, error } = await client
@@ -69,6 +71,7 @@ export async function payAndPost(
     createdBy: args.createdBy,
     branchId: args.branchId ?? null,
     entryDate: args.paymentDate,
+    backdateReason: args.backdateReason ?? null,
     claims: [{ table: "supplier_payments", rowId: row.id }],
   };
 

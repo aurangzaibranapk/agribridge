@@ -123,6 +123,9 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       notes: `Kharid ${purchaseNumber} ke waqt`,
       branchId,
       createdBy: user?.id ?? null,
+      // Purchase ki tareekh khud peeche chuni gayi ho sakti hai -- wo
+      // khud wajah hai, alag se kisi se poochne ki zaroorat nahi.
+      backdateReason: purchaseDate < aajKaKhana() ? `Purchase ${purchaseNumber} ki apni tareekh (${purchaseDate}) — adaigi bhi usi din ki hai.` : null,
     });
     if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }

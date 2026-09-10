@@ -825,6 +825,13 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
       notes: `Kharid ${purchaseNumber} ke waqt (bill se)`,
       createdBy: user.id,
+      // Bill ki apni tareekh purani ho sakti hai (jis din bill mila
+      // us din ki) -- wo khud hi wajah hai, alag se kisi se poochne ki
+      // zaroorat nahi.
+      backdateReason:
+        purchaseDate < aajKaKhana()
+          ? `Supplier bill ${bill.bill_number || billId} ki apni tareekh — adaigi bhi usi din ki hai.`
+          : null,
     });
     if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }

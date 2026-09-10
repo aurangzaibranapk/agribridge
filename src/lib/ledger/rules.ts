@@ -32,6 +32,8 @@ export interface EventContext {
   createdBy: string | null;
   branchId?: string | null;
   entryDate?: string;
+  /** Purani tareekh ki entry ke liye wajah — na ho to postJournal rok deta hai. */
+  backdateReason?: string | null;
   claims?: SourceClaim[];
 }
 
@@ -265,6 +267,7 @@ export async function postCashIn(args: {
     sourceModule: "finance",
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -297,6 +300,7 @@ export async function postCashOut(args: {
     sourceModule: "finance",
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -333,6 +337,7 @@ export async function postTransferOut(args: {
     sourceModule: "finance_transfer",
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -354,6 +359,7 @@ export async function postTransferIn(args: {
     sourceModule: "finance_transfer",
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -394,6 +400,7 @@ export async function postFarmerCreditGiven(args: {
     sourceId: args.farmerId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -429,6 +436,7 @@ export async function postFarmerCreditRepaid(args: {
     sourceId: args.farmerId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -465,6 +473,7 @@ export async function postMilkPurchase(args: {
     sourceId: args.collectionId ?? args.farmerId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -515,6 +524,7 @@ export async function postWalletMovement(args: {
     sourceId: args.ownerId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines:
@@ -571,6 +581,7 @@ export async function postStaffLedger(args: {
     sourceId: args.profileId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines:
@@ -595,6 +606,7 @@ export async function postStaffAdvance(args: {
     sourceId: args.profileId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -661,6 +673,7 @@ export async function postSalaryPaid(args: {
     sourceId: args.profileId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,
@@ -705,6 +718,7 @@ export async function postBranchCredit(args: {
     sourceId: args.branchId,
     branchId: args.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: branchOwesMore
@@ -794,6 +808,7 @@ export async function postGoodsReceived(args: {
     sourceId: args.purchaseId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -841,6 +856,7 @@ export async function postSupplierPayment(args: {
     sourceId: args.paymentId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -905,6 +921,7 @@ export async function postSale(args: {
     sourceId: args.sourceId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,
@@ -926,6 +943,7 @@ export async function postCustomerPayment(args: {
     sourceId: args.customerId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -987,6 +1005,7 @@ export async function postMachineryAdvance(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -1103,6 +1122,7 @@ export async function postMachineryBill(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,
@@ -1164,6 +1184,7 @@ export async function postMachineryVendorCollected(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -1268,6 +1289,7 @@ export async function postCropLiftSettlement(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,
@@ -1295,6 +1317,7 @@ export async function postCropLifterPayment(args: {
     sourceId: args.paymentId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -1331,6 +1354,7 @@ export async function postVendorCashHandover(args: {
     sourceModule: "machinery_payment",
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -1400,6 +1424,7 @@ export async function postMachineryPayment(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines: [
@@ -1514,6 +1539,7 @@ export async function postMachineryVendorPayout(args: {
     sourceId: args.bookingId,
     branchId: args.ctx.branchId,
     entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,

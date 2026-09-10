@@ -8,6 +8,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { departmentForRole, DEPARTMENTS } from "@/lib/departments";
 import { CancelButton } from "./cancel-button";
+import { RevokeButton } from "./revoke-button";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function MyAccessPage() {
                   <span className="text-xs text-surface-500">{[...v.actions].join(", ")}</span>
                   <Badge tone="gray">{v.scope ?? "—"}</Badge>
                   {v.expires && <Badge tone="amber">{t("ar_expires", lang)} {new Date(v.expires).toLocaleDateString("en-GB")}</Badge>}
+                  <RevokeButton featureKey={k} lang={lang} />
                 </li>
               ))}
             </ul>

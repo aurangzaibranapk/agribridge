@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { decideAccessRequest } from "@/lib/access/access-requests";
+import { decideAccessRequest, createAccessRequest } from "@/lib/access/access-requests";
 import { runConflictScan, setFindingStatus, updateConflictRule, updateSodRule } from "@/lib/access/conflicts";
 
 export interface AccessState {
@@ -24,7 +24,12 @@ export async function decideAccess(_prev: AccessState, formData: FormData): Prom
   if (!id || (decision !== "approved" && decision !== "rejected")) return { error: "Faisla saaf nahi." };
   const overrideReason = String(formData.get("override_reason") ?? "").trim() || null;
   const overrideExpiresAt = String(formData.get("override_expires_at") ?? "").trim() || null;
-  const res = await decideAccessRequest(id, user.id, decision, note, { overrideReason, overrideExpiresAt });
+  // Change & Approve: form se checkbox actions aur scope, sirf jab
+  // "change" button dabaya gaya ho (formData mein change=1).
+  const isChange = formData.get("change") === "1" && decision === "approved";
+  const changedActions = isChange ? formData.getAll("changed_actions").map(String) : null;
+  const changedScope = isChange ? String(formData.get("changed_scope") ?? "").trim() || null : null;
+  const res = await decideAccessRequest(id, user.id, decision, note, { overrideReason, overrideExpiresAt, changedActions, changedScope });
   revalidatePath("/admin/access-requests");
   revalidatePath("/admin/my-access");
   revalidatePath("/admin", "layout");
@@ -47,6 +52,29 @@ export async function cancelMyAccessRequest(_prev: AccessState, formData: FormDa
   revalidatePath("/admin/my-access");
   revalidatePath("/admin/access-requests");
   return { success: true, message: "Wapas le li." };
+}
+
+/** Maujooda access khatam karwane ki darkhwast (270 ka teesra kind, 10 September). */
+export async function requestAccessRevoke(_prev: AccessState, formData: FormData): Promise<AccessState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const featureKey = String(formData.get("feature_key") ?? "").trim();
+  if (!featureKey) return { error: "Feature saaf nahi." };
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+  const res = await createAccessRequest({
+    kind: "feature_revoke",
+    requestedFor: user.id,
+    requestedBy: user.id,
+    featureKey,
+    actions: [],
+    reason,
+  });
+  revalidatePath("/admin/my-access");
+  revalidatePath("/admin/access-requests");
+  return res.ok ? { success: true, message: res.message } : { error: res.message };
 }
 
 /** Takraao ka scan (271): sirf report, ijazat nahi badalti. */

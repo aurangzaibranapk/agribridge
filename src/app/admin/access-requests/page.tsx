@@ -274,7 +274,18 @@ export default async function AccessRequestsPage({ searchParams }: { searchParam
                   </details>
                 )}
               </Card>
-              {selected.status === "pending" && (isMaster || selected.risk_level !== "high") && <DecideForm lang={lang} id={selected.id} isHead={!isMaster} isMaster={isMaster} gate={gate} />}
+              {selected.status === "pending" && (isMaster || selected.risk_level !== "high") && (
+                <DecideForm
+                  lang={lang}
+                  id={selected.id}
+                  isHead={!isMaster}
+                  isMaster={isMaster}
+                  gate={gate}
+                  kind={selected.kind}
+                  requestedActions={(selected.actions as string[] | null) ?? []}
+                  requestedScope={selected.data_scope ?? "own_branch"}
+                />
+              )}
               <Card>
                 <h3 className="mb-2 text-sm font-semibold">{t("ar_trail", lang)}</h3>
                 <ul className="space-y-1.5 text-xs">

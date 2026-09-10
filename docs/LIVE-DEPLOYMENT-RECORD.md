@@ -3147,3 +3147,37 @@ poori fehrist mein disclose ho kar bhi jaan boojh kar NAHI chhua gaya
   is round mein tang hui.
 - Testing DB par `is_main_branch=true` do branches (test seed data,
   Live par asar nahi — Test 3/No 3 ke commit mein disclose hua).
+
+## Purchase-from-bill ledger error + My Access revoke/Change (10 September)
+
+Malik live Trade Rate from Bill par kaam kar rahe the jab teen masle mile:
+
+1. **"Adaigi likh di gayi, magar ledger tak nahi pahunchi"** — purani
+   tareekh ki supplier bill se purchase banate waqt payment ledger post
+   nahi hoti thi, kyunke `EventContext` (`src/lib/ledger/rules.ts`) mein
+   `backdateReason` field hi nahi tha — is se guzarne wale saare 24
+   posters (postSupplierPayment, postSale, ...) kisi bhi backdated entry
+   par yehi ghalti dete. Root cause fix: `EventContext.backdateReason`
+   add kiya, 24 jagah thread kiya. `createPurchaseFromBill`
+   (bill-rates) aur `createPurchase` (purchases/new) dono mein — jab
+   bill/purchase ki apni tareekh purani ho, khud-kaar wajah bhejta hai
+   (bill/purchase number apne aap wajah hai, user se alag se nahi
+   poochna parta).
+2. **"Agla kadam kahan hai"** — link pehle se tha (`/admin/purchases`),
+   sirf upar wali ghalti ke waqt error-path se hota tha jahan wo nazar
+   nahi aata. (1) theek hote hi khud theek.
+3. **My Access — revoke + Change** — `access_requests.kind` mein
+   `'feature_revoke'` (migration 385) add kiya: staff ab maujooda access
+   khatam karwane ki darkhwast bhi bhej sakta hai (`/admin/my-access`,
+   "Khatam karwayein"), approve par `user_feature_permissions` row
+   poori tarah delete hoti hai. Approver (`/admin/access-requests`) ke
+   paas ab Approve/Reject ke sath "Change & approve" bhi hai — jo maanga
+   gaya us se alag actions/scope de kar manzoor kar sakta hai; badla hua
+   hamesha `decision_note` mein likha jata hai ("maanga X, diya Y").
+
+`tsc` (71, baseline — sirf jaana-pehchana `.next/types` generated-file
+noise alag) clean. Migration 385 Testing aur Live dono par laga di gayi
+(sirf CHECK constraint badalti hai, koi data nahi chhuta).
+
+**Build/package abhi baaki hai** — malik "system par aa gaya" kahein to
+dono command (pull+build, package) ek sath.

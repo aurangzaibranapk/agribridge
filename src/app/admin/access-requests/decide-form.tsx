@@ -1,19 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { Check, X, ShieldAlert } from "lucide-react";
+import { Check, X, ShieldAlert, Pencil } from "lucide-react";
 import { decideAccess, type AccessState } from "@/actions/access-requests";
 import { Card } from "@/components/ui/layout-primitives";
-import { Textarea, Label, Input } from "@/components/ui/form";
+import { Textarea, Label, Input, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { ACTIONS, DATA_SCOPES } from "@/lib/access/types";
 
 const initial: AccessState = {};
 
-function Btn({ label, tone, decision, disabled }: { label: string; tone: "green" | "red"; decision: string; disabled?: boolean }) {
+function Btn({ label, tone, decision, disabled, changing }: { label: string; tone: "green" | "red" | "amber"; decision: string; disabled?: boolean; changing?: boolean }) {
   const { pending } = useFormStatus();
+  const cls = tone === "green" ? "bg-emerald-600 hover:bg-emerald-700" : tone === "amber" ? "bg-amber-600 hover:bg-amber-700" : "bg-red-600 hover:bg-red-700";
   return (
-    <button type="submit" name="decision" value={decision} disabled={pending || disabled} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-white disabled:opacity-60 ${tone === "green" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
-      {tone === "green" ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />} {pending ? "…" : label}
+    <button type="submit" name="decision" value={decision} disabled={pending || disabled} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-white disabled:opacity-60 ${cls}`}>
+      {changing ? <Pencil className="h-4 w-4" /> : tone === "green" ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />} {pending ? "…" : label}
     </button>
   );
 }
@@ -30,9 +33,29 @@ export interface ConflictGate {
  *  - override: sirf Owner/Admin, wajah + miyaad ke sath
  *  - block: Approve band
  */
-export function DecideForm({ lang, id, isHead, isMaster, gate }: { lang: Lang; id: string; isHead: boolean; isMaster: boolean; gate: ConflictGate }) {
+export function DecideForm({
+  lang,
+  id,
+  isHead,
+  isMaster,
+  gate,
+  kind,
+  requestedActions,
+  requestedScope,
+}: {
+  lang: Lang;
+  id: string;
+  isHead: boolean;
+  isMaster: boolean;
+  gate: ConflictGate;
+  kind: string;
+  requestedActions: string[];
+  requestedScope: string;
+}) {
   const [state, action] = useFormState(decideAccess, initial);
+  const [changing, setChanging] = useState(false);
   const approveDisabled = gate.level === "block" || (gate.level === "override" && !isMaster);
+  const canChange = kind === "feature_access";
   return (
     <Card>
       <h3 className="mb-1 text-sm font-semibold">{t("ar_decide", lang)}</h3>
@@ -73,8 +96,45 @@ export function DecideForm({ lang, id, isHead, isMaster, gate }: { lang: Lang; i
             <p className="self-end text-[11px] text-surface-500">{t("cfl_override_note", lang)}</p>
           </div>
         )}
-        <div className="flex gap-2">
-          <Btn label={t("ar_approve", lang)} tone="green" decision="approved" disabled={approveDisabled} />
+        {canChange && (
+          <div>
+            {!changing ? (
+              <button type="button" onClick={() => setChanging(true)} className="text-xs text-amber-700 underline">
+                {t("ar_change_toggle", lang)}
+              </button>
+            ) : (
+              <div className="rounded-lg border border-amber-200 p-2 dark:border-amber-900/50">
+                <input type="hidden" name="change" value="1" />
+                <Label>{t("ar_change_actions", lang)}</Label>
+                <div className="flex flex-wrap gap-2 py-1">
+                  {ACTIONS.map((a) => (
+                    <label key={a} className="flex items-center gap-1 text-xs">
+                      <input type="checkbox" name="changed_actions" value={a} defaultChecked={requestedActions.includes(a)} />
+                      {a}
+                    </label>
+                  ))}
+                </div>
+                <Label>{t("ar_change_scope", lang)}</Label>
+                <Select name="changed_scope" defaultValue={requestedScope} className="w-full">
+                  {DATA_SCOPES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+                <button type="button" onClick={() => setChanging(false)} className="mt-1 text-[11px] text-surface-500 underline">
+                  {t("ar_change_cancel", lang)}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {changing ? (
+            <Btn label={t("ar_change_approve", lang)} tone="amber" decision="approved" disabled={approveDisabled} changing />
+          ) : (
+            <Btn label={t("ar_approve", lang)} tone="green" decision="approved" disabled={approveDisabled} />
+          )}
           <Btn label={t("ar_reject", lang)} tone="red" decision="rejected" />
         </div>
       </form>

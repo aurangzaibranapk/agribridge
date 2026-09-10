@@ -49,7 +49,7 @@ export function expiryFor(duration: string, customIso?: string | null): string |
 }
 
 export interface AccessRequestInput {
-  kind: "feature_access" | "department_assign";
+  kind: "feature_access" | "department_assign" | "feature_revoke";
   requestedFor: string;
   requestedBy: string;
   featureKey?: string | null;
@@ -83,6 +83,10 @@ export async function createAccessRequest(input: AccessRequestInput): Promise<{ 
     if (actions.length === 0) actions.push("view");
     if (!actions.includes("view")) actions.unshift("view");
   }
+  // Khatam karwane ki darkhwast: poora feature khatam hota hai, is liye
+  // actions ki fehrist yahan maani nahi rakhti -- "view" force karne ka
+  // qaida bhi is par nahi lagta.
+  if (input.kind === "feature_revoke" && !input.featureKey) return { ok: false, message: "Feature saaf nahi." };
   const scope = input.dataScope && isDataScope(input.dataScope) ? input.dataScope : "own_branch";
   const duration = ["today", "7d", "30d", "custom", "permanent"].includes(input.duration ?? "") ? (input.duration as string) : "permanent";
 
@@ -153,6 +157,13 @@ export interface DecideOptions {
   overrideReason?: string | null;
   /** Override ki miyaad -- ijazat is se aage nahi jayegi. */
   overrideExpiresAt?: string | null;
+  /**
+   * "Change & Approve" (10 September): approver jo maanga gaya us se kam
+   * ya zyada de sakta hai -- diya gaya, "reject phir dobara maango" nahi
+   * karna parta. Ceiling (capGrant) is par bhi waisi hi lagti hai.
+   */
+  changedActions?: string[] | null;
+  changedScope?: string | null;
 }
 
 export async function decideAccessRequest(requestId: string, deciderId: string, decision: "approved" | "rejected", note: string | null, opts: DecideOptions = {}): Promise<{ ok: boolean; message: string; refused?: string[]; conflicts?: ConflictPreview }> {
@@ -178,8 +189,11 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
   }
 
   // ---- APPROVE: lagao ----
-  const wantActions = ((req.actions as string[]) ?? []).filter(isAction) as Action[];
-  const wantScope = (isDataScope(req.data_scope) ? req.data_scope : "own_branch") as DataScope;
+  const originalActions = ((req.actions as string[]) ?? []).filter(isAction) as Action[];
+  const originalScope = (isDataScope(req.data_scope) ? req.data_scope : "own_branch") as DataScope;
+  const hasChange = !!(opts.changedActions && opts.changedActions.length) || !!(opts.changedScope && isDataScope(opts.changedScope));
+  const wantActions = opts.changedActions && opts.changedActions.length ? (opts.changedActions.filter(isAction) as Action[]) : originalActions;
+  const wantScope = opts.changedScope && isDataScope(opts.changedScope) ? opts.changedScope : originalScope;
   let applied: { feature_key: string; actions: Action[]; scope: DataScope }[] = [];
   let refused: string[] = [];
   const oldSnap: Record<string, unknown> = {};
@@ -258,6 +272,15 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
   if (req.kind === "feature_access" && req.feature_key) {
     const r = await applyOne(req.feature_key, wantActions, wantScope);
     refused = r.refused;
+  } else if (req.kind === "feature_revoke" && req.feature_key) {
+    oldSnap[req.feature_key] = await currentAccess(req.requested_for, req.feature_key);
+    const { error: revokeErr } = await service
+      .from("user_feature_permissions")
+      .delete()
+      .eq("profile_id", req.requested_for)
+      .eq("feature_key", req.feature_key);
+    if (revokeErr) refused = [revokeErr.message];
+    else applied.push({ feature_key: req.feature_key, actions: [], scope: wantScope });
   } else if (req.kind === "department_assign" && req.department_key) {
     if (!isMaster) return { ok: false, message: "Department dena sirf Owner/Admin ka kaam hai." };
     const dept = departmentByKey(req.department_key);
@@ -277,13 +300,19 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
     return { ok: false, message: `Kuch nahi laga: ${refused.join(", ") || "ceiling se bahar"}`, refused };
   }
 
+  // Change & Approve (10 September): jo maanga gaya us se alag diya gaya
+  // ho to ye hamesha ke liye note mein likha jata hai -- audit trail
+  // "manzoor" nahi bolta jab kuch aur diya gaya ho.
+  const changeNote = hasChange ? ` [Badal kar diya: maanga tha ${originalActions.join(",") || "—"}/${originalScope}, diya gaya ${wantActions.join(",") || "—"}/${wantScope}]` : "";
+  const decisionNote = ((note ?? "") + changeNote).trim() || null;
+
   await service
     .from("access_requests")
     .update({
       status: "approved",
       decided_by: deciderId,
       decided_at: new Date().toISOString(),
-      decision_note: note,
+      decision_note: decisionNote,
       applied_at: new Date().toISOString(),
       old_permissions: oldSnap as any,
       new_permissions: applied as any,
@@ -294,17 +323,33 @@ export async function decideAccessRequest(requestId: string, deciderId: string, 
       override_expires_at: conflicts.needsOverride ? overrideExpiry : null,
     } as any)
     .eq("id", requestId);
-  await service.from("access_request_events").insert({ request_id: requestId, actor_id: deciderId, event: "approved_applied", detail: { note, applied, refused, expires_at: finalExpiry, conflicts: conflicts.created.map((c) => `${c.severity}:${c.rule_code}`), override_reason: conflicts.needsOverride ? opts.overrideReason : null } as any });
+  await service.from("access_request_events").insert({ request_id: requestId, actor_id: deciderId, event: "approved_applied", detail: { note: decisionNote, applied, refused, expires_at: finalExpiry, conflicts: conflicts.created.map((c) => `${c.severity}:${c.rule_code}`), override_reason: conflicts.needsOverride ? opts.overrideReason : null, changed: hasChange ? { from: `${originalActions.join(",")}/${originalScope}`, to: `${wantActions.join(",")}/${wantScope}` } : null } as any });
   if (conflicts.created.length) {
     await logConflictEvent(conflicts.needsOverride ? "approved_with_override" : "approved_with_conflict", { reason: opts.overrideReason ?? null, override_expires_at: overrideExpiry, applied });
     // Findings ki fehrist taaza -- naya takraao 'detected' ke sath darj ho jaye (kuch hatta nahi)
     await (service as any).rpc("fn_run_access_conflict_scan", { p_trigger: "approval", p_actor: deciderId });
   }
-  await logAudit({ actionType: "update", module: "access_requests", recordId: requestId, recordLabel: req.number, description: `Manzoor: ${applied.map((a) => `${a.feature_key} [${a.actions.join(",")}/${a.scope}]`).join("; ")}${refused.length ? ` — nahi diya: ${refused.join(", ")}` : ""}` });
-  await notifyUser(req.requested_for, `Access Granted ${req.number}`, `${applied.map((a) => a.feature_key).join(", ")}${req.expires_at ? ` (${new Date(req.expires_at).toLocaleDateString("en-GB")} tak)` : ""}`, "/admin/my-access");
+  const isRevoke = req.kind === "feature_revoke";
+  await logAudit({
+    actionType: "update",
+    module: "access_requests",
+    recordId: requestId,
+    recordLabel: req.number,
+    description: isRevoke
+      ? `Khatam ki gayi: ${applied.map((a) => a.feature_key).join(", ")}${refused.length ? ` — nahi ho saki: ${refused.join(", ")}` : ""}`
+      : `Manzoor: ${applied.map((a) => `${a.feature_key} [${a.actions.join(",")}/${a.scope}]`).join("; ")}${refused.length ? ` — nahi diya: ${refused.join(", ")}` : ""}`,
+  });
+  await notifyUser(
+    req.requested_for,
+    isRevoke ? `Access Khatam ${req.number}` : `Access Granted ${req.number}`,
+    `${applied.map((a) => a.feature_key).join(", ")}${!isRevoke && req.expires_at ? ` (${new Date(req.expires_at).toLocaleDateString("en-GB")} tak)` : ""}`,
+    "/admin/my-access"
+  );
   return {
     ok: true,
-    message: `Lag gayi: ${applied.map((a) => a.feature_key).join(", ")}${finalExpiry ? ` (${new Date(finalExpiry).toLocaleDateString("en-GB")} tak)` : ""}${refused.length ? `. Nahi diya (ceiling): ${refused.join(", ")}` : ""}${conflicts.created.length ? `. Takraao darj: ${conflicts.created.map((c) => c.rule_code).join(", ")}${conflicts.needsOverride ? " (override, wajah mehfooz)" : " (advisory)"}` : ""}`,
+    message: isRevoke
+      ? `Khatam ho gayi: ${applied.map((a) => a.feature_key).join(", ")}${refused.length ? `. Nahi ho saki: ${refused.join(", ")}` : ""}`
+      : `Lag gayi: ${applied.map((a) => a.feature_key).join(", ")}${finalExpiry ? ` (${new Date(finalExpiry).toLocaleDateString("en-GB")} tak)` : ""}${refused.length ? `. Nahi diya (ceiling): ${refused.join(", ")}` : ""}${conflicts.created.length ? `. Takraao darj: ${conflicts.created.map((c) => c.rule_code).join(", ")}${conflicts.needsOverride ? " (override, wajah mehfooz)" : " (advisory)"}` : ""}`,
     refused,
     conflicts,
   };
