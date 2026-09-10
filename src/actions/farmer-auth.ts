@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { findFarmerByPhone, phoneKey } from "@/lib/farmers/identity";
 import { sendFarmerOtp } from "@/lib/farmers/otp";
+import { getRoleRedirectPath } from "@/lib/utils/roles";
 
 /**
  * Kisan ka login -- mobile aur OTP.
@@ -323,45 +324,79 @@ export async function setFarmerUsername(
   return { success: true, username };
 }
 
-/**
- * User ID aur password se login.
- *
- * Ye server par hota hai, browser mein nahi -- aur is ki ek pakki wajah
- * hai. Andar ka login email kisan ke MOBILE se banta hai
- * (3001234567@phone.agribridge.local). Agar browser ko ye pata chalne
- * diya jaye ke kis User ID ka kaunsa email hai, to koi bhi naam ka
- * andaza laga kar us bande ka mobile number nikal sakta hai. Wo email
- * yahan se bahar nahi jata.
- */
-export async function loginWithUsername(
-  _prev: FarmerAuthState,
-  formData: FormData
-): Promise<FarmerAuthState> {
-  const username = String(formData.get("username") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-  if (!username || !password) return { error: "User ID aur password dono likhein." };
+export interface IdentifierLoginState {
+  error?: string;
+  success?: boolean;
+  redirectPath?: string;
+}
 
-  const service = createServiceClient();
-  const { data: farmer } = await service
-    .from("farmers")
-    .select("user_id")
-    .eq("username", username)
-    .eq("is_deleted", false)
-    .maybeSingle();
+/**
+ * Ek hi khana -- email, mobile number, ya User ID, jo bhi bana ho.
+ *
+ * Malik (10 September): login safhe par teenon raaste ek hi khane se
+ * chalne chahiye -- jo bhi kisi bande ka bana ho (email, mobile, ya
+ * User ID), usi se andar aa jaye.
+ *
+ * Teenon ek hi tareeqe se resolve nahi hote:
+ *   "@" ho to seedha email hai.
+ *   Das hindse ban jayen to wahi purana synthetic email
+ *     (mobile@phone.agribridge.local) jo OTP login bhi istemal karta hai.
+ *   Baqi kuch bhi ho to kisan ki User ID samajh kar dhoondi jati hai.
+ *
+ * Ye poora kaam SERVER PAR hota hai, browser mein nahi -- aur is ki ek
+ * pakki wajah hai. Andar ka login email kisan ke MOBILE se banta hai.
+ * Agar browser ko ye pata chalne diya jaye ke kis User ID ka kaunsa
+ * email hai, to koi bhi naam ka andaza laga kar us bande ka mobile
+ * number nikal sakta hai. Wo email yahan se bahar nahi jata -- na
+ * User ID ke jawab mein, na ghalti ke jawab mein.
+ */
+export async function loginWithIdentifier(
+  _prev: IdentifierLoginState,
+  formData: FormData
+): Promise<IdentifierLoginState> {
+  const raw = String(formData.get("identifier") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  if (!raw || !password) return { error: "Email, mobile number ya User ID -- aur password, dono likhein." };
 
   // Naam na mile to bhi wohi jumla jo ghalat password par aata hai.
-  // Alag jumla dena kisi ko ye batata hai ke kaunsi User ID maujood hai
-  // aur kaunsi nahi -- aur wo fehrist banane ka pehla qadam hota hai.
-  const ghalat = { error: "Ghalat User ID ya password." };
-  if (!farmer?.user_id) return ghalat;
+  // Alag jumla dena kisi ko ye batata hai ke kaunsi ID maujood hai aur
+  // kaunsi nahi -- aur wo fehrist banane ka pehla qadam hota hai.
+  const ghalat = { error: "Ghalat ID ya password." };
 
-  const { data: authUser } = await service.auth.admin.getUserById(farmer.user_id as string);
-  const email = authUser?.user?.email;
+  const service = createServiceClient();
+  let email: string | null = null;
+
+  if (raw.includes("@")) {
+    email = raw.toLowerCase();
+  } else {
+    const key = phoneKey(raw);
+    if (key) {
+      email = loginEmailFor(key);
+    } else {
+      const username = raw.toLowerCase();
+      const { data: farmer } = await service
+        .from("farmers")
+        .select("user_id")
+        .eq("username", username)
+        .eq("is_deleted", false)
+        .maybeSingle();
+      if (!farmer?.user_id) return ghalat;
+      const { data: authUser } = await service.auth.admin.getUserById(farmer.user_id as string);
+      email = authUser?.user?.email ?? null;
+    }
+  }
   if (!email) return ghalat;
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return ghalat;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) return ghalat;
 
-  return { success: true };
+  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
+  if (!profile) return { error: "Account setup adhoora hai. Support se rabta karein." };
+  if (!profile.is_active) {
+    await supabase.auth.signOut();
+    return { error: "Ye account deactivate ho chuka hai. Admin se rabta karein." };
+  }
+
+  return { success: true, redirectPath: getRoleRedirectPath(profile.role) };
 }

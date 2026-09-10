@@ -59,7 +59,7 @@ export const authDict = {
   au_eg_village: { en: "e.g. Chak Maha Bali", rm: "Misal: Chak Maha Bali", ur: "مثال: چک مہا بلی" },
 
   // ---- Doosre raaste ----
-  au_email_or_mobile: { en: "Email or Mobile", rm: "Email ya Mobile", ur: "ای میل یا موبائل" },
+  au_email_or_mobile: { en: "Email, Mobile or User ID", rm: "Email, Mobile ya User ID", ur: "ای میل، موبائل یا یوزر آئی ڈی" },
   au_have_user_id: { en: "Made a User ID? Log in with that", rm: "Apni User ID bana rakhi hai? Us se login karein", ur: "اپنی یوزر آئی ڈی بنا رکھی ہے؟ اس سے لاگ اِن کریں" },
   au_forgot_password_q: { en: "Forgot your password? Log in with mobile and OTP", rm: "Password yaad nahi? Mobile aur OTP se login karein", ur: "پاس ورڈ یاد نہیں؟ موبائل اور او ٹی پی سے لاگ اِن کریں" },
   au_customer_email_login: { en: "A customer? Come in with email and password", rm: "Customer hain? Email aur password se aayein", ur: "گاہک ہیں؟ ای میل اور پاس ورڈ سے آئیں" },

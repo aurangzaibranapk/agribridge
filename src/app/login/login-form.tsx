@@ -7,7 +7,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
-import { requestFarmerOtp, verifyFarmerOtp, loginWithUsername, type FarmerAuthState } from "@/actions/farmer-auth";
+import { requestFarmerOtp, verifyFarmerOtp, loginWithIdentifier, type FarmerAuthState, type IdentifierLoginState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -46,52 +46,39 @@ export function LoginForm() {
   );
 }
 
+const identifierEmptyState: IdentifierLoginState = {};
+
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    const trimmed = identifier.trim();
-    const email = trimmed.includes("@") ? trimmed.toLowerCase() : `${trimmed.replace(/\D/g, "")}@phone.agribridge.local`;
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      setLoading(false);
-      setError(signInError.message === "Invalid login credentials" ? "Ghalat email ya password." : signInError.message);
-      return;
-    }
-    const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).single();
-    if (!profile) { setLoading(false); setError("Account setup adhoora hai. Support se rabta karein."); return; }
-    if (!profile.is_active) { await supabase.auth.signOut(); setLoading(false); setError("Ye account deactivate ho chuka hai. Admin se rabta karein."); return; }
+  useEffect(() => {
+    if (!state.success) return;
+    // Login se pehle jo safha khulna tha wahi jeetta hai -- role ke
+    // hisaab se ghar sirf tab, jab koi khaas manzil na ho.
     const redirectTo = searchParams.get("redirectTo");
-    router.push(redirectTo && redirectTo !== "/login" ? redirectTo : getRoleRedirectPath(profile.role));
+    router.push(redirectTo && redirectTo !== "/login" ? redirectTo : state.redirectPath ?? "/");
     router.refresh();
-  }
+  }, [state.success, state.redirectPath, searchParams, router]);
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <Alert tone="error">{error}</Alert>}
+      <form action={action} className="space-y-4">
+        {state.error && <Alert tone="error">{state.error}</Alert>}
         <div>
           <Label htmlFor="identifier">{t("au_email_or_mobile", lang)}</Label>
-          <Input id="identifier" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder={t("au_eg_email", lang)} className={FIELD} />
+          <Input id="identifier" name="identifier" required placeholder={t("au_eg_email", lang)} className={FIELD} />
         </div>
         <div>
           <div className="mb-1 flex items-center justify-between">
             <Label htmlFor="password">{t("pm_password", lang)}</Label>
             <Link href="/forgot-password" className="text-xs font-semibold text-[#1E4A2E] hover:underline">{t("au_forgot_password", lang)}</Link>
           </div>
-          <PasswordInput id="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={FIELD} />
+          <PasswordInput id="password" name="password" required placeholder="••••••••" className={FIELD} />
         </div>
-        <Button type="submit" disabled={loading} className={BIG_BTN}>{loading ? "Sign in ho raha hai..." : "Sign in"}</Button>
+        <SubmitBtn label="Sign in" busy="Sign in ho raha hai..." />
       </form>
       <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052]">
         Secure access · Role ke mutabiq aapka dashboard khulega.
@@ -235,9 +222,9 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
 function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
   const lang = useLang();
   const router = useRouter();
-  const [state, action] = useFormState(loginWithUsername, emptyState);
-  useEffect(() => { if (state.success) { router.push("/portal/dashboard"); router.refresh(); } }, [state.success, router]);
-  return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="username">{t("pm_user_id", lang)}</Label><Input id="username" name="username" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
+  const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
+  useEffect(() => { if (state.success) { router.push(state.redirectPath ?? "/portal/dashboard"); router.refresh(); } }, [state.success, state.redirectPath, router]);
+  return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="identifier">{t("pm_user_id", lang)}</Label><Input id="identifier" name="identifier" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
 }
 
 function SubmitBtn({
