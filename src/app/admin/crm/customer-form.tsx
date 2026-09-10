@@ -14,6 +14,7 @@ interface ExistingCustomer {
   name: string;
   contact_person: string | null;
   phone_number: string;
+  cnic: string | null;
   email: string | null;
   address: string | null;
   credit_limit: number;
@@ -91,6 +92,10 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
           <div>
             <Label>{t("at_phone_number_req", lang)}</Label>
             <Input name="phone_number" defaultValue={customer?.phone_number} required />
+          </div>
+          <div>
+            <Label>CNIC</Label>
+            <Input name="cnic" defaultValue={customer?.cnic ?? ""} placeholder="00000-0000000-0" />
           </div>
           <div>
             <Label>{t("c_email", lang)}</Label>

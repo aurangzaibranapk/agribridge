@@ -18,7 +18,7 @@ export default async function AdminCrmPage() {
   ] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, name, contact_person, phone_number, email, address, credit_limit, payment_due_days, current_balance, is_active")
+      .select("id, name, contact_person, phone_number, cnic, email, address, credit_limit, payment_due_days, current_balance, is_active")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("suppliers").select("id, name, contact_person, phone_number, current_payable").eq("is_active", true).order("name"),

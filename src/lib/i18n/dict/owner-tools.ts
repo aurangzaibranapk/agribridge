@@ -52,8 +52,8 @@ export const ownerToolsDict = {
   // ---- POS counter ----
   pos_all_groups: { en: "All groups", rm: "Sab qismein", ur: "سب قسمیں" },
   pos_no_group: { en: "No category set", rm: "Qism nahi lagi", ur: "قسم نہیں لگی" },
-  pos_cust_search: { en: "Search by name or phone", rm: "Naam ya phone se dhoondein", ur: "نام یا فون سے ڈھونڈیں" },
-  pos_cust_none: { en: "No customer found by that name or phone.", rm: "Is naam ya phone se koi gahak nahi mila.", ur: "اس نام یا فون سے کوئی گاہک نہیں ملا۔" },
+  pos_cust_search: { en: "Search by name, phone or CNIC", rm: "Naam, phone ya CNIC se dhoondein", ur: "نام، فون یا شناختی کارڈ سے ڈھونڈیں" },
+  pos_cust_none: { en: "No customer found by that name, phone or CNIC.", rm: "Is naam, phone ya CNIC se koi gahak nahi mila.", ur: "اس نام، فون یا شناختی کارڈ سے کوئی گاہک نہیں ملا۔" },
   pos_cust_balance: { en: "Balance", rm: "Us par baqi", ur: "اس پر باقی" },
   pos_walk_in_hint: {
     en: "Leave empty for a walk-in customer.",

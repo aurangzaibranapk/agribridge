@@ -12,6 +12,7 @@ interface Customer {
   id: string;
   name: string;
   phone_number: string;
+  cnic: string | null;
   contact_person: string | null;
   email: string | null;
   address: string | null;

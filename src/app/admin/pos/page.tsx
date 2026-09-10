@@ -225,12 +225,13 @@ export default async function PosPage() {
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
-      .select("id, name, phone_number, customer_type, current_balance, credit_limit")
+      .select("id, name, phone_number, cnic, customer_type, current_balance, credit_limit")
       .order("name");
     rawCustomers = (cust ?? []).map((c: any) => ({
       id: c.id,
       name: c.name,
       phone: c.phone_number,
+      cnic: c.cnic,
       // Hadd darj hi na ho to NULL. Sifar likh dena "is ko udhaar bilkul
       // nahi" kehna hai -- aur wo faisla kisi ne kiya hi nahi.
       creditLimit: c.credit_limit == null ? null : Number(c.credit_limit),

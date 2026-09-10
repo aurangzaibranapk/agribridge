@@ -7028,6 +7028,7 @@ export type Database = {
         Row: {
           address: string | null
           branch_id: string | null
+          cnic: string | null
           contact_person: string | null
           created_at: string
           credit_limit: number | null
@@ -7047,6 +7048,7 @@ export type Database = {
         Insert: {
           address?: string | null
           branch_id?: string | null
+          cnic?: string | null
           contact_person?: string | null
           created_at?: string
           credit_limit?: number | null
@@ -7066,6 +7068,7 @@ export type Database = {
         Update: {
           address?: string | null
           branch_id?: string | null
+          cnic?: string | null
           contact_person?: string | null
           created_at?: string
           credit_limit?: number | null

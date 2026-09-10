@@ -57,6 +57,7 @@ interface Customer {
   id: string;
   name: string;
   phone: string | null;
+  cnic?: string | null;
   balance?: number | null;
   creditLimit?: number | null;
   isWholesaleShop: boolean;
@@ -217,11 +218,16 @@ export function PosClient({
     const pool = customers.filter((c) => c.isWholesaleShop === wantWholesale);
     const q = custQuery.trim().toLowerCase();
     if (!q) return pool.slice(0, 8);
+    // CNIC/mobile dash ke sath ya bina likhe ja sakte hain -- dono taraf
+    // se dash nikal kar milaya jata hai, taake "12345" aur "1-2345" ek hi
+    // banda samjhe jayein.
+    const qDigits = q.replace(/-/g, "");
     return pool
       .filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
           (c.phone ?? "").toLowerCase().includes(q) ||
+          (c.cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits) ||
           c.id.toLowerCase().startsWith(q)
       )
       .slice(0, 8);
