@@ -810,9 +810,14 @@ export const productsFlowDict = {
   pf_bill_drop_line: { en: "Drop this line", rm: "Ye qatar chhoR dein", ur: "یہ قطار چھوڑ دیں" },
   pf_bill_search_product: { en: "Type the product name…", rm: "Product ka naam likhein…", ur: "پروڈکٹ کا نام لکھیں…" },
   pf_bill_no_product: {
-    en: "No product found with that name. Create the product first, then choose it here.",
-    rm: "Is naam ka koi product nahi mila. Pehle product banayein, phir yahan chunein.",
-    ur: "اس نام کا کوئی پروڈکٹ نہیں ملا۔ پہلے پروڈکٹ بنائیں، پھر یہاں چنیں۔",
+    en: "No product found with that name.",
+    rm: "Is naam ka koi product nahi mila.",
+    ur: "اس نام کا کوئی پروڈکٹ نہیں ملا۔",
+  },
+  pf_bill_create_product: {
+    en: "Create \"{name}\" as a new product",
+    rm: "\"{name}\" naam se naya product banayein",
+    ur: "\"{name}\" نام سے نیا پروڈکٹ بنائیں",
   },
   pf_bill_rate_was_none: {
     en: "trade rate was not known until now",

@@ -107,6 +107,67 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   redirect("/admin/products");
 }
 
+/**
+ * Bill Rates se seedha naya product (10 September).
+ *
+ * Malik ka kehna: "jab system ne bill se naam diya, neeche main khud
+ * naam de raha hoon, system ko wahi naam save karna chahiye" -- yani
+ * "koi product nahi mila" par safha chhoR kar Products par jana aur
+ * wapas aana faaltu chakkar hai. Yahan se bina redirect ke, bina kisi
+ * approval-flow ke (jo Owner/Admin/Warehouse bill rates par kaam kar
+ * raha hai wo product bhi bana sakta hai) -- rate wahi jo us line par
+ * abhi tak likha ja chuka hai, dobara nahi poochna.
+ */
+export async function quickCreateProduct(input: {
+  name: string;
+  packSize?: string | null;
+  purchasePrice: number;
+  sellingPrice?: number | null;
+  wholesalePrice?: number | null;
+  mrpPrice?: number | null;
+}): Promise<{ id: string } | { error: string }> {
+  const supabase = createClient();
+  const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
+  if (!isUnrestricted && !permission?.can_add) {
+    return { error: "Aapke paas Product Add karne ki ijazat nahi hai." };
+  }
+  const name = input.name.trim();
+  if (!name) return { error: "Product ka naam saaf nahi." };
+  if (!Number.isFinite(input.purchasePrice) || input.purchasePrice < 0) {
+    return { error: "Trade rate saaf nahi -- pehle wo bharein." };
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      name,
+      pack_size: input.packSize?.trim() || null,
+      purchase_price: input.purchasePrice,
+      // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
+      // Baqi wala nishan isi se lagta hai (rates-baqi/page.tsx).
+      selling_price: input.sellingPrice ?? 0,
+      wholesale_price: input.wholesalePrice ?? null,
+      mrp_price: input.mrpPrice ?? null,
+      is_verified: isUnrestricted || permission?.add_needs_approval === false,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Product nahi ban saka." };
+
+  const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
+  const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
+  if (warehouse) {
+    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouse.id, quantity_on_hand: 0 });
+  }
+
+  await supabase.from("activity_logs").insert({ user_id: userId, action: "create", entity_name: "Product", entity_id: data.id });
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/bill-rates");
+
+  return { id: data.id };
+}
+
 export async function updateProduct(_prev: FormState, formData: FormData): Promise<FormState> {
   const supabase = createClient();
   const id = String(formData.get("id") ?? "");

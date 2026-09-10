@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, CheckCircle2, FileText, Save, Search, ShoppingBag, Table2, Trash2, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2, FileText, Plus, Save, Search, ShoppingBag, Table2, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import {
   applyBillRates,
@@ -12,6 +13,7 @@ import {
   skipBillLine,
   type BillRateState,
 } from "@/actions/supplier-bill-rates";
+import { quickCreateProduct } from "@/actions/products";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -118,16 +120,57 @@ function ProductPicker({
   products,
   defaultId,
   disabled,
+  packSize,
+  currentRate,
+  currentWholesale,
+  currentSale,
+  currentMrp,
 }: {
   lang: Lang;
   name: string;
   products: Product[];
   defaultId: string | null;
   disabled?: boolean;
+  packSize?: string | null;
+  /** Line par abhi tak likhe hue (magar Save na hue) rate -- naya product isi rate se banta hai. */
+  currentRate?: string;
+  currentWholesale?: string;
+  currentSale?: string;
+  currentMrp?: string;
 }) {
+  const router = useRouter();
   const [chosen, setChosen] = useState<string | null>(defaultId);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  async function createHere() {
+    const rate = Number(currentRate);
+    if (!currentRate || !Number.isFinite(rate) || rate < 0) {
+      setCreateError("Pehle Trade rate bharein — bina rate ke naya product nahi banta.");
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    const res = await quickCreateProduct({
+      name: query.trim(),
+      packSize,
+      purchasePrice: rate,
+      sellingPrice: currentSale ? Number(currentSale) : null,
+      wholesalePrice: currentWholesale ? Number(currentWholesale) : null,
+      mrpPrice: currentMrp ? Number(currentMrp) : null,
+    });
+    setCreating(false);
+    if ("error" in res) {
+      setCreateError(res.error);
+      return;
+    }
+    setChosen(res.id);
+    setOpen(false);
+    setQuery("");
+    router.refresh();
+  }
 
   const chosenProduct = useMemo(() => products.find((p) => p.id === chosen) ?? null, [products, chosen]);
 
@@ -210,9 +253,18 @@ function ProductPicker({
           )}
 
           {open && query.trim().length > 1 && results.length === 0 && (
-            <p className="mt-1 text-xs text-surface-500">
-              {t("pf_bill_no_product", lang)}
-            </p>
+            <div className="mt-1">
+              <p className="text-xs text-surface-500">{t("pf_bill_no_product", lang)}</p>
+              <button
+                type="button"
+                onClick={createHere}
+                disabled={creating}
+                className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-60 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
+              >
+                <Plus className="h-3.5 w-3.5" /> {creating ? "…" : t("pf_bill_create_product", lang).replace("{name}", query.trim())}
+              </button>
+              {createError && <p className="mt-1 text-xs text-red-600">{createError}</p>}
+            </div>
           )}
         </div>
       )}
@@ -223,6 +275,13 @@ function ProductPicker({
 function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; products: Product[]; billDone: boolean }) {
   const [saveState, saveAction] = useFormState(saveBillLine, initial);
   const [skipState, skipAction] = useFormState(skipBillLine, initial);
+  // Naya product yahin se ban sake to usay woh rate chahiye jo line par
+  // abhi likha ja raha hai -- chahe abhi Save na dabaya ho. Isi liye
+  // controlled: ProductPicker ko taaza qeemat milti hai.
+  const [rate, setRate] = useState(line.rate != null ? String(line.rate) : "");
+  const [wholesaleRate, setWholesaleRate] = useState(line.wholesaleRate != null ? String(line.wholesaleRate) : "");
+  const [saleRate, setSaleRate] = useState(line.saleRate != null ? String(line.saleRate) : "");
+  const [mrpRate, setMrpRate] = useState(line.mrpRate != null ? String(line.mrpRate) : "");
 
   const applied = line.status === "applied";
   const locked = applied || billDone;
@@ -299,7 +358,8 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               type="number"
               step="0.01"
               min="0"
-              defaultValue={line.rate ?? ""}
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
               disabled={locked}
               placeholder={t("pf_bill_rate_ph", lang)}
               className="text-base"
@@ -330,7 +390,8 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               type="number"
               step="0.01"
               min="0"
-              defaultValue={line.wholesaleRate ?? ""}
+              value={wholesaleRate}
+              onChange={(e) => setWholesaleRate(e.target.value)}
               disabled={locked}
               placeholder="khali chhorein to na badle"
               className="text-base"
@@ -352,7 +413,8 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               type="number"
               step="0.01"
               min="0"
-              defaultValue={line.saleRate ?? ""}
+              value={saleRate}
+              onChange={(e) => setSaleRate(e.target.value)}
               disabled={locked}
               placeholder="khali chhorein to na badle"
               className="text-base"
@@ -372,7 +434,8 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               type="number"
               step="0.01"
               min="0"
-              defaultValue={line.mrpRate ?? ""}
+              value={mrpRate}
+              onChange={(e) => setMrpRate(e.target.value)}
               disabled={locked}
               placeholder="khali chhorein to na badle"
               className="text-base"
@@ -385,7 +448,18 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
 
         <div>
           <Label>{t("pf_bill_which_product", lang)}</Label>
-          <ProductPicker lang={lang} name="product_id" products={products} defaultId={line.productId} disabled={locked} />
+          <ProductPicker
+            lang={lang}
+            name="product_id"
+            products={products}
+            defaultId={line.productId}
+            disabled={locked}
+            packSize={line.packSize}
+            currentRate={rate}
+            currentWholesale={wholesaleRate}
+            currentSale={saleRate}
+            currentMrp={mrpRate}
+          />
           {line.matchSource === "auto_name" && !applied && (
             <p className="mt-1 text-xs text-amber-700">
               {t("pf_bill_auto_match", lang)}
