@@ -52,6 +52,9 @@ export const catalogUsersDict = {
   pd_remove_image: { en: "Remove image", rm: "Tasveer hatayein", ur: "تصویر ہٹائیں" },
   pd_catalog_export: { en: "Product Catalog Export", rm: "Cheezon ki fehrist nikaalein", ur: "چیزوں کی فہرست نکالیں" },
   cx_all_categories: { en: "All Categories", rm: "Sab qismein", ur: "سب قسمیں" },
+  cx_count_columns: { en: "Add blank Actual Stock + Difference columns (for a paper count sheet)", rm: "Khaali Actual Stock + Farq ke khane bhi shamil karein (kaghazi ginti ke liye)", ur: "خالی Actual Stock + فرق کے خانے بھی شامل کریں" },
+  cx_actual_stock: { en: "Actual Stock", rm: "Actual Stock (dukan mein)", ur: "اصل اسٹاک (دکان میں)" },
+  cx_diff: { en: "Difference", rm: "Farq", ur: "فرق" },
   pd_search_short: { en: "Search product", rm: "Cheez dhoondein", ur: "چیز تلاش کریں" },
   pd_select_fields: { en: "Select Fields", rm: "Kaun se khane chahiye", ur: "کون سے خانے چاہیے" },
 
