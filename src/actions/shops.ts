@@ -30,7 +30,7 @@ export interface ActionState {
   success?: boolean;
 }
 
-const BUSINESS_TYPES = ["karyana", "agri_inputs", "grain_procurement", "dairy", "machinery_fleet", "vet"];
+const BUSINESS_TYPES = ["karyana", "agri_inputs", "grain_procurement", "dairy", "machinery_fleet", "vet", "central"];
 const STATUSES = ["active", "inactive", "suspended"];
 
 /** Dukan banane, badalne aur halat badalne ka haq. */

@@ -22,6 +22,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   dairy: "Dairy",
   machinery_fleet: "Machinery",
   vet: "Vets",
+  central: "Central Warehouse",
 };
 
 /** Chunte hi mehfooz — aur wo baat nazar bhi aati hai. */

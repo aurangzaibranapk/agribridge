@@ -46,6 +46,7 @@ export const branchOpsDict = {
   sh_machinery: { en: "Machinery & Fleet", rm: "Machinery aur gaariyan", ur: "مشینری اور گاڑیاں" },
   sh_vet: { en: "Vets", rm: "Vet (jaanwaron ka ilaj)", ur: "ویٹ (جانوروں کا علاج)" },
   sh_agri_inputs: { en: "Agri Inputs (fertilizer / pesticide / feed)", rm: "Kheti ka saman (khaad / zehr / wanda)", ur: "کھیتی کا سامان (کھاد / زہر / ونڈا)" },
+  sh_central: { en: "Central Warehouse (all products)", rm: "Central Warehouse (poora maal)", ur: "سنٹرل ویئر ہاؤس (پورا مال)" },
 
   // Dukan ki tafseel badalna, halat, aur mitana (291)
   sh_edit: { en: "Edit", rm: "Tafseel badlein", ur: "تفصیل بدلیں" },

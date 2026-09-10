@@ -135,25 +135,46 @@ export async function rejectTransfer(_prev: ActionState, formData: FormData): Pr
   return { success: true };
 }
 
+/**
+ * Warehouse banana/badalna, dono ek hi jagah se (10 September).
+ *
+ * Pehle yahan sirf "banana" tha, wo bhi hamesha PEHLI branch se juR
+ * jata -- jo branch chuni ho wo maayne hi nahi rakhti thi. Is se
+ * Central Warehouse ko kisi shop se joRna (taake us ka apna POS ban
+ * sake) mumkin hi nahi tha -- warehouse hamesha ghalat branch par ban
+ * jata, aur jo pehle se bana hua tha use badalne ka koi raasta nahi
+ * tha.
+ *
+ * Ab: branch form se aati hai (zaroori), shop optional hai (khali =
+ * "yahi branch ka apna godam, kisi ek dukan ka nahi" -- HQ isi tarah
+ * rehta hai), aur `id` diya ho to naya nahi banta, wahi update hota
+ * hai.
+ */
 export async function saveWarehouse(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
 
+  const id = String(formData.get("id") ?? "").trim() || null;
   const name = String(formData.get("name") ?? "").trim();
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const address = (formData.get("address") as string) || null;
+  const branchId = String(formData.get("branch_id") ?? "").trim();
+  const shopId = String(formData.get("shop_id") ?? "").trim() || null;
 
   if (!name) return { error: "Warehouse name is required." };
   if (!code) return { error: "Warehouse code is required." };
+  if (!branchId) return { error: "Branch select karna zaroori hai." };
 
-  const { data: branch } = await supabase.from("branches").select("id").limit(1).single();
-  if (!branch) return { error: "No branch found - cannot create warehouse." };
+  if (shopId) {
+    const { data: shop } = await supabase.from("shops").select("id, branch_id").eq("id", shopId).maybeSingle();
+    if (!shop) return { error: "Shop nahi mila." };
+    if (shop.branch_id !== branchId) return { error: "Ye shop is branch ke andar nahi -- pehle branch theek karein." };
+  }
 
-  const { error } = await supabase.from("warehouses").insert({
-    branch_id: branch.id,
-    name,
-    code,
-    address,
-  });
+  const payload = { branch_id: branchId, shop_id: shopId, name, code, address };
+
+  const { error } = id
+    ? await supabase.from("warehouses").update(payload).eq("id", id)
+    : await supabase.from("warehouses").insert(payload);
 
   if (error) return { error: error.message };
 

@@ -16,6 +16,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   dairy: "Dairy",
   machinery_fleet: "Machinery & Fleet",
   vet: "Vets",
+  central: "Central Warehouse",
 };
 
 interface Shop {
@@ -281,6 +282,7 @@ function BusinessTypeOptions() {
       <option value="dairy">{t("sh_dairy", lang)}</option>
       <option value="machinery_fleet">{t("sh_machinery", lang)}</option>
       <option value="vet">{t("sh_vet", lang)}</option>
+      <option value="central">{t("sh_central", lang)}</option>
     </>
   );
 }

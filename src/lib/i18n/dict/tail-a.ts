@@ -87,6 +87,16 @@ export const tailADict = {
   wh_code: { en: "Code *", rm: "Code *", ur: "کوڈ *" },
   wh_code_eg: { en: "e.g. NORTH", rm: "misal: NORTH", ur: "مثال: NORTH" },
   wh_name_eg: { en: "e.g. North Store", rm: "misal: North Store", ur: "مثال: North Store" },
+  wh_branch: { en: "Branch *", rm: "Branch (shaakh) *", ur: "شاخ *" },
+  wh_pick_branch: { en: "- Select branch -", rm: "- Branch chunein -", ur: "- شاخ چنیں -" },
+  wh_shop: { en: "Shop (optional)", rm: "Dukan (agar kisi ek dukan ka hai)", ur: "دکان (اگر کسی ایک دکان کا ہے)" },
+  wh_no_shop: { en: "No shop — whole branch's own store", rm: "Kisi dukan ka nahi — poori branch ka apna godam", ur: "کسی دکان کا نہیں — پوری شاخ کا اپنا گودام" },
+  wh_shop_hint: { en: "Leave empty for a central/branch warehouse; pick a shop to make this that shop's own stock.", rm: "Central ya branch ke godam ke liye khali chhoR dein; kisi dukan ka apna stock banane ke liye wo dukan chunein.", ur: "سنٹرل یا برانچ کے گودام کے لیے خالی رہنے دیں۔" },
+  wh_add_btn: { en: "Add Warehouse", rm: "Godam shamil karein", ur: "گودام شامل کریں" },
+  wh_edit: { en: "Edit Warehouse", rm: "Godam ki tafseel badlein", ur: "گودام کی تفصیل بدلیں" },
+  wh_save: { en: "Save", rm: "Mehfooz karein", ur: "محفوظ کریں" },
+  wh_cancel: { en: "Cancel", rm: "Raho do", ur: "چھوڑیں" },
+  wh_branch_only: { en: "Branch's own store", rm: "Branch ka apna godam", ur: "برانچ کا اپنا گودام" },
 
   // ---- Kisan ka udhaar (baqi) ----
   fc_credit_type: { en: "Credit Type *", rm: "Udhaar ki qism *", ur: "ادھار کی قسم *" },
