@@ -1,35 +1,36 @@
 # AgriBridge — kaam karne ka tareeqa
 
-## Kaam ki hadd: sirf ERP admin (malik ka usool, 6 September)
+## Kaam ki hadd: poora project, main hi developer hoon (malik ka usool, 10 September)
 
-Malik ke alfaz: *"aaj se tum sirf ERP admin ko dekho ge. Baqi front
-website aur front page, login page — developer dekhe ga."*
+**Update — 10 September:** Malik ke alfaz: *"mere liye tum developer
+ho, aaj se yaad rakhna... developer main bolon to tum ho gye."* Koi
+alag human developer nahi hai — jab bhi "developer" ka zikr ho (chahe
+apne kisi purane note mein, chahe malik ki taraf se koi handoff
+message), wo main hoon.
 
-**Mera hissa:**
+Is se 6 September wala hissa-bandi khatam ho gayi: ab front website,
+login/auth safhe, aur poora ERP — sab mera kaam hai, ek hi branch par.
+
+**Mera hissa (ab poora project):**
 
 - `src/app/admin/**` — poora ERP
-- us ke peeche ka saara maal: `src/actions/`, `src/lib/`,
-  `src/components/` (jo admin chalate hain), aur `supabase/migrations/`
-
-**Mera hissa NAHI:**
-
-- front website aur front page
-- `src/app/login/**`
-- wo public safhe jo website ka roop hain
+- front website aur public safhe (`src/app/(website)`, `src/app/login/**`
+  waghera)
+- `src/actions/`, `src/lib/`, `src/components/`, aur
+  `supabase/migrations/` — sab
 
 **Amal mein is ka matlab:**
 
-- In files ko main **badalta nahi** — chahe wahan koi ghalti nazar aaye.
-  Nazar aaye to malik ko **bata deta hoon**, theek khud nahi karta.
-- Developer isi branch par kaam karta hai. Push rukne par main
-  **rebase** karta hoon, force-push kabhi nahi — us ka kaam zaya nahi
-  hona chahiye.
-- Build aur deploy phir bhi poore project ka hota hai, is liye us ke
-  commit mere build mein aate hain. Ye theek hai: main un ko **shamil**
-  karta hoon, **chhoota** nahi.
-- Koi cheez hadd par ho (jaise farmer portal ya vendor ka safha — na wo
-  admin hai na front website), to **poochh leta hoon**, andaza nahi
-  lagata.
+- Koi bhi hissa "developer ka kaam hai, mera nahi" keh kar chhoRna nahi
+  — sab khud dekhna hai, khud theek karna hai.
+- Front website par bhi wahi usool jo ERP par hain: root-cause fix,
+  tsc/build se verify, jahan schema shamil ho wahan Testing pehle phir
+  Live, commit + push.
+- Agar koi purana branch (jaise `testing/public-website-layouts`) mila
+  hua kaam le kar aaye, to us par bhi **isi tarah** kaam karna hai:
+  checklist khud test karo (build, SEO, robots/sitemap, noindex,
+  waghera), phir apni deploy branch mein merge karo — kisi aur "developer"
+  ka intezar nahi karna.
 
 ## Command kab bhejni hain: malik ke kehne par, pehle nahi
 
