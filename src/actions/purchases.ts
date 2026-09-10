@@ -295,13 +295,20 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       .eq("id", row.product_id)
       .single();
 
+    // Maal kis branch mein jayega, ye is PURCHASE ne khud chuna tha
+    // (banate waqt "Branch" khana) -- product ka apna purana branch_id
+    // (jab wo pehli dafa bana tha) us faisle se ooncha nahi ho sakta.
+    // Pehle ulta tha: product.branch_id hamesha jeet jata, is liye
+    // Central Warehouse ke liye banayi purchase bhi product ke purane
+    // (Main Branch) mein chali jati thi -- maal "gum" nahi hota tha,
+    // bas ghalat jagah dikhta tha (10 September).
     let warehouseId: string | null = null;
     if (product?.shop_id) {
       const { data: shopWarehouse } = await supabase.from("warehouses").select("id").eq("shop_id", product.shop_id).maybeSingle();
       warehouseId = shopWarehouse?.id ?? null;
     }
     if (!warehouseId) {
-      const targetBranchId = product?.branch_id ?? purchase.branch_id;
+      const targetBranchId = purchase.branch_id ?? product?.branch_id;
       const { data: mainWarehouse } = await supabase.from("warehouses").select("id").eq("branch_id", targetBranchId ?? "").eq("code", "MAIN").maybeSingle();
       warehouseId = mainWarehouse?.id ?? null;
     }
