@@ -133,6 +133,17 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
 
   return (
     <div>
+      {/* Print par table ke columns barh sakte hain (11 fields tak, +2
+          ginti sheet ke liye) -- portrait A4 mein sab nahi aata, dayeen
+          taraf ke khane katte hue chhap jate. Landscape + chhota font
+          isi liye, sirf print ke waqt (screen par asar nahi). */}
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 8mm; }
+          .catalog-print-table { font-size: 9px; }
+          .catalog-print-table th, .catalog-print-table td { padding: 2px 4px !important; }
+        }
+      `}</style>
       <div className="mb-2 flex flex-wrap items-center gap-1.5 print:hidden">
         <button
           type="button"
@@ -193,7 +204,7 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
             {titleSuffix || "Sab Products"} <span className="text-sm font-normal text-surface-400">({filtered.length} products)</span>
           </h2>
         </div>
-        <table className="w-full text-sm">
+        <table className="catalog-print-table w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left dark:border-surface-800">
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
