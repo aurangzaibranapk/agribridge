@@ -112,7 +112,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
         sum("grain_procurement_entries", "weight_kg", (q: any) => q.gte("entry_date", monthStart())),
         sum("grain_sales", "quantity_kg", (q: any) => q.gte("sale_date", monthStart())),
         sum("grain_sales", "total_amount", (q: any) => q.gte("sale_date", monthStart())),
-        sum("grain_inventory", "quantity_kg", (q: any) => q.gt("quantity_kg", 0)),
+        sum("v_grain_warehouse_stock", "maujood_kg", (q: any) => q.gt("maujood_kg", 0)),
       ]);
       return [{ label: "Month purchased", value: bought == null ? "—" : `${Math.round(bought).toLocaleString()} kg`, href: "/admin/grain-procurement" }, { label: "Month sold", value: sold == null ? "—" : `${Math.round(sold).toLocaleString()} kg`, href: "/admin/grain-procurement/sell" }, { label: "Sales value", value: rs(revenue), href: "/admin/grain-procurement/dashboard" }, { label: "Available grain", value: stock == null ? "—" : `${Math.round(stock).toLocaleString()} kg`, href: "/admin/grain-procurement/warehouse" }];
     }
@@ -129,8 +129,8 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
 
     case "fuel": {
       const [milkFuel, machineFuel, vehicles] = await Promise.all([
-        sum("milk_fuel_logs", "amount", (q: any) => q.gte("log_date", monthStart())),
-        sum("machinery_diesel_entries", "total_amount", (q: any) => q.gte("entry_date", monthStart())),
+        sum("fuel_logs", "fuel_cost", (q: any) => q.gte("log_date", monthStart())),
+        sum("machinery_fuel_logs", "amount", (q: any) => q.gte("log_date", monthStart()).eq("verification_status", "verified")),
         count(() => s.from("vehicles").select("id", { count: "exact", head: true }).eq("is_active", true)),
       ]);
       return [{ label: "Milk route fuel", value: rs(milkFuel), href: "/admin/milk-collection/fuel" }, { label: "Machinery diesel", value: rs(machineFuel), href: "/admin/machinery-rental/diesel" }, { label: "Active vehicles", value: n(vehicles), href: "/admin/vehicles" }];
@@ -138,9 +138,9 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
 
     case "generator": {
       const [logs, fuel, runtime] = await Promise.all([
-        count(() => s.from("milk_generator_logs").select("id", { count: "exact", head: true }).gte("log_date", monthStart())),
-        sum("milk_generator_logs", "fuel_liters", (q: any) => q.gte("log_date", monthStart())),
-        sum("milk_generator_logs", "runtime_hours", (q: any) => q.gte("log_date", monthStart())),
+        count(() => s.from("generator_logs").select("id", { count: "exact", head: true }).gte("log_date", monthStart())),
+        sum("generator_logs", "diesel_liters_purchased", (q: any) => q.gte("log_date", monthStart())),
+        sum("generator_logs", "hours_run", (q: any) => q.gte("log_date", monthStart())),
       ]);
       return [{ label: "Month log entries", value: n(logs), href: "/admin/milk-collection/generator" }, { label: "Fuel consumed", value: fuel == null ? "—" : `${Math.round(fuel * 10) / 10} L`, href: "/admin/milk-collection/generator" }, { label: "Runtime", value: runtime == null ? "—" : `${Math.round(runtime * 10) / 10} h`, href: "/admin/milk-collection/generator" }];
     }
@@ -150,7 +150,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
         count(() => s.from("vehicles").select("id", { count: "exact", head: true }).eq("is_active", true)),
         count(() => s.from("drivers").select("id", { count: "exact", head: true }).eq("is_active", true)),
         count(() => s.from("vehicle_daily_logs").select("id", { count: "exact", head: true }).is("closing_km", null)),
-        count(() => s.from("milk_maintenance_logs").select("id", { count: "exact", head: true }).gte("maintenance_date", monthStart())),
+        count(() => s.from("maintenance_logs").select("id", { count: "exact", head: true }).gte("service_date", monthStart())),
       ]);
       return [{ label: "Active vehicles", value: n(vehicles), href: "/admin/vehicles" }, { label: "Active drivers", value: n(drivers), href: "/admin/drivers" }, { label: "Open trip logs", value: n(openLogs), href: "/admin/my-vehicle", tone: openLogs ? "warn" : "normal" }, { label: "Month maintenance", value: n(maintenance), href: "/admin/milk-collection/maintenance" }];
     }
@@ -159,7 +159,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
       const [farmers, loans, wallets, pending] = await Promise.all([
         count(() => s.from("farmers").select("id", { count: "exact", head: true })),
         count(() => s.from("farmer_loans").select("id", { count: "exact", head: true }).eq("status", "active")),
-        count(() => s.from("farmer_wallets").select("id", { count: "exact", head: true })),
+        count(() => s.from("wallets").select("id", { count: "exact", head: true }).eq("owner_type", "farmer")),
         count(() => s.from("credit_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
       ]);
       return [{ label: "Registered farmers", value: n(farmers), href: "/admin/farmers" }, { label: "Active loans", value: n(loans), href: "/admin/farmer-loans" }, { label: "Farmer wallets", value: n(wallets), href: "/admin/wallets" }, { label: "Credit requests", value: n(pending), href: "/admin/credit-requests", tone: pending ? "warn" : "normal" }];
@@ -189,7 +189,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
     case "audit": {
       const [approvals, anomalies, stockCount, openLogs] = await Promise.all([
         count(() => s.from("whatsapp_submissions").select("id", { count: "exact", head: true }).eq("status", "pending")),
-        count(() => s.from("audit_anomalies").select("id", { count: "exact", head: true }).eq("status", "open")),
+        count(() => s.from("anomaly_findings").select("id", { count: "exact", head: true }).eq("status", "open")),
         count(() => s.from("stock_counts").select("id", { count: "exact", head: true }).eq("status", "draft")),
         count(() => s.from("vehicle_daily_logs").select("id", { count: "exact", head: true }).is("closing_km", null)),
       ]);
@@ -208,10 +208,13 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
 
     case "ai": {
       const [suggestions, actions, logs, instructions] = await Promise.all([
-        count(() => s.from("ai_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")),
-        count(() => s.from("ai_action_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
-        count(() => s.from("bridge_ai_logs").select("id", { count: "exact", head: true }).gte("created_at", t)),
-        count(() => s.from("ai_instructions").select("id", { count: "exact", head: true }).eq("is_active", true)),
+        count(() => s.from("ai_purchase_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("bridge_ai_action_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("bridge_ai_activity_log").select("id", { count: "exact", head: true }).gte("created_at", t)),
+        // ai_report_instructions ek hi settings row rakhta hai -- "active"
+        // ka koi khana nahi, is liye sirf itna dekha jata hai ke likhi hui
+        // hai ya nahi.
+        count(() => s.from("ai_report_instructions").select("id", { count: "exact", head: true })),
       ]);
       return [{ label: "Suggestions pending", value: n(suggestions), href: "/admin/ai-suggestions", tone: suggestions ? "warn" : "normal" }, { label: "Actions for review", value: n(actions), href: "/admin/bridge-ai/action-requests", tone: actions ? "alert" : "normal" }, { label: "AI activity today", value: n(logs), href: "/admin/bridge-ai/activity-log" }, { label: "Active instructions", value: n(instructions), href: "/admin/ai-instructions" }];
     }

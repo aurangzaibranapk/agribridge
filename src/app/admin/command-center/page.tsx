@@ -83,7 +83,7 @@ export default async function CommandCenterPage() {
     loadDeptKpis(lang),
     loadAlerts(),
     Promise.all(
-      ["branches", "shops", "farmers", "suppliers", "dealers", "buyers"].map(async (table) => {
+      (["branches", "shops", "farmers", "suppliers", "dealers", "buyers"] as const).map(async (table) => {
         const { count, error } = await supabase.from(table).select("id", { count: "exact", head: true });
         return error ? null : count;
       })
