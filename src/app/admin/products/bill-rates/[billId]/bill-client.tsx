@@ -278,10 +278,22 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
   // Naya product yahin se ban sake to usay woh rate chahiye jo line par
   // abhi likha ja raha hai -- chahe abhi Save na dabaya ho. Isi liye
   // controlled: ProductPicker ko taaza qeemat milti hai.
+  const [qty, setQty] = useState(line.qty != null ? String(line.qty) : "");
   const [rate, setRate] = useState(line.rate != null ? String(line.rate) : "");
   const [wholesaleRate, setWholesaleRate] = useState(line.wholesaleRate != null ? String(line.wholesaleRate) : "");
   const [saleRate, setSaleRate] = useState(line.saleRate != null ? String(line.saleRate) : "");
   const [mrpRate, setMrpRate] = useState(line.mrpRate != null ? String(line.mrpRate) : "");
+
+  // Har rate ke sath "is rate par ye qatar kitne ki bani" -- malik (10
+  // September): "hamein pata to chale is rate se ye value hai, kis rate
+  // par kya value, kitni value sale hui hai." Qty khali ho to kuch nahi
+  // dikhata -- adhoori ginti se banaya hua adad jhoot bolta.
+  const q = Number(qty);
+  const amountAt = (rateStr: string): string | null => {
+    const r = Number(rateStr);
+    if (!qty.trim() || !rateStr.trim() || !Number.isFinite(q) || !Number.isFinite(r)) return null;
+    return `Rs ${(q * r).toLocaleString()}`;
+  };
 
   const applied = line.status === "applied";
   const locked = applied || billDone;
@@ -345,7 +357,8 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               type="number"
               step="0.001"
               min="0"
-              defaultValue={line.qty ?? ""}
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
               disabled={locked}
               className="text-base"
             />
@@ -364,6 +377,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder={t("pf_bill_rate_ph", lang)}
               className="text-base"
             />
+            {amountAt(rate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(rate)}</p>}
             {line.rate == null && !applied && (
               <p className="mt-1 text-xs text-amber-700">
                 {t("pf_bill_rate_blank", lang)}
@@ -396,6 +410,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder="khali chhorein to na badle"
               className="text-base"
             />
+            {amountAt(wholesaleRate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(wholesaleRate)}</p>}
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana wholesale rate waisa hi rahega.
             </p>
@@ -419,6 +434,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder="khali chhorein to na badle"
               className="text-base"
             />
+            {amountAt(saleRate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(saleRate)}</p>}
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana sale rate waisa hi rahega.
             </p>
@@ -440,6 +456,7 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder="khali chhorein to na badle"
               className="text-base"
             />
+            {amountAt(mrpRate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(mrpRate)}</p>}
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana MRP rate waisa hi rahega.
             </p>
