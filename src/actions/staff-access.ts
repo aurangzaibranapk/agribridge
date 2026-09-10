@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { isAction, isDataScope, type Action, type DataScope } from "@/lib/access/types";
+import { DEPARTMENTS } from "@/lib/departments";
+import { updateUserRole } from "@/actions/users";
+import type { UserRole } from "@/lib/utils/roles";
 
 /**
  * Kis bande ko kya khulta hai -- ek jagah se.
@@ -41,6 +44,84 @@ export interface ActionState {
   error?: string;
   success?: boolean;
   message?: string;
+}
+
+/**
+ * Malik ke liye ek hi Save button: department/role, jagah aur access
+ * template ek workflow mein. Asal permissions phir bhi purane, audited
+ * sources mein hi rehti hain; ye action koi doosra permission system
+ * paida nahi karta.
+ */
+export async function saveStaffAccessSetup(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await master();
+  if ("error" in who) return { error: who.error };
+
+  const profileId = String(formData.get("profile_id") ?? "");
+  const role = String(formData.get("role") ?? "");
+  const branchId = String(formData.get("branch_id") ?? "") || null;
+  const shopId = String(formData.get("shop_id") ?? "") || null;
+  const template = String(formData.get("template") ?? role);
+  if (!profileId) return { error: "Pehle banda chunein." };
+
+  const allowedRoles = new Set(DEPARTMENTS.map((d) => d.role));
+  if (!allowedRoles.has(role) || !allowedRoles.has(template)) {
+    return { error: "Department ya access template durust nahi hai." };
+  }
+
+  const service = createServiceClient();
+  if (branchId) {
+    const { data: branch } = await service.from("branches").select("id").eq("id", branchId).eq("is_active", true).maybeSingle();
+    if (!branch) return { error: "Chuni hui branch active nahi hai ya maujood nahi." };
+  }
+  const { data: target } = await service
+    .from("profiles")
+    .select("full_name, role, branch_id, shop_id")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!target) return { error: "Ye staff member nahi mila." };
+
+  if (shopId) {
+    if (!branchId) return { error: "Shop dene se pehle branch chunein." };
+    const { data: shop } = await service.from("shops").select("branch_id").eq("id", shopId).eq("is_active", true).maybeSingle();
+    if (!shop || shop.branch_id !== branchId) return { error: "Ye shop chuni hui branch ke andar nahi hai." };
+  }
+
+  if (target.role !== role) {
+    const changed = await updateUserRole(profileId, role as UserRole);
+    if (changed.error) return { error: changed.error };
+  }
+
+  const { error: locationError } = await service
+    .from("profiles")
+    .update({ branch_id: branchId, shop_id: shopId })
+    .eq("id", profileId);
+  if (locationError) return { error: locationError.message };
+
+  const supabase = createClient();
+  const { data, error } = await (
+    supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: number | null; error: { message: string } | null }>
+  )("fn_apply_role_template", { p_profile: profileId, p_template: template });
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "staff-access",
+    recordId: profileId,
+    recordLabel: target.full_name ?? profileId,
+    description: `Staff setup: ${role}; template ${template}; branch ${branchId ?? "all"}; shop ${shopId ?? "all"}.`,
+    changes: {
+      role: { pehle: target.role, ab: role },
+      branch_id: { pehle: target.branch_id, ab: branchId },
+      shop_id: { pehle: target.shop_id, ab: shopId },
+    },
+  });
+
+  revalidatePath("/admin/staff-access");
+  revalidatePath("/admin/users");
+  return { success: true, message: `Access mehfooz ho gaya. Template se ${Number(data ?? 0)} nayi cheezein khuli hain.` };
 }
 
 const MASTER_ROLES = ["owner", "super_admin", "admin"];

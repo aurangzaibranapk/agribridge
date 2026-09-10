@@ -41,7 +41,7 @@ export default async function StaffAccessPage({
 
   const service = createServiceClient();
 
-  const [{ data: staff }, { data: features }, { data: templates }] = await Promise.all([
+  const [{ data: staff }, { data: features }, { data: templates }, { data: branches }, { data: shops }] = await Promise.all([
     // Malik (7 September): "yahan sirf staff aana chahiye aur kuch
     // nahi." Pehle ye query koi role filter nahi karti thi -- har
     // profile aa jata tha, farmer aur vendor tak jo kabhi test signup
@@ -55,6 +55,8 @@ export default async function StaffAccessPage({
       .order("full_name"),
     service.from("features").select("key, label, route, is_sensitive").eq("is_active", true).order("label"),
     service.from("role_feature_permissions").select("role, feature_key"),
+    service.from("branches").select("id, name").eq("is_active", true).order("name"),
+    service.from("shops").select("id, name, branch_id").eq("is_active", true).order("name"),
   ]);
 
   // Kaam ka banda wohi jise ijazat lagti hai. Owner/Admin is fehrist
@@ -85,8 +87,8 @@ export default async function StaffAccessPage({
   return (
     <div>
       <PageHeader
-        title="Staff ki ijazat"
-        description="Banda chunein — us ke stage ka template ek dabao mein lagayein, phir kam ya zyada karein"
+        title="Staff & Access Control"
+        description="Banda, department, branch, shop aur access — sab ek hi jagah se"
       />
       {log.length === 0 ? (
         <EmptyState title="Koi staff nahi mila." />
@@ -97,6 +99,8 @@ export default async function StaffAccessPage({
             full_name: p.full_name ?? "(naam nahi)",
             role: String(p.role),
             is_active: p.is_active !== false,
+            branch_id: (p.branch_id as string | null) ?? null,
+            shop_id: (p.shop_id as string | null) ?? null,
           }))}
           features={(features ?? []).map((f: any) => ({
             key: f.key,
@@ -113,6 +117,8 @@ export default async function StaffAccessPage({
             expires_at: (r.expires_at as string | null) ?? null,
             reason: (r.reason as string | null) ?? null,
           }))}
+          branches={(branches ?? []).map((b: any) => ({ id: b.id, name: b.name }))}
+          shops={(shops ?? []).map((s: any) => ({ id: s.id, name: s.name, branch_id: s.branch_id }))}
         />
       )}
     </div>
