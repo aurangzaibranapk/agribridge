@@ -17,7 +17,7 @@ export interface NavGroup {
 
 export const DASHBOARD_ITEM: NavItem = { href: "/admin/command-center", label: "Owner Command Center", icon: Scale };
 
-export const ADMIN_NAV_GROUPS: NavGroup[] = [
+const LEGACY_ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: "Business",
     items: [
@@ -204,5 +204,77 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+const FINAL_DEPARTMENTS = [
+  "Master Command",
+  "Branches",
+  "Shops",
+  "Sales & POS",
+  "AgriBridge Ordering",
+  "Procurement",
+  "Grain Business",
+  "Purchases",
+  "Milk & Dairy",
+  "Machinery",
+  "Product Management",
+  "Inventory & Warehouse",
+  "Fuel Management",
+  "Generator Management",
+  "Fleet Management",
+  "Farmers",
+  "Dealers",
+  "Buyers",
+  "Suppliers",
+  "CRM",
+  "Finance & Accounting",
+  "HR & Staff",
+  "Audit & Control",
+  "Reports & Analytics",
+  "Website",
+  "Bridge AI",
+  "Administration & Security",
+] as const;
+
+function canonicalDepartment(href: string): (typeof FINAL_DEPARTMENTS)[number] {
+  if (href === "/admin/command-center" || href === "/admin/master-dashboard" || href === "/admin/investors") return "Master Command";
+  if (href.startsWith("/admin/branches")) return "Branches";
+  if (["/admin/shops", "/admin/shop-rent", "/admin/branch-credit"].includes(href) || href.startsWith("/admin/shop-360")) return "Shops";
+  if (href.startsWith("/admin/agri-orders") || href.startsWith("/admin/pos/ordering")) return "AgriBridge Ordering";
+  if (href === "/admin/grain-procurement" || href.includes("grain-procurement/payment") || href.includes("grain-procurement/statement")) return "Procurement";
+  if (href.startsWith("/admin/grain")) return "Grain Business";
+  if (href.startsWith("/admin/purchases") || href === "/admin/ai-suggestions") return "Purchases";
+  if (href === "/admin/milk-collection/fuel") return "Fuel Management";
+  if (href === "/admin/milk-collection/generator") return "Generator Management";
+  if (href === "/admin/milk-collection/maintenance" || href.startsWith("/admin/drivers") || href.startsWith("/admin/vehicles") || href.startsWith("/admin/my-vehicle")) return "Fleet Management";
+  if (href.startsWith("/admin/milk-collection")) return "Milk & Dairy";
+  if (href === "/admin/machinery-rental/diesel") return "Fuel Management";
+  if (href.startsWith("/admin/machinery-rental")) return "Machinery";
+  if (href.startsWith("/admin/products") || ["/admin/categories", "/admin/brands", "/admin/companies", "/admin/rate-master"].includes(href)) return "Product Management";
+  if (href.startsWith("/admin/inventory") || href.startsWith("/admin/stock-") || href.startsWith("/admin/agri-returns")) return "Inventory & Warehouse";
+  if (href.startsWith("/admin/farmers") || href.startsWith("/admin/farmer-") || href.startsWith("/admin/wallets") || href.startsWith("/admin/payouts")) return "Farmers";
+  if (href.startsWith("/admin/dealers") || href.startsWith("/admin/dealer-orders")) return "Dealers";
+  if (href.startsWith("/admin/buyers")) return "Buyers";
+  if (href.startsWith("/admin/suppliers")) return "Suppliers";
+  if (href.startsWith("/admin/crm") || href === "/admin/messages") return "CRM";
+  if (href.startsWith("/admin/reports")) return "Reports & Analytics";
+  if (["/admin/reconciliation", "/admin/leakage", "/admin/audit-trail", "/admin/anomalies", "/admin/field-watch", "/admin/activity-logs", "/admin/errors", "/admin/stock-count", "/admin/submissions"].includes(href)) return "Audit & Control";
+  if (href.startsWith("/admin/hr") || href.startsWith("/admin/my-hr") || href.startsWith("/admin/my-attendance") || href.startsWith("/admin/my-department") || href.startsWith("/admin/job-") || href === "/admin/staff-khata" || href === "/admin/my-wallet") return "HR & Staff";
+  if (href.startsWith("/admin/bridge-ai") || href === "/admin/ai-instructions" || href === "/admin/ai-usage") return "Bridge AI";
+  if (["/admin/dashboard", "/admin/hero-slides", "/admin/blog", "/admin/testimonials", "/admin/gallery", "/admin/media-library", "/admin/faqs", "/admin/static-pages", "/admin/menus", "/admin/contact-messages", "/admin/investor-inquiries", "/admin/email-templates", "/admin/settings"].includes(href)) return "Website";
+  if (href.startsWith("/admin/pos") || href === "/admin/bridge-orders" || href === "/admin/produce-orders" || href === "/admin/khata" || href === "/admin/settlements") return "Sales & POS";
+  if (href.startsWith("/admin/finance") || href.startsWith("/admin/cash-") || href.startsWith("/admin/bank-") || ["/admin/money-trail", "/admin/shaam-ka-hisaab", "/admin/quantity-money", "/admin/kharche", "/admin/load-bill", "/admin/company-expenses", "/admin/credit-requests"].includes(href)) return "Finance & Accounting";
+  return "Administration & Security";
+}
+
+// Database registry unavailable ho to bhi final, duplication-free structure
+// hi nazar aaye. Ek route ek hi canonical department mein jata hai.
+const UNIQUE_FALLBACK_ITEMS = [...new Map(
+  LEGACY_ADMIN_NAV_GROUPS.flatMap((group) => group.items).map((item) => [item.href, item])
+).values()];
+
+export const ADMIN_NAV_GROUPS: NavGroup[] = FINAL_DEPARTMENTS.map((label) => ({
+  label,
+  items: UNIQUE_FALLBACK_ITEMS.filter((item) => canonicalDepartment(item.href) === label),
+})).filter((group) => group.items.length > 0);
 
 export const ADMIN_NAV: NavItem[] = [DASHBOARD_ITEM, ...ADMIN_NAV_GROUPS.flatMap((g) => g.items)];
