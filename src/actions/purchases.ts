@@ -187,7 +187,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status, supplier_id")
+    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status, supplier_id, discount_amount, tax_amount, tax_label")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
@@ -442,11 +442,19 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   // sath jati hai aur qatar `v_ledger_unposted` par surkh dikhti hai.
   let ledgerWarning: string | null = null;
   if (acceptedTotal > 0) {
+    // Bill ka discount/tax poore invoice par likha hota hai; agar kuch
+    // kam/toota nikla to yahan sirf USI hisse ka discount/tax (388) --
+    // poora laga dena galat rehta agar aadha maal wapas ho gaya.
+    const originalTotal = Number(purchase.total_amount ?? 0);
+    const ratio = originalTotal > 0 ? Math.min(1, acceptedTotal / originalTotal) : 1;
     const posted = await postGoodsReceived({
       purchaseId,
       purchaseNumber: purchase.purchase_number ?? null,
       supplierId: purchase.supplier_id ?? null,
       amount: acceptedTotal,
+      discountAmount: purchase.discount_amount != null ? Number(purchase.discount_amount) * ratio : null,
+      taxAmount: purchase.tax_amount != null ? Number(purchase.tax_amount) * ratio : null,
+      taxLabel: purchase.tax_label,
       ctx: {
         createdBy: user?.id ?? null,
         branchId: purchase.branch_id ?? null,

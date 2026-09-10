@@ -84,6 +84,12 @@ export const ACC = {
   // per-account balance journal ki un qataron se ginta hai jin par
   // party_id = load_account hota hai.
   loadFloat: "1190",
+  // Supplier ke bill par diya hua advance tax (jaise 236G/236H) -- humne
+  // ADA KIYA hai, cash se nikla hai, magar apna kharcha nahi: aage
+  // hamari apni tax liability se ADJUST hota hai. Is liye kharche mein
+  // nahi, asaason mein -- FBR ko dene ke waqt yahi khata dikhata hai
+  // "ab tak kitna diya hua para hai".
+  taxRecoverable: "1195",
   stockGoods: "1200",
   stockMilk: "1210",
   stockGrain: "1220",
@@ -795,13 +801,65 @@ export async function postGoodsReceived(args: {
   purchaseId: string;
   purchaseNumber: string | null;
   supplierId: string | null;
-  /** Qabool shuda raqam: sum(received x unit_cost). */
+  /** Qabool shuda raqam: sum(received x unit_cost) — discount/tax se pehle. */
   amount: number;
+  /**
+   * Bill par likha discount aur advance tax (318, 389) -- sirf is
+   * purchase ki apni hissedari (partial-receive par proportional). Dono
+   * KHALI ho sakte hain: har bill par ye nahi hote.
+   */
+  discountAmount?: number | null;
+  taxAmount?: number | null;
+  taxLabel?: string | null;
   /** Kis stock ke khate mein -- anaj aur doodh ke apne khate hain. */
   stockAccount?: string;
   ctx: EventContext;
 }): Promise<PostResult> {
   const tafseel = `Kharid ${args.purchaseNumber ?? args.purchaseId} — maal wusool hua`;
+  // Discount is receiving ke maal se zyada nahi ho sakta -- agar bill
+  // kai purchase mein bant gaya ho (388) to poore bill ka discount
+  // pehli purchase par likha hai, magar us ki apni receiving chhoti bhi
+  // ho sakti hai. Zyada hone par stock manfi na ho, is liye yahan tope.
+  const discount = Math.min(Math.max(0, Math.round((args.discountAmount ?? 0) * 100) / 100), args.amount);
+  const tax = Math.max(0, Math.round((args.taxAmount ?? 0) * 100) / 100);
+  // Discount maal ki lagat KAM karta hai (jo cost humne asal mein di),
+  // tax alag rakha jata hai -- wo hamara kharcha nahi, FBR se wapas lena
+  // hai (1195). Dono milakar supplier ko utna hi dena banta hai jitna
+  // bill ka grand total kehta hai -- qataron ka jama nahi.
+  const stockAmount = Math.round((args.amount - discount) * 100) / 100;
+  const payable = Math.round((stockAmount + tax) * 100) / 100;
+
+  const lines: Array<{
+    account: string;
+    debit?: number;
+    credit?: number;
+    partyType?: string | null;
+    partyId?: string | null;
+    memo?: string | null;
+  }> = [
+    {
+      account: args.stockAccount ?? ACC.stockGoods,
+      debit: stockAmount,
+      memo: discount > 0 ? `Stock barha (trade rate par, bill ka discount Rs ${discount.toLocaleString()} minus)` : "Stock barha (trade rate par)",
+    },
+  ];
+  if (tax > 0) {
+    lines.push({
+      account: ACC.taxRecoverable,
+      debit: tax,
+      partyType: args.supplierId ? "supplier" : null,
+      partyId: args.supplierId ?? null,
+      memo: `${args.taxLabel || "Advance tax"} — ${tafseel}`,
+    });
+  }
+  lines.push({
+    account: ACC.supplierPayable,
+    credit: payable,
+    partyType: args.supplierId ? "supplier" : null,
+    partyId: args.supplierId ?? null,
+    memo: tafseel,
+  });
+
   return postJournal({
     description: tafseel,
     sourceModule: "purchase",
@@ -811,20 +869,7 @@ export async function postGoodsReceived(args: {
     backdateReason: args.ctx.backdateReason,
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
-    lines: [
-      {
-        account: args.stockAccount ?? ACC.stockGoods,
-        debit: args.amount,
-        memo: "Stock barha (trade rate par)",
-      },
-      {
-        account: ACC.supplierPayable,
-        credit: args.amount,
-        partyType: args.supplierId ? "supplier" : null,
-        partyId: args.supplierId ?? null,
-        memo: tafseel,
-      },
-    ],
+    lines,
   });
 }
 
