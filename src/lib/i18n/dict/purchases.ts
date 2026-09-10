@@ -30,6 +30,8 @@ export const purchasesDict = {
   pu_branch: { en: "Branch", rm: "Shakh", ur: "شاخ" },
   pu_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
   pu_amount: { en: "Amount", rm: "Raqam", ur: "رقم" },
+  pu_discount: { en: "Discount", rm: "Discount", ur: "ڈسکاؤنٹ" },
+  pu_tax: { en: "Tax", rm: "Tax", ur: "ٹیکس" },
   pu_status: { en: "Status", rm: "Halat", ur: "حالت" },
   pu_action: { en: "Action", rm: "Kaam", ur: "کام" },
   pu_delete: { en: "Delete", rm: "Mitayein", ur: "مٹائیں" },

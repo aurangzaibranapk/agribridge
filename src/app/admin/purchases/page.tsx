@@ -52,7 +52,7 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
       )
       .order("created_at", { ascending: false })
       .limit(50),
@@ -99,6 +99,9 @@ export default async function AdminPurchasesPage() {
     status: p.status,
     total_amount: p.total_amount,
     invoice_total: p.invoice_total as number | null,
+    discount_amount: p.discount_amount as number | null,
+    tax_amount: p.tax_amount as number | null,
+    tax_label: p.tax_label as string | null,
     review_status: (p.review_status as string) ?? "approved",
     // Product setup baqi = is purchase ki koi cheez bina sale rate ke.
     setupPending: ((p.purchase_items ?? []) as any[]).some((i) => {
@@ -198,6 +201,20 @@ export default async function AdminPurchasesPage() {
                         {p.invoice_total != null && Number(p.invoice_total) !== Number(p.total_amount) && (
                           <span className="block text-[11px] font-normal text-amber-700 dark:text-amber-400">
                             {t("grn_discrepancy", lang)}: Rs {Number(p.invoice_total).toLocaleString()}
+                          </span>
+                        )}
+                        {/* Poore supplier bill ka discount/tax -- sirf us
+                            bill ki pehli purchase par (389, malik 10
+                            September: "tax aur discount ki amount kahan
+                            gayi hai"). */}
+                        {p.discount_amount != null && (
+                          <span className="block text-[11px] font-normal text-emerald-700 dark:text-emerald-400">
+                            {t("pu_discount", lang)}: Rs {Number(p.discount_amount).toLocaleString()}
+                          </span>
+                        )}
+                        {p.tax_amount != null && (
+                          <span className="block text-[11px] font-normal text-surface-500">
+                            {p.tax_label || t("pu_tax", lang)}: Rs {Number(p.tax_amount).toLocaleString()}
                           </span>
                         )}
                       </td>

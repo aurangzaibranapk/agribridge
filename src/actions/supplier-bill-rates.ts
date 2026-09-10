@@ -733,7 +733,7 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
 
   const { data: bill } = await supabase
     .from("supplier_bill_reads")
-    .select("id, status, bill_number, bill_date, supplier_id, purchase_id, source")
+    .select("id, status, bill_number, bill_date, supplier_id, purchase_id, source, discount_amount, tax_amount, tax_label")
     .eq("id", billId)
     .maybeSingle();
   if (!bill) return { error: "Bill nahi mila." };
@@ -840,6 +840,13 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
       supplier_bill_no: bill.bill_number || null,
       notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
       created_by: user.id,
+      // Poore bill ka discount/tax sirf ISI bill ki PEHLI purchase par
+      // (10 September) -- agar bill.purchase_id pehle se hai to matlab
+      // ye is bill ki doosri/teesri purchase hai (388), aur raqam pehli
+      // par likhi ja chuki hai -- dobara likhna 2-3 guna dikha deta.
+      discount_amount: bill.purchase_id ? null : bill.discount_amount,
+      tax_amount: bill.purchase_id ? null : bill.tax_amount,
+      tax_label: bill.purchase_id ? null : bill.tax_label,
     })
     .select("id")
     .single();

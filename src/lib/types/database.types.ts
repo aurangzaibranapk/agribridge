@@ -21160,6 +21160,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           credit_days: number | null
+          discount_amount: number | null
           due_date: string | null
           grn_note: string | null
           grn_photo_url: string | null
@@ -21179,6 +21180,8 @@ export type Database = {
           status: Database["public"]["Enums"]["purchase_status"]
           supplier_bill_no: string | null
           supplier_id: string
+          tax_amount: number | null
+          tax_label: string | null
           total_amount: number
           verified_at: string | null
           verified_by: string | null
@@ -21188,6 +21191,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_days?: number | null
+          discount_amount?: number | null
           due_date?: string | null
           grn_note?: string | null
           grn_photo_url?: string | null
@@ -21207,6 +21211,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["purchase_status"]
           supplier_bill_no?: string | null
           supplier_id: string
+          tax_amount?: number | null
+          tax_label?: string | null
           total_amount?: number
           verified_at?: string | null
           verified_by?: string | null
@@ -21216,6 +21222,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_days?: number | null
+          discount_amount?: number | null
           due_date?: string | null
           grn_note?: string | null
           grn_photo_url?: string | null
@@ -21235,6 +21242,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["purchase_status"]
           supplier_bill_no?: string | null
           supplier_id?: string
+          tax_amount?: number | null
+          tax_label?: string | null
           total_amount?: number
           verified_at?: string | null
           verified_by?: string | null
