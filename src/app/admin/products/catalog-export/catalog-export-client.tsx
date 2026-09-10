@@ -84,11 +84,13 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
 
   function buildCsv(): string {
     const headers = [
+      "Sr#",
       "Product Name",
       ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => f.label),
       ...(includeCountColumns ? ["Actual Stock", "Farq"] : []),
     ];
-    const rows = filtered.map((p) => [
+    const rows = filtered.map((p, i) => [
+      String(i + 1),
       p.name,
       ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => formatValue(p, f.key)),
       ...(includeCountColumns ? ["", ""] : []),
@@ -207,6 +209,7 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
         <table className="catalog-print-table w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left dark:border-surface-800">
+              <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                 <th key={f.key} className="px-3 py-2 font-medium text-surface-500">{f.label}</th>
@@ -220,8 +223,9 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
+            {filtered.map((p, i) => (
               <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
+                <td className="px-3 py-2 text-surface-500">{i + 1}</td>
                 <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
                 {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                   <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
@@ -235,7 +239,7 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={selectedFields.length + 1 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
+              <tr><td colSpan={selectedFields.length + 2 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
             )}
           </tbody>
         </table>
