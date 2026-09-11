@@ -35,6 +35,8 @@ flutter run \
 
 The Android application ID must be `pk.alranatraders.agribridge`. Never pass the Supabase service-role key to Flutter.
 
+Firebase Messaging remains off by default. Enable it only after adding the environment-specific Firebase Android configuration, using `--dart-define=FIREBASE_MESSAGING_ENABLED=true`.
+
 ## Testing preview
 
 When Supabase variables are omitted, the login screen shows Admin, Farmer, Staff and Dealer preview buttons. This mode never writes to production data.
