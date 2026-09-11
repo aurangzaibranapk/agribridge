@@ -11,14 +11,14 @@
 - Role-specific navigation
 - Supabase environment separation
 
-## Phase 2 — Customer commerce (next)
+## Phase 2 — Customer commerce (front-end implemented)
 
 - Real product catalog, category/brand filters and stock presentation
 - Cart, checkout, branch/shop pickup and delivery
 - Order history and tracking
 - Cash, khata, bank transfer, Easypaisa and JazzCash choices
 
-## Phase 3 — Farmer services (next)
+## Phase 3 — Farmer services (front-end implemented)
 
 - Farmer 360 dashboard
 - Separate milk and FMCG khata views
