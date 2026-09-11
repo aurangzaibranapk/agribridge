@@ -37,7 +37,7 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
                 ? _LoadError(onRetry: () => ref.invalidate(productsProvider))
                 : products.isEmpty
                     ? const Center(child: Text('Koi product available nahi.'))
-                    : RefreshIndicator(onRefresh: () async { await ref.refresh(productsProvider.future); }, child: GridView.builder(padding: const EdgeInsets.all(16), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .67, crossAxisSpacing: 12, mainAxisSpacing: 12), itemCount: products.length, itemBuilder: (_, i) => _ProductCard(product: products[i])))),
+                    : RefreshIndicator(onRefresh: () => ref.refresh(productsProvider.future).then((_) {}), child: GridView.builder(padding: const EdgeInsets.all(16), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .67, crossAxisSpacing: 12, mainAxisSpacing: 12), itemCount: products.length, itemBuilder: (_, i) => _ProductCard(product: products[i])))),
       ]),
     );
   }
