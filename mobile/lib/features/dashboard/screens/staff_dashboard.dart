@@ -11,7 +11,7 @@ class StaffDashboard extends StatelessWidget {
   Widget build(BuildContext context) => CustomScrollView(slivers: [
     SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Teamwork grows progress', badge: 'Sales Staff')),
     SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverList.list(children: [
-      const SizedBox(height: 220, child: GridView.count(physics: NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: [
+      SizedBox(height: 220, child: GridView.count(physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: const [
         MetricCard(label: 'My Work', value: '8', icon: Icons.assignment_outlined, caption: 'Assigned tasks'),
         MetricCard(label: 'Today Orders', value: '12', icon: Icons.shopping_cart_outlined, caption: 'Rs 285,400'),
         MetricCard(label: 'Pending Delivery', value: '5', icon: Icons.local_shipping_outlined, tint: Colors.orange, caption: 'Orders'),
