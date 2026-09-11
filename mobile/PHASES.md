@@ -26,13 +26,13 @@
 - Grain sale request and statement
 - Machinery booking and wallet
 
-## Phase 4 — Staff and dealer operations (next)
+## Phase 4 — Staff and dealer operations (front-end foundation implemented)
 
 - Feature/action/scope-driven staff menus
 - My Work, delivery, collection and stock request flows
 - Dealer catalog, credit limit, order and payment flows
 
-## Phase 5 — AI and notifications (next)
+## Phase 5 — AI and notifications (secure foundation implemented)
 
 - Firebase push registration
 - Kisan AI chat, image upload and expert escalation
