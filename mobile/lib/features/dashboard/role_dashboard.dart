@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/auth/session_controller.dart';
 import '../../core/models/app_role.dart';
 import '../../core/theme/app_theme.dart';
 import '../modules/module_hub.dart';
