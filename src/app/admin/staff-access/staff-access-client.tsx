@@ -25,9 +25,9 @@ function MiniButton({ children, danger = false }: { children: React.ReactNode; d
   const { pending } = useFormStatus();
   return <button disabled={pending} className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${danger ? "border-red-200 text-red-700 hover:bg-red-50" : "border-surface-200 text-surface-700 hover:bg-surface-50"}`}>{pending ? "..." : children}</button>;
 }
-function BulkButton({ children, danger = false }: { children: React.ReactNode; danger?: boolean }) {
+function BulkButton({ children, danger = false, action, onConfirm }: { children: React.ReactNode; danger?: boolean; action: (formData: FormData) => void; onConfirm: () => boolean }) {
   const { pending } = useFormStatus();
-  return <button disabled={pending} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${danger ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100" : "border-brand-700 bg-brand-700 text-white hover:bg-brand-800"}`}><KeyRound className="h-3.5 w-3.5" />{pending ? "Access di ja rahi hai..." : children}</button>;
+  return <button type="submit" formAction={action} onClick={(event) => { if (!onConfirm()) event.preventDefault(); }} disabled={pending} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${danger ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100" : "border-brand-700 bg-brand-700 text-white hover:bg-brand-800"}`}><KeyRound className="h-3.5 w-3.5" />{pending ? "Access di ja rahi hai..." : children}</button>;
 }
 
 export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIjazat, branches, shops, productPermission }: {
@@ -121,8 +121,8 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
           </div>
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-semibold">Complete Permission Buttons</h3><p className="mt-1 text-xs text-surface-500">Ek department ya tamam departments ki permissions ek click mein dein. Data sirf assigned shop/branch tak rahega.</p></div><div className="flex flex-wrap gap-2">
-              <form action={departmentAction} onSubmit={(event) => { const label = DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? templateRole; if (!window.confirm(`${banda.full_name} ko ${label} department ki tamam permissions deni hain?`)) event.preventDefault(); }}><input type="hidden" name="profile_id" value={banda.id} /><input type="hidden" name="template" value={templateRole || banda.role} /><BulkButton>{DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? "Is Department"} ki Sab Permissions</BulkButton></form>
-              <form action={allAction} onSubmit={(event) => { if (!window.confirm(`${banda.full_name} ko TAMAM departments ki tamam permissions deni hain? Ye bohat zyada access hai.`)) event.preventDefault(); }}><input type="hidden" name="profile_id" value={banda.id} /><BulkButton danger>Tamam Departments ki Sab Permissions</BulkButton></form>
+              <BulkButton action={departmentAction} onConfirm={() => { const label = DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? templateRole; return window.confirm(`${banda.full_name} ko ${label} department ki tamam permissions deni hain?`); }}>{DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? "Is Department"} ki Sab Permissions</BulkButton>
+              <BulkButton action={allAction} danger onConfirm={() => window.confirm(`${banda.full_name} ko TAMAM departments ki tamam permissions deni hain? Ye bohat zyada access hai.`)}>Tamam Departments ki Sab Permissions</BulkButton>
             </div></div>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-surface-100 pt-4 dark:border-surface-800"><button type="button" onClick={() => setAdvanced((v) => !v)} className="text-sm font-medium text-brand-700 underline">{advanced ? "Advanced band karein" : "Extra Access (Optional)"}</button><SaveButton /></div>
