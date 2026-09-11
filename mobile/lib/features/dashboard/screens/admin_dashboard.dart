@@ -16,7 +16,7 @@ class AdminDashboard extends StatelessWidget {
           sliver: SliverList.list(children: [
             Card(child: ListTile(leading: const Icon(Icons.business, color: AppColors.green), title: const Text('Business View', style: TextStyle(fontSize: 11)), subtitle: const Text('Master View', style: TextStyle(fontWeight: FontWeight.w800)), trailing: const Icon(Icons.keyboard_arrow_down))),
             const SizedBox(height: 14),
-            const SizedBox(height: 220, child: GridView.count(physics: NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: [
+            SizedBox(height: 220, child: GridView.count(physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: const [
               MetricCard(label: 'Today Sales', value: 'Rs 2,480,500', icon: Icons.point_of_sale, caption: '↑ 12% vs yesterday'),
               MetricCard(label: 'Cash Position', value: 'Rs 1,320,000', icon: Icons.account_balance_wallet_outlined, caption: '↑ 8% vs yesterday'),
               MetricCard(label: 'Receivables', value: 'Rs 3,750,000', icon: Icons.groups_outlined, tint: Colors.orange, caption: '12 payments due'),
