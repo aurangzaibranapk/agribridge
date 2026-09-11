@@ -10,6 +10,26 @@ class Product {
   final String? brand;
   final String? batch;
   final DateTime? expiry;
+
+  factory Product.fromRow(Map<String, dynamic> row) {
+    String relationName(String key, String fallback) {
+      final value = row[key];
+      return value is Map ? (value['name']?.toString() ?? fallback) : fallback;
+    }
+    double number(String key) => (row[key] as num?)?.toDouble() ?? 0;
+    return Product(
+      id: row['id'].toString(),
+      name: row['name']?.toString() ?? 'Product',
+      category: relationName('categories', 'Other'),
+      pack: row['pack_size']?.toString() ?? row['unit']?.toString() ?? 'Unit',
+      price: number('selling_price'),
+      warehouseStock: number('warehouse_stock'),
+      shopStock: number('shop_stock'),
+      brand: relationName('brands', ''),
+      batch: row['batch_number']?.toString(),
+      expiry: DateTime.tryParse(row['expiry_date']?.toString() ?? ''),
+    );
+  }
 }
 
 const demoProducts = [
