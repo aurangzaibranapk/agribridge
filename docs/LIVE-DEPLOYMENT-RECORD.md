@@ -3181,3 +3181,95 @@ noise alag) clean. Migration 385 Testing aur Live dono par laga di gayi
 
 **Build/package abhi baaki hai** — malik "system par aa gaya" kahein to
 dono command (pull+build, package) ek sath.
+
+## 10-11 September ka baqi kaam — migrations 386-391 (sab Testing + Live par lag chuki hain)
+
+Upar wala "build/package baaki hai" tab se ab tak Live par nahi gaya —
+is doraan kaam rukta nahi raha, is liye fehrist lambi ho chuki hai.
+Database dono taraf (Testing `hwaiuwxqldxsoukkfefn`, Live
+`ktskwawkslaznkjjacni`) migration 391 tak barabar hain (`list_migrations`
+se 11 September ko dobara tasdeeq ki) — **sirf code ka build/package
+baaki hai**, schema nahi.
+
+**Trade Rate from Bill — malik ke apne agle kehne par jaari (10 September):**
+1. Khud-approver (Owner/Admin) purchase banaye to alag manzoori qadam
+   khatam — `purchases/new` jaisa hi, aur khud handoff (Godam ki taraf)
+   banta hai taake Purchases list par "kis ke paas hai" foran nazar aaye.
+2. **386** — Central Warehouse ko apna shop `business_type` mila, warehouse
+   edit form.
+3. **387** — MRP (khata) rate bhi isi qatar se `products.mrp_price` tak.
+4. Product na mile to qatar se seedha "naya product banayein" — trade/
+   wholesale/sale/MRP jo likha ja chuka wahi le kar.
+5. Partial-purchase se bill lock nahi hota ab — bill sirf tab "applied"
+   hota hai jab koi line draft/ready mein baqi na ho (pehle 11 lines ke
+   bill mein 1 ready hote hi bill lock ho jata, baqi 10 hamesha ke liye
+   phans jati thin).
+6. **388** — us se seedha nateeja: "duplicate key" error jab isi bill se
+   doosri (jaayaz) purchase banti — rok migration 289 mein PURCHASE table
+   par thi, ab bill-upload ke star par (ek supplier ka ek bill number sirf
+   EK bill-upload se purchase bana sakta hai, usi upload se dobara-dobara
+   theek hai).
+7. **389 + 390** — bill ka discount/tax purchase tak (pehle gum ho jata
+   tha), aur Tax Recoverable ledger khata (1195) — asal payable ab
+   discount minus, tax alag.
+8. Bill Rates: har rate (trade/wholesale/sale/MRP) ke saamne "= Rs X"
+   computed value, jyun jyun likha jaye.
+9. Export Catalogue: Available Stock field.
+10. Receiving warehouse resolution fix — purchase ki apni branch product
+    ke purane branch_id par jeetni chahiye.
+
+**Merge `testing/shop-360-zero-leakage` — unified Staff & Access Control:**
+Malik ka usool laagu hote hi ("developer main bolon to tum ho gye") khud
+review kar ke merge kiya, kisi aur ka intezar nahi kiya. Naya
+`/admin/staff-access`: ek hi safha se staff select, role/branch/shop,
+template apply, individual/bulk permission edit, poora access zero,
+Template Management. `/admin/departments` aur `/admin/product-permissions`
+ab isi par redirect. Review mein do cheezein pakri aur theek ki:
+- `staff-access.ts` mein `ACTIONS` import missing (tsc error).
+- **Asal masla**: is branch ne middleware.ts/nav.ts se purana safety-net
+  fallback (`profiles.allowed_pages`) hata diya tha — Live check karne par
+  Anwar Ul Hassan jaisे staff ka asal access ABHI BHI sirf isi purane
+  raaste se aa raha tha (naya `user_feature_permissions` khali). Fallback
+  wapas laga diya, naye system ke sath (naya pehle try, khali mile to
+  purana).
+
+**Us ke baad chaar pakRi hui kharabiyan (11 September):**
+1. Export Catalogue PDF build fail — cPanel par jsPDF/canvg ka Node
+   dependency theek install nahi hota tha; pdf-lib (jo wallet statement
+   mein pehle se hai) se badla, koi babel/canvg dependency nahi.
+2. "Sab Access Zero Karein" ke baad bhi Anwar ka POS khula raha — button
+   sirf naye system ko saaf karta tha, purana `allowed_pages` fallback
+   nahi. Do jagah theek: `clearAllStaffAccess` ab `[]` likhta hai (NULL
+   nahi), aur middleware/nav mein NULL ("kabhi set nahi hua") aur `[]`
+   ("jaan boojh kar zero") ab do alag cheezein hain.
+3. Us fix ki apni ghalti se Anwar ke login par 500 — Live data seedha SQL
+   se `'{}'` (JSONB object) likha gaya tha, `'[]'` (array) chahiye tha.
+   Data theek kiya, aur `Array.isArray()` guard laga diya taake aisi
+   ghalti crash na kare, sirf "set nahi hua" maan le.
+4. Staff dashboard par "Quick Access" (sidebar) aur "Your Departments"
+   (my-work card) duplicate — mehdood staff ke liye ab "Your Departments"
+   khali; wo cards sirf Owner/Admin/Manager ke liye maqsad rakhte hain.
+5. **391** — Sidebar mein naya naam "Staff & Access Control" nahi dikh
+   raha tha kyunke Owner sidebar `features` table se banti hai (code ke
+   static naam se nahi), aur is naye safhe ki wahan qatar hi nahi thi —
+   register kiya, purani do qataron ("Departments & Access", "Product
+   Permissions") ko sidebar se hataya (bookmark/URL abhi bhi chalega).
+6. Poore admin panel ka naam-review: `nav-items.ts` (fallback, English)
+   aur `features` table (asal, Roman Urdu) ke 83 labels sync kiye — jab
+   kisi staff ka naya system khali ho, purani fallback list Angrezi naam
+   dikhati thi jab ke Staff & Access Control mein Roman Urdu. User Portal
+   ka apna review alag se (jaan boojh kar, apna lehja): "My Profile" ka
+   safha unwan hamesha "Complete Your Profile" tha, ab nav ke barabar.
+
+Har commit apna `tsc` (70, baseline) aur clean build se guzra hai.
+
+**Ab tak build/package NAHI gaya — fehrist ye hai jab malik "system par
+aa gaya" kahein:**
+```
+git pull origin claude/code-load-project-structure-fq91y9 && npm run build > build.log 2>&1; tail -5 build.log
+```
+```
+ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
+```
+Migration se koi qadam baqi nahi (386-391 dono taraf lag chuki) — sirf
+upar wala build+upload+Restart.
