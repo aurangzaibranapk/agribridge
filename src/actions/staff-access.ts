@@ -529,6 +529,27 @@ export async function clearRoleTemplate(_prev: TemplateActionState, formData: Fo
   return { success: true, message: `${role} template zero ho gaya. Staff ki mojooda individual access nahi badli.` };
 }
 
+/** Selected template mein tamam active features aur tamam actions ek martaba mein bharna. */
+export async function fillRoleTemplate(_prev: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
+  const who = await master();
+  if ("error" in who) return { error: who.error };
+  const role = String(formData.get("role") ?? "").trim();
+  if (!DEPARTMENTS.some((d) => d.role === role)) return { error: "Template durust nahi hai." };
+  const service = createServiceClient();
+  const { data: featureRows, error: featureError } = await service.from("features").select("key").eq("is_active", true);
+  if (featureError) return { error: featureError.message };
+  const permissions: TemplatePermissionDraft[] = (featureRows ?? []).map((feature) => ({ feature_key: String(feature.key), actions: [...ACTIONS], data_scope: "own_branch" }));
+  if (!permissions.length) return { error: "Koi active feature nahi mila." };
+  const { error } = await service.from("role_feature_permissions").upsert(
+    permissions.map((permission) => ({ ...permission, role, updated_by: who.userId, updated_at: new Date().toISOString() })),
+    { onConflict: "role,feature_key" }
+  );
+  if (error) return { error: error.message };
+  await logAudit({ actionType: "update", module: "staff-access-template", recordId: role, recordLabel: role, description: `Template ko tamam access di: ${permissions.length} active features aur tamam actions; scope own_branch.` });
+  revalidatePath("/admin/staff-access");
+  return { success: true, message: `${role} template ko tamam ${permissions.length} permissions mil gayin.`, suggestion: permissions };
+}
+
 /** AI sirf preview banati hai. Owner ke alag Save ke baghair koi access apply nahi hota. */
 export async function suggestRoleTemplate(_prev: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
   const who = await master();
