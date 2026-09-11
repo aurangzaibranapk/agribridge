@@ -1,28 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/session_controller.dart';
+import '../../core/config/app_config.dart';
+import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
-  @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Notifications'), actions: [TextButton(onPressed: () {}, child: const Text('Sab parh li'))]),
-    body: ListView.separated(padding: const EdgeInsets.all(16), itemCount: _items.length, separatorBuilder: (_, __) => const SizedBox(height: 8), itemBuilder: (_, i) {
-      final item = _items[i];
-      return Card(color: item.unread ? AppColors.mint : Colors.white, child: ListTile(
-        leading: CircleAvatar(backgroundColor: item.color.withValues(alpha: .12), child: Icon(item.icon, color: item.color)),
-        title: Text(item.title, style: TextStyle(fontWeight: item.unread ? FontWeight.w800 : FontWeight.w600)),
-        subtitle: Text('${item.body}\n${item.time}', style: const TextStyle(fontSize: 11)),
-        isThreeLine: true,
-        trailing: item.unread ? const CircleAvatar(radius: 4, backgroundColor: AppColors.green) : null,
-      ));
-    }),
-  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(notificationsProvider);
+    final rows = AppConfig.hasSupabase ? (state.valueOrNull ?? const []) : _demoItems;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notifications'), actions: [
+        TextButton(onPressed: rows.isEmpty ? null : () async {
+          final profile = ref.read(sessionProvider).valueOrNull;
+          if (profile == null) return;
+          await ref.read(mobileRepositoryProvider).markAllNotificationsRead(profile.id);
+          ref.invalidate(notificationsProvider);
+        }, child: const Text('Sab parh li')),
+      ]),
+      body: state.isLoading && AppConfig.hasSupabase
+          ? const Center(child: CircularProgressIndicator())
+          : state.hasError && AppConfig.hasSupabase
+              ? Center(child: TextButton.icon(onPressed: () => ref.invalidate(notificationsProvider), icon: const Icon(Icons.refresh), label: const Text('Notifications dobara load karein')))
+              : rows.isEmpty
+                  ? const Center(child: Text('Abhi koi notification nahi.'))
+                  : RefreshIndicator(
+                      onRefresh: () async { await ref.refresh(notificationsProvider.future); },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: rows.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _NoticeCard(row: rows[i]),
+                      ),
+                    ),
+    );
+  }
 }
 
-class _Notice { const _Notice(this.title,this.body,this.time,this.icon,this.color,{this.unread=false}); final String title,body,time; final IconData icon; final Color color; final bool unread; }
-const _items = [
-  _Notice('Order Approved', 'Aap ka order #ORD-7841 approve ho gaya.', '5 min ago', Icons.check_circle_outline, Colors.green, unread: true),
-  _Notice('Milk Payment', 'Is haftay ki milk payment Wednesday ko available hogi.', '1 hour ago', Icons.water_drop_outlined, Colors.blue, unread: true),
-  _Notice('Stock Alert', 'Engro Urea shop stock minimum level par hai.', 'Today', Icons.inventory_2_outlined, Colors.orange),
-  _Notice('Machinery Booking', 'Rice harvester booking schedule confirm ho gaya.', 'Yesterday', Icons.agriculture_outlined, AppColors.green),
+class _NoticeCard extends StatelessWidget {
+  const _NoticeCard({required this.row});
+  final Map<String, dynamic> row;
+  @override Widget build(BuildContext context) {
+    final unread = row['is_read'] != true;
+    final created = DateTime.tryParse(row['created_at']?.toString() ?? '');
+    final time = created == null ? '' : '${created.toLocal().day}/${created.toLocal().month}/${created.toLocal().year}';
+    return Card(color: unread ? AppColors.mint : Colors.white, child: ListTile(
+      leading: CircleAvatar(backgroundColor: AppColors.green.withValues(alpha: .12), child: const Icon(Icons.notifications_outlined, color: AppColors.green)),
+      title: Text(row['title']?.toString() ?? 'Update', style: TextStyle(fontWeight: unread ? FontWeight.w800 : FontWeight.w600)),
+      subtitle: Text('${row['message'] ?? ''}${time.isEmpty ? '' : '\n$time'}', style: const TextStyle(fontSize: 11)),
+      isThreeLine: time.isNotEmpty,
+      trailing: unread ? const CircleAvatar(radius: 4, backgroundColor: AppColors.green) : null,
+    ));
+  }
+}
+
+const _demoItems = <Map<String, dynamic>>[
+  {'title': 'Order Approved', 'message': 'Aap ka order #ORD-7841 approve ho gaya.', 'is_read': false},
+  {'title': 'Milk Payment', 'message': 'Is haftay ki milk payment Wednesday ko available hogi.', 'is_read': false},
+  {'title': 'Machinery Booking', 'message': 'Rice harvester booking schedule confirm ho gaya.', 'is_read': true},
 ];
