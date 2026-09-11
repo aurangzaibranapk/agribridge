@@ -18,7 +18,7 @@ class FarmerDashboard extends StatelessWidget {
             Icon(Icons.chevron_right, color: Colors.white),
           ])),
           const SizedBox(height: 14),
-          const GridView.count(shrinkWrap: true, physics: NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: [
+          GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: const [
             QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined),
             QuickAction(label: 'FMCG Khata', icon: Icons.shopping_cart_outlined),
             QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined),
