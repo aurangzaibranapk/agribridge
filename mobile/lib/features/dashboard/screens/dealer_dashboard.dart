@@ -16,7 +16,7 @@ class DealerDashboard extends StatelessWidget {
         const Divider(height: 28), Row(children: [Expanded(child: _Limit('Credit Limit', 'Rs 500,000')), Expanded(child: _Limit('Available Limit', 'Rs 344,000'))]),
       ]))),
       const SizedBox(height: 14),
-      const GridView.count(shrinkWrap: true, physics: NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: [
+      GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: const [
         QuickAction(label: 'New Order', icon: Icons.add_shopping_cart), QuickAction(label: 'Order History', icon: Icons.receipt_long_outlined), QuickAction(label: 'Payments', icon: Icons.credit_card_outlined), QuickAction(label: 'Credit Limit', icon: Icons.bar_chart_rounded),
       ]),
       const SizedBox(height: 16), const SectionTitle('Recent Orders'), const SizedBox(height: 8),
