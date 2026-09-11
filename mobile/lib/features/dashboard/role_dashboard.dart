@@ -5,6 +5,9 @@ import '../../core/auth/session_controller.dart';
 import '../../core/models/app_role.dart';
 import '../../core/theme/app_theme.dart';
 import '../modules/module_hub.dart';
+import '../commerce/product_catalog_screen.dart';
+import '../farmer/farmer_khata_screen.dart';
+import '../farmer/farmer_services_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/dealer_dashboard.dart';
 import 'screens/farmer_dashboard.dart';
@@ -45,7 +48,13 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final body = index == 0 ? home : ModuleHub(title: items[index].label, role: widget.profile.role);
+    final selected = items[index].label;
+    final body = index == 0 ? home : switch (selected) {
+      'Order' => const ProductCatalogScreen(),
+      'Khata' => const FarmerKhataScreen(),
+      'Services' => const FarmerServicesScreen(),
+      _ => ModuleHub(title: selected, role: widget.profile.role),
+    };
     return Scaffold(
       body: body,
       bottomNavigationBar: NavigationBar(
