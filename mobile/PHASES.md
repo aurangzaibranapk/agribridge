@@ -1,5 +1,13 @@
 # Mobile delivery phases
 
+## Current verified status
+
+- Flutter static analysis: passing in GitHub Actions
+- Automated tests: passing in GitHub Actions
+- Android testing APK: building successfully
+- Testing APK is retained as a downloadable workflow artifact for 14 days
+- Live/production deployment remains intentionally disabled
+
 ## Phase 1 — Foundation (implemented)
 
 - Flutter package and dependency definition
