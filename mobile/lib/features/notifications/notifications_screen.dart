@@ -29,7 +29,7 @@ class NotificationsScreen extends ConsumerWidget {
               : rows.isEmpty
                   ? const Center(child: Text('Abhi koi notification nahi.'))
                   : RefreshIndicator(
-                      onRefresh: () async { await ref.refresh(notificationsProvider.future); },
+                      onRefresh: () => ref.refresh(notificationsProvider.future).then((_) {}),
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: rows.length,
