@@ -9,6 +9,7 @@ import '../ai/kisan_ai_screen.dart';
 import '../farmer/farmer_khata_screen.dart';
 import '../farmer/farmer_services_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../profile/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/dealer_dashboard.dart';
 import 'screens/farmer_dashboard.dart';
@@ -55,6 +56,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
       'Khata' => const FarmerKhataScreen(),
       'Services' => const FarmerServicesScreen(),
       'Alerts' => const NotificationsScreen(),
+      'Profile' || 'Menu' => ProfileScreen(profile: widget.profile),
       _ => ModuleHub(title: selected, role: widget.profile.role),
     };
     return Scaffold(
