@@ -101,6 +101,8 @@ export const portalDict = {
   add_new_crop: { en: "Add New Crop", ur: "نئی فصل شامل کریں" },
   select_farm: { en: "Select a farm", ur: "کھیت منتخب کریں" },
   crop: { en: "Crop", ur: "فصل" },
+  other_crop: { en: "Other", ur: "دیگر" },
+  other_crop_placeholder: { en: "Type crop name", ur: "فصل کا نام لکھیں" },
   sowing_date: { en: "Sowing Date", ur: "بوائی کی تاریخ" },
   area_optional: { en: "Area - Optional (Acre / Kanal / Marla)", ur: "رقبہ - اختیاری (ایکڑ / کنال / مرلہ)" },
   land_available_hint: { en: "Only this much land is available on this farm.", ur: "اس کھیت میں صرف اتنی زمین دستیاب ہے۔" },

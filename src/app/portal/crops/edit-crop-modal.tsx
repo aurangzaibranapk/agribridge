@@ -6,6 +6,8 @@ import { updateCropAction } from "./actions";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
+const OTHER_CROP = "__other__";
+
 interface Crop {
   id: string;
   crop_name: string;
@@ -26,6 +28,11 @@ export function EditCropButton({ crop }: { crop: Crop }) {
 
 function EditModal({ crop, onClose }: { crop: Crop; onClose: () => void }) {
   const lang = useLang();
+  const knownCrop = CROP_NAMES.includes(crop.crop_name);
+  const [selectedCrop, setSelectedCrop] = useState(knownCrop ? crop.crop_name : OTHER_CROP);
+  const [customCrop, setCustomCrop] = useState(knownCrop ? "" : crop.crop_name);
+  const isOther = selectedCrop === OTHER_CROP;
+  const finalCropName = isOther ? customCrop.trim() : selectedCrop;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
@@ -39,11 +46,27 @@ function EditModal({ crop, onClose }: { crop: Crop; onClose: () => void }) {
           <input type="hidden" name="crop_id" value={crop.id} />
           <div>
             <label className="text-xs font-medium text-surface-600">{t("c_crop", lang)}</label>
-            <select name="crop_name" defaultValue={crop.crop_name} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+            <select
+              value={selectedCrop}
+              onChange={(e) => setSelectedCrop(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            >
               {CROP_NAMES.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
+              <option value={OTHER_CROP}>{t("other_crop", lang)}</option>
             </select>
+            {isOther && (
+              <input
+                type="text"
+                value={customCrop}
+                onChange={(e) => setCustomCrop(e.target.value)}
+                placeholder={t("other_crop_placeholder", lang)}
+                required
+                className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              />
+            )}
+            <input type="hidden" name="crop_name" value={finalCropName} />
           </div>
           <div>
             <label className="text-xs font-medium text-surface-600">{t("pm_sowing_date", lang)}</label>
