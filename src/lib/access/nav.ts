@@ -210,7 +210,11 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
       .select("allowed_pages, extra_roles")
       .eq("id", profileId)
       .maybeSingle();
-    const ownPages = (profile?.allowed_pages as string[] | null) ?? null;
+    // allowed_pages JSONB hai -- array hi asal jawab hai, kuch aur
+    // (jaise galti se likha `{}`) mile to "kabhi set nahi hua" maano,
+    // crash mat karo (11 September ka 500 error isi se aaya tha).
+    const rawPages = profile?.allowed_pages;
+    const ownPages = Array.isArray(rawPages) ? (rawPages as string[]) : null;
 
     // KHAALI array aur NULL ek cheez nahi (11 September, "Sab Access
     // Zero Karein" ke baad Anwar ke paas phir bhi POS khula tha -- wajah
