@@ -281,7 +281,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         <MyWorkBody
           lang={lang}
           quick={model.quick}
-          departments={model.departments}
+          // Jis banday ki ijazat mehdood hai, us ka HAR kaam sidebar ki
+          // "Quick Access" mein ek hi flat fehrist mein pehle se hai
+          // (admin/layout.tsx). Yahan wohi cheezein department cards mein
+          // dobara dikhana ("AgriBridge Ordering" sidebar mein bhi, yahan
+          // bhi) sirf duplicate aur confusion banata hai (malik, 11
+          // September). Department cards sirf un ke liye jin ke paas
+          // itna kaam hai ke browse karna zaroori ho -- Owner/Admin/
+          // Manager.
+          departments={nav.unrestricted ? model.departments : []}
           defaultDept={defaultDashboardForRole(me.role)}
           attention={attentionTop}
           attentionTotal={attentionItems.length}
