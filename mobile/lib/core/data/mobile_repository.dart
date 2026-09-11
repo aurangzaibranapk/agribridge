@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_config.dart';
+import '../../features/commerce/cart_controller.dart';
 
 class MobileRepository {
   SupabaseClient get _client => Supabase.instance.client;
@@ -52,5 +53,25 @@ class MobileRepository {
     final user = _client.auth.currentUser;
     if (user == null) throw StateError('Login zaroori hai.');
     await _client.from('account_deletion_requests').insert({'profile_id': user.id, 'reason': reason});
+  }
+
+  Future<String> submitOrder({
+    required Iterable<CartLine> lines,
+    required String paymentMethod,
+    String? notes,
+  }) async {
+    if (!AppConfig.hasSupabase) throw StateError('Testing demo mein order database ko nahi bheja jata.');
+    final paymentTerms = switch (paymentMethod) {
+      'Bank Transfer' || 'Easypaisa' || 'JazzCash' => 'Bank Transfer',
+      'Customer Khata' => 'Credit',
+      'Advance Payment' => 'Advance Payment',
+      _ => 'Cash',
+    };
+    final result = await _client.rpc('mobile_submit_agri_order', params: {
+      'p_items': [for (final line in lines) {'product_id': line.product.id, 'quantity': line.quantity}],
+      'p_payment_terms': paymentTerms,
+      'p_notes': notes,
+    });
+    return result.toString();
   }
 }
