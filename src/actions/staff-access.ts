@@ -415,6 +415,61 @@ export async function clearAllStaffAccess(_prev: ActionState, formData: FormData
   };
 }
 
+async function grantCompleteAccess(formData: FormData, allDepartments: boolean): Promise<ActionState> {
+  const who = await master();
+  if ("error" in who) return { error: who.error };
+  const profileId = String(formData.get("profile_id") ?? "");
+  const role = String(formData.get("template") ?? "");
+  if (!profileId) return { error: "Pehle staff member chunein." };
+  if (!allDepartments && !DEPARTMENTS.some((d) => d.role === role)) return { error: "Department/template chunein." };
+
+  const service = createServiceClient();
+  const { data: target } = await service.from("profiles").select("full_name, role, branch_id, shop_id").eq("id", profileId).maybeSingle();
+  if (!target) return { error: "Staff member nahi mila." };
+  if (MASTER_ROLES.includes(String(target.role))) return { error: "Owner/Admin ko unrestricted access pehle se hasil hai." };
+
+  let templateQuery = service.from("role_feature_permissions").select("feature_key");
+  if (!allDepartments) templateQuery = templateQuery.eq("role", role);
+  const { data: templateRows, error: templateError } = await templateQuery;
+  if (templateError) return { error: templateError.message };
+  const featureKeys = [...new Set((templateRows ?? []).map((r) => String(r.feature_key)))];
+  if (!featureKeys.length) return { error: "Is selection ke templates mein koi permission nahi hai." };
+
+  const dataScope: DataScope = target.shop_id ? "own_shop" : target.branch_id ? "own_branch" : "own_records";
+  const { error: permissionError } = await service.from("user_feature_permissions").upsert(
+    featureKeys.map((featureKey) => ({
+      profile_id: profileId,
+      feature_key: featureKey,
+      actions: [...ACTIONS],
+      data_scope: dataScope,
+      reason: allDepartments ? "Malik ne tamam departments ki complete access di." : `Malik ne ${role} department ki complete access di.`,
+      granted_by: who.userId,
+    })),
+    { onConflict: "profile_id,feature_key" }
+  );
+  if (permissionError) return { error: permissionError.message };
+
+  if (allDepartments) {
+    const { error: productError } = await service.from("staff_product_permissions").upsert({
+      profile_id: profileId, can_add: true, can_edit: true, can_view: true, can_delete: true, can_approve_products: true, updated_at: new Date().toISOString(),
+    }, { onConflict: "profile_id" });
+    if (productError) return { error: productError.message };
+  }
+
+  const label = allDepartments ? "tamam departments" : (DEPARTMENTS.find((d) => d.role === role)?.label ?? role);
+  await logAudit({ actionType: "update", module: "staff-access", recordId: profileId, recordLabel: target.full_name ?? profileId, description: `${label} ki complete access di: ${featureKeys.length} features, tamam actions, scope ${dataScope}.` });
+  revalidatePath("/admin/staff-access");
+  return { success: true, message: `${target.full_name ?? "Staff"} ko ${label} ki ${featureKeys.length} complete permissions mil gayin.` };
+}
+
+export async function grantCompleteDepartmentAccess(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return grantCompleteAccess(formData, false);
+}
+
+export async function grantAllDepartmentsAccess(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  return grantCompleteAccess(formData, true);
+}
+
 /** Malik ke banaye hue role template ko poori editable fehrist ke sath save karna. */
 export async function saveRoleTemplate(_prev: TemplateActionState, formData: FormData): Promise<TemplateActionState> {
   const who = await master();
