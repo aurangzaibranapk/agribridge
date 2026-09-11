@@ -23,7 +23,7 @@ ThemeData buildTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: const Color(0xFFF6F8F6),
     fontFamily: 'Roboto',
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       elevation: 0,
       margin: EdgeInsets.zero,
       color: Colors.white,
