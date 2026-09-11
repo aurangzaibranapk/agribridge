@@ -1,0 +1,34 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [testing/shop-360-zero-leakage]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform
+        run: flutter create --platforms=android --project-name agribridge --org pk.alranatraders .
+      - name: Dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Testing APK
+        run: flutter build apk --debug --dart-define=APP_ENV=testing
