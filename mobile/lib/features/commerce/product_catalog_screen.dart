@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/data/mobile_providers.dart';
 import 'cart_controller.dart';
 import 'cart_screen.dart';
 import 'product.dart';
@@ -18,8 +19,10 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final categories = ['All', ...{for (final p in demoProducts) p.category}];
-    final products = demoProducts.where((p) => (category == 'All' || p.category == category) && '${p.name} ${p.brand} ${p.category}'.toLowerCase().contains(query.toLowerCase())).toList();
+    final productState = ref.watch(productsProvider);
+    final allProducts = productState.valueOrNull ?? const <Product>[];
+    final categories = ['All', ...{for (final p in allProducts) p.category}];
+    final products = allProducts.where((p) => (category == 'All' || p.category == category) && '${p.name} ${p.brand} ${p.category}'.toLowerCase().contains(query.toLowerCase())).toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Products'), actions: [
         IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())), icon: Badge(label: Text('${cart.values.fold<int>(0, (s, e) => s + e.quantity)}'), child: const Icon(Icons.shopping_bag_outlined))),
@@ -28,10 +31,22 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
         Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 8), child: TextField(onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(hintText: 'Product, brand ya category search karein', prefixIcon: Icon(Icons.search)))),
         SizedBox(height: 42, child: ListView.separated(padding: const EdgeInsets.symmetric(horizontal: 16), scrollDirection: Axis.horizontal, itemCount: categories.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, i) => ChoiceChip(label: Text(categories[i]), selected: category == categories[i], onSelected: (_) => setState(() => category = categories[i])))),
         const SizedBox(height: 8),
-        Expanded(child: GridView.builder(padding: const EdgeInsets.all(16), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .67, crossAxisSpacing: 12, mainAxisSpacing: 12), itemCount: products.length, itemBuilder: (_, i) => _ProductCard(product: products[i]))),
+        Expanded(child: productState.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : productState.hasError
+                ? _LoadError(onRetry: () => ref.invalidate(productsProvider))
+                : products.isEmpty
+                    ? const Center(child: Text('Koi product available nahi.'))
+                    : RefreshIndicator(onRefresh: () async { await ref.refresh(productsProvider.future); }, child: GridView.builder(padding: const EdgeInsets.all(16), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: .67, crossAxisSpacing: 12, mainAxisSpacing: 12), itemCount: products.length, itemBuilder: (_, i) => _ProductCard(product: products[i])))),
       ]),
     );
   }
+}
+
+class _LoadError extends StatelessWidget {
+  const _LoadError({required this.onRetry});
+  final VoidCallback onRetry;
+  @override Widget build(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off_outlined, size: 42), const SizedBox(height: 8), const Text('Products load nahi huay.'), TextButton(onPressed: onRetry, child: const Text('Dobara koshish'))]));
 }
 
 class _ProductCard extends ConsumerWidget {
