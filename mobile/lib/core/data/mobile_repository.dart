@@ -7,7 +7,13 @@ class MobileRepository {
 
   Future<List<Map<String, dynamic>>> activeProducts({int limit = 30}) async {
     if (!AppConfig.hasSupabase) return const [];
-    final rows = await _client.from('products').select().eq('is_active', true).limit(limit);
+    final rows = await _client
+        .from('products')
+        .select('id, name, pack_size, unit, selling_price, image_url, expiry_date, categories(name), brands(name)')
+        .eq('is_available', true)
+        .eq('is_deleted', false)
+        .order('name')
+        .limit(limit);
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -21,6 +27,11 @@ class MobileRepository {
     if (!AppConfig.hasSupabase) return const [];
     final rows = await _client.from('notifications').select().eq('recipient_user_id', profileId).order('created_at', ascending: false).limit(40);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> markAllNotificationsRead(String profileId) async {
+    if (!AppConfig.hasSupabase) return;
+    await _client.from('notifications').update({'is_read': true}).eq('recipient_user_id', profileId).eq('is_read', false);
   }
 
   Future<void> registerDevice({required String token, required String platform}) async {
