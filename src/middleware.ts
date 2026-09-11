@@ -102,8 +102,12 @@ export async function middleware(request: NextRequest) {
       // mein tha -- role ka template tha, khud par apply nahi hua tha.)
       if (!rows || rows.length === 0) {
         const ownPages = (profile.allowed_pages as string[] | null) ?? null;
+        // NULL (kabhi set nahi) aur [] (jaan boojh kar zero) ek cheez
+        // nahi -- "Sab Access Zero Karein" ke baad bhi banda role ki
+        // default pages par gir jata tha kyunke [] aur null yahan barabar
+        // maane ja rahe the.
         let rolePages: string[] = [];
-        if (!ownPages || ownPages.length === 0) {
+        if (ownPages === null) {
           // Apna department AUR jo doosre diye gaye hon (193) -- sab ke
           // safhe jore jate hain. Sirf apna dekhna doosre department ko
           // bemaani kar deta.
@@ -115,7 +119,7 @@ export async function middleware(request: NextRequest) {
             ...new Set((rolePerm ?? []).flatMap((r) => (r.allowed_pages as string[] | null) ?? [])),
           ];
         }
-        allowed.push(...(ownPages && ownPages.length > 0 ? ownPages : rolePages));
+        allowed.push(...(ownPages !== null ? ownPages : rolePages));
       }
 
       // Sab se lamba milta hua raasta jeetta hai -- warna

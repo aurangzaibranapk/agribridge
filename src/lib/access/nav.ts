@@ -210,10 +210,16 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
       .select("allowed_pages, extra_roles")
       .eq("id", profileId)
       .maybeSingle();
-    const own = (profile?.allowed_pages as string[] | null) ?? [];
+    const ownPages = (profile?.allowed_pages as string[] | null) ?? null;
 
-    let pages = own;
-    if (pages.length === 0) {
+    // KHAALI array aur NULL ek cheez nahi (11 September, "Sab Access
+    // Zero Karein" ke baad Anwar ke paas phir bhi POS khula tha -- wajah
+    // yehi thi: purana [] bhi "kuch set nahi" samjha jata tha, is liye
+    // yahan role ki default pages par gir jata). NULL = kabhi set nahi
+    // hua, role ka default chalega. [] = jaan boojh kar zero kiya gaya,
+    // ismein role ka default bhi shamil nahi.
+    let pages: string[] = ownPages ?? [];
+    if (ownPages === null) {
       // Apna department AUR jo doosre diye gaye hon (193). Menu aur rok
       // ek hi hisaab par chalte hain -- warna banda menu mein cheez
       // dekhta aur khol nahi pata, ya us se ulta.
