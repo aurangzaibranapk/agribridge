@@ -6,8 +6,10 @@ import '../../core/models/app_role.dart';
 import '../../core/theme/app_theme.dart';
 import '../modules/module_hub.dart';
 import '../commerce/product_catalog_screen.dart';
+import '../ai/kisan_ai_screen.dart';
 import '../farmer/farmer_khata_screen.dart';
 import '../farmer/farmer_services_screen.dart';
+import '../notifications/notifications_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/dealer_dashboard.dart';
 import 'screens/farmer_dashboard.dart';
@@ -53,6 +55,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
       'Order' => const ProductCatalogScreen(),
       'Khata' => const FarmerKhataScreen(),
       'Services' => const FarmerServicesScreen(),
+      'Alerts' => const NotificationsScreen(),
       _ => ModuleHub(title: selected, role: widget.profile.role),
     };
     return Scaffold(
@@ -64,7 +67,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
         destinations: items.map((item) => NavigationDestination(icon: Icon(item.icon), label: item.label)).toList(),
       ),
       floatingActionButton: widget.profile.role == AppRole.farmer
-          ? FloatingActionButton.extended(onPressed: () {}, backgroundColor: AppColors.green, foregroundColor: Colors.white, icon: const Icon(Icons.smart_toy_outlined), label: const Text('Kisan AI'))
+          ? FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KisanAiScreen())), backgroundColor: AppColors.green, foregroundColor: Colors.white, icon: const Icon(Icons.smart_toy_outlined), label: const Text('Kisan AI'))
           : null,
     );
   }
