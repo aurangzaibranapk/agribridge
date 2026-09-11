@@ -40,4 +40,9 @@ class SessionController extends AsyncNotifier<AppProfile?> {
       shopId: 'testing-shop',
     ));
   }
+
+  Future<void> signOut() async {
+    await ref.read(authRepositoryProvider).signOut();
+    state = const AsyncData(null);
+  }
 }
