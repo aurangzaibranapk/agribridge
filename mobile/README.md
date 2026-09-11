@@ -2,6 +2,10 @@
 
 Role-aware Flutter application for Admin, Farmer, Staff and Dealer users. It shares the existing AgriBridge Supabase backend and never embeds a service-role key.
 
+## Testing APK
+
+Every Testing-branch push that changes `mobile/**` runs **Mobile CI**. After a successful run, download the `agribridge-testing-apk` workflow artifact. This build never publishes to Live or Google Play.
+
 ## Current foundation
 
 - Premium ART/AgriBridge mobile design system
