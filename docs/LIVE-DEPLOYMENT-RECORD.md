@@ -3263,13 +3263,47 @@ ab isi par redirect. Review mein do cheezein pakri aur theek ki:
 
 Har commit apna `tsc` (70, baseline) aur clean build se guzra hai.
 
-**Ab tak build/package NAHI gaya — fehrist ye hai jab malik "system par
-aa gaya" kahein:**
+## 11 September, thodi der baad — mazeed 5 fix (malik ke apne screenshots se)
+
+Malik ne app istemal karte hue live 3 masle bheje, 5 commit ban gaye:
+
+1. **My Profile — CNIC upload par camera + crop nahi tha** — ye kaam
+   `admin-farmer-form.tsx` (Admin ki taraf) mein 7 September ko ho chuka
+   tha (`02ff9c2`), magar farmer ke apne `/portal/profile` safhe par
+   (jahan wo khud CNIC upload karta hai) reh gaya tha. Wahi maujooda
+   `ImageCropField` component yahan bhi laga diya — koi naya nahi
+   banaya.
+2. **My Crops — fehrist mein sirf 10 fasal, "Other" ka raasta nahi** —
+   Add aur Edit Crop dono forms mein "Other" option, chunte hi text
+   field khulta hai. Backend pehle se koi bhi naam qabool karta tha.
+3. **Edit Crop khulte waqt Acre/Kanal/Marla khali** — sirf tareekh
+   badalne ke liye Save karna bhi maujooda raqba ko 0 kar deta tha
+   (`updateCropAction` teenon khanon ka jorh hi mehfooz karta hai). Kul
+   acre ko wapas Acre/Kanal/Marla mein tor kar khali khanon mein bhar
+   diya.
+4. **Add Expense modal par pata nahi chalta kaunsi zameen/fasal ka
+   kharcha hai** — title ke neeche "Farm — Fasal — X.X acre" patti.
+5. **Farmer verification 30 minute se baqi ho to koi highlight nahi
+   thi** — `/admin/farmers` par "Tasdeeq baqi" amber badge hamesha ek
+   jaisa dikhta tha. Ab `profile_confirmed_at` se 30 minute paar hote hi
+   poori qatar surkh (bg-red-50) ho jati hai, "X min se tasdeeq baqi"
+   likha aata hai — sirf tasdeeqKarSakta (verify permission + owner/
+   admin) ko dikhta hai.
+
+Koi naya migration nahi (sab existing columns/components ka istemal).
+`tsc` (70, baseline) aur build har commit par clean.
+
+**Malik ne khud "build karo" kaha (11 September) — is liye ab command
+bhej rahe hain, HOLD nahi.** Ye build 10 September se ab tak ka SAARA
+kaam le kar jaata hai — Trade Rate from Bill ki baqi cheezein, Shop 360
+merge, 4 kharabiyan (Anwar POS/login, dashboard duplicate, sidebar naam,
+83 label sync), aur upar wale 5 fix. Migration se koi qadam baqi nahi
+(386-391 dono taraf pehle hi lag chuki hain) — sirf ye build+upload:
 ```
 git pull origin claude/code-load-project-structure-fq91y9 && npm run build > build.log 2>&1; tail -5 build.log
 ```
 ```
 ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
 ```
-Migration se koi qadam baqi nahi (386-391 dono taraf lag chuki) — sirf
-upar wala build+upload+Restart.
+Phir cPanel: Setup Node.js App → Stop → File Manager → domains/agribridge
+→ deploy.tar.gz Upload (overwrite) → Extract → Start.
