@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/utils/format";
 import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { FarmerActions } from "@/app/admin/farmers/farmer-actions";
 import { bulkToggleFarmerActive, bulkDeleteFarmers, type ActionState } from "@/actions/farmers-bulk";
-import { CheckSquare, FileText } from "lucide-react";
+import { CheckSquare, FileText, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -25,6 +25,15 @@ interface Farmer {
   is_verified: boolean;
   is_active: boolean | null;
   created_at: string;
+  profile_confirmed_at: string | null;
+}
+
+const VERIFY_SLA_MINUTES = 30;
+
+/** Profile confirm hone ke kitne minute baad -- na ho to null. */
+function minutesSinceConfirmed(profileConfirmedAt: string | null): number | null {
+  if (!profileConfirmedAt) return null;
+  return Math.floor((Date.now() - new Date(profileConfirmedAt).getTime()) / 60000);
 }
 
 /**
@@ -86,8 +95,18 @@ export function FarmersListClient({
             </tr>
           </thead>
           <tbody>
-            {farmers.map((f) => (
-              <tr key={f.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800/60">
+            {farmers.map((f) => {
+              const overdueMinutes = !f.is_verified ? minutesSinceConfirmed(f.profile_confirmed_at) : null;
+              // 30 minute ka usool malik ka hai: tasdeeq is se der ho to
+              // qatar khud chhup kar nahi baithti -- surkh ho jati hai,
+              // taake admin/owner aur jise tasdeeq ki ijazat hai, un ki
+              // nazar isi par pehle jaye.
+              const isOverdue = overdueMinutes !== null && overdueMinutes >= VERIFY_SLA_MINUTES;
+              return (
+              <tr
+                key={f.id}
+                className={`border-b border-surface-50 last:border-0 dark:border-surface-800/60 ${isOverdue ? "bg-red-50 dark:bg-red-950/20" : ""}`}
+              >
                 {koiBulkKaam && (
                   <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggleSelect(f.id)} /></td>
                 )}
@@ -101,13 +120,22 @@ export function FarmersListClient({
                 <td className="px-5 py-3">
                   {f.is_verified ? (
                     <Badge tone="green">{t("c_verified", lang)}</Badge>
-                  ) : tasdeeqKarSakta ? (
-                    <VerifyFarmerButton id={f.id} />
                   ) : (
-                    // Staff ko haalat NAZAR aati hai, magar thappa us ke
-                    // haath mein nahi. Tasdeeq ka matlab hai kisi ne
-                    // kaghaz apni aankh se dekhe.
-                    <Badge tone="amber">Tasdeeq baqi</Badge>
+                    <div className="space-y-1">
+                      {isOverdue && (
+                        <p className="flex items-center gap-1 text-[11px] font-semibold text-red-700 dark:text-red-400">
+                          <AlertTriangle className="h-3 w-3" /> {overdueMinutes} min se tasdeeq baqi
+                        </p>
+                      )}
+                      {tasdeeqKarSakta ? (
+                        <VerifyFarmerButton id={f.id} />
+                      ) : (
+                        // Staff ko haalat NAZAR aati hai, magar thappa us
+                        // ke haath mein nahi. Tasdeeq ka matlab hai kisi
+                        // ne kaghaz apni aankh se dekhe.
+                        <Badge tone={isOverdue ? "red" : "amber"}>Tasdeeq baqi</Badge>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td className="px-5 py-3"><Badge tone={f.is_active ? "green" : "gray"}>{f.is_active ? "Active" : "Inactive"}</Badge></td>
@@ -120,7 +148,8 @@ export function FarmersListClient({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
