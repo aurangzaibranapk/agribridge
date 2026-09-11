@@ -5,6 +5,8 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { StaffAccessClient } from "./staff-access-client";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { STAFF_ROLES } from "@/lib/utils/roles";
+import { DEPARTMENTS } from "@/lib/departments";
+import { TemplateManager } from "./template-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +56,7 @@ export default async function StaffAccessPage({
       .order("is_active", { ascending: false })
       .order("full_name"),
     service.from("features").select("key, label, route, is_sensitive").eq("is_active", true).order("label"),
-    service.from("role_feature_permissions").select("role, feature_key"),
+    service.from("role_feature_permissions").select("role, feature_key, actions, data_scope"),
     service.from("branches").select("id, name").eq("is_active", true).order("name"),
     service.from("shops").select("id, name, branch_id").eq("is_active", true).order("name"),
   ]);
@@ -66,13 +68,16 @@ export default async function StaffAccessPage({
 
   // Har template mein kitni cheezein hain -- taake malik ko lagane se
   // pehle pata ho ke wo kya de raha hai.
-  const templateGinti = new Map<string, number>();
+  const templateFeatures = new Map<string, { feature_key: string; actions: any[]; data_scope: any }[]>();
   (templates ?? []).forEach((r: any) => {
-    templateGinti.set(r.role, (templateGinti.get(r.role) ?? 0) + 1);
+    const list = templateFeatures.get(r.role) ?? [];
+    list.push({ feature_key: String(r.feature_key), actions: (r.actions ?? ["view"]) as any[], data_scope: r.data_scope ?? "own_branch" });
+    templateFeatures.set(r.role, list);
   });
-  const templateFehrist = [...templateGinti.entries()]
-    .map(([role, ginti]) => ({ role, ginti }))
-    .sort((a, b) => a.role.localeCompare(b.role));
+  const templateFehrist = DEPARTMENTS.map((department) => {
+    const permissions = templateFeatures.get(department.role) ?? [];
+    return { role: department.role, label: department.label, summary: department.summary, ginti: permissions.length, featureKeys: permissions.map((p) => p.feature_key), permissions };
+  }).sort((a, b) => a.label.localeCompare(b.label));
 
   const chunaHua = params.banda && log.some((p) => p.id === params.banda) ? params.banda : null;
 
@@ -84,12 +89,26 @@ export default async function StaffAccessPage({
         .order("feature_key")
     : { data: [] };
 
+  const { data: productPermission } = chunaHua
+    ? await service
+        .from("staff_product_permissions")
+        .select("can_add, can_edit, can_view, can_delete, can_approve_products")
+        .eq("profile_id", chunaHua)
+        .maybeSingle()
+    : { data: null };
+
   return (
     <div>
       <PageHeader
         title="Staff & Access Control"
         description="Banda, department, branch, shop aur access — sab ek hi jagah se"
       />
+      <div className="mt-4">
+        <TemplateManager
+          templates={templateFehrist.map((t) => ({ role: t.role, label: t.label, summary: t.summary, permissions: t.permissions }))}
+          features={(features ?? []).map((f: any) => ({ key: f.key, label: f.label, route: f.route, is_sensitive: f.is_sensitive === true }))}
+        />
+      </div>
       {log.length === 0 ? (
         <EmptyState title="Koi staff nahi mila." />
       ) : (
@@ -119,6 +138,13 @@ export default async function StaffAccessPage({
           }))}
           branches={(branches ?? []).map((b: any) => ({ id: b.id, name: b.name }))}
           shops={(shops ?? []).map((s: any) => ({ id: s.id, name: s.name, branch_id: s.branch_id }))}
+          productPermission={{
+            can_add: productPermission?.can_add === true,
+            can_edit: productPermission?.can_edit === true,
+            can_view: productPermission?.can_view === true,
+            can_delete: productPermission?.can_delete === true,
+            can_approve_products: productPermission?.can_approve_products === true,
+          }}
         />
       )}
     </div>
