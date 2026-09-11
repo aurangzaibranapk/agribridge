@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { Printer, Download, Mail, MessageCircle } from "lucide-react";
+import { Printer, Download, Mail, MessageCircle, FileText } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -57,6 +57,19 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
   const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
   const [search, setSearch] = useState("");
   const [includeCountColumns, setIncludeCountColumns] = useState(false);
+  // Ginti sheet ab kaghaz tak mehdood nahi -- yahin screen par bhi
+  // "Actual Stock" likha ja sakta hai, aur Farq khud ban jata hai.
+  // Malik (11 September): "next bhi yahan stock likhna hai, farq wahan
+  // box hona chahiye."
+  const [actualStock, setActualStock] = useState<Record<string, string>>({});
+
+  function diffFor(p: Product): number | null {
+    const raw = actualStock[p.id];
+    if (raw === undefined || raw.trim() === "") return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    return n - Number(p.stock_qty ?? 0);
+  }
 
   const filtered = useMemo(() => {
     let list = products;
@@ -89,12 +102,15 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
       ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => f.label),
       ...(includeCountColumns ? ["Actual Stock", "Farq"] : []),
     ];
-    const rows = filtered.map((p, i) => [
-      String(i + 1),
-      p.name,
-      ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => formatValue(p, f.key)),
-      ...(includeCountColumns ? ["", ""] : []),
-    ]);
+    const rows = filtered.map((p, i) => {
+      const diff = diffFor(p);
+      return [
+        String(i + 1),
+        p.name,
+        ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => formatValue(p, f.key)),
+        ...(includeCountColumns ? [actualStock[p.id] ?? "", diff === null ? "" : String(diff)] : []),
+      ];
+    });
     return [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
   }
 
@@ -125,6 +141,38 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
     a.download = `product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+  async function handleDownloadPdf() {
+    const { default: jsPDF } = await import("jspdf");
+    await import("jspdf-autotable");
+    const doc = new (jsPDF as any)({ orientation: "landscape" });
+    const title = `Product Catalog${titleSuffix ? ` - ${titleSuffix}` : ""}`;
+    doc.setFontSize(13);
+    doc.text(title, 14, 12);
+    doc.setFontSize(9);
+    doc.text(`Total Products: ${filtered.length}`, 14, 18);
+
+    const visibleFields = FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key));
+    const head = [["Sr#", "Product", ...visibleFields.map((f) => f.label), ...(includeCountColumns ? ["Actual Stock", "Farq"] : [])]];
+    const body = filtered.map((p, i) => {
+      const diff = diffFor(p);
+      return [
+        String(i + 1),
+        p.name,
+        ...visibleFields.map((f) => formatValue(p, f.key)),
+        ...(includeCountColumns ? [actualStock[p.id] ?? "", diff === null ? "" : String(diff)] : []),
+      ];
+    });
+
+    (doc as any).autoTable({
+      head,
+      body,
+      startY: 22,
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [40, 120, 50], textColor: 255, fontStyle: "bold" },
+    });
+
+    doc.save(`product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.pdf`);
   }
   function handleWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildText())}`, "_blank");
@@ -173,8 +221,9 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
         </select>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="ml-auto flex gap-2">
-          <button onClick={handlePrint} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
-          <button onClick={handleDownload} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button onClick={handlePrint} title="Print" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
+          <button onClick={handleDownload} title="CSV Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button onClick={handleDownloadPdf} title="PDF Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><FileText className="h-4 w-4" /></button>
           <button onClick={handleWhatsApp} className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
           <button onClick={handleEmail} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
         </div>
@@ -223,21 +272,44 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p, i) => (
-              <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
-                <td className="px-3 py-2 text-surface-500">{i + 1}</td>
-                <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
-                {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
-                  <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
-                ))}
-                {includeCountColumns && (
-                  <>
-                    <td className="border-b border-surface-300 px-3 py-2">&nbsp;</td>
-                    <td className="border-b border-surface-300 px-3 py-2">&nbsp;</td>
-                  </>
-                )}
-              </tr>
-            ))}
+            {filtered.map((p, i) => {
+              const diff = diffFor(p);
+              return (
+                <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
+                  <td className="px-3 py-2 text-surface-500">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
+                  {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
+                    <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
+                  ))}
+                  {includeCountColumns && (
+                    <>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={actualStock[p.id] ?? ""}
+                          onChange={(e) => setActualStock((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                          className="w-20 rounded border border-surface-300 px-1.5 py-1 text-sm print:border print:border-surface-400 dark:border-surface-600 dark:bg-surface-800"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-block min-w-[3.5rem] rounded border px-1.5 py-1 text-center text-sm ${
+                            diff === null
+                              ? "border-surface-300 text-surface-400 dark:border-surface-600"
+                              : diff === 0
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                : "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400"
+                          }`}
+                        >
+                          {diff === null ? "" : diff}
+                        </span>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
             {filtered.length === 0 && (
               <tr><td colSpan={selectedFields.length + 2 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
             )}
