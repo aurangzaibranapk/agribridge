@@ -113,6 +113,8 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                     <td colSpan={7} className="bg-surface-50 px-3 py-3">
                       <CropExpensePanel
                         cropHistoryId={c.id}
+                        cropName={c.cropName}
+                        farmName={c.farmName}
                         expenses={c.expenses}
                         areaSownAcres={c.areaSownAcres}
                         isReadyToHarvest={isReady}
