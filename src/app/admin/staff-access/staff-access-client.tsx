@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
-import { Check, ChevronRight, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Check, ChevronRight, KeyRound, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { ACTIONS, ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { DEPARTMENTS } from "@/lib/departments";
-import { clearAllStaffAccess, removeFeatureAccess, saveStaffAccessSetup, setFeatureAccess, type ActionState } from "@/actions/staff-access";
+import { clearAllStaffAccess, grantAllDepartmentsAccess, grantCompleteDepartmentAccess, removeFeatureAccess, saveStaffAccessSetup, setFeatureAccess, type ActionState } from "@/actions/staff-access";
 import { saveStaffProductPermissions } from "@/actions/product-permissions";
 
 interface Banda { id: string; full_name: string; role: string; is_active: boolean; branch_id: string | null; shop_id: string | null }
@@ -24,6 +24,10 @@ function SaveButton() {
 function MiniButton({ children, danger = false }: { children: React.ReactNode; danger?: boolean }) {
   const { pending } = useFormStatus();
   return <button disabled={pending} className={`rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${danger ? "border-red-200 text-red-700 hover:bg-red-50" : "border-surface-200 text-surface-700 hover:bg-surface-50"}`}>{pending ? "..." : children}</button>;
+}
+function BulkButton({ children, danger = false }: { children: React.ReactNode; danger?: boolean }) {
+  const { pending } = useFormStatus();
+  return <button disabled={pending} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${danger ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100" : "border-brand-700 bg-brand-700 text-white hover:bg-brand-800"}`}><KeyRound className="h-3.5 w-3.5" />{pending ? "Access di ja rahi hai..." : children}</button>;
 }
 
 export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIjazat, branches, shops, productPermission }: {
@@ -43,6 +47,8 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
   const [removeState, removeAction] = useFormState(removeFeatureAccess, KHALI);
   const [productState, productAction] = useFormState(saveStaffProductPermissions, KHALI);
   const [clearState, clearAction] = useFormState(clearAllStaffAccess, KHALI);
+  const [departmentState, departmentAction] = useFormState(grantCompleteDepartmentAccess, KHALI);
+  const [allState, allAction] = useFormState(grantAllDepartmentsAccess, KHALI);
   const banda = staff.find((s) => s.id === chunaHua) ?? null;
   const selectedBranch = branchId || banda?.branch_id || "";
   const visibleStaff = useMemo(() => { const q = query.trim().toLowerCase(); return q ? staff.filter((s) => `${s.full_name} ${s.role}`.toLowerCase().includes(q)) : staff; }, [query, staff]);
@@ -50,8 +56,8 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
   const granted = useMemo(() => new Map(uskiIjazat.map((r) => [r.feature_key, r])), [uskiIjazat]);
   const remaining = features.filter((f) => !granted.has(f.key));
   const dept = DEPARTMENTS.find((d) => d.role === banda?.role);
-  const message = clearState.message ?? saveState.message ?? setState.message ?? removeState.message ?? (productState.success ? "Product permissions mehfooz ho gayin." : undefined);
-  const error = clearState.error ?? saveState.error ?? setState.error ?? removeState.error ?? productState.error;
+  const message = allState.message ?? departmentState.message ?? clearState.message ?? saveState.message ?? setState.message ?? removeState.message ?? (productState.success ? "Product permissions mehfooz ho gayin." : undefined);
+  const error = allState.error ?? departmentState.error ?? clearState.error ?? saveState.error ?? setState.error ?? removeState.error ?? productState.error;
   const location = banda?.shop_id ? shops.find((s) => s.id === banda.shop_id)?.name : banda?.branch_id ? branches.find((b) => b.id === banda.branch_id)?.name : "tamam assigned locations";
   const visibleFeatures = useMemo(() => {
     const q = featureQuery.trim().toLowerCase();
@@ -60,9 +66,9 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
 
   useEffect(() => {
     setPicked(new Set(uskiIjazat.map((r) => r.feature_key)));
-    setTemplateRole("");
+    setTemplateRole(banda?.role ?? "");
     setFeatureQuery("");
-  }, [chunaHua, uskiIjazat]);
+  }, [chunaHua, uskiIjazat, banda?.role]);
 
   function pickTemplate(role: string) {
     setTemplateRole(role);
@@ -112,6 +118,12 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <section className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4 dark:border-surface-700 dark:bg-surface-800"><div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-700" />Editable Access ({picked.size})</h3><p className="mt-1 text-xs text-surface-500">Template ki 13 ya current tamam permissions yahan tick/untick karein.</p></div><input value={featureQuery} onChange={(e) => setFeatureQuery(e.target.value)} placeholder="Access search..." className="rounded-lg border border-surface-200 bg-white px-2 py-1.5 text-xs outline-none dark:border-surface-700 dark:bg-surface-900" /></div><div className="mt-3 grid max-h-52 grid-cols-1 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">{visibleFeatures.map((f) => <label key={f.key} className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs ${picked.has(f.key) ? "border-emerald-200 bg-white text-surface-800" : "border-transparent text-surface-500 hover:bg-white/70"}`}><input type="checkbox" checked={picked.has(f.key)} onChange={() => toggleFeature(f.key)} /><span className="truncate">{f.label}</span>{f.is_sensitive && <span className="ml-auto text-[9px] text-red-600">HASSAS</span>}</label>)}</div></section>
             <section className="rounded-lg border border-surface-200 p-4 dark:border-surface-700"><h3 className="text-sm font-semibold">Access Summary</h3><p className="mt-2 text-sm leading-6 text-surface-600 dark:text-surface-300"><b>{banda.full_name}</b> ko <b>{dept?.label ?? banda.role}</b> ka access milega. Data ki hadd <b>{location ?? "assigned location"}</b> hai. Save ke baad <b>{picked.size}</b> features khulenge.</p></section>
+          </div>
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-semibold">Complete Permission Buttons</h3><p className="mt-1 text-xs text-surface-500">Ek department ya tamam departments ki permissions ek click mein dein. Data sirf assigned shop/branch tak rahega.</p></div><div className="flex flex-wrap gap-2">
+              <form action={departmentAction} onSubmit={(event) => { const label = DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? templateRole; if (!window.confirm(`${banda.full_name} ko ${label} department ki tamam permissions deni hain?`)) event.preventDefault(); }}><input type="hidden" name="profile_id" value={banda.id} /><input type="hidden" name="template" value={templateRole || banda.role} /><BulkButton>{DEPARTMENTS.find((d) => d.role === (templateRole || banda.role))?.label ?? "Is Department"} ki Sab Permissions</BulkButton></form>
+              <form action={allAction} onSubmit={(event) => { if (!window.confirm(`${banda.full_name} ko TAMAM departments ki tamam permissions deni hain? Ye bohat zyada access hai.`)) event.preventDefault(); }}><input type="hidden" name="profile_id" value={banda.id} /><BulkButton danger>Tamam Departments ki Sab Permissions</BulkButton></form>
+            </div></div>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-surface-100 pt-4 dark:border-surface-800"><button type="button" onClick={() => setAdvanced((v) => !v)} className="text-sm font-medium text-brand-700 underline">{advanced ? "Advanced band karein" : "Extra Access (Optional)"}</button><SaveButton /></div>
         </form>
