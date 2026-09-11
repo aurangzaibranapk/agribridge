@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
-import { isAction, isDataScope, type Action, type DataScope } from "@/lib/access/types";
+import { ACTIONS, isAction, isDataScope, type Action, type DataScope } from "@/lib/access/types";
 import { DEPARTMENTS } from "@/lib/departments";
 import { updateUserRole } from "@/actions/users";
 import type { UserRole } from "@/lib/utils/roles";
