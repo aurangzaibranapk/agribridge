@@ -210,6 +210,7 @@ export const sitePagesDict = {
   sp_diagnosing: { en: "Diagnosing...", rm: "Jaanch ho rahi hai...", ur: "جانچ ہو رہی ہے..." },
   sp_tap_upload: { en: "Tap to upload a photo of the affected crop", rm: "Kharab fasal ki tasveer bhejne ke liye yahan dabayein", ur: "خراب فصل کی تصویر بھیجنے کے لیے یہاں دبائیں" },
   sp_photo_hint: { en: "JPG or PNG, a clear close-up works best", rm: "JPG ya PNG — qareeb se li hui saaf tasveer sab se behtar", ur: "جے پی جی یا پی این جی — قریب سے لی ہوئی صاف تصویر سب سے بہتر" },
+  sp_camera_now: { en: "Take Photo Now", rm: "Abhi Camera se Khenchein", ur: "ابھی کیمرے سے کھینچیں" },
   sp_uploaded_crop: { en: "Uploaded crop", rm: "Bheji hui fasal", ur: "بھیجی ہوئی فصل" },
   sp_treatment: { en: "Treatment", rm: "Ilaj", ur: "علاج" },
   sp_spray_schedule: { en: "Spray Schedule", rm: "Spray ka nizam-ul-auqat", ur: "سپرے کا شیڈول" },

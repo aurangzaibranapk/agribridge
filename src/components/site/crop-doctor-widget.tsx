@@ -1,6 +1,6 @@
 ﻿"use client";
-import { useState } from "react";
-import { Camera, Loader2, Sprout, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Camera, Image as ImageIcon, Loader2, Sprout, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -15,6 +15,8 @@ type CropDiagnosis = {
 
 export function CropDoctorWidget({ mode }: { mode?: string }) {
   const lang = useLang();
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,19 +78,47 @@ export function CropDoctorWidget({ mode }: { mode?: string }) {
   return (
     <div>
       <div className="rounded-card border-2 border-dashed border-surface-300 bg-surface-50 p-10 text-center">
-        <label htmlFor="crop-photo-upload" className="cursor-pointer">
-          {preview ? (
-            <img src={preview} alt={t("sp_uploaded_crop", lang)} className="mx-auto max-h-64 rounded-lg" />
-          ) : (
-            <>
-              <Camera className="mx-auto mb-3 h-10 w-10 text-surface-400" />
-              <p className="text-surface-500">{t("sp_tap_upload", lang)}</p>
-              <p className="mt-1 text-xs text-surface-400">{t("sp_photo_hint", lang)}</p>
-            </>
-          )}
-        </label>
+        {preview ? (
+          <img src={preview} alt={t("sp_uploaded_crop", lang)} className="mx-auto max-h-64 rounded-lg" />
+        ) : (
+          <>
+            <Camera className="mx-auto mb-3 h-10 w-10 text-surface-400" />
+            <p className="text-surface-500">{t("sp_tap_upload", lang)}</p>
+            <p className="mt-1 text-xs text-surface-400">{t("sp_photo_hint", lang)}</p>
+          </>
+        )}
+
+        {/* Malik: mauqe par khara ho kar pattay ki tasveer khenchni hai --
+            sirf "file chunein" dabane se aksar phone Gallery app khol
+            deta hai, seedha camera nahi. Do alag button dete hain taake
+            camera hamesha ek hi tap mein khule, gallery se purani
+            tasveer bhi mil sake. */}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-100"
+          >
+            <Camera className="h-4 w-4" /> {t("sp_camera_now", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-100"
+          >
+            <ImageIcon className="h-4 w-4" /> {t("sp_gallery", lang)}
+          </button>
+        </div>
         <input
-          id="crop-photo-upload"
+          ref={cameraInputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <input
+          ref={galleryInputRef}
           type="file"
           accept="image/jpeg,image/png"
           className="hidden"
