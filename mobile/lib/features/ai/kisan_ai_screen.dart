@@ -19,28 +19,37 @@ class _KisanAiScreenState extends State<KisanAiScreen> {
   ];
   bool busy = false;
 
+  @override
+  void dispose() {
+    input.dispose();
+    super.dispose();
+  }
+
   Future<void> send() async {
     final text = input.text.trim();
     if (text.isEmpty || busy) return;
     setState(() { messages.add((mine: true, text: text)); input.clear(); busy = true; });
     try {
-      if (!AppConfig.hasSupabase) {
+      if (AppConfig.demoMode) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
-        setState(() => messages.add((mine: false, text: 'Testing preview: production mein ye sawal verified Kisan AI aur aapke farmer record se process hoga.')));
+        if (mounted) setState(() => messages.add((mine: false, text: 'Testing preview: production mein ye sawal verified Kisan AI aur aapke farmer record se process hoga.')));
         return;
+      }
+      if (!AppConfig.hasSupabase || !AppConfig.hasApiBaseUrl) {
+        throw StateError('Kisan AI testing endpoint configured nahi.');
       }
       final session = Supabase.instance.client.auth.currentSession;
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/api/mobile/farmer-ai'),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${session?.accessToken ?? ''}'},
         body: jsonEncode({'message': text}),
-      );
+      ).timeout(const Duration(seconds: 30));
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode >= 400) throw Exception(body['error'] ?? 'AI response nahi mila.');
       final answer = body['answer'] ?? body['response'] ?? body['text'];
-      setState(() => messages.add((mine: false, text: '$answer')));
+      if (mounted) setState(() => messages.add((mine: false, text: '$answer')));
     } catch (e) {
-      setState(() => messages.add((mine: false, text: 'Maazrat, abhi jawab nahi mil saka: $e')));
+      if (mounted) setState(() => messages.add((mine: false, text: 'Maazrat, abhi jawab nahi mil saka. Dobara koshish karein.')));
     } finally {
       if (mounted) setState(() => busy = false);
     }
