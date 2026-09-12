@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
 class BrandHeader extends StatelessWidget {
-  const BrandHeader({super.key, required this.name, required this.subtitle, this.badge});
+  const BrandHeader({super.key, required this.name, required this.subtitle, this.badge, this.onNotifications, this.notificationCount = 0});
   final String name;
   final String subtitle;
   final String? badge;
+  final VoidCallback? onNotifications;
+  final int notificationCount;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -23,7 +25,13 @@ class BrandHeader extends StatelessWidget {
               Text('Al Rana Traders', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
               Text('A g r i B r i d g e', style: TextStyle(color: Color(0xFF9DD3B0), fontSize: 10)),
             ])),
-            IconButton(onPressed: () {}, icon: const Badge(label: Text('3'), child: Icon(Icons.notifications_outlined, color: Colors.white))),
+            IconButton(
+              onPressed: onNotifications,
+              tooltip: 'Notifications',
+              icon: notificationCount > 0
+                  ? Badge(label: Text(notificationCount > 99 ? '99+' : '$notificationCount'), child: const Icon(Icons.notifications_outlined, color: Colors.white))
+                  : const Icon(Icons.notifications_outlined, color: Colors.white),
+            ),
           ]),
           const SizedBox(height: 18),
           Row(children: [

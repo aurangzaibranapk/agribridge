@@ -32,6 +32,12 @@ final ordersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   return ref.read(mobileRepositoryProvider).myOrders(profile.id);
 });
 
+final serviceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (AppConfig.demoMode) return const [];
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  return ref.read(mobileRepositoryProvider).myServiceRequests();
+});
+
 final farmerSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   if (AppConfig.demoMode) return demoFarmerSummary;
   if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');

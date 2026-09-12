@@ -9,8 +9,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 
 class StaffDashboard extends ConsumerWidget {
-  const StaffDashboard({super.key, required this.profile});
+  const StaffDashboard({super.key, required this.profile, this.onNotifications});
   final AppProfile profile;
+  final VoidCallback? onNotifications;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(roleDashboardSummaryProvider);
@@ -18,7 +19,7 @@ class StaffDashboard extends ConsumerWidget {
     String count(String key) => state.isLoading && !AppConfig.demoMode ? '—' : '${summary[key] ?? 0}';
     String money(String key) => state.isLoading && !AppConfig.demoMode ? '—' : 'Rs ${NumberFormat('#,##0').format((summary[key] as num?) ?? 0)}';
     return CustomScrollView(slivers: [
-    SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Teamwork grows progress', badge: 'Sales Staff')),
+    SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Teamwork grows progress', badge: 'Sales Staff', onNotifications: onNotifications, notificationCount: (summary['unread_notifications'] as num?)?.toInt() ?? 0)),
     SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverList.list(children: [
       SizedBox(height: 220, child: GridView.count(physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: [
         MetricCard(label: 'Allowed Features', value: count('allowed_features'), icon: Icons.assignment_outlined, caption: 'Your permissions'),

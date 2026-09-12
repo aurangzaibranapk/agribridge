@@ -19,38 +19,39 @@
 - Role-specific navigation
 - Supabase environment separation
 
-## Phase 2 — Customer commerce (front-end implemented)
+## Phase 2 — Customer commerce (implemented for Testing)
 
 - Real product catalog, category/brand filters and stock presentation
 - Cart, checkout, branch/shop pickup and delivery
 - Order history and tracking
 - Cash, khata, bank transfer, Easypaisa and JazzCash choices
 
-## Phase 3 — Farmer services (front-end implemented)
+## Phase 3 — Farmer services (implemented for Testing)
 
 - Farmer 360 dashboard
 - Separate milk and FMCG khata views
 - Milk quality and Wednesday payment history
-- Grain sale request and statement
-- Machinery booking and wallet
+- Grain sale, machinery, veterinary and crop-doctor requests
+- Submitted service-request history
 
-## Phase 4 — Staff and dealer operations (front-end foundation implemented)
+## Phase 4 — Staff and dealer operations (implemented scope)
 
 - Feature/action/scope-driven staff menus
-- My Work, delivery, collection and stock request flows
-- Dealer catalog, credit limit, order and payment flows
+- Permission-filtered staff product access and real dashboard counts
+- Dealer product catalog, order submission/history and current payable summary
+- Unsupported payment-taking and task-assignment controls are intentionally not shown as active actions
 
-## Phase 5 — AI and notifications (secure foundation implemented)
+## Phase 5 — AI and notifications (Testing-ready foundation)
 
-- Firebase push registration
+- Firebase push registration when the Testing Firebase secret is supplied
 - Kisan AI chat, image upload and expert escalation
 - Weather and operational alerts
 
-## Phase 6 — Store release (blocked on external owner inputs)
+## External activation still required (not an app-code task)
 
-- Android platform generation and compile require Flutter SDK
+- Apply Testing database migrations through `381_mobile_order_tenant_guard.sql`
+- Provide Testing Supabase/API and Firebase configuration secrets
 - Production signing requires the owner's private upload keystore
-- Firebase file and production Supabase values must be supplied as secrets
 - Play Console identity verification and closed test require the owner's Google account
 
 No production credential belongs in Git.

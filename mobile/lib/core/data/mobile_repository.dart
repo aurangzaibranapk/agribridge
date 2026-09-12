@@ -27,6 +27,19 @@ class MobileRepository {
     });
   }
 
+  Future<List<Map<String, dynamic>>> myServiceRequests() async {
+    if (!AppConfig.hasSupabase) return const [];
+    final user = _client.auth.currentUser;
+    if (user == null) return const [];
+    final rows = await _client
+        .from('mobile_service_requests')
+        .select('id, request_type, details, status, created_at, updated_at')
+        .eq('profile_id', user.id)
+        .order('created_at', ascending: false)
+        .limit(30);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<List<Map<String, dynamic>>> myOrders(String profileId) async {
     if (!AppConfig.hasSupabase) return const [];
     final rows = await _client

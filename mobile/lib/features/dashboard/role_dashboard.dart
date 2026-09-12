@@ -5,7 +5,6 @@ import '../../core/models/app_role.dart';
 import '../../core/config/app_config.dart';
 import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
-import '../modules/module_hub.dart';
 import '../commerce/product_catalog_screen.dart';
 import '../commerce/order_history_screen.dart';
 import '../ai/kisan_ai_screen.dart';
@@ -31,13 +30,13 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
 
   List<_NavItem> get allItems => switch (widget.profile.role) {
         AppRole.admin => const [
-            _NavItem('Home', Icons.home_rounded), _NavItem('Approvals', Icons.fact_check_outlined), _NavItem('Reports', Icons.bar_chart_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
+            _NavItem('Home', Icons.home_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.staff => const [
-            _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('My Work', Icons.assignment_outlined), _NavItem('Scan', Icons.qr_code_scanner_rounded, 'products.intake'), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
+            _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('Products', Icons.inventory_2_outlined, 'products.intake'), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.dealer => const [
-            _NavItem('Home', Icons.home_rounded), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Statement', Icons.receipt_long_outlined), _NavItem('Payments', Icons.credit_card_outlined), _NavItem('Profile', Icons.person_outline),
+            _NavItem('Home', Icons.home_rounded), _NavItem('Shop', Icons.shopping_cart_outlined), _NavItem('Orders', Icons.receipt_long_outlined), _NavItem('Profile', Icons.person_outline),
           ],
         _ => const [
             _NavItem('Home', Icons.home_rounded), _NavItem('Khata', Icons.account_balance_wallet_outlined), _NavItem('Services', Icons.handyman_outlined), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Profile', Icons.person_outline),
@@ -45,10 +44,10 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
       };
 
   Widget get home => switch (widget.profile.role) {
-        AppRole.admin => AdminDashboard(profile: widget.profile),
-        AppRole.staff => StaffDashboard(profile: widget.profile),
-        AppRole.dealer => DealerDashboard(profile: widget.profile),
-        _ => FarmerDashboard(profile: widget.profile),
+        AppRole.admin => AdminDashboard(profile: widget.profile, onNotifications: _showNotifications),
+        AppRole.staff => StaffDashboard(profile: widget.profile, onNotifications: _showNotifications),
+        AppRole.dealer => DealerDashboard(profile: widget.profile, onNotifications: _showNotifications),
+        _ => FarmerDashboard(profile: widget.profile, onNotifications: _showNotifications),
       };
 
   @override
@@ -60,13 +59,13 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
     final safeIndex = index < items.length ? index : 0;
     final selected = items[safeIndex].label;
     final body = safeIndex == 0 ? home : switch (selected) {
-      'Order' => const ProductCatalogScreen(),
+      'Shop' || 'Products' => const ProductCatalogScreen(),
       'Orders' => const OrderHistoryScreen(),
       'Khata' => const FarmerKhataScreen(),
       'Services' => const FarmerServicesScreen(),
       'Alerts' => const NotificationsScreen(),
       'Profile' || 'Menu' => ProfileScreen(profile: widget.profile),
-      _ => ModuleHub(title: selected, role: widget.profile.role),
+      _ => home,
     };
     return Scaffold(
       body: body,
@@ -81,6 +80,8 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
           : null,
     );
   }
+
+  void _showNotifications() => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
 }
 
 class _NavItem {

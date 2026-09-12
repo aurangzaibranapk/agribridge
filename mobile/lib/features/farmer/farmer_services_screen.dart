@@ -25,6 +25,9 @@ class FarmerServicesScreen extends ConsumerWidget {
     QuickAction(label: 'Grain Sale Request', icon: Icons.grass_outlined, onTap: () => _request(context, 'grain_sale', 'Grain Sale Request', ['Crop', 'Expected Bags', 'Expected Date', 'Pickup Location'])), const SizedBox(height: 10),
     QuickAction(label: 'Veterinary Service', icon: Icons.pets_outlined, onTap: () => _request(context, 'veterinary_service', 'Veterinary Service', ['Animal', 'Problem', 'Preferred Date', 'Location'])), const SizedBox(height: 10),
     QuickAction(label: 'Crop Doctor', icon: Icons.health_and_safety_outlined, onTap: () => _request(context, 'crop_doctor', 'Crop Doctor', ['Crop', 'Problem', 'Acres', 'Farm Location'])), const SizedBox(height: 18),
+    const SectionTitle('Meri Requests', action: ''), const SizedBox(height: 8),
+    _ServiceRequestHistory(state: ref.watch(serviceRequestsProvider), onRetry: () => ref.invalidate(serviceRequestsProvider)),
+    const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(18)), child: const Row(children: [CircleAvatar(backgroundColor: AppColors.green, child: Icon(Icons.smart_toy_outlined, color: Colors.white)), SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Kisan AI', style: TextStyle(fontWeight: FontWeight.w800)), Text('Fasal, spray, mausam ya janwaron ke bare mein poochain.', style: TextStyle(fontSize: 11, color: AppColors.muted))])), Icon(Icons.chevron_right)])),
   ]));
   }
@@ -63,6 +66,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           type: widget.type,
           details: {for (var index = 0; index < widget.fields.length; index++) widget.fields[index]: controllers[index].text.trim()},
         );
+        ref.invalidate(serviceRequestsProvider);
       }
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
@@ -76,4 +80,29 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
   }
 
   @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.viewInsetsOf(context).bottom + 20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), const SizedBox(height: 16), ...List.generate(widget.fields.length, (index) => Padding(padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: controllers[index], decoration: InputDecoration(labelText: widget.fields[index])))), FilledButton(onPressed: busy ? null : submit, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)), child: Text(busy ? 'Submit ho raha hai…' : 'Request Submit Karein'))]));
+}
+
+class _ServiceRequestHistory extends StatelessWidget {
+  const _ServiceRequestHistory({required this.state, required this.onRetry});
+  final AsyncValue<List<Map<String, dynamic>>> state;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => state.when(
+        loading: () => const Card(child: Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator()))),
+        error: (_, __) => Card(child: ListTile(title: const Text('Requests load nahi huin.'), trailing: TextButton(onPressed: onRetry, child: const Text('Retry')))),
+        data: (rows) => rows.isEmpty
+            ? const Card(child: ListTile(leading: Icon(Icons.inbox_outlined), title: Text('Abhi koi service request nahi.')))
+            : Column(children: rows.take(5).map((row) {
+                final type = (row['request_type']?.toString() ?? 'service').replaceAll('_', ' ');
+                final status = (row['status']?.toString() ?? 'submitted').replaceAll('_', ' ');
+                return Card(child: ListTile(
+                  leading: const CircleAvatar(backgroundColor: AppColors.mint, child: Icon(Icons.assignment_outlined, color: AppColors.green)),
+                  title: Text(_title(type), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('Status: ${_title(status)}'),
+                ));
+              }).toList()),
+      );
+
+  static String _title(String value) => value.split(' ').map((part) => part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}').join(' ');
 }

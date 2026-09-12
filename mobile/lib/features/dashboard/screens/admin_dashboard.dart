@@ -9,8 +9,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 
 class AdminDashboard extends ConsumerWidget {
-  const AdminDashboard({super.key, required this.profile});
+  const AdminDashboard({super.key, required this.profile, this.onNotifications});
   final AppProfile profile;
+  final VoidCallback? onNotifications;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,7 +20,7 @@ class AdminDashboard extends ConsumerWidget {
     String count(String key) => state.isLoading && !AppConfig.demoMode ? '—' : '${summary[key] ?? 0}';
     String money(String key) => state.isLoading && !AppConfig.demoMode ? '—' : 'Rs ${NumberFormat('#,##0').format((summary[key] as num?) ?? 0)}';
     return CustomScrollView(slivers: [
-        SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Complete oversight for a stronger tomorrow')),
+        SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Complete oversight for a stronger tomorrow', onNotifications: onNotifications, notificationCount: (summary['unread_notifications'] as num?)?.toInt() ?? 0)),
         SliverPadding(
           padding: const EdgeInsets.all(16),
           sliver: SliverList.list(children: [

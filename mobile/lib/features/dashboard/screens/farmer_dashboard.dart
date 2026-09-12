@@ -6,10 +6,13 @@ import '../../../core/data/mobile_providers.dart';
 import '../../../core/models/app_role.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
+import '../../farmer/farmer_khata_screen.dart';
+import '../../farmer/farmer_services_screen.dart';
 
 class FarmerDashboard extends ConsumerWidget {
-  const FarmerDashboard({super.key, required this.profile});
+  const FarmerDashboard({super.key, required this.profile, this.onNotifications});
   final AppProfile profile;
+  final VoidCallback? onNotifications;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,7 +26,7 @@ class FarmerDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(farmerSummaryProvider.future).then((_) {}),
       child: CustomScrollView(slivers: [
-        SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Aapki mehnat, hamara saath')),
+        SliverToBoxAdapter(child: BrandHeader(name: profile.name, subtitle: 'Aapki mehnat, hamara saath', onNotifications: onNotifications)),
         SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverList.list(children: [
           if (state.hasError)
             Card(color: const Color(0xFFFFF4E5), child: ListTile(leading: const Icon(Icons.warning_amber, color: Colors.orange), title: const Text('Farmer data load nahi hua.'), trailing: TextButton(onPressed: () => ref.invalidate(farmerSummaryProvider), child: const Text('Retry')))),
@@ -37,11 +40,11 @@ class FarmerDashboard extends ConsumerWidget {
             const Icon(Icons.chevron_right, color: Colors.white),
           ])),
           const SizedBox(height: 14),
-          GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: const [
-            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined),
-            QuickAction(label: 'FMCG Khata', icon: Icons.shopping_cart_outlined),
-            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined),
-            QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined),
+          GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: [
+            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
+            QuickAction(label: 'FMCG Khata', icon: Icons.shopping_cart_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
+            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
+            QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
           ]),
           const SizedBox(height: 16),
           const SectionTitle('Is haftay ka Doodh Record'), const SizedBox(height: 8),
@@ -58,6 +61,8 @@ class FarmerDashboard extends ConsumerWidget {
       ]),
     );
   }
+
+  void _open(BuildContext context, Widget screen) => Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 }
 
 class _MilkValue extends StatelessWidget {
