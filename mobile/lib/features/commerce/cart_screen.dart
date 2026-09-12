@@ -38,8 +38,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (!mounted) return;
       await showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Order Submit Ho Gaya'), content: Text('Reference: $id'), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Theek hai'))]));
       if (mounted) Navigator.pop(context);
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order submit nahi hua: $error')));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order submit nahi hua. Products aur internet check karke dobara koshish karein.')));
     } finally {
       if (mounted) setState(() => submitting = false);
     }

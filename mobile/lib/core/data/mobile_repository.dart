@@ -16,8 +16,9 @@ class MobileRepository {
     if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
     final user = _client.auth.currentUser;
     if (user == null) throw StateError('Login zaroori hai.');
-    final profile = await _client.from('profiles').select('branch_id, shop_id').eq('id', user.id).single();
+    final profile = await _client.from('profiles').select('organization_id, branch_id, shop_id').eq('id', user.id).single();
     await _client.from('mobile_service_requests').insert({
+      'organization_id': profile['organization_id'],
       'profile_id': user.id,
       'request_type': type,
       'details': details,

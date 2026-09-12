@@ -2,6 +2,7 @@
 
 create table if not exists public.mobile_service_requests (
   id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null default fn_default_organization_id() references public.organizations(id),
   profile_id uuid not null references public.profiles(id) on delete cascade,
   request_type text not null check (request_type in ('machinery_booking','grain_sale','veterinary_service','crop_doctor')),
   details jsonb not null default '{}'::jsonb,
@@ -22,6 +23,7 @@ drop policy if exists mobile_service_requests_own_insert on public.mobile_servic
 create policy mobile_service_requests_own_insert on public.mobile_service_requests
   for insert to authenticated with check (
     profile_id = auth.uid()
+    and organization_id = (select organization_id from public.profiles where id = auth.uid())
     and branch_id is not distinct from (select branch_id from public.profiles where id = auth.uid())
     and shop_id is not distinct from (select shop_id from public.profiles where id = auth.uid())
   );
@@ -29,13 +31,15 @@ create policy mobile_service_requests_own_insert on public.mobile_service_reques
 drop policy if exists mobile_service_requests_admin_manage on public.mobile_service_requests;
 create policy mobile_service_requests_admin_manage on public.mobile_service_requests
   for all to authenticated using (
-    exists (select 1 from public.profiles where id = auth.uid() and is_active and role::text in ('owner','super_admin','admin','manager'))
+    exists (select 1 from public.profiles where id = auth.uid() and is_active and role::text in ('owner','super_admin','admin','manager') and organization_id = mobile_service_requests.organization_id)
   ) with check (
-    exists (select 1 from public.profiles where id = auth.uid() and is_active and role::text in ('owner','super_admin','admin','manager'))
+    exists (select 1 from public.profiles where id = auth.uid() and is_active and role::text in ('owner','super_admin','admin','manager') and organization_id = mobile_service_requests.organization_id)
   );
 
 create index if not exists mobile_service_requests_profile_idx
   on public.mobile_service_requests(profile_id, created_at desc);
+create index if not exists mobile_service_requests_organization_idx
+  on public.mobile_service_requests(organization_id, status, created_at desc);
 
 create or replace function public.mobile_product_catalog(p_limit integer default 100)
 returns jsonb
