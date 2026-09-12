@@ -47,4 +47,26 @@ No production deployment is performed by this workflow.
 - At least 4 phone screenshots
 - Short and full descriptions in English and Urdu
 - Privacy Policy URL
+- Account deletion URL: `https://alranatraders.pk/account-deletion`
 - Support email and website
+
+## Console declarations (do not guess)
+
+- App access: provide a dedicated Testing reviewer login/OTP route.
+- Ads: select **No** unless advertising is added later.
+- Target audience: business users and adult farmers/dealers; do not mark as designed for children.
+- Data Safety: declare phone/profile identifiers, orders, financial records, optional location and optional crop images exactly as used by the Testing build.
+- Account deletion: enter `https://alranatraders.pk/account-deletion` and keep the in-app deletion request visible under Profile.
+- Financial features: the app displays business ledgers/khata but does not issue loans or operate a wallet unless those regulated features are separately implemented and declared.
+
+## Release gate
+
+The bundle is ready for Internal testing only when all of these are green:
+
+1. Testing migrations through `380_mobile_catalog_and_service_requests.sql` are applied.
+2. Mobile CI Analyze, Tests and APK jobs pass.
+3. Mobile Play Bundle workflow produces a signed `.aab` with Testing Supabase/API secrets.
+4. OTP login, every role, permissions, order submission, service request, account deletion and notification token are smoke-tested on a physical Android device.
+5. Store listing, privacy/Data Safety, app access and content-rating forms are complete.
+
+Never upload a demo build or a bundle containing Live credentials to a Testing track.

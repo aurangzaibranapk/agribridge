@@ -8,14 +8,22 @@ class MobileRepository {
 
   Future<List<Map<String, dynamic>>> activeProducts({int limit = 30}) async {
     if (!AppConfig.hasSupabase) return const [];
-    final rows = await _client
-        .from('products')
-        .select('id, name, pack_size, unit, selling_price, image_url, expiry_date, categories(name), brands(name)')
-        .eq('is_available', true)
-        .eq('is_deleted', false)
-        .order('name')
-        .limit(limit);
+    final rows = await _client.rpc('mobile_product_catalog', params: {'p_limit': limit});
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> submitServiceRequest({required String type, required Map<String, String> details}) async {
+    if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
+    final user = _client.auth.currentUser;
+    if (user == null) throw StateError('Login zaroori hai.');
+    final profile = await _client.from('profiles').select('branch_id, shop_id').eq('id', user.id).single();
+    await _client.from('mobile_service_requests').insert({
+      'profile_id': user.id,
+      'request_type': type,
+      'details': details,
+      'branch_id': profile['branch_id'],
+      'shop_id': profile['shop_id'],
+    });
   }
 
   Future<List<Map<String, dynamic>>> myOrders(String profileId) async {
@@ -83,6 +91,12 @@ class MobileRepository {
   Future<Map<String, dynamic>> myFarmerSummary() async {
     if (!AppConfig.hasSupabase) return const {};
     final result = await _client.rpc('mobile_my_farmer_summary');
+    return Map<String, dynamic>.from(result as Map);
+  }
+
+  Future<Map<String, dynamic>> roleDashboardSummary() async {
+    if (!AppConfig.hasSupabase) return const {};
+    final result = await _client.rpc('mobile_role_dashboard_summary');
     return Map<String, dynamic>.from(result as Map);
   }
 }

@@ -38,6 +38,22 @@ final farmerSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   return ref.read(mobileRepositoryProvider).myFarmerSummary();
 });
 
+final roleDashboardSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  if (AppConfig.demoMode) return demoRoleDashboardSummary;
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  return ref.read(mobileRepositoryProvider).roleDashboardSummary();
+});
+
+const demoRoleDashboardSummary = <String, dynamic>{
+  'today_orders': 12,
+  'today_order_value': 285400,
+  'pending_orders': 5,
+  'unread_notifications': 3,
+  'allowed_features': 18,
+  'open_service_requests': 2,
+  'dealer_payable': 156000,
+};
+
 const demoFarmerSummary = <String, dynamic>{
   'milk_balance': 42850,
   'credit_balance': 14400,

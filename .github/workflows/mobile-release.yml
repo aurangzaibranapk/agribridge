@@ -62,7 +62,10 @@ jobs:
         run: |
           if [ -n "$FIREBASE_JSON_B64" ]; then
             printf '%s' "$FIREBASE_JSON_B64" | base64 --decode > android/app/google-services.json
+            python3 tool/configure_firebase.py
+            echo "MOBILE_FIREBASE_ENABLED=true" >> "$GITHUB_ENV"
           else
+            echo "MOBILE_FIREBASE_ENABLED=false" >> "$GITHUB_ENV"
             echo "Firebase configuration omitted; messaging remains disabled for this Testing build."
           fi
       - name: Dependencies and tests
@@ -81,7 +84,7 @@ jobs:
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_KEY" \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
-            --dart-define=FIREBASE_MESSAGING_ENABLED=false
+            --dart-define=FIREBASE_MESSAGING_ENABLED="$MOBILE_FIREBASE_ENABLED"
       - uses: actions/upload-artifact@v4
         with:
           name: agribridge-testing-play-bundle

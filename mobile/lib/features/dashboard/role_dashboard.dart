@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/app_role.dart';
+import '../../core/config/app_config.dart';
+import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../modules/module_hub.dart';
 import '../commerce/product_catalog_screen.dart';
@@ -27,12 +29,12 @@ class RoleDashboard extends ConsumerStatefulWidget {
 class _RoleDashboardState extends ConsumerState<RoleDashboard> {
   int index = 0;
 
-  List<_NavItem> get items => switch (widget.profile.role) {
+  List<_NavItem> get allItems => switch (widget.profile.role) {
         AppRole.admin => const [
             _NavItem('Home', Icons.home_rounded), _NavItem('Approvals', Icons.fact_check_outlined), _NavItem('Reports', Icons.bar_chart_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.staff => const [
-            _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('My Work', Icons.assignment_outlined), _NavItem('Scan', Icons.qr_code_scanner_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
+            _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('My Work', Icons.assignment_outlined), _NavItem('Scan', Icons.qr_code_scanner_rounded, 'products.intake'), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.dealer => const [
             _NavItem('Home', Icons.home_rounded), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Statement', Icons.receipt_long_outlined), _NavItem('Payments', Icons.credit_card_outlined), _NavItem('Profile', Icons.person_outline),
@@ -51,8 +53,13 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = items[index].label;
-    final body = index == 0 ? home : switch (selected) {
+    final permissions = ref.watch(permissionsProvider).valueOrNull ?? const {};
+    final items = widget.profile.role == AppRole.staff && AppConfig.hasSupabase
+        ? allItems.where((item) => item.requiredFeature == null || permissions.containsKey(item.requiredFeature)).toList()
+        : allItems;
+    final safeIndex = index < items.length ? index : 0;
+    final selected = items[safeIndex].label;
+    final body = safeIndex == 0 ? home : switch (selected) {
       'Order' => const ProductCatalogScreen(),
       'Orders' => const OrderHistoryScreen(),
       'Khata' => const FarmerKhataScreen(),
@@ -64,7 +71,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
     return Scaffold(
       body: body,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
+        selectedIndex: safeIndex,
         onDestinationSelected: (value) => setState(() => index = value),
         indicatorColor: AppColors.green.withValues(alpha: .14),
         destinations: items.map((item) => NavigationDestination(icon: Icon(item.icon), label: item.label)).toList(),
@@ -77,7 +84,8 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
 }
 
 class _NavItem {
-  const _NavItem(this.label, this.icon);
+  const _NavItem(this.label, this.icon, [this.requiredFeature]);
   final String label;
   final IconData icon;
+  final String? requiredFeature;
 }
