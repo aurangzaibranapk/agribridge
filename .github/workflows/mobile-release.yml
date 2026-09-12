@@ -1,0 +1,85 @@
+name: Mobile Play Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Build environment
+        required: true
+        default: testing
+        type: choice
+        options: [testing]
+
+jobs:
+  signed-aab:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Validate protected release inputs
+        env:
+          SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+          KEYSTORE_B64: ${{ secrets.MOBILE_ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.MOBILE_ANDROID_STORE_PASSWORD }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          test -n "$KEYSTORE_B64"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          test -n "$STORE_PASSWORD"
+      - name: Generate Android project
+        run: flutter create --platforms=android --project-name agribridge --org pk.alranatraders .
+      - name: Configure private signing
+        env:
+          KEYSTORE_B64: ${{ secrets.MOBILE_ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.MOBILE_ANDROID_STORE_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > android/app/upload-keystore.jks
+          {
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storeFile=upload-keystore.jks"
+          } > android/key.properties
+          python3 tool/configure_signing.py
+      - name: Add Firebase configuration
+        env:
+          FIREBASE_JSON_B64: ${{ secrets.MOBILE_FIREBASE_ANDROID_JSON_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_JSON_B64" ]; then
+            printf '%s' "$FIREBASE_JSON_B64" | base64 --decode > android/app/google-services.json
+          else
+            echo "Firebase configuration omitted; messaging remains disabled for this Testing build."
+          fi
+      - name: Dependencies and tests
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build signed Testing AAB
+        env:
+          SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=APP_ENV=testing \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_KEY" \
+            --dart-define=FIREBASE_MESSAGING_ENABLED=false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-testing-play-bundle
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
