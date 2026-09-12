@@ -8,7 +8,10 @@ import '../../shared/widgets/app_widgets.dart';
 class FarmerServicesScreen extends ConsumerWidget {
   const FarmerServicesScreen({super.key});
   @override Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(farmerSummaryProvider).valueOrNull ?? demoFarmerSummary;
+    final state = ref.watch(farmerSummaryProvider);
+    if (state.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (state.hasError) return Scaffold(appBar: AppBar(title: const Text('Farmer Services')), body: Center(child: TextButton.icon(onPressed: () => ref.invalidate(farmerSummaryProvider), icon: const Icon(Icons.refresh), label: const Text('Data dobara load karein'))));
+    final summary = state.valueOrNull ?? const <String, dynamic>{};
     String value(String key, {String suffix = ''}) => '${(summary[key] as num?)?.toStringAsFixed(1) ?? '0'}$suffix';
     return Scaffold(appBar: AppBar(title: const Text('Farmer Services')), body: ListView(padding: const EdgeInsets.all(16), children: [
     const SectionTitle('Milk Collection', action: 'Full Statement'), const SizedBox(height: 8),
