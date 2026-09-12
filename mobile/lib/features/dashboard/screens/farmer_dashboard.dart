@@ -54,7 +54,7 @@ class FarmerDashboard extends ConsumerWidget {
           const SizedBox(height: 16),
           const Card(child: ListTile(leading: Icon(Icons.cloud_outlined, color: AppColors.green, size: 34), title: Text('Mausam service', style: TextStyle(fontWeight: FontWeight.w800)), subtitle: Text('Verified location aur weather feed configure hone par yahan live forecast nazar ayega.'))),
           const SizedBox(height: 90),
-        ]))),
+        ])),
       ]),
     );
   }
