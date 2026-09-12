@@ -5,6 +5,7 @@ import '../../core/models/app_role.dart';
 import '../../core/theme/app_theme.dart';
 import '../modules/module_hub.dart';
 import '../commerce/product_catalog_screen.dart';
+import '../commerce/order_history_screen.dart';
 import '../ai/kisan_ai_screen.dart';
 import '../farmer/farmer_khata_screen.dart';
 import '../farmer/farmer_services_screen.dart';
@@ -34,7 +35,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
             _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('My Work', Icons.assignment_outlined), _NavItem('Scan', Icons.qr_code_scanner_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.dealer => const [
-            _NavItem('Home', Icons.home_rounded), _NavItem('Order', Icons.shopping_cart_outlined), _NavItem('Statement', Icons.receipt_long_outlined), _NavItem('Payments', Icons.credit_card_outlined), _NavItem('Profile', Icons.person_outline),
+            _NavItem('Home', Icons.home_rounded), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Statement', Icons.receipt_long_outlined), _NavItem('Payments', Icons.credit_card_outlined), _NavItem('Profile', Icons.person_outline),
           ],
         _ => const [
             _NavItem('Home', Icons.home_rounded), _NavItem('Khata', Icons.account_balance_wallet_outlined), _NavItem('Services', Icons.handyman_outlined), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Profile', Icons.person_outline),
@@ -53,6 +54,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
     final selected = items[index].label;
     final body = index == 0 ? home : switch (selected) {
       'Order' => const ProductCatalogScreen(),
+      'Orders' => const OrderHistoryScreen(),
       'Khata' => const FarmerKhataScreen(),
       'Services' => const FarmerServicesScreen(),
       'Alerts' => const NotificationsScreen(),
