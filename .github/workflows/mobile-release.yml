@@ -26,6 +26,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.MOBILE_TEST_API_BASE_URL }}
           KEYSTORE_B64: ${{ secrets.MOBILE_ANDROID_KEYSTORE_BASE64 }}
           KEY_ALIAS: ${{ secrets.MOBILE_ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.MOBILE_ANDROID_KEY_PASSWORD }}
@@ -33,6 +34,7 @@ jobs:
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_KEY"
+          test -n "$API_BASE_URL"
           test -n "$KEYSTORE_B64"
           test -n "$KEY_ALIAS"
           test -n "$KEY_PASSWORD"
@@ -72,11 +74,13 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.MOBILE_TEST_API_BASE_URL }}
         run: |
           flutter build appbundle --release \
             --dart-define=APP_ENV=testing \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_KEY" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=FIREBASE_MESSAGING_ENABLED=false
       - uses: actions/upload-artifact@v4
         with:
