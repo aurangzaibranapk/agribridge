@@ -79,4 +79,10 @@ class MobileRepository {
     });
     return result.toString();
   }
+
+  Future<Map<String, dynamic>> myFarmerSummary() async {
+    if (!AppConfig.hasSupabase) return const {};
+    final result = await _client.rpc('mobile_my_farmer_summary');
+    return Map<String, dynamic>.from(result as Map);
+  }
 }
