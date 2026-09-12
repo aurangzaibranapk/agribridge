@@ -28,7 +28,7 @@ class StaffDashboard extends ConsumerWidget {
       ])),
       if (state.hasError && !AppConfig.demoMode) TextButton.icon(onPressed: () => ref.invalidate(roleDashboardSummaryProvider), icon: const Icon(Icons.refresh), label: const Text('Dashboard dobara load karein')),
       if (AppConfig.demoMode) ...[
-        const SizedBox(height: 16), const SectionTitle("Preview Tasks"), const SizedBox(height: 8),
+      const SizedBox(height: 16), const SectionTitle('Preview Tasks'), const SizedBox(height: 8),
         const Card(child: Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Column(children: [
         StatusRow(title: 'Visit Al-Farooq Dairy', subtitle: 'Gulberg, Faisalabad • 09:00 AM', status: 'Completed'), Divider(height: 1),
         StatusRow(title: 'Take Order — Chaudhry Feed Store', subtitle: 'D-Ground • 11:30 AM', status: 'In Progress', color: Colors.blue), Divider(height: 1),
