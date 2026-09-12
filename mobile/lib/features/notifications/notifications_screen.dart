@@ -12,7 +12,7 @@ class NotificationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(notificationsProvider);
-    final rows = AppConfig.hasSupabase ? (state.valueOrNull ?? const []) : _demoItems;
+    final rows = AppConfig.demoMode ? _demoItems : (state.valueOrNull ?? const []);
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications'), actions: [
         TextButton(onPressed: rows.isEmpty ? null : () async {
