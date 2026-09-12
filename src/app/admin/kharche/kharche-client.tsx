@@ -14,6 +14,8 @@ import {
   HALAT_LABEL,
   qismDhoondein,
 } from "@/lib/kharche";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Qatar {
   id: string;
@@ -120,6 +122,7 @@ export function KharcheClient({
    */
   showCompanyBalances?: boolean;
 }) {
+  const lang = useLang();
   const [darjState, darjAction] = useFormState(kharchaDarj, KHALI);
   const [manzoorState, manzoorAction] = useFormState(kharchaManzoor, KHALI);
   const [taseeqState, taseeqAction] = useFormState(kharchaVerify, KHALI);
@@ -265,7 +268,7 @@ export function KharcheClient({
       {showCompanyBalances && (
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
-          <Wallet className="h-3.5 w-3.5" /> Is waqt khaton mein
+          <Wallet className="h-3.5 w-3.5" /> {t("kh_khaton_mein", lang)}
         </p>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {khaate.map((k) => (
@@ -276,17 +279,17 @@ export function KharcheClient({
               </b>
             </span>
           ))}
-          {khaate.length === 0 && <span className="text-sm text-surface-400">Koi khata darj nahi.</span>}
+          {khaate.length === 0 && <span className="text-sm text-surface-400">{t("kh_koi_khata_darj_nahi", lang)}</span>}
         </div>
         <p className="mt-2 text-[11px] leading-snug text-surface-400">
-          Ye khate poori company ke hain, har dukan ke apne nahi. Manzoori ke baad hi ye adad hilte hain —
+          {t("kh_khaton_baare_mein", lang)}
           {intezarKiRaqam > 0 ? (
             <>
               {" "}
-              abhi Rs {Math.round(intezarKiRaqam).toLocaleString()} manzoori ke intezar mein hai.
+              {t("kh_abhi_rs_prefix", lang)} {Math.round(intezarKiRaqam).toLocaleString()} {t("kh_manzoori_intezar_suffix", lang)}
             </>
           ) : (
-            " abhi kuch intezar mein nahi."
+            ` ${t("kh_kuch_intezar_nahi", lang)}`
           )}
         </p>
       </div>
@@ -296,7 +299,7 @@ export function KharcheClient({
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-              Naya darj karein
+              {t("kh_naya_darj_karein", lang)}
             </h2>
             <button
               type="button"
@@ -304,7 +307,7 @@ export function KharcheClient({
               className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
             >
               {khula ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {khula ? "Band karein" : "Naya darj karein"}
+              {khula ? t("kh_band_karein", lang) : t("kh_naya_darj_karein", lang)}
             </button>
           </div>
 
@@ -336,12 +339,11 @@ export function KharcheClient({
             <form action={mazdoorDarjAction} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <p className="sm:col-span-2 flex items-start gap-1.5 rounded-lg bg-sky-50 p-2 text-xs text-sky-800 dark:bg-surface-800 dark:text-sky-300">
                 <HardHat className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Yahan cash nahi hilta — sirf kaam darj hota hai. Purana advance is mein se KHUD adjust ho jata hai;
-                jo bacha wo us bande ko dena ban jata hai.
+                {t("kh_mazdoori_info", lang)}
               </p>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Fehrist</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_fehrist", lang)}</span>
                 <select
                   name="party_type"
                   value={mQism}
@@ -361,7 +363,7 @@ export function KharcheClient({
 
               <label className="text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  Kis ne kaam kia
+                  {t("kh_kis_ne_kaam_kia", lang)}
                 </span>
                 <select
                   name="party_id"
@@ -370,7 +372,7 @@ export function KharcheClient({
                   onChange={(e) => setMBanda(e.target.value)}
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 >
-                  <option value="">— chunein —</option>
+                  <option value="">{t("kh_chunein_option", lang)}</option>
                   {(bande[mQism] ?? []).map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.naam}
@@ -382,17 +384,17 @@ export function KharcheClient({
               {mBanda && (
                 <div className="sm:col-span-2 flex flex-wrap items-center gap-4 rounded-lg bg-surface-50 p-3 text-xs dark:bg-surface-800">
                   {mHaal === null ? (
-                    <span className="text-surface-400">Is ka haal parha ja raha hai...</span>
+                    <span className="text-surface-400">{t("kh_haal_parha_ja_raha", lang)}</span>
                   ) : (
                     <>
                       <span className="text-surface-600 dark:text-surface-400">
-                        Advance baqi:{" "}
+                        {t("kh_advance_baqi_colon", lang)}{" "}
                         <b className="tabular-nums text-surface-900 dark:text-surface-100">
                           Rs {mHaal.advanceBaqi.toLocaleString()}
                         </b>
                       </span>
                       <span className="text-surface-600 dark:text-surface-400">
-                        Is ko dena:{" "}
+                        {t("kh_is_ko_dena_colon", lang)}{" "}
                         <b className="tabular-nums text-surface-900 dark:text-surface-100">
                           Rs {mHaal.denaBaqi.toLocaleString()}
                         </b>
@@ -401,12 +403,11 @@ export function KharcheClient({
                         href={`/admin/khata/banda/${mQism}/${mBanda}`}
                         className="inline-flex items-center gap-1 text-emerald-700 hover:underline dark:text-emerald-400"
                       >
-                        Poora khata <ExternalLink className="h-3 w-3" />
+                        {t("kh_poora_khata", lang)} <ExternalLink className="h-3 w-3" />
                       </Link>
                       {mRaqam != null && mHaal.advanceBaqi > 0 && (
                         <span className="w-full text-emerald-700 dark:text-emerald-400">
-                          Is mein se Rs {Math.min(mHaal.advanceBaqi, mRaqam).toLocaleString()} purane advance mein se
-                          adjust hoga; Rs {Math.max(mRaqam - mHaal.advanceBaqi, 0).toLocaleString()} dena banega.
+                          {t("kh_is_mein_se_rs", lang)} {Math.min(mHaal.advanceBaqi, mRaqam).toLocaleString()} {t("kh_purane_advance_adjust", lang)} {Math.max(mRaqam - mHaal.advanceBaqi, 0).toLocaleString()} {t("kh_dena_banega", lang)}
                         </span>
                       )}
                     </>
@@ -415,17 +416,17 @@ export function KharcheClient({
               )}
 
               <label className="sm:col-span-2 text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Kaam kya tha</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_kaam_kya_tha", lang)}</span>
                 <input
                   name="work_detail"
                   required
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                  placeholder="jaise: 150 khaad ki boriyan unloading"
+                  placeholder={t("kh_ph_kaam_example", lang)}
                 />
               </label>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Tareekh</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_tareekh", lang)}</span>
                 <input
                   name="work_date"
                   type="date"
@@ -436,7 +437,7 @@ export function KharcheClient({
               </label>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Ginti</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_ginti", lang)}</span>
                 <span className="flex gap-2">
                   <input
                     name="quantity"
@@ -450,13 +451,13 @@ export function KharcheClient({
                   <input
                     name="unit"
                     className="w-24 rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                    placeholder="bori"
+                    placeholder={t("kh_ph_bori", lang)}
                   />
                 </span>
               </label>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Rate (Rs)</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_rate_rs", lang)}</span>
                 <input
                   name="rate"
                   type="number"
@@ -469,7 +470,7 @@ export function KharcheClient({
               </label>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Mazdoori (Rs)</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_mazdoori_rs", lang)}</span>
                 <input
                   name="amount"
                   type="number"
@@ -479,23 +480,23 @@ export function KharcheClient({
                   readOnly={mRaqam != null}
                   onChange={() => {}}
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm read-only:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:read-only:bg-surface-800"
-                  placeholder="Ginti × rate se khud ban jayegi"
+                  placeholder={t("kh_ph_ginti_rate_khud", lang)}
                 />
               </label>
 
               <label className="text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  Lene wala koi aur ho to
+                  {t("kh_lene_wala_koi_aur", lang)}
                 </span>
                 <input
                   name="received_by_name"
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                  placeholder="jaise: Ali (beta)"
+                  placeholder={t("kh_ph_lene_wala_example", lang)}
                 />
               </label>
 
               <div className="sm:col-span-2">
-                <Dabao>Bhejein (manzoori ke liye)</Dabao>
+                <Dabao>{t("kh_bhejein_manzoori", lang)}</Dabao>
               </div>
             </form>
           )}
@@ -505,7 +506,7 @@ export function KharcheClient({
               {/* 1) QISM — is khaane ki */}
               <label className="sm:col-span-2 text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  Ye kya hai?
+                  {t("kh_ye_kya_hai", lang)}
                 </span>
                 <select
                   name="kind"
@@ -536,11 +537,11 @@ export function KharcheClient({
               {/* 2) KAUN LE GAYA */}
               <div className="sm:col-span-2 rounded-lg border border-surface-100 p-3 dark:border-surface-800">
                 <p className="mb-2 text-sm font-medium text-surface-700 dark:text-surface-300">
-                  Kaun le gaya / kis se aaya?
+                  {t("kh_kaun_le_gaya_kis_se_aaya", lang)}
                 </p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="text-xs text-surface-500">
-                    <span className="mb-1 block">Kis fehrist se</span>
+                    <span className="mb-1 block">{t("kh_kis_fehrist_se", lang)}</span>
                     <select
                       name="party_type"
                       value={chaliQism}
@@ -556,14 +557,14 @@ export function KharcheClient({
                     </select>
                   </label>
                   <label className="text-xs text-surface-500">
-                    <span className="mb-1 block">Naam (fehrist se)</span>
+                    <span className="mb-1 block">{t("kh_naam_fehrist_se", lang)}</span>
                     <select
                       name="party_id"
                       required
                       defaultValue=""
                       className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                     >
-                      <option value="">— chunein —</option>
+                      <option value="">{t("kh_chunein_option", lang)}</option>
                       {fehrist.map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.naam}
@@ -584,15 +585,15 @@ export function KharcheClient({
                   bande ke khaate mein KABHI nazar nahi aati.
                 */}
                 <p className="mt-3 text-[11px] leading-snug text-surface-400">
-                  Jo fehrist mein nahi, usay pehle darj karein —{" "}
+                  {t("kh_jo_fehrist_mein_nahi", lang)}{" "}
                   <Link href="/admin/farmers" className="text-emerald-700 hover:underline dark:text-emerald-400">
-                    Farmers / Membership
+                    {t("kh_farmers_membership", lang)}
                   </Link>{" "}
-                  ya{" "}
+                  {t("kh_ya", lang)}{" "}
                   <Link href="/admin/crm" className="text-emerald-700 hover:underline dark:text-emerald-400">
-                    Customers
+                    {t("kh_customers", lang)}
                   </Link>
-                  . Ek dafa ka kaam hai; us ke baad us ka poora hisaab khud jurta rehta hai.
+                  {t("kh_ek_dafa_ka_kaam", lang)}
                 </p>
                 {/*
                   Naam likhna aur khata banna do alag baatein hain -- aur
@@ -601,14 +602,14 @@ export function KharcheClient({
                 */}
                 <p className="mt-2 text-[11px] leading-snug text-surface-400">
                   {bandhiQism
-                    ? `Is qism ke liye banda ${bandhiQism} ki fehrist se chunein — us ka khata usi fehrist se juda hua hai.`
-                    : "Wohi banda kisan bhi ho sakta hai, customer bhi aur mazdoor bhi — ID ek hi rehti hai, is liye fehrist koi bhi chunein."}
+                    ? `${t("kh_qism_ke_liye_banda_prefix", lang)} ${bandhiQism} ${t("kh_qism_ke_liye_banda_suffix", lang)}`
+                    : t("kh_wohi_banda_kisan", lang)}
                 </p>
               </div>
 
               {/* 3) QISM (bill ki) + apni qism */}
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Kis cheez ka</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_kis_cheez_ka", lang)}</span>
                 <select
                   name="category"
                   value={category}
@@ -626,16 +627,16 @@ export function KharcheClient({
               {category === APNI_QISM ? (
                 <label className="text-sm">
                   <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                    Apni qism ka naam
+                    {t("kh_apni_qism_ka_naam", lang)}
                   </span>
                   <input
                     name="category_apni"
                     required
                     className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                    placeholder="jaise: nehar ki safai"
+                    placeholder={t("kh_ph_apni_qism_example", lang)}
                   />
                   <span className="mt-1 block text-[11px] text-surface-400">
-                    Yehi naam qism ban kar mehfooz hoga — agli dafa report mein apni alag qatar bana lega.
+                    {t("kh_yehi_naam_qism_ban_kar", lang)}
                   </span>
                 </label>
               ) : (
@@ -644,7 +645,7 @@ export function KharcheClient({
 
               {/* 4) Raqam aur tareekh */}
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Raqam (Rs)</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_raqam_rs", lang)}</span>
                 <input
                   name="amount"
                   type="number"
@@ -656,7 +657,7 @@ export function KharcheClient({
               </label>
 
               <label className="text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Tareekh</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_tareekh", lang)}</span>
                 <input
                   name="expense_date"
                   type="date"
@@ -665,14 +666,14 @@ export function KharcheClient({
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 />
                 <span className="mt-1 block text-[11px] text-surface-400">
-                  Wo din likhein jis din kharcha hua — darj karne ka din nahi.
+                  {t("kh_wo_din_likhein", lang)}
                 </span>
               </label>
 
               {/* 5) Khata */}
               <label className="text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  Paisa kis khate se
+                  {t("kh_paisa_kis_khate_se", lang)}
                 </span>
                 <select
                   name="paid_from_account_id"
@@ -680,7 +681,7 @@ export function KharcheClient({
                   defaultValue=""
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 >
-                  <option value="">— chunein —</option>
+                  <option value="">{t("kh_chunein_option", lang)}</option>
                   {khaate.map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.name} — Rs {Math.round(k.balance).toLocaleString()}
@@ -688,23 +689,23 @@ export function KharcheClient({
                   ))}
                 </select>
                 <span className="mt-1 block text-[11px] text-surface-400">
-                  Is ke baghair Finance ke safhe par khate ka adad nahi hilta.
+                  {t("kh_is_ke_baghair_finance", lang)}
                 </span>
               </label>
 
               <label className="sm:col-span-2 text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">Tafseel</span>
+                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_tafseel", lang)}</span>
                 <input
                   name="description"
                   required
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                  placeholder="jaise: dukan ke generator ka diesel"
+                  placeholder={t("kh_ph_tafseel_example", lang)}
                 />
               </label>
 
               <label className="sm:col-span-2 text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  Raseed ki tasveer (marzi)
+                  {t("kh_raseed_tasveer_marzi", lang)}
                 </span>
                 <input
                   name="document"
@@ -715,7 +716,7 @@ export function KharcheClient({
               </label>
 
               <div className="sm:col-span-2">
-                <Dabao>Bhejein (manzoori ke liye)</Dabao>
+                <Dabao>{t("kh_bhejein_manzoori", lang)}</Dabao>
               </div>
             </form>
           )}
@@ -726,21 +727,21 @@ export function KharcheClient({
       {mazdooriRows.length > 0 && (
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <HardHat className="h-4 w-4 text-surface-400" /> Mazdoori ({mazdooriRows.length})
+            <HardHat className="h-4 w-4 text-surface-400" /> {t("kh_mazdoori_heading", lang)} ({mazdooriRows.length})
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500 dark:border-surface-800">
-                  <th className="py-2 pr-3">Tareekh</th>
-                  <th className="py-2 pr-3">Number</th>
-                  <th className="py-2 pr-3">Banda</th>
-                  <th className="py-2 pr-3">Kaam</th>
-                  <th className="py-2 pr-3 text-right">Mazdoori</th>
-                  <th className="py-2 pr-3 text-right">Advance adjust</th>
-                  <th className="py-2 pr-3 text-right">Dena bana</th>
-                  <th className="py-2 pr-3">Halat</th>
-                  {manzoorKarSakta && <th className="py-2 pr-3">Faisla</th>}
+                  <th className="py-2 pr-3">{t("kh_tareekh", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_number", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_banda", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_kaam_header", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("kh_mazdoori_heading", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("kh_advance_adjust", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("kh_dena_bana", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_halat", lang)}</th>
+                  {manzoorKarSakta && <th className="py-2 pr-3">{t("kh_faisla", lang)}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -750,10 +751,10 @@ export function KharcheClient({
                     <td className="py-2 pr-3 whitespace-nowrap text-surface-500">{r.entry_number}</td>
                     <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">
                       <Link href={`/admin/khata/banda/${r.party_type}/${r.party_id}`} className="hover:underline">
-                        {naamMap[r.party_id] ?? "(naam nahi mila)"}
+                        {naamMap[r.party_id] ?? t("kh_naam_nahi_mila", lang)}
                       </Link>
                       {r.received_by_name && (
-                        <span className="block text-[11px] text-surface-400">liya: {r.received_by_name}</span>
+                        <span className="block text-[11px] text-surface-400">{t("kh_liya_colon", lang)} {r.received_by_name}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-surface-600 dark:text-surface-400">
@@ -798,12 +799,12 @@ export function KharcheClient({
                               <input
                                 name="comment"
                                 required
-                                placeholder="Aap ki raye (lazmi)"
+                                placeholder={t("kh_ph_aap_ki_raye", lang)}
                                 className="w-32 rounded-lg border border-surface-200 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
                               />
                               <Dabao tone="hara">
                                 <span className="inline-flex items-center gap-1">
-                                  <Check className="h-3 w-3" /> Manzoor
+                                  <Check className="h-3 w-3" /> {t("kh_manzoor", lang)}
                                 </span>
                               </Dabao>
                             </form>
@@ -813,10 +814,10 @@ export function KharcheClient({
                                 <input
                                   name="rejection_reason"
                                   required
-                                  placeholder="Wajah"
+                                  placeholder={t("kh_wajah", lang)}
                                   className="w-32 rounded-lg border border-surface-200 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
                                 />
-                                <Dabao tone="laal">Wapas / Radd</Dabao>
+                                <Dabao tone="laal">{t("kh_wapas_radd", lang)}</Dabao>
                               </form>
                             ) : (
                               <button
@@ -824,7 +825,7 @@ export function KharcheClient({
                                 onClick={() => setRaddKaunsa(r.id)}
                                 className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800"
                               >
-                                Wapas bhejein
+                                {t("kh_wapas_bhejein", lang)}
                               </button>
                             )}
                           </div>
@@ -844,24 +845,24 @@ export function KharcheClient({
       {/* Fehrist */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-          Paisa ki qatarein ({rows.length})
+          {t("kh_paisa_ki_qatarein", lang)} ({rows.length})
         </h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">Abhi koi kharcha darj nahi hua.</p>
+          <p className="text-sm text-surface-400">{t("kh_abhi_koi_kharcha_nahi", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500 dark:border-surface-800">
-                  <th className="py-2 pr-3">Tareekh</th>
-                  <th className="py-2 pr-3">Number</th>
-                  <th className="py-2 pr-3">Ye kya hai</th>
-                  <th className="py-2 pr-3">Kis cheez ka</th>
-                  <th className="py-2 pr-3">Kaun le gaya</th>
-                  <th className="py-2 pr-3">Khata</th>
-                  <th className="py-2 pr-3 text-right">Raqam</th>
-                  <th className="py-2 pr-3">Halat</th>
-                  {(manzoorKarSakta || taseeqKarSakta) && <th className="py-2 pr-3">Faisla</th>}
+                  <th className="py-2 pr-3">{t("kh_tareekh", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_number", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_ye_kya_hai_col", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_kis_cheez_ka", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_kaun_le_gaya_header", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_khata_header", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("kh_raqam_header", lang)}</th>
+                  <th className="py-2 pr-3">{t("kh_halat", lang)}</th>
+                  {(manzoorKarSakta || taseeqKarSakta) && <th className="py-2 pr-3">{t("kh_faisla", lang)}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -878,7 +879,7 @@ export function KharcheClient({
                             target="_blank"
                             rel="noreferrer"
                             className="ml-1 inline-flex text-emerald-700 hover:underline"
-                            aria-label="Raseed"
+                            aria-label={t("kh_raseed", lang)}
                           >
                             <Paperclip className="h-3 w-3" />
                           </a>
@@ -902,7 +903,7 @@ export function KharcheClient({
                         )}
                       </td>
                       <td className="py-2 pr-3 text-surface-600 dark:text-surface-400">
-                        {r.paid_from_account_id ? (khataNaam[r.paid_from_account_id] ?? "—") : "— (darj nahi)"}
+                        {r.paid_from_account_id ? (khataNaam[r.paid_from_account_id] ?? "—") : t("kh_darj_nahi_dash", lang)}
                       </td>
                       <td
                         className={`py-2 pr-3 text-right font-medium tabular-nums ${
@@ -937,7 +938,7 @@ export function KharcheClient({
                                 <input type="hidden" name="id" value={r.id} />
                                 <Dabao tone="hara">
                                   <span className="inline-flex items-center gap-1">
-                                    <Check className="h-3 w-3" /> Manzoor
+                                    <Check className="h-3 w-3" /> {t("kh_manzoor", lang)}
                                   </span>
                                 </Dabao>
                               </form>
@@ -947,10 +948,10 @@ export function KharcheClient({
                                   <input
                                     name="rejection_reason"
                                     required
-                                    placeholder="Wajah"
+                                    placeholder={t("kh_wajah", lang)}
                                     className="w-32 rounded-lg border border-surface-200 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
                                   />
-                                  <Dabao tone="laal">Radd karein</Dabao>
+                                  <Dabao tone="laal">{t("kh_radd_karein", lang)}</Dabao>
                                 </form>
                               ) : (
                                 <button
@@ -958,7 +959,7 @@ export function KharcheClient({
                                   onClick={() => setRaddKaunsa(r.id)}
                                   className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800"
                                 >
-                                  Radd
+                                  {t("kh_radd", lang)}
                                 </button>
                               )}
                             </div>
@@ -968,7 +969,7 @@ export function KharcheClient({
                                 <input type="hidden" name="id" value={r.id} />
                                 <Dabao tone="hara">
                                   <span className="inline-flex items-center gap-1">
-                                    <Check className="h-3 w-3" /> Tasdeeq
+                                    <Check className="h-3 w-3" /> {t("kh_tasdeeq", lang)}
                                   </span>
                                 </Dabao>
                               </form>
@@ -978,10 +979,10 @@ export function KharcheClient({
                                   <input
                                     name="rejection_reason"
                                     required
-                                    placeholder="Wajah"
+                                    placeholder={t("kh_wajah", lang)}
                                     className="w-32 rounded-lg border border-surface-200 px-2 py-1 text-xs dark:border-surface-700 dark:bg-surface-900"
                                   />
-                                  <Dabao tone="laal">Radd karein</Dabao>
+                                  <Dabao tone="laal">{t("kh_radd_karein", lang)}</Dabao>
                                 </form>
                               ) : (
                                 <button
@@ -989,7 +990,7 @@ export function KharcheClient({
                                   onClick={() => setRaddKaunsa(r.id)}
                                   className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800"
                                 >
-                                  Radd
+                                  {t("kh_radd", lang)}
                                 </button>
                               )}
                             </div>
