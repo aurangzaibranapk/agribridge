@@ -3,12 +3,23 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { ShopRentClient } from "./shop-rent-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { canDo } from "@/lib/access/guard";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ShopRentPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
+  // Agreement banana, kiraya record karna, company stamp -- ye company/admin ka kaam hai.
+  // Shop staff sirf apni dukan ka bill upload kar sakta hai; baaqi sirf dekh sakta hai.
+  const canManage = sabKuchWala || (await canDo("shop-rent", "approve"));
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
 
@@ -88,7 +99,7 @@ export default async function ShopRentPage() {
   return (
     <div>
       <PageHeader title={t("at_shop_rent", lang)} description="Har shop ka rent agreement, monthly payment, aur bills (electricity/maintenance)" />
-      <ShopRentClient branches={branches ?? []} agreements={agreements} bills={bills} currentMonth={currentMonth} currentYear={currentYear} />
+      <ShopRentClient branches={branches ?? []} agreements={agreements} bills={bills} currentMonth={currentMonth} currentYear={currentYear} canManage={canManage} />
     </div>
   );
 }

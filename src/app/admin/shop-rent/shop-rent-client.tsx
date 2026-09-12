@@ -66,12 +66,14 @@ export function ShopRentClient({
   bills,
   currentMonth,
   currentYear,
+  canManage,
 }: {
   branches: Branch[];
   agreements: Agreement[];
   bills: Bill[];
   currentMonth: number;
   currentYear: number;
+  canManage: boolean;
 }) {
   const [showAddAgreement, setShowAddAgreement] = useState(false);
   const lang = useLang();
@@ -81,12 +83,16 @@ export function ShopRentClient({
   return (
     <div>
       <div className="mb-4 flex justify-end gap-2">
-        <button onClick={() => setShowStamp(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
-          <Stamp className="h-4 w-4" />{t("sr_company_stamp_short", lang)}</button>
+        {canManage && (
+          <button onClick={() => setShowStamp(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
+            <Stamp className="h-4 w-4" />{t("sr_company_stamp_short", lang)}</button>
+        )}
         <button onClick={() => setShowAddBill(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50">
           <Zap className="h-4 w-4" />{t("srent_add_bill", lang)}</button>
-        <button onClick={() => setShowAddAgreement(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" />{t("sr_make_agreement", lang)}</button>
+        {canManage && (
+          <button onClick={() => setShowAddAgreement(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+            <Plus className="h-4 w-4" />{t("sr_make_agreement", lang)}</button>
+        )}
       </div>
 
       {showAddAgreement && <AddAgreementModal branches={branches} onClose={() => setShowAddAgreement(false)} />}
@@ -95,7 +101,7 @@ export function ShopRentClient({
 
       <div className="space-y-4">
         {agreements.map((a) => (
-          <AgreementCard key={a.id} agreement={a} currentMonth={currentMonth} currentYear={currentYear} bills={bills.filter((b) => b.branch_name === a.branch_name)} />
+          <AgreementCard key={a.id} agreement={a} currentMonth={currentMonth} currentYear={currentYear} bills={bills.filter((b) => b.branch_name === a.branch_name)} canManage={canManage} />
         ))}
         {agreements.length === 0 && (
           <p className="rounded-card border border-dashed border-surface-200 bg-white p-10 text-center text-surface-400">{t("sr_none_yet", lang)}</p>
@@ -105,7 +111,7 @@ export function ShopRentClient({
   );
 }
 
-function AgreementCard({ agreement, currentMonth, currentYear, bills }: { agreement: Agreement; currentMonth: number; currentYear: number; bills: Bill[] }) {
+function AgreementCard({ agreement, currentMonth, currentYear, bills, canManage }: { agreement: Agreement; currentMonth: number; currentYear: number; bills: Bill[]; canManage: boolean }) {
   const [showPay, setShowPay] = useState(false);
   const lang = useLang();
   const isPaidThisMonth = agreement.current_month_paid >= agreement.monthly_rent;
@@ -146,9 +152,13 @@ function AgreementCard({ agreement, currentMonth, currentYear, bills }: { agreem
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setShowPay(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("c_record_payment", lang)}</button>
-        <Link href={`/admin/shop-rent/${agreement.id}/agreement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
-          <FileSignature className="h-3.5 w-3.5" />{t("sr_digital_agreement", lang)}</Link>
+        {canManage && (
+          <button onClick={() => setShowPay(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("c_record_payment", lang)}</button>
+        )}
+        {canManage && (
+          <Link href={`/admin/shop-rent/${agreement.id}/agreement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
+            <FileSignature className="h-3.5 w-3.5" />{t("sr_digital_agreement", lang)}</Link>
+        )}
       </div>
 
       {bills.length > 0 && (
@@ -156,7 +166,7 @@ function AgreementCard({ agreement, currentMonth, currentYear, bills }: { agreem
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("sr_bills", lang)}</p>
           <div className="flex flex-wrap gap-1.5">
             {bills.slice(0, 6).map((b) => (
-              <BillChip key={b.id} bill={b} />
+              <BillChip key={b.id} bill={b} canManage={canManage} />
             ))}
           </div>
         </div>
@@ -167,13 +177,13 @@ function AgreementCard({ agreement, currentMonth, currentYear, bills }: { agreem
   );
 }
 
-function BillChip({ bill }: { bill: Bill }) {
+function BillChip({ bill, canManage }: { bill: Bill; canManage: boolean }) {
   const [, formAction] = useFormState(markBillPaid, initialState);
   const lang = useLang();
   return (
     <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${bill.status === "paid" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
       {bill.bill_type} ({MONTHS[bill.bill_month - 1]}) Rs {bill.amount.toLocaleString()}
-      {bill.status !== "paid" && (
+      {bill.status !== "paid" && canManage && (
         <form action={formAction}>
           <input type="hidden" name="bill_id" value={bill.id} />
           <button type="submit" title={t("sr_mark_paid", lang)}><CheckCircle2 className="h-3 w-3" /></button>
