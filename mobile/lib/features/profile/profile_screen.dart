@@ -40,7 +40,13 @@ class ProfileScreen extends ConsumerWidget {
       actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Request'))],
     ));
     if (confirmed != true || !context.mounted) return;
-    await ref.read(mobileRepositoryProvider).requestAccountDeletion(controller.text.trim());
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request receive ho gayi.')));
+    try {
+      await ref.read(mobileRepositoryProvider).requestAccountDeletion(controller.text.trim());
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request receive ho gayi.')));
+    } catch (_) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request submit nahi hui. Dobara koshish karein.')));
+    } finally {
+      controller.dispose();
+    }
   }
 }
