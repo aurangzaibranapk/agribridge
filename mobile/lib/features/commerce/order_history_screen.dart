@@ -64,7 +64,7 @@ class _OrderCard extends StatelessWidget {
       child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(row['order_number']?.toString() ?? 'Order', style: const TextStyle(fontWeight: FontWeight.w800))),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(20)), child: Text(_label(status), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800))),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(20)), child: Text(label(status), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800))),
         ]),
         const SizedBox(height: 8),
         Text(items.isEmpty ? 'Order items' : items.take(2).map((item) => item['product_name']).join(', '), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.muted)),
