@@ -18,6 +18,20 @@
 - Provide reviewer credentials if authenticated screens must be reviewed.
 - Verify target SDK against the current Play Console requirement.
 
+## Protected GitHub secrets
+
+The manual **Mobile Play Bundle** workflow only targets Testing and requires:
+
+- `MOBILE_TEST_SUPABASE_URL`
+- `MOBILE_TEST_SUPABASE_ANON_KEY`
+- `MOBILE_ANDROID_KEYSTORE_BASE64`
+- `MOBILE_ANDROID_KEY_ALIAS`
+- `MOBILE_ANDROID_KEY_PASSWORD`
+- `MOBILE_ANDROID_STORE_PASSWORD`
+- `MOBILE_FIREBASE_ANDROID_JSON_BASE64` (optional until messaging test)
+
+No production deployment is performed by this workflow.
+
 ## Tracks
 
 1. Internal test for team devices.
