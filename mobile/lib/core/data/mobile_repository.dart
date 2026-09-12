@@ -20,7 +20,12 @@ class MobileRepository {
 
   Future<List<Map<String, dynamic>>> myOrders(String profileId) async {
     if (!AppConfig.hasSupabase) return const [];
-    final rows = await _client.from('agri_orders').select().eq('requested_by', profileId).order('created_at', ascending: false).limit(30);
+    final rows = await _client
+        .from('agri_orders')
+        .select('id, order_number, status, grand_total, payment_terms, created_at, agri_order_items(product_name, order_qty, pack_size)')
+        .eq('requested_by', profileId)
+        .order('created_at', ascending: false)
+        .limit(30);
     return List<Map<String, dynamic>>.from(rows);
   }
 
