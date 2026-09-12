@@ -21,15 +21,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool busy = false;
   String? error;
 
+  @override
+  void dispose() {
+    phone.dispose();
+    otp.dispose();
+    super.dispose();
+  }
+
   Future<void> submit() async {
+    if (!AppConfig.hasSupabase) {
+      setState(() => error = AppConfig.isProduction
+          ? 'App configuration missing. Support se rabta karein.'
+          : 'Testing preview role chunein.');
+      return;
+    }
+    final mobile = phone.text.replaceAll(RegExp(r'\s+'), '');
+    if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(mobile)) {
+      setState(() => error = 'Mobile international format mein likhein, misal +923126513294.');
+      return;
+    }
+    if (sent && !RegExp(r'^\d{4,8}$').hasMatch(otp.text.trim())) {
+      setState(() => error = 'Durust OTP code likhein.');
+      return;
+    }
     setState(() { busy = true; error = null; });
     try {
       final auth = ref.read(authRepositoryProvider);
       if (!sent) {
-        await auth.sendOtp(phone.text.trim());
+        await auth.sendOtp(mobile);
         setState(() => sent = true);
       } else {
-        await auth.verifyOtp(phone.text.trim(), otp.text.trim());
+        await auth.verifyOtp(mobile, otp.text.trim());
         await ref.read(sessionProvider.notifier).refresh();
       }
     } catch (e) {
@@ -70,7 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               FilledButton(onPressed: busy ? null : submit,
                   style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                   child: Text(busy ? 'Please wait...' : sent ? 'Login Karein' : 'OTP Bhejein')),
-              if (!AppConfig.hasSupabase) ...[
+              if (AppConfig.demoMode) ...[
                 const SizedBox(height: 30),
                 const Text('Testing Preview', textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w700)),
