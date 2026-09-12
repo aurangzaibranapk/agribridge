@@ -24,3 +24,9 @@ final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
   if (profile == null || !AppConfig.hasSupabase) return const [];
   return ref.read(mobileRepositoryProvider).myNotifications(profile.id);
 });
+
+final ordersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || !AppConfig.hasSupabase) return const [];
+  return ref.read(mobileRepositoryProvider).myOrders(profile.id);
+});
