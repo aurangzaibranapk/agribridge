@@ -10,7 +10,8 @@ final mobileRepositoryProvider = Provider((_) => MobileRepository());
 final permissionRepositoryProvider = Provider((_) => PermissionRepository());
 
 final productsProvider = FutureProvider<List<Product>>((ref) async {
-  if (!AppConfig.hasSupabase) return demoProducts;
+  if (AppConfig.demoMode) return demoProducts;
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
   final rows = await ref.read(mobileRepositoryProvider).activeProducts(limit: 100);
   return rows.map(Product.fromRow).toList();
 });
@@ -32,7 +33,8 @@ final ordersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
 });
 
 final farmerSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  if (!AppConfig.hasSupabase) return demoFarmerSummary;
+  if (AppConfig.demoMode) return demoFarmerSummary;
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
   return ref.read(mobileRepositoryProvider).myFarmerSummary();
 });
 
