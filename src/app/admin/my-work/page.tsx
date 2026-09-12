@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -161,13 +161,26 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // chuna hua raasta.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
   type QuickAction = { href: string; label: string; icon: string };
+
+  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
+  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
+  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
+  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
+  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
+  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
+  const sidebarHrefs = nav.unrestricted
+    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
+    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
+
   const quickActions: QuickAction[] = [
     canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
     canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
     canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
     canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
     canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
-  ].filter((x): x is QuickAction => x !== null);
+  ]
+    .filter((x): x is QuickAction => x !== null)
+    .filter((qa) => !sidebarHrefs.has(qa.href));
 
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
