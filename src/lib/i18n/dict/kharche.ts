@@ -141,4 +141,40 @@ export const kharcheDict = {
   kh_raqam_header: { en: "Amount", rm: "Raqam", ur: "رقم" },
   kh_raseed: { en: "Receipt", rm: "Raseed", ur: "رسید" },
   kh_darj_nahi_dash: { en: "— (not recorded)", rm: "— (darj nahi)", ur: "— (درج نہیں)" },
+
+  // ---- page.tsx: header, stat cards, shop payment-method breakdown ----
+  kh_page_title: { en: "Money & Ledger", rm: "Paisa & Khata", ur: "پیسہ اور کھاتہ" },
+  kh_page_desc: {
+    en: "Giving, taking, credit, expense and labour pay — all in one place",
+    rm: "Paisa dena, lena, udhaar, kharcha aur mazdoori — sab ek jagah",
+    ur: "پیسہ دینا، لینا، ادھار، خرچہ اور مزدوری — سب ایک جگہ",
+  },
+  kh_stat_aaj_gaya: { en: "Money out today", rm: "Aaj paisa gaya", ur: "آج پیسہ گیا" },
+  kh_stat_aaj_aaya: { en: "Money in today", rm: "Aaj paisa aaya", ur: "آج پیسہ آیا" },
+  kh_stat_manzoori_intezar: { en: "Waiting for approval", rm: "Manzoori ka intezar", ur: "منظوری کا انتظار" },
+  kh_meri_dukan: { en: "My Shop", rm: "Meri Dukan", ur: "میری دکان" },
+  kh_isi_dukan: { en: "this shop", rm: "isi dukan", ur: "اسی دکان" },
+  kh_shop_hisaab_suffix: {
+    en: "'s account — by payment method",
+    rm: "ka hisaab — payment method ke hisaab se",
+    ur: "کا حساب — پیمنٹ میتھڈ کے حساب سے",
+  },
+  kh_se: { en: "From", rm: "Se", ur: "سے" },
+  kh_tak: { en: "To", rm: "Tak", ur: "تک" },
+  kh_dekhein: { en: "View", rm: "Dekhein", ur: "دیکھیں" },
+  kh_payment_method_col: { en: "Payment Method", rm: "Payment Method", ur: "پیمنٹ میتھڈ" },
+  kh_sale_col: { en: "Sale", rm: "Sale", ur: "سیل" },
+  kh_kharcha_adaigi_col: { en: "Expense/Payment", rm: "Kharcha/Adaigi", ur: "خرچہ/ادائیگی" },
+  kh_bacha_col: { en: "Left Over", rm: "Bacha", ur: "بچا" },
+  kh_no_pos_sale_in_range: {
+    en: "No POS sale found for this shop in this date range.",
+    rm: "Is date range mein is shop ki koi POS sale nahi mili.",
+    ur: "اس ڈیٹ رینج میں اس دکان کی کوئی POS سیل نہیں ملی۔",
+  },
+  kh_shop_footer_prefix: { en: "This is only", rm: "Ye sirf", ur: "یہ صرف" },
+  kh_shop_footer_suffix: {
+    en: "'s account — not any other shop or branch. Only approved expense/payments are deducted; entries still waiting for approval aren't included yet.",
+    rm: "ka hisaab hai — kisi doosri shop ya branch ka nahi. Sirf manzoor-shuda kharcha/adaigi hi ghata jata hai; manzoori ka intezar wali qatarein abhi shamil nahi.",
+    ur: "کا حساب ہے — کسی دوسری دکان یا برانچ کا نہیں۔ صرف منظور شدہ خرچہ/ادائیگی ہی گھٹائی جاتی ہے؛ منظوری کے انتظار والی قطاریں ابھی شامل نہیں۔",
+  },
 } as const;

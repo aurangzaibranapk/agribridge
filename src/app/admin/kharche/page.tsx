@@ -9,6 +9,8 @@ import { billQismKaLabel } from "@/lib/kharche";
 import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
 import { ArrowDownCircle, ArrowUpCircle, Clock, Wallet } from "lucide-react";
 import { LiveRefresh } from "@/components/live/live-refresh";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,7 @@ export default async function KharchePage({
 }: {
   searchParams?: { from?: string; to?: string };
 }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -205,18 +208,18 @@ export default async function KharchePage({
   return (
     <div>
       <PageHeader
-        title="Paisa & Khata"
-        description="Paisa dena, lena, udhaar, kharcha aur mazdoori — sab ek jagah"
+        title={t("kh_page_title", lang)}
+        description={t("kh_page_desc", lang)}
         actions={
           <LiveRefresh tables={["company_expense_requests", "labour_work_entries", "finance_transactions"]} />
         }
       />
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Aaj paisa gaya" value={`Rs. ${aajGaya.toLocaleString()}`} icon={ArrowDownCircle} tone="red" />
-        <StatCard label="Aaj paisa aaya" value={`Rs. ${aajAaya.toLocaleString()}`} icon={ArrowUpCircle} tone="green" />
+        <StatCard label={t("kh_stat_aaj_gaya", lang)} value={`Rs. ${aajGaya.toLocaleString()}`} icon={ArrowDownCircle} tone="red" />
+        <StatCard label={t("kh_stat_aaj_aaya", lang)} value={`Rs. ${aajAaya.toLocaleString()}`} icon={ArrowUpCircle} tone="green" />
         <StatCard
-          label={`Manzoori ka intezar (${intezar.length})`}
+          label={`${t("kh_stat_manzoori_intezar", lang)} (${intezar.length})`}
           value={`Rs. ${intezarKiRaqam.toLocaleString()}`}
           icon={Clock}
           tone="warn"
@@ -226,12 +229,12 @@ export default async function KharchePage({
       {shopScoped && (
         <Card className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
-            <Wallet className="h-3.5 w-3.5" /> {shopName ?? "Meri Dukan"} ka hisaab — payment method ke hisaab se
+            <Wallet className="h-3.5 w-3.5" /> {shopName ?? t("kh_meri_dukan", lang)} {t("kh_shop_hisaab_suffix", lang)}
           </p>
 
           <form className="mb-3 flex flex-wrap items-end gap-2 text-sm" method="GET">
             <div>
-              <label className="mb-1 block text-[11px] text-surface-500">Se</label>
+              <label className="mb-1 block text-[11px] text-surface-500">{t("kh_se", lang)}</label>
               <input
                 type="date"
                 name="from"
@@ -240,7 +243,7 @@ export default async function KharchePage({
               />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] text-surface-500">Tak</label>
+              <label className="mb-1 block text-[11px] text-surface-500">{t("kh_tak", lang)}</label>
               <input
                 type="date"
                 name="to"
@@ -252,7 +255,7 @@ export default async function KharchePage({
               type="submit"
               className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Dekhein
+              {t("kh_dekhein", lang)}
             </button>
           </form>
 
@@ -261,10 +264,10 @@ export default async function KharchePage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-surface-400">
-                    <th className="pb-1.5 pr-4">Payment Method</th>
-                    <th className="pb-1.5 pr-4 text-right">Sale</th>
-                    <th className="pb-1.5 pr-4 text-right">Kharcha/Adaigi</th>
-                    <th className="pb-1.5 text-right">Bacha</th>
+                    <th className="pb-1.5 pr-4">{t("kh_payment_method_col", lang)}</th>
+                    <th className="pb-1.5 pr-4 text-right">{t("kh_sale_col", lang)}</th>
+                    <th className="pb-1.5 pr-4 text-right">{t("kh_kharcha_adaigi_col", lang)}</th>
+                    <th className="pb-1.5 text-right">{t("kh_bacha_col", lang)}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -287,12 +290,11 @@ export default async function KharchePage({
               </table>
             </div>
           ) : (
-            <p className="text-sm text-surface-400">Is date range mein is shop ki koi POS sale nahi mili.</p>
+            <p className="text-sm text-surface-400">{t("kh_no_pos_sale_in_range", lang)}</p>
           )}
 
           <p className="mt-2 text-[11px] leading-snug text-surface-400">
-            Ye sirf {shopName ?? "isi dukan"} ka hisaab hai — kisi doosri shop ya branch ka nahi. Sirf manzoor-shuda
-            kharcha/adaigi hi ghata jata hai; manzoori ka intezar wali qatarein abhi shamil nahi.
+            {t("kh_shop_footer_prefix", lang)} {shopName ?? t("kh_isi_dukan", lang)} {t("kh_shop_footer_suffix", lang)}
           </p>
         </Card>
       )}
