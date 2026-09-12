@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_widgets.dart';
 
-class FarmerServicesScreen extends StatelessWidget {
+class FarmerServicesScreen extends ConsumerWidget {
   const FarmerServicesScreen({super.key});
-  @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Farmer Services')), body: ListView(padding: const EdgeInsets.all(16), children: [
+  @override Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(farmerSummaryProvider).valueOrNull ?? demoFarmerSummary;
+    String value(String key, {String suffix = ''}) => '${(summary[key] as num?)?.toStringAsFixed(1) ?? '0'}$suffix';
+    return Scaffold(appBar: AppBar(title: const Text('Farmer Services')), body: ListView(padding: const EdgeInsets.all(16), children: [
     const SectionTitle('Milk Collection', action: 'Full Statement'), const SizedBox(height: 8),
     Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('This Week', style: TextStyle(fontWeight: FontWeight.w800)), Text('Payment: Wednesday', style: TextStyle(color: AppColors.green, fontWeight: FontWeight.w700))]), const Divider(height: 24),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: const [_Value('742 L','Milk'), _Value('3.9%','Avg Fat'), _Value('13.1%','Avg TS'), _Value('Rs 158k','Amount')]),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_Value(value('week_liters', suffix: ' L'),'Milk'), _Value(value('avg_fat', suffix: '%'),'Avg Fat'), _Value(value('avg_snf', suffix: '%'),'Avg SNF'), _Value('Rs ${((summary['week_amount'] as num?) ?? 0).toStringAsFixed(0)}','Amount')]),
     ]))),
     const SizedBox(height: 18), const SectionTitle('Book a Service', action: ''), const SizedBox(height: 8),
     QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _booking(context)), const SizedBox(height: 10),
@@ -18,6 +23,7 @@ class FarmerServicesScreen extends StatelessWidget {
     const QuickAction(label: 'Crop Doctor', icon: Icons.health_and_safety_outlined), const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(18)), child: const Row(children: [CircleAvatar(backgroundColor: AppColors.green, child: Icon(Icons.smart_toy_outlined, color: Colors.white)), SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Kisan AI', style: TextStyle(fontWeight: FontWeight.w800)), Text('Fasal, spray, mausam ya janwaron ke bare mein poochain.', style: TextStyle(fontSize: 11, color: AppColors.muted))])), Icon(Icons.chevron_right)])),
   ]));
+  }
 
   void _booking(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => const _RequestSheet(title: 'Machinery Booking', fields: ['Machine', 'Acres', 'Required Date', 'Farm Location']));
   void _grain(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => const _RequestSheet(title: 'Grain Sale Request', fields: ['Crop', 'Expected Bags', 'Expected Date', 'Pickup Location']));
