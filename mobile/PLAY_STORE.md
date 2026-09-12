@@ -24,6 +24,7 @@ The manual **Mobile Play Bundle** workflow only targets Testing and requires:
 
 - `MOBILE_TEST_SUPABASE_URL`
 - `MOBILE_TEST_SUPABASE_ANON_KEY`
+- `MOBILE_TEST_API_BASE_URL` (Testing web/API deployment; never the Live URL)
 - `MOBILE_ANDROID_KEYSTORE_BASE64`
 - `MOBILE_ANDROID_KEY_ALIAS`
 - `MOBILE_ANDROID_KEY_PASSWORD`
