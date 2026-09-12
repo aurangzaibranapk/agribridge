@@ -13,7 +13,7 @@ class OrderHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(ordersProvider);
-    final rows = AppConfig.hasSupabase ? (state.valueOrNull ?? const []) : _demoOrders;
+    final rows = AppConfig.demoMode ? _demoOrders : (state.valueOrNull ?? const []);
     return Scaffold(
       appBar: AppBar(title: const Text('My Orders'), actions: [
         IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductCatalogScreen())), icon: const Icon(Icons.add_shopping_cart_outlined), tooltip: 'New order'),
