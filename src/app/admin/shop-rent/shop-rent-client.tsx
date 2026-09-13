@@ -224,6 +224,7 @@ function PayModal({ agreement, currentMonth, currentYear, onClose }: { agreement
             <option value="bank_transfer">{t("c_bank_transfer", lang)}</option>
             <option value="easypaisa">EasyPaisa</option>
             <option value="jazzcash">JazzCash</option>
+            <option value="waseela_card">Waseela Card</option>
           </select>
           <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("sr_save_payment", lang)} />

@@ -69,7 +69,7 @@ interface CartLine {
   unit_price: number;
 }
 
-type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata";
+type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata" | "waseela_card";
 const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "cash", label: "Cash" },
   { key: "bank_transfer", label: "Bank" },
@@ -78,6 +78,7 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "easypaisa", label: "Easypaisa" },
   { key: "qr", label: "QR" },
   { key: "khata", label: "Khata" },
+  { key: "waseela_card", label: "Waseela Card" },
 ];
 
 type CustomerMode = "walkin" | "regular" | "wholesale";

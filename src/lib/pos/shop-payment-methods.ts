@@ -49,6 +49,7 @@ const POS_METHODS: { method: string; label: string }[] = [
   { method: "easypaisa", label: "Easypaisa" },
   { method: "qr", label: "QR" },
   { method: "khata", label: "Khata" },
+  { method: "waseela_card", label: "Waseela Card" },
 ];
 
 const METHOD_LABEL: Record<string, string> = Object.fromEntries(

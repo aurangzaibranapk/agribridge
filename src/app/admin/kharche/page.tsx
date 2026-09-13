@@ -111,7 +111,7 @@ export default async function KharchePage({
       // do alag jawab aate hain.
       service
         .from("finance_accounts")
-        .select("id, name, gl_code, is_active, current_balance")
+        .select("id, name, gl_code, is_active, current_balance, account_type")
         .eq("is_active", true)
         .order("name"),
       service.from("suppliers").select("id, name").order("name").limit(500),
@@ -308,7 +308,9 @@ export default async function KharchePage({
           name: k.name,
           gl_code: k.gl_code,
           balance: Number(k.current_balance ?? 0),
+          account_type: k.account_type as string,
         }))}
+        isUnrestricted={sabKuchWala}
         bande={{
           supplier: (suppliers ?? []).map((s: any) => ({ id: s.id, naam: s.name })),
           staff: (staff ?? []).map((s: any) => ({ id: s.id, naam: s.full_name })),

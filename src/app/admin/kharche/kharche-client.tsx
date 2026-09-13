@@ -103,10 +103,11 @@ export function KharcheClient({
   manzoorKarSakta,
   taseeqKarSakta,
   showCompanyBalances = true,
+  isUnrestricted = false,
 }: {
   rows: Qatar[];
   mazdooriRows: MazdooriQatar[];
-  khaate: { id: string; name: string; gl_code: string | null; balance: number }[];
+  khaate: { id: string; name: string; gl_code: string | null; balance: number; account_type?: string }[];
   bande: Record<string, Banda[]>;
   naamMap: Record<string, string>;
   khataNaam: Record<string, string>;
@@ -121,6 +122,14 @@ export function KharcheClient({
    * (paid_from_account_id chunne ke liye), sirf ye strip chhupti hai.
    */
   showCompanyBalances?: boolean;
+  /**
+   * Malik (13 September): "staff ko sirf apni cash hand amount se allow
+   * hai -- wo kisi bank, QR code, kisi card se kisi ko payment ya bill
+   * nahi bhar sakta." Admin/Owner ko har khata (bank/wallet/cash) khulta
+   * hai. Yahan sirf dropdown chhupta hai -- asal rok server par
+   * (`kharchaDarj`) hai, ye UI to sirf ghalat button dikhana rokti hai.
+   */
+  isUnrestricted?: boolean;
 }) {
   const lang = useLang();
   const [darjState, darjAction] = useFormState(kharchaDarj, KHALI);
@@ -175,6 +184,11 @@ export function KharcheClient({
     if (Number.isFinite(g) && Number.isFinite(r) && g > 0 && r > 0) return Math.round(g * r * 100) / 100;
     return null;
   }, [mGinti, mRate]);
+
+  // Staff sirf "cash" wale khate se kharcha darj kar sakta hai -- bank,
+  // wallet, card sirf admin/owner ke liye. Asal rok server par bhi hai
+  // (kharchaDarj); ye sirf ghalat option dikhne se rokta hai.
+  const khaateForDarj = isUnrestricted ? khaate : khaate.filter((k) => k.account_type === "cash");
 
   const qism = useMemo(() => qismDhoondein(kind), [kind]);
 
@@ -682,14 +696,14 @@ export function KharcheClient({
                   className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
                 >
                   <option value="">{t("kh_chunein_option", lang)}</option>
-                  {khaate.map((k) => (
+                  {khaateForDarj.map((k) => (
                     <option key={k.id} value={k.id}>
                       {k.name} — Rs {Math.round(k.balance).toLocaleString()}
                     </option>
                   ))}
                 </select>
                 <span className="mt-1 block text-[11px] text-surface-400">
-                  {t("kh_is_ke_baghair_finance", lang)}
+                  {isUnrestricted ? t("kh_is_ke_baghair_finance", lang) : "Sirf cash hand se — bank/wallet/card sirf admin/owner ke paas."}
                 </span>
               </label>
 
