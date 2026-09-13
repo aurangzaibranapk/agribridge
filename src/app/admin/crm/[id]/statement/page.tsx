@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { formatDate } from "@/lib/utils/format";
+import { StatementActions } from "./statement-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -56,17 +57,23 @@ export default async function CustomerStatementPage({
     .eq("id", id)
     .maybeSingle();
 
-  const [{ data: rows }, { data: baqi }] = await Promise.all([
+  const openingEnd = sp.start ? new Date(`${sp.start}T00:00:00Z`) : null;
+  if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
+  const [{ data: rows }, { data: baqi }, { data: openingRows }] = await Promise.all([
     supabase.rpc("fn_customer_ledger", {
       p_customer: id,
       p_start: sp.start ?? undefined,
       p_end: sp.end ?? undefined,
     }),
     supabase.rpc("fn_customer_baqi", { p_customer: id }),
+    sp.start
+      ? supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: openingEnd!.toISOString().slice(0, 10) })
+      : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const qatarein = rows ?? [];
-  let chalta = 0;
+  const openingBalance = (openingRows ?? []).reduce((s, r) => s + Number(r.debit) - Number(r.credit), 0);
+  let chalta = openingBalance;
   const saathBalance = qatarein.map((r) => {
     chalta += Number(r.debit) - Number(r.credit);
     return { ...r, balance: chalta };
@@ -80,6 +87,14 @@ export default async function CustomerStatementPage({
         title={`${customer?.name ?? "Gahak"} — Khata`}
         description="Har lena aur dena, tareekh ke sath — ledger se seedha."
       />
+
+      <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900">
+        <label className="text-xs text-surface-500">From<input type="date" name="start" defaultValue={sp.start} className="ml-2 rounded-lg border border-surface-200 px-2 py-1.5 dark:bg-surface-900" /></label>
+        <label className="text-xs text-surface-500">To<input type="date" name="end" defaultValue={sp.end} className="ml-2 rounded-lg border border-surface-200 px-2 py-1.5 dark:bg-surface-900" /></label>
+        <button type="submit" className="rounded-lg bg-surface-800 px-3 py-1.5 text-sm text-white">Apply</button>
+      </form>
+
+      <StatementActions customerId={id} start={sp.start} end={sp.end} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
@@ -119,6 +134,12 @@ export default async function CustomerStatementPage({
           )}
         </Card>
       </div>
+
+      {sp.start && (
+        <p className="rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800">
+          Opening balance before {sp.start}: <strong>{rs(openingBalance)}</strong>
+        </p>
+      )}
 
       <Card className="p-0">
         {qatarein.length === 0 ? (
