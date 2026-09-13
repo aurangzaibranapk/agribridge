@@ -89,10 +89,20 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 
   if (error) return { error: error.message };
 
-  const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
-  const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
-  if (warehouse) {
-    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouse.id, quantity_on_hand: 0 });
+  // Kaun sa godam -- banda ne khud chuna ho to wahi (13 September:
+  // "kuch warehouse mein hai kuch POS mein" wale confusion ki jaR yehi
+  // thi -- har naya product hamesha Central mein ban jata tha, chahe
+  // banda kisi bhi dukan ke liye soch raha ho). Kuch na chuna ho to
+  // purana raasta -- product ke apne branch ka MAIN godam.
+  const chosenWarehouseId = (formData.get("warehouse_id") as string) || null;
+  let warehouseId = chosenWarehouseId;
+  if (!warehouseId) {
+    const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
+    const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
+    warehouseId = warehouse?.id ?? null;
+  }
+  if (warehouseId) {
+    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouseId, quantity_on_hand: 0 });
   }
 
   await supabase.from("activity_logs").insert({ user_id: userId, action: "create", entity_name: "Product", entity_id: data.id });
