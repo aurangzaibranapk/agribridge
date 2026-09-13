@@ -31,7 +31,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   return (
     <div className="flex min-h-0 flex-col gap-4">
       <PageHeader title="Khata & Recovery" description="Outstanding customers, statements aur payment follow-up — ek jagah." />
-      <div className="flex gap-2"><Link href="/admin/finance/recovery/history" className="rounded-lg border px-3 py-2 text-sm">Reminder History</Link><Link href="/admin/finance/recovery/promises" className="rounded-lg border px-3 py-2 text-sm">Promise to Pay</Link></div>
+      <div className="flex flex-wrap gap-2"><Link href="/admin/finance/recovery/history" className="rounded-lg border px-3 py-2 text-sm">Reminder History</Link><Link href="/admin/finance/recovery/promises" className="rounded-lg border px-3 py-2 text-sm">Promise to Pay</Link><Link href="/admin/finance/recovery/templates" className="rounded-lg border px-3 py-2 text-sm">Templates</Link></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="py-3"><WalletCards className="mb-2 h-5 w-5 text-red-600" /><p className="text-xs text-surface-500">Total Receivable</p><p className="text-xl font-semibold text-red-700">{rs(total)}</p></Card>
         <Card className="py-3"><ReceiptText className="mb-2 h-5 w-5 text-emerald-600" /><p className="text-xs text-surface-500">Outstanding Accounts</p><p className="text-xl font-semibold">{parties.length}</p></Card>
