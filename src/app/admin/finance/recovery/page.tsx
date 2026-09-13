@@ -1,17 +1,21 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { Card, PageHeader } from "@/components/ui/layout-primitives";
-import { AlertTriangle, CalendarClock, ReceiptText, WalletCards } from "lucide-react";
-import { RecoveryClient } from "./recovery-client";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CalendarDays } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/ui/layout-primitives";
+import { RecoveryClient, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
 
-function rs(value: number) {
-  return `Rs ${Math.round(value).toLocaleString("en-PK")}`;
+const DEFAULT_DUE_DAYS = 15;
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
-export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const sp = await searchParams;
   const supabase = createClient();
   const {
@@ -20,72 +24,129 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   if (!user) redirect("/login");
 
   const loose = supabase as any;
-  const [{ data }, { count: scheduled }, { count: promises }, { count: failed }] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [{ data }, { data: reminders }, { data: templates }, { data: customerDueDays }] = await Promise.all([
     loose.rpc("fn_recovery_outstanding", { p_search: sp.q?.trim() || null }),
-    loose.from("payment_reminders").select("id", { count: "exact", head: true }).eq("delivery_status", "scheduled"),
-    loose.from("payment_promises").select("id", { count: "exact", head: true }).in("status", ["open", "due_today"]),
-    loose.from("payment_reminders").select("id", { count: "exact", head: true }).eq("delivery_status", "failed"),
+    // Last reminder per party, aur aaj kis kis ko reminder ja chuka --
+    // yahin se "Last Reminder" column aur "Collected Today" ke liye
+    // reminder-status bhi milta hai.
+    loose
+      .from("payment_reminders")
+      .select("party_type,party_id,sent_at,delivery_status")
+      .order("sent_at", { ascending: false }),
+    loose.from("reminder_templates").select("id,template_name,language,channel,message_body,reminder_stage,is_active").eq("is_active", true),
+    loose.from("customers").select("id,payment_due_days"),
   ]);
-  const parties = (data ?? []).map((p: any) => ({
-    type: p.party_type,
-    id: p.party_id,
-    name: p.party_name,
-    phone: p.phone,
-    email: p.email,
-    outstanding: Number(p.outstanding || 0),
-    lastActivity: p.last_activity,
+
+  // Har party ka aakhri reminder -- pehli qatar jo mile (order by sent_at
+  // desc se aa rahi hai).
+  const lastReminderByParty = new Map<string, string | null>();
+  for (const r of reminders ?? []) {
+    const key = `${r.party_type}:${r.party_id}`;
+    if (!lastReminderByParty.has(key)) lastReminderByParty.set(key, r.sent_at);
+  }
+
+  // Customer ki apni "kitne din mein wapas" -- na ho to project-wide
+  // andaza (15 din). Farmer/dealer/supplier ke liye abhi ye khana kahin
+  // nahi -- wahi andaza lagta hai.
+  const dueDaysByCustomer = new Map<string, number>();
+  for (const c of customerDueDays ?? []) {
+    if (c.payment_due_days) dueDaysByCustomer.set(c.id, Number(c.payment_due_days));
+  }
+
+  // "Due date" is party ke aakhri ledger-harkat (last_activity) se, us
+  // ke apne credit-din jama kar ke -- ledger khud kisi qatar par "ye
+  // kab wapas mangna hai" nahi likhta, is liye ye hamesha ANDAZA hai,
+  // asal tareekh nahi. Jahan last_activity hi nahi (kabhi lena-dena
+  // hua hi nahi), wahan due date bhi nahi banta.
+  const parties: RecoveryParty[] = (data ?? []).map((p: any) => {
+    const dueDays = p.party_type === "customer" ? dueDaysByCustomer.get(p.party_id) ?? DEFAULT_DUE_DAYS : DEFAULT_DUE_DAYS;
+    const dueDate = p.last_activity ? addDays(p.last_activity, dueDays) : null;
+    const overdueDays = dueDate ? Math.round((new Date(today).getTime() - new Date(dueDate).getTime()) / 86400000) : null;
+    const status: RecoveryParty["status"] = dueDate == null ? "upcoming" : overdueDays! > 0 ? "overdue" : overdueDays === 0 ? "due_today" : "upcoming";
+    return {
+      type: p.party_type,
+      id: p.party_id,
+      name: p.party_name,
+      phone: p.phone,
+      email: p.email,
+      outstanding: Number(p.outstanding || 0),
+      lastActivity: p.last_activity,
+      dueDate,
+      overdueDays: overdueDays != null && overdueDays > 0 ? overdueDays : null,
+      status,
+      lastReminder: lastReminderByParty.get(`${p.party_type}:${p.party_id}`) ?? null,
+    };
+  });
+
+  const totalReceivable = parties.reduce((s, p) => s + p.outstanding, 0);
+  const dueTodayParties = parties.filter((p) => p.status === "due_today");
+  const overdueParties = parties.filter((p) => p.status === "overdue");
+  const failedCount = (reminders ?? []).filter((r: any) => r.delivery_status === "failed").length;
+
+  // "Collected today" -- customer/farmer ke khate mein aaj credit hua
+  // paisa (1100/1150), seedha ledger se. Ye Recovery ki apni koi qatar
+  // nahi -- kahin bhi wapsi darj ho (POS, load-bill, farmer credit), wo
+  // yahan gin jati hai.
+  const { data: collectedRows } = await loose
+    .from("journal_lines")
+    .select("credit, journal_entries!inner(entry_date)")
+    .in("account_code", ["1100", "1150"])
+    .gt("credit", 0)
+    .eq("journal_entries.entry_date", today);
+  const collectedToday = (collectedRows ?? []).reduce((s: number, r: any) => s + Number(r.credit || 0), 0);
+  const collectedTodayCount = (collectedRows ?? []).length;
+
+  const reminderTemplates: ReminderTemplate[] = (templates ?? []).map((t: any) => ({
+    id: t.id,
+    name: t.template_name,
+    language: t.language,
+    channel: t.channel,
+    body: t.message_body,
+    stage: t.reminder_stage,
   }));
-  const total = parties.reduce((sum: number, p: any) => sum + p.outstanding, 0);
-  const withoutContact = parties.filter((p: any) => !p.phone && !p.email).length;
+
+  const todayLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    weekday: "short",
+  });
 
   return (
     <div className="flex min-h-0 flex-col gap-4">
-      <PageHeader title="Khata & Recovery" description="Outstanding customers, statements aur payment follow-up — ek jagah." />
-      <div className="flex flex-wrap gap-2">
-        <Link href="/admin/finance/recovery/history" className="rounded-lg border px-3 py-2 text-sm">
-          Reminder History
-        </Link>
-        <Link href="/admin/finance/recovery/promises" className="rounded-lg border px-3 py-2 text-sm">
-          Promise to Pay
-        </Link>
-        <Link href="/admin/finance/recovery/templates" className="rounded-lg border px-3 py-2 text-sm">
-          Templates
-        </Link>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="py-3">
-          <WalletCards className="mb-2 h-5 w-5 text-red-600" />
-          <p className="text-xs text-surface-500">Total Receivable</p>
-          <p className="text-xl font-semibold text-red-700">{rs(total)}</p>
-        </Card>
-        <Card className="py-3">
-          <ReceiptText className="mb-2 h-5 w-5 text-emerald-600" />
-          <p className="text-xs text-surface-500">Outstanding Accounts</p>
-          <p className="text-xl font-semibold">{parties.length}</p>
-        </Card>
-        <Card className="py-3">
-          <CalendarClock className="mb-2 h-5 w-5 text-amber-600" />
-          <p className="text-xs text-surface-500">Scheduled / Promises</p>
-          <p className="text-xl font-semibold">
-            {scheduled ?? 0} / {promises ?? 0}
-          </p>
-        </Card>
-        <Card className="py-3">
-          <AlertTriangle className="mb-2 h-5 w-5 text-orange-600" />
-          <p className="text-xs text-surface-500">Failed / Contact Missing</p>
-          <p className="text-xl font-semibold">
-            {failed ?? 0} / {withoutContact}
-          </p>
-        </Card>
-      </div>
-
-      <Card className="flex min-h-0 flex-col p-0">
-        <form className="flex flex-wrap gap-2 border-b border-surface-100 p-3 dark:border-surface-800">
-          <input name="q" defaultValue={sp.q} placeholder="Customer search..." className="min-w-64 rounded-lg border border-surface-200 bg-transparent px-3 py-2 text-sm" />
-          <button className="rounded-lg bg-surface-800 px-4 py-2 text-sm text-white">Search</button>
-        </form>
-        <RecoveryClient parties={parties} />
-      </Card>
+      <p className="text-xs text-surface-500">
+        <Link href="/admin/dashboard" className="hover:underline">
+          Home
+        </Link>{" "}
+        &gt; Khata &amp; Recovery
+      </p>
+      <PageHeader
+        title="Khata Recovery"
+        description="Track receivables, send reminders and manage customer payments"
+        actions={
+          <div className="flex items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm dark:border-surface-800 dark:bg-surface-900">
+            <CalendarDays className="h-4 w-4 text-brand-600" />
+            <div className="leading-tight">
+              <p className="text-[11px] text-surface-400">Today</p>
+              <p className="font-medium text-surface-800 dark:text-surface-200">{todayLabel}</p>
+            </div>
+          </div>
+        }
+      />
+      <RecoveryClient
+        parties={parties}
+        templates={reminderTemplates}
+        totalReceivable={totalReceivable}
+        dueTodayAmount={dueTodayParties.reduce((s, p) => s + p.outstanding, 0)}
+        dueTodayCount={dueTodayParties.length}
+        overdueAmount={overdueParties.reduce((s, p) => s + p.outstanding, 0)}
+        overdueCount={overdueParties.length}
+        collectedToday={collectedToday}
+        collectedTodayCount={collectedTodayCount}
+        failedCount={failedCount}
+      />
     </div>
   );
 }
