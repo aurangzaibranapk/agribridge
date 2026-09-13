@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      data_health_findings: {
+        Row: {
+          amount: number | null
+          dedupe_key: string
+          department: string
+          description: string
+          detected_at: string
+          finding_type: string
+          id: string
+          related_id: string | null
+          related_label: string | null
+          related_table: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+        }
+        Insert: {
+          amount?: number | null
+          dedupe_key: string
+          department: string
+          description: string
+          detected_at?: string
+          finding_type: string
+          id?: string
+          related_id?: string | null
+          related_label?: string | null
+          related_table?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+        }
+        Update: {
+          amount?: number | null
+          dedupe_key?: string
+          department?: string
+          description?: string
+          detected_at?: string
+          finding_type?: string
+          id?: string
+          related_id?: string | null
+          related_label?: string | null
+          related_table?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_health_findings_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_health_findings_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
 
       payment_promises: {
         Row: {
@@ -32051,6 +32123,12 @@ export type Database = {
       }
     }
     Functions: {
+      fn_data_health_scan: {
+        Args: never
+        Returns: {
+          inserted_count: number
+        }[]
+      }
       create_pos_sale: {
         Args: {
           p_cash_paid: number
