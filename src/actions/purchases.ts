@@ -316,11 +316,36 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       return { error: "Is product ki shop/branch ke liye koi warehouse set up nahi hai." };
     }
 
-    if (row.batch_id) {
+    // Batch kabhi kabhi bana hi nahi (purani ghalti: ek hi bill mein
+    // ek product do qataron mein aaye to naam takra jata, batch nahi
+    // banta) -- us waqt maal ki ginti to yahan se aage barh jati thi,
+    // magar wo lot kisi batch mein kabhi darj nahi hota. Ab agar
+    // qatar ke paas batch nahi hai, wahi yahan bana dete hain -- taake
+    // stock hamesha kisi na kisi batch se aaye, kabhi hawa se nahi.
+    let batchId = row.batch_id;
+    if (batchId) {
       await supabase
         .from("stock_batches")
         .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: row.unit_cost })
-        .eq("id", row.batch_id);
+        .eq("id", batchId);
+    } else {
+      const { data: newBatch, error: batchErr } = await supabase
+        .from("stock_batches")
+        .insert({
+          product_id: row.product_id,
+          warehouse_id: warehouseId,
+          batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
+          initial_quantity: row.received,
+          remaining_quantity: row.received,
+          unit_cost: row.unit_cost,
+        })
+        .select("id")
+        .single();
+      if (batchErr || !newBatch) {
+        return { error: `${row.name}: batch nahi ban saka, maal receive nahi hua: ${batchErr?.message ?? "wajah maloom nahi"}` };
+      }
+      batchId = newBatch.id;
+      await supabase.from("purchase_items").update({ batch_id: batchId }).eq("id", row.id);
     }
 
     const { data: existingInventory } = await supabase

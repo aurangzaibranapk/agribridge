@@ -881,20 +881,32 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
     const qty = Number(l.qty);
     const cost = Number(l.applied_rate ?? l.rate ?? 0);
 
-    const { data: batch } = await supabase
+    // Batch ka naam sirf product se banta tha -- ek hi bill mein wohi
+    // product DO qataron mein aaye (do alag lot, do alag rate) to
+    // dusra naam pehle jaisa hi ban jata aur uska batch banna hi nahi
+    // (naam takra jata). Ginti aur paisa dono theek darj hote the,
+    // magar wo doosri qatar ka lot kabhi kisi batch mein nahi jata --
+    // aur us ka pata mahino baad "godam ki ginti aur khata barabar
+    // nahi" wale farq se chalta (13 September). Har qatar ki apni id
+    // bhi naam mein shamil kar ke ye takraaw hamesha ke liye khatam.
+    const { data: batch, error: batchErr } = await supabase
       .from("stock_batches")
       .insert({
         product_id: l.product_id as string,
-        batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}`,
+        batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}-${(l.id as string).slice(0, 6)}`,
         initial_quantity: qty,
       })
       .select("id")
       .single();
+    if (batchErr || !batch) {
+      problems.push(`${l.item_name ?? "qatar"} ka batch nahi bana: ${batchErr?.message ?? "wajah maloom nahi"}`);
+      continue;
+    }
 
     const { error: itemErr } = await supabase.from("purchase_items").insert({
       purchase_id: po.id,
       product_id: l.product_id as string,
-      batch_id: batch?.id ?? null,
+      batch_id: batch.id,
       quantity: qty,
       unit_cost: cost,
       line_total: qty * cost,
