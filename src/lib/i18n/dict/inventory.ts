@@ -44,9 +44,21 @@ export const inventoryDict = {
   inv_wholesale_rate: { en: "Wholesale Rate", rm: "Thok Rate", ur: "تھوک ریٹ" },
   inv_credit_rate: { en: "Credit / Khata Rate (MRP)", rm: "Credit / Khata Rate (MRP)", ur: "کریڈٹ / کھاتہ ریٹ (MRP)" },
   inv_rate_missing_note: {
-    en: "items have no rate set — not counted as zero, just left out of this total",
-    rm: "cheezon ka ye rate darj nahi -- unhein sifar nahi samjha gaya, bas is jama mein shamil nahi",
-    ur: "چیزوں کا یہ ریٹ درج نہیں — انہیں صفر نہیں سمجھا گیا، بس اس جمع میں شامل نہیں",
+    en: "items have no rate set — not counted as zero, just left out of this total. Click to see them",
+    rm: "cheezon ka ye rate darj nahi -- unhein sifar nahi samjha gaya, bas is jama mein shamil nahi. Dekhne ke liye click karein",
+    ur: "چیزوں کا یہ ریٹ درج نہیں — انہیں صفر نہیں سمجھا گیا، بس اس جمع میں شامل نہیں۔ دیکھنے کے لیے کلک کریں",
+  },
+  inv_missing_filter_active: {
+    en: "Showing only items missing this rate.",
+    rm: "Sirf wo cheezein dikh rahi hain jin ka ye rate darj nahi.",
+    ur: "صرف وہ چیزیں دکھ رہی ہیں جن کا یہ ریٹ درج نہیں۔",
+  },
+  inv_missing_filter_clear: { en: "Show all", rm: "Sab dikhayein", ur: "سب دکھائیں" },
+  inv_edit_product: { en: "Edit product", rm: "Cheez ka rate/naam theek karein", ur: "چیز کا ریٹ/نام ٹھیک کریں" },
+  inv_qty_report_hint: {
+    en: "Open this stock line's full report",
+    rm: "Is stock ki poori report kholein",
+    ur: "اس اسٹاک کی پوری رپورٹ کھولیں",
   },
   // Receiving (265)
   inv_rc_title: { en: "Receiving", rm: "Receiving -- jo maal aana hai", ur: "ریسیونگ -- جو مال آنا ہے" },
@@ -112,6 +124,15 @@ export const inventoryDict = {
   inv_pc_nearest: { en: "Nearest expiry", rm: "Qareeb miyaad", ur: "قریب میعاد" },
   inv_pc_last_move: { en: "Last movement", rm: "Aakhri harkat", ur: "آخری حرکت" },
   inv_pc_movements: { en: "Recent movements", rm: "Haal ki harkatein", ur: "حال کی حرکتیں" },
+  inv_pc_sold_30d: { en: "Sold, last 30 days", rm: "Pichle 30 din mein bikri", ur: "پچھلے 30 دن میں بکری" },
+  inv_pc_request_from_here: {
+    en: "Request stock from here",
+    rm: "Yahan se stock mangwayein",
+    ur: "یہاں سے اسٹاک منگوائیں",
+  },
+  inv_pc_arrived: { en: "Arrived", rm: "Kab Aaya", ur: "کب آیا" },
+  inv_pc_arrived_qty: { en: "Received", rm: "Kitna Aaya Tha", ur: "کتنا آیا تھا" },
+  inv_pc_sold_pct: { en: "Sold %", rm: "Kitna % Bika", ur: "کتنا % بکا" },
 
   // ---- Rate ki tareekh (293) ----
   prh_title: { en: "Rate history", rm: "Rate ki tareekh", ur: "ریٹ کی تاریخ" },

@@ -45,6 +45,35 @@ export default async function ProductCardPage({ params }: { params: { productId:
         .limit(20)
     : { data: [] as any[] };
 
+  // Batch kab aaya tha aur us mein se kitna bik chuka -- malik (13
+  // September): "kab stock aaya tha, iski stock-sale ki kya percentage
+  // hai" -- taake hisaab laga kar doosri branch se maal mangwaya ja
+  // sake. v_product_batches sirf abhi ke maal wale batch dikhata hai
+  // (remaining_quantity > 0), is liye "aaya kitna tha" wahan nahi hai --
+  // yahan seedha stock_batches se batch_id ke zariye lete hain.
+  const batchIds = (batches ?? []).map((b: any) => b.batch_id);
+  const { data: batchTotals } = batchIds.length
+    ? await supabase.from("stock_batches").select("id, initial_quantity").in("id", batchIds)
+    : { data: [] as any[] };
+  const initialQtyByBatch = new Map((batchTotals ?? []).map((b: any) => [b.id, Number(b.initial_quantity ?? 0)]));
+
+  // Pichle 30 din mein har godam se kitna bika -- taake "sale kis tarah
+  // ho rahi hai" ka andaza mile, sirf abhi ka stock nahi.
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentSales } = invIds.length
+    ? await supabase
+        .from("stock_movements")
+        .select("inventory_id, quantity")
+        .in("inventory_id", invIds)
+        .eq("movement_type", "sale_out")
+        .gte("created_at", thirtyDaysAgo)
+    : { data: [] as any[] };
+  const soldLast30ByInventory = new Map<string, number>();
+  for (const m of recentSales ?? []) {
+    soldLast30ByInventory.set(m.inventory_id, (soldLast30ByInventory.get(m.inventory_id) ?? 0) + Number(m.quantity ?? 0));
+  }
+  const invIdByWarehouse = new Map((invRows ?? []).map((r: any) => [r.warehouse_id, r.id]));
+
   // ---- Rate ki tareekh (293) ----
   //
   // Ye hissa SAFHE PAR hi chhup jata hai, sirf khali qatarein dikha kar
@@ -143,6 +172,18 @@ export default async function ProductCardPage({ params }: { params: { productId:
                     </strong>
                   </span>
                   <span>{t("inv_pc_last_move", lang)}: <strong>{c.last_movement_at ? new Date(c.last_movement_at).toLocaleDateString("en-PK") : "—"}</strong></span>
+                  <span>
+                    {t("inv_pc_sold_30d", lang)}:{" "}
+                    <strong>{soldLast30ByInventory.get(invIdByWarehouse.get(c.warehouse_id) ?? "") ?? 0}</strong>
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <Link
+                    href="/admin/stock-transfers"
+                    className="text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    {t("inv_pc_request_from_here", lang)} →
+                  </Link>
                 </div>
               </Card>
             );
@@ -158,22 +199,36 @@ export default async function ProductCardPage({ params }: { params: { productId:
               <tr className="border-b border-surface-200 text-left text-xs text-surface-500">
                 <th className="py-2">{t("inv_batch", lang)}</th>
                 <th className="py-2">{t("inv_warehouse", lang)}</th>
+                <th className="py-2">{t("inv_pc_arrived", lang)}</th>
                 <th className="py-2">{t("inv_expiry", lang)}</th>
+                <th className="py-2 text-right">{t("inv_pc_arrived_qty", lang)}</th>
                 <th className="py-2 text-right">{t("inv_qty", lang)}</th>
+                <th className="py-2 text-right">{t("inv_pc_sold_pct", lang)}</th>
               </tr>
             </thead>
             <tbody>
               {(batches ?? []).map((b) => {
                 const dl = b.days_left == null ? null : Number(b.days_left);
+                const initialQty = initialQtyByBatch.get(b.batch_id) ?? null;
+                const remainingQty = Number(b.remaining_quantity ?? 0);
+                const soldPct =
+                  initialQty != null && initialQty > 0
+                    ? Math.round(((initialQty - remainingQty) / initialQty) * 100)
+                    : null;
                 return (
                   <tr key={b.batch_id} className="border-b border-surface-100">
                     <td className="py-2 font-mono text-xs">{b.batch_number}</td>
                     <td className="py-2 text-surface-600">{b.warehouse_name ?? "—"}</td>
+                    <td className="py-2 text-xs text-surface-500">
+                      {b.created_at ? new Date(b.created_at).toLocaleDateString("en-PK") : "—"}
+                    </td>
                     <td className={`py-2 ${dl != null && dl <= 30 ? "font-medium text-red-600" : dl != null && dl <= 90 ? "text-amber-700" : "text-surface-600"}`}>
                       {b.expiry_date ?? "—"}
                       {dl != null && dl <= 90 ? ` (${dl < 0 ? t("inv_expired", lang) : `${dl} ${t("inv_days", lang)}`})` : ""}
                     </td>
-                    <td className="py-2 text-right tabular-nums">{Number(b.remaining_quantity ?? 0)}</td>
+                    <td className="py-2 text-right tabular-nums text-surface-500">{initialQty ?? "—"}</td>
+                    <td className="py-2 text-right tabular-nums">{remainingQty}</td>
+                    <td className="py-2 text-right tabular-nums">{soldPct == null ? "—" : `${soldPct}%`}</td>
                   </tr>
                 );
               })}

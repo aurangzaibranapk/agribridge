@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { adjustStock, transferStock, type ActionState } from "@/actions/inventory";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { AlertTriangle, Package, DollarSign, Settings2, ArrowLeftRight, X } from "lucide-react";
+import { AlertTriangle, Package, DollarSign, Settings2, ArrowLeftRight, Pencil, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -41,29 +41,51 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
   const [adjustTarget, setAdjustTarget] = useState<InventoryRow | null>(null);
   const [transferTarget, setTransferTarget] = useState<InventoryRow | null>(null);
   const [warehouseFilter, setWarehouseFilter] = useState("");
+  // "62 items ka rate missing" sirf ginti dikhata tha -- malik (13
+  // September): "iske niche link hona chahiye, hum us par click karein
+  // to inke asal page par chale jayein". Ab wahi ginti click hone par
+  // neeche wali fehrist inhi products tak simat jati hai, aur har ek ke
+  // aage Edit ka raasta hai.
+  const [missingFilter, setMissingFilter] = useState<null | "trade" | "sale" | "wholesale" | "credit">(null);
 
-  const filteredRows = useMemo(
+  const warehouseFiltered = useMemo(
     () => (warehouseFilter ? rows.filter((r) => r.warehouse_id === warehouseFilter) : rows),
     [rows, warehouseFilter]
   );
 
+  const MISSING_RATE_KEY: Record<"trade" | "sale" | "wholesale" | "credit", (r: InventoryRow) => number | null> = {
+    trade: (r) => r.purchase_price,
+    sale: (r) => r.selling_price,
+    wholesale: (r) => r.wholesale_price,
+    credit: (r) => r.mrp_price,
+  };
+
+  const filteredRows = useMemo(() => {
+    if (!missingFilter) return warehouseFiltered;
+    const getRate = MISSING_RATE_KEY[missingFilter];
+    return warehouseFiltered.filter((r) => getRate(r) == null && r.quantity_on_hand > 0);
+  }, [warehouseFiltered, missingFilter]);
+
   const totalValue = useMemo(
-    () => filteredRows.reduce((sum, r) => sum + r.quantity_on_hand * r.purchase_price, 0),
-    [filteredRows]
+    () => warehouseFiltered.reduce((sum, r) => sum + r.quantity_on_hand * r.purchase_price, 0),
+    [warehouseFiltered]
   );
   const lowStockRows = useMemo(
-    () => filteredRows.filter((r) => r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold),
-    [filteredRows]
+    () => warehouseFiltered.filter((r) => r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold),
+    [warehouseFiltered]
   );
 
   // Har rate ke hisaab se qeemat -- jis cheez ka wo rate darj hi nahi,
   // us ko sifar samajh kar jama mein nahi lete (CLAUDE.md: NULL aur
-  // sifar ek cheez nahi). Missing count alag se dikhaya jata hai.
+  // sifar ek cheez nahi). Missing count alag se dikhaya jata hai. Ye
+  // hamesha WAREHOUSE-filtered set par ginta hai, "missingFilter" par
+  // nahi -- warna neeche wali fehrist chhoti hone par ginti bhi ghat
+  // jati, aur banda samajhta "sab theek ho gaya".
   const rateBreakdown = useMemo(() => {
     const calc = (getRate: (r: InventoryRow) => number | null) => {
       let value = 0;
       let missing = 0;
-      for (const r of filteredRows) {
+      for (const r of warehouseFiltered) {
         const rate = getRate(r);
         if (rate == null) {
           if (r.quantity_on_hand > 0) missing += 1;
@@ -79,7 +101,7 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
       wholesale: calc((r) => r.wholesale_price),
       credit: calc((r) => r.mrp_price),
     };
-  }, [filteredRows]);
+  }, [warehouseFiltered]);
 
   return (
     <div>
@@ -134,20 +156,37 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
             ] as const
           ).map(({ key, label }) => {
             const { value, missing } = rateBreakdown[key];
+            const active = missingFilter === key;
             return (
-              <div key={key} className="rounded-lg border border-surface-100 p-3 dark:border-surface-800">
+              <div
+                key={key}
+                className={`rounded-lg border p-3 ${active ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20" : "border-surface-100 dark:border-surface-800"}`}
+              >
                 <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{label}</p>
                 <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">Rs {value.toLocaleString()}</p>
                 {missing > 0 && (
-                  <p className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+                  <button
+                    type="button"
+                    onClick={() => setMissingFilter(active ? null : key)}
+                    className="mt-0.5 text-[11px] font-medium text-amber-700 underline hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
+                  >
                     {missing} {t("inv_rate_missing_note", lang)}
-                  </p>
+                  </button>
                 )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {missingFilter && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+          <span>{t("inv_missing_filter_active", lang)}</span>
+          <button type="button" onClick={() => setMissingFilter(null)} className="font-medium underline">
+            {t("inv_missing_filter_clear", lang)}
+          </button>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
@@ -184,7 +223,9 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
                     )}
                   </td>
                   <td className={`px-4 py-3 text-right font-semibold ${isLow ? "text-red-600" : "text-surface-800 dark:text-surface-200"}`}>
-                    {r.quantity_on_hand}
+                    <Link href={`/admin/inventory/product/${r.product_id}`} className="hover:text-brand-600 hover:underline" title={t("inv_qty_report_hint", lang)}>
+                      {r.quantity_on_hand}
+                    </Link>
                     {isLow && <span className="ml-1 text-xs">({t("inv_low", lang)})</span>}
                   </td>
                   <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
@@ -192,6 +233,9 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <Link href={`/admin/products/${r.product_id}/edit`} className="text-surface-400 hover:text-brand-600" title={t("inv_edit_product", lang)}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
                       <button onClick={() => setAdjustTarget(r)} className="text-surface-400 hover:text-brand-600" title={t("inv_adjust", lang)}>
                         <Settings2 className="h-4 w-4" />
                       </button>
