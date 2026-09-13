@@ -75,6 +75,30 @@ function fieldMarks(line: Line): { name: "ok" | "warn" | "none"; qty: "ok" | "wa
   return { name, qty, rate, adds };
 }
 
+/**
+ * "1X12" jaisa likha hota hai bill par -- 1 pet mein 12 botal.
+ *
+ * Malik (13 September): Sale/MRP ka rate hamesha EK SINGLE BOTAL ka
+ * hota hai, jabke "kitna aaya" (qty) PET ki ginti hota hai -- dono ko
+ * seedha guna kar dena ek jhooti total deta hai (jo yahan pehle ho raha
+ * tha). Pet ki asal qeemat jaanne ke liye single-botal rate ko is PET
+ * SIZE se guna karna hai, bill ki qty se nahi.
+ */
+function guessPetSize(text: string | null): number | null {
+  if (!text) return null;
+  const m = text.match(/(\d+)\s*[xX]\s*(\d+)\b/);
+  if (m) {
+    const n = Number(m[2]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const t = text.toLowerCase();
+  if (/\b(1\s*l(itre|tr)?|2\s*l(itre|tr)?)\b/.test(t)) return 6;
+  if (/\b500\s*ml\b/.test(t)) return 12;
+  if (/\b350\s*ml\b/.test(t)) return 12;
+  if (/\b250\s*ml\b/.test(t)) return 24;
+  return null;
+}
+
 function Mark({ state, lang }: { state: "ok" | "warn" | "none"; lang: Lang }) {
   if (state === "ok") return <span className="ml-1 text-xs text-emerald-600" title={t("pf_bill_c_ok", lang)}>✓</span>;
   if (state === "warn") return <span className="ml-1 text-xs text-amber-600" title={t("pf_bill_c_warn", lang)}>⚠</span>;
@@ -283,6 +307,10 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
   const [wholesaleRate, setWholesaleRate] = useState(line.wholesaleRate != null ? String(line.wholesaleRate) : "");
   const [saleRate, setSaleRate] = useState(line.saleRate != null ? String(line.saleRate) : "");
   const [mrpRate, setMrpRate] = useState(line.mrpRate != null ? String(line.mrpRate) : "");
+  const [petSize, setPetSize] = useState(() => {
+    const g = guessPetSize(line.rawText ?? line.itemName);
+    return g != null ? String(g) : "";
+  });
 
   // Har rate ke sath "is rate par ye qatar kitne ki bani" -- malik (10
   // September): "hamein pata to chale is rate se ye value hai, kis rate
@@ -293,6 +321,18 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
     const r = Number(rateStr);
     if (!qty.trim() || !rateStr.trim() || !Number.isFinite(q) || !Number.isFinite(r)) return null;
     return `Rs ${(q * r).toLocaleString()}`;
+  };
+
+  // Sale/MRP single-botal ka rate hai, "kitna aaya" pet ki ginti -- in
+  // dono ko guna karna galat hai. Pet ki qeemat yahan PET SIZE se
+  // nikalti hai, qty se nahi (malik, 13 September).
+  const petSizeNum = Number(petSize);
+  const perPetAt = (rateStr: string): string | null => {
+    const r = Number(rateStr);
+    if (!petSize.trim() || !rateStr.trim() || !Number.isFinite(petSizeNum) || petSizeNum <= 0 || !Number.isFinite(r)) {
+      return null;
+    }
+    return `Rs ${(petSizeNum * r).toLocaleString()}`;
   };
 
   const applied = line.status === "applied";
@@ -434,7 +474,11 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder="khali chhorein to na badle"
               className="text-base"
             />
-            {amountAt(saleRate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(saleRate)}</p>}
+            {perPetAt(saleRate) && (
+              <p className="mt-1 text-xs font-medium text-brand-700">
+                1 pet ({petSize} botal) single-single bech kar = {perPetAt(saleRate)}
+              </p>
+            )}
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana sale rate waisa hi rahega.
             </p>
@@ -456,10 +500,39 @@ function LineRow({ lang, line, products, billDone }: { lang: Lang; line: Line; p
               placeholder="khali chhorein to na badle"
               className="text-base"
             />
-            {amountAt(mrpRate) && <p className="mt-1 text-xs font-medium text-brand-700">= {amountAt(mrpRate)}</p>}
+            {perPetAt(mrpRate) && (
+              <p className="mt-1 text-xs font-medium text-brand-700">
+                1 pet ({petSize} botal) single-single bech kar = {perPetAt(mrpRate)}
+              </p>
+            )}
             <p className="mt-1 text-xs text-surface-500">
               Khali chhor dein to is cheez ka purana MRP rate waisa hi rahega.
             </p>
+          </div>
+
+          {/* Sale/MRP ka rate 1 SINGLE BOTAL ka hota hai, magar bill par
+              "kitna aaya" pet ki ginti mein hota hai -- pet ki qeemat
+              jaanne ke liye single rate ko is size se guna karna hai
+              (upar), qty se nahi. "1X12" jaisa likha ho to khud bhar
+              jata hai, warna haath se likh dein. */}
+          <div className="sm:col-span-3">
+            <Label htmlFor={`ps-${line.id}`}>1 pet mein kitni botal?</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                id={`ps-${line.id}`}
+                type="number"
+                min="1"
+                step="1"
+                value={petSize}
+                onChange={(e) => setPetSize(e.target.value)}
+                disabled={locked}
+                placeholder="jaise 12"
+                className="w-24 rounded-lg border border-surface-300 bg-white px-2.5 py-1.5 text-base dark:border-surface-600 dark:bg-surface-900"
+              />
+              <span className="text-xs text-surface-500">
+                Sirf Sale/MRP ki pet-qeemat dikhane ke liye — kahin save nahi hoti. Bill par &quot;1X12&quot; jaisa likha ho to khud bhar jata hai.
+              </span>
+            </div>
           </div>
         </div>
 
