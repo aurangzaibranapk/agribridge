@@ -137,6 +137,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
         description="Products, pricing, and specifications"
         actions={
           <div className="flex flex-wrap gap-2">
+            {isUnrestricted && (
+              <Link href="/admin/products/duplicates"><Button variant="secondary">Duplicate Products</Button></Link>
+            )}
             {banaSakta ? (
               <>
                 <Link href="/admin/products/import"><Button variant="secondary"><Upload className="h-4 w-4" />Import</Button></Link>
