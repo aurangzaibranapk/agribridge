@@ -55,6 +55,40 @@ export async function sendWhatsAppMessage(toPhoneNumber: string, text: string): 
 }
 
 /**
+ * Khata statement ki PDF -- document ki tarah, matn ki tarah nahi.
+ *
+ * `documentUrl` ek signed (waqti) link hai, Storage ka asal raasta
+ * nahi -- warna kisi ke paas link chala jaye to us ka khata hamesha
+ * ke liye khula reh jata.
+ */
+export async function sendWhatsAppDocument(
+  toPhoneNumber: string,
+  documentUrl: string,
+  filename: string,
+  caption: string
+): Promise<void> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!phoneNumberId || !accessToken) throw new Error("WhatsApp ki chaabi set nahi hai.");
+  const to = toWhatsAppNumber(toPhoneNumber);
+  if (!to) throw new Error(`Ye number WhatsApp ke qabil nahi: ${toPhoneNumber}`);
+  const res = await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "document",
+      document: { link: documentUrl, filename, caption },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`WhatsApp ne statement nahi li (${res.status}): ${body.slice(0, 300)}`);
+  }
+}
+
+/**
  * Manzoor shuda template par paighaam.
  *
  * Ye upar wale se ALAG kyun hai, aur is ka jawab OTP ne diya:

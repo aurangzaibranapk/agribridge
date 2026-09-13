@@ -14,6 +14,522 @@ export type Database = {
   }
   public: {
     Tables: {
+
+      payment_promises: {
+        Row: {
+          assigned_to: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          fulfilled_amount: number
+          id: string
+          notes: string | null
+          organization_id: string | null
+          party_id: string
+          party_type: string
+          promise_date: string
+          promised_amount: number
+          shop_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fulfilled_amount?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          party_id: string
+          party_type: string
+          promise_date: string
+          promised_amount: number
+          shop_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fulfilled_amount?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          party_id?: string
+          party_type?: string
+          promise_date?: string
+          promised_amount?: number
+          shop_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_promises_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "payment_promises_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payment_promises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+
+      payment_reminders: {
+        Row: {
+          branch_id: string | null
+          channel: string
+          created_at: string
+          delivery_status: string
+          due_date: string | null
+          external_message_id: string | null
+          failure_reason: string | null
+          id: string
+          khata_account_id: string | null
+          organization_id: string | null
+          outstanding_amount: number
+          overdue_amount: number
+          party_id: string
+          party_type: string
+          reminder_stage: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_by: string | null
+          shop_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          channel: string
+          created_at?: string
+          delivery_status?: string
+          due_date?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          organization_id?: string | null
+          outstanding_amount?: number
+          overdue_amount?: number
+          party_id: string
+          party_type: string
+          reminder_stage?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          channel?: string
+          created_at?: string
+          delivery_status?: string
+          due_date?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          organization_id?: string | null
+          outstanding_amount?: number
+          overdue_amount?: number
+          party_id?: string
+          party_type?: string
+          reminder_stage?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+
+      recovery_followups: {
+        Row: {
+          action_type: string
+          assigned_staff_id: string | null
+          attachment_url: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          followup_date: string
+          id: string
+          next_action_date: string | null
+          notes: string | null
+          organization_id: string | null
+          party_id: string
+          party_type: string
+          result: string | null
+          shop_id: string | null
+        }
+        Insert: {
+          action_type: string
+          assigned_staff_id?: string | null
+          attachment_url?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_date: string
+          id?: string
+          next_action_date?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          party_id: string
+          party_type: string
+          result?: string | null
+          shop_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          assigned_staff_id?: string | null
+          attachment_url?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          followup_date?: string
+          id?: string
+          next_action_date?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          party_id?: string
+          party_type?: string
+          result?: string | null
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_followups_assigned_staff_id_fkey"
+            columns: ["assigned_staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_followups_assigned_staff_id_fkey"
+            columns: ["assigned_staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "recovery_followups_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_followups_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "recovery_followups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_followups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+
+      reminder_settings: {
+        Row: {
+          auto_stop_on_payment: boolean
+          branch_id: string | null
+          created_at: string
+          daily_limit: number
+          default_language: string
+          duplicate_block_hours: number
+          escalation_rules: Json
+          id: string
+          organization_id: string | null
+          sending_hours: Json
+          shop_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_stop_on_payment?: boolean
+          branch_id?: string | null
+          created_at?: string
+          daily_limit?: number
+          default_language?: string
+          duplicate_block_hours?: number
+          escalation_rules?: Json
+          id?: string
+          organization_id?: string | null
+          sending_hours?: Json
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_stop_on_payment?: boolean
+          branch_id?: string | null
+          created_at?: string
+          daily_limit?: number
+          default_language?: string
+          duplicate_block_hours?: number
+          escalation_rules?: Json
+          id?: string
+          organization_id?: string | null
+          sending_hours?: Json
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+
+      reminder_templates: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          language: string
+          message_body: string
+          organization_id: string | null
+          reminder_stage: string
+          template_name: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          language?: string
+          message_body: string
+          organization_id?: string | null
+          reminder_stage?: string
+          template_name: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          language?: string
+          message_body?: string
+          organization_id?: string | null
+          reminder_stage?: string
+          template_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+
+      statement_share_history: {
+        Row: {
+          branch_id: string | null
+          channel: string
+          closing_balance: number
+          created_at: string
+          delivery_status: string
+          document_format: string
+          document_url: string | null
+          external_message_id: string | null
+          failure_reason: string | null
+          id: string
+          khata_account_id: string | null
+          opening_balance: number
+          organization_id: string | null
+          party_id: string
+          party_type: string
+          recipient: string | null
+          sent_at: string | null
+          sent_by: string | null
+          shop_id: string | null
+          statement_from_date: string | null
+          statement_to_date: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          channel: string
+          closing_balance?: number
+          created_at?: string
+          delivery_status?: string
+          document_format?: string
+          document_url?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          opening_balance?: number
+          organization_id?: string | null
+          party_id: string
+          party_type: string
+          recipient?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          statement_from_date?: string | null
+          statement_to_date?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          channel?: string
+          closing_balance?: number
+          created_at?: string
+          delivery_status?: string
+          document_format?: string
+          document_url?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          opening_balance?: number
+          organization_id?: string | null
+          party_id?: string
+          party_type?: string
+          recipient?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          statement_from_date?: string | null
+          statement_to_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statement_share_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "statement_share_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "statement_share_history_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "statement_share_history_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       access_conflict_events: {
         Row: {
           actor_id: string | null
