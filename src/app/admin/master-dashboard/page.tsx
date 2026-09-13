@@ -51,14 +51,21 @@ export default async function MasterDashboardPage() {
   const totalPayables = haalat.dena === null ? null : Math.abs(haalat.dena);
   const payablesBreakdown = haalat.denaRows.map((r) => ({ name: r.name, value: Math.abs(r.amount) }));
 
-  // Inventory breakdown (per category)
-  const { data: inventoryRows } = await supabase.from("inventory").select("quantity_on_hand, products(purchase_price, categories(name))");
+  // Inventory breakdown (per category) -- BATCH KI ASAL KHAREED QEEMAT PAR.
+  //
+  // Pehle products.purchase_price (CURRENT/aaj ki rate) se ginte the.
+  // Rate waqt ke sath badalti hai -- is liye purani khareedi hui qatarein
+  // NAYI rate par gin jati thin, aur ledger ka khata 1200 (jo har batch ki
+  // ASAL khareed qeemat par bana hai) se hamesha Rs 3,442 tak ka farq
+  // dikhata tha, bhale stock ki ginti (quantity) barabar ho. Ab har batch
+  // ki apni `unit_cost` istemal hoti hai -- yehi wo qeemat hai jo waqai
+  // ledger mein gayi thi, is liye dono adad ab milte hain.
+  const { data: batchRows } = await supabase.from("stock_batches").select("remaining_quantity, unit_cost, products(categories(name))");
   let totalInventoryValue = 0;
   const inventoryByCategory: Record<string, number> = {};
-  (inventoryRows ?? []).forEach((r: any) => {
+  (batchRows ?? []).forEach((r: any) => {
     const product = Array.isArray(r.products) ? r.products[0] : r.products;
-    const price = Number(product?.purchase_price ?? 0);
-    const value = Number(r.quantity_on_hand) * price;
+    const value = Number(r.remaining_quantity ?? 0) * Number(r.unit_cost ?? 0);
     totalInventoryValue += value;
     const category = Array.isArray(product?.categories) ? product?.categories[0]?.name : product?.categories?.name;
     const catName = category ?? "Uncategorized";
@@ -214,14 +221,14 @@ export default async function MasterDashboardPage() {
         <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
           <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
           <p className="mt-1 text-xs leading-relaxed">
-            Godam ki ginti (trade rate par): <strong>Rs {Math.round(totalInventoryValue).toLocaleString()}</strong> ·
+            Godam ki ginti (batch ki asal khareed qeemat par): <strong>Rs {Math.round(totalInventoryValue).toLocaleString()}</strong> ·
             Ledger ka khata 1200: <strong>Rs {Math.round(stockLedger ?? 0).toLocaleString()}</strong> ·
             Farq: <strong>Rs {Math.round(stockFarq).toLocaleString()}</strong>
           </p>
           <p className="mt-1 text-xs leading-relaxed">
-            Wajah: kharid receive hone par ledger mein entry banti hi nahi thi. Ab banti hai — magar jo kharid
-            us se pehle ho chuki, wo ledger mein abhi nahi gayi. Upar likha POSITION ledger se banta hai, is liye
-            us mein stock abhi poora shamil nahi.
+            Wajah: kisi product ka koi batch bina record hue reh gaya hai (quantity to inventory mein hai, magar
+            us ka batch/qeemat kahin darj nahi) — is liye us ka hissa upar wali ginti mein nahi aa raha. Inventory
+            &gt; wo product dekhein jahan Godam ki qatarein poori nahi lagtin.
           </p>
         </div>
       )}
