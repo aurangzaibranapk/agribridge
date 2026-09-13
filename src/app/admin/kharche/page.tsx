@@ -116,8 +116,8 @@ export default async function KharchePage({
         .order("name"),
       service.from("suppliers").select("id, name").order("name").limit(500),
       service.from("profiles").select("id, full_name").eq("is_active", true).order("full_name").limit(500),
-      service.from("farmers").select("id, full_name, phone_number").eq("is_deleted", false).order("full_name").limit(1000),
-      service.from("customers").select("id, name, phone_number").order("name").limit(1000),
+      service.from("farmers").select("id, full_name, phone_number, cnic").eq("is_deleted", false).order("full_name").limit(1000),
+      service.from("customers").select("id, name, phone_number, cnic").order("name").limit(1000),
     ]);
 
   const rows = ((rawRows ?? []) as any[]).map((r) => ({
@@ -317,10 +317,12 @@ export default async function KharchePage({
           farmer: (farmers ?? []).map((f: any) => ({
             id: f.id,
             naam: f.phone_number ? `${f.full_name} — ${f.phone_number}` : f.full_name,
+            search: [f.phone_number, f.cnic].filter(Boolean).join(" "),
           })),
           customer: (customers ?? []).map((c: any) => ({
             id: c.id,
             naam: c.phone_number ? `${c.name} — ${c.phone_number}` : c.name,
+            search: [c.phone_number, c.cnic].filter(Boolean).join(" "),
           })),
         }}
         naamMap={Object.fromEntries(naamMap)}

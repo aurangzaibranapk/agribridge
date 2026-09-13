@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { Check, X, Plus, Paperclip, Info, Wallet, ExternalLink, HardHat } from "lucide-react";
+import { Check, X, Plus, Paperclip, Info, Wallet, ExternalLink, HardHat, Search } from "lucide-react";
 import { kharchaDarj, kharchaManzoor, kharchaVerify, kharchaRadd, type ActionState } from "@/actions/kharche";
 import { mazdooriDarj, mazdooriManzoor, mazdooriRadd, bandeKaHaal } from "@/actions/mazdoori";
 import {
@@ -39,6 +39,129 @@ interface Qatar {
 interface Banda {
   id: string;
   naam: string;
+  /** Naam ke ilawa jis se dhoonda ja sake -- mobile number, CNIC. */
+  search?: string;
+}
+
+/**
+ * Raseed ki tasveer -- seedha camera se khinch kar, ya file/gallery se
+ * chun kar. Dono ka istemal ho to bhi form ek hi khana ("document")
+ * bhejta hai -- DataTransfer se chuni hui file usi mein daal di jati hai.
+ *
+ * Malik (13 September): "receive karte waqt agar bank/card/QR kuch bhi
+ * hua ho to wahan slip zaroor add karega -- upload ka bhi option ho aur
+ * camera se seedha capture ka bhi."
+ */
+function ReceiptUpload({ label }: { label: string }) {
+  const mainRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  function receiveFile(file: File | undefined) {
+    if (!file || !mainRef.current) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    mainRef.current.files = dt.files;
+    setFileName(file.name);
+  }
+
+  return (
+    <div>
+      <span className="mb-1 block text-sm font-medium text-surface-700 dark:text-surface-300">{label}</span>
+      <input ref={mainRef} name="document" type="file" accept="image/*,.pdf" className="hidden" />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => receiveFile(e.target.files?.[0])}
+      />
+      <input ref={galleryRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => receiveFile(e.target.files?.[0])} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => cameraRef.current?.click()}
+          className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+        >
+          📷 Camera se khinchein
+        </button>
+        <button
+          type="button"
+          onClick={() => galleryRef.current?.click()}
+          className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+        >
+          File chunein
+        </button>
+        {fileName && <span className="text-xs text-surface-500">{fileName}</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Naam/number/CNIC se dhoond kar chunna -- jaisa POS mein customer
+ * dhoonda jata hai.
+ *
+ * Malik (13 September): "yahan par farmer search karein jaisa POS mein
+ * hai -- mobile no, CNIC no, ya naam ke sath search ho, sirf 4 farmer
+ * aa rahe hon pehle." Khaali dhoondte waqt sirf pehle 4 dikhte hain --
+ * poori lambi fehrist ek sath scroll karna nahi paRta; likhte hi
+ * (naam/number/CNIC kisi mein bhi) poori fehrist mein se milaan aata hai.
+ */
+function BandaPicker({ options, name, required }: { options: Banda[]; name: string; required?: boolean }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options.slice(0, 4);
+    return options.filter((o) => `${o.naam} ${o.search ?? ""}`.toLowerCase().includes(q)).slice(0, 20);
+  }, [options, query]);
+
+  const selected = options.find((o) => o.id === selectedId);
+
+  return (
+    <div className="relative">
+      <input type="hidden" name={name} value={selectedId} required={required} />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-surface-400" />
+        <input
+          value={selected ? selected.naam : query}
+          onChange={(e) => {
+            setSelectedId("");
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Naam, mobile ya CNIC likh kar dhoondein..."
+          className="w-full rounded-lg border border-surface-200 py-2 pl-8 pr-3 text-sm dark:border-surface-700 dark:bg-surface-900"
+        />
+      </div>
+      {open && (
+        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-surface-200 bg-white shadow-lg dark:border-surface-700 dark:bg-surface-900">
+          {matches.length === 0 && <p className="px-3 py-2 text-xs text-surface-400">Koi milaan nahi mila.</p>}
+          {matches.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onMouseDown={() => {
+                setSelectedId(o.id);
+                setQuery("");
+                setOpen(false);
+              }}
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-50 dark:hover:bg-surface-800"
+            >
+              {o.naam}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface MazdooriQatar {
@@ -572,19 +695,7 @@ export function KharcheClient({
                   </label>
                   <label className="text-xs text-surface-500">
                     <span className="mb-1 block">{t("kh_naam_fehrist_se", lang)}</span>
-                    <select
-                      name="party_id"
-                      required
-                      defaultValue=""
-                      className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                    >
-                      <option value="">{t("kh_chunein_option", lang)}</option>
-                      {fehrist.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.naam}
-                        </option>
-                      ))}
-                    </select>
+                    <BandaPicker key={chaliQism} options={fehrist} name="party_id" required />
                   </label>
                 </div>
                 {/*
@@ -717,17 +828,15 @@ export function KharcheClient({
                 />
               </label>
 
-              <label className="sm:col-span-2 text-sm">
-                <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
-                  {t("kh_raseed_tasveer_marzi", lang)}
-                </span>
-                <input
-                  name="document"
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-                />
-              </label>
+              <div className="sm:col-span-2">
+                <ReceiptUpload label={t("kh_raseed_tasveer_marzi", lang)} />
+                {!isUnrestricted && (
+                  <p className="mt-1 text-[11px] leading-snug text-amber-600 dark:text-amber-400">
+                    Agar paisa cash hand ke ilawa kisi aur tareeqe se (bank/card/Easypaisa/JazzCash) hua hai, to Tafseel
+                    mein wo tareeqa likh dein, aur us payment ki slip/screenshot yahan lagayein.
+                  </p>
+                )}
+              </div>
 
               <div className="sm:col-span-2">
                 <Dabao>{t("kh_bhejein_manzoori", lang)}</Dabao>
