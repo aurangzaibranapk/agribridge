@@ -234,7 +234,29 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
 
   const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number, vendor_id").eq("id", bookingId).single();
   if (!booking) return { error: "Booking nahi mili." };
-  const remaining = Math.max(0, Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor));
+
+  // Vendor ka hissa kisan ne SEEDHA vendor ko de diya ho (163, "vendor
+  // collected") to wo hissa bhi ada ho chuka hai -- bhale is screen ne
+  // khud kabhi cash nahi diya. Ye check na ho to yehi hua (13 September,
+  // MB-2026-00008): vendor ne farmer se seedha le liya, aur do din baad
+  // isi purani screen se WOHI hissa dobara cash mein ada ho gaya, kyunke
+  // `amount_paid_to_vendor` (jo sirf ye screen khud badalti hai) ko us
+  // seedhi wasooli ka pata hi nahi tha.
+  const { data: collectedRows } = await supabase
+    .from("machinery_payments")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("method", "vendor_collected");
+  const vendorCollectedTotal = (collectedRows ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const vendorOwnShareCollected = Math.min(vendorCollectedTotal, Number(booking.vendor_payable ?? 0));
+
+  const remaining = Math.max(0, Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor) - vendorOwnShareCollected);
+
+  if (remaining <= 0 && vendorOwnShareCollected > 0) {
+    return {
+      error: `Is booking ${booking.booking_number} ka vendor hissa (Rs ${vendorOwnShareCollected.toLocaleString()}) kisan ne pehle hi seedha vendor ko de diya hai (vendor collected) — is se cash mein dobara adaigi nahi honi chahiye. Sirf advance dena ho to wo vendor ke apne khate se dein.`,
+    };
+  }
 
   // Is booking par jitna dena tha us se ZYADA bhi diya ja sakta hai.
   //
