@@ -44,6 +44,7 @@ const support: string[][] = [
   ["Blog", "/blog"],
   ["Gallery", "/gallery"],
   ["Privacy Policy", "/privacy-policy"],
+  ["Account Deletion", "/account-deletion"],
   ["Disclaimer", "/disclaimer"],
   ["Cookie Policy", "/cookie-policy"],
 ];

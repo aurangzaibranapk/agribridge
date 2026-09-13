@@ -1,0 +1,74 @@
+name: Mobile Real Testing APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type TESTING ONLY
+        required: true
+        type: string
+
+jobs:
+  testing-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse non-testing invocation
+        if: ${{ inputs.confirmation != 'TESTING ONLY' }}
+        run: |
+          echo "Confirmation must be TESTING ONLY"
+          exit 1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Validate Testing configuration
+        env:
+          SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.MOBILE_TEST_API_BASE_URL }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_KEY"
+          test -n "$API_BASE_URL"
+          case "$SUPABASE_URL" in https://*) ;; *) echo "Invalid Testing Supabase URL"; exit 1;; esac
+          case "$API_BASE_URL" in https://*) ;; *) echo "Invalid Testing API URL"; exit 1;; esac
+      - name: Generate Android project
+        run: flutter create --platforms=android --project-name agribridge --org pk.alranatraders .
+      - name: Configure optional Firebase
+        env:
+          FIREBASE_JSON_B64: ${{ secrets.MOBILE_FIREBASE_ANDROID_JSON_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_JSON_B64" ]; then
+            printf '%s' "$FIREBASE_JSON_B64" | base64 --decode > android/app/google-services.json
+            python3 tool/configure_firebase.py
+            echo "MOBILE_FIREBASE_ENABLED=true" >> "$GITHUB_ENV"
+          else
+            echo "MOBILE_FIREBASE_ENABLED=false" >> "$GITHUB_ENV"
+          fi
+      - name: Analyze and test
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build real Testing APK
+        env:
+          SUPABASE_URL: ${{ secrets.MOBILE_TEST_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.MOBILE_TEST_SUPABASE_ANON_KEY }}
+          API_BASE_URL: ${{ secrets.MOBILE_TEST_API_BASE_URL }}
+        run: |
+          flutter build apk --debug \
+            --dart-define=APP_ENV=testing \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_KEY" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=FIREBASE_MESSAGING_ENABLED="$MOBILE_FIREBASE_ENABLED"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-real-testing-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+
