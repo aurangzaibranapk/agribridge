@@ -14,7 +14,7 @@ export default async function AdminInventoryPage() {
     supabase
       .from("inventory")
       .select(
-        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, purchase_price, min_stock_threshold)"
+        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold)"
       )
       .order("quantity_on_hand", { ascending: true }),
     supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
@@ -54,6 +54,12 @@ export default async function AdminInventoryPage() {
       warehouse_name: warehouse?.name ?? "Unknown Warehouse",
       quantity_on_hand: Number(row.quantity_on_hand),
       purchase_price: Number(product?.purchase_price ?? 0),
+      // Sale/wholesale/credit (MRP) rate darj hi na ho to NULL rehta
+      // hai -- us qeemat ko sifar samajh kar value mein jorna galat
+      // hoga (CLAUDE.md: sifar aur "darj nahi" ek cheez nahi).
+      selling_price: product?.selling_price == null ? null : Number(product.selling_price),
+      wholesale_price: product?.wholesale_price == null ? null : Number(product.wholesale_price),
+      mrp_price: product?.mrp_price == null ? null : Number(product.mrp_price),
       min_stock_threshold: Number(product?.min_stock_threshold ?? 0),
     };
   });

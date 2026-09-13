@@ -5,14 +5,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { ChevronDown, CheckCircle2, Camera } from "lucide-react";
 import { updateFarmerProfile, confirmFarmerProfile, type FarmerProfileState } from "@/actions/farmer-profile";
 import { Button, Input, Label } from "@/components/ui/form";
+import { ImageCropField } from "@/components/ui/image-crop-field";
 import type { ProfileCompletion } from "@/lib/utils/farmer-profile";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FarmerProfileState = {};
-
-const fileInputClass =
-  "block w-full text-sm text-surface-500 file:mr-3 file:rounded-lg file:border-0 file:bg-surface-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-surface-900 hover:file:bg-surface-200 dark:file:bg-surface-800 dark:file:text-surface-100";
 
 export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; completion: ProfileCompletion; lang: Lang }) {
   const [state, formAction] = useFormState(updateFarmerProfile, initialState);
@@ -218,8 +216,14 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
         onToggle={() => setOpenSection(openSection === "documents" ? null : "documents")}
       >
         <div className="grid grid-cols-2 gap-4">
-          <DocumentField label={t("cnic_front", lang)} name="cnic_front_image" existingUrl={farmer.cnic_image_url} />
-          <DocumentField label={t("cnic_back", lang)} name="cnic_back_image" existingUrl={farmer.cnic_back_image_url} />
+          <div>
+            <Label>{t("cnic_front", lang)}</Label>
+            <ImageCropField label={t("cnic_front", lang)} name="cnic_front_image" existingUrl={farmer.cnic_image_url} aspect={1.586} />
+          </div>
+          <div>
+            <Label>{t("cnic_back", lang)}</Label>
+            <ImageCropField label={t("cnic_back", lang)} name="cnic_back_image" existingUrl={farmer.cnic_back_image_url} aspect={1.586} />
+          </div>
         </div>
       </AccordionSection>
 
@@ -371,18 +375,6 @@ function AccordionSection({
       <div className={open ? "border-t border-surface-100 px-4 py-4 dark:border-surface-800" : "hidden"}>
         {children}
       </div>
-    </div>
-  );
-}
-
-function DocumentField({ label, name, existingUrl }: { label: string; name: string; existingUrl: string | null }) {
-  return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
-      {existingUrl && (
-        <img src={existingUrl} alt={label} className="mb-2 h-16 w-16 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
-      )}
-      <input id={name} name={name} type="file" accept="image/*" className={fileInputClass} />
     </div>
   );
 }

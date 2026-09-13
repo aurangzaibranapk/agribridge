@@ -23,6 +23,9 @@ interface InventoryRow {
   warehouse_name: string;
   quantity_on_hand: number;
   purchase_price: number;
+  selling_price: number | null;
+  wholesale_price: number | null;
+  mrp_price: number | null;
   min_stock_threshold: number;
 }
 
@@ -37,25 +40,67 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
   const lang = useLang();
   const [adjustTarget, setAdjustTarget] = useState<InventoryRow | null>(null);
   const [transferTarget, setTransferTarget] = useState<InventoryRow | null>(null);
+  const [warehouseFilter, setWarehouseFilter] = useState("");
+
+  const filteredRows = useMemo(
+    () => (warehouseFilter ? rows.filter((r) => r.warehouse_id === warehouseFilter) : rows),
+    [rows, warehouseFilter]
+  );
 
   const totalValue = useMemo(
-    () => rows.reduce((sum, r) => sum + r.quantity_on_hand * r.purchase_price, 0),
-    [rows]
+    () => filteredRows.reduce((sum, r) => sum + r.quantity_on_hand * r.purchase_price, 0),
+    [filteredRows]
   );
   const lowStockRows = useMemo(
-    () => rows.filter((r) => r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold),
-    [rows]
+    () => filteredRows.filter((r) => r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold),
+    [filteredRows]
   );
+
+  // Har rate ke hisaab se qeemat -- jis cheez ka wo rate darj hi nahi,
+  // us ko sifar samajh kar jama mein nahi lete (CLAUDE.md: NULL aur
+  // sifar ek cheez nahi). Missing count alag se dikhaya jata hai.
+  const rateBreakdown = useMemo(() => {
+    const calc = (getRate: (r: InventoryRow) => number | null) => {
+      let value = 0;
+      let missing = 0;
+      for (const r of filteredRows) {
+        const rate = getRate(r);
+        if (rate == null) {
+          if (r.quantity_on_hand > 0) missing += 1;
+        } else {
+          value += rate * r.quantity_on_hand;
+        }
+      }
+      return { value, missing };
+    };
+    return {
+      trade: calc((r) => r.purchase_price),
+      sale: calc((r) => r.selling_price),
+      wholesale: calc((r) => r.wholesale_price),
+      credit: calc((r) => r.mrp_price),
+    };
+  }, [filteredRows]);
 
   return (
     <div>
+      <div className="mb-4 max-w-xs">
+        <Label htmlFor="warehouse-filter">{t("inv_filter_warehouse", lang)}</Label>
+        <Select id="warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}>
+          <option value="">{t("inv_all_warehouses", lang)}</option>
+          {warehouses.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.name}
+            </option>
+          ))}
+        </Select>
+      </div>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
           <div className="flex items-center gap-2 text-surface-500">
             <Package className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wide">{t("inv_stock_lines", lang)}</span>
           </div>
-          <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{rows.length}</p>
+          <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{filteredRows.length}</p>
         </Card>
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
           <div className="flex items-center gap-2 text-brand-600">
@@ -77,6 +122,33 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
         </Card>
       </div>
 
+      <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <h3 className="mb-3 font-display text-sm font-semibold text-surface-900 dark:text-white">{t("inv_value_by_rate", lang)}</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {(
+            [
+              { key: "trade", label: t("inv_trade_rate", lang) },
+              { key: "sale", label: t("inv_sale_rate", lang) },
+              { key: "wholesale", label: t("inv_wholesale_rate", lang) },
+              { key: "credit", label: t("inv_credit_rate", lang) },
+            ] as const
+          ).map(({ key, label }) => {
+            const { value, missing } = rateBreakdown[key];
+            return (
+              <div key={key} className="rounded-lg border border-surface-100 p-3 dark:border-surface-800">
+                <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{label}</p>
+                <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">Rs {value.toLocaleString()}</p>
+                {missing > 0 && (
+                  <p className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+                    {missing} {t("inv_rate_missing_note", lang)}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -91,7 +163,7 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {filteredRows.map((r) => {
               const isLow = r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold;
               return (
                 <tr key={r.id} className={`border-b border-surface-100 last:border-0 dark:border-surface-800 ${isLow ? "bg-red-50/50 dark:bg-red-950/10" : ""}`}>
@@ -131,7 +203,7 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
                 </tr>
               );
             })}
-            {rows.length === 0 && (
+            {filteredRows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-surface-400">
                   {t("inv_empty", lang)}

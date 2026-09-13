@@ -69,7 +69,7 @@ interface CartLine {
   unit_price: number;
 }
 
-type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata";
+type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata" | "waseela_card";
 const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "cash", label: "Cash" },
   { key: "bank_transfer", label: "Bank" },
@@ -78,6 +78,7 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "easypaisa", label: "Easypaisa" },
   { key: "qr", label: "QR" },
   { key: "khata", label: "Khata" },
+  { key: "waseela_card", label: "Waseela Card" },
 ];
 
 type CustomerMode = "walkin" | "regular" | "wholesale";
@@ -127,6 +128,7 @@ export function PosClient({
   inventory,
   groups = [],
   customers,
+  topCustomerIds = [],
   branchId = null,
   counterId = null,
   rateBaqiCount = 0,
@@ -137,6 +139,8 @@ export function PosClient({
   inventory: InventoryItem[];
   groups?: { name: string; count: number }[];
   customers: Customer[];
+  /** Sab se zyada khareedne wale, isi tarteeb mein -- search khali hone par yehi dikhte hain. */
+  topCustomerIds?: string[];
   branchId?: string | null;
   counterId?: string | null;
   rateBaqiCount?: number;
@@ -217,7 +221,15 @@ export function PosClient({
     const wantWholesale = custMode === "wholesale";
     const pool = customers.filter((c) => c.isWholesaleShop === wantWholesale);
     const q = custQuery.trim().toLowerCase();
-    if (!q) return pool.slice(0, 8);
+    if (!q) {
+      // Kuch search na ho to poori fehrist nahi -- sirf sab se zyada
+      // khareedne wale, taake roz ke gahak upar hi milen (12 September).
+      const byId = new Map(pool.map((c) => [c.id, c]));
+      const top = topCustomerIds.map((id) => byId.get(id)).filter((c): c is Customer => !!c);
+      // Abhi tak kisi ne kuch khareeda hi nahi (naya shop) -- khali
+      // dabba dikhane se behtar hai ke pehli chaar dikha dein.
+      return top.length > 0 ? top : pool.slice(0, 4);
+    }
     // CNIC/mobile dash ke sath ya bina likhe ja sakte hain -- dono taraf
     // se dash nikal kar milaya jata hai, taake "12345" aur "1-2345" ek hi
     // banda samjhe jayein.
@@ -231,7 +243,7 @@ export function PosClient({
           c.id.toLowerCase().startsWith(q)
       )
       .slice(0, 8);
-  }, [customers, custQuery, custMode]);
+  }, [customers, custQuery, custMode, topCustomerIds]);
 
   const total = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0),

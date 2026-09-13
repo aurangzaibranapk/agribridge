@@ -4,6 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendDeptMail } from "@/lib/mailer";
+import { requireAction } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
@@ -16,6 +17,9 @@ export interface ActionState {
 const SITE_URL = "https://alranatraders.pk";
 
 export async function createRentAgreement(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const branchId = String(formData.get("branch_id") ?? "");
@@ -162,6 +166,9 @@ export async function saveCompanySignature(_prev: ActionState, formData: FormDat
 }
 
 export async function uploadCompanyStamp(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const stamp = formData.get("stamp_image");
@@ -184,6 +191,9 @@ export async function uploadCompanyStamp(_prev: ActionState, formData: FormData)
 }
 
 export async function recordRentPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const agreementId = String(formData.get("agreement_id") ?? "");
   const month = Number(formData.get("payment_month") ?? 0);
@@ -221,6 +231,9 @@ export async function recordRentPayment(_prev: ActionState, formData: FormData):
 }
 
 export async function createShopBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "create");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const branchId = String(formData.get("branch_id") ?? "");
@@ -268,6 +281,9 @@ export async function createShopBill(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function markBillPaid(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const billId = String(formData.get("bill_id") ?? "");
   if (!billId) return { error: "Missing bill id." };

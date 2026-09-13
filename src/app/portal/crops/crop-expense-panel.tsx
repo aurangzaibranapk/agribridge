@@ -42,6 +42,8 @@ interface Expense {
 
 export function CropExpensePanel({
   cropHistoryId,
+  cropName,
+  farmName,
   expenses,
   areaSownAcres,
   isReadyToHarvest,
@@ -49,6 +51,8 @@ export function CropExpensePanel({
   expenseOptions,
 }: {
   cropHistoryId: string;
+  cropName: string;
+  farmName: string;
   expenses: Expense[];
   areaSownAcres: number | null;
   isReadyToHarvest: boolean;
@@ -109,6 +113,8 @@ export function CropExpensePanel({
       {showForm && (
         <ExpenseModal
           cropHistoryId={cropHistoryId}
+          cropName={cropName}
+          farmName={farmName}
           areaSownAcres={areaSownAcres}
           expenseOptions={expenseOptions}
           onClose={() => setShowForm(false)}
@@ -120,11 +126,15 @@ export function CropExpensePanel({
 
 function ExpenseModal({
   cropHistoryId,
+  cropName,
+  farmName,
   areaSownAcres,
   expenseOptions,
   onClose,
 }: {
   cropHistoryId: string;
+  cropName: string;
+  farmName: string;
   areaSownAcres: number | null;
   expenseOptions?: ExpenseOptions;
   onClose: () => void;
@@ -173,12 +183,19 @@ function ExpenseModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_add_expense", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
         </div>
+        {/* Ek kisan ke ek se zyada khet aur fasal ho sakte hain -- bina
+            ye dikhaye, kharcha ghalat fasal par lagne ka khatra rehta
+            hai, aur wo ghalti sirf report banate waqt nazar aati. */}
+        <p className="mb-3 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
+          {farmName} — {cropName}
+          {areaSownAcres ? ` — ${areaSownAcres.toFixed(1)} acre` : ""}
+        </p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("pm_added", lang)}</p>}
         <form action={formAction} className="space-y-3">

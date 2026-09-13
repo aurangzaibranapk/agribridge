@@ -268,6 +268,26 @@ export default async function PosPage() {
       });
     }
   }
+
+  // Search khali ho to poori (alphabetical) fehrist ki jagah sirf wo 4
+  // gahak jin ki kul khareedari (completed sales) sab se zyada hai --
+  // malik (12 September): "sirf 4 customer wo hon jin ki sab se zyada
+  // buying hai." Dealer ke apne gahak alag table (dealer_customers) mein
+  // hain, wahan ye hisaab nahi lagta.
+  let topCustomerIds: string[] = [];
+  if (!dealer) {
+    // `fn_top_customers_by_purchase` migration 392 ka hai; generated
+    // types abhi us se pehle ke hain. Types dobara banne par ye cast
+    // hat jayega.
+    const { data: topRows } = await (
+      supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: { customer_id: string; total_amount: number }[] | null }>
+    )("fn_top_customers_by_purchase", { p_limit: 4 });
+    topCustomerIds = (topRows ?? []).map((r) => r.customer_id);
+  }
+
   const inventory = (rawInventory ?? []).map((item: any) => ({
     id: item.id,
     product_id: item.product_id,
@@ -453,6 +473,7 @@ export default async function PosPage() {
         inventory={inventory}
         groups={groups}
         customers={rawCustomers ?? []}
+        topCustomerIds={topCustomerIds}
         branchId={branch?.id ?? null}
         counterId={activeCounterId}
         rateBaqiCount={rateBaqiCount}

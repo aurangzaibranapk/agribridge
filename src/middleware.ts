@@ -101,9 +101,19 @@ export async function middleware(request: NextRequest) {
       // system kahin bura hai. (11 September: Anwar Ul Hassan isi haal
       // mein tha -- role ka template tha, khud par apply nahi hua tha.)
       if (!rows || rows.length === 0) {
-        const ownPages = (profile.allowed_pages as string[] | null) ?? null;
+        // allowed_pages JSONB hai -- koi bhi shakl aa sakti hai (ek
+        // seedhi ghalti se `{}` bhi likha ja saka, array nahi, aur
+        // us se poora safha 500 par gir gaya, 11 September). Array
+        // hi asal jawab hai, kuch aur mile to "kabhi set nahi hua"
+        // maan lo -- crash se behtar.
+        const rawPages = profile.allowed_pages;
+        const ownPages = Array.isArray(rawPages) ? (rawPages as string[]) : null;
+        // NULL (kabhi set nahi) aur [] (jaan boojh kar zero) ek cheez
+        // nahi -- "Sab Access Zero Karein" ke baad bhi banda role ki
+        // default pages par gir jata tha kyunke [] aur null yahan barabar
+        // maane ja rahe the.
         let rolePages: string[] = [];
-        if (!ownPages || ownPages.length === 0) {
+        if (ownPages === null) {
           // Apna department AUR jo doosre diye gaye hon (193) -- sab ke
           // safhe jore jate hain. Sirf apna dekhna doosre department ko
           // bemaani kar deta.
@@ -115,7 +125,7 @@ export async function middleware(request: NextRequest) {
             ...new Set((rolePerm ?? []).flatMap((r) => (r.allowed_pages as string[] | null) ?? [])),
           ];
         }
-        allowed.push(...(ownPages && ownPages.length > 0 ? ownPages : rolePages));
+        allowed.push(...(ownPages !== null ? ownPages : rolePages));
       }
 
       // Sab se lamba milta hua raasta jeetta hai -- warna

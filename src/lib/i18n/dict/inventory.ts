@@ -32,6 +32,22 @@ export const inventoryDict = {
   inv_value: { en: "Value", rm: "Qeemat", ur: "قیمت" },
   inv_actions: { en: "Actions", rm: "Kaam", ur: "کام" },
   inv_low: { en: "Low", rm: "Kam", ur: "کم" },
+  inv_filter_warehouse: { en: "Warehouse", rm: "Godam chunein", ur: "گودام چنیں" },
+  inv_all_warehouses: { en: "All Warehouses", rm: "Sab Godam", ur: "سب گودام" },
+  inv_value_by_rate: {
+    en: "Stock value at each rate",
+    rm: "Har rate ke hisaab se stock ki qeemat",
+    ur: "ہر ریٹ کے حساب سے اسٹاک کی قیمت",
+  },
+  inv_trade_rate: { en: "Trade Rate (Cost)", rm: "Trade Rate (Lagat)", ur: "ٹریڈ ریٹ (لاگت)" },
+  inv_sale_rate: { en: "Sale Rate", rm: "Sale Rate", ur: "سیل ریٹ" },
+  inv_wholesale_rate: { en: "Wholesale Rate", rm: "Thok Rate", ur: "تھوک ریٹ" },
+  inv_credit_rate: { en: "Credit / Khata Rate (MRP)", rm: "Credit / Khata Rate (MRP)", ur: "کریڈٹ / کھاتہ ریٹ (MRP)" },
+  inv_rate_missing_note: {
+    en: "items have no rate set — not counted as zero, just left out of this total",
+    rm: "cheezon ka ye rate darj nahi -- unhein sifar nahi samjha gaya, bas is jama mein shamil nahi",
+    ur: "چیزوں کا یہ ریٹ درج نہیں — انہیں صفر نہیں سمجھا گیا، بس اس جمع میں شامل نہیں",
+  },
   // Receiving (265)
   inv_rc_title: { en: "Receiving", rm: "Receiving -- jo maal aana hai", ur: "ریسیونگ -- جو مال آنا ہے" },
   inv_rc_desc: {

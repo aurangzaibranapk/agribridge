@@ -43,13 +43,21 @@ interface ExistingProduct {
 }
 
 export function ProductForm({
-  companies, brands, categories, product, uiMode = "advanced", units = [], packSizes = [],
+  companies, brands, categories, product, uiMode = "advanced", units = [], packSizes = [], warehouses = [],
 }: {
   companies: { id: string; name: string }[]; brands: { id: string; name: string }[]; categories: { id: string; name: string; category_kind: string; default_min_stock: number | null }[];
   product?: ExistingProduct;
   /** Units ka master (273); khali ho to purani built-in fehrist. */
   units?: UnitRow[];
   packSizes?: PackSizeRow[];
+  /**
+   * Naya product kis dukan/godam ke liye hai (13 September). Pehle har
+   * naya product hamesha Central Warehouse mein chala jata tha -- chahe
+   * banda kisi bhi dukan ke liye maal soch raha ho -- aur phir "kuch
+   * warehouse mein hai kuch POS mein" wala confusion banta tha. Ab yahin
+   * chun lete hain.
+   */
+  warehouses?: { id: string; name: string; shopName: string | null }[];
   /** Simple = zarai/technical khane chhupe (E). Rok wahi rehti hai. */
   uiMode?: "simple" | "advanced";
 }) {
@@ -227,6 +235,23 @@ export function ProductForm({
           }}
         />
       </div>
+
+      {!isEditMode && warehouses.length > 0 && (
+        <div>
+          <Label htmlFor="warehouse_id">Ye maal kis dukan/godam ke liye hai?</Label>
+          <Select id="warehouse_id" name="warehouse_id" defaultValue="">
+            <option value="">- Central Warehouse (default) -</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.shopName ? `${w.shopName} — ${w.name}` : w.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-surface-500">
+            Shuru mein stock sifar hi rehta hai (maal "Maal Andar" se aayega) — ye sirf tay karta hai ke product kis dukan ke godam ke naam bane, taake wo POS par sahi jagah nazar aaye.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         <div>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { requireAction } from "@/lib/access/guard";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { nextExpenseNumber } from "@/lib/expense-number";
 import { postJournal } from "@/lib/ledger/post";
 import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules";
@@ -204,6 +205,25 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
   }
 
   const service = createServiceClient();
+
+  /**
+   * Staff sirf apni "cash hand" (nagad) se kharcha/bill bhar sakta hai --
+   * bank, wallet ya card sirf admin/owner ke liye (malik, 13 September:
+   * "wo kisi bank se kisi QR code kisi card se kisi ko payment ya bill
+   * nahi bhar sakta ... admin ya owner ko allow hai wo bank se, QR se,
+   * card se, kisi bhi payment method se ... kharcha bill amount udhaar
+   * kuch bhi dein").
+   *
+   * UI mein dropdown pehle hi sirf "cash" wale khate dikhata hai
+   * (kharche-client.tsx) -- ye yahan dobara check hai taake koi seedha
+   * request bana kar us rok ko na toR sake.
+   */
+  if (!UNRESTRICTED_ROLES.includes(who.role)) {
+    const { data: account } = await service.from("finance_accounts").select("account_type").eq("id", accountId).maybeSingle();
+    if (account?.account_type !== "cash") {
+      return { error: "Aap sirf cash hand (nagad) se kharcha/bill darj kar sakte hain — bank, wallet ya card sirf admin/owner istemal kar sakte hain." };
+    }
+  }
 
   let documentUrl: string | null = null;
   const doc = formData.get("document");

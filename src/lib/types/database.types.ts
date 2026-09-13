@@ -6967,6 +6967,91 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_import_drafts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          imported_customer_id: string | null
+          name: string
+          note: string | null
+          opening_balance: number
+          phone_number: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          imported_customer_id?: string | null
+          name: string
+          note?: string | null
+          opening_balance?: number
+          phone_number?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          imported_customer_id?: string | null
+          name?: string
+          note?: string | null
+          opening_balance?: number
+          phone_number?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_import_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_import_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "customer_import_drafts_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_import_drafts_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "customer_import_drafts_imported_customer_id_fkey"
+            columns: ["imported_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_import_drafts_imported_customer_id_fkey"
+            columns: ["imported_customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_ledger: {
         Row: {
           balance_after: number
@@ -7102,6 +7187,104 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cash_close_missing"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "customers_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
           },
           {
             foreignKeyName: "customers_organization_id_fkey"
@@ -25251,11 +25434,11 @@ export type Database = {
           line_no: number | null
           line_total: number | null
           match_source: string | null
+          mrp_rate: number | null
           pack_size: string | null
           page_no: number | null
           problem: string | null
           product_id: string | null
-          mrp_rate: number | null
           qty: number | null
           rate: number | null
           raw_text: string | null
@@ -25275,11 +25458,11 @@ export type Database = {
           line_no?: number | null
           line_total?: number | null
           match_source?: string | null
+          mrp_rate?: number | null
           pack_size?: string | null
           page_no?: number | null
           problem?: string | null
           product_id?: string | null
-          mrp_rate?: number | null
           qty?: number | null
           rate?: number | null
           raw_text?: string | null
@@ -25299,11 +25482,11 @@ export type Database = {
           line_no?: number | null
           line_total?: number | null
           match_source?: string | null
+          mrp_rate?: number | null
           pack_size?: string | null
           page_no?: number | null
           problem?: string | null
           product_id?: string | null
-          mrp_rate?: number | null
           qty?: number | null
           rate?: number | null
           raw_text?: string | null
@@ -31969,6 +32152,13 @@ export type Database = {
       fn_sync_vendor_settlement: {
         Args: { p_payment_id: string }
         Returns: undefined
+      }
+      fn_top_customers_by_purchase: {
+        Args: { p_limit?: number }
+        Returns: {
+          customer_id: string
+          total_amount: number
+        }[]
       }
       fn_unit_code_for_text: { Args: { p_text: string }; Returns: string }
       fn_verify_farmer_otp: {

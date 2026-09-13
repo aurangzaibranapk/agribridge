@@ -1,14 +1,22 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { CrmClient } from "@/app/admin/crm/crm-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCrmPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
 
   const [
     { data: customers },
@@ -28,7 +36,17 @@ export default async function AdminCrmPage() {
 
   return (
     <div>
-      <PageHeader title={t("cr_title", lang)} description="Customers, Suppliers, Companies, and Dealers in one place" />
+      <PageHeader
+        title={t("cr_title", lang)}
+        description="Customers, Suppliers, Companies, and Dealers in one place"
+        actions={
+          sabKuchWala ? (
+            <Link href="/admin/crm/import" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">
+              Purane Customers Import
+            </Link>
+          ) : undefined
+        }
+      />
       <CrmClient
         customers={(customers ?? []).map((c) => ({
           ...c,

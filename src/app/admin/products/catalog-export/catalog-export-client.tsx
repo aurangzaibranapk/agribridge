@@ -143,36 +143,86 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
     URL.revokeObjectURL(url);
   }
   async function handleDownloadPdf() {
-    const { default: jsPDF } = await import("jspdf");
-    await import("jspdf-autotable");
-    const doc = new (jsPDF as any)({ orientation: "landscape" });
-    const title = `Product Catalog${titleSuffix ? ` - ${titleSuffix}` : ""}`;
-    doc.setFontSize(13);
-    doc.text(title, 14, 12);
-    doc.setFontSize(9);
-    doc.text(`Total Products: ${filtered.length}`, 14, 18);
+    // jsPDF ka Node build (jspdf-autotable ke zariye) canvg/@babel-runtime
+    // khींchta hai jo har machine par sahi install nahi hota (11
+    // September, cPanel build par "Module not found" -- deploy atak
+    // gaya). pdf-lib is project mein wallet statement par pehle se
+    // chalta hai, koi aisi dependency nahi -- isi ka tareeqa yahan bhi.
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
 
     const visibleFields = FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key));
-    const head = [["Sr#", "Product", ...visibleFields.map((f) => f.label), ...(includeCountColumns ? ["Actual Stock", "Farq"] : [])]];
-    const body = filtered.map((p, i) => {
+    const cols: { label: string; width: number }[] = [
+      { label: "Sr#", width: 24 },
+      { label: "Product", width: 130 },
+      ...visibleFields.map((f) => ({ label: f.label, width: 70 })),
+      ...(includeCountColumns ? [{ label: "Actual Stock", width: 60 }, { label: "Farq", width: 50 }] : []),
+    ];
+    const pageWidth = Math.max(595, 40 + cols.reduce((s, c) => s + c.width, 0));
+    const pageHeight = 842;
+    const marginX = 20;
+    let page = doc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - 30;
+    const title = `Product Catalog${titleSuffix ? ` - ${titleSuffix}` : ""}`;
+
+    function drawHeaderRow() {
+      let x = marginX;
+      for (const c of cols) {
+        page.drawText(c.label, { x, y, size: 8, font: boldFont, color: rgb(1, 1, 1) });
+        x += c.width;
+      }
+      y -= 4;
+      page.drawLine({ start: { x: marginX, y }, end: { x: pageWidth - marginX, y }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
+      y -= 12;
+    }
+
+    function drawPageTop() {
+      y = pageHeight - 30;
+      page.drawText(title, { x: marginX, y, size: 13, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+      y -= 16;
+      page.drawText(`Total Products: ${filtered.length}`, { x: marginX, y, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+      y -= 14;
+      // Header row ki hari patti.
+      let x = marginX - 2;
+      page.drawRectangle({ x, y: y - 4, width: pageWidth - 2 * marginX + 4, height: 14, color: rgb(0.16, 0.47, 0.2) });
+      drawHeaderRow();
+    }
+
+    drawPageTop();
+
+    for (let i = 0; i < filtered.length; i++) {
+      if (y < 40) {
+        page = doc.addPage([pageWidth, pageHeight]);
+        drawPageTop();
+      }
+      const p = filtered[i];
       const diff = diffFor(p);
-      return [
+      const values = [
         String(i + 1),
         p.name,
         ...visibleFields.map((f) => formatValue(p, f.key)),
         ...(includeCountColumns ? [actualStock[p.id] ?? "", diff === null ? "" : String(diff)] : []),
       ];
-    });
+      let x = marginX;
+      for (let c = 0; c < cols.length; c++) {
+        const maxChars = Math.floor(cols[c].width / 4.2);
+        const text = values[c].length > maxChars ? values[c].slice(0, maxChars - 1) + "…" : values[c];
+        page.drawText(text, { x, y, size: 7.5, font, color: rgb(0.15, 0.15, 0.15) });
+        x += cols[c].width;
+      }
+      y -= 13;
+    }
 
-    (doc as any).autoTable({
-      head,
-      body,
-      startY: 22,
-      styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 120, 50], textColor: 255, fontStyle: "bold" },
-    });
-
-    doc.save(`product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.pdf`);
+    const bytes = await doc.save();
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
   function handleWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(buildText())}`, "_blank");

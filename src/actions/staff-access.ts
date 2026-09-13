@@ -384,6 +384,18 @@ export async function clearAllStaffAccess(_prev: ActionState, formData: FormData
     .eq("profile_id", profileId);
   if (accessError) return { error: accessError.message };
 
+  // Purana raasta (allowed_pages) bhi zero -- warna naye system mein
+  // sab hata dene ke baad bhi banda usi purani fehrist se andar aata
+  // rehta hai (11 September: Anwar ka access zero kiya gaya, magar POS
+  // waise ka waisa khula raha -- us ka asal access yahin se aa raha
+  // tha). Khaali ARRAY [], NULL nahi -- warna middleware/nav ye samajh
+  // kar role ki default pages par gir jate ke "kabhi set hi nahi hua".
+  const { error: pagesError } = await service
+    .from("profiles")
+    .update({ allowed_pages: [] })
+    .eq("id", profileId);
+  if (pagesError) return { error: pagesError.message };
+
   const { error: productError } = await service
     .from("staff_product_permissions")
     .upsert(

@@ -185,6 +185,7 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
             <option value="cash">{t("c_cash", lang)}</option>
             <option value="bank_transfer">{t("c_bank_transfer", lang)}</option>
             <option value="cheque">{t("c_cheque", lang)}</option>
+            <option value="waseela_card">Waseela Card</option>
           </select>
           <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div>

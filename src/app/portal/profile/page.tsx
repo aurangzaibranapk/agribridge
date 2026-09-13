@@ -30,7 +30,11 @@ export default async function FarmerProfilePage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">← {t("back_to_dashboard", lang)}</Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("complete_your_profile", lang)}</h1>
+      {/* Sidebar mein "My Profile" likha hai -- yahan hamesha "Complete
+          Your Profile" aata tha, chahe profile poori ho chuki ho. Naam
+          consistent rakha, "complete karein" wala paighaam neeche wale
+          badge mein pehle se hai (malik, 11 September). */}
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("nav_profile", lang)}</h1>
       <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-900">
         <span className="text-sm text-surface-600">{completion.percent}% {t("percent_complete", lang)}</span>
         <div className="ml-3 h-2 flex-1 overflow-hidden rounded-full bg-surface-200">

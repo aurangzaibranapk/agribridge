@@ -138,6 +138,7 @@ export function PaymentForm({
               <option value="bank">{t("mc_bank", lang)}</option>
               <option value="wallet">{t("mc_wallet", lang)}</option>
               <option value="khata">{t("mc_khata_credit", lang)}</option>
+              <option value="waseela_card">Waseela Card</option>
               <option value="vendor_collected">{t("mc_paid_to_vendor", lang)}</option>
             </Select>
           </div>
