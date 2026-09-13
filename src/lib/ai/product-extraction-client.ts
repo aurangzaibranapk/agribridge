@@ -1,4 +1,5 @@
-﻿// Gemini-powered product-detail extraction from a photo. Reads the
+﻿import { geminiApiKey } from "@/lib/ai/gemini-key";
+// Gemini-powered product-detail extraction from a photo. Reads the
 // product label/packaging and returns structured fields to pre-fill
 // the manual entry form - AI assists the form, it doesn't replace it.
 export interface ExtractedProductInfo {
@@ -13,7 +14,7 @@ export interface ExtractedProductInfo {
   safetyInformation?: string;
 }
 export async function extractProductInfoFromImage(imageUrl: string): Promise<ExtractedProductInfo | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   if (!apiKey) {
     return null;
   }

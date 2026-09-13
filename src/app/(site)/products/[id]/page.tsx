@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { Package, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: product } = await supabase
     .from("products")
@@ -46,42 +49,41 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
           </span>
 
           <dl className="mt-6 space-y-3 text-sm">
-            {product.pack_size && <Row label="Pack Size" value={product.pack_size} />}
-            {product.unit && <Row label="Unit" value={product.unit} />}
-            {product.active_ingredient && <Row label="Active Ingredient" value={product.active_ingredient} />}
-            {product.composition && <Row label="Composition" value={product.composition} />}
-            {product.dose && <Row label="Dosage" value={product.dose} />}
-            {product.expiry_date && product.show_expiry_to_customer && <Row label="Best Before" value={new Date(product.expiry_date).toLocaleDateString("en-PK", { year: "numeric", month: "long" })} />}
+            {product.pack_size && <Row label={t("sp_pack_size", lang)} value={product.pack_size} />}
+            {product.unit && <Row label={t("sp_unit", lang)} value={product.unit} />}
+            {product.active_ingredient && <Row label={t("sp_active_ingredient", lang)} value={product.active_ingredient} />}
+            {product.composition && <Row label={t("sp_composition", lang)} value={product.composition} />}
+            {product.dose && <Row label={t("sp_dosage", lang)} value={product.dose} />}
+            {product.expiry_date && product.show_expiry_to_customer && <Row label={t("sp_best_before", lang)} value={new Date(product.expiry_date).toLocaleDateString("en-PK", { year: "numeric", month: "long" })} />}
           </dl>
 
           {product.usage_instructions && (
             <div className="mt-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-surface-400 dark:text-surface-500">Usage Instructions</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-surface-400 dark:text-surface-500">{t("sp_usage", lang)}</p>
               <p className="mt-1 text-sm text-surface-700 dark:text-surface-300">{product.usage_instructions}</p>
             </div>
           )}
           {product.safety_information && (
             <div className="mt-4 rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20">
-              <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">Safety Information</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">{t("sp_safety", lang)}</p>
               <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">{product.safety_information}</p>
             </div>
           )}
 
           {product.brochure_pdf_url && (
             <a href={product.brochure_pdf_url} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-lg border border-surface-200 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800">
-              <FileDown className="h-4 w-4" /> Download Brochure (PDF)
-            </a>
+              <FileDown className="h-4 w-4" />{t("sp_brochure", lang)}</a>
           )}
 
           <Link href="/contact" className="mt-6 block">
-            <span className="inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700">Order This Product</span>
+            <span className="inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700">{t("sp_order_this", lang)}</span>
           </Link>
         </div>
       </div>
 
       {related && related.length > 0 && (
         <div className="mt-16 border-t border-surface-200 pt-8 dark:border-surface-800">
-          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">Related Products</h2>
+          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">{t("sp_related_products", lang)}</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {related.map((r) => (
               <Link key={r.id} href={`/products/${r.id}`} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">

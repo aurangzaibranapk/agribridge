@@ -1,6 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postJournal } from "@/lib/ledger/post";
+import { postFarmerLedger } from "@/lib/farmer-ledger";
+import { postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -24,20 +27,54 @@ export async function manualWalletAdjustment(_prev: ActionState, formData: FormD
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("wallet_transactions").insert({
-    wallet_id: walletId,
-    type,
-    direction,
-    amount,
-    balance_after: 0,
-    reference_type: "manual",
-    notes,
-    created_by: user?.id ?? null,
-  });
+  const { data: row, error } = await supabase
+    .from("wallet_transactions")
+    .insert({
+      wallet_id: walletId,
+      type: type as "manual_topup" | "withdrawal" | "manual_adjustment",
+      direction,
+      amount,
+      balance_after: 0,
+      reference_type: "manual",
+      notes,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
 
+  const { data: wallet } = await supabase
+    .from("wallets")
+    .select("owner_type, owner_id")
+    .eq("id", walletId)
+    .maybeSingle();
+
+  // Topup aur withdrawal mein paisa cash se aata jata hai -- wo maloom
+  // hai. "Manual adjustment" ka matlab hi ye hai ke wajah likhi nahi
+  // gayi, is liye us ki doosri taraf Suspense hai. Use kisi kaam ke khate
+  // mein daal dena hisaab ko theek dikha deta hai jab ke wo theek nahi.
+  const against =
+    type === "manual_topup" || type === "withdrawal" ? ACC.cash : ACC.suspense;
+
+  if (wallet?.owner_id) {
+    const posted = await postWalletMovement({
+      ownerType: wallet.owner_type,
+      ownerId: wallet.owner_id,
+      amount,
+      direction,
+      against,
+      description: notes?.trim() || `Wallet ${direction} — Rs ${amount.toLocaleString()}`,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "wallet_transactions", rowId: row.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Wallet update hua magar ledger mein nahi gaya: ${posted.error}` };
+  }
+
   revalidatePath("/admin/wallets");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 
@@ -68,18 +105,38 @@ export async function markDealerPayoutPaid(_prev: ActionState, formData: FormDat
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error: txnError } = await supabase.from("wallet_transactions").insert({
-    wallet_id: wallet.id,
-    type: "commission_credit",
-    direction: "credit",
-    amount: payout.amount,
-    balance_after: 0,
-    reference_type: "dealer_payout",
-    reference_id: payout.id,
-    created_by: user?.id ?? null,
-  });
+  const { data: txnRow, error: txnError } = await supabase
+    .from("wallet_transactions")
+    .insert({
+      wallet_id: wallet.id,
+      type: "commission_credit",
+      direction: "credit",
+      amount: payout.amount,
+      balance_after: 0,
+      reference_type: "dealer_payout",
+      reference_id: payout.id,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
   if (txnError) return { error: txnError.message };
+
+  if (txnRow?.id) {
+    const posted = await postWalletMovement({
+      ownerType: "dealer",
+      ownerId: payout.dealer_id,
+      amount: Number(payout.amount),
+      direction: "credit",
+      against: ACC.otherExpense,
+      description: `Dealer commission — Rs ${Number(payout.amount).toLocaleString()}`,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "wallet_transactions", rowId: txnRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Payout paid hua magar ledger mein nahi gaya: ${posted.error}` };
+  }
 
   const { error: statusError } = await supabase
     .from("dealer_payouts")
@@ -136,31 +193,78 @@ export async function markFarmerPayoutPaid(_prev: ActionState, formData: FormDat
   const deduction = Math.min(outstandingCredit, payoutAmount);
   const remainderToWallet = payoutAmount - deduction;
 
+  const claims: Array<{ table: string; rowId: string }> = [];
+
   if (deduction > 0) {
-    const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
-      farmer_id: payout.farmer_id,
-      source_type: "produce_repayment",
-      ledger_type: "credit",
+    const credit = await postFarmerLedger({
+      farmerId: payout.farmer_id,
+      sourceType: "produce_repayment",
+      ledgerType: "credit",
       amount: deduction,
-      reference_id: payout.id,
+      referenceId: payout.id,
       notes: "Auto-deducted from produce sale payout",
-      created_by: user?.id ?? null,
+      createdBy: user?.id ?? null,
     });
-    if (creditError) return { error: creditError.message };
+    if (credit.error) return { error: credit.error };
+    if (credit.id) claims.push({ table: "farmer_credit_ledger", rowId: credit.id });
   }
 
   if (remainderToWallet > 0) {
-    const { error: txnError } = await supabase.from("wallet_transactions").insert({
-      wallet_id: wallet.id,
-      type: "commission_credit",
-      direction: "credit",
-      amount: remainderToWallet,
-      balance_after: 0,
-      reference_type: "farmer_produce_payout",
-      reference_id: payout.id,
-      created_by: user?.id ?? null,
-    });
+    const { data: txnRow, error: txnError } = await supabase
+      .from("wallet_transactions")
+      .insert({
+        wallet_id: wallet.id,
+        type: "commission_credit",
+        direction: "credit",
+        amount: remainderToWallet,
+        balance_after: 0,
+        reference_type: "farmer_produce_payout",
+        reference_id: payout.id,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
     if (txnError) return { error: txnError.message };
+    if (txnRow?.id) claims.push({ table: "wallet_transactions", rowId: txnRow.id });
+  }
+
+  // Fasal ki qeemat EK hai, magar wo do hisson mein jati hai: pehle
+  // purana udhaar kata, baqi wallet mein. Is liye entry bhi EK hai jis
+  // ki teen qataren hain -- ek kharcha, do jagah adaigi. Do alag entries
+  // banayein to fasal ki lagat do dafa gin li jayegi.
+  const payoutLines = [
+    { account: ACC.grainPurchase, debit: payoutAmount, memo: "Fasal ki khareed" },
+  ] as Array<{ account: string; debit?: number; credit?: number; partyType?: string | null; partyId?: string | null; memo?: string | null }>;
+
+  if (deduction > 0) {
+    payoutLines.push({
+      account: ACC.farmerDue,
+      credit: deduction,
+      partyType: "farmer",
+      partyId: payout.farmer_id,
+      memo: "Purana udhaar kata",
+    });
+  }
+  if (remainderToWallet > 0) {
+    payoutLines.push({
+      account: ACC.walletPayable,
+      credit: remainderToWallet,
+      partyType: "farmer",
+      partyId: payout.farmer_id,
+      memo: "Wallet mein daala",
+    });
+  }
+
+  if (payoutLines.length > 1) {
+    const posted = await postJournal({
+      description: `Fasal ki adaigi — Rs ${payoutAmount.toLocaleString()}`,
+      sourceModule: "farmer_payout",
+      sourceId: payout.id,
+      createdBy: user?.id ?? null,
+      claims,
+      lines: payoutLines,
+    });
+    if ("error" in posted) return { error: `Payout hua magar ledger mein nahi gaya: ${posted.error}` };
   }
 
   const { error: statusError } = await supabase
@@ -172,5 +276,6 @@ export async function markFarmerPayoutPaid(_prev: ActionState, formData: FormDat
 
   revalidatePath("/admin/payouts");
   revalidatePath("/admin/farmer-credit");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }

@@ -1,21 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
+import Link from "next/link";
 import { CreditRequestActions } from "@/app/admin/credit-requests/credit-request-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCreditRequestsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawRequests } = await supabase
     .from("credit_requests")
-    .select("id, category, quantity, mrp_rate, base_amount, margin_percentage, total_amount, status, created_at, farmers(full_name, farmer_code), products(name)")
+    .select("id, farmer_id, category, quantity, mrp_rate, base_amount, margin_percentage, total_amount, status, created_at, farmers(full_name, farmer_code), products(name)")
     .order("created_at", { ascending: false })
     .limit(100);
 
   const requests = (rawRequests ?? []).map((r: any) => ({
     id: r.id,
+    farmerId: r.farmer_id,
     category: r.category,
     quantity: Number(r.quantity),
     baseAmount: Number(r.base_amount),
@@ -36,28 +41,34 @@ export default async function AdminCreditRequestsPage() {
 
   return (
     <div>
-      <PageHeader title="Credit Requests" description="Seed/Fertilizer/Pesticide credit requests from farmers, priced at MRP" />
+      <PageHeader title={t("crq_title", lang)} description="Seed/Fertilizer/Pesticide credit requests from farmers, priced at MRP" />
       {requests.length === 0 ? (
-        <EmptyState title="No credit requests yet" />
+        <EmptyState title={t("crq_none_yet", lang)} />
       ) : (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Farmer</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Category</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Product</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Qty</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Base</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Total</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Action</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_category", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_product", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("crq_base", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_action", lang)}</th>
               </tr>
             </thead>
             <tbody>
               {requests.map((r) => (
                 <tr key={r.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                  <td className="px-4 py-3 text-surface-700 dark:text-surface-300">{r.farmerName} ({r.farmerCode})</td>
+                  <td className="px-4 py-3 text-surface-700 dark:text-surface-300">
+                    {r.farmerName} ({r.farmerCode})
+                    {/* Manzoor hote hi ye Farmer Credit ke usi khate mein jati hai (party_type='farmer') — sirf raasta. */}
+                    <Link href={`/admin/khata/banda/farmer/${r.farmerId}`} className="block text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
+                      Poora khata
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 capitalize text-surface-600 dark:text-surface-400">{r.category}</td>
                   <td className="px-4 py-3 text-surface-700 dark:text-surface-300">{r.productName}</td>
                   <td className="px-4 py-3 text-right text-surface-600 dark:text-surface-400">{r.quantity}</td>

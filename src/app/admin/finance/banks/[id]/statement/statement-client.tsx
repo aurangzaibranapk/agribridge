@@ -1,12 +1,16 @@
 "use client";
 import { Printer, Download, Mail, MessageCircle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Transaction {
   id: string;
-  created_at: string;
+  /** Karobar ki tareekh (transaction_date), na ke jab entry likhi gayi. */
+  date: string;
   description: string;
   amount: number;
-  type: string;
+  /** Khate mein paisa aaya (income ya transfer_in), warna gaya. */
+  isCredit: boolean;
   runningBalance: number;
 }
 
@@ -23,6 +27,7 @@ interface Props {
 }
 
 export function StatementClient(props: Props) {
+  const lang = useLang();
   function statementText() {
     const lines = [
       `${props.bankName} - Bank Statement`,
@@ -33,7 +38,7 @@ export function StatementClient(props: Props) {
       "",
       ...props.transactions.map(
         (t) =>
-          `${new Date(t.created_at).toLocaleDateString()} | ${t.description} | ${t.type === "income" ? "+" : "-"}Rs ${t.amount.toLocaleString()} | Balance: Rs ${t.runningBalance.toLocaleString()}`
+          `${t.date} | ${t.description} | ${t.isCredit ? "+" : "-"}Rs ${t.amount.toLocaleString()} | Balance: Rs ${t.runningBalance.toLocaleString()}`
       ),
       "",
       `Total Credit: Rs ${props.totalCredit.toLocaleString()}`,
@@ -68,7 +73,7 @@ export function StatementClient(props: Props) {
         <form className="flex items-center gap-2">
           <input type="date" name="start" defaultValue={props.startDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="date" name="end" defaultValue={props.endDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">View</button>
+          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_view", lang)}</button>
         </form>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
@@ -87,15 +92,15 @@ export function StatementClient(props: Props) {
 
         <div className="mb-4 grid grid-cols-3 gap-3 text-center">
           <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-            <p className="text-xs text-surface-400">Total Credit</p>
+            <p className="text-xs text-surface-400">{t("c_total_credit", lang)}</p>
             <p className="font-semibold text-green-600">Rs {props.totalCredit.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-            <p className="text-xs text-surface-400">Total Debit</p>
+            <p className="text-xs text-surface-400">{t("c_total_debit", lang)}</p>
             <p className="font-semibold text-red-600">Rs {props.totalDebit.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
-            <p className="text-xs text-brand-500">Closing Balance</p>
+            <p className="text-xs text-brand-500">{t("c_closing_balance", lang)}</p>
             <p className="font-semibold text-brand-700 dark:text-brand-300">Rs {props.closingBalance.toLocaleString()}</p>
           </div>
         </div>
@@ -103,25 +108,25 @@ export function StatementClient(props: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left dark:border-surface-800">
-              <th className="px-2 py-2 font-medium text-surface-500">Date</th>
-              <th className="px-2 py-2 font-medium text-surface-500">Description</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">Amount</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">Balance</th>
+              <th className="px-2 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="px-2 py-2 font-medium text-surface-500">{t("c_description", lang)}</th>
+              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
+              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
             </tr>
           </thead>
           <tbody>
             {props.transactions.map((t) => (
               <tr key={t.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
-                <td className="px-2 py-1.5 text-surface-500">{new Date(t.created_at).toLocaleDateString()}</td>
+                <td className="px-2 py-1.5 text-surface-500">{t.date}</td>
                 <td className="px-2 py-1.5 text-surface-700 dark:text-surface-300">{t.description}</td>
-                <td className={`px-2 py-1.5 text-right font-medium ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                  {t.type === "income" ? "+" : "-"}Rs {t.amount.toLocaleString()}
+                <td className={`px-2 py-1.5 text-right font-medium ${t.isCredit ? "text-green-600" : "text-red-600"}`}>
+                  {t.isCredit ? "+" : "-"}Rs {t.amount.toLocaleString()}
                 </td>
                 <td className="px-2 py-1.5 text-right text-surface-600 dark:text-surface-400">Rs {t.runningBalance.toLocaleString()}</td>
               </tr>
             ))}
             {props.transactions.length === 0 && (
-              <tr><td colSpan={4} className="px-2 py-8 text-center text-surface-400">Is period mein koi transaction nahi hai.</td></tr>
+              <tr><td colSpan={4} className="px-2 py-8 text-center text-surface-400">{t("c_no_tx_period", lang)}</td></tr>
             )}
           </tbody>
         </table>

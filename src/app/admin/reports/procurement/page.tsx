@@ -4,6 +4,8 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { Wheat, Wallet, Users, TrendingUp } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function ProcurementReportPage({
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const { start, end } = getDateRange(range);
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: entries } = await supabase
@@ -50,32 +53,32 @@ export default async function ProcurementReportPage({
 
   return (
     <div>
-      <PageHeader title="Grain Procurement Report" description="Grain procurement by crop, and farmer balances" />
+      <PageHeader title={t("pr_title", lang)} description="Grain procurement by crop, and farmer balances" />
 
       <div className="mt-4">
         <DateRangeFilter current={range} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Quantity" value={`${totalWeight.toLocaleString()} kg`} icon={Wheat} tone="orange" />
-        <StatCard label="Total Amount" value={`Rs. ${totalAmount.toLocaleString()}`} icon={TrendingUp} tone="brand" />
-        <StatCard label="Avg. Rate/kg" value={`Rs. ${avgRate.toFixed(1)}`} icon={Wheat} tone="purple" />
-        <StatCard label="Farmers" value={String(farmerCount)} icon={Users} tone="blue" />
-        <StatCard label="Owed to Farmers" value={`Rs. ${totalOwed.toLocaleString()}`} icon={Wallet} tone="warn" />
+        <StatCard label={t("pr_total_quantity", lang)} value={`${totalWeight.toLocaleString()} kg`} icon={Wheat} tone="orange" />
+        <StatCard label={t("c_total_amount", lang)} value={`Rs. ${totalAmount.toLocaleString()}`} icon={TrendingUp} tone="brand" />
+        <StatCard label={t("pr_avg_rate_kg", lang)} value={`Rs. ${avgRate.toFixed(1)}`} icon={Wheat} tone="purple" />
+        <StatCard label={t("c_farmers", lang)} value={String(farmerCount)} icon={Users} tone="blue" />
+        <StatCard label={t("c_owed_to_farmers", lang)} value={`Rs. ${totalOwed.toLocaleString()}`} icon={Wallet} tone="warn" />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Crop-wise Breakdown</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("pr_crop_breakdown", lang)}</h2>
           {grainBreakdown.length === 0 ? (
-            <p className="text-sm text-surface-400">No procurement in this period.</p>
+            <p className="text-sm text-surface-400">{t("pr_no_procurement", lang)}</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-1.5 pr-2">Crop</th>
-                  <th className="py-1.5 pr-2 text-right">Quantity</th>
-                  <th className="py-1.5 pr-2 text-right">Amount</th>
+                  <th className="py-1.5 pr-2">{t("c_crop", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("c_quantity", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,16 +95,16 @@ export default async function ProcurementReportPage({
         </div>
 
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Farmers with Outstanding Balance</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("c_farmers_with_outstanding", lang)}</h2>
           {topOwed.length === 0 ? (
-            <p className="text-sm text-surface-400">No outstanding balances.</p>
+            <p className="text-sm text-surface-400">{t("c_no_outstanding", lang)}</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-1.5 pr-2">Farmer</th>
-                  <th className="py-1.5 pr-2 text-right">Supplied</th>
-                  <th className="py-1.5 pr-2 text-right">Balance Due</th>
+                  <th className="py-1.5 pr-2">{t("c_farmer", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("pr_supplied", lang)}</th>
+                  <th className="py-1.5 pr-2 text-right">{t("c_balance_due", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,21 +122,21 @@ export default async function ProcurementReportPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Recent Entries</h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("c_recent_entries", lang)}</h2>
         {(entries ?? []).length === 0 ? (
-          <p className="text-sm text-surface-400">No entries in this period.</p>
+          <p className="text-sm text-surface-400">{t("c_no_entries_period", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Farmer</th>
-                  <th className="py-2 pr-3">Crop</th>
-                  <th className="py-2 pr-3">Quality</th>
-                  <th className="py-2 pr-3 text-right">Weight</th>
-                  <th className="py-2 pr-3 text-right">Rate</th>
-                  <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2 pr-3">{t("c_date", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_farmer", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_crop", lang)}</th>
+                  <th className="py-2 pr-3">{t("pr_quality", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("pr_weight", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_rate", lang)}</th>
+                  <th className="py-2 pr-3 text-right">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>

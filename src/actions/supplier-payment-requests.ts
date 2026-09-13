@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { payAndPost } from "@/lib/ledger/supplier-money";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ActionState {
@@ -103,24 +105,21 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
     .eq("id", requestId);
   if (updateError) return { error: updateError.message };
 
-  const { error: paymentError } = await supabase.from("supplier_payments").insert({
-    supplier_id: request.supplier_id,
+  const paid = await payAndPost(supabase, {
+    supplierId: request.supplier_id,
     amount: request.amount,
-    payment_date: new Date().toISOString().slice(0, 10),
-    payment_method: request.payment_method,
+    paymentDate: aajKaKhana(),
+    paymentMethod: request.payment_method,
+    accountId: (request as { finance_account_id?: string | null }).finance_account_id ?? null,
     notes: `Approved request: ${request.request_number}${request.notes ? " - " + request.notes : ""}`,
-    slip_url: request.slip_url,
-    created_by: user.id,
+    slipUrl: request.slip_url,
+    createdBy: user.id,
   });
-  if (paymentError) return { error: paymentError.message };
+  if ("error" in paid) return { error: paid.error };
 
-  const { data: supplier } = await supabase.from("suppliers").select("current_payable").eq("id", request.supplier_id).single();
-  if (supplier) {
-    await supabase
-      .from("suppliers")
-      .update({ current_payable: Math.max(0, Number(supplier.current_payable) - Number(request.amount)) })
-      .eq("id", request.supplier_id);
-  }
+  // Payable yahan se NAHI ghataya jata -- upar wali supplier_payments
+  // ki qatar daalte hi trigger khud kar deta hai (139). Pehle dono kaam
+  // hote the, yani ek hi adaigi do dafa katne ka raasta khula tha.
 
   revalidatePath("/admin/finance/queue");
   revalidatePath("/admin/suppliers");

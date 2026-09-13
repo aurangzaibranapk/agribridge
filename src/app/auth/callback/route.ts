@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { nextFarmerCode } from "@/actions/registration";
 
 // Google/Facebook sign-in lands here with a ?code param. This exchanges
 // it for a session (setting the auth cookie), then — for a first-time
@@ -44,12 +43,11 @@ export async function GET(request: Request) {
         // here, immediately after a brand new sign-in.
         await serviceClient.from("profiles").update({ role: "farmer" }).eq("id", data.user.id).eq("role", "sales_staff");
 
-        const farmerCode = await nextFarmerCode(serviceClient);
         await serviceClient.from("farmers").insert({
           user_id: data.user.id,
-          farmer_code: farmerCode,
           email: data.user.email ?? null,
           full_name: (data.user.user_metadata?.full_name as string) || (data.user.user_metadata?.name as string) || null,
+          registration_source: "SELF",
         });
       }
     }

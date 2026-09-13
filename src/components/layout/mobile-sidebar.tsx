@@ -4,9 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/format";
-import { ADMIN_NAV_GROUPS, DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { DASHBOARD_ITEM } from "@/components/layout/nav-items";
+import { iconByName } from "@/lib/access/icons";
+import type { SidebarGroup } from "@/components/layout/sidebar";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
-export function MobileSidebar({ subtitle }: { subtitle: string }) {
+/**
+ * Chhoti screen ka menu. Pehle ye HAR group dikhata tha, chahe banday ko
+ * ijazat ho ya na ho -- rok phir bhi lagti thi, magar banda band darwaze
+ * dekhta rehta tha. Ab ise wahi fehrist milti hai jo bari screen ko
+ * milti hai.
+ */
+export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; groups?: SidebarGroup[] }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -15,7 +26,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const activeGroupLabel = ADMIN_NAV_GROUPS.find((g) => g.items.some((item) => isActive(item.href)))?.label;
+  const activeGroupLabel = groups.find((g) => g.items.some((item) => isActive(item.href)))?.label;
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     new Set(activeGroupLabel ? [activeGroupLabel] : [])
@@ -34,7 +45,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open menu"
+        aria-label={t("sh_open_menu", lang)}
         className="rounded-lg p-2 text-surface-600 hover:bg-surface-100 lg:hidden dark:text-surface-300 dark:hover:bg-surface-800"
       >
         <Menu className="h-5 w-5" />
@@ -45,13 +56,13 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
           <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-[#1a1f36] shadow-xl">
             <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">AR</div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
                 <div>
-                  <p className="font-display text-sm font-semibold leading-tight text-white">Al Rana Traders</p>
+                  <p className="font-display text-sm font-semibold leading-tight text-white">{t("au_company", lang)}</p>
                   <p className="text-xs text-surface-400">{subtitle}</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-1.5 text-surface-400 hover:bg-white/5">
+              <button onClick={() => setOpen(false)} aria-label={t("sh_close_menu", lang)} className="rounded-lg p-1.5 text-surface-400 hover:bg-white/5">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -69,7 +80,7 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
 
               <div className="my-2 border-t border-white/10" />
 
-              {ADMIN_NAV_GROUPS.map((group) => {
+              {groups.map((group) => {
                 const isOpen = openGroups.has(group.label);
                 const groupActive = group.items.some((item) => isActive(item.href));
                 return (
@@ -87,21 +98,30 @@ export function MobileSidebar({ subtitle }: { subtitle: string }) {
                     </button>
                     {isOpen && (
                       <div className="space-y-0.5 pb-1">
-                        {group.items.map((item) => {
+                        {group.items.map((item, index) => {
                           const active = isActive(item.href);
-                          const Icon = item.icon;
+                          const Icon = iconByName(item.icon);
+                          // Sarkhi wahin chhapti hai jahan wo badalti hai (174).
+                          const prevSection = index > 0 ? (group.items[index - 1].section ?? null) : null;
+                          const section = item.section ?? null;
                           return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className={cn(
-                                "flex items-center gap-2.5 rounded-lg px-3 py-2.5 pl-6 text-sm font-medium transition-colors",
-                                active ? "bg-brand-600 text-white" : "text-surface-300 hover:bg-white/5 hover:text-white"
+                            <div key={item.href}>
+                              {!!section && section !== prevSection && (
+                                <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                                  {section}
+                                </p>
                               )}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {item.label}
-                            </Link>
+                              <Link
+                                href={item.href}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 pl-6 text-sm font-medium transition-colors",
+                                  active ? "bg-brand-600 text-white" : "text-surface-300 hover:bg-white/5 hover:text-white"
+                                )}
+                              >
+                                <Icon className="h-4 w-4" />
+                                {item.label}
+                              </Link>
+                            </div>
                           );
                         })}
                       </div>

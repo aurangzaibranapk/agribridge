@@ -1,19 +1,25 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import nodemailer from "nodemailer";
+import { sendDeptMail } from "@/lib/mailer";
+import { requireAction } from "@/lib/access/guard";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
   documentUrl?: string;
   signingLink?: string;
+  notice?: string;
 }
 
 const SITE_URL = "https://alranatraders.pk";
 
 export async function createRentAgreement(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const branchId = String(formData.get("branch_id") ?? "");
@@ -114,24 +120,16 @@ export async function sendSigningLinkEmail(_prev: ActionState, formData: FormDat
   const branch = Array.isArray(agreement.branches) ? agreement.branches[0] : agreement.branches;
   const link = `${SITE_URL}/agreement-sign/${agreement.signing_token}`;
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Rent Agreement - ${branch?.name ?? "Shop"}`,
-      html: `<div dir="rtl" style="font-family: Arial, sans-serif;"><p>محترم ${agreement.landlord_name},</p><p>براہ کرم نیچے دیئے گئے لنک پر جا کر معاہدہ کرایہ داری ملاحظہ فرمائیں اور دستخط کریں۔</p><p><a href="${link}">${link}</a></p></div>`,
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
+  // Kiraye ka muahida kiraye ke khate se (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "rent",
+    to: toEmail,
+    subject: `Rent Agreement - ${branch?.name ?? "Shop"}`,
+    html: `<div dir="rtl" style="font-family: Arial, sans-serif;"><p>محترم ${agreement.landlord_name},</p><p>براہ کرم نیچے دیئے گئے لنک پر جا کر معاہدہ کرایہ داری ملاحظہ فرمائیں اور دستخط کریں۔</p><p><a href="${link}">${link}</a></p></div>`,
+  });
+  if (!sent.sent) return { error: sent.error };
 
-  return { success: true };
+  return { success: true, notice: `Muahida ${toEmail} par bhej diya gaya (${sent.from} se).` };
 }
 
 export async function saveLandlordSignature(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -168,6 +166,9 @@ export async function saveCompanySignature(_prev: ActionState, formData: FormDat
 }
 
 export async function uploadCompanyStamp(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const stamp = formData.get("stamp_image");
@@ -190,6 +191,9 @@ export async function uploadCompanyStamp(_prev: ActionState, formData: FormData)
 }
 
 export async function recordRentPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const agreementId = String(formData.get("agreement_id") ?? "");
   const month = Number(formData.get("payment_month") ?? 0);
@@ -213,7 +217,7 @@ export async function recordRentPayment(_prev: ActionState, formData: FormData):
       payment_year: year,
       amount_due: amountDue,
       amount_paid: amountPaid,
-      paid_date: new Date().toISOString().slice(0, 10),
+      paid_date: aajKaKhana(),
       payment_method: paymentMethod,
       notes,
       created_by: user?.id ?? null,
@@ -227,6 +231,9 @@ export async function recordRentPayment(_prev: ActionState, formData: FormData):
 }
 
 export async function createShopBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "create");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const branchId = String(formData.get("branch_id") ?? "");
@@ -274,13 +281,16 @@ export async function createShopBill(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function markBillPaid(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+
   const supabase = createClient();
   const billId = String(formData.get("bill_id") ?? "");
   if (!billId) return { error: "Missing bill id." };
 
   const { error } = await supabase
     .from("shop_bills")
-    .update({ status: "paid", paid_date: new Date().toISOString().slice(0, 10) })
+    .update({ status: "paid", paid_date: aajKaKhana() })
     .eq("id", billId);
   if (error) return { error: error.message };
 

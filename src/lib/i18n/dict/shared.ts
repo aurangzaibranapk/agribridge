@@ -1,0 +1,137 @@
+/**
+ * Wo components jo kai safhon par ek sath nazar aate hain.
+ *
+ * Sidebar, khata, reports, batwa, table ke neeche wale button -- ye kisi
+ * ek safhe ke nahi. Isi liye in ka tarjuma alag rakha gaya hai: jab ye
+ * har safhe par hain, to in mein ek lafz ka farq har safhe par nazar
+ * aata hai.
+ *
+ * DO CHEEZEIN JAAN BOOJH KAR YAHAN NAHI HAIN:
+ *
+ * 1. urdu-agreement-template.tsx -- kiraye ka qanooni muahida. Wo poora
+ *    Urdu mein likha hai aur usay teen zabanon ke switch mein daalna
+ *    ghalat hoga: English mode mein aadha angrezi muahida banta, jo
+ *    qanooni tor par bekar hai. Muahida ek hi zaban mein rehta hai.
+ *
+ * 2. art-logo.tsx -- wahan "Al Rana Traders" logo ka aria-label hai,
+ *    nazar aane wala matn nahi. Logo ka wordmark hota hai; usay har
+ *    zaban mein badal dena nishan ko hi badal dena hai.
+ *
+ * Jo lafz commonDict mein pehle se the (Raqam, Baqi, Tareekh, Phone,
+ * Qism, Tafseel) aur jo doosri fehriston mein (Customer, Loading...,
+ * All Branches, AR, Al Rana Traders) un ke liye naya key nahi banaya.
+ */
+export const sharedDict = {
+  // ---- Tasveer aur file ----
+  sh_preview: { en: "Preview", rm: "Jhalak", ur: "جھلک" },
+  sh_remove_image: { en: "Remove image", rm: "Tasveer hatayein", ur: "تصویر ہٹائیں" },
+  sh_remove_file: { en: "Remove file", rm: "File hatayein", ur: "فائل ہٹائیں" },
+  sh_file: { en: "File", rm: "File", ur: "فائل" },
+  sh_attachment: { en: "attachment", rm: "sath lagi file", ur: "ساتھ لگی فائل" },
+  sh_payment_slip: { en: "Payment Slip (image or PDF)", rm: "Adaigi ki parchi (tasveer ya PDF)", ur: "ادائیگی کی پرچی (تصویر یا PDF)" },
+  sh_no_voice: { en: "Voice input not supported in this browser", rm: "Is browser mein awaz se likhna nahi chalta", ur: "اس براؤزر میں آواز سے لکھنا نہیں چلتا" },
+
+  // ---- Sidebar aur upar ki patti ----
+  sh_logout: { en: "Log out", rm: "Bahar niklein", ur: "باہر نکلیں" },
+  sh_open_menu: { en: "Open menu", rm: "Menu kholein", ur: "مینو کھولیں" },
+  sh_close_menu: { en: "Close menu", rm: "Menu band karein", ur: "مینو بند کریں" },
+  sh_toggle_dark: { en: "Toggle dark mode", rm: "Andhera mode badlein", ur: "اندھیرا موڈ بدلیں" },
+
+  // ---- Khata ----
+  sh_no_customers: { en: "No customers found.", rm: "Koi gahak nahi mila.", ur: "کوئی گاہک نہیں ملا۔" },
+  sh_no_transactions: { en: "No transactions yet.", rm: "Abhi koi lein dein nahi.", ur: "ابھی کوئی لین دین نہیں۔" },
+  sh_note: { en: "Note", rm: "Note", ur: "نوٹ" },
+  sh_note_optional: { en: "Note (optional)", rm: "Note (marzi se)", ur: "نوٹ (مرضی سے)" },
+  sh_payment_amount: { en: "Payment Amount", rm: "Adaigi ki raqam", ur: "ادائیگی کی رقم" },
+  sh_record_payment: { en: "Record Payment", rm: "Adaigi darj karein", ur: "ادائیگی درج کریں" },
+  sh_search_customer: { en: "Search customer...", rm: "Gahak dhoondein...", ur: "گاہک تلاش کریں..." },
+  sh_select_customer: {
+    en: "Select a customer from the list to record a payment.",
+    rm: "Adaigi darj karne ke liye fehrist mein se gahak chunein.",
+    ur: "ادائیگی درج کرنے کے لیے فہرست میں سے گاہک چنیں۔",
+  },
+  sh_eg_cash_received: { en: "e.g. Cash received", rm: "misal: naqad mila", ur: "مثال: نقد ملا" },
+
+  // ---- Paighaam ----
+  sh_ask_question: { en: "Ask a question...", rm: "Kuch poochhein...", ur: "کچھ پوچھیں..." },
+  sh_no_messages: { en: "No messages yet.", rm: "Koi paighaam nahi hai abhi.", ur: "کوئی پیغام نہیں ہے ابھی۔" },
+  sh_no_contact: { en: "No contact found.", rm: "Koi banda nahi mila.", ur: "کوئی بندہ نہیں ملا۔" },
+  at_footer: { en: "AgriBridge ERP · Guided Work System", rm: "AgriBridge ERP · Guided Work System", ur: "ایگری برج ای آر پی" },
+  // Staff ki sidebar (277 reference)
+  ws_quick: { en: "Quick access", rm: "Jaldi ke kaam", ur: "فوری کام" },
+  ws_departments: { en: "Departments", rm: "Department", ur: "شعبے" },
+  ws_reports: { en: "Reports", rm: "Reports", ur: "رپورٹس" },
+  ws_settings: { en: "Settings", rm: "Settings", ur: "ترتیبات" },
+  ws_ai: { en: "AI Assistant", rm: "AI Assistant", ur: "اے آئی اسسٹنٹ" },
+  ws_ai_sub: { en: "Your work, my help", rm: "Aap ka kaam, meri madad", ur: "آپ کا کام، میری مدد" },
+  // Madad ka hissa (malik ke karyana reference ke mutabiq, 5 September)
+  ws_tagline: { en: "Kisan Se Karobar Tak", rm: "Kisan Se Karobar Tak", ur: "کسان سے کاروبار تک" },
+  ws_help: { en: "Help", rm: "Madad", ur: "مدد" },
+  ws_training: { en: "Training", rm: "Training", ur: "ٹریننگ" },
+  ws_suggestions: { en: "Suggestions", rm: "Tajaweez", ur: "تجاویز" },
+  ws_assistant_card: { en: "AgriBridge Assistant", rm: "AgriBridge Assistant", ur: "ایگری برج اسسٹنٹ" },
+  ws_assistant_sub: { en: "Any question? Just ask me.", rm: "Koi sawal? Mujh se poochein.", ur: "کوئی سوال؟ مجھ سے پوچھیں۔" },
+  // Assistant panel (276) -- Assistant | Paighaam | Tajaweez
+  ap_tab_ai: { en: "Assistant", rm: "Assistant", ur: "اسسٹنٹ" },
+  ap_tab_msg: { en: "Messages", rm: "Paighaam", ur: "پیغامات" },
+  ap_tab_sug: { en: "Suggestions", rm: "Tajaweez", ur: "تجاویز" },
+  ap_title: { en: "AgriBridge", rm: "AgriBridge", ur: "ایگری برج" },
+  ap_greet: { en: "How can I help with your work today?", rm: "Aaj kaam mein kis cheez ki madad chahiye?", ur: "آج کام میں کس چیز کی مدد چاہیے؟" },
+  ap_qa: { en: "Quick actions", rm: "Jaldi ke kaam", ur: "فوری کام" },
+  ap_qa_access: { en: "Request Access", rm: "Ijazat maangein", ur: "اجازت مانگیں" },
+  ap_qa_sugg: { en: "Suggest Improvement", rm: "Tajweez dein", ur: "تجویز دیں" },
+  ap_qa_explain: { en: "Explain this page", rm: "Ye safha samjhayein", ur: "یہ صفحہ سمجھائیں" },
+  ap_qa_training: { en: "Training", rm: "Training", ur: "تربیت" },
+  ap_search: { en: "Search person or department...", rm: "Banda ya department dhoondein...", ur: "بندہ یا شعبہ ڈھونڈیں..." },
+  ap_recent: { en: "Recent", rm: "Haal hi mein", ur: "حال ہی میں" },
+  ap_departments: { en: "Departments", rm: "Department", ur: "شعبے" },
+  ap_staff: { en: "Staff", rm: "Staff", ur: "عملہ" },
+  ap_admin_only: { en: "Admin only", rm: "Sirf admin", ur: "صرف ایڈمن" },
+  ap_announce: { en: "Announcement to All Staff", rm: "Sab staff ko elaan", ur: "سب عملے کو اعلان" },
+  ap_announce_confirm: { en: "Send this announcement to {n} staff members?", rm: "Ye elaan {n} mulazimeen ko bhej dein?", ur: "یہ اعلان {n} ملازمین کو بھیج دیں؟" },
+  ap_announce_yes: { en: "Yes, send", rm: "Haan, bhej dein", ur: "ہاں، بھیج دیں" },
+  ap_cancel: { en: "Cancel", rm: "Rehne dein", ur: "رہنے دیں" },
+  ap_dept_to: { en: "Message to {d} department", rm: "{d} department ko paighaam", ur: "{d} شعبے کو پیغام" },
+  ap_dept_count: { en: "{n} people", rm: "{n} log", ur: "{n} لوگ" },
+  ap_sent_n: { en: "Sent to {n}.", rm: "{n} tak pahunch gaya.", ur: "{n} تک پہنچ گیا۔" },
+  ap_sug_none: { en: "You have not sent any suggestion yet.", rm: "Aap ne abhi koi tajweez nahi bheji.", ur: "آپ نے ابھی کوئی تجویز نہیں بھیجی۔" },
+  ap_sug_all: { en: "All improvements", rm: "Saari tajaweez", ur: "ساری تجاویز" },
+  ap_sug_hint: { en: "Tell the Assistant what should improve — it drafts the suggestion for you.", rm: "Assistant ko bata dein kya behtar hona chahiye -- wo tajweez ka draft bana dega.", ur: "اسسٹنٹ کو بتا دیں کیا بہتر ہونا چاہیے" },
+  ap_ai_not_human: { en: "This is the AI assistant — it does not reach your colleagues.", rm: "Ye AI hai -- ye baat kisi sathi tak nahi jati.", ur: "یہ اے آئی ہے، یہ بات کسی ساتھی تک نہیں جاتی۔" },
+  sh_send_all_staff: { en: "Send to All Staff", rm: "Sab staff ko bhejein", ur: "سب عملے کو بھیجیں" },
+  sh_one_msg_all: { en: "One message, goes to everyone", rm: "Ek paighaam, sab ko chala jayega", ur: "ایک پیغام، سب کو چلا جائے گا" },
+  sh_write_announcement: { en: "Write the announcement...", rm: "Elaan likhein...", ur: "اعلان لکھیں..." },
+  sh_all_staff_note: {
+    en: "This message goes to every active staff member (Sales, Finance, Warehouse, HR, etc).",
+    rm: "Ye paighaam har chalte hue staff (Sales, Finance, Warehouse, HR waghera) ko chala jayega.",
+    ur: "یہ پیغام ہر چلتے ہوئے عملے (Sales، Finance، Warehouse، HR وغیرہ) کو چلا جائے گا۔",
+  },
+
+  // ---- Reports ----
+  sh_daily_sales: { en: "Daily Sales Summary", rm: "Roz ki bikri ka khulasa", ur: "روز کی بکری کا خلاصہ" },
+  sh_reports_sub: { en: "Daily sales summary and Khata aging", rm: "Roz ki bikri ka khulasa aur khate ki umar", ur: "روز کی بکری کا خلاصہ اور کھاتے کی عمر" },
+  sh_total_sales: { en: "Total Sales", rm: "Kul bikri", ur: "کل بکری" },
+  sh_cash_received: { en: "Cash Received", rm: "Naqad mila", ur: "نقد ملا" },
+  sh_khata_credit: { en: "Khata (Credit)", rm: "Khata (udhaar)", ur: "کھاتہ (ادھار)" },
+  sh_est_profit: { en: "Est. Profit", rm: "Andaze ka nafa", ur: "اندازے کا نفع" },
+  sh_transactions: { en: "Transactions", rm: "Lein dein", ur: "لین دین" },
+  sh_khata_aging: { en: "Khata Aging Report", rm: "Khate ki umar ki report", ur: "کھاتے کی عمر کی رپورٹ" },
+  sh_days_outstanding: { en: "Days Outstanding", rm: "Kitne din se baqi", ur: "کتنے دن سے باقی" },
+  sh_no_khata: { en: "No outstanding Khata balances.", rm: "Khate mein kuch baqi nahi.", ur: "کھاتے میں کچھ باقی نہیں۔" },
+
+  // ---- Batwa ----
+  sh_available_balance: { en: "Available Balance", rm: "Jo abhi mil sakta hai", ur: "جو ابھی مل سکتا ہے" },
+  sh_held_pending: { en: "Held (Pending)", rm: "Roka hua", ur: "روکا ہوا" },
+  sh_txn_history: { en: "Transaction History", rm: "Lein dein ka record", ur: "لین دین کا ریکارڈ" },
+
+  // ---- Charts aur table ----
+  sh_no_requests: { en: "No requests yet", rm: "Abhi koi darkhwast nahi", ur: "ابھی کوئی درخواست نہیں" },
+  sh_activity_trend: { en: "Activity Trend", rm: "Kaam ka rukh", ur: "کام کا رخ" },
+  sh_requests_by_service: { en: "Requests by Service", rm: "Service ke hisaab se darkhwastein", ur: "سروس کے حساب سے درخواستیں" },
+  sh_next: { en: "Next", rm: "Agla", ur: "اگلا" },
+  sh_previous: { en: "Previous", rm: "Pichhla", ur: "پچھلا" },
+
+  // ---- Dastakhat ----
+  sh_clear: { en: "Clear", rm: "Saaf karein", ur: "صاف کریں" },
+  sh_sign_here: { en: "Sign here with your finger or mouse", rm: "Ungli ya mouse se yahan sign karein", ur: "انگلی یا ماؤس سے یہاں دستخط کریں" },
+};

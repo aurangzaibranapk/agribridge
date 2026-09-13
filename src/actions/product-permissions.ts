@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { logAudit } from "@/lib/audit";
 
 export interface ActionState {
   error?: string;
@@ -27,6 +28,13 @@ async function getApprovalContext(supabase: ReturnType<typeof createClient>) {
 }
 
 export async function saveStaffProductPermissions(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(me.role)) {
+    return { error: "Sirf Owner ya Admin product permissions badal sakta hai." };
+  }
   const serviceClient = createServiceClient();
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Staff select karein." };
@@ -51,7 +59,16 @@ export async function saveStaffProductPermissions(_prev: ActionState, formData: 
   );
   if (error) return { error: error.message };
 
+  await logAudit({
+    actionType: "update",
+    module: "staff-product-permissions",
+    recordId: profileId,
+    recordLabel: profileId,
+    description: `Product access: view ${canView}, add ${canAdd}, edit ${canEdit}, delete ${canDelete}, approve ${canApproveProducts}.`,
+  });
+
   revalidatePath("/admin/product-permissions");
+  revalidatePath("/admin/staff-access");
   return { success: true };
 }
 
@@ -72,11 +89,37 @@ export async function staffProposeProduct(_prev: ActionState, formData: FormData
   if (!isUnrestricted && !permission?.can_add) return { error: "Aapke paas Product Add karne ki ijazat nahi hai." };
 
   const name = String(formData.get("name") ?? "").trim();
-  const categoryId = (formData.get("category_id") as string) || null;
+  const categoryIdRaw = (formData.get("category_id") as string) || "";
+  const newCategoryName = String(formData.get("new_category_name") ?? "").trim();
   const packSize = (formData.get("pack_size") as string) || null;
+  const imageUrl = (formData.get("image_url") as string) || null;
   const proposedPrice = Number(formData.get("proposed_price") ?? 0);
   if (!name) return { error: "Product naam zaroori hai." };
   if (!proposedPrice || proposedPrice <= 0) return { error: "Proposed rate zaroori hai." };
+
+  // Category fehrist mein na ho to staff yahin naya naam likh sakta hai
+  // (7 September) -- dobara Categories ka safha khol kar wapas aane ki
+  // zaroorat nahi. Pehle naam se hi dhoondte hain (case-insensitive) taake
+  // "Seeds" aur "seeds" do alag category na ban jayen.
+  let categoryId: string | null = categoryIdRaw && categoryIdRaw !== "__new__" ? categoryIdRaw : null;
+  if (categoryIdRaw === "__new__" && newCategoryName) {
+    const { data: existing } = await supabase
+      .from("categories")
+      .select("id")
+      .ilike("name", newCategoryName)
+      .maybeSingle();
+    if (existing) {
+      categoryId = existing.id;
+    } else {
+      const { data: created, error: catErr } = await supabase
+        .from("categories")
+        .insert({ name: newCategoryName, category_kind: "karyana" })
+        .select("id")
+        .single();
+      if (catErr) return { error: `Category nahi ban saki: ${catErr.message}` };
+      categoryId = created.id;
+    }
+  }
 
   const { data: org } = await supabase.from("organizations").select("id").limit(1).single();
 
@@ -85,6 +128,7 @@ export async function staffProposeProduct(_prev: ActionState, formData: FormData
     category_id: categoryId,
     name,
     pack_size: packSize,
+    image_url: imageUrl,
     purchase_price: proposedPrice,
     selling_price: proposedPrice,
     is_verified: isUnrestricted,

@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { dealerRespondToOrder, dealerDispatchOrder, type ActionState } from "@/actions/bridge-orders";
 import { Package, Wallet, Clock, CheckCircle2, XCircle, Truck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -37,6 +39,7 @@ export function DealerDashboardClient({
   pendingCount: number;
   orders: Order[];
 }) {
+  const lang = useLang();
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6">
@@ -48,25 +51,23 @@ export function DealerDashboardClient({
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
           <Clock className="h-5 w-5 text-amber-500" />
           <p className="mt-2 text-2xl font-bold text-surface-900">{pendingCount}</p>
-          <p className="text-xs text-surface-500">Naye Orders</p>
+          <p className="text-xs text-surface-500">{t("ou_new_orders", lang)}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
           <Package className="h-5 w-5 text-brand-500" />
           <p className="mt-2 text-2xl font-bold text-surface-900">{orders.length}</p>
-          <p className="text-xs text-surface-500">Total Orders</p>
+          <p className="text-xs text-surface-500">{t("ou_total_orders", lang)}</p>
         </div>
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
           <Wallet className="h-5 w-5 text-red-500" />
           <p className="mt-2 text-2xl font-bold text-surface-900">Rs {currentPayable.toLocaleString()}</p>
-          <p className="text-xs text-surface-500">Aapko Dena Hai (Payable)</p>
+          <p className="text-xs text-surface-500">{t("ou_you_owe", lang)}</p>
         </div>
       </div>
 
-      <h2 className="mb-3 text-sm font-semibold text-surface-700">Orders</h2>
+      <h2 className="mb-3 text-sm font-semibold text-surface-700">{t("ou_orders", lang)}</h2>
       {orders.length === 0 ? (
-        <p className="rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400">
-          Abhi koi Order nahi hai.
-        </p>
+        <p className="rounded-card border border-surface-200 bg-white p-6 text-center text-sm text-surface-400">{t("ou_no_orders", lang)}</p>
       ) : (
         <div className="space-y-3">
           {orders.map((o) => (
@@ -122,19 +123,19 @@ function RespondButtons({ orderId }: { orderId: string }) {
 }
 
 function AcceptButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60">
-      <CheckCircle2 className="h-4 w-4" /> Accept
-    </button>
+      <CheckCircle2 className="h-4 w-4" />{t("ou_accept", lang)}</button>
   );
 }
 function RejectButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-surface-100 py-2 text-sm font-medium text-surface-600 hover:bg-surface-200 disabled:opacity-60">
-      <XCircle className="h-4 w-4" /> Reject
-    </button>
+      <XCircle className="h-4 w-4" />{t("ou_reject", lang)}</button>
   );
 }
 
@@ -149,10 +150,10 @@ function DispatchButton({ orderId }: { orderId: string }) {
   );
 }
 function DispatchSubmitButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-purple-600 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
-      <Truck className="h-4 w-4" /> Dispatch Kar Diya
-    </button>
+      <Truck className="h-4 w-4" />{t("ou_dispatched", lang)}</button>
   );
 }

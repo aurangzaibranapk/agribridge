@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { updateLivestockDetails, type FarmerProfileState } from "@/actions/farmer-profile";
 import { Button, Input, Label } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: FarmerProfileState = {};
 
@@ -20,24 +22,23 @@ interface Farmer {
 }
 
 export function LivestockDetailsForm({ farmer }: { farmer: Farmer }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(updateLivestockDetails, initialState);
   const [hasLivestock, setHasLivestock] = useState(farmer.has_livestock);
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card mb-6">
-      <h2 className="font-display text-sm font-semibold text-surface-900">Livestock Details</h2>
+      <h2 className="font-display text-sm font-semibold text-surface-900">{t("pm_livestock_details", lang)}</h2>
       {state.error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-      {state.success && <p className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Saved.</p>}
+      {state.success && <p className="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("c_saved", lang)}</p>}
       <form action={formAction} className="mt-3 space-y-3">
         <div>
-          <Label>Kya Aap Livestock Rakhte Hain?</Label>
+          <Label>{t("pm_have_livestock", lang)}</Label>
           <div className="flex gap-4">
             <label className="flex items-center gap-1.5 text-sm text-surface-600">
-              <input type="radio" name="has_livestock" value="yes" checked={hasLivestock} onChange={() => setHasLivestock(true)} className="h-4 w-4" /> Yes
-            </label>
+              <input type="radio" name="has_livestock" value="yes" checked={hasLivestock} onChange={() => setHasLivestock(true)} className="h-4 w-4" />{t("yes_label", lang)}</label>
             <label className="flex items-center gap-1.5 text-sm text-surface-600">
-              <input type="radio" name="has_livestock" value="no" checked={!hasLivestock} onChange={() => setHasLivestock(false)} className="h-4 w-4" /> No
-            </label>
+              <input type="radio" name="has_livestock" value="no" checked={!hasLivestock} onChange={() => setHasLivestock(false)} className="h-4 w-4" />{t("no_label", lang)}</label>
           </div>
         </div>
 
@@ -45,42 +46,42 @@ export function LivestockDetailsForm({ farmer }: { farmer: Farmer }) {
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
-                <Label htmlFor="cow_count">Cows</Label>
+                <Label htmlFor="cow_count">{t("pm_cows", lang)}</Label>
                 <Input id="cow_count" name="cow_count" type="number" min="0" defaultValue={farmer.cow_count ?? 0} />
               </div>
               <div>
-                <Label htmlFor="buffalo_count">Buffaloes</Label>
+                <Label htmlFor="buffalo_count">{t("pm_buffaloes", lang)}</Label>
                 <Input id="buffalo_count" name="buffalo_count" type="number" min="0" defaultValue={farmer.buffalo_count ?? 0} />
               </div>
               <div>
-                <Label htmlFor="calves_count">Calves (Bachay)</Label>
+                <Label htmlFor="calves_count">{t("pm_calves", lang)}</Label>
                 <Input id="calves_count" name="calves_count" type="number" min="0" defaultValue={farmer.calves_count ?? 0} />
               </div>
               <div>
-                <Label htmlFor="milking_animal_count">Milking Animals</Label>
+                <Label htmlFor="milking_animal_count">{t("pm_milking_animals", lang)}</Label>
                 <Input id="milking_animal_count" name="milking_animal_count" type="number" min="0" defaultValue={farmer.milking_animal_count ?? 0} />
               </div>
               <div>
-                <Label htmlFor="meat_animal_count">Meat Animals</Label>
+                <Label htmlFor="meat_animal_count">{t("pm_meat_animals", lang)}</Label>
                 <Input id="meat_animal_count" name="meat_animal_count" type="number" min="0" defaultValue={farmer.meat_animal_count ?? 0} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 border-t border-surface-100 pt-3">
               <div>
-                <Label htmlFor="milk_liters_per_day">Milk (Litres/Day)</Label>
+                <Label htmlFor="milk_liters_per_day">{t("pm_milk_per_day", lang)}</Label>
                 <Input id="milk_liters_per_day" name="milk_liters_per_day" type="number" step="0.1" min="0" defaultValue={farmer.milk_liters_per_day ?? ""} />
               </div>
               <div>
-                <Label htmlFor="milk_sale_rate">Milk Rate (Rs./Litre)</Label>
+                <Label htmlFor="milk_sale_rate">{t("pm_milk_rate", lang)}</Label>
                 <Input id="milk_sale_rate" name="milk_sale_rate" type="number" step="0.01" min="0" defaultValue={farmer.milk_sale_rate ?? ""} />
               </div>
               <div className="col-span-2">
-                <Label htmlFor="milk_buyer_name">Milk Buyer (kis ko bechte hain)</Label>
+                <Label htmlFor="milk_buyer_name">{t("pm_milk_buyer", lang)}</Label>
                 <Input id="milk_buyer_name" name="milk_buyer_name" defaultValue={farmer.milk_buyer_name ?? ""} />
               </div>
               <div className="col-span-2">
-                <Label htmlFor="milk_advance_loan_amount">Milk ke Against Advance/Loan (Rs.)</Label>
+                <Label htmlFor="milk_advance_loan_amount">{t("pm_milk_advance", lang)}</Label>
                 <Input id="milk_advance_loan_amount" name="milk_advance_loan_amount" type="number" step="0.01" min="0" defaultValue={farmer.milk_advance_loan_amount ?? ""} />
               </div>
             </div>

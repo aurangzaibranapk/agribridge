@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ const AGENT_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default async function BridgeAiActivityLogPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: logs } = await supabase
@@ -56,31 +59,31 @@ export default async function BridgeAiActivityLogPage() {
   return (
     <div>
       <PageHeader
-        title="Bridge AI Activity Log"
+        title={t("ba_activity_log", lang)}
         description="Bridge AI se ab tak jitne sawal poochay gaye hain, unki list aur analytics - sirf dekhne ke liye. AI abhi database mein kuch change nahi karta, sirf jawab deta hai."
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Sawal</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ba_total_questions", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalQueries}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Aaj Ke Sawal</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ba_today_questions", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{queriesToday}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Bina Data Ke Jawab</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ba_answers_without_data", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-600">{noToolAnswersCount}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Sab Se Zyada Tool</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ba_top_tool", lang)}</p>
           <p className="mt-2 font-display text-sm font-semibold text-surface-900 dark:text-white">{topTools[0]?.[0] ?? "-"}</p>
         </Card>
       </div>
 
       <div className="mb-6">
-        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Agent Ke Hisaab Se Sawal</h3>
+        <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("ba_by_agent", lang)}</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Object.entries(byAgent).map(([agent, count]) => (
             <div key={agent} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -93,7 +96,7 @@ export default async function BridgeAiActivityLogPage() {
 
       {topTools.length > 0 && (
         <div className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Sab Se Zyada Use Hone Wale Tools</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("ba_top_tools", lang)}</h3>
           <div className="flex flex-wrap gap-2">
             {topTools.map(([tool, count]) => (
               <span key={tool} className="rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
@@ -106,7 +109,7 @@ export default async function BridgeAiActivityLogPage() {
 
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">Abhi tak koi activity nahi hai.</p>
+          <p className="text-sm text-surface-400">{t("ba_no_activity", lang)}</p>
         ) : (
           <div className="space-y-4">
             {rows.map((row) => {

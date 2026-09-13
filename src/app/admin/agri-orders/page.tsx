@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import Link from "next/link";
@@ -37,6 +39,7 @@ function statusTone(status: string) {
 }
 
 export default async function AgriOrdersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: orders } = await supabase
@@ -62,12 +65,11 @@ export default async function AgriOrdersPage() {
   return (
     <div>
       <PageHeader
-        title="AgriBridge Ordering"
+        title={t("ao_ordering_title", lang)}
         description="Order Creation se Delivery/GRN tak - poora tracking"
         actions={
           <Link href="/admin/agri-orders/new" className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            <Plus className="h-4 w-4" /> New Order
-          </Link>
+            <Plus className="h-4 w-4" />{t("at_new_order", lang)}</Link>
         }
       />
 
@@ -75,20 +77,20 @@ export default async function AgriOrdersPage() {
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
           <div className="flex items-center gap-2 text-brand-600">
             <TrendingUp className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Total Orders</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("db_total_orders", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-brand-800 dark:text-brand-200">{orders?.length ?? 0}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Order Value</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ao_total_order_value", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalValue.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Pending Payment</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("ao_pending_payment", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700 dark:text-amber-300">Rs {pendingPayment.toLocaleString()}</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">This Month Sales</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("ao_month_sales", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {thisMonthSales.toLocaleString()}</p>
         </Card>
       </div>
@@ -113,11 +115,11 @@ export default async function AgriOrdersPage() {
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
               <th className="px-3 py-2 font-medium text-surface-500"></th>
-              <th className="px-3 py-2 font-medium text-surface-500">Order No.</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Type</th>
-              <th className="px-3 py-2 font-medium text-surface-500">To</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Value</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Status</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("ao_order_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_type", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("ao_to", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_value", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500"></th>
             </tr>
           </thead>
@@ -145,15 +147,13 @@ export default async function AgriOrdersPage() {
                     <Link
                       href={`/admin/agri-orders/${o.id}`}
                       className={`text-xs font-medium hover:underline ${needsAction ? "text-red-600" : isDone ? "text-green-600" : "text-brand-600"}`}
-                    >
-                      Dekhein
-                    </Link>
+                    >{t("at_view", lang)}</Link>
                   </td>
                 </tr>
               );
             })}
             {(orders ?? []).length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">Koi order nahi hai abhi.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">{t("ao_no_order_yet", lang)}</td></tr>
             )}
           </tbody>
         </table>

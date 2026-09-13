@@ -3,10 +3,13 @@ import { redirect } from "next/navigation";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { OnboardForm } from "@/app/admin/platform/onboard-form";
 import { OrgActions } from "@/app/admin/platform/org-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlatformPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -19,7 +22,7 @@ export default async function PlatformPage() {
   if (profile?.role !== "super_admin") {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">Only a Super Admin can access this page.</p>
+        <p className="text-surface-600">{t("at_super_admin_only", lang)}</p>
       </div>
     );
   }
@@ -31,15 +34,13 @@ export default async function PlatformPage() {
 
   return (
     <div>
-      <PageHeader title="Platform / Clients" description="Manage client organizations using AgriBridge" />
+      <PageHeader title={t("at_platform_clients", lang)} description="Manage client organizations using AgriBridge" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Organizations
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_organizations", lang)}</h2>
           {!organizations || organizations.length === 0 ? (
-            <EmptyState title="No organizations found" />
+            <EmptyState title={t("at_no_orgs", lang)} />
           ) : (
             <div className="space-y-2">
               {organizations.map((o) => (

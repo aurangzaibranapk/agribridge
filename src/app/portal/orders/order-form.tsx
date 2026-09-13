@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { placeBridgeOrder, type ActionState } from "@/actions/bridge-orders";
 import { Search, ShoppingCart, Trash2, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Product {
   id: string;
@@ -30,6 +32,7 @@ export function OrderForm({
   farmerTehsil: string | null;
 }) {
   const [state, formAction] = useFormState(placeBridgeOrder, initialState);
+  const lang = useLang();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [district, setDistrict] = useState(farmerDistrict ?? "");
@@ -70,10 +73,8 @@ export function OrderForm({
     return (
       <div className="rounded-card border border-brand-200 bg-brand-50 p-6 text-center dark:border-brand-900/40 dark:bg-brand-950/30">
         <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-brand-600" />
-        <p className="font-medium text-brand-800 dark:text-brand-300">Order placed successfully!</p>
-        <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">
-          A verified dealer in your area has been notified. You'll be updated as your order progresses.
-        </p>
+        <p className="font-medium text-brand-800 dark:text-brand-300">{t("pm_order_placed", lang)}</p>
+        <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">{t("pm_dealer_notified", lang)}</p>
       </div>
     );
   }
@@ -86,7 +87,7 @@ export function OrderForm({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products..."
+            placeholder={t("pm_search_products", lang)}
             className="w-full rounded-lg border border-surface-200 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none"
           />
         </div>
@@ -105,7 +106,7 @@ export function OrderForm({
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-full py-10 text-center text-sm text-surface-400">No products found.</p>
+            <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("pm_no_products", lang)}</p>
           )}
         </div>
       </div>
@@ -113,7 +114,7 @@ export function OrderForm({
       <div className="h-fit rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">Your Order</h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("pm_your_order", lang)}</h2>
         </div>
 
         {state.error && (
@@ -123,7 +124,7 @@ export function OrderForm({
         )}
 
         <div className="max-h-56 space-y-2 overflow-y-auto">
-          {cart.length === 0 && <p className="py-6 text-center text-sm text-surface-400">No items yet</p>}
+          {cart.length === 0 && <p className="py-6 text-center text-sm text-surface-400">{t("pm_no_items", lang)}</p>}
           {cart.map((l) => (
             <div key={l.product_id} className="flex items-center gap-2 rounded-lg border border-surface-100 p-2 dark:border-surface-800">
               <div className="flex-1">
@@ -147,7 +148,7 @@ export function OrderForm({
         <form action={formAction} className="mt-3 space-y-3 border-t border-surface-100 pt-3 dark:border-surface-800">
           <input type="hidden" name="items_json" value={itemsJson} />
           <div>
-            <label className="text-xs font-medium text-surface-500">District</label>
+            <label className="text-xs font-medium text-surface-500">{t("c_district", lang)}</label>
             <input
               name="district"
               value={district}
@@ -157,7 +158,7 @@ export function OrderForm({
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">Tehsil (optional)</label>
+            <label className="text-xs font-medium text-surface-500">{t("pm_tehsil", lang)}</label>
             <input
               name="tehsil"
               value={tehsil}
@@ -166,7 +167,7 @@ export function OrderForm({
             />
           </div>
           <div className="flex items-center justify-between border-t border-surface-100 pt-2 dark:border-surface-800">
-            <span className="text-sm font-medium text-surface-700 dark:text-surface-300">Total</span>
+            <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t("c_total", lang)}</span>
             <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">
               Rs {total.toLocaleString()}
             </span>

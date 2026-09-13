@@ -1,17 +1,21 @@
 "use client";
-import { useState } from "react";
+import Link from "next/link";
+import { fetchAttendanceMonth } from "@/actions/hr-attendance";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   saveStaffDetails,
-  markAttendance,
   recordSalaryPayment,
   markSalaryPaid,
   inviteStaffMember,
   bulkDeactivateStaff,
   type ActionState,
 } from "@/actions/hr";
+import { DEPARTMENTS } from "@/lib/departments";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Plus, X, CheckSquare, UserPlus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -56,6 +60,14 @@ interface Salary {
 
 interface Branch { id: string; name: string; }
 
+/** Hazri ki halat database mein jo likhi hai, us ka lafz kahan se aaye. */
+const ATTENDANCE_KEY = {
+  present: "hr_present",
+  absent: "hr_absent",
+  leave: "hr_leave",
+  half_day: "hr_half_day",
+} as const satisfies Record<string, "hr_present" | "hr_absent" | "hr_leave" | "hr_half_day">;
+
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
   admin: "Admin",
@@ -68,12 +80,16 @@ export function HRClient({
   attendance,
   salaries,
   branches,
+  accounts,
 }: {
   staff: Staff[];
   attendance: Attendance[];
   salaries: Salary[];
   branches: Branch[];
+  /** Tankhwah kis khate se nikle -- us ke baghair paisa kisi kitab mein nahi jata. */
+  accounts: { id: string; name: string }[];
 }) {
+  const lang = useLang();
   const [tab, setTab] = useState<"staff" | "attendance" | "salary">("staff");
   const [selected, setSelected] = useState<string[]>([]);
   const [showInvite, setShowInvite] = useState(false);
@@ -92,13 +108,13 @@ export function HRClient({
     <div>
       <div className="mb-4 flex items-center justify-between gap-2 border-b border-surface-200 dark:border-surface-800">
         <div className="flex gap-2">
-          <TabButton active={tab === "staff"} onClick={() => setTab("staff")}>Staff</TabButton>
-          <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>Attendance</TabButton>
-          <TabButton active={tab === "salary"} onClick={() => setTab("salary")}>Salary</TabButton>
+          <TabButton active={tab === "staff"} onClick={() => setTab("staff")}>{t("hr_tab_staff", lang)}</TabButton>
+          <TabButton active={tab === "attendance"} onClick={() => setTab("attendance")}>{t("hr_tab_attendance", lang)}</TabButton>
+          <TabButton active={tab === "salary"} onClick={() => setTab("salary")}>{t("hr_tab_salary", lang)}</TabButton>
         </div>
         {tab === "staff" && (
           <button onClick={() => setShowInvite(true)} className="mb-2 flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
-            <UserPlus className="h-3.5 w-3.5" /> Naya Staff Invite Karein
+            <UserPlus className="h-3.5 w-3.5" /> {t("hr_invite_staff", lang)}
           </button>
         )}
       </div>
@@ -113,11 +129,11 @@ export function HRClient({
                   <th className="px-3 py-2">
                     <input type="checkbox" checked={selected.length === staff.length && staff.length > 0} onChange={toggleSelectAll} />
                   </th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Naam</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Role</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Designation</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Phone</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Basic Salary</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_name", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_role", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_designation", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_phone", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("hr_basic_salary", lang)}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -133,12 +149,12 @@ export function HRClient({
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{s.details?.phone ?? "-"}</td>
                     <td className="px-3 py-2 text-right text-surface-800 dark:text-surface-200">{s.details?.basic_salary ? `Rs ${s.details.basic_salary.toLocaleString()}` : "-"}</td>
                     <td className="px-3 py-2">
-                      <button onClick={() => setEditingStaff(s)} className="text-xs font-medium text-brand-600 hover:underline">Edit</button>
+                      <button onClick={() => setEditingStaff(s)} className="text-xs font-medium text-brand-600 hover:underline">{t("hr_edit", lang)}</button>
                     </td>
                   </tr>
                 ))}
                 {staff.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">Koi Staff nahi hai.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">{t("hr_no_staff", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -149,15 +165,15 @@ export function HRClient({
       {tab === "attendance" && (
         <div>
           <button onClick={() => setShowMarkAttendance(true)} className="mb-3 flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            <Plus className="h-4 w-4" /> Attendance Mark Karein
+            <Plus className="h-4 w-4" /> {t("hr_mark_attendance", lang)}
           </button>
           <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Staff</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Status</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_staff", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_date", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_status", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,12 +182,12 @@ export function HRClient({
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{a.staff_name}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{a.attendance_date}</td>
                     <td className="px-3 py-2">
-                      <Badge tone={a.status === "present" ? "green" : a.status === "absent" ? "red" : "amber"}>{a.status}</Badge>
+                      <Badge tone={a.status === "present" ? "green" : a.status === "absent" ? "red" : "amber"}>{t(ATTENDANCE_KEY[a.status as keyof typeof ATTENDANCE_KEY] ?? "hr_status", lang)}</Badge>
                     </td>
                   </tr>
                 ))}
                 {attendance.length === 0 && (
-                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">Koi record nahi hai.</td></tr>
+                  <tr><td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("hr_no_record", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -182,16 +198,16 @@ export function HRClient({
       {tab === "salary" && (
         <div>
           <button onClick={() => setShowSalaryForm(true)} className="mb-3 flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            <Plus className="h-4 w-4" /> Salary Record Karein
+            <Plus className="h-4 w-4" /> {t("hr_record_salary", lang)}
           </button>
           <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Staff</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Month/Year</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Net Salary</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Status</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_staff", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_month_year", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("hr_net_salary", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_status", lang)}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -202,15 +218,15 @@ export function HRClient({
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{s.pay_month}/{s.pay_year}</td>
                     <td className="px-3 py-2 text-right text-surface-800 dark:text-surface-200">Rs {s.net_salary.toLocaleString()}</td>
                     <td className="px-3 py-2">
-                      <Badge tone={s.status === "paid" ? "green" : "amber"}>{s.status === "paid" ? "Paid" : "Pending"}</Badge>
+                      <Badge tone={s.status === "paid" ? "green" : "amber"}>{t(s.status === "paid" ? "hr_paid" : "hr_pending", lang)}</Badge>
                     </td>
                     <td className="px-3 py-2">
-                      {s.status !== "paid" && <MarkPaidButton paymentId={s.id} />}
+                      {s.status !== "paid" && <MarkPaidButton paymentId={s.id} accounts={accounts} />}
                     </td>
                   </tr>
                 ))}
                 {salaries.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">Koi record nahi hai.</td></tr>
+                  <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">{t("hr_no_record", lang)}</td></tr>
                 )}
               </tbody>
             </table>
@@ -235,30 +251,32 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 }
 
 function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(bulkDeactivateStaff, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 800);
 
   return (
     <div className="mb-3 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2">
       <span className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
-        <CheckSquare className="h-4 w-4" /> {selectedIds.length} selected
+        <CheckSquare className="h-4 w-4" /> {selectedIds.length} {t("hr_selected", lang)}
       </span>
       {state.error && <span className="text-xs text-red-600">{state.error}</span>}
       <form
         action={formAction}
         onSubmit={(e) => {
-          if (!confirm(`Kya aap ${selectedIds.length} Staff ko Inactive karna chahte hain?`)) e.preventDefault();
+          if (!confirm(`${selectedIds.length} — ${t("hr_confirm_deactivate", lang)}`)) e.preventDefault();
         }}
       >
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700">Inactive Karein</button>
+        <button type="submit" className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700">{t("hr_deactivate", lang)}</button>
       </form>
-      <button onClick={onDone} className="ml-auto text-xs text-surface-500 hover:text-surface-700">Cancel</button>
+      <button onClick={onDone} className="ml-auto text-xs text-surface-500 hover:text-surface-700">{t("hr_cancel", lang)}</button>
     </div>
   );
 }
 
 function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(inviteStaffMember, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
@@ -266,28 +284,34 @@ function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Naya Staff Invite Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_invite_staff", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Invite bhej di gayi, login details email mein hain.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("hr_invite_sent", lang)}</p>}
         <form action={formAction} className="space-y-2">
-          <Input name="full_name" required placeholder="Naam *" />
-          <Input type="email" name="email" required placeholder="Email *" />
-          <Select name="role" required>
-            <option value="sales_staff">Sales Staff</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+          <Input name="full_name" required placeholder={t("hr_name_req", lang)} />
+          <Input type="email" name="email" required placeholder={t("hr_email_req", lang)} />
+          {/* Role yani DEPARTMENT. Yahan pehle sirf teen option the --
+              is liye Machinery, HR, Procurement ya Dairy ka banda bulaya
+              hi nahi ja sakta tha, aur /admin/departments par un ke
+              saamne hamesha "0 banday" likha aata tha. Ab fehrist
+              DEPARTMENTS se banti hai. */}
+          <Select name="role" required defaultValue="sales_staff">
+            {DEPARTMENTS.map((d) => (
+              <option key={d.role} value={d.role}>{d.label}</option>
+            ))}
+            <option value="admin">{t("at_admin", lang)}</option>
           </Select>
           <Select name="branch_id">
-            <option value="">- Branch (optional) -</option>
+            <option value="">{t("hr_branch_optional", lang)}</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </Select>
-          <Input name="designation" placeholder="Designation (optional)" />
-          <Input type="number" step="0.01" name="basic_salary" placeholder="Basic Salary (optional)" />
-          <SubmitButton label="Invite Karein" />
+          <Input name="designation" placeholder={t("hr_designation_optional", lang)} />
+          <Input type="number" step="0.01" name="basic_salary" placeholder={t("hr_basic_salary_optional", lang)} />
+          <SubmitButton label={t("hr_invite", lang)} />
         </form>
       </div>
     </div>
@@ -295,6 +319,7 @@ function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: 
 }
 
 function EditStaffModal({ staff, onClose }: { staff: Staff; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(saveStaffDetails, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 800);
 
@@ -302,113 +327,214 @@ function EditStaffModal({ staff, onClose }: { staff: Staff; onClose: () => void 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{staff.full_name} - Details</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{staff.full_name} — {t("hr_details", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="profile_id" value={staff.id} />
-          <Input name="designation" defaultValue={staff.details?.designation ?? ""} placeholder="Designation" />
-          <Input name="cnic" defaultValue={staff.details?.cnic ?? ""} placeholder="CNIC" />
-          <Input name="phone" defaultValue={staff.details?.phone ?? ""} placeholder="Phone" />
-          <Textarea name="address" defaultValue={staff.details?.address ?? ""} rows={2} placeholder="Address" />
+          <Input name="designation" defaultValue={staff.details?.designation ?? ""} placeholder={t("hr_designation", lang)} />
+          <Input name="cnic" defaultValue={staff.details?.cnic ?? ""} placeholder={t("hr_cnic", lang)} />
+          <Input name="phone" defaultValue={staff.details?.phone ?? ""} placeholder={t("hr_phone", lang)} />
+          <Textarea name="address" defaultValue={staff.details?.address ?? ""} rows={2} placeholder={t("hr_address", lang)} />
           <div>
-            <Label>Hire Date</Label>
+            <Label>{t("hr_hire_date", lang)}</Label>
             <Input type="date" name="hire_date" defaultValue={staff.details?.hire_date ?? ""} />
           </div>
-          <Input type="number" step="0.01" name="basic_salary" defaultValue={staff.details?.basic_salary ?? ""} placeholder="Basic Salary" />
-          <Input name="bank_account" defaultValue={staff.details?.bank_account ?? ""} placeholder="Bank Account" />
-          <SubmitButton label="Save Karein" />
+          <Input type="number" step="0.01" name="basic_salary" defaultValue={staff.details?.basic_salary ?? ""} placeholder={t("hr_basic_salary", lang)} />
+          <Input name="bank_account" defaultValue={staff.details?.bank_account ?? ""} placeholder={t("hr_bank_account", lang)} />
+          <SubmitButton label={t("hr_save", lang)} />
         </form>
       </div>
     </div>
   );
 }
 
+/**
+ * Hazri ab yahan se nahi lagti.
+ *
+ * Pehle ye modal seedha upsert karta tha: purani hazri par nayi likh kar
+ * guzar jata tha, bina wajah ke, bina nishan ke. Ab hazri Calendar se
+ * lagti hai -- wahan wajah lazmi hai, afsar ki hadd lagti hai, band
+ * mahina rukta hai, aur purani qeemat record par mehfooz rehti hai.
+ *
+ * Modal ko chup chaap hata dena theek nahi tha: jo banda ise roz istemal
+ * karta tha, usay ye maloom hona chahiye ke ab jana kahan hai.
+ */
 function MarkAttendanceModal({ staff, onClose }: { staff: Staff[]; onClose: () => void }) {
-  const [state, formAction] = useFormState(markAttendance, initialState);
-  if (state.success) setTimeout(() => window.location.reload(), 800);
+  const lang = useLang();
+  void staff;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Attendance Mark Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_mark_attendance", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        <form action={formAction} className="space-y-2">
-          <Select name="profile_id" required>
-            <option value="">- Staff Select Karein -</option>
-            {staff.map((s) => (
-              <option key={s.id} value={s.id}>{s.full_name}</option>
-            ))}
-          </Select>
-          <Input type="date" name="attendance_date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-          <Select name="status" required>
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-            <option value="leave">Leave</option>
-            <option value="half_day">Half Day</option>
-          </Select>
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
-          <SubmitButton label="Mark Karein" />
-        </form>
+        <p className="mb-3 text-sm text-surface-600 dark:text-surface-300">
+          {t("hra_subtitle", lang)}
+        </p>
+        <Link
+          href="/admin/hr/attendance"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          {t("hra_title", lang)}
+        </Link>
       </div>
     </div>
   );
 }
 
 function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(recordSalaryPayment, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 800);
 
   const now = new Date();
 
+  // Hazri ke adad form par PEHLE dikhte hain, rok ke baad nahi. Rok
+  // (recordSalaryPayment mein) tab lagti hai jab banda form bhar chuka
+  // hota hai -- us waqt tak wo adad zehen mein tay kar chuka hota hai.
+  const [who, setWho] = useState("");
+  const [mm, setMm] = useState(now.getMonth() + 1);
+  const [yy, setYy] = useState(now.getFullYear());
+  const [att, setAtt] = useState<Awaited<ReturnType<typeof fetchAttendanceMonth>> | undefined>(undefined);
+
+  useEffect(() => {
+    if (!who) {
+      setAtt(undefined);
+      return;
+    }
+    let alive = true;
+    setAtt(undefined);
+    fetchAttendanceMonth(who, yy, mm).then((r) => {
+      if (alive) setAtt(r);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [who, mm, yy]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Salary Record Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_record_salary", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Select name="profile_id" required>
-            <option value="">- Staff Select Karein -</option>
+          <Select name="profile_id" required value={who} onChange={(e) => setWho(e.target.value)}>
+            <option value="">{t("hr_pick_staff", lang)}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>{s.full_name}</option>
             ))}
           </Select>
           <div className="flex gap-2">
-            <Input type="number" name="pay_month" min="1" max="12" defaultValue={now.getMonth() + 1} required placeholder="Month" />
-            <Input type="number" name="pay_year" defaultValue={now.getFullYear()} required placeholder="Year" />
+            <Input type="number" name="pay_month" min="1" max="12" value={mm} onChange={(e) => setMm(Number(e.target.value))} required placeholder={t("hr_month", lang)} />
+            <Input type="number" name="pay_year" value={yy} onChange={(e) => setYy(Number(e.target.value))} required placeholder={t("hr_year", lang)} />
           </div>
-          <Input type="number" step="0.01" name="basic_salary" required placeholder="Basic Salary *" />
-          <Input type="number" step="0.01" name="bonus" placeholder="Bonus (optional)" />
-          <Input type="number" step="0.01" name="deductions" placeholder="Deductions (optional)" />
-          <Input type="number" step="0.01" name="advance_deduction" placeholder="Advance Deduction (optional)" />
-          <Textarea name="notes" rows={2} placeholder="Notes (optional)" />
-          <SubmitButton label="Record Karein" />
+
+          {/* att === undefined: abhi poochha ja raha hai.
+              att === null:      poochha gaya, JAWAB NAHI MILA.
+              Doosri soorat mein sifar likhna jhoot hota. */}
+          {who && (
+            <div className="rounded-lg border border-surface-200 p-2 text-xs dark:border-surface-700">
+              {att === undefined ? (
+                <p className="text-surface-400">…</p>
+              ) : att === null ? (
+                <p className="text-surface-500">Is mahine ki hazri parhi nahi ja saki.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Fig label={t("hra_working_days", lang)} v={att.workingDays} />
+                    <Fig label={t("hra_present_days", lang)} v={att.presentDays} />
+                    <Fig label={t("hra_leave_days", lang)} v={att.paidLeave + att.unpaidLeave} />
+                    <Fig label={t("hra_absent_days", lang)} v={att.absentDays} />
+                    <Fig label={t("hra_missing_days", lang)} v={att.missingDays} />
+                    <Fig label={t("hra_late_days", lang)} v={att.lateCount} />
+                  </div>
+                  {(!att.isFinalized || att.openItems > 0) && (
+                    <p className="mt-1.5 text-amber-700">
+                      {t("hra_payroll_warning", lang)}
+                      {att.openItems > 0 ? ` (${att.openItems})` : ""}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          <Input type="number" step="0.01" name="basic_salary" required placeholder={t("hr_basic_salary_req", lang)} />
+          <Input type="number" step="0.01" name="bonus" placeholder={t("hr_bonus", lang)} />
+          <Input type="number" step="0.01" name="deductions" placeholder={t("hr_deductions", lang)} />
+          <Input type="number" step="0.01" name="advance_deduction" placeholder={t("hr_advance_deduction", lang)} />
+          <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
+          {/* Ye nishan jaan boojh kar khali hai. Hazri adhoori ho to
+              action pehle rok deta hai; ye khana us soorat mein soch kar
+              aage baRhne ka raasta hai, aadat ka nahi. */}
+          <label className="flex items-start gap-2 text-xs text-surface-600 dark:text-surface-300">
+            <input type="checkbox" name="ack_unfinalized" value="yes" className="mt-0.5" />
+            <span>Hazri adhoori hai, phir bhi tankhwah banayein</span>
+          </label>
+          <SubmitButton label={t("hr_record", lang)} />
         </form>
       </div>
     </div>
   );
 }
 
-function MarkPaidButton({ paymentId }: { paymentId: string }) {
+/**
+ * Tankhwah dena -- ab khata poochh kar.
+ *
+ * Pehle ye ek button tha jo sirf nishan laga deta tha. Paisa nikalta tha
+ * aur kisi kitab mein nahi aata tha. Ab ye poochhta hai ke kis khate se
+ * nikla, kyunke us ke baghair raat ki ginti mein farq nikal aata hai
+ * jis ki wajah nahi milti.
+ */
+function MarkPaidButton({ paymentId, accounts }: { paymentId: string; accounts: { id: string; name: string }[] }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(markSalaryPaid, initialState);
   if (state.success) setTimeout(() => window.location.reload(), 600);
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="flex flex-col items-end gap-1">
       <input type="hidden" name="payment_id" value={paymentId} />
-      <button type="submit" className="text-xs font-medium text-green-600 hover:underline">Paid Mark Karein</button>
+      <select
+        name="account_id"
+        required
+        defaultValue=""
+        className="rounded border border-surface-200 px-1 py-0.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+      >
+        <option value="">{t("hr_from_which_account", lang)}</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="text-xs font-medium text-green-600 hover:underline">{t("hr_mark_paid", lang)}</button>
+      {state.error && <span className="text-xs text-red-600">{state.error}</span>}
     </form>
   );
 }
 
 function SubmitButton({ label }: { label: string }) {
+  const lang = useLang();
   const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending} className="w-full">{pending ? "Saving..." : label}</Button>;
+  return <Button type="submit" disabled={pending} className="w-full">{pending ? t("hr_saving", lang) : label}</Button>;
+}
+
+/**
+ * Ek chhota adad. Alag function is liye ke tankhwah ke form par ye
+ * chhe dafa aata hai, aur chhe jagah alag alag likha jana wohi cheez
+ * hai jis se adad ek doosre se mel khana chhoR dete hain.
+ */
+function Fig({ label, v }: { label: string; v: number }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase text-surface-400">{label}</p>
+      <p className="font-bold tabular-nums text-surface-800 dark:text-surface-100">{v}</p>
+    </div>
+  );
 }

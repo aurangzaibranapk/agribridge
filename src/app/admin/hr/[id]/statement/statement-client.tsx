@@ -1,5 +1,7 @@
 "use client";
 import { Printer, Download, Mail, MessageCircle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Entry {
   date: string;
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export function StaffStatementClient(props: Props) {
+  const lang = useLang();
   function statementText() {
     const lines = [
       `${props.staffName}${props.role ? ` (${props.role})` : ""} - Khata Statement`,
@@ -63,7 +66,7 @@ export function StaffStatementClient(props: Props) {
         <form className="flex items-center gap-2">
           <input type="date" name="start" defaultValue={props.startDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="date" name="end" defaultValue={props.endDate} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">View</button>
+          <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_view", lang)}</button>
         </form>
         <div className="flex gap-2">
           <button onClick={handlePrint} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
@@ -81,15 +84,15 @@ export function StaffStatementClient(props: Props) {
 
         <div className="mb-4 grid grid-cols-3 gap-3 text-center">
           <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-            <p className="text-xs text-surface-400">Total Credits</p>
+            <p className="text-xs text-surface-400">{t("fp_total_credits", lang)}</p>
             <p className="font-semibold text-green-600">Rs {props.totalCredit.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-            <p className="text-xs text-surface-400">Total Debits</p>
+            <p className="text-xs text-surface-400">{t("fp_total_debits", lang)}</p>
             <p className="font-semibold text-red-600">Rs {props.totalDebit.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-amber-50 p-3">
-            <p className="text-xs text-amber-500">Closing Balance</p>
+            <p className="text-xs text-amber-500">{t("c_closing_balance", lang)}</p>
             <p className="font-semibold text-amber-700">Rs {props.closingBalance.toLocaleString()}</p>
           </div>
         </div>
@@ -97,11 +100,11 @@ export function StaffStatementClient(props: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left dark:border-surface-800">
-              <th className="px-2 py-2 font-medium text-surface-500">Date</th>
-              <th className="px-2 py-2 font-medium text-surface-500">Description</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">Credit</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">Debit</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">Balance</th>
+              <th className="px-2 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="px-2 py-2 font-medium text-surface-500">{t("c_description", lang)}</th>
+              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_credit", lang)}</th>
+              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_debit", lang)}</th>
+              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -115,7 +118,7 @@ export function StaffStatementClient(props: Props) {
               </tr>
             ))}
             {props.entries.length === 0 && (
-              <tr><td colSpan={5} className="px-2 py-8 text-center text-surface-400">Is period mein koi transaction nahi hai.</td></tr>
+              <tr><td colSpan={5} className="px-2 py-8 text-center text-surface-400">{t("c_no_tx_period", lang)}</td></tr>
             )}
           </tbody>
         </table>

@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { GrantVerifierForm } from "./grant-verifier-form";
 import { RevokeVerifierButton } from "./revoke-verifier-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function LossVerifiersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -15,7 +18,7 @@ export default async function LossVerifiersPage() {
   const isHQ = ["super_admin", "admin", "owner"].includes(profile?.role ?? "");
 
   if (!isHQ) {
-    return <div className="p-8 text-center text-surface-400">Sirf Admin/Owner ye page dekh sakta hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("rv_admin_only", lang)}</div>;
   }
 
   const [{ data: staff }, { data: shops }, { data: rawGrants }] = await Promise.all([
@@ -37,7 +40,7 @@ export default async function LossVerifiersPage() {
 
   return (
     <div>
-      <PageHeader title="Loss Verification Permissions" description="Kisi bhi staff member ko chahe uska koi bhi role ho - Loss verify karne ki ijazat dein" />
+      <PageHeader title={t("rv_title", lang)} description="Kisi bhi staff member ko chahe uska koi bhi role ho - Loss verify karne ki ijazat dein" />
 
       <div className="mb-6">
         <GrantVerifierForm
@@ -50,8 +53,8 @@ export default async function LossVerifiersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-4 py-3 font-medium text-surface-500">Staff Member</th>
-              <th className="px-4 py-3 font-medium text-surface-500">Shop (khaali = Sab Shops)</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("rv_staff_member", lang)}</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("at_shop_all", lang)}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -64,7 +67,7 @@ export default async function LossVerifiersPage() {
               </tr>
             ))}
             {grants.length === 0 && (
-              <tr><td colSpan={3} className="px-4 py-8 text-center text-surface-400">Abhi tak kisi ko permission nahi di gayi.</td></tr>
+              <tr><td colSpan={3} className="px-4 py-8 text-center text-surface-400">{t("rv_none_yet", lang)}</td></tr>
             )}
           </tbody>
         </table>

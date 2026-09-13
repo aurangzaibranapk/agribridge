@@ -2,11 +2,14 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { deleteApplication, type ActionState } from "@/actions/delete-application";
 import { Trash2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function DeleteApplicationButton({ applicationId, isJoined }: { applicationId: string; isJoined: boolean }) {
   const [state, formAction] = useFormState(deleteApplication, initialState);
+  const lang = useLang();
 
   return (
     <div className="inline-block">
@@ -29,8 +32,9 @@ export function DeleteApplicationButton({ applicationId, isJoined }: { applicati
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const lang = useLang();
   return (
-    <button type="submit" disabled={pending} title="Delete" className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-50">
+    <button type="submit" disabled={pending} title={t("c_delete", lang)} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-50">
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   );

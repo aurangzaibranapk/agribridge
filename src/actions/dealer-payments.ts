@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -13,7 +14,7 @@ export async function recordDealerPayment(_prev: ActionState, formData: FormData
   const serviceClient = createServiceClient();
   const dealerId = String(formData.get("dealer_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const paymentDate = String(formData.get("payment_date") ?? new Date().toISOString().slice(0, 10));
+  const paymentDate = String(formData.get("payment_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
   if (!dealerId) return { error: "Missing dealer id." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };

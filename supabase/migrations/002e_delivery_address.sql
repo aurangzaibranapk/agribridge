@@ -8,7 +8,7 @@
 -- deliver an order without knowing where to take it. The masking
 -- principle is about IDENTITY (name, phone, CNIC) — never exposed to a
 -- dealer, no matter what — not about location, which any courier needs.
-alter table bridge_orders add column delivery_address text;
+alter table bridge_orders add column if not exists delivery_address text;
 
 comment on column bridge_orders.delivery_address is
   'Full delivery address, visible to the assigned dealer for fulfilment. '

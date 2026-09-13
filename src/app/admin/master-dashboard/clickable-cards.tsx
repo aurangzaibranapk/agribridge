@@ -2,24 +2,38 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Wallet, Boxes, ArrowDownCircle, ArrowUpCircle, PiggyBank, Scale, ChevronDown, ChevronUp, ReceiptText, Milk } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface DataPoint {
   name: string;
   value: number;
 }
 
+/**
+ * Adad NULL kyun ho sakta hai.
+ *
+ * `number` = gina gaya, yehi adad hai (sifar bhi ho sakta hai, aur sifar
+ * ka matlab "dekh liya, kuch nahi" hota hai).
+ *
+ * `null` = gina hi nahi ja saka -- ledger ka jawab nahi aaya. Aisi jagah
+ * par "Rs 0" likhna is project ki teen dafa dohrayi hui ghalati hai, is
+ * liye wahan "—" likha jata hai aur wajah sath hoti hai.
+ */
+type Adad = number | null;
+
 interface SummaryProps {
   variant?: "summary";
   totalCapitalInvested: number;
   capitalBreakdown: DataPoint[];
-  currentPosition: number;
-  totalBankBalance: number;
+  currentPosition: Adad;
+  totalBankBalance: Adad;
   bankBreakdown: DataPoint[];
-  totalInventoryValue: number;
+  totalInventoryValue: Adad;
   inventoryBreakdown: DataPoint[];
-  totalReceivables: number;
+  totalReceivables: Adad;
   receivablesBreakdown: DataPoint[];
-  totalPayables: number;
+  totalPayables: Adad;
   payablesBreakdown: DataPoint[];
 }
 
@@ -33,6 +47,7 @@ interface PLProps {
 
 export function ClickableCards(props: SummaryProps | PLProps) {
   const [openCard, setOpenCard] = useState<string | null>(null);
+  const lang = useLang();
 
   function toggle(key: string) {
     setOpenCard(openCard === key ? null : key);
@@ -43,7 +58,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ClickCard
           id="expenses"
-          label="Company Expenses (Non-Milk)"
+          label={t("md_company_expenses", lang)}
           icon={<ReceiptText className="h-4 w-4" />}
           value={props.totalExpenses}
           valueColor="text-red-600"
@@ -54,7 +69,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <ClickCard
           id="milk"
-          label="Milk Collection Costs"
+          label={t("md_milk_costs", lang)}
           icon={<Milk className="h-4 w-4" />}
           value={props.milkTotalDeductions}
           valueColor="text-red-600"
@@ -72,7 +87,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ClickCard
           id="capital"
-          label="Total Invest Kiya Hua (Capital)"
+          label={t("md_total_capital", lang)}
           icon={<PiggyBank className="h-4 w-4" />}
           value={props.totalCapitalInvested}
           valueColor="text-brand-700"
@@ -84,16 +99,20 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <div className="rounded-card border border-surface-200 bg-white p-6 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
           <p className="flex items-center justify-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-surface-500">
-            <Scale className="h-4 w-4" /> Abhi Ka Position (Bank+Stock+Receivable-Payable)
+            <Scale className="h-4 w-4" />{t("at_position_now", lang)}</p>
+          <p className="mt-2 font-display text-3xl font-bold text-surface-900 dark:text-white">
+            {props.currentPosition === null ? "—" : `Rs ${props.currentPosition.toLocaleString()}`}
           </p>
-          <p className="mt-2 font-display text-3xl font-bold text-surface-900 dark:text-white">Rs {props.currentPosition.toLocaleString()}</p>
+          {props.currentPosition === null && (
+            <p className="mt-1 text-xs text-amber-600">Ledger ka jawab nahi mila — ye adad bana nahi ja saka.</p>
+          )}
         </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ClickCard
           id="bank"
-          label="Bank/Cash Balance"
+          label={t("md_bank_cash", lang)}
           icon={<Wallet className="h-4 w-4" />}
           value={props.totalBankBalance}
           valueColor="text-surface-900 dark:text-white"
@@ -104,7 +123,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <ClickCard
           id="inventory"
-          label="Inventory Value"
+          label={t("md_inventory_value", lang)}
           icon={<Boxes className="h-4 w-4" />}
           value={props.totalInventoryValue}
           valueColor="text-surface-900 dark:text-white"
@@ -115,7 +134,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <ClickCard
           id="receivables"
-          label="Aana Hai (Receivables)"
+          label={t("md_receivables", lang)}
           icon={<ArrowDownCircle className="h-4 w-4" />}
           value={props.totalReceivables}
           valueColor="text-green-700"
@@ -126,7 +145,7 @@ export function ClickableCards(props: SummaryProps | PLProps) {
         />
         <ClickCard
           id="payables"
-          label="Dena Hai (Payables)"
+          label={t("md_payables", lang)}
           icon={<ArrowUpCircle className="h-4 w-4" />}
           value={props.totalPayables}
           valueColor="text-red-700"
@@ -155,7 +174,7 @@ function ClickCard({
   id: string;
   label: string;
   icon: React.ReactNode;
-  value: number;
+  value: Adad;
   valueColor: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -163,6 +182,7 @@ function ClickCard({
   barColor: string;
   big?: boolean;
 }) {
+  const lang = useLang();
   return (
     <div className={`rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900 ${big ? "p-6 text-center" : "p-4"}`}>
       <button onClick={onToggle} className="w-full">
@@ -171,7 +191,10 @@ function ClickCard({
           <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
           {data.length > 0 && (isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />)}
         </div>
-        <p className={`mt-2 font-display font-semibold ${big ? "text-3xl" : "text-xl"} ${valueColor}`}>Rs {value.toLocaleString()}</p>
+        <p className={`mt-2 font-display font-semibold ${big ? "text-3xl" : "text-xl"} ${value === null ? "text-amber-600" : valueColor}`}>
+          {value === null ? "—" : `Rs ${value.toLocaleString()}`}
+        </p>
+        {value === null && <p className="text-[10px] text-amber-600">gina nahi ja saka</p>}
       </button>
 
       {isOpen && data.length > 0 && (
@@ -187,7 +210,7 @@ function ClickCard({
           </ResponsiveContainer>
         </div>
       )}
-      {isOpen && data.length === 0 && <p className="mt-3 text-center text-xs text-surface-400">Koi detail nahi hai.</p>}
+      {isOpen && data.length === 0 && <p className="mt-3 text-center text-xs text-surface-400">{t("md_no_detail", lang)}</p>}
     </div>
   );
 }

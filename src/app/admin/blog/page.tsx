@@ -3,31 +3,34 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge, Button } from "@/components/ui/form";
 import { formatDate } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBlogPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: posts } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
 
   return (
     <div>
       <PageHeader
-        title="Blog"
+        title={t("bg_blog", lang)}
         description="Articles shown on the public /blog page"
-        actions={<Link href="/admin/blog/new"><Button size="sm">New Post</Button></Link>}
+        actions={<Link href="/admin/blog/new"><Button size="sm">{t("bg_new_post", lang)}</Button></Link>}
       />
       {!posts || posts.length === 0 ? (
-        <EmptyState title="No blog posts yet" description="Create your first post." />
+        <EmptyState title={t("bg_none_yet", lang)} description="Create your first post." />
       ) : (
         <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-100 text-left text-xs font-medium uppercase tracking-wide text-surface-400 dark:border-surface-800 dark:text-surface-500">
-                <th className="px-5 py-3">Title</th>
-                <th className="px-5 py-3">Category</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Created</th>
+                <th className="px-5 py-3">{t("c_title", lang)}</th>
+                <th className="px-5 py-3">{t("c_category", lang)}</th>
+                <th className="px-5 py-3">{t("c_status", lang)}</th>
+                <th className="px-5 py-3 text-right">{t("bg_created", lang)}</th>
               </tr>
             </thead>
             <tbody>

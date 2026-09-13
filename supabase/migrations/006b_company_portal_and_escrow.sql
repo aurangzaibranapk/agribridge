@@ -187,4 +187,4 @@ create policy escrow_party_visibility on escrow_transactions for select using (
 -- sensible fallback when displaying amounts that aren't tied to a
 -- specific wallet (e.g. product prices).
 -- ---------------------------------------------------------------------
-alter table organizations add column default_currency text not null default 'PKR';
+alter table organizations add column if not exists default_currency text not null default 'PKR';

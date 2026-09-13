@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils/format";
 import { EmptyState } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export interface Column<T> {
   header: string;
@@ -60,6 +62,7 @@ export function DataTable<T>({
 }
 
 export function Pagination({ page, pageSize, totalCount, basePath }: { page: number; pageSize: number; totalCount: number; basePath: string }) {
+  const lang = getLanguageFromCookies("rm");
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   if (totalPages <= 1) return null;
 
@@ -74,15 +77,11 @@ export function Pagination({ page, pageSize, totalCount, basePath }: { page: num
         <a
           href={page > 1 ? buildHref(page - 1) : undefined}
           className={cn("rounded-lg border border-surface-200 px-3 py-1.5", page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-surface-100")}
-        >
-          Previous
-        </a>
+        >{t("sh_previous", lang)}</a>
         <a
           href={page < totalPages ? buildHref(page + 1) : undefined}
           className={cn("rounded-lg border border-surface-200 px-3 py-1.5", page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-surface-100")}
-        >
-          Next
-        </a>
+        >{t("sh_next", lang)}</a>
       </div>
     </div>
   );

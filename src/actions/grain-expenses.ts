@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -14,7 +16,7 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
   const amount = Number(formData.get("amount") ?? 0);
   const accountId = (formData.get("account_id") as string) || null;
   const entryId = (formData.get("entry_id") as string) || null;
-  const expenseDate = String(formData.get("expense_date") ?? new Date().toISOString().slice(0, 10));
+  const expenseDate = String(formData.get("expense_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!["diesel_fuel", "labor_mazdoori", "bardana", "tractor_trolley_rent", "other"].includes(category)) {
@@ -40,19 +42,41 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
   });
   if (error) return { error: error.message };
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "expense",
-    category: "Grain Operations",
-    amount,
-    transaction_date: expenseDate,
-    notes: `${description} (Grain Operations)`,
-    created_by: user?.id ?? null,
-  });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) - amount }).eq("id", accountId);
+  const { data: grainExpRow } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "expense",
+      category: "Grain Operations",
+      amount,
+      transaction_date: expenseDate,
+      notes: `${description} (Grain Operations)`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  // Bardana, mazdoori, chungi -- ye grain ki lagat ka hissa hain, aam
+  // daftari kharcha nahi. Inhen 6090 mein daal dein to grain ka asal
+  // nafa maloom hi nahi hota.
+  if (grainExpRow?.id) {
+    const posted = await postCashOut({
+      accountId,
+      amount,
+      description: `${description} (Grain Operations)`,
+      againstAccount: ACC.grainPurchase,
+      ctx: {
+        createdBy: user?.id ?? null,
+        entryDate: expenseDate,
+        claims: [{ table: "finance_transactions", rowId: grainExpRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Kharcha darj hua magar ledger mein nahi gaya: ${posted.error}` };
   }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
 
   revalidatePath("/admin/grain-procurement/dashboard");
   revalidatePath("/admin/grain-procurement");

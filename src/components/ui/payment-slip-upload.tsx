@@ -3,8 +3,11 @@ import { useRef, useState } from "react";
 import { FileUp, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Label } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 export function PaymentSlipUpload({ onUploaded }: { onUploaded?: (url: string) => void }) {
+  const lang = useLang();
   const [fileUrl, setFileUrl] = useState("");
   const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -33,7 +36,7 @@ export function PaymentSlipUpload({ onUploaded }: { onUploaded?: (url: string) =
 
   return (
     <div>
-      <Label>Payment Slip (image or PDF)</Label>
+      <Label>{t("sh_payment_slip", lang)}</Label>
       <input type="hidden" name="payment_slip_url" value={fileUrl} />
       {fileUrl ? (
         <div className="flex items-center gap-2 rounded-lg border border-surface-200 p-2 dark:border-surface-700">
@@ -44,7 +47,7 @@ export function PaymentSlipUpload({ onUploaded }: { onUploaded?: (url: string) =
             type="button"
             onClick={() => { setFileUrl(""); setFileName(""); }}
             className="ml-auto text-surface-400 hover:text-red-600"
-            aria-label="Remove file"
+            aria-label={t("sh_remove_file", lang)}
           >
             <X className="h-3.5 w-3.5" />
           </button>

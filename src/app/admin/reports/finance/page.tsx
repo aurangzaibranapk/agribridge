@@ -4,6 +4,8 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 import { TrendingUp, TrendingDown, Wallet, Landmark } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function FinanceReportPage({
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const { start, end } = getDateRange(range);
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: accounts } = await supabase
@@ -68,29 +71,29 @@ export default async function FinanceReportPage({
 
   return (
     <div>
-      <PageHeader title="Finance Report" description="Company-wide cash book — income, expenses, and account balances" />
+      <PageHeader title={t("rf_title", lang)} description="Company-wide cash book — income, expenses, and account balances" />
 
       <div className="mt-4">
         <DateRangeFilter current={range} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Income" value={`Rs. ${totalIncome.toLocaleString()}`} icon={TrendingUp} tone="brand" />
-        <StatCard label="Total Expense" value={`Rs. ${totalExpense.toLocaleString()}`} icon={TrendingDown} tone="warn" />
+        <StatCard label={t("rf_total_income", lang)} value={`Rs. ${totalIncome.toLocaleString()}`} icon={TrendingUp} tone="brand" />
+        <StatCard label={t("rf_total_expense", lang)} value={`Rs. ${totalExpense.toLocaleString()}`} icon={TrendingDown} tone="warn" />
         <StatCard
-          label="Net Cash Flow"
+          label={t("rf_net_cash_flow", lang)}
           value={`${netCashFlow >= 0 ? "+" : ""}Rs. ${netCashFlow.toLocaleString()}`}
           icon={Wallet}
           tone={netCashFlow >= 0 ? "brand" : "warn"}
         />
-        <StatCard label="Total Balance (All Accounts)" value={`Rs. ${totalBalance.toLocaleString()}`} icon={Landmark} tone="purple" />
+        <StatCard label={t("rf_total_balance", lang)} value={`Rs. ${totalBalance.toLocaleString()}`} icon={Landmark} tone="purple" />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Account Balances</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("rf_account_balances", lang)}</h2>
           {(accounts ?? []).length === 0 ? (
-            <p className="text-sm text-surface-400">No accounts yet.</p>
+            <p className="text-sm text-surface-400">{t("rf_no_accounts", lang)}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {(accounts ?? []).map((a) => (
@@ -104,9 +107,9 @@ export default async function FinanceReportPage({
         </div>
 
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Top Expense Categories</h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("rf_top_expense_cats", lang)}</h2>
           {topExpenseCategories.length === 0 ? (
-            <p className="text-sm text-surface-400">No expenses in this period.</p>
+            <p className="text-sm text-surface-400">{t("rf_no_expenses_period", lang)}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {topExpenseCategories.map(([cat, amount]) => (
@@ -124,20 +127,20 @@ export default async function FinanceReportPage({
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">Recent Transactions</h2>
+        <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("c_recent_transactions", lang)}</h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">No transactions in this period.</p>
+          <p className="text-sm text-surface-400">{t("c_no_tx_period", lang)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Account</th>
-                  <th className="py-2 pr-3">Type</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 pr-3">Notes</th>
-                  <th className="py-2 pr-3">Amount</th>
+                  <th className="py-2 pr-3">{t("c_date", lang)}</th>
+                  <th className="py-2 pr-3">{t("rf_account", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_type", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_category", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_notes", lang)}</th>
+                  <th className="py-2 pr-3">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>

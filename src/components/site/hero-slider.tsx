@@ -1,22 +1,42 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/form";
 import { cn } from "@/lib/utils/format";
-interface Slide { id: string; image_url: string; mobile_image_url?: string | null; headline: string; subheadline: string | null; cta_label: string | null; cta_url: string | null }
+
+interface Slide {
+  id: string;
+  image_url: string;
+  mobile_image_url?: string | null;
+  headline: string;
+  subheadline: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
+}
+
 export function HeroSlider({ slides }: { slides: Slide[] }) {
   const [active, setActive] = useState(0);
+
   useEffect(() => {
     if (slides.length <= 1) return;
     const timer = setInterval(() => setActive((i) => (i + 1) % slides.length), 6000);
     return () => clearInterval(timer);
   }, [slides.length]);
+
   const slide = slides[active];
+
   return (
     <section className="relative w-full overflow-hidden aspect-[1600/510] min-h-[16rem]">
       {slides.map((s, i) => (
-        <picture key={s.id} className={cn("absolute inset-0 block h-full w-full transition-opacity duration-1000", i === active ? "opacity-100" : "opacity-0")}>
-          {s.mobile_image_url && <source media="(max-width: 639px)" srcSet={s.mobile_image_url} />}
+        <picture
+          key={s.id}
+          className={cn(
+            "absolute inset-0 block h-full w-full transition-opacity duration-1000",
+            i === active ? "opacity-100" : "opacity-0"
+          )}
+        >
+          {s.mobile_image_url && (
+            <source media="(max-width: 639px)" srcSet={s.mobile_image_url} />
+          )}
           <img
             src={s.image_url}
             alt={s.headline}
@@ -24,18 +44,35 @@ export function HeroSlider({ slides }: { slides: Slide[] }) {
           />
         </picture>
       ))}
+
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+
       <div className="absolute inset-x-0 bottom-0 px-4 pb-10 sm:pb-12">
         <div className="mx-auto max-w-2xl text-center text-white">
-          <p className="font-display text-xl font-semibold sm:text-2xl">{slide.headline}</p>
-          {slide.subheadline && <p className="mt-1.5 text-sm text-white/85 sm:text-base">{slide.subheadline}</p>}
+          <p className="font-display text-xl font-semibold sm:text-2xl">
+            {slide.headline}
+          </p>
+
+          {slide.subheadline && (
+            <p className="mt-1.5 text-sm text-white/85 sm:text-base">
+              {slide.subheadline}
+            </p>
+          )}
+
           {slide.cta_label && slide.cta_url && (
-            <Link href={slide.cta_url} className="mt-3 inline-block">
-              <Button size="sm">{slide.cta_label}</Button>
+            <Link
+              href={slide.cta_url}
+              className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border-2 border-white bg-white px-7 py-2.5 text-sm font-bold text-emerald-900 shadow-[0_8px_28px_rgba(0,0,0,0.38)] ring-2 ring-black/15 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-[0_10px_32px_rgba(0,0,0,0.48)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/80 sm:px-8 sm:text-base"
+            >
+              {slide.cta_label}
+              <span aria-hidden="true" className="ml-2 text-lg leading-none">
+                →
+              </span>
             </Link>
           )}
         </div>
       </div>
+
       {slides.length > 1 && (
         <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
           {slides.map((_, i) => (
@@ -43,7 +80,10 @@ export function HeroSlider({ slides }: { slides: Slide[] }) {
               key={i}
               onClick={() => setActive(i)}
               aria-label={`Go to slide ${i + 1}`}
-              className={cn("h-1.5 rounded-full transition-all", i === active ? "w-6 bg-white" : "w-1.5 bg-white/50")}
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === active ? "w-6 bg-white" : "w-1.5 bg-white/50"
+              )}
             />
           ))}
         </div>

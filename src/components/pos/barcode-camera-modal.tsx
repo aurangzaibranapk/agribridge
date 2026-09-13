@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { X, ScanLine } from "lucide-react";
 
 export function BarcodeCameraModal({
   onDetected,
   onClose,
+  lang,
 }: {
   onDetected: (code: string) => void;
   onClose: () => void;
+  /** Zaban server se aati hai -- dekhein pos-client.tsx ka note. */
+  lang: Lang;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +48,7 @@ export function BarcodeCameraModal({
       <div className="w-full max-w-md rounded-card bg-white p-4 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <ScanLine className="h-4 w-4 text-brand-600" /> Scan Barcode
+            <ScanLine className="h-4 w-4 text-brand-600" /> {t("pos_scan_barcode", lang)}
           </h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
@@ -60,7 +64,7 @@ export function BarcodeCameraModal({
         )}
 
         <p className="mt-3 text-center text-xs text-surface-400">
-          Product ke barcode ko camera ke saamne rakhein
+          {t("pos_scan_camera_hint", lang)}
         </p>
       </div>
     </div>

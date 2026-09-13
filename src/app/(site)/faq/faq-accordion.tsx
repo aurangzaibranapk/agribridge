@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/form";
 import { cn } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Faq { id: string; question: string; answer: string; category: string | null }
 
 export function FaqAccordion({ faqs }: { faqs: Faq[] }) {
+  const lang = useLang();
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -31,10 +34,10 @@ export function FaqAccordion({ faqs }: { faqs: Faq[] }) {
     <div>
       <div className="relative mb-8">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search FAQs..." className="pl-9" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("sp_search_faq", lang)} className="pl-9" />
       </div>
 
-      {grouped.length === 0 && <p className="text-center text-sm text-surface-400 dark:text-surface-500">No FAQs match your search.</p>}
+      {grouped.length === 0 && <p className="text-center text-sm text-surface-400 dark:text-surface-500">{t("sp_no_faq", lang)}</p>}
 
       {grouped.map(([category, items]) => (
         <div key={category} className="mb-8">

@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MilkClient } from "@/app/admin/milk-collection/milk-client";
 import { FarmerSettingsPanel } from "@/app/admin/milk-collection/farmer-settings-panel";
 export const dynamic = "force-dynamic";
 export default async function AdminMilkCollectionPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const [{ data: farmers }, { data: rawEntries }, { data: balances }, { data: rateSettings }, { data: rawMigrations }, { data: branches }] = await Promise.all([
     supabase.from("farmers").select("id, full_name, farmer_code, milk_collection_type").eq("is_deleted", false).order("full_name"),
     supabase
@@ -47,7 +50,7 @@ export default async function AdminMilkCollectionPage() {
   }));
   return (
     <div>
-      <PageHeader title="Milk Collection" description="Daily milk entries, quality tracking, and farmer payments" />
+      <PageHeader title={t("mk_title", lang)} description={t("mk_subtitle", lang)} />
       <MilkClient farmers={farmers ?? []} entries={entries} balances={normalizedBalances} branches={branches ?? []} />
       <FarmerSettingsPanel
         farmers={(farmers ?? []) as any}

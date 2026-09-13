@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { useFormState } from "react-dom";
 import Link from "next/link";
-import { Users, FileText, CheckSquare } from "lucide-react";
+import { Users, FileText, CheckSquare, Store, Plus, LayoutDashboard } from "lucide-react";
 import { DeleteBranchButton } from "./delete-branch-button";
 import { BranchStatusManager } from "./branch-status-manager";
 import { EditBranchButton } from "./edit-branch-modal";
 import { bulkUpdateBranchStatus, bulkDeleteBranches, type ActionState } from "@/actions/branches-bulk";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -26,8 +28,33 @@ interface Worker {
   role: string;
 }
 
-export function BranchesListClient({ branches, staffByBranch }: { branches: Branch[]; staffByBranch: Record<string, Worker[]> }) {
+interface Dukan {
+  id: string;
+  name: string;
+  business_type: string;
+  is_active: boolean;
+}
+
+const QISM_LABEL: Record<string, string> = {
+  karyana: "Karyana",
+  agri_inputs: "Agri Inputs",
+  grain_procurement: "Anaj",
+  dairy: "Doodh",
+  machinery_fleet: "Machinery",
+  vet: "Vet",
+};
+
+export function BranchesListClient({
+  branches,
+  staffByBranch,
+  shopsByBranch = {},
+}: {
+  branches: Branch[];
+  staffByBranch: Record<string, Worker[]>;
+  shopsByBranch?: Record<string, Dukan[]>;
+}) {
   const [selected, setSelected] = useState<string[]>([]);
+  const lang = useLang();
 
   function toggleSelect(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -50,6 +77,7 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
       <div className="space-y-2">
         {branches.map((b) => {
           const workers = staffByBranch[b.id] ?? [];
+          const dukanein = shopsByBranch[b.id] ?? [];
           return (
             <div key={b.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
               <div className="flex items-start justify-between">
@@ -59,35 +87,77 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
                   )}
                   <div>
                     <p className="flex items-center gap-2 font-medium text-surface-900 dark:text-white">
-                      {b.name}
+                      <Link href={`/admin/branches/${b.id}/dashboard`} className="hover:text-brand-700 hover:underline">
+                        {b.name}
+                      </Link>
                       <EditBranchButton branch={b} />
-                      {b.is_main_branch && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Main</span>}
-                      {b.status === "suspended" && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Suspended</span>}
-                      {b.status === "blocked" && <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Blocked</span>}
+                      {b.is_main_branch && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("br_main", lang)}</span>}
+                      {b.status === "suspended" && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">{t("c_suspended", lang)}</span>}
+                      {b.status === "blocked" && <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">{t("br_blocked", lang)}</span>}
                     </p>
                     <p className="mt-0.5 text-xs text-surface-500">{[b.district, b.tehsil].filter(Boolean).join(", ") || "-"}</p>
                     {b.address && <p className="mt-0.5 text-xs text-surface-400">{b.address}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Link href={`/admin/branches/${b.id}/dashboard`} className="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-300">
+                    <LayoutDashboard className="h-3.5 w-3.5" />{t("br_dashboard", lang)}</Link>
                   <Link href={`/admin/branches/${b.id}/statement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs text-surface-600 hover:bg-surface-50">
-                    <FileText className="h-3.5 w-3.5" /> Statement
-                  </Link>
+                    <FileText className="h-3.5 w-3.5" />{t("at_statement", lang)}</Link>
                   <BranchStatusManager branchId={b.id} status={b.status} />
                   {!b.is_main_branch && <DeleteBranchButton branchId={b.id} />}
                 </div>
               </div>
               {b.status_reason && (
                 <p className="mt-2 rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">
-                  <strong>Wajah:</strong> {b.status_reason}
+                  <strong>{t("br_reason_label", lang)}</strong> {b.status_reason}
                 </p>
               )}
+              {/* Is shaakh ki dukanein -- shaakh ke andar hi.
+                  Malik ka naqsha: pehle shaakh, phir us ke andar dukan.
+                  Dukan ka apna godam us dukan ka hota hai; HQ ka godam
+                  kisi shaakh ya dukan ka nahi -- wo alag cheez hai. */}
+              <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
+                    <Store className="h-3.5 w-3.5" /> Dukanein ({dukanein.length})
+                  </p>
+                  <Link
+                    href="/admin/shops"
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    <Plus className="h-3 w-3" /> Nayi dukan
+                  </Link>
+                </div>
+                {dukanein.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                    Is shaakh ke neeche koi dukan nahi — is par kaam karne wale ko dukan nahi chuni ja
+                    sakegi.
+                  </p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {dukanein.map((d) => (
+                      <span
+                        key={d.id}
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          d.is_active
+                            ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+                            : "bg-surface-100 text-surface-500 dark:bg-surface-800"
+                        }`}
+                      >
+                        {d.name} <span className="opacity-60">({QISM_LABEL[d.business_type] ?? d.business_type})</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-surface-400">
                   <Users className="h-3.5 w-3.5" /> Workers ({workers.length})
                 </p>
                 {workers.length === 0 ? (
-                  <p className="mt-1 text-xs text-surface-400">Abhi koi staff assign nahi hua.</p>
+                  <p className="mt-1 text-xs text-surface-400">{t("br_no_staff", lang)}</p>
                 ) : (
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {workers.map((w, i) => (
@@ -107,6 +177,7 @@ export function BranchesListClient({ branches, staffByBranch }: { branches: Bran
 }
 
 function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+  const lang = useLang();
   const [statusState, statusAction] = useFormState(bulkUpdateBranchStatus, initialState);
   const [deleteState, deleteAction] = useFormState(bulkDeleteBranches, initialState);
 
@@ -120,12 +191,12 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="status" value="active" />
-        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">Active Karein</button>
+        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">{t("c_activate", lang)}</button>
       </form>
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="status" value="suspended" />
-        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">Suspend Karein</button>
+        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">{t("c_suspend", lang)}</button>
       </form>
       <form
         action={deleteAction}
@@ -134,7 +205,7 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
         }}
       >
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">Delete Karein</button>
+        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">{t("c_delete", lang)}</button>
       </form>
     </div>
   );

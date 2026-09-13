@@ -3,10 +3,13 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { VacancyForm } from "./vacancy-form";
 import { VacancyToggle } from "./vacancy-toggle";
 import { DeleteVacancyButton } from "./delete-vacancy-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminJobVacanciesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
   const { data: rawVacancies } = await supabase
@@ -26,11 +29,11 @@ export default async function AdminJobVacanciesPage() {
   }));
   return (
     <div>
-      <PageHeader title="Job Vacancies" description="Post open positions - they'll show up on the public Careers page" />
+      <PageHeader title={t("at_job_vacancies", lang)} description="Post open positions - they'll show up on the public Careers page" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {vacancies.length === 0 ? (
-            <EmptyState title="No vacancies posted yet" />
+            <EmptyState title={t("at_no_vacancies", lang)} />
           ) : (
             <div className="space-y-2">
               {vacancies.map((v) => (

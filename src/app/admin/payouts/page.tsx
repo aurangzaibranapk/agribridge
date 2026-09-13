@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { MarkDealerPaidButton, MarkFarmerPaidButton } from "@/app/admin/payouts/payout-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPayoutsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [{ data: rawDealerPayouts }, { data: rawFarmerPayouts }] = await Promise.all([
@@ -39,15 +42,13 @@ export default async function AdminPayoutsPage() {
 
   return (
     <div>
-      <PageHeader title="Payouts" description="Dealer and Farmer payouts awaiting release - marking paid also credits their wallet" />
+      <PageHeader title={t("at_payouts", lang)} description="Dealer and Farmer payouts awaiting release - marking paid also credits their wallet" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Dealer Payouts
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_dealer_payouts", lang)}</h2>
           {dealerPayouts.length === 0 ? (
-            <EmptyState title="No dealer payouts" />
+            <EmptyState title={t("at_no_dealer_payouts", lang)} />
           ) : (
             <div className="space-y-2">
               {dealerPayouts.map((p) => (
@@ -67,11 +68,9 @@ export default async function AdminPayoutsPage() {
         </div>
 
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Farmer Produce Payouts
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_farmer_payouts", lang)}</h2>
           {farmerPayouts.length === 0 ? (
-            <EmptyState title="No farmer payouts" />
+            <EmptyState title={t("at_no_farmer_payouts", lang)} />
           ) : (
             <div className="space-y-2">
               {farmerPayouts.map((p) => (

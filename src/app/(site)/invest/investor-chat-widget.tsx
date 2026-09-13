@@ -1,6 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Message {
   role: "user" | "model";
@@ -14,6 +16,7 @@ const EXAMPLES = [
 ];
 
 export function InvestorChatWidget() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -54,9 +57,7 @@ export function InvestorChatWidget() {
       <button
         onClick={() => setOpen(true)}
         className="rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-700"
-      >
-        Start a Conversation
-      </button>
+      >{t("sp_start_conversation", lang)}</button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
@@ -64,7 +65,7 @@ export function InvestorChatWidget() {
             <div className="flex items-center justify-between rounded-t-2xl bg-brand-600 px-4 py-3 text-white">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-sm font-semibold">Investment Assistant</span>
+                <span className="text-sm font-semibold">{t("sp_investment_assistant", lang)}</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white">
                 <X className="h-5 w-5" />
@@ -75,7 +76,7 @@ export function InvestorChatWidget() {
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
                   <MessageCircle className="h-8 w-8 text-brand-300" />
-                  <p className="text-sm text-surface-500">Kuch bhi poochein, jaise:</p>
+                  <p className="text-sm text-surface-500">{t("sp_ask_anything", lang)}</p>
                   <div className="flex flex-col items-center gap-2">
                     {EXAMPLES.map((q) => (
                       <button
@@ -100,7 +101,7 @@ export function InvestorChatWidget() {
                   </span>
                 </div>
               ))}
-              {loading && <p className="text-xs text-surface-400">Type kar raha hai...</p>}
+              {loading && <p className="text-xs text-surface-400">{t("sp_typing", lang)}</p>}
             </div>
 
             <div className="flex items-center gap-2 border-t border-surface-100 p-3 dark:border-surface-800">
@@ -108,7 +109,7 @@ export function InvestorChatWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-                placeholder="Apna sawal likhein..."
+                placeholder={t("sp_write_question", lang)}
                 className="h-10 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white"
               />
               <button

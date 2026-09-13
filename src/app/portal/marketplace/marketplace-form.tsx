@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { placeMarketplaceOrder, type ActionState } from "@/actions/marketplace";
 import { Search, ShoppingCart, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Product {
   id: string;
@@ -13,6 +15,7 @@ interface Product {
 const initialState: ActionState = {};
 
 export function MarketplaceForm({ products }: { products: Product[] }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(placeMarketplaceOrder, initialState);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -28,10 +31,8 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
     return (
       <div className="rounded-card border border-brand-200 bg-brand-50 p-6 text-center dark:border-brand-900/40 dark:bg-brand-950/30">
         <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-brand-600" />
-        <p className="font-medium text-brand-800 dark:text-brand-300">Order placed successfully!</p>
-        <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">
-          We automatically matched you with the best available price. You'll be updated as your order progresses.
-        </p>
+        <p className="font-medium text-brand-800 dark:text-brand-300">{t("pm_order_placed", lang)}</p>
+        <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">{t("pm_matched_best", lang)}</p>
       </div>
     );
   }
@@ -44,7 +45,7 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search fertilizer, seeds, pesticide..."
+            placeholder={t("pm_search_inputs", lang)}
             className="w-full rounded-lg border border-surface-200 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none"
           />
         </div>
@@ -64,7 +65,7 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-full py-10 text-center text-sm text-surface-400">No products found.</p>
+            <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("pm_no_products", lang)}</p>
           )}
         </div>
       </div>
@@ -72,7 +73,7 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
       <div className="h-fit rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="mb-3 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">Your Order</h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("pm_your_order", lang)}</h2>
         </div>
 
         {state.error && (
@@ -87,13 +88,13 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
             {selectedProduct.pack_size && <p className="text-xs text-surface-400">{selectedProduct.pack_size}</p>}
           </div>
         ) : (
-          <p className="mb-3 py-6 text-center text-sm text-surface-400">Select a product to order</p>
+          <p className="mb-3 py-6 text-center text-sm text-surface-400">{t("pm_select_product", lang)}</p>
         )}
 
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="product_id" value={selectedProduct?.id ?? ""} />
           <div>
-            <label className="text-xs font-medium text-surface-500">Quantity</label>
+            <label className="text-xs font-medium text-surface-500">{t("c_quantity", lang)}</label>
             <input
               type="number"
               name="quantity"
@@ -103,9 +104,7 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
               className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
             />
           </div>
-          <p className="text-xs text-surface-400">
-            We'll automatically match you with the seller offering the best price for your quantity.
-          </p>
+          <p className="text-xs text-surface-400">{t("pm_will_match_best", lang)}</p>
           <SubmitButton disabled={!selectedProduct} />
         </form>
       </div>

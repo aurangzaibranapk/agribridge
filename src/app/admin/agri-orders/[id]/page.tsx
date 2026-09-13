@@ -2,12 +2,15 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { getOrderPermissions } from "@/lib/order-permissions";
+import { getAdvancePaymentStatus } from "@/lib/order-payment-gate";
 import { OrderDetailActions } from "./order-detail-actions";
 import { PaymentSection } from "./payment-section";
 import { DispatchSection } from "./dispatch-section";
 import { GrnSection } from "./grn-section";
 import { ComplaintFeedbackSection } from "./complaint-feedback-section";
 import { Check } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -64,15 +67,21 @@ const STEPPER_STAGES = [
 
 export default async function AgriOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: order } = await supabase.from("agri_orders").select("*, branches!agri_orders_order_to_branch_id_fkey(name)").eq("id", id).single();
 
   if (!order) {
-    return <div className="p-8 text-center text-surface-400">Order nahi mila.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("ao_order_not_found", lang)}</div>;
   }
 
-  const permissions = await getOrderPermissions(order.order_to_branch_id ?? null);
+  const permissions = await getOrderPermissions(order.order_to_branch_id ?? null, order.order_from_branch_id ?? null);
+
+  // Advance order ki payment poori hui ya nahi — isi se dispatch ka
+  // button khulta hai aur upar wala banner tay hota hai. Base order par
+  // isSatisfied hamesha true aata hai, is liye koi farq nahi parta.
+  const advance = await getAdvancePaymentStatus(order.id);
 
   // Logged-in user's own identity - passed down so the Delivery Confirm
   // modal can auto-fill "Receiver" fields instead of retyping what the
@@ -151,6 +160,14 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
   }
 
   const toBranch = Array.isArray(order.branches) ? order.branches[0]?.name : order.branches?.name;
+
+  // Branch-to-branch order mein maal dene wali shop ka naam. Alag query
+  // se aata hai kyunke order ki apni select sirf order_to_branch_id wale
+  // rishte ko laati hai.
+  const { data: fromBranchRow } = order.order_from_branch_id
+    ? await supabase.from("branches").select("name").eq("id", order.order_from_branch_id).maybeSingle()
+    : { data: null };
+  const fromBranch = fromBranchRow?.name ?? null;
 
   const payments = (rawPayments ?? []).map((p) => ({
     id: p.id,
@@ -260,6 +277,18 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
         <div className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">{nextStepHint}</div>
       )}
 
+      {advance.isAdvance && !isRejected && (
+        advance.isSatisfied ? (
+          <div className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/30 dark:text-green-300">
+            Advance Order — poori payment Rs {advance.grandTotal.toLocaleString()} verify ho chuki hai. Dispatch ho sakta hai.
+          </div>
+        ) : (
+          <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            Advance Order — Rs {advance.verifiedPaid.toLocaleString()} verify hui, <strong>Rs {advance.remaining.toLocaleString()} baqi hai</strong>. Poori payment aane tak dispatch nahi hoga.
+          </div>
+        )
+      )}
+
       <OrderDetailActions orderId={order.id} status={order.status} permissions={permissions} />
 
       <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -268,10 +297,10 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Qty</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Price</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Total</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_qty", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_price", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_total", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,21 +320,31 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
           </div>
 
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Order Summary</h3>
+            <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("c_order_summary", lang)}</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-surface-500">Subtotal</span><span>Rs {Number(order.subtotal).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Discount</span><span>- Rs {Number(order.discount).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Tax</span><span>+ Rs {Number(order.tax).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-surface-500">Freight</span><span>+ Rs {Number(order.freight_charges).toLocaleString()}</span></div>
-              <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800"><span>Grand Total</span><span>Rs {Number(order.grand_total).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_subtotal", lang)}</span><span>Rs {Number(order.subtotal).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_discount", lang)}</span><span>- Rs {Number(order.discount).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("c_tax", lang)}</span><span>+ Rs {Number(order.tax).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-surface-500">{t("ao_freight", lang)}</span><span>+ Rs {Number(order.freight_charges).toLocaleString()}</span></div>
+              <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800"><span>{t("c_grand_total", lang)}</span><span>Rs {Number(order.grand_total).toLocaleString()}</span></div>
             </div>
-            <p className="mt-2 text-xs text-surface-500">Payment Terms: {order.payment_terms}</p>
+            <p className="mt-2 text-xs text-surface-500">Payment Mode: {advance.isAdvance ? "Advance Order (pehle payment)" : `Base Order / Khata (${order.payment_terms})`}</p>
+            <p className="mt-1 text-xs text-surface-500">
+              Maal Kahan Se: {order.order_from_branch_id ? `${fromBranch ?? "Doosri Shop"} (shop-to-shop)` : "Company / HQ Warehouse"}
+            </p>
+            {order.order_from_branch_id && (
+              <p className="mt-1 text-xs text-surface-500">
+                Settlement: {order.settlement_method === "direct_branch"
+                  ? "Seedha shops ke darmiyan (Company ka taalluq nahi)"
+                  : "Company ke zariye"}
+              </p>
+            )}
             {order.rejection_reason && <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">Reject Wajah: {order.rejection_reason}</p>}
           </div>
 
           {permissions.canSeePayments && <PaymentSection orderId={order.id} payments={payments} permissions={permissions} />}
           {permissions.canSeeDispatch && (
-            <DispatchSection orderId={order.id} orderStatus={order.status} orderItems={orderItemsForDispatch} dispatch={dispatch} delivery={delivery} permissions={permissions} drivers={drivers} dispatchItems={(rawDispatchItems ?? []).map((di: any) => ({ id: di.id, product_name: di.product_name, dispatched_qty: Number(di.dispatched_qty) }))} currentUserIdentity={currentUserIdentity} />
+            <DispatchSection orderId={order.id} orderStatus={order.status} orderItems={orderItemsForDispatch} dispatch={dispatch} delivery={delivery} permissions={permissions} drivers={drivers} dispatchItems={(rawDispatchItems ?? []).map((di: any) => ({ id: di.id, product_name: di.product_name, dispatched_qty: Number(di.dispatched_qty) }))} currentUserIdentity={currentUserIdentity} advanceBlocked={!advance.isSatisfied} advanceRemaining={advance.remaining} />
           )}
           {permissions.canSeeGrn && (
             <GrnSection orderId={order.id} dispatchId={dispatch?.id ?? null} orderStatus={order.status} orderItems={orderItemsForGrn} grn={grn} permissions={permissions} deliveryInfoByOrderItem={deliveryInfoByOrderItem} />
@@ -316,7 +355,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Order Progress</h3>
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("ao_order_progress", lang)}</h3>
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
             {!isRejected ? (
               <div className="space-y-0">
@@ -347,7 +386,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
             )}
           </div>
 
-          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">Detailed Log</h3>
+          <h3 className="mb-2 mt-4 text-sm font-semibold text-surface-900 dark:text-white">{t("ao_detailed_log", lang)}</h3>
           <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
             <div className="space-y-2.5">
               {(timeline ?? []).map((t) => {

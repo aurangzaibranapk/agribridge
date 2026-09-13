@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { DriverStatementClient } from "./driver-statement-client";
 import { notFound } from "next/navigation";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function DriverStatementPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
@@ -68,15 +71,15 @@ export default async function DriverStatementPage({ params }: { params: Promise<
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Trips</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_trips", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{trips.length}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Total Salary Paid</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_total_salary_paid", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalPaid.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Total Maintenance Cost</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_total_maintenance", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalMaintenance.toLocaleString()}</p>
         </Card>
       </div>

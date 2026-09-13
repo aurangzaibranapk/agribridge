@@ -2,6 +2,8 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { adminVerifyProduceOrder, adminMarkProduceDelivered, type ActionState } from "@/actions/produce";
 import { CheckCircle2, Truck } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -33,6 +35,7 @@ export function ProduceOrderActions({ orderId, status }: { orderId: string; stat
 }
 
 function VerifyButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -40,12 +43,12 @@ function VerifyButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60"
     >
-      <CheckCircle2 className="h-3.5 w-3.5" /> Verify & Release Payout
-    </button>
+      <CheckCircle2 className="h-3.5 w-3.5" />{t("at_verify_release_payout", lang)}</button>
   );
 }
 
 function DeliverButton() {
+  const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -53,7 +56,6 @@ function DeliverButton() {
       disabled={pending}
       className="flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
     >
-      <Truck className="h-3.5 w-3.5" /> Mark Delivered
-    </button>
+      <Truck className="h-3.5 w-3.5" />{t("at_mark_delivered", lang)}</button>
   );
 }

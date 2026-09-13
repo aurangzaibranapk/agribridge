@@ -1,6 +1,8 @@
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 type ChartCrop = {
   crop_name: string;
@@ -9,11 +11,12 @@ type ChartCrop = {
 };
 
 export default function CropsChart({ data }: { data: ChartCrop[] }) {
+  const lang = useLang();
   if (data.length === 0) return null;
 
   return (
     <div className="mt-6 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-      <h3 className="mb-3 text-sm font-semibold text-surface-900">Progress Overview</h3>
+      <h3 className="mb-3 text-sm font-semibold text-surface-900">{t("pm_chart_progress", lang)}</h3>
       <ResponsiveContainer width="100%" height={Math.max(120, data.length * 50)}>
         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
           <XAxis type="number" domain={[0, 100]} hide />

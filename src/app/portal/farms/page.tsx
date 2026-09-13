@@ -4,7 +4,7 @@ import { CheckCircle2, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { addFarmAction } from "./actions";
 import { DeleteFarmButton } from "./delete-farm-button";
-import { LocationPicker } from "./location-picker";
+import { LocationPicker } from "@/components/ui/location-picker";
 import { MapLink } from "./map-link";
 import { checkProfileComplete } from "@/lib/utils/profile-gate";
 import { ProfileGateMessage } from "@/components/portal/profile-gate-message";

@@ -7,7 +7,9 @@ import { formatDate } from "@/lib/utils/format";
 import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { FarmerActions } from "@/app/admin/farmers/farmer-actions";
 import { bulkToggleFarmerActive, bulkDeleteFarmers, type ActionState } from "@/actions/farmers-bulk";
-import { CheckSquare, FileText } from "lucide-react";
+import { CheckSquare, FileText, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -16,15 +18,50 @@ interface Farmer {
   full_name: string;
   farmer_code: string | null;
   phone_number: string | null;
+  cnic: string | null;
+  village: string | null;
   tehsil: string | null;
   district: string | null;
   is_verified: boolean;
   is_active: boolean | null;
   created_at: string;
+  profile_confirmed_at: string | null;
 }
 
-export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
+const VERIFY_SLA_MINUTES = 30;
+
+/** Profile confirm hone ke kitne minute baad -- na ho to null. */
+function minutesSinceConfirmed(profileConfirmedAt: string | null): number | null {
+  if (!profileConfirmedAt) return null;
+  return Math.floor((Date.now() - new Date(profileConfirmedAt).getTime()) / 60000);
+}
+
+/**
+ * Membership ki fehrist -- aur us par kaun kya kar sakta hai.
+ *
+ * Malik (6 September): *"Farmers ki jagah staff ko Farmers/Membership
+ * aana chahiye, jis se ye SIRF member add kar sakein."*
+ *
+ * Is liye tasdeeq (verify), band karna aur mitana ab sirf us ke paas
+ * hain jise wo ijazat mili ho. Staff ke liye ye qatarein nazar hi nahi
+ * aatin -- band button dikhane se banda dabata hai, kuch nahi hota, aur
+ * samajh nahi aata kis se kahe.
+ *
+ * Chunne ke khane (checkbox) bhi tabhi aate hain jab un se koi kaam ho
+ * sakta ho.
+ */
+export function FarmersListClient({
+  farmers,
+  tasdeeqKarSakta = false,
+  mitaSakta = false,
+}: {
+  farmers: Farmer[];
+  tasdeeqKarSakta?: boolean;
+  mitaSakta?: boolean;
+}) {
+  const lang = useLang();
   const [selected, setSelected] = useState<string[]>([]);
+  const koiBulkKaam = tasdeeqKarSakta || mitaSakta;
 
   function toggleSelect(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -36,44 +73,83 @@ export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
 
   return (
     <div>
-      {selected.length > 0 && <BulkActionBar selectedIds={selected} onDone={() => setSelected([])} />}
+      {koiBulkKaam && selected.length > 0 && (
+        <BulkActionBar selectedIds={selected} onDone={() => setSelected([])} mitaSakta={mitaSakta} />
+      )}
 
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left text-xs font-medium uppercase tracking-wide text-surface-400 dark:border-surface-800 dark:text-surface-500">
-              <th className="px-3 py-3"><input type="checkbox" checked={selected.length === farmers.length && farmers.length > 0} onChange={toggleSelectAll} /></th>
-              <th className="px-5 py-3">Name</th>
-              <th className="px-5 py-3">Contact</th>
-              <th className="px-5 py-3">Location</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3">Active</th>
-              <th className="px-5 py-3 text-right">Registered</th>
-              <th className="px-5 py-3">Actions</th>
+              {koiBulkKaam && (
+                <th className="px-3 py-3"><input type="checkbox" checked={selected.length === farmers.length && farmers.length > 0} onChange={toggleSelectAll} /></th>
+              )}
+              <th className="px-5 py-3">{t("c_name", lang)}</th>
+              <th className="px-5 py-3">{t("fp_contact", lang)}</th>
+              <th className="px-5 py-3">{t("c_cnic", lang)}</th>
+              <th className="px-5 py-3">{t("c_location", lang)}</th>
+              <th className="px-5 py-3">{t("c_status", lang)}</th>
+              <th className="px-5 py-3">{t("c_active", lang)}</th>
+              <th className="px-5 py-3 text-right">{t("fp_registered", lang)}</th>
+              <th className="px-5 py-3">{t("c_actions", lang)}</th>
             </tr>
           </thead>
           <tbody>
-            {farmers.map((f) => (
-              <tr key={f.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800/60">
-                <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggleSelect(f.id)} /></td>
+            {farmers.map((f) => {
+              const overdueMinutes = !f.is_verified ? minutesSinceConfirmed(f.profile_confirmed_at) : null;
+              // 30 minute ka usool malik ka hai: tasdeeq is se der ho to
+              // qatar khud chhup kar nahi baithti -- surkh ho jati hai,
+              // taake admin/owner aur jise tasdeeq ki ijazat hai, un ki
+              // nazar isi par pehle jaye.
+              const isOverdue = overdueMinutes !== null && overdueMinutes >= VERIFY_SLA_MINUTES;
+              return (
+              <tr
+                key={f.id}
+                className={`border-b border-surface-50 last:border-0 dark:border-surface-800/60 ${isOverdue ? "bg-red-50 dark:bg-red-950/20" : ""}`}
+              >
+                {koiBulkKaam && (
+                  <td className="px-3 py-3"><input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggleSelect(f.id)} /></td>
+                )}
                 <td className="px-5 py-3">
                   <p className="font-medium text-surface-900 dark:text-white">{f.full_name}</p>
                   <p className="text-xs text-surface-400 dark:text-surface-500">{f.farmer_code}</p>
                 </td>
                 <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{f.phone_number}</td>
-                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{[f.tehsil, f.district].filter(Boolean).join(", ") || "-"}</td>
-                <td className="px-5 py-3">{f.is_verified ? <Badge tone="green">Verified</Badge> : <VerifyFarmerButton id={f.id} />}</td>
+                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{f.cnic || "-"}</td>
+                <td className="px-5 py-3 text-surface-600 dark:text-surface-300">{[f.village, f.tehsil, f.district].filter(Boolean).join(", ") || "-"}</td>
+                <td className="px-5 py-3">
+                  {f.is_verified ? (
+                    <Badge tone="green">{t("c_verified", lang)}</Badge>
+                  ) : (
+                    <div className="space-y-1">
+                      {isOverdue && (
+                        <p className="flex items-center gap-1 text-[11px] font-semibold text-red-700 dark:text-red-400">
+                          <AlertTriangle className="h-3 w-3" /> {overdueMinutes} min se tasdeeq baqi
+                        </p>
+                      )}
+                      {tasdeeqKarSakta ? (
+                        <VerifyFarmerButton id={f.id} />
+                      ) : (
+                        // Staff ko haalat NAZAR aati hai, magar thappa us
+                        // ke haath mein nahi. Tasdeeq ka matlab hai kisi
+                        // ne kaghaz apni aankh se dekhe.
+                        <Badge tone={isOverdue ? "red" : "amber"}>Tasdeeq baqi</Badge>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td className="px-5 py-3"><Badge tone={f.is_active ? "green" : "gray"}>{f.is_active ? "Active" : "Inactive"}</Badge></td>
                 <td className="px-5 py-3 text-right text-xs text-surface-400 dark:text-surface-500">{formatDate(f.created_at)}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2">
-                    <Link href={`/admin/farmers/${f.id}`} className="text-xs font-medium text-brand-600 hover:underline">Details</Link>
-                    <Link href={`/admin/farmers/${f.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-surface-500 hover:underline"><FileText className="h-3 w-3" /> Statement</Link>
-                    <FarmerActions farmerId={f.id} isActive={f.is_active ?? true} />
+                    <Link href={`/admin/farmers/${f.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("fp_details", lang)}</Link>
+                    <Link href={`/admin/farmers/${f.id}/statement`} className="flex items-center gap-1 text-xs font-medium text-surface-500 hover:underline"><FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
+                    {mitaSakta && <FarmerActions farmerId={f.id} isActive={f.is_active ?? true} />}
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -81,7 +157,16 @@ export function FarmersListClient({ farmers }: { farmers: Farmer[] }) {
   );
 }
 
-function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+function BulkActionBar({
+  selectedIds,
+  onDone,
+  mitaSakta,
+}: {
+  selectedIds: string[];
+  onDone: () => void;
+  mitaSakta: boolean;
+}) {
+  const lang = useLang();
   const [activateState, activateAction] = useFormState(bulkToggleFarmerActive, initialState);
   const [deleteState, deleteAction] = useFormState(bulkDeleteFarmers, initialState);
 
@@ -95,22 +180,26 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
       <form action={activateAction}>
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="true" />
-        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">Active Karein</button>
+        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">{t("c_activate", lang)}</button>
       </form>
       <form action={activateAction}>
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="false" />
-        <button type="submit" className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-medium text-surface-600 hover:bg-surface-200">Inactive Karein</button>
+        <button type="submit" className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-medium text-surface-600 hover:bg-surface-200">{t("c_deactivate", lang)}</button>
       </form>
-      <form
-        action={deleteAction}
-        onSubmit={(e) => {
-          if (!confirm(`Kya aap ${selectedIds.length} farmers delete karna chahte hain?`)) e.preventDefault();
-        }}
-      >
-        <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">Delete Karein</button>
-      </form>
+      {/* Mitana sab se bhaari kaam hai -- wo sirf us ke paas jise ijazat
+          mili ho. */}
+      {mitaSakta && (
+        <form
+          action={deleteAction}
+          onSubmit={(e) => {
+            if (!confirm(`Kya aap ${selectedIds.length} farmers delete karna chahte hain?`)) e.preventDefault();
+          }}
+        >
+          <input type="hidden" name="ids" value={selectedIds.join(",")} />
+          <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">{t("c_delete", lang)}</button>
+        </form>
+      )}
     </div>
   );
 }

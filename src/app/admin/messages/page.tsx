@@ -1,21 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MessagesClient } from "./messages-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "manager", "sales_staff", "finance",
-  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "ai_assistant",
+  "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "machinery", "ai_assistant",
 ];
 
 export default async function MessagesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return <div className="p-8 text-center text-surface-400">Login zaroori hai.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_login_required", lang)}</div>;
   }
 
   const { data: contactsRaw } = await supabase
@@ -58,7 +61,7 @@ export default async function MessagesPage() {
 
   return (
     <div>
-      <PageHeader title="Messages" description="Staff ke sath direct baat karein - AI Assistant se bhi puchh sakte hain" />
+      <PageHeader title={t("at_messages", lang)} description="Staff ke sath direct baat karein - AI Assistant se bhi puchh sakte hain" />
       <MessagesClient currentUserId={user.id} contacts={contacts} messages={messages} />
     </div>
   );

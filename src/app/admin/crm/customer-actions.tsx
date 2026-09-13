@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { toggleCustomerActive, deleteCustomer, promoteCustomerToStaff, type ActionState } from "@/actions/member-management";
 import { Power, Trash2, ShieldPlus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -10,6 +12,7 @@ export function CustomerActions({ customerId, isActive }: { customerId: string; 
   const [toggleState, toggleAction] = useFormState(toggleCustomerActive, initialState);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
+  const lang = useLang();
 
   return (
     <div className="flex items-center gap-1.5">
@@ -22,7 +25,7 @@ export function CustomerActions({ customerId, isActive }: { customerId: string; 
       <button
         onClick={() => setShowPromoteConfirm(true)}
         className="rounded-lg border border-purple-200 p-1.5 text-purple-600 hover:bg-purple-50 dark:border-purple-900/40 dark:hover:bg-purple-950/30"
-        title="Promote to Staff/Admin"
+        title={t("fp_promote", lang)}
       >
         <ShieldPlus className="h-3.5 w-3.5" />
       </button>
@@ -30,7 +33,7 @@ export function CustomerActions({ customerId, isActive }: { customerId: string; 
       <button
         onClick={() => setShowDeleteConfirm(true)}
         className="rounded-lg border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
-        title="Delete"
+        title={t("c_delete", lang)}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -39,7 +42,7 @@ export function CustomerActions({ customerId, isActive }: { customerId: string; 
 
       {showDeleteConfirm && (
         <ConfirmModal
-          title="Delete Customer?"
+          title={t("cr_delete_customer_q", lang)}
           message="This hides the customer from all lists. Their sales/Khata history is kept for records but they can no longer log in or transact."
           action={deleteCustomer}
           hiddenFields={{ customer_id: customerId }}
@@ -51,7 +54,7 @@ export function CustomerActions({ customerId, isActive }: { customerId: string; 
 
       {showPromoteConfirm && (
         <ConfirmModal
-          title="Promote to Staff?"
+          title={t("fp_promote_q", lang)}
           message="This gives the customer's login account Sales Staff access to your admin panel, in addition to their customer profile. Only do this for someone you're hiring as staff."
           action={promoteCustomerToStaff}
           hiddenFields={{ customer_id: customerId }}
@@ -99,6 +102,7 @@ function ConfirmModal({
   confirmColor: "red" | "purple";
   onClose: () => void;
 }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(action, initialState);
 
   if (state.success) {
@@ -124,17 +128,13 @@ function ConfirmModal({
           </p>
         )}
         {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            Done.
-          </p>
+          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_done", lang)}</p>
         )}
         <form action={formAction} className="flex gap-2">
           {Object.entries(hiddenFields).map(([key, value]) => (
             <input key={key} type="hidden" name={key} value={value} />
           ))}
-          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">
-            Cancel
-          </button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">{t("at_cancel", lang)}</button>
           <SubmitButton label={confirmLabel} colorClasses={colorClasses} />
         </form>
       </div>

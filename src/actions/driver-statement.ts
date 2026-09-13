@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -12,7 +13,7 @@ export async function addDriverPayment(_prev: ActionState, formData: FormData): 
   const driverId = String(formData.get("driver_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
   const paymentType = String(formData.get("payment_type") ?? "Salary");
-  const paymentDate = String(formData.get("payment_date") ?? new Date().toISOString().slice(0, 10));
+  const paymentDate = String(formData.get("payment_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!driverId) return { error: "Missing driver id." };
@@ -43,7 +44,7 @@ export async function addMaintenanceRecord(_prev: ActionState, formData: FormDat
   const maintenanceType = String(formData.get("maintenance_type") ?? "").trim();
   const amount = Number(formData.get("amount") ?? 0);
   const odometerKm = formData.get("odometer_km") ? Number(formData.get("odometer_km")) : null;
-  const maintenanceDate = String(formData.get("maintenance_date") ?? new Date().toISOString().slice(0, 10));
+  const maintenanceDate = String(formData.get("maintenance_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!vehicleId) return { error: "Vehicle nahi mila is driver ke liye." };

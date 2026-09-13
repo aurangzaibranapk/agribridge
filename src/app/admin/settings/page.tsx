@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SettingRow } from "@/app/admin/settings/setting-row";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +21,13 @@ const LABELS: Record<string, string> = {
 };
 
 export default async function AdminSettingsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: settings } = await supabase.from("website_settings").select("*").order("key");
 
   return (
     <div>
-      <PageHeader title="Website Settings" description="Site-wide values used across the public pages" />
+      <PageHeader title={t("at_website_settings", lang)} description="Site-wide values used across the public pages" />
       <div className="max-w-2xl space-y-3">
         {(settings ?? []).map((s) => (
           <SettingRow key={s.key} settingKey={s.key} label={LABELS[s.key] ?? s.key} value={typeof s.value === "string" ? s.value : JSON.stringify(s.value)} />

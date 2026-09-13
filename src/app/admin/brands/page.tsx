@@ -3,20 +3,25 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteTaxonomyItem, saveTaxonomyItem } from "@/actions/taxonomy";
 import { NewTaxonomyItemForm } from "@/app/admin/categories/new-taxonomy-item-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { MastersTabs } from "@/components/products/masters-tabs";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBrandsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("brands").select("*").order("name");
 
   return (
     <div>
-      <PageHeader title="Brands" description="Product brands, used to label products in the catalogue" />
+      <PageHeader title={t("at_brands", lang)} description="Product brands, used to label products in the catalogue" />
+      <MastersTabs current="brands" lang={lang} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No brands yet" />
+            <EmptyState title={t("at_no_brands", lang)} />
           ) : (
             <div className="space-y-2">
               {items.map((b) => (
@@ -28,7 +33,7 @@ export default async function AdminBrandsPage() {
             </div>
           )}
         </div>
-        <NewTaxonomyItemForm table="brands" label="Brand" action={saveTaxonomyItem.bind(null, "brands")} />
+        <NewTaxonomyItemForm table="brands" label={t("at_brands", lang)} action={saveTaxonomyItem.bind(null, "brands")} />
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { DriversClient } from "./drivers-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function DriversPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: rawDrivers } = await supabase
@@ -24,7 +27,7 @@ export default async function DriversPage() {
 
   return (
     <div>
-      <PageHeader title="Drivers & Vehicles" description="Driver register karein, dispatch mein dropdown se select karein" />
+      <PageHeader title={t("at_drivers_vehicles", lang)} description="Driver register karein, dispatch mein dropdown se select karein" />
       <DriversClient drivers={drivers} />
     </div>
   );

@@ -3,10 +3,13 @@
 import { useFormState, useFormStatus } from "react-dom";
 import { updateWebsiteSetting, type ActionState } from "@/actions/cms";
 import { Input, Label, Button } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function SettingRow({ settingKey, label, value }: { settingKey: string; label: string; value: string }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(updateWebsiteSetting, initialState);
   return (
     <form action={formAction} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -16,7 +19,7 @@ export function SettingRow({ settingKey, label, value }: { settingKey: string; l
         <Input id={settingKey} name="value" defaultValue={value} />
         <SubmitButton />
       </div>
-      {state.success && <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">Saved.</p>}
+      {state.success && <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">{t("at_saved", lang)}</p>}
     </form>
   );
 }

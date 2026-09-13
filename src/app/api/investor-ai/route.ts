@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 
 const SYSTEM_INSTRUCTION = `Aap Al Rana Traders / AgriBridge ke Investment Assistant hain. Aapka kaam hai potential Investors/Business Partners ke sawalon ka jawab dena, taake unhein poora bharosa ho jaye hamare business model par.
 
@@ -28,7 +29,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message zaroori hai" }, { status: 400 });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.BRIDGE_AI_GEMINI_API_KEY! });
+    const apiKey = aiKeyOrNull();
+    if (!apiKey) return NextResponse.json({ error: AI_KEY_MISSING }, { status: 503 });
+
+    const ai = new GoogleGenAI({ apiKey });
     const chat = ai.chats.create({
       model: "gemini-3.6-flash",
       config: { systemInstruction: SYSTEM_INSTRUCTION },
@@ -39,6 +43,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ answer: result.text ?? "Maaf kijiye, dobara koshish karein." });
   } catch (error) {
     console.error("Investor AI error:", error);
-    return NextResponse.json({ error: "Kuch masla ho gaya, dobara koshish karein." }, { status: 500 });
+    return NextResponse.json({ error: aiErrorMessage(error) }, { status: 500 });
   }
 }

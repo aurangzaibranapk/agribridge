@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postWalletMovement, ACC } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -41,17 +42,39 @@ export async function createFarmerLoan(_prev: ActionState, formData: FormData): 
     .single();
   if (loanError) return { error: loanError.message };
 
-  const { error: walletError } = await supabase.from("wallet_transactions").insert({
-    wallet_id: wallet.id,
-    type: "loan_disbursement",
-    direction: "credit",
-    amount: principalAmount,
-    balance_after: 0,
-    reference_type: "farmer_loan",
-    reference_id: loan.id,
-    notes: `Loan diya gaya - Weekly Installment Rs ${weeklyInstallment.toLocaleString()}`,
-    created_by: user?.id ?? null,
-  });
+  const { data: loanWalletRow, error: walletError } = await supabase
+    .from("wallet_transactions")
+    .insert({
+      wallet_id: wallet.id,
+      type: "loan_disbursement",
+      direction: "credit",
+      amount: principalAmount,
+      balance_after: 0,
+      reference_type: "farmer_loan",
+      reference_id: loan.id,
+      notes: `Loan diya gaya - Weekly Installment Rs ${weeklyInstallment.toLocaleString()}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  // Loan kharcha nahi hai -- wo hamara lena hai. Ise kharcha ginna us
+  // mahine ka nafa kam dikha deta hai aur wapsi par aamdani zyada, jab
+  // ke asal mein sirf paisa idhar se udhar hua.
+  if (loanWalletRow?.id) {
+    await postWalletMovement({
+      ownerType: "farmer",
+      ownerId: farmerId,
+      amount: principalAmount,
+      direction: "credit",
+      against: ACC.farmerAdvance,
+      description: `Loan diya gaya — Rs ${principalAmount.toLocaleString()}`,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "wallet_transactions", rowId: loanWalletRow.id }],
+      },
+    });
+  }
   if (walletError) return { error: walletError.message };
 
   revalidatePath("/admin/farmer-loans");
@@ -78,16 +101,35 @@ export async function runWeeklyLoanDeductions(): Promise<{ processed: number; er
     const installment = Math.min(Number(loan.weekly_installment), Number(loan.outstanding_balance), Number(wallet.balance));
     if (installment <= 0) continue;
 
-    await supabase.from("wallet_transactions").insert({
-      wallet_id: wallet.id,
-      type: "loan_repayment",
-      direction: "debit",
-      amount: installment,
-      balance_after: 0,
-      reference_type: "farmer_loan",
-      reference_id: loan.id,
-      notes: "Weekly Loan Installment",
-    });
+    const { data: repayRow } = await supabase
+      .from("wallet_transactions")
+      .insert({
+        wallet_id: wallet.id,
+        type: "loan_repayment",
+        direction: "debit",
+        amount: installment,
+        balance_after: 0,
+        reference_type: "farmer_loan",
+        reference_id: loan.id,
+        notes: "Weekly Loan Installment",
+      })
+      .select("id")
+      .single();
+
+    if (repayRow?.id) {
+      await postWalletMovement({
+        ownerType: "farmer",
+        ownerId: loan.farmer_id,
+        amount: installment,
+        direction: "debit",
+        against: ACC.farmerAdvance,
+        description: "Loan ki hafta-war qist",
+        ctx: {
+          createdBy: null,
+          claims: [{ table: "wallet_transactions", rowId: repayRow.id }],
+        },
+      });
+    }
 
     const newOutstanding = Number(loan.outstanding_balance) - installment;
     await supabase

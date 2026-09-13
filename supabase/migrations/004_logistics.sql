@@ -7,12 +7,12 @@
 -- than a farmer self-clicking "I received this", which is still kept as
 -- a fallback for when the OTP flow can't be used.
 
-alter table bridge_orders add column tracking_number text unique;
-alter table bridge_orders add column delivery_otp text;
-alter table bridge_orders add column delivery_photo_url text;
-alter table bridge_orders add column delivery_latitude double precision;
-alter table bridge_orders add column delivery_longitude double precision;
-alter table bridge_orders add column otp_verified_at timestamptz;
+alter table bridge_orders add column if not exists tracking_number text unique;
+alter table bridge_orders add column if not exists delivery_otp text;
+alter table bridge_orders add column if not exists delivery_photo_url text;
+alter table bridge_orders add column if not exists delivery_latitude double precision;
+alter table bridge_orders add column if not exists delivery_longitude double precision;
+alter table bridge_orders add column if not exists otp_verified_at timestamptz;
 
 -- Generates a tracking number and a 6-digit OTP the moment an order is
 -- dispatched — this is when the farmer first needs to know the OTP, and

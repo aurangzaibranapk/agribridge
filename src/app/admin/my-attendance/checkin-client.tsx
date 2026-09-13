@@ -1,8 +1,11 @@
 "use client";
+import { aajPakistan } from "@/lib/utils/format";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { selfCheckIn, selfCheckOut, type ActionState } from "@/actions/hr";
 import { MapPin, LogIn, LogOut, Loader2, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -46,7 +49,7 @@ export function CheckinClient({ today }: { today: TodayRecord | null }) {
   return (
     <div className="mx-auto max-w-md">
       <div className="rounded-card border border-surface-200 bg-white p-6 text-center shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <p className="text-sm text-surface-500">{new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+        <p className="text-sm text-surface-500">{aajPakistan(true)}</p>
 
         {checkedIn && (
           <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-green-700">
@@ -80,24 +83,26 @@ export function CheckinClient({ today }: { today: TodayRecord | null }) {
 }
 
 function CheckInForm({ coords, disabled }: { coords: { lat: number; lng: number } | null; disabled: boolean }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(selfCheckIn, initialState);
   return (
     <form action={formAction}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
-      <ActionButton icon={LogIn} label="Check In" disabled={disabled} color="brand" />
+      <ActionButton icon={LogIn} label={t("at_check_in", lang)} disabled={disabled} color="brand" />
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </form>
   );
 }
 
 function CheckOutForm({ coords, disabled }: { coords: { lat: number; lng: number } | null; disabled: boolean }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(selfCheckOut, initialState);
   return (
     <form action={formAction}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
-      <ActionButton icon={LogOut} label="Check Out" disabled={disabled} color="surface" />
+      <ActionButton icon={LogOut} label={t("at_check_out", lang)} disabled={disabled} color="surface" />
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </form>
   );

@@ -17,6 +17,8 @@ export async function addFarmAction(formData: FormData) {
   const district = String(formData.get("district") ?? "").trim();
   const latRaw = String(formData.get("latitude") ?? "");
   const lngRaw = String(formData.get("longitude") ?? "");
+  const accuracyRaw = String(formData.get("location_accuracy_m") ?? "");
+  const sourceRaw = String(formData.get("location_source") ?? "");
   const ownershipType = String(formData.get("ownership_type") ?? "owned");
   const rentRaw = String(formData.get("rent_per_acre") ?? "");
 
@@ -31,6 +33,13 @@ export async function addFarmAction(formData: FormData) {
     district: district || null,
     latitude: latRaw ? parseFloat(latRaw) : null,
     longitude: lngRaw ? parseFloat(lngRaw) : null,
+    // Jagah ke sath ye bhi: kitni durusti se li, kis tarah li, aur kis
+    // ne. Sirf do adad rakh lena kaafi nahi -- baad mein koi puchhe ke
+    // "ye point theek hai?" to jawab dene ke liye yehi teen cheezein
+    // chahiye hoti hain.
+    location_accuracy_m: sourceRaw === "gps" && accuracyRaw ? parseFloat(accuracyRaw) : null,
+    location_source: latRaw ? (sourceRaw === "gps" ? "gps" : "manual_pin") : null,
+    location_captured_by: latRaw ? user.id : null,
     ownership_type: ownershipType,
     rent_per_acre: ownershipType === "rented" && rentRaw ? parseFloat(rentRaw) : null,
   });

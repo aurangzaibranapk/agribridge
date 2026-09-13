@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveIdCardDetails, type ActionState } from "@/actions/staff-id-card";
 import { Printer, Download, Mail, MessageCircle, User, Settings } from "lucide-react";
+import { t as tr } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -30,6 +32,7 @@ const DESIGNS = [
 
 export function IdCardClient(props: Props) {
   const [design, setDesign] = useState("blue");
+  const lang = useLang();
   const [showSettings, setShowSettings] = useState(false);
 
   function cardText() {
@@ -80,11 +83,11 @@ export function IdCardClient(props: Props) {
           ))}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(true)} aria-label="Card settings" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Settings className="h-4 w-4" /></button>
-          <button onClick={handlePrint} aria-label="Print ID card" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
-          <button onClick={handleDownload} aria-label="Download ID card details" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
-          <button onClick={handleWhatsApp} aria-label="Share via WhatsApp" className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
-          <button onClick={handleEmail} aria-label="Share via Email" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
+          <button onClick={() => setShowSettings(true)} aria-label={tr("ic_settings", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Settings className="h-4 w-4" /></button>
+          <button onClick={handlePrint} aria-label={tr("ic_print", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
+          <button onClick={handleDownload} aria-label={tr("ic_download", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button onClick={handleWhatsApp} aria-label={tr("ic_share_whatsapp", lang)} className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
+          <button onClick={handleEmail} aria-label={tr("ic_share_email", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
         </div>
       </div>
 
@@ -99,6 +102,7 @@ export function IdCardClient(props: Props) {
 }
 
 function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodGroup, emergencyName, emergencyPhone, employeeCode, cnic, branchName }: Props & { design: string; side: "front" | "back" }) {
+  const lang = useLang();
   const themes: Record<string, { bg: string; accent: string; text: string; subtext: string }> = {
     blue: { bg: "bg-gradient-to-br from-blue-600 to-blue-800", accent: "bg-blue-500", text: "text-white", subtext: "text-blue-100" },
     navy: { bg: "bg-[#0f172a]", accent: "bg-amber-500", text: "text-white", subtext: "text-slate-300" },
@@ -113,7 +117,7 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
       <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl ${t.bg}`}>
         <div className={`h-2 w-full ${t.accent}`} />
         <div className="flex h-full flex-col items-center justify-center p-4">
-          <p className={`text-xs font-bold uppercase tracking-wider ${t.text}`}>Al Rana Traders</p>
+          <p className={`text-xs font-bold uppercase tracking-wider ${t.text}`}>{tr("sh_company", lang)}</p>
           <div className="my-2 h-20 w-20 overflow-hidden rounded-full border-2 border-white/50 bg-white/20">
             {photoUrl ? (
               <img src={photoUrl} alt={fullName} className="h-full w-full object-cover" />
@@ -134,12 +138,12 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
     <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl ${t.bg}`}>
       <div className={`h-2 w-full ${t.accent}`} />
       <div className="flex h-full flex-col justify-center gap-1.5 p-5 text-xs">
-        <p className={t.text}><strong>CNIC:</strong> {cnic ?? "-"}</p>
-        <p className={t.text}><strong>Phone:</strong> {phone ?? "-"}</p>
-        <p className={t.text}><strong>Blood Group:</strong> {bloodGroup ?? "-"}</p>
-        <p className={t.text}><strong>Emergency:</strong> {emergencyName ?? "-"} {emergencyPhone ? `(${emergencyPhone})` : ""}</p>
+        <p className={t.text}><strong>{tr("hj_cnic_label", lang)}</strong> {cnic ?? "-"}</p>
+        <p className={t.text}><strong>{tr("hj_phone_label", lang)}</strong> {phone ?? "-"}</p>
+        <p className={t.text}><strong>{tr("ic_blood_label", lang)}</strong> {bloodGroup ?? "-"}</p>
+        <p className={t.text}><strong>{tr("ic_emergency_label", lang)}</strong> {emergencyName ?? "-"} {emergencyPhone ? `(${emergencyPhone})` : ""}</p>
         <div className={`mt-2 border-t pt-2 ${design === "white" ? "border-surface-200" : "border-white/20"}`}>
-          <p className={`text-[10px] ${t.subtext}`}>Agar ye card kisi ko mile, barah-e-meherbani wapis karein: alranatraders.pk | job@alranatraders.pk</p>
+          <p className={`text-[10px] ${t.subtext}`}>{tr("at_card_return_note", lang)}</p>
         </div>
       </div>
     </div>
@@ -148,6 +152,7 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
 
 function SettingsModal({ profileId, onClose, ...current }: Props & { onClose: () => void }) {
   const [state, formAction] = useFormState(saveIdCardDetails, initialState);
+  const lang = useLang();
 
   useEffect(() => {
     if (state.success) {
@@ -159,21 +164,21 @@ function SettingsModal({ profileId, onClose, ...current }: Props & { onClose: ()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:hidden">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
-        <h3 className="mb-3 font-display text-base font-semibold text-surface-900">Card Details Update Karein</h3>
+        <h3 className="mb-3 font-display text-base font-semibold text-surface-900">{tr("ic_update_details", lang)}</h3>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Save ho gaya.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{tr("c_saved", lang)}</p>}
         <form action={formAction} encType="multipart/form-data" className="space-y-2">
           <input type="hidden" name="profile_id" value={profileId} />
           <div>
-            <label className="text-xs text-surface-500">Photo</label>
+            <label className="text-xs text-surface-500">{tr("c_photo", lang)}</label>
             <input type="file" name="photo" accept="image/*" className="mt-1 w-full text-xs" />
           </div>
-          <input name="employee_code" defaultValue={current.employeeCode ?? ""} placeholder="Employee Code" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="blood_group" defaultValue={current.bloodGroup ?? ""} placeholder="Blood Group (e.g. O+)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="emergency_contact_name" defaultValue={current.emergencyName ?? ""} placeholder="Emergency Contact Naam" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="emergency_contact_phone" defaultValue={current.emergencyPhone ?? ""} placeholder="Emergency Contact Number" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="employee_code" defaultValue={current.employeeCode ?? ""} placeholder={tr("ic_employee_code", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="blood_group" defaultValue={current.bloodGroup ?? ""} placeholder={tr("ic_blood_group", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="emergency_contact_name" defaultValue={current.emergencyName ?? ""} placeholder={tr("ic_emergency_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="emergency_contact_phone" defaultValue={current.emergencyPhone ?? ""} placeholder={tr("ic_emergency_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 py-2 text-sm text-surface-600">Cancel</button>
+            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 py-2 text-sm text-surface-600">{tr("c_cancel", lang)}</button>
             <SubmitButton />
           </div>
         </form>

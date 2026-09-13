@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function BlogListPage({ searchParams }: { searchParams: { category?: string; q?: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   let query = supabase.from("blog_posts").select("*").eq("is_published", true).order("published_at", { ascending: false });
   if (searchParams.category) query = query.eq("category", searchParams.category);
@@ -16,27 +19,27 @@ export default async function BlogListPage({ searchParams }: { searchParams: { c
   return (
     <div className="mx-auto max-w-5xl px-4 py-16">
       <div className="text-center">
-        <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">Blog</h1>
-        <p className="mx-auto mt-2 max-w-lg text-surface-500 dark:text-surface-400">Farming tips, product guides, and stories from the field.</p>
+        <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">{t("sp_blog", lang)}</h1>
+        <p className="mx-auto mt-2 max-w-lg text-surface-500 dark:text-surface-400">{t("sp_blog_lead", lang)}</p>
       </div>
 
       <form className="mx-auto mt-8 flex max-w-md gap-2">
         <input
-          name="q" defaultValue={searchParams.q} placeholder="Search articles..."
+          name="q" defaultValue={searchParams.q} placeholder={t("sp_search_articles", lang)}
           className="h-10 w-full rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white"
         />
-        <button type="submit" className="rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700">Search</button>
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700">{t("sp_search", lang)}</button>
       </form>
 
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        <Link href="/blog" className={`rounded-full px-3 py-1.5 text-sm ${!searchParams.category ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300"}`}>All</Link>
+        <Link href="/blog" className={`rounded-full px-3 py-1.5 text-sm ${!searchParams.category ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300"}`}>{t("sp_all", lang)}</Link>
         {categories.map((c) => (
           <Link key={c} href={`/blog?category=${encodeURIComponent(c)}`} className={`rounded-full px-3 py-1.5 text-sm ${searchParams.category === c ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300"}`}>{c}</Link>
         ))}
       </div>
 
       {(!posts || posts.length === 0) ? (
-        <p className="mt-10 text-center text-sm text-surface-400 dark:text-surface-500">No articles found.</p>
+        <p className="mt-10 text-center text-sm text-surface-400 dark:text-surface-500">{t("sp_no_articles", lang)}</p>
       ) : (
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((p) => (

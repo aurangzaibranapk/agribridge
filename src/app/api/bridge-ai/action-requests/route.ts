@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff } from "@/lib/api-auth";
 
 export async function GET() {
+  // AI ke action requests staff ka andaruni kaam hai. Middleware /api ko nahi bachata,
+  // is liye rok yahan lagani parti hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const supabase = createClient();
 
   const [{ data: requests, error }, { data: suppliers }, { data: branches }] = await Promise.all([
     supabase
       .from("bridge_ai_action_requests")
       .select(
-        "id, created_at, action_type, description, details, status, review_notes, product_id, suggested_quantity, created_purchase_id, products(name, purchase_price)"
+        "id, created_at, action_type, description, details, status, review_notes, product_id, suggested_quantity, created_purchase_id, created_order_id, products(name, purchase_price), agri_orders(order_number, status, grand_total)"
       )
       .order("created_at", { ascending: false })
       .limit(200),
@@ -33,6 +39,9 @@ export async function GET() {
       product_purchase_price: product?.purchase_price ?? null,
       suggested_quantity: r.suggested_quantity,
       created_purchase_id: r.created_purchase_id,
+      created_order_id: r.created_order_id ?? null,
+      order_number: (Array.isArray(r.agri_orders) ? r.agri_orders[0] : r.agri_orders)?.order_number ?? null,
+      order_status: (Array.isArray(r.agri_orders) ? r.agri_orders[0] : r.agri_orders)?.status ?? null,
     };
   });
 

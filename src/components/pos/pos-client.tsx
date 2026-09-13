@@ -1,24 +1,66 @@
-﻿"use client";
+"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
+import { BINA_QISM } from "@/lib/pos/constants";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { posCheckout } from "@/actions/pos";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { ShoppingCart, Trash2, Search, ScanLine, Camera, Plus, X, PackagePlus, Paperclip, Check } from "lucide-react";
+import {
+  ShoppingCart,
+  Trash2,
+  RotateCcw,
+  ArrowLeft,
+  ChevronRight,
+  Search,
+  ScanLine,
+  Camera,
+  Plus,
+  Minus,
+  X,
+  Paperclip,
+  Check,
+  Package,
+  Lock,
+} from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
+import { PosReturn } from "@/components/pos/pos-return";
+import type { PosPermissions } from "@/lib/pos/permissions";
+
+interface PosProduct {
+  name: string;
+  pack_size: string | null;
+  barcode: string | null;
+  internal_barcode?: string | null;
+  image_url?: string | null;
+  unit_code?: string | null;
+  category_name?: string | null;
+  mrp_price?: number | null;
+  purchase_price?: number | null;
+}
 
 interface InventoryItem {
   id: string;
   product_id: string;
   stock_quantity: number;
   selling_price: number;
-  products: { name: string; pack_size: string | null; barcode: string | null } | null;
+  wholesale_price: number | null;
+  warehouse_stock?: number | null;
+  batch_number?: string | null;
+  batch_count?: number;
+  expiry_date?: string | null;
+  products: PosProduct | null;
 }
 interface Customer {
   id: string;
   name: string;
   phone: string | null;
+  cnic?: string | null;
+  balance?: number | null;
+  creditLimit?: number | null;
+  isWholesaleShop: boolean;
 }
 interface CartLine {
   product_id: string;
@@ -27,16 +69,19 @@ interface CartLine {
   unit_price: number;
 }
 
-type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata";
+type PaymentMethod = "cash" | "bank_transfer" | "card" | "jazzcash" | "easypaisa" | "qr" | "khata" | "waseela_card";
 const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: "cash", label: "Cash" },
   { key: "bank_transfer", label: "Bank" },
-  { key: "card", label: "Card" },
+  { key: "card", label: "Kisan Card" },
   { key: "jazzcash", label: "JazzCash" },
   { key: "easypaisa", label: "Easypaisa" },
   { key: "qr", label: "QR" },
   { key: "khata", label: "Khata" },
+  { key: "waseela_card", label: "Waseela Card" },
 ];
+
+type CustomerMode = "walkin" | "regular" | "wholesale";
 
 interface PaymentLine {
   id: string;
@@ -48,19 +93,88 @@ interface PaymentLine {
   uploading: boolean;
 }
 
+function stockTone(qty: number): string {
+  if (qty <= 5) return "bg-red-500";
+  if (qty <= 20) return "bg-amber-500";
+  return "bg-emerald-500";
+}
+
+function shortDate(d: string | null | undefined): string | null {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+function rebalanceKhata(lines: PaymentLine[], amountDue: number): PaymentLine[] {
+  const khataIndex = lines.findIndex((line) => line.method === "khata");
+  if (khataIndex < 0) return lines;
+
+  const otherAllocated = lines.reduce((sum, line, index) => {
+    if (index === khataIndex) return sum;
+    return sum + (parseFloat(line.amount) || 0);
+  }, 0);
+  const autoKhata = Math.max(0, Math.round((amountDue - otherAllocated) * 100) / 100);
+  const current = parseFloat(lines[khataIndex].amount) || 0;
+  if (Math.abs(current - autoKhata) < 0.005) return lines;
+
+  return lines.map((line, index) =>
+    index === khataIndex ? { ...line, amount: autoKhata ? String(autoKhata) : "0" } : line
+  );
+}
+
 export function PosClient({
   sellerName,
   inventory,
+  groups = [],
   customers,
+  topCustomerIds = [],
+  branchId = null,
+  counterId = null,
+  rateBaqiCount = 0,
+  perms,
+  lang,
 }: {
   sellerName: string;
   inventory: InventoryItem[];
+  groups?: { name: string; count: number }[];
   customers: Customer[];
+  /** Sab se zyada khareedne wale, isi tarteeb mein -- search khali hone par yehi dikhte hain. */
+  topCustomerIds?: string[];
+  branchId?: string | null;
+  counterId?: string | null;
+  rateBaqiCount?: number;
+  perms: PosPermissions;
+  lang: Lang;
 }) {
   const supabase = createClient();
   const [search, setSearch] = useState("");
+  const [group, setGroup] = useState("");
+  const [custQuery, setCustQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string>("");
+  const [custMode, setCustMode] = useState<CustomerMode>("walkin");
+  const [mode, setMode] = useState<"sale" | "return">("sale");
+
+  const chosenCustomer = customers.find((c) => c.id === customerId) ?? null;
+  const wholesaleOn = chosenCustomer?.isWholesaleShop === true;
+
+  function priceFor(item: InventoryItem, forWholesale: boolean): number {
+    if (forWholesale && item.wholesale_price != null) return item.wholesale_price;
+    return item.selling_price;
+  }
+
+  function applyCustomer(id: string) {
+    setCustomerId(id);
+    const nowWholesale = customers.find((c) => c.id === id)?.isWholesaleShop === true;
+    setCart((prev) =>
+      prev.map((line) => {
+        const item = inventory.find((i) => i.product_id === line.product_id);
+        return item ? { ...line, unit_price: priceFor(item, nowWholesale) } : line;
+      })
+    );
+  }
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
     { id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
   ]);
@@ -76,23 +190,85 @@ export function PosClient({
     barcodeRef.current?.focus();
   }, []);
 
+  function switchCustomerMode(nextMode: CustomerMode) {
+    setCustMode(nextMode);
+    setCustQuery("");
+    applyCustomer("");
+    if (nextMode === "walkin") {
+      setPaymentLines((prev) => prev.map((l) => (l.method === "khata" ? { ...l, method: "cash", amount: "" } : l)));
+    }
+  }
+
   const filteredInventory = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return inventory;
-    return inventory.filter((item) => item.products?.name?.toLowerCase().includes(q));
-  }, [inventory, search]);
+    return inventory.filter((item) => {
+      if (group === BINA_QISM) {
+        if (item.products?.category_name) return false;
+      } else if (group && item.products?.category_name !== group) {
+        return false;
+      }
+      if (!q) return true;
+      const p = item.products;
+      return (
+        p?.name?.toLowerCase().includes(q) ||
+        p?.barcode?.toLowerCase().includes(q) ||
+        p?.internal_barcode?.toLowerCase().includes(q)
+      );
+    });
+  }, [inventory, search, group]);
+
+  const custMatches = useMemo(() => {
+    const wantWholesale = custMode === "wholesale";
+    const pool = customers.filter((c) => c.isWholesaleShop === wantWholesale);
+    const q = custQuery.trim().toLowerCase();
+    if (!q) {
+      // Kuch search na ho to poori fehrist nahi -- sirf sab se zyada
+      // khareedne wale, taake roz ke gahak upar hi milen (12 September).
+      const byId = new Map(pool.map((c) => [c.id, c]));
+      const top = topCustomerIds.map((id) => byId.get(id)).filter((c): c is Customer => !!c);
+      // Abhi tak kisi ne kuch khareeda hi nahi (naya shop) -- khali
+      // dabba dikhane se behtar hai ke pehli chaar dikha dein.
+      return top.length > 0 ? top : pool.slice(0, 4);
+    }
+    // CNIC/mobile dash ke sath ya bina likhe ja sakte hain -- dono taraf
+    // se dash nikal kar milaya jata hai, taake "12345" aur "1-2345" ek hi
+    // banda samjhe jayein.
+    const qDigits = q.replace(/-/g, "");
+    return pool
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.phone ?? "").toLowerCase().includes(q) ||
+          (c.cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits) ||
+          c.id.toLowerCase().startsWith(q)
+      )
+      .slice(0, 8);
+  }, [customers, custQuery, custMode, topCustomerIds]);
 
   const total = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0),
     [cart]
   );
 
+  const [discount, setDiscount] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
+  const chhoot = Math.min(Math.max(parseFloat(discount) || 0, 0), total);
+  const deyRaqam = Math.round((total - chhoot) * 100) / 100;
+
+  useEffect(() => {
+    setPaymentLines((prev) => rebalanceKhata(prev, deyRaqam));
+  }, [deyRaqam]);
+
   const totalAllocated = useMemo(
     () => paymentLines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
     [paymentLines]
   );
-  const remaining = total - totalAllocated;
+  const remaining = deyRaqam - totalAllocated;
   const khataTotal = paymentLines.filter((l) => l.method === "khata").reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+
+  const selectedLine = cart.find((l) => l.product_id === selectedId) ?? null;
+  const selectedItem = selectedId ? inventory.find((i) => i.product_id === selectedId) ?? null : null;
+  const payMethods = custMode === "walkin" ? PAYMENT_METHODS.filter((m) => m.key !== "khata") : PAYMENT_METHODS;
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
@@ -105,7 +281,12 @@ export function PosClient({
       }
       return [
         ...prev,
-        { product_id: item.product_id, name: item.products!.name, quantity: 1, unit_price: item.selling_price },
+        {
+          product_id: item.product_id,
+          name: item.products!.name,
+          quantity: 1,
+          unit_price: priceFor(item, wholesaleOn),
+        },
       ];
     });
   }
@@ -113,7 +294,7 @@ export function PosClient({
   function findByBarcode(code: string): InventoryItem | undefined {
     const trimmed = code.trim();
     if (!trimmed) return undefined;
-    return inventory.find((item) => item.products?.barcode === trimmed);
+    return inventory.find((item) => item.products?.barcode === trimmed || item.products?.internal_barcode === trimmed);
   }
 
   function handleBarcodeSubmit(e: React.FormEvent) {
@@ -142,20 +323,34 @@ export function PosClient({
 
   function updateQuantity(product_id: string, quantity: number) {
     if (quantity <= 0) {
-      setCart((prev) => prev.filter((l) => l.product_id !== product_id));
+      removeLine(product_id);
       return;
     }
     setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity } : l)));
   }
 
+  function updateRate(product_id: string, rate: number) {
+    if (!perms.canEditRate) return;
+    setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, unit_price: rate } : l)));
+  }
+
   function removeLine(product_id: string) {
-    setCart((prev) => prev.filter((l) => l.product_id !== product_id));
+    setCart((prev) => {
+      const next = prev.filter((l) => l.product_id !== product_id);
+      if (product_id === selectedId) setSelectedId(next.length ? next[0].product_id : null);
+      return next;
+    });
   }
 
   function resetSale() {
     setCart([]);
+    setSelectedId(null);
     setCustomerId("");
+    setCustMode("walkin");
+    setCustQuery("");
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
+    setDiscount("");
+    setDiscountReason("");
     barcodeRef.current?.focus();
   }
 
@@ -166,13 +361,18 @@ export function PosClient({
     ]);
   }
   function removePaymentLine(id: string) {
-    setPaymentLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
+    setPaymentLines((prev) => rebalanceKhata(prev.length > 1 ? prev.filter((l) => l.id !== id) : prev, deyRaqam));
   }
   function updatePaymentLine(id: string, field: keyof PaymentLine, value: any) {
-    setPaymentLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+    setPaymentLines((prev) => {
+      const next = prev.map((l) => (l.id === id ? { ...l, [field]: value } : l));
+      return rebalanceKhata(next, deyRaqam);
+    });
   }
   function fillRemaining(id: string) {
-    updatePaymentLine(id, "amount", Math.max(0, remaining + (parseFloat(paymentLines.find((l) => l.id === id)?.amount ?? "0") || 0)).toString());
+    const line = paymentLines.find((l) => l.id === id);
+    if (line?.method === "khata") return;
+    updatePaymentLine(id, "amount", Math.max(0, remaining + (parseFloat(line?.amount ?? "0") || 0)).toString());
   }
 
   async function handleReceiptUpload(id: string, file: File) {
@@ -193,11 +393,19 @@ export function PosClient({
   async function handleCheckout() {
     setMessage(null);
     if (cart.length === 0) {
-      setMessage({ type: "error", text: "Cart is empty." });
+      setMessage({ type: "error", text: t("pos_cart_empty_error", lang) });
       return;
     }
     if (khataTotal > 0 && !customerId) {
-      setMessage({ type: "error", text: "Khata ke liye Customer select karein." });
+      setMessage({ type: "error", text: t("pos_credit_needs_customer", lang) });
+      return;
+    }
+    if (chhoot > 0 && discountReason.trim().length < 3) {
+      setMessage({ type: "error", text: "Discount ki wajah likhein." });
+      return;
+    }
+    if (custMode === "wholesale" && !customerId) {
+      setMessage({ type: "error", text: t("pos_wholesale_needs_shop", lang) });
       return;
     }
     if (Math.abs(remaining) > 0.5) {
@@ -205,268 +413,239 @@ export function PosClient({
       return;
     }
 
-    const cashCollected = total - khataTotal;
+    const cashCollected = deyRaqam - khataTotal;
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
     setSubmitting(true);
-    const { data, error } = await supabase.rpc("create_pos_sale", {
-      p_customer_id: customerId || null,
-      p_payment_mode: primaryMethod,
-      p_cash_paid: cashCollected,
-      p_khata_amount: khataTotal,
-      p_items: cart.map((l) => ({
+    const result = await posCheckout({
+      customerId: customerId || null,
+      paymentMode: primaryMethod,
+      cashPaid: cashCollected,
+      khataAmount: khataTotal,
+      items: cart.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
         unit_price: l.unit_price,
       })),
-      p_payment_lines: paymentLines
+      paymentLines: paymentLines
         .filter((l) => (parseFloat(l.amount) || 0) > 0)
         .map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
+      discount: chhoot,
+      discountReason: discountReason.trim(),
+      counterId,
     });
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
+    const data = result.saleId;
+    if (result.error) {
+      setMessage({ type: "error", text: result.error });
+      setSubmitting(false);
+      return;
+    }
+    if (!data) {
+      setMessage({ type: "error", text: t("pos_sale_failed", lang) });
       setSubmitting(false);
       return;
     }
 
-    const saleId = data as string;
-
-    setMessage({ type: "success", text: "Sale complete ho gayi." });
-    setCompletedSaleId(saleId);
+    setMessage(
+      result.notice
+        ? { type: "error", text: `${t("pos_sale_done", lang)} — magar ${result.notice}` }
+        : { type: "success", text: t("pos_sale_done", lang) }
+    );
+    setCompletedSaleId(data);
     resetSale();
     setSubmitting(false);
   }
 
-  return (
-    <div className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-[1fr_380px]">
-      <div>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="font-display text-xl font-semibold text-surface-900 dark:text-white">
-              {sellerName} - POS
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/pos/ordering"
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300"
-            >
-              <PackagePlus className="h-4 w-4" /> Karyana Ordering
-            </Link>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
-              <Input
-                placeholder="Search products..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
+  if (mode === "return") {
+    return (
+      <div className="space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" onClick={() => setMode("sale")} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200">
+            <ArrowLeft className="h-4 w-4" /> {t("pos_mode_sale", lang)}
+          </button>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 dark:bg-amber-900/30 dark:text-amber-300">
+            <RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}
+          </span>
         </div>
-
-        <form onSubmit={handleBarcodeSubmit} className="mb-4 flex gap-2">
-          <div className="relative flex-1">
-            <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
-            <Input
-              ref={barcodeRef}
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              placeholder="Scan barcode with scanner, or type and press Enter"
-              className="pl-9"
-            />
-          </div>
-          <Button type="button" variant="secondary" onClick={() => setShowCameraModal(true)}>
-            <Camera className="h-4 w-4" />
-          </Button>
-        </form>
-        {barcodeError && (
-          <p className="-mt-3 mb-4 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {filteredInventory.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => addToCart(item)}
-              className="rounded-card border border-surface-200 bg-white p-3 text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
-            >
-              <p className="text-sm font-medium text-surface-900 dark:text-surface-100 line-clamp-2">
-                {item.products?.name}
-              </p>
-              {item.products?.pack_size && (
-                <p className="mt-0.5 text-xs text-surface-400">{item.products.pack_size}</p>
-              )}
-              <p className="mt-2 font-display text-sm font-semibold text-brand-700 dark:text-brand-300">
-                Rs {item.selling_price.toLocaleString()}
-              </p>
-              <p className="mt-1 text-xs text-surface-400">Stock: {item.stock_quantity}</p>
-            </button>
-          ))}
-          {filteredInventory.length === 0 && (
-            <p className="col-span-full py-10 text-center text-sm text-surface-400">
-              No products found.
-            </p>
-          )}
-        </div>
+        <PosReturn lang={lang} branchId={branchId} counterId={counterId} onDone={() => setMode("sale")} />
       </div>
+    );
+  }
 
-      <Card className="flex h-fit flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Cart
-          </h2>
-        </div>
-
-        <div className="max-h-64 space-y-2 overflow-y-auto">
-          {cart.length === 0 && (
-            <p className="py-6 text-center text-sm text-surface-400">No items in cart</p>
-          )}
-          {cart.map((line) => (
-            <div key={line.product_id} className="flex items-center gap-2 rounded-lg border border-surface-100 p-2 dark:border-surface-800">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</p>
-                <p className="text-xs text-surface-400">Rs {line.unit_price.toLocaleString()} each</p>
-              </div>
-              <Input
-                type="number"
-                min={1}
-                value={line.quantity}
-                onChange={(e) => updateQuantity(line.product_id, parseInt(e.target.value) || 0)}
-                className="h-8 w-16 text-center"
-              />
-              <button onClick={() => removeLine(line.product_id)} className="text-surface-400 hover:text-red-600">
-                <Trash2 className="h-4 w-4" />
-              </button>
+  return (
+    <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
+      <section className="flex flex-col lg:min-h-0">
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
+          <h1 className="max-w-[11rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">{sellerName} - POS</h1>
+          <form onSubmit={handleBarcodeSubmit} className="flex min-w-0 flex-[2] items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
+              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder={t("pos_scan_hint", lang)} className="h-11 pl-9" />
             </div>
-          ))}
+            <button type="button" onClick={() => setShowCameraModal(true)} aria-label="Camera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"><Camera className="h-4 w-4" /></button>
+          </form>
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+            <Input placeholder={t("pos_search_products", lang)} value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 pl-9" />
+          </div>
+          {groups.length > 0 && (
+            <Select value={group} onChange={(e) => setGroup(e.target.value)} className="h-11 w-[9rem] shrink-0">
+              <option value="">{t("pos_all_groups", lang)}</option>
+              {groups.map((g) => <option key={g.name} value={g.name}>{g.name === BINA_QISM ? t("pos_no_group", lang) : g.name} ({g.count})</option>)}
+            </Select>
+          )}
+          <button type="button" onClick={() => setMode("return")} className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-surface-200 px-3 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"><RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}</button>
+        </div>
+        {rateBaqiCount > 0 && <p className="-mt-1 mb-2 shrink-0 text-xs text-amber-700">{t("pos_rate_baqi_hidden", lang).replace("{n}", String(rateBaqiCount))} <Link href="/admin/products/rates-baqi" className="underline">{t("pos_rate_baqi_link", lang)}</Link></p>}
+        {barcodeError && <p className="-mt-1 mb-3 shrink-0 text-sm text-red-600 dark:text-red-400">{barcodeError}</p>}
+        <p className="mb-2 shrink-0 text-sm font-semibold text-surface-800 dark:text-surface-200">{group || t("pos_all_items", lang)} <span className="font-normal text-surface-400">({filteredInventory.length})</span></p>
+        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+          <div className={selectedLine && selectedItem ? "grid grid-cols-2 gap-2.5 sm:grid-cols-3" : "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"}>
+            {filteredInventory.map((item) => {
+              const inCart = cart.some((l) => l.product_id === item.product_id);
+              const p = item.products;
+              return (
+                <button key={item.id} onClick={() => addToCart(item)} className={`overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
+                  <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
+                    {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>
+                  </div>
+                  <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
+                    <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
+                    <p className="mt-0.5 flex items-baseline justify-between gap-2"><span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">Rs {item.selling_price.toLocaleString()}</span>{p?.mrp_price != null && p.mrp_price > 0 && <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">{t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}</span>}</p>
+                  </div>
+                </button>
+              );
+            })}
+            {filteredInventory.length === 0 && <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("pos_no_products", lang)}</p>}
+          </div>
+        </div>
+      </section>
+
+      {selectedLine && selectedItem && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedId(null)} aria-hidden />
+          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-fit lg:max-h-full lg:w-auto lg:max-w-none lg:overflow-y-auto lg:rounded-card lg:border lg:shadow-card">
+            <div className="mb-3 flex items-center justify-between"><h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("pos_details", lang)}</h2><button type="button" onClick={() => setSelectedId(null)} className="rounded-md p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-700 dark:hover:bg-surface-800" aria-label={t("sh_cancel", lang)}><X className="h-4 w-4" /></button></div>
+            <ItemDetails line={selectedLine} item={selectedItem} lang={lang} perms={perms} onQty={(q) => updateQuantity(selectedLine.product_id, q)} onRate={(r) => updateRate(selectedLine.product_id, r)} onRemove={() => removeLine(selectedLine.product_id)} onClose={() => setSelectedId(null)} />
+          </aside>
+        </>
+      )}
+
+      <Card className="flex flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+        <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
+        <div className="max-h-64 space-y-2 overflow-y-auto">
+          {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
+          {cart.map((line) => {
+            const item = inventory.find((i) => i.product_id === line.product_id);
+            const active = line.product_id === selectedId;
+            return (
+              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}</span></span>
+                <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
-          <Label>Customer {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
-          <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-            <option value="">Walk-in / No customer</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.phone ? ` - ${c.phone}` : ""}
-              </option>
+          <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
+          <div className="mb-2 grid grid-cols-3 gap-1.5">
+            {([ ["walkin", t("pos_walkin", lang)], ["regular", t("pos_regular", lang)], ["wholesale", t("pos_wholesale", lang)] ] as [CustomerMode, string][]).map(([customerMode, label]) => (
+              <button key={customerMode} type="button" onClick={() => switchCustomerMode(customerMode)} className={`rounded-lg border px-2 py-1.5 text-xs font-medium ${custMode === customerMode ? customerMode === "wholesale" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-brand-500 bg-brand-50 text-brand-800" : "border-surface-300 text-surface-600 dark:border-surface-700 dark:text-surface-400"}`}>{label}</button>
             ))}
-          </Select>
+          </div>
+          {custMode === "walkin" ? <p className="rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">{t("pos_walkin_note", lang)}</p> : chosenCustomer ? (
+            <div className="flex items-start gap-2 rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">{chosenCustomer.name}</p>
+                {chosenCustomer.phone && <p className="text-xs text-surface-500">{chosenCustomer.phone}</p>}
+                <p className="mt-0.5 text-xs"><span className="text-surface-500">{t("pos_cust_balance", lang)}: </span>{chosenCustomer.balance == null ? <span className="text-surface-400">—</span> : <span className={chosenCustomer.balance > 0 ? "font-semibold text-red-600" : "font-semibold text-emerald-700"}>Rs {Math.round(chosenCustomer.balance).toLocaleString()}</span>}</p>
+                <p className="text-xs"><span className="text-surface-500">{t("pos_credit_limit", lang)}: </span>{chosenCustomer.creditLimit == null || chosenCustomer.creditLimit === 0 ? <span className="text-surface-400">—</span> : <span className="font-medium text-surface-700 dark:text-surface-200">Rs {Math.round(chosenCustomer.creditLimit).toLocaleString()}</span>}</p>
+                <p className="text-xs"><span className="text-surface-500">{t("pos_credit_left", lang)}: </span>{chosenCustomer.creditLimit == null || chosenCustomer.creditLimit === 0 || chosenCustomer.balance == null ? <span className="text-surface-400">—</span> : <span className={chosenCustomer.creditLimit - chosenCustomer.balance <= 0 ? "font-semibold text-red-600" : "font-semibold text-emerald-700"}>Rs {Math.round(chosenCustomer.creditLimit - chosenCustomer.balance).toLocaleString()}</span>}</p>
+              </div>
+              <button type="button" onClick={() => { applyCustomer(""); setCustQuery(""); }} className="shrink-0 rounded-md px-1.5 text-surface-400 hover:text-surface-700" aria-label={t("pos_walk_in", lang)}>✕</button>
+            </div>
+          ) : (
+            <>
+              <Input value={custQuery} onChange={(e) => setCustQuery(e.target.value)} placeholder={custMode === "wholesale" ? t("pos_shop_search", lang) : t("pos_cust_search", lang)} />
+              <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
+                {custMatches.length === 0 ? <p className="px-3 py-2 text-xs text-surface-400">{custMode === "wholesale" ? t("pf_pos_no_shops", lang) : t("pos_cust_none", lang)}</p> : custMatches.map((c) => <button key={c.id} type="button" onClick={() => { applyCustomer(c.id); setCustQuery(""); }} className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.name}</p><p className="text-xs text-surface-500">{c.phone ?? "—"}{c.balance != null && c.balance > 0 ? ` · Rs ${Math.round(c.balance).toLocaleString()}` : ""}</p></button>)}
+              </div>
+            </>
+          )}
+          {wholesaleOn && <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">{t("pf_pos_wholesale_on", lang)}</p>}
         </div>
 
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <Label>Payment</Label>
-            <button type="button" onClick={addPaymentLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-              <Plus className="h-3 w-3" /> Split Payment Add Karein
-            </button>
-          </div>
+          <div className="mb-1.5 flex items-center justify-between"><Label>{t("pos_payment", lang)}</Label><button type="button" onClick={addPaymentLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"><Plus className="h-3 w-3" /> {t("pos_add_split", lang)}</button></div>
+          {custMode === "walkin" && <p className="mb-1.5 text-[11px] text-surface-400">{t("pos_walkin_no_credit", lang)}</p>}
           <div className="space-y-2">
             {paymentLines.map((line) => (
               <div key={line.id} className="rounded-lg border border-surface-200 p-2 dark:border-surface-700">
                 <div className="flex items-center gap-1.5">
-                  <Select value={line.method} onChange={(e) => updatePaymentLine(line.id, "method", e.target.value)} className="flex-1 text-xs">
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m.key} value={m.key}>{m.label}</option>
-                    ))}
-                  </Select>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="Amount"
-                    value={line.amount}
-                    onChange={(e) => updatePaymentLine(line.id, "amount", e.target.value)}
-                    className="h-8 w-24 text-xs"
-                  />
-                  <button type="button" onClick={() => fillRemaining(line.id)} className="whitespace-nowrap text-[10px] text-brand-600 hover:underline">Baaqi</button>
-                  {paymentLines.length > 1 && (
-                    <button type="button" onClick={() => removePaymentLine(line.id)} className="text-surface-400 hover:text-red-600">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                  <Select value={line.method} onChange={(e) => updatePaymentLine(line.id, "method", e.target.value)} className="flex-1 text-xs">{payMethods.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}</Select>
+                  <Input type="number" min={0} placeholder={line.method === "khata" ? "Auto" : t("pos_amount", lang)} value={line.amount} readOnly={line.method === "khata"} onChange={(e) => updatePaymentLine(line.id, "amount", e.target.value)} className={`h-8 w-24 text-xs ${line.method === "khata" ? "bg-surface-50 font-semibold text-amber-700" : ""}`} />
+                  {line.method === "khata" ? <span className="whitespace-nowrap text-[10px] font-medium text-amber-700">Auto Udhaar</span> : <button type="button" onClick={() => fillRemaining(line.id)} className="whitespace-nowrap text-[10px] text-brand-600 hover:underline">{t("pos_remaining", lang)}</button>}
+                  {paymentLines.length > 1 && <button type="button" onClick={() => removePaymentLine(line.id)} className="text-surface-400 hover:text-red-600"><X className="h-3.5 w-3.5" /></button>}
                 </div>
-                {line.method !== "cash" && line.method !== "khata" && (
-                  <>
-                    <Input
-                      placeholder="Transaction Reference (optional)"
-                      value={line.reference}
-                      onChange={(e) => updatePaymentLine(line.id, "reference", e.target.value)}
-                      className="mt-1.5 h-7 text-xs"
-                    />
-                    <label className="mt-1.5 flex cursor-pointer items-center gap-1.5 rounded border border-dashed border-surface-300 px-2 py-1.5 text-[11px] text-surface-500 hover:bg-surface-50">
-                      {line.uploading ? (
-                        "Upload ho raha hai..."
-                      ) : line.receiptUrl ? (
-                        <span className="flex items-center gap-1 text-green-600"><Check className="h-3 w-3" /> Receipt attach ho gayi</span>
-                      ) : (
-                        <span className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> Payment Screenshot/Receipt Attach Karein</span>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleReceiptUpload(line.id, file);
-                        }}
-                      />
-                    </label>
-                  </>
-                )}
+                {line.method !== "cash" && line.method !== "khata" && <><Input placeholder={t("pos_reference_optional", lang)} value={line.reference} onChange={(e) => updatePaymentLine(line.id, "reference", e.target.value)} className="mt-1.5 h-7 text-xs" /><label className="mt-1.5 flex cursor-pointer items-center gap-1.5 rounded border border-dashed border-surface-300 px-2 py-1.5 text-[11px] text-surface-500 hover:bg-surface-50">{line.uploading ? "Upload ho raha hai..." : line.receiptUrl ? <span className="flex items-center gap-1 text-green-600"><Check className="h-3 w-3" /> {t("pos_receipt_attached", lang)}</span> : <span className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> {t("pos_attach_receipt", lang)}</span>}<input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleReceiptUpload(line.id, file); }} /></label></>}
               </div>
             ))}
           </div>
+          {khataTotal > 0 && <p className="mt-1.5 text-[11px] text-amber-700">Khata remaining amount ko automatically cover karta hai. Cash/Bank ki amount badlein to Khata khud adjust ho jayega.</p>}
         </div>
 
-        <div className="flex items-center justify-between border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
-          <span className="text-surface-500">Total Quantity</span>
-          <span className="font-medium text-surface-900 dark:text-surface-100">
-            {cart.reduce((s, l) => s + l.quantity, 0)}
-          </span>
+        <div className="space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
+          <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_total_quantity", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">{cart.reduce((s, l) => s + l.quantity, 0)}</span></div>
+          <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_subtotal", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {total.toLocaleString()}</span></div>
+          {perms.canGiveDiscount && cart.length > 0 && (
+            <div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
+              <div className="flex items-center justify-between gap-2"><label htmlFor="pos-discount" className="text-surface-500">Discount</label><input id="pos-discount" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-8 w-24 rounded-md border border-surface-200 bg-white px-2 text-right text-sm tabular-nums dark:border-surface-700 dark:bg-surface-900" /></div>
+              {chhoot > 0 && <input value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="Wajah — jaise: purana gahak" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
+              {chhoot > 0 && discountReason.trim().length < 3 && <p className="mt-1 text-[11px] text-amber-600">Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.</p>}
+            </div>
+          )}
+          <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_paid", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {totalAllocated.toLocaleString()}</span></div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="font-display text-base font-semibold text-surface-900 dark:text-white">Grand Total</span>
-          <span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">
-            Rs {total.toLocaleString()}
-          </span>
-        </div>
-        <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}>
-          <span>{remaining > 0 ? "Baaqi Rakam" : remaining < 0 ? "Zyada Amount" : "Poora Paid"}</span>
-          <span className="font-semibold">Rs {Math.abs(remaining).toLocaleString()}</span>
-        </div>
-
-        {message && (
-          <div
-            className={`rounded-lg px-3 py-2 text-sm ${
-              message.type === "success"
-                ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
-                : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={resetSale} disabled={submitting}>
-            Clear Cart
-          </Button>
-          <Button className="flex-1" onClick={handleCheckout} disabled={submitting || cart.length === 0}>
-            {submitting ? "Processing..." : "Checkout"}
-          </Button>
-        </div>
+        <div className="flex items-center justify-between"><span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span><span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">Rs {deyRaqam.toLocaleString()}</span></div>
+        <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : remaining < 0 ? "Zyada Amount" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
+        {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
+        <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
       </Card>
-      {completedSaleId && (
-        <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} />
-      )}
-      {showCameraModal && (
-        <BarcodeCameraModal
-          onDetected={handleCameraDetected}
-          onClose={() => setShowCameraModal(false)}
-        />
-      )}
+      {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} lang={lang} />}
+      {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
+    </div>
+  );
+}
+
+function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose }: { line: CartLine; item: InventoryItem; lang: Lang; perms: PosPermissions; onQty: (q: number) => void; onRate: (r: number) => void; onRemove: () => void; onClose: () => void; }) {
+  const p = item.products;
+  const expiry = shortDate(item.expiry_date);
+  const barcode = p?.barcode || p?.internal_barcode || null;
+  const Field = ({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean; }) => <div><p className="mb-0.5 text-[11px] text-surface-500">{label}</p><div className={`rounded-lg border border-surface-200 bg-surface-50 px-2.5 py-1.5 text-sm tabular-nums dark:border-surface-700 dark:bg-surface-800 ${strong ? "font-semibold text-surface-900 dark:text-white" : "text-surface-700 dark:text-surface-200"}`}>{value}</div></div>;
+  const nishaan = <span className="text-surface-400">—</span>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><p className="font-display text-base font-bold leading-tight text-surface-900 dark:text-white">{line.name}</p><p className="mt-0.5 text-xs text-surface-500">{[p?.pack_size, p?.unit_code].filter(Boolean).join(" / ") || "—"}</p><p className="mt-1 font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {line.unit_price.toLocaleString()}</p></div><div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-50 dark:bg-surface-800">{p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" /> : <Package className="h-7 w-7 text-surface-300 dark:text-surface-600" strokeWidth={1.25} />}</div></div>
+      <div><p className="mb-0.5 text-[11px] text-surface-500">{t("pos_qty", lang)}</p><div className="flex items-center gap-2"><button type="button" onClick={() => onQty(line.quantity - 1)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300" aria-label="-"><Minus className="h-4 w-4" /></button><Input type="number" min={1} value={line.quantity} onChange={(e) => onQty(parseInt(e.target.value) || 0)} className="h-9 flex-1 text-center" /><button type="button" onClick={() => onQty(line.quantity + 1)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300" aria-label="+"><Plus className="h-4 w-4" /></button></div></div>
+      <div className="grid grid-cols-2 gap-2">
+        {perms.canEditRate ? <div><p className="mb-0.5 text-[11px] text-surface-500">{t("pos_sell_rate", lang)}</p><Input type="number" min={0} step="0.01" value={line.unit_price} onChange={(e) => onRate(parseFloat(e.target.value) || 0)} className="h-9" /></div> : <Field label={t("pos_sell_rate", lang)} strong value={<span className="flex items-center gap-1.5">Rs {line.unit_price.toLocaleString()}<Lock className="h-3 w-3 text-surface-400" /></span>} />}
+        <Field label={t("pos_mrp", lang)} value={p?.mrp_price != null && p.mrp_price > 0 ? `Rs ${Number(p.mrp_price).toLocaleString()}` : nishaan} />
+        {perms.canSeeCost && <Field label={t("pos_cost_rate", lang)} value={p?.purchase_price != null && p.purchase_price > 0 ? `Rs ${Number(p.purchase_price).toLocaleString()}` : nishaan} />}
+        {perms.canSeeCost && <Field label={t("pos_wholesale_rate", lang)} value={item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan} />}
+        <Field label={t("pos_shop_stock", lang)} value={<span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>} />
+        <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : item.warehouse_stock} />
+        <Field label={t("pos_barcode", lang)} value={barcode ? <span className="font-mono text-xs">{barcode}</span> : <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>} />
+        <Field label={t("pos_batch", lang)} value={item.batch_number ? item.batch_number : (item.batch_count ?? 0) > 1 ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count)) : nishaan} />
+        <Field label={t("pos_expiry", lang)} value={expiry ?? nishaan} />
+        <Field label={t("pos_line_total", lang)} strong value={<span className="text-brand-700 dark:text-brand-300">Rs {(line.quantity * line.unit_price).toLocaleString()}</span>} />
+      </div>
+      {!perms.canEditRate && <p className="text-[11px] text-surface-400">{t("pos_rate_locked", lang)}</p>}
+      <div className="flex gap-2"><button type="button" onClick={onRemove} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> {t("pos_remove_item", lang)}</button><button type="button" onClick={onClose} className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("pos_details_done", lang)}</button></div>
     </div>
   );
 }

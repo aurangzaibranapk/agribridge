@@ -4,10 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle, X, Send } from "lucide-react";
 import { askChatbot } from "@/actions/chatbot";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Message { role: "user" | "bot"; text: string; link?: string }
 
 export function ChatbotWidget() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "bot", text: "Assalam o Alaikum! Ask me about our products, services, or anything else — I'll do my best to help." },
@@ -38,7 +41,7 @@ export function ChatbotWidget() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Open chat assistant"
+        aria-label={t("sp_open_chat", lang)}
         className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg hover:bg-brand-700"
       >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
@@ -47,7 +50,7 @@ export function ChatbotWidget() {
       {open && (
         <div className="fixed bottom-24 right-5 z-40 flex h-[28rem] w-80 flex-col overflow-hidden rounded-card border border-surface-200 bg-white shadow-xl dark:border-surface-800 dark:bg-surface-900">
           <div className="border-b border-surface-100 bg-brand-600 p-3 dark:border-surface-800">
-            <p className="text-sm font-semibold text-white">AgriBridge Assistant</p>
+            <p className="text-sm font-semibold text-white">{t("sp_assistant", lang)}</p>
           </div>
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
             {messages.map((m, i) => (
@@ -57,19 +60,19 @@ export function ChatbotWidget() {
                 </span>
                 {m.link && (
                   <div>
-                    <Link href={m.link} className="mt-1 inline-block text-xs text-brand-700 hover:underline dark:text-brand-400">Open page →</Link>
+                    <Link href={m.link} className="mt-1 inline-block text-xs text-brand-700 hover:underline dark:text-brand-400">{t("sp_open_page", lang)}</Link>
                   </div>
                 )}
               </div>
             ))}
-            {loading && <p className="text-xs text-surface-400 dark:text-surface-500">Typing...</p>}
+            {loading && <p className="text-xs text-surface-400 dark:text-surface-500">{t("sp_typing", lang)}</p>}
           </div>
           <div className="flex items-center gap-2 border-t border-surface-100 p-2 dark:border-surface-800">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Ask a question..."
+              placeholder={t("sp_ask_question", lang)}
               className="h-9 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white"
             />
             <button onClick={handleSend} disabled={loading} className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50">

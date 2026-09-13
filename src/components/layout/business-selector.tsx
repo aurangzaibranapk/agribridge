@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Building2, Store, Sprout, Wheat, Milk, Truck } from "lucide-react";
+import { ChevronDown, Building2, Store, Sprout, Wheat, Milk, Truck, Stethoscope } from "lucide-react";
 import { setBusinessContext, type BusinessContext } from "@/actions/business-context";
 
 const OPTIONS: { value: BusinessContext; label: string; icon: any }[] = [
@@ -10,6 +10,7 @@ const OPTIONS: { value: BusinessContext; label: string; icon: any }[] = [
   { value: "grain_procurement", label: "Grain Procurement", icon: Wheat },
   { value: "dairy", label: "Dairy", icon: Milk },
   { value: "machinery_fleet", label: "Machinery & Fleet", icon: Truck },
+  { value: "vet", label: "Vets", icon: Stethoscope },
 ];
 
 export function BusinessSelector({ current }: { current: BusinessContext }) {

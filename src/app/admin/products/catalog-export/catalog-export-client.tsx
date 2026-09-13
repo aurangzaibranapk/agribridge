@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
-import { Printer, Download, Mail, MessageCircle } from "lucide-react";
+import { Printer, Download, Mail, MessageCircle, FileText } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Product {
   id: string;
@@ -15,11 +17,19 @@ interface Product {
   barcode: string | null;
   manufacture_date: string | null;
   expiry_date: string | null;
+  stock_qty: number | null;
+  /** Kis kis dukan-qism (Karyana/Agri Inputs/Dairy) ka maal hai -- ek se zyada bhi ho sakta hai. */
+  shopGroups: string[];
 }
 
 interface Category {
   id: string;
   name: string;
+}
+
+interface ShopGroup {
+  key: string;
+  label: string;
 }
 
 const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
@@ -29,26 +39,48 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "purchase_price", label: "Purchase Rate" },
   { key: "selling_price", label: "Selling Rate" },
   { key: "mrp_price", label: "MRP" },
+  { key: "stock_qty", label: "Available Stock" },
   { key: "unit", label: "Unit" },
   { key: "barcode", label: "Barcode" },
   { key: "manufacture_date", label: "Manufacturing Date" },
   { key: "expiry_date", label: "Expiry Date" },
 ];
 
-export function CatalogExportClient({ products, categories }: { products: Product[]; categories: Category[] }) {
+export function CatalogExportClient({ products, categories, shopGroups }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[] }) {
   const [categoryFilter, setCategoryFilter] = useState("");
+  // Karyana chunte hi uski saari categories (Grocery, Cold/Soft Drink,
+  // Dairy Products aur unki har aulaad) ek sath aati hain -- ek-ek
+  // category alag se chunne ki zaroorat nahi, aur pesticide/khad wali
+  // categories khud-ba-khud bahar rehti hain.
+  const [shopGroupFilter, setShopGroupFilter] = useState("");
+  const lang = useLang();
   const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
   const [search, setSearch] = useState("");
+  const [includeCountColumns, setIncludeCountColumns] = useState(false);
+  // Ginti sheet ab kaghaz tak mehdood nahi -- yahin screen par bhi
+  // "Actual Stock" likha ja sakta hai, aur Farq khud ban jata hai.
+  // Malik (11 September): "next bhi yahan stock likhna hai, farq wahan
+  // box hona chahiye."
+  const [actualStock, setActualStock] = useState<Record<string, string>>({});
+
+  function diffFor(p: Product): number | null {
+    const raw = actualStock[p.id];
+    if (raw === undefined || raw.trim() === "") return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    return n - Number(p.stock_qty ?? 0);
+  }
 
   const filtered = useMemo(() => {
     let list = products;
+    if (shopGroupFilter) list = list.filter((p) => p.shopGroups.includes(shopGroupFilter));
     if (categoryFilter) list = list.filter((p) => p.category === categoryFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q));
     }
     return list;
-  }, [products, categoryFilter, search]);
+  }, [products, shopGroupFilter, categoryFilter, search]);
 
   function toggleField(key: string) {
     setSelectedFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -58,22 +90,36 @@ export function CatalogExportClient({ products, categories }: { products: Produc
     const value = p[key];
     if (value === null || value === undefined) return "-";
     if (key === "purchase_price" || key === "selling_price" || key === "mrp_price") return `Rs ${Number(value).toLocaleString()}`;
+    if (key === "stock_qty") return Number(value).toLocaleString();
     if (key === "manufacture_date" || key === "expiry_date") return new Date(value as string).toLocaleDateString();
     return String(value);
   }
 
   function buildCsv(): string {
-    const headers = ["Product Name", ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => f.label)];
-    const rows = filtered.map((p) => [
-      p.name,
-      ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => formatValue(p, f.key)),
-    ]);
+    const headers = [
+      "Sr#",
+      "Product Name",
+      ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => f.label),
+      ...(includeCountColumns ? ["Actual Stock", "Farq"] : []),
+    ];
+    const rows = filtered.map((p, i) => {
+      const diff = diffFor(p);
+      return [
+        String(i + 1),
+        p.name,
+        ...FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => formatValue(p, f.key)),
+        ...(includeCountColumns ? [actualStock[p.id] ?? "", diff === null ? "" : String(diff)] : []),
+      ];
+    });
     return [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
   }
 
+  const groupLabel = shopGroupFilter ? shopGroups.find((g) => g.key === shopGroupFilter)?.label ?? "" : "";
+  const titleSuffix = [groupLabel, categoryFilter].filter(Boolean).join(" - ");
+
   function buildText(): string {
     const lines = [
-      `Product Catalog${categoryFilter ? ` - ${categoryFilter}` : ""}`,
+      `Product Catalog${titleSuffix ? ` - ${titleSuffix}` : ""}`,
       `Total Products: ${filtered.length}`,
       "",
       ...filtered.map((p) => {
@@ -92,7 +138,89 @@ export function CatalogExportClient({ products, categories }: { products: Produc
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `product-catalog${categoryFilter ? `-${categoryFilter}` : ""}.csv`;
+    a.download = `product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  async function handleDownloadPdf() {
+    // jsPDF ka Node build (jspdf-autotable ke zariye) canvg/@babel-runtime
+    // khींchta hai jo har machine par sahi install nahi hota (11
+    // September, cPanel build par "Module not found" -- deploy atak
+    // gaya). pdf-lib is project mein wallet statement par pehle se
+    // chalta hai, koi aisi dependency nahi -- isi ka tareeqa yahan bhi.
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+
+    const visibleFields = FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key));
+    const cols: { label: string; width: number }[] = [
+      { label: "Sr#", width: 24 },
+      { label: "Product", width: 130 },
+      ...visibleFields.map((f) => ({ label: f.label, width: 70 })),
+      ...(includeCountColumns ? [{ label: "Actual Stock", width: 60 }, { label: "Farq", width: 50 }] : []),
+    ];
+    const pageWidth = Math.max(595, 40 + cols.reduce((s, c) => s + c.width, 0));
+    const pageHeight = 842;
+    const marginX = 20;
+    let page = doc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - 30;
+    const title = `Product Catalog${titleSuffix ? ` - ${titleSuffix}` : ""}`;
+
+    function drawHeaderRow() {
+      let x = marginX;
+      for (const c of cols) {
+        page.drawText(c.label, { x, y, size: 8, font: boldFont, color: rgb(1, 1, 1) });
+        x += c.width;
+      }
+      y -= 4;
+      page.drawLine({ start: { x: marginX, y }, end: { x: pageWidth - marginX, y }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
+      y -= 12;
+    }
+
+    function drawPageTop() {
+      y = pageHeight - 30;
+      page.drawText(title, { x: marginX, y, size: 13, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+      y -= 16;
+      page.drawText(`Total Products: ${filtered.length}`, { x: marginX, y, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+      y -= 14;
+      // Header row ki hari patti.
+      let x = marginX - 2;
+      page.drawRectangle({ x, y: y - 4, width: pageWidth - 2 * marginX + 4, height: 14, color: rgb(0.16, 0.47, 0.2) });
+      drawHeaderRow();
+    }
+
+    drawPageTop();
+
+    for (let i = 0; i < filtered.length; i++) {
+      if (y < 40) {
+        page = doc.addPage([pageWidth, pageHeight]);
+        drawPageTop();
+      }
+      const p = filtered[i];
+      const diff = diffFor(p);
+      const values = [
+        String(i + 1),
+        p.name,
+        ...visibleFields.map((f) => formatValue(p, f.key)),
+        ...(includeCountColumns ? [actualStock[p.id] ?? "", diff === null ? "" : String(diff)] : []),
+      ];
+      let x = marginX;
+      for (let c = 0; c < cols.length; c++) {
+        const maxChars = Math.floor(cols[c].width / 4.2);
+        const text = values[c].length > maxChars ? values[c].slice(0, maxChars - 1) + "…" : values[c];
+        page.drawText(text, { x, y, size: 7.5, font, color: rgb(0.15, 0.15, 0.15) });
+        x += cols[c].width;
+      }
+      y -= 13;
+    }
+
+    const bytes = await doc.save();
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `product-catalog${titleSuffix ? `-${titleSuffix}` : ""}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -105,22 +233,54 @@ export function CatalogExportClient({ products, categories }: { products: Produc
 
   return (
     <div>
+      {/* Print par table ke columns barh sakte hain (11 fields tak, +2
+          ginti sheet ke liye) -- portrait A4 mein sab nahi aata, dayeen
+          taraf ke khane katte hue chhap jate. Landscape + chhota font
+          isi liye, sirf print ke waqt (screen par asar nahi). */}
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 8mm; }
+          .catalog-print-table { font-size: 9px; }
+          .catalog-print-table th, .catalog-print-table td { padding: 2px 4px !important; }
+        }
+      `}</style>
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 print:hidden">
+        <button
+          type="button"
+          onClick={() => setShopGroupFilter("")}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${shopGroupFilter === "" ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300"}`}
+        >
+          Sab
+        </button>
+        {shopGroups.map((g) => (
+          <button
+            key={g.key}
+            type="button"
+            onClick={() => setShopGroupFilter(g.key)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${shopGroupFilter === g.key ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-300"}`}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="">Sab Categories</option>
+          <option value="">{t("cx_all_categories", lang)}</option>
           {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Product dhoondein" className="rounded-lg border border-surface-200 p-2 text-sm" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="ml-auto flex gap-2">
-          <button onClick={handlePrint} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
-          <button onClick={handleDownload} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button onClick={handlePrint} title="Print" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
+          <button onClick={handleDownload} title="CSV Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button onClick={handleDownloadPdf} title="PDF Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><FileText className="h-4 w-4" /></button>
           <button onClick={handleWhatsApp} className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
           <button onClick={handleEmail} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
         </div>
       </div>
 
       <div className="mb-4 rounded-card border border-surface-200 bg-white p-3 shadow-card print:hidden dark:border-surface-800 dark:bg-surface-900">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Fields Select Karein</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("pd_select_fields", lang)}</p>
         <div className="flex flex-wrap gap-3">
           {FIELD_OPTIONS.map((f) => (
             <label key={f.key} className="flex items-center gap-1.5 text-sm text-surface-600 dark:text-surface-300">
@@ -129,34 +289,79 @@ export function CatalogExportClient({ products, categories }: { products: Produc
             </label>
           ))}
         </div>
+        {/* Ginti sheet: system ka Available Stock chhapa hua, aur uske
+            sath do khaali khane -- Actual Stock aur Farq -- jo dukan mein
+            khud gin kar haath se likhne hain. Malik (10 September): "farq
+            kitna hai mujhe page par likhna hai." */}
+        <label className="mt-2 flex items-center gap-1.5 border-t border-surface-100 pt-2 text-sm text-surface-600 dark:border-surface-800 dark:text-surface-300">
+          <input type="checkbox" checked={includeCountColumns} onChange={(e) => setIncludeCountColumns(e.target.checked)} />
+          {t("cx_count_columns", lang)}
+        </label>
       </div>
 
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="border-b border-surface-100 p-4 dark:border-surface-800">
           <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">
-            {categoryFilter || "Sab Products"} <span className="text-sm font-normal text-surface-400">({filtered.length} products)</span>
+            {titleSuffix || "Sab Products"} <span className="text-sm font-normal text-surface-400">({filtered.length} products)</span>
           </h2>
         </div>
-        <table className="w-full text-sm">
+        <table className="catalog-print-table w-full text-sm">
           <thead>
             <tr className="border-b border-surface-100 text-left dark:border-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Product</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                 <th key={f.key} className="px-3 py-2 font-medium text-surface-500">{f.label}</th>
               ))}
+              {includeCountColumns && (
+                <>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("cx_actual_stock", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("cx_diff", lang)}</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
-                <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
-                {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
-                  <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
-                ))}
-              </tr>
-            ))}
+            {filtered.map((p, i) => {
+              const diff = diffFor(p);
+              return (
+                <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
+                  <td className="px-3 py-2 text-surface-500">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
+                  {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
+                    <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
+                  ))}
+                  {includeCountColumns && (
+                    <>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={actualStock[p.id] ?? ""}
+                          onChange={(e) => setActualStock((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                          className="w-20 rounded border border-surface-300 px-1.5 py-1 text-sm print:border print:border-surface-400 dark:border-surface-600 dark:bg-surface-800"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-block min-w-[3.5rem] rounded border px-1.5 py-1 text-center text-sm ${
+                            diff === null
+                              ? "border-surface-300 text-surface-400 dark:border-surface-600"
+                              : diff === 0
+                                ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                : "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400"
+                          }`}
+                        >
+                          {diff === null ? "" : diff}
+                        </span>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
             {filtered.length === 0 && (
-              <tr><td colSpan={selectedFields.length + 1} className="px-3 py-8 text-center text-surface-400">Koi product nahi mila.</td></tr>
+              <tr><td colSpan={selectedFields.length + 2 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
             )}
           </tbody>
         </table>

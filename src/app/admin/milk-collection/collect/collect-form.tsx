@@ -1,0 +1,468 @@
+"use client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { shrinkImage } from "@/lib/image-capture";
+import { queueAdd, queueAll, queueRemove, offlineSupported, type QueuedItem } from "@/lib/offline-queue";
+import { syncQueue } from "@/lib/milk-offline-sync";
+import { Camera, Check, Loader2, Search, AlertTriangle, CloudOff, RefreshCw, Trash2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
+
+export interface FarmerOption {
+  id: string;
+  full_name: string;
+  farmer_code: string;
+}
+
+interface SavedLine {
+  collectionNumber: string;
+  farmerName: string;
+  liters: number;
+  flags: string[];
+}
+
+/**
+ * Maidan ka collection screen.
+ *
+ * Ye form seedha database se baat nahi karta -- /api/milk/collect ko
+ * JSON bhejta hai, wahi darwaza jo WhatsApp aur aage chal kar app
+ * istemal karengi. Server action rakhna aasan hota, magar phir offline
+ * mode ke waqt poora screen dobara likhna parta: offline mein entry
+ * pehle device par rukti hai aur baad mein wahi JSON bheja jata hai.
+ *
+ * client_uuid yahin banta hai, bhejne se PEHLE. Ye ahem hai: agar jawab
+ * aate waqt network toot jaye to user dobara bhejta hai, aur wohi
+ * client_uuid dobara jane se entry do dafa nahi banti.
+ */
+export function CollectForm({ farmers }: { farmers: FarmerOption[] }) {
+  const lang = useLang();
+  const [query, setQuery] = useState("");
+  const [farmerId, setFarmerId] = useState("");
+  const [liters, setLiters] = useState("");
+  const [lr, setLr] = useState("");
+  const [shift, setShift] = useState(() => (new Date().getHours() < 14 ? "morning" : "evening"));
+  const [photo, setPhoto] = useState<{ base64: string; mimeType: string; bytes: number } | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState<SavedLine[]>([]);
+  const [queued, setQueued] = useState<QueuedItem[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [online, setOnline] = useState(true);
+
+  const refreshQueue = useCallback(async () => {
+    if (!offlineSupported()) return;
+    try {
+      setQueued(await queueAll());
+    } catch {
+      // Device ka khana na khule to offline sahara nahi milega, magar
+      // online kaam chalta rahega. Yahan rukna ghalat hoga.
+    }
+  }, []);
+
+  const runSync = useCallback(async () => {
+    if (!offlineSupported() || syncing) return;
+    setSyncing(true);
+    try {
+      await syncQueue();
+      await refreshQueue();
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshQueue, syncing]);
+
+  // Teen mauqon par sync: safha khulte hi, network wapas aane par, aur
+  // har minute. Sirf "online" event par bharosa nahi kiya ja sakta --
+  // phone kabhi kabhi keh deta hai ke network hai jabke asal mein nahi
+  // hota, aur us soorat mein qatar hamesha ke liye ruki reh jati.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setOnline(navigator.onLine);
+    void refreshQueue();
+    void runSync();
+
+    const onOnline = () => {
+      setOnline(true);
+      void runSync();
+    };
+    const onOffline = () => setOnline(false);
+
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    const timer = window.setInterval(() => void runSync(), 60_000);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const waiting = queued.filter((q) => !q.error);
+  const stuck = queued.filter((q) => q.error);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return farmers.slice(0, 8);
+    return farmers
+      .filter((f) => f.full_name.toLowerCase().includes(q) || f.farmer_code.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [farmers, query]);
+
+  const chosen = farmers.find((f) => f.id === farmerId) ?? null;
+  const ready = !!farmerId && Number(liters) > 0;
+
+  async function onPhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoBusy(true);
+    setError("");
+    try {
+      setPhoto(await shrinkImage(file));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("mk_photo_failed", lang));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function clearForm() {
+    setFarmerId("");
+    setQuery("");
+    setLiters("");
+    setLr("");
+    setPhoto(null);
+  }
+
+  async function submit() {
+    if (!ready || busy) return;
+    setBusy(true);
+    setError("");
+
+    // Nishan bhejne se PEHLE banta hai -- network toot jane par dobara
+    // bhejne se entry do dafa nahi banti.
+    const clientUuid =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const item: QueuedItem = {
+      client_uuid: clientUuid,
+      farmer_id: farmerId,
+      farmer_label: chosen ? `${chosen.farmer_code} — ${chosen.full_name}` : "",
+      liters: Number(liters),
+      lr: lr === "" ? null : Number(lr),
+      shift,
+      collected_at: new Date().toISOString(),
+      lr_image_base64: photo?.base64,
+      lr_image_mime: photo?.mimeType,
+      queued_at: new Date().toISOString(),
+    };
+
+    // Network hi na ho to server tak jane ki koshish bhi nahi karte --
+    // MCA ko bekar ka intezar karwana maidan mein waqt ka nuqsan hai.
+    if (typeof navigator !== "undefined" && !navigator.onLine && offlineSupported()) {
+      await stash(item, t("mk_no_network", lang));
+      setBusy(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/milk/collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "website",
+          items: [
+            {
+              client_uuid: clientUuid,
+              farmer_id: farmerId,
+              liters: item.liters,
+              lr: item.lr,
+              shift,
+              collected_at: item.collected_at,
+              lr_image_base64: photo?.base64,
+              lr_image_mime: photo?.mimeType,
+            },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? t("mk_not_saved", lang));
+        return;
+      }
+
+      const line = data.results?.[0];
+      if (!line?.ok) {
+        // Server ne wajah batayi -- ise device par rakhne ka koi fayda
+        // nahi, wahi wajah dobara aayegi. MCA abhi theek kar sakta hai.
+        setError(line?.error ?? t("mk_not_saved", lang));
+        return;
+      }
+
+      setSaved((prev) => [
+        {
+          collectionNumber: line.collection_number,
+          farmerName: line.farmer_name || chosen?.full_name || "",
+          liters: line.liters,
+          flags: line.flags ?? [],
+        },
+        ...prev,
+      ]);
+
+      // Agla kisan foran — maidan mein qatar lagi hoti hai.
+      clearForm();
+    } catch {
+      // Server tak nahi pahuncha ja saka. Entry kho dena sab se bura
+      // hoga, is liye device par mahfooz kar lete hain.
+      if (offlineSupported()) {
+        await stash(item, t("mk_server_unreachable", lang));
+      } else {
+        setError(t("mk_server_unreachable_retry", lang));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stash(item: QueuedItem, reason: string) {
+    try {
+      await queueAdd(item);
+      await refreshQueue();
+      clearForm();
+      setError("");
+      setSaved((prev) => [
+        {
+          collectionNumber: `${reason} — ${t("mk_saved_on_device", lang)}`,
+          farmerName: item.farmer_label,
+          liters: item.liters,
+          flags: [],
+        },
+        ...prev,
+      ]);
+    } catch {
+      setError(t("mk_device_save_failed", lang));
+    }
+  }
+
+  async function dropStuck(clientUuid: string) {
+    await queueRemove(clientUuid);
+    await refreshQueue();
+  }
+
+  return (
+    <div className="space-y-4">
+      {(!online || waiting.length > 0 || stuck.length > 0) && (
+        <div
+          className={`rounded-card border p-3 ${
+            online
+              ? "border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20"
+              : "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-surface-800 dark:text-surface-200">
+              <CloudOff className="h-4 w-4" />
+              {online
+                ? `${waiting.length} ${t("mk_offline_sending", lang)}`
+                : t("mk_offline_saving", lang)}
+            </p>
+            {online && waiting.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void runSync()}
+                disabled={syncing}
+                className="flex items-center gap-1 rounded-lg border border-surface-300 px-2 py-1 text-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? t("mk_sending", lang) : t("mk_send_now", lang)}
+              </button>
+            )}
+          </div>
+
+          {!online && waiting.length > 0 && (
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">
+              {waiting.length} {t("mk_offline_queue_note", lang)}
+            </p>
+          )}
+
+          {stuck.length > 0 && (
+            <div className="mt-2 border-t border-amber-200 pt-2 dark:border-amber-800">
+              <p className="text-xs font-medium text-red-700">
+                {stuck.length} {t("mk_stuck", lang)}
+              </p>
+              <ul className="mt-1 space-y-1">
+                {stuck.map((q) => (
+                  <li key={q.client_uuid} className="flex items-start justify-between gap-2 text-xs">
+                    <span className="min-w-0 text-surface-700 dark:text-surface-300">
+                      {q.farmer_label || "—"} · {q.liters} L — {q.error}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void dropStuck(q.client_uuid)}
+                      className="flex shrink-0 items-center gap-1 text-red-600 underline"
+                    >
+                      <Trash2 className="h-3 w-3" /> {t("mk_remove", lang)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-surface-500">
+                {t("mk_stuck_note", lang)}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+        <label className="text-xs font-medium text-surface-600">{t("mk_farmer_req", lang)}</label>
+        {chosen ? (
+          <div className="mt-1 flex items-center justify-between rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 dark:bg-brand-950/20">
+            <span className="text-sm font-medium text-surface-900 dark:text-white">
+              {chosen.farmer_code} — {chosen.full_name}
+            </span>
+            <button type="button" onClick={() => setFarmerId("")} className="text-xs text-brand-700 underline">
+              {t("mk_change", lang)}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-surface-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("mk_search_name_code", lang)}
+                className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm"
+              />
+            </div>
+            <ul className="mt-1 divide-y divide-surface-100 rounded-lg border border-surface-200 dark:divide-surface-800 dark:border-surface-800">
+              {matches.length === 0 && <li className="px-3 py-2 text-xs text-surface-400">{t("mk_no_farmer_found", lang)}</li>}
+              {matches.map((f) => (
+                <li key={f.id}>
+                  <button
+                    type="button"
+                    onClick={() => setFarmerId(f.id)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-surface-50 dark:hover:bg-surface-800"
+                  >
+                    <span className="font-medium">{f.farmer_code}</span> — {f.full_name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-surface-600">{t("mk_liters_req", lang)}</label>
+            <input
+              value={liters}
+              onChange={(e) => setLiters(e.target.value)}
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={0}
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-lg font-semibold"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-surface-600">LR</label>
+            <input
+              value={lr}
+              onChange={(e) => setLr(e.target.value)}
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={0}
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-lg font-semibold"
+            />
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="text-xs font-medium text-surface-600">{t("mk_shift", lang)}</label>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {[
+              { value: "morning", label: t("mk_morning", lang) },
+              { value: "evening", label: t("mk_evening", lang) },
+            ].map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setShift(s.value)}
+                className={`rounded-lg border p-2 text-sm font-medium ${
+                  shift === s.value
+                    ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/20"
+                    : "border-surface-200 text-surface-600"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="flex items-center gap-1 text-xs font-medium text-surface-600">
+            <Camera className="h-3 w-3" /> {t("mk_lr_photo", lang)}
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => onPhoto(e.target.files?.[0])}
+            className="mt-1 w-full rounded-lg border border-surface-200 p-1.5 text-xs"
+          />
+          {photoBusy && <p className="mt-1 text-xs text-surface-500">{t("mk_photo_preparing", lang)}</p>}
+          {photo && (
+            <p className="mt-1 text-xs text-green-700">
+              {t("mk_photo_ready", lang)} ({Math.round(photo.bytes / 1024)} KB)
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!ready || busy}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-base font-semibold text-white disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          {busy ? t("mk_saving", lang) : online ? t("mk_save", lang) : t("mk_save_on_device", lang)}
+        </button>
+
+        <p className="mt-2 text-center text-xs text-surface-500">
+          {t("mk_fat_at_chiller_note", lang)}
+        </p>
+      </div>
+
+      {saved.length > 0 && (
+        <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">
+            {t("mk_just_saved", lang)} ({saved.length})
+          </h3>
+          <ul className="divide-y divide-surface-100 dark:divide-surface-800">
+            {saved.map((s) => (
+              <li key={s.collectionNumber} className="py-2">
+                <p className="text-sm text-surface-900 dark:text-white">
+                  {s.farmerName} — <span className="font-semibold">{s.liters} L</span>
+                </p>
+                <p className="text-xs text-surface-400">{s.collectionNumber}</p>
+                {s.flags.map((f) => (
+                  <p key={f} className="mt-1 flex items-start gap-1 text-xs text-amber-700">
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {f}
+                  </p>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -3,6 +3,8 @@ import { Package, Building2, Sprout, TrendingUp, AlertTriangle } from "lucide-re
 import { Button } from "@/components/ui/form";
 import { InvestorInquiryForm } from "@/app/(site)/invest/investor-inquiry-form";
 import { InvestorChatWidget } from "@/app/(site)/invest/investor-chat-widget";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const MODELS = [
   {
@@ -43,17 +45,14 @@ const GROWTH = [
 ];
 
 export default function InvestPage() {
+  const lang = getLanguageFromCookies("rm");
   return (
     <div>
       <section className="border-b border-surface-200 bg-gradient-to-b from-wheat-400/10 to-white px-4 py-16">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-wheat-600">Business &amp; Investment Platform</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold text-surface-900 sm:text-4xl">
-            Your trusted agriculture business partner
-          </h1>
-          <p className="mx-auto mt-3 max-w-xl text-surface-500">
-            Pakistan&apos;s most transparent agriculture business platform — no cash, only products and livestock, run through halal, written agreements.
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-wheat-600">{t("sp_invest_platform", lang)}</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-surface-900 sm:text-4xl">{t("sp_trusted_partner", lang)}</h1>
+          <p className="mx-auto mt-3 max-w-xl text-surface-500">{t("sp_invest_lead", lang)}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <InvestorChatWidget />
           </div>
@@ -61,8 +60,8 @@ export default function InvestPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-center font-display text-2xl font-semibold text-surface-900">Choose Your Business Model</h2>
-        <p className="mx-auto mt-2 max-w-xl text-center text-surface-500">Four proven partnership models — transparent, halal, and profitable. No cash required.</p>
+        <h2 className="text-center font-display text-2xl font-semibold text-surface-900">{t("sp_choose_model", lang)}</h2>
+        <p className="mx-auto mt-2 max-w-xl text-center text-surface-500">{t("sp_four_models", lang)}</p>
 
         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {MODELS.map((m) => (
@@ -81,9 +80,7 @@ export default function InvestPage() {
               <Link
                 href={`/contact?model=${encodeURIComponent(m.title)}`}
                 className="mt-4 inline-block text-sm font-medium text-brand-700 hover:underline"
-              >
-                Discuss this model →
-              </Link>
+              >{t("sp_discuss_model", lang)}</Link>
             </div>
           ))}
         </div>
@@ -91,7 +88,7 @@ export default function InvestPage() {
 
       <section className="border-y border-surface-200 bg-surface-50 px-4 py-16">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-center font-display text-2xl font-semibold text-surface-900">From Startup to Market Leader</h2>
+          <h2 className="text-center font-display text-2xl font-semibold text-surface-900">{t("sp_startup_to_leader", lang)}</h2>
           <div className="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-4">
             {GROWTH.map((g) => (
               <div key={g.year} className="text-center">
@@ -100,15 +97,13 @@ export default function InvestPage() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-surface-400">
-            Exact revenue and growth figures are shared directly with serious partnership inquiries.
-          </p>
+          <p className="mt-6 text-center text-xs text-surface-400">{t("sp_figures_note", lang)}</p>
         </div>
       </section>
 
       <section className="mx-auto max-w-xl px-4 py-16">
-        <h2 className="text-center font-display text-2xl font-semibold text-surface-900 dark:text-white">Submit an Investment Inquiry</h2>
-        <p className="mx-auto mt-2 max-w-md text-center text-surface-500 dark:text-surface-400">Tell us a bit about your interest — our team will reach out to discuss details.</p>
+        <h2 className="text-center font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sp_submit_inquiry", lang)}</h2>
+        <p className="mx-auto mt-2 max-w-md text-center text-surface-500 dark:text-surface-400">{t("sp_inquiry_note", lang)}</p>
         <div className="mt-8">
           <InvestorInquiryForm />
         </div>
@@ -118,7 +113,7 @@ export default function InvestPage() {
         <div className="flex gap-3 rounded-card border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-900/20">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <strong>Fraud alert:</strong> Al Rana Traders never accepts cash for a partnership or investment — every deal happens through products or livestock, with a written agreement. If someone asks for cash using our name, it&apos;s fraud. Report it to{" "}
+            <strong>{t("sh_fraud_label", lang)}</strong> Al Rana Traders never accepts cash for a partnership or investment — every deal happens through products or livestock, with a written agreement. If someone asks for cash using our name, it&apos;s fraud. Report it to{" "}
             <a href="mailto:info@alranatraders.pk" className="underline">info@alranatraders.pk</a>.
           </p>
         </div>

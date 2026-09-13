@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { DealersListClient } from "./dealers-list-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export const dynamic = "force-dynamic";
 export default async function AdminDealersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: dealers } = await supabase
     .from("dealers")
@@ -16,7 +19,7 @@ export default async function AdminDealersPage() {
 
   return (
     <div>
-      <PageHeader title="Dealers" description="Third-party dealer partners using AgriBridge's Bridge Order system" />
+      <PageHeader title={t("dl_dealers", lang)} description="Third-party dealer partners using AgriBridge's Bridge Order system" />
       <DealersListClient dealers={typedDealers} />
     </div>
   );
