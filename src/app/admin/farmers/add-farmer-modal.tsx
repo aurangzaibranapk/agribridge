@@ -40,6 +40,16 @@ function AddFarmerModal({ onClose }: { onClose: () => void }) {
           <input name="cnic" placeholder={t("c_cnic_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="village" placeholder={t("c_village", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="district" placeholder={t("c_district", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <div>
+            <input
+              name="opening_balance"
+              type="number"
+              step="0.01"
+              placeholder={t("af_opening_balance", lang)}
+              className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+            />
+            <p className="mt-1 text-[11px] text-surface-500">{t("af_opening_balance_hint", lang)}</p>
+          </div>
           <SubmitButton />
         </form>
       </div>

@@ -87,6 +87,16 @@ export const peoplePagesDict = {
   fp_farmer_owes: { en: "Farmer owes", rm: "Kisan ke zimme", ur: "کسان کے ذمے" },
   fp_add_farmer: { en: "Add Farmer", rm: "Kisan shamil karein", ur: "کسان شامل کریں" },
   fp_farmer_added: { en: "Farmer added.", rm: "Kisan shamil ho gaya.", ur: "کسان شامل ہو گیا۔" },
+  af_opening_balance: {
+    en: "Opening balance (optional)",
+    rm: "Pehle se balance (agar ho)",
+    ur: "پہلے سے بیلنس (اگر ہو)",
+  },
+  af_opening_balance_hint: {
+    en: "Positive = farmer owes us. Negative = we owe the farmer. Leave blank for a fresh account.",
+    rm: "Kisan se lena ho to seedha adad likhein, kisan ko dena ho to (-) laga kar. Naya khata ho to khali chhor dein.",
+    ur: "کسان سے لینا ہو تو سیدھا عدد لکھیں، کسان کو دینا ہو تو (-) لگا کر۔ نیا کھاتہ ہو تو خالی چھوڑ دیں۔",
+  },
   fp_promote: { en: "Promote to Staff / Admin", rm: "Staff ya Admin bana dein", ur: "عملہ یا ایڈمن بنا دیں" },
   fp_delete_q: { en: "Delete farmer?", rm: "Kisan ko mita dein?", ur: "کسان کو مٹا دیں؟" },
   fp_promote_q: { en: "Promote to staff?", rm: "Staff bana dein?", ur: "عملہ بنا دیں؟" },
