@@ -62,9 +62,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const path = `${id}/${Date.now()}-${filename}`;
       const upload = await service.storage.from("statement-files").upload(path, pdf, { contentType: "application/pdf", upsert: false });
       if (upload.error) throw new Error(upload.error.message);
-      const publicUrl = String(service.storage.from("statement-files").getPublicUrl(path).data.publicUrl);
-      documentUrl = publicUrl;
-      await sendWhatsAppDocument(recipientValue, publicUrl, filename, `Assalam-o-Alaikum ${customer.name} Sahib, aap ka Al Rana Traders Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}.`);
+      const signed = await service.storage.from("statement-files").createSignedUrl(path, 60 * 60);
+      if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Statement ka secure link nahi bana.");
+      documentUrl = path;
+      await sendWhatsAppDocument(recipientValue, String(signed.data.signedUrl), filename, `Assalam-o-Alaikum ${customer.name} Sahib, aap ka Al Rana Traders Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}.`);
     } else {
       throw new Error("Unsupported channel.");
     }

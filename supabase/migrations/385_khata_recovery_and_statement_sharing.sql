@@ -195,8 +195,8 @@ create trigger trg_stop_paid_party_reminders after insert on public.journal_line
 for each row execute function public.fn_stop_paid_party_reminders();
 
 insert into storage.buckets (id, name, public)
-values ('statement-files', 'statement-files', true)
-on conflict (id) do update set public = true;
+values ('statement-files', 'statement-files', false)
+on conflict (id) do update set public = false;
 
 insert into public.features
   (key, label, label_en, label_ur, route, icon, is_sensitive, description, description_en, description_ur, is_active)
