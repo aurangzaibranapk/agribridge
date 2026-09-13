@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getUiMode } from "@/lib/access/ui-mode";
@@ -26,7 +28,15 @@ export default async function EditProductPage({ params }: { params: { id: string
 
   return (
     <div>
-      <PageHeader title={t("pd_edit_product", lang)} description={product.name} />
+      <PageHeader
+        title={t("pd_edit_product", lang)}
+        description={product.name}
+        actions={
+          <Link href="/admin/products" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
+            <ArrowLeft className="h-4 w-4" /> {t("pd_back_to_products", lang)}
+          </Link>
+        }
+      />
       <ProductForm uiMode={await getUiMode()}
         companies={companies ?? []}
         brands={brands ?? []}

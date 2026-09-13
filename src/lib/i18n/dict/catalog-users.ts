@@ -31,6 +31,7 @@ export const catalogUsersDict = {
 
   // ---- Cheezein ----
   pd_edit_product: { en: "Edit Product", rm: "Cheez tabdeel karein", ur: "چیز تبدیل کریں" },
+  pd_back_to_products: { en: "Back to Products", rm: "Products ki fehrist par wapas", ur: "پروڈکٹس کی فہرست پر واپس" },
   pd_management: { en: "Product Management", rm: "Cheezon ka intezam", ur: "چیزوں کا انتظام" },
   pd_search: { en: "Search products...", rm: "Cheezein dhoondein...", ur: "چیزیں تلاش کریں..." },
   pd_pending_verify: { en: "Pending Verify", rm: "Tasdeeq baqi", ur: "تصدیق باقی" },
