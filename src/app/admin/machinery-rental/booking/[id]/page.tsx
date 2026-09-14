@@ -186,7 +186,6 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         village: booking.village,
         location_address: booking.location_address,
         harvest_area: Number(booking.harvest_area ?? 0),
-        total_area: Number(booking.total_area ?? 0),
         machine_type_requested: booking.machine_type_requested,
         machine_label: machine ? `${machine.machine_type}${machine.model ? ` (${machine.model})` : ""}` : null,
         estimated_rate:

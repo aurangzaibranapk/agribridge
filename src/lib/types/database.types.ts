@@ -14884,11 +14884,11 @@ export type Database = {
           farmer_confirmation_response: string | null
           farmer_confirmed_at: string | null
           farmer_id: string
-          field_access: string | null
           field_ready: string | null
           final_rate: number | null
           harvest_area: number | null
           harvest_area_acres: number | null
+          verified_area: number | null
           harvest_area_kanal: number | null
           harvest_ready: string | null
           harvest_type: string | null
@@ -14902,7 +14902,6 @@ export type Database = {
           machine_id: string | null
           machine_type_requested: string | null
           notes: string | null
-          other_service: string | null
           parent_booking_id: string | null
           payment_promise_at: string | null
           payment_promise_by: string | null
@@ -14910,7 +14909,6 @@ export type Database = {
           payment_promise_note: string | null
           preferred_date: string | null
           preferred_time: string | null
-          rate_amount: number | null
           rate_confirmation_rate: number | null
           rate_confirmation_sent_at: string | null
           rate_confirmation_sent_by: string | null
@@ -14918,16 +14916,10 @@ export type Database = {
           rate_status: string
           reached_farm_at: string | null
           request_id: string | null
-          required_units: number
           sabit_area: number | null
           sabit_rate: number | null
-          special_instructions: string | null
           status: string
           total_amount: number | null
-          total_area: number | null
-          total_area_acres: number | null
-          total_area_kanal: number | null
-          trolley_required: boolean
           vendor_closing_at: string | null
           vendor_closing_by: string | null
           vendor_id: string | null
@@ -14973,13 +14965,13 @@ export type Database = {
           farmer_confirmation_response?: string | null
           farmer_confirmed_at?: string | null
           farmer_id: string
-          field_access?: string | null
           field_ready?: string | null
           final_rate?: number | null
           harvest_area?: number | null
           harvest_area_acres?: number | null
           harvest_area_kanal?: number | null
           harvest_ready?: string | null
+          verified_area?: number | null
           harvest_type?: string | null
           hours?: number | null
           id?: string
@@ -14991,7 +14983,6 @@ export type Database = {
           machine_id?: string | null
           machine_type_requested?: string | null
           notes?: string | null
-          other_service?: string | null
           parent_booking_id?: string | null
           payment_promise_at?: string | null
           payment_promise_by?: string | null
@@ -14999,7 +14990,6 @@ export type Database = {
           payment_promise_note?: string | null
           preferred_date?: string | null
           preferred_time?: string | null
-          rate_amount?: number | null
           rate_confirmation_rate?: number | null
           rate_confirmation_sent_at?: string | null
           rate_confirmation_sent_by?: string | null
@@ -15007,16 +14997,10 @@ export type Database = {
           rate_status?: string
           reached_farm_at?: string | null
           request_id?: string | null
-          required_units?: number
           sabit_area?: number | null
           sabit_rate?: number | null
-          special_instructions?: string | null
           status?: string
           total_amount?: number | null
-          total_area?: number | null
-          total_area_acres?: number | null
-          total_area_kanal?: number | null
-          trolley_required?: boolean
           vendor_closing_at?: string | null
           vendor_closing_by?: string | null
           vendor_id?: string | null
@@ -15062,13 +15046,13 @@ export type Database = {
           farmer_confirmation_response?: string | null
           farmer_confirmed_at?: string | null
           farmer_id?: string
-          field_access?: string | null
           field_ready?: string | null
           final_rate?: number | null
           harvest_area?: number | null
           harvest_area_acres?: number | null
           harvest_area_kanal?: number | null
           harvest_ready?: string | null
+          verified_area?: number | null
           harvest_type?: string | null
           hours?: number | null
           id?: string
@@ -15080,7 +15064,6 @@ export type Database = {
           machine_id?: string | null
           machine_type_requested?: string | null
           notes?: string | null
-          other_service?: string | null
           parent_booking_id?: string | null
           payment_promise_at?: string | null
           payment_promise_by?: string | null
@@ -15088,7 +15071,6 @@ export type Database = {
           payment_promise_note?: string | null
           preferred_date?: string | null
           preferred_time?: string | null
-          rate_amount?: number | null
           rate_confirmation_rate?: number | null
           rate_confirmation_sent_at?: string | null
           rate_confirmation_sent_by?: string | null
@@ -15096,16 +15078,10 @@ export type Database = {
           rate_status?: string
           reached_farm_at?: string | null
           request_id?: string | null
-          required_units?: number
           sabit_area?: number | null
           sabit_rate?: number | null
-          special_instructions?: string | null
           status?: string
           total_amount?: number | null
-          total_area?: number | null
-          total_area_acres?: number | null
-          total_area_kanal?: number | null
-          trolley_required?: boolean
           vendor_closing_at?: string | null
           vendor_closing_by?: string | null
           vendor_id?: string | null

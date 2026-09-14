@@ -81,7 +81,6 @@ interface Booking {
   village: string | null;
   location_address: string | null;
   harvest_area: number;
-  total_area: number;
   machine_type_requested: string | null;
   machine_label: string | null;
   estimated_rate: number | null;

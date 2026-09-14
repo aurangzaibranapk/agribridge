@@ -377,11 +377,9 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       location_address: str(formData, "location_address"),
       location_lat: num(formData, "location_lat"),
       location_lng: num(formData, "location_lng"),
-      field_access: str(formData, "field_access"),
       expected_harvest_date: str(formData, "expected_harvest_date"),
       preferred_date: str(formData, "preferred_date"),
       preferred_time: str(formData, "preferred_time"),
-      special_instructions: str(formData, "special_instructions"),
 
       // Do sawal jin ka jawab na hone se machine khali jati hai
       // (migration 125). "unknown" bhi ek sahi jawab hai -- booking
@@ -389,16 +387,11 @@ export async function createBooking(_prev: ActionState, formData: FormData): Pro
       field_ready: str(formData, "field_ready"),
       harvest_ready: str(formData, "harvest_ready"),
 
-      total_area_acres: num(formData, "total_area_acres"),
-      total_area_kanal: num(formData, "total_area_kanal"),
       harvest_area_acres: harvestAcres,
       harvest_area_kanal: harvestKanal,
 
       machine_type_requested: machineType,
       machine_id: str(formData, "machine_id"),
-      required_units: num(formData, "required_units") ?? 1,
-      trolley_required: formData.get("trolley_required") === "on",
-      other_service: str(formData, "other_service"),
 
       estimated_rate: estimatedRate,
       rate_status: "estimated",
