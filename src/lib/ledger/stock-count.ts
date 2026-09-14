@@ -70,13 +70,20 @@ export async function openCount(
   // 'verified' (370: Branch Manager ki tasdeeq) yahan bhi aati hai --
   // warna tasdeeq shuda ginti finance/owner ko dikhna hi band ho jati,
   // aur wo usay post kabhi nahi kar sakte.
-  const { data: header } = await service
+  // `stock_counts` mein `profiles` ki taraf TEEN alag foreign key hain
+  // (started_by, verified_by, posted_by) -- `profiles(full_name)` likhne
+  // se PostgREST ye faisla nahi kar sakta kaun sa connection istemal
+  // kare, aur error deta hai. Us error ko yahan kabhi check hi nahi kiya
+  // gaya tha (sirf `data` liya jata tha) -- is liye khuli hui ginti
+  // hamesha "nahi mili" jaisi lagti thi, chahe database mein ho.
+  const { data: header, error: headerError } = await service
     .from("stock_counts")
-    .select("id, warehouse_id, count_date, started_at, status, warehouses(name), profiles(full_name)")
+    .select("id, warehouse_id, count_date, started_at, status, warehouses(name), profiles!started_by(full_name)")
     .eq("warehouse_id", warehouseId)
     .in("status", ["counting", "verified"])
     .maybeSingle();
 
+  if (headerError) throw new Error(`Khuli hui ginti nahi mil saki: ${headerError.message}`);
   if (!header) return null;
 
   const { data: rows } = await service
@@ -113,7 +120,7 @@ export async function openCount(
     warehouseName: (header.warehouses as { name: string } | null)?.name ?? "—",
     countDate: header.count_date,
     startedAt: header.started_at,
-    startedByName: (header.profiles as { full_name: string | null } | null)?.full_name ?? null,
+    startedByName: (header.profiles as unknown as { full_name: string | null } | null)?.full_name ?? null,
     lines,
     allCounted,
     needsReview: allCounted,
