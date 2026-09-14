@@ -202,6 +202,52 @@ export async function approveProductMerge(_prev: ActionState, formData: FormData
   return { success: true, message: "Merge ho gaya -- stock chala gaya, purana naam hata diya gaya." };
 }
 
+/**
+ * Tasdeeq se pehle target naam ghalat lage to admin yahin theek kar
+ * sakta hai -- staff ko dobara tajweez bhejne ke liye wapas bhejne ki
+ * zaroorat nahi (malik, 14 September: "wahan edit ka option ho, theek
+ * kar ke move karonga").
+ */
+export async function updateMergeRequestTarget(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const { canApprove } = await getApprovalContext(supabase);
+  if (!canApprove) return { error: "Aap ke paas ye tasdeeq karne ki ijazat nahi hai." };
+
+  const requestId = String(formData.get("request_id") ?? "");
+  const targetName = String(formData.get("target_name") ?? "").trim();
+  if (!requestId) return { error: "Request nahi mili." };
+  if (targetName.length < 2) return { error: "Naya naam likhein." };
+
+  const { data: request } = await service
+    .from("product_merge_requests")
+    .select("id, source_product_id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!request) return { error: "Request nahi mili." };
+  if (request.status !== "pending") return { error: "Ye request pehle hi nipat chuki hai." };
+
+  const { data: target } = await service
+    .from("products")
+    .select("id, name")
+    .ilike("name", targetName)
+    .eq("is_deleted", false)
+    .neq("id", request.source_product_id)
+    .maybeSingle();
+  if (!target) {
+    return { error: `"${targetName}" naam ka product nahi mila -- naam bilkul sahi likhein.` };
+  }
+
+  const { error } = await service
+    .from("product_merge_requests")
+    .update({ target_product_id: target.id })
+    .eq("id", requestId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products/duplicates");
+  return { success: true, message: `Target ab "${target.name}" hai.` };
+}
+
 export async function rejectProductMerge(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const service = createServiceClient();
