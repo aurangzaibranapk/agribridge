@@ -201,9 +201,6 @@ export function CountingSheet({
 
   return (
     <div className="space-y-3">
-    <form action={formAction} className="space-y-3">
-      <input type="hidden" name="count_id" value={countId} />
-
       <div className="flex items-start gap-2 rounded-lg bg-surface-100 px-3 py-2.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-300">
         <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
@@ -224,6 +221,14 @@ export function CountingSheet({
         placeholder={t("sc_search_item", lang)}
         className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
       />
+
+      {/* Ginti karte waqt hi "kuch mila jo list mein nahi" darj karna hai
+          -- is liye button upar wali (baqi) list ke sath hi rahe, sab
+          bhar jane tak neeche scroll na karna paRe (malik, 14 September). */}
+      <ExtraItemForm countId={countId} />
+
+    <form action={formAction} className="space-y-3">
+      <input type="hidden" name="count_id" value={countId} />
 
       <div className="overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
         <table className="w-full text-sm">
@@ -286,8 +291,6 @@ export function CountingSheet({
       <Feedback state={state} />
       <Submit label={t("sc_save_counts", lang)} />
     </form>
-
-      <ExtraItemForm countId={countId} />
     </div>
   );
 }
