@@ -25,6 +25,16 @@ const nextConfig = {
   experimental: {
     cpus: process.env.SHARED_HOST_BUILD === "1" ? 1 : Math.max(2, require("os").cpus().length - 1),
     workerThreads: false,
+    // Next.js apne taur par client-side navigation (Link se, sidebar se)
+    // par har safhe ka purana snapshot 30 second tak yaad rakhta hai --
+    // `dynamic = "force-dynamic"` isay nahi rokta, wo sirf server-side
+    // caching band karta hai. Is app mein har safha turant badalne wala
+    // data dikhata hai (jaise Stock Count ki "khuli hui ginti") -- 30
+    // second purana snapshot dikhana seedha ghalat jawab dikhana hai
+    // (14 September: Anwar ki ginti shuru ho chuki thi, safha "koi ginti
+    // khuli nahi" dikhata raha jab tak URL nayi tab mein taaza na khola
+    // gaya). Is liye ye hamesha 0 -- har navigation par taaza data.
+    staleTimes: { dynamic: 0 },
   },
   // The real Supabase-generated database.types.ts (added Aug 2026) is far
   // stricter than the old loosely-typed placeholder — it now surfaces
