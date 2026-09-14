@@ -89,6 +89,7 @@ export type Database = {
 
       owner_whatsapp_commands: {
         Row: {
+          confirmed_at: string | null
           created_at: string
           from_phone: string
           id: string
@@ -100,6 +101,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          confirmed_at?: string | null
           created_at?: string
           from_phone: string
           id?: string
@@ -111,6 +113,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          confirmed_at?: string | null
           created_at?: string
           from_phone?: string
           id?: string

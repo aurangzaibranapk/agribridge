@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
 const STATUS_LABEL: Record<string, string> = {
   received: "Aaya hai",
   acknowledged: "Dekh liya",
-  responded: "Jawab likha",
+  responded: "Jawab likha — tasdeeq ka intezar",
+  confirmed: "Tasdeeq ho gayi — amal baaqi",
+  dismissed: "Malik ne mana kar diya",
   done: "Ho gaya",
 };
 
@@ -19,7 +21,18 @@ const STATUS_COLOR: Record<string, string> = {
   received: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400",
   acknowledged: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400",
   responded: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400",
+  confirmed: "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-400",
+  dismissed: "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400",
   done: "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400",
+};
+
+// Sabse pehle wo dikhna chahiye jis par ABHI amal karna hai.
+const STATUS_ORDER: Record<string, number> = {
+  confirmed: 0,
+  received: 1,
+  responded: 2,
+  dismissed: 3,
+  acknowledged: 4,
 };
 
 export default async function OwnerCommandsPage() {
@@ -41,11 +54,13 @@ export default async function OwnerCommandsPage() {
   const service = createServiceClient();
   const { data: rows } = await service
     .from("owner_whatsapp_commands")
-    .select("id, from_phone, message, status, response_text, responded_at, resolved_at, created_at")
+    .select("id, from_phone, message, status, response_text, responded_at, confirmed_at, resolved_at, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const open = (rows ?? []).filter((r) => r.status !== "done");
+  const open = (rows ?? [])
+    .filter((r) => r.status !== "done")
+    .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
   const done = (rows ?? []).filter((r) => r.status === "done");
 
   return (
@@ -59,9 +74,11 @@ export default async function OwnerCommandsPage() {
         <div className="flex items-start gap-3">
           <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-surface-500" />
           <p className="text-xs text-surface-600 dark:text-surface-400">
-            Malik ka WhatsApp paigham yahan &ldquo;Aaya hai&rdquo; ke sath aata hai. Jawab likhna Claude Code
-            session ka kaam hai — jawab jama karte hi wo seedha malik ke WhatsApp par bhi chala jata hai (agar
-            24 ghante ke andar ho). Kaam ho jane par &ldquo;Kaam ho gaya&rdquo; dabayein.
+            Malik ka WhatsApp paigham yahan &ldquo;Aaya hai&rdquo; ke sath aata hai. Jawab (tajweez) likhte hi
+            wo seedha malik ke WhatsApp par bhi chala jata hai. Malik WhatsApp par &ldquo;haan&rdquo;/&ldquo;theek
+            hai&rdquo; likhein to wo tajweez khud &ldquo;Tasdeeq ho gayi&rdquo; ban jati hai — <strong>amal
+            phir bhi hamesha insaan (Claude Code session) khud karta hai</strong>, koi khud-kaar execution
+            nahi. Kaam ho jane par &ldquo;Kaam ho gaya&rdquo; dabayein.
           </p>
         </div>
       </Card>
@@ -73,7 +90,7 @@ export default async function OwnerCommandsPage() {
       ) : (
         <div className="space-y-2">
           {open.map((r) => (
-            <Card key={r.id} className="p-4">
+            <Card key={r.id} className={`p-4 ${r.status === "confirmed" ? "border-l-4 border-l-orange-500" : ""}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-xs font-medium text-surface-400">

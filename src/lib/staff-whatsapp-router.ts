@@ -5,7 +5,7 @@ import { readBillOrCashPhoto, type BillCashReading } from "@/lib/ai/bill-cash-ph
 import { recordSubmission, type SubmissionKind } from "@/lib/whatsapp-submissions";
 import { looksLikeMilk, handleMilkMessage } from "@/lib/milk-whatsapp";
 import { vehicleForStaff, todaysLog, recordOpening, recordFuel, recordClosing } from "@/lib/vehicle-daily-log";
-import { recordOwnerCommand } from "@/lib/owner-whatsapp-commands";
+import { recordOwnerCommand, resolvePendingConfirmation } from "@/lib/owner-whatsapp-commands";
 
 /**
  * Staff ke WhatsApp message ka jawab.
@@ -27,6 +27,11 @@ const FUEL_WORDS = ["petrol", "diesel", "fuel", "tel", "پٹرول", "ڈیزل"]
 const BILL_WORDS = ["bill", "bijli", "bijlee", "electricity", "gas", "kiraya", "kiraaya", "rent", "kharcha", "kharch", "marammat", "repair", "بل", "بجلی", "کرایہ", "خرچ"];
 const CASH_PAID_WORDS = ["cash dia", "cash diya", "cash dey", "diye", "diya", "adaigi", "adayegi", "paid", "payment ki", "raqam di", "دیے", "ادائیگی"];
 const CASH_RECEIVED_WORDS = ["cash mila", "cash aya", "cash aaya", "wasool", "wasooli", "received", "recieved", "raqam mili", "mila", "ملا", "وصولی"];
+
+// Sirf Owner/Super Admin ke jawab ke liye -- ek tajweez ki tasdeeq ya
+// inkaar (Command Center Stage 3).
+const OWNER_CONFIRM_WORDS = ["haan", "han", "ji haan", "theek hai", "thik hai", "ok", "okay", "confirm", "kar do", "yes", "ہاں", "ٹھیک ہے"];
+const OWNER_REJECT_WORDS = ["nahi", "nahin", "mat karo", "cancel", "ruk jao", "روکو", "نہیں"];
 
 function matchesAny(text: string, words: string[]): boolean {
   const t = text.trim().toLowerCase();
@@ -345,6 +350,18 @@ export async function handleStaffMessage(msg: IncomingStaffMessage): Promise<str
   // Sirf owner/super_admin: koi bhi staff "database delete karo" jaisa
   // paigham bhej kar tawajjah nahi maang sakta.
   if ((role === "owner" || role === "super_admin") && text.trim().length > 0) {
+    // Stage 3: agar pichhli koi tajweez intezar mein thi ("responded"),
+    // to "haan"/"nahi" jaisa chhota jawab usay confirm/dismiss karta hai
+    // -- ye khud koi fix NAHI karta, sirf agli Claude Code session ko
+    // saaf batata hai ke amal ab karna hai.
+    if (matchesAny(text, OWNER_CONFIRM_WORDS)) {
+      const resolved = await resolvePendingConfirmation(msg.fromPhone, "confirmed");
+      if (resolved) return "Theek hai — tasdeeq ho gayi, ab is par amal karta hoon.";
+    } else if (matchesAny(text, OWNER_REJECT_WORDS)) {
+      const resolved = await resolvePendingConfirmation(msg.fromPhone, "dismissed");
+      if (resolved) return "Theek hai, rok deta hoon — amal nahi karunga.";
+    }
+
     await recordOwnerCommand(msg.fromPhone, profileId, text);
     return "Samajh gaya — dekh raha hoon, thodi dair mein update dunga.";
   }
