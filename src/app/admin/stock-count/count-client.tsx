@@ -11,8 +11,9 @@ import {
   type ActionState,
 } from "@/actions/stock-count";
 import { previewProductMerge, requestProductMerge } from "@/actions/product-merge";
+import { saveMissingRates } from "@/actions/product-rates";
 import { bestMatches, MATCH_STRONG } from "@/lib/product-match";
-import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save, Merge } from "lucide-react";
+import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save, Merge, Tag } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -92,14 +93,27 @@ export function StartCountForm({ warehouses }: { warehouses: { id: string; name:
  * na HTML mein. Hidden field mein bhej dena bhi kaafi nahi hota: page ka
  * source dekh kar adad mil jata hai.
  */
-type CountLine = { id: string; productId: string; productName: string; unit: string | null; packSize: string | null; counted: number | null };
+type CountLine = {
+  id: string;
+  productId: string;
+  productName: string;
+  unit: string | null;
+  packSize: string | null;
+  counted: number | null;
+  salePrice: number | null;
+  tradePrice: number | null;
+  saleRatePending: boolean;
+  tradeRatePending: boolean;
+};
 
 export function CountingSheet({
   countId,
   lines,
+  canEditRates,
 }: {
   countId: string;
   lines: CountLine[];
+  canEditRates: boolean;
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(saveCounts, initialState);
@@ -270,6 +284,9 @@ export function CountingSheet({
                       {[l.packSize, l.unit].filter(Boolean).join(" • ")}
                     </span>
                   )}
+                  {canEditRates && (
+                    <RateCell productId={l.productId} saleRatePending={l.saleRatePending} tradeRatePending={l.tradeRatePending} />
+                  )}
                 </td>
                 <td className="px-4 py-2">
                   <CountCell l={l} />
@@ -296,8 +313,11 @@ export function CountingSheet({
             {done.map((l) => (
               <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
                 <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                <div className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">
+                <div className="min-w-0 flex-1 truncate text-sm text-surface-600 dark:text-surface-400">
                   <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} suggestedDuplicate={duplicateSuggestions.get(l.id)} />
+                  {canEditRates && (
+                    <RateCell productId={l.productId} saleRatePending={l.saleRatePending} tradeRatePending={l.tradeRatePending} />
+                  )}
                 </div>
                 <div className="w-40">
                   <CountCell l={l} />
@@ -507,6 +527,88 @@ function MergeButton({
         </div>
       )}
       {requestState.error && <p className="mt-1 text-red-600">{requestState.error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Rate Baqi -- ginti ke dauran hi bhar dena (malik, 14 September:
+ * "yahan bhi sath sath rate hona chahiye jo add kar sakein"). Sirf
+ * jahan asal mein khali ho (sale ya trade), aur sirf Owner/Admin/
+ * Warehouse ke liye -- rate wahi ijazat hai jo /admin/products/rates-baqi
+ * par hai, ginti se bahar jane ki zaroorat nahi paRti.
+ */
+function RateCell({
+  productId,
+  saleRatePending,
+  tradeRatePending,
+}: {
+  productId: string;
+  saleRatePending: boolean;
+  tradeRatePending: boolean;
+}) {
+  const lang = useLang();
+  const [sale, setSale] = useState("");
+  const [trade, setTrade] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [msg, setMsg] = useState("");
+
+  if (!saleRatePending && !tradeRatePending) return null;
+  if (status === "saved") {
+    return <p className="mt-0.5 text-[11px] text-green-700 dark:text-green-400">{t("sc_rate_saved", lang)}</p>;
+  }
+
+  async function handleSave() {
+    if (!sale.trim() && !trade.trim()) return;
+    setStatus("saving");
+    const fd = new FormData();
+    fd.set("id", productId);
+    if (sale.trim()) fd.set(`sale_${productId}`, sale.trim());
+    if (trade.trim()) fd.set(`trade_${productId}`, trade.trim());
+    const result = await saveMissingRates({}, fd);
+    if (result.error) {
+      setStatus("error");
+      setMsg(result.error);
+    } else {
+      setStatus("saved");
+    }
+  }
+
+  return (
+    <div className="mt-1 flex items-center gap-1">
+      <Tag className="h-3 w-3 shrink-0 text-amber-500" />
+      {saleRatePending && (
+        <input
+          value={sale}
+          onChange={(e) => setSale(e.target.value)}
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder={t("sc_rate_sale", lang)}
+          className="w-20 rounded-lg border border-amber-300 px-1.5 py-0.5 text-[11px] dark:border-amber-800 dark:bg-surface-900"
+        />
+      )}
+      {tradeRatePending && (
+        <input
+          value={trade}
+          onChange={(e) => setTrade(e.target.value)}
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder={t("sc_rate_trade", lang)}
+          className="w-20 rounded-lg border border-amber-300 px-1.5 py-0.5 text-[11px] dark:border-amber-800 dark:bg-surface-900"
+        />
+      )}
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={status === "saving" || (!sale.trim() && !trade.trim())}
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-amber-300 text-amber-600 hover:bg-amber-50 disabled:opacity-40 dark:border-amber-800"
+        title={t("sc_save_row", lang)}
+      >
+        <Save className="h-3 w-3" />
+      </button>
+      {status === "error" && <span className="text-[11px] text-red-600">{msg}</span>}
     </div>
   );
 }

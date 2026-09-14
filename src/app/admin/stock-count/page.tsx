@@ -234,6 +234,7 @@ export default async function StockCountPage({
                 ) : (
                   <CountingSheet
                     countId={current.id}
+                    canEditRates={["owner", "super_admin", "admin", "warehouse"].includes(me.role)}
                     lines={current.lines.map((l) => ({
                       id: l.id,
                       productId: l.productId,
@@ -241,6 +242,10 @@ export default async function StockCountPage({
                       unit: l.unit,
                       packSize: l.packSize,
                       counted: l.counted,
+                      salePrice: l.salePrice,
+                      tradePrice: l.tradePrice,
+                      saleRatePending: l.saleRatePending,
+                      tradeRatePending: l.tradeRatePending,
                     }))}
                   />
                 )}

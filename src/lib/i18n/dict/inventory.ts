@@ -313,6 +313,11 @@ export const stockCountDict = {
   sc_merge_will_move: { en: "Will move:", rm: "Jayega:", ur: "جائے گا:" },
   sc_maybe_duplicate: { en: "Possible duplicate of", rm: "Shayad duplicate hai", ur: "شاید ڈوپلیکیٹ ہے" },
 
+  // --- Rate Baqi, ginti ke andar hi (14 September) ---
+  sc_rate_sale: { en: "Sale Rs", rm: "Sale rate", ur: "سیل ریٹ" },
+  sc_rate_trade: { en: "Trade Rs", rm: "Trade rate", ur: "ٹریڈ ریٹ" },
+  sc_rate_saved: { en: "Rate saved", rm: "Rate mehfooz ho gaya", ur: "ریٹ محفوظ ہو گیا" },
+
   // --- Extra cheez mili (408) ---
   sc_extra_open: { en: "Found something not on this list?", rm: "Koi cheez mili jo list mein nahi thi?", ur: "کوئی چیز ملی جو لسٹ میں نہیں تھی؟" },
   sc_extra_title: { en: "Add what you found", rm: "Jo mila, darj karein", ur: "جو ملا، درج کریں" },

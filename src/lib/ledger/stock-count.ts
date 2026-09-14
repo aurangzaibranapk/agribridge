@@ -36,6 +36,11 @@ export interface CountLine {
   unitCost: number;
   differenceValue: number | null;
   reason: string | null;
+  /** Rate abhi maloom nahi -- "Rate Baqi" (0 = muft ban jata hai, is liye NULL). */
+  salePrice: number | null;
+  tradePrice: number | null;
+  saleRatePending: boolean;
+  tradeRatePending: boolean;
 }
 
 export interface OpenCount {
@@ -89,13 +94,21 @@ export async function openCount(
   const { data: rows } = await service
     .from("stock_count_lines")
     .select(
-      "id, product_id, expected_qty, counted_qty, difference_qty, unit_cost, difference_value, reason, products(name, unit, pack_size)"
+      "id, product_id, expected_qty, counted_qty, difference_qty, unit_cost, difference_value, reason, products(name, unit, pack_size, selling_price, purchase_price, sale_rate_pending, trade_rate_pending)"
     )
     .eq("count_id", header.id);
 
   const lines: CountLine[] = (rows ?? [])
     .map((r) => {
-      const product = r.products as { name: string; unit: string | null; pack_size: string | null } | null;
+      const product = r.products as {
+        name: string;
+        unit: string | null;
+        pack_size: string | null;
+        selling_price: number | null;
+        purchase_price: number | null;
+        sale_rate_pending: boolean | null;
+        trade_rate_pending: boolean | null;
+      } | null;
       return {
         id: r.id,
         productId: r.product_id,
@@ -108,6 +121,12 @@ export async function openCount(
         unitCost: Number(r.unit_cost),
         differenceValue: r.difference_value === null ? null : Number(r.difference_value),
         reason: r.reason,
+        // Rate Baqi ka usool: pending ho to NULL, sifar nahi -- 0 ka
+        // matlab "muft" ban jata hai (rates-baqi/page.tsx).
+        salePrice: product?.sale_rate_pending ? null : (product?.selling_price ?? null),
+        tradePrice: product?.trade_rate_pending ? null : (product?.purchase_price ?? null),
+        saleRatePending: Boolean(product?.sale_rate_pending),
+        tradeRatePending: Boolean(product?.trade_rate_pending),
       };
     })
     .sort((a, b) => a.productName.localeCompare(b.productName));
