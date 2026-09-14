@@ -10,7 +10,7 @@ import {
   renameProductFromCount,
   type ActionState,
 } from "@/actions/stock-count";
-import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check } from "lucide-react";
+import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -124,20 +124,74 @@ export function CountingSheet({
     });
   }
 
-  function CountInput({ l }: { l: CountLine }) {
+  // Har qatar apna alag "abhi mehfooz karein" button rakhti hai (malik,
+  // 14 September) -- ginti khatam hone tak intezar nahi karna, jo cheez
+  // gin li wo isi waqt bach jati hai, aakhri "Save" button ke bharose
+  // nahi rehna paRta.
+  function CountCell({ l }: { l: CountLine }) {
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+    const [saveMsg, setSaveMsg] = useState("");
+    const value = values[l.id] ?? "";
+
+    async function handleSave() {
+      if (!value.trim()) return;
+      setSaveStatus("saving");
+      const fd = new FormData();
+      fd.set("count_id", countId);
+      fd.set(`qty_${l.id}`, value);
+      const result = await saveCounts({}, fd);
+      if (result.error) {
+        setSaveStatus("error");
+        setSaveMsg(result.error);
+      } else {
+        setSaveStatus("saved");
+        setSaveMsg("");
+        setDoneIds((prev) => new Set(prev).add(l.id));
+      }
+    }
+
     return (
-      <input
-        name={`qty_${l.id}`}
-        type="number"
-        min={0}
-        step="0.001"
-        inputMode="decimal"
-        value={values[l.id] ?? ""}
-        onChange={(e) => handleValueChange(l.id, e.target.value)}
-        onBlur={() => handleBlur(l.id)}
-        placeholder="—"
-        className="w-full rounded-lg border border-surface-300 px-2 py-1.5 text-right text-sm dark:border-surface-700 dark:bg-surface-900"
-      />
+      <div>
+        <div className="flex items-center justify-end gap-1.5">
+          <input
+            name={`qty_${l.id}`}
+            type="number"
+            min={0}
+            step="0.001"
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => {
+              handleValueChange(l.id, e.target.value);
+              setSaveStatus("idle");
+            }}
+            onBlur={() => handleBlur(l.id)}
+            placeholder="—"
+            className="w-full rounded-lg border border-surface-300 px-2 py-1.5 text-right text-sm dark:border-surface-700 dark:bg-surface-900"
+          />
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!value.trim() || saveStatus === "saving"}
+            title={t("sc_save_row", lang)}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 ${
+              saveStatus === "saved"
+                ? "border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
+                : saveStatus === "error"
+                  ? "border-red-300 text-red-600 dark:border-red-800"
+                  : "border-surface-300 text-surface-500 hover:border-brand-400 hover:text-brand-600 dark:border-surface-700"
+            }`}
+          >
+            {saveStatus === "saving" ? (
+              <span className="text-xs">…</span>
+            ) : saveStatus === "saved" ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+        {saveStatus === "error" && <p className="mt-1 text-right text-xs text-red-600">{saveMsg}</p>}
+      </div>
     );
   }
 
@@ -177,7 +231,7 @@ export function CountingSheet({
             <tr>
               <th className="w-10 px-4 py-2 text-right font-medium">#</th>
               <th className="px-4 py-2 font-medium">{t("sc_item", lang)}</th>
-              <th className="w-32 px-4 py-2 text-right font-medium">{t("sc_you_counted", lang)}</th>
+              <th className="w-44 px-4 py-2 text-right font-medium">{t("sc_you_counted", lang)}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -193,7 +247,7 @@ export function CountingSheet({
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  <CountInput l={l} />
+                  <CountCell l={l} />
                 </td>
               </tr>
             ))}
@@ -218,8 +272,8 @@ export function CountingSheet({
               <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
                 <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
                 <span className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">{l.productName}</span>
-                <div className="w-24">
-                  <CountInput l={l} />
+                <div className="w-40">
+                  <CountCell l={l} />
                 </div>
               </div>
             ))}
