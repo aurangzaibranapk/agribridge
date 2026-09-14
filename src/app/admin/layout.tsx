@@ -204,28 +204,34 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <LangProvider lang={lang}>
-    <div className="flex h-screen min-h-0 overflow-hidden bg-surface-50 dark:bg-surface-950">
+    <div className="flex h-screen min-h-0 overflow-hidden bg-surface-50 print:h-auto print:overflow-visible dark:bg-surface-950">
       {/* Chhoti sidebar sirf us bande ko jise das se ZYADA safhe khulte
           hain. Us se kam par safha sirf cards ka rehta hai -- malik ka
           usool. */}
       {/* ChromeGate: Mera Kaam se ek safha "workspace" overlay ke andar
           khula ho (?workspace=1) to yahan sidebar dobara nahi banti --
           overlay ka apna Wapas/title header hi kaafi hai. */}
+      {/* print:hidden -- sidebar/topbar kaghaz par kisi kaam ka nahi,
+          aur pehle print par poore admin shell ke sath chhap jate the
+          (malik ne khud dikhaya: safhe ka andaza aana mushkil ho gaya
+          tha). Ye poore admin app ke liye ek hi jagah se theek ho gaya. */}
       <Suspense fallback={null}>
         <ChromeGate>
-          {sidebarKind === "work" && user && (
-            <WorkSidebar
-              lang={lang}
-              homeHref={homePageForRole(role)}
-              quick={quickSide}
-              departments={deptSide}
-              reports={reportsSide}
-              settings={settingsSide}
-            />
-          )}
-          {showSidebar && (
-            <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
-          )}
+          <div className="print:hidden">
+            {sidebarKind === "work" && user && (
+              <WorkSidebar
+                lang={lang}
+                homeHref={homePageForRole(role)}
+                quick={quickSide}
+                departments={deptSide}
+                reports={reportsSide}
+                settings={settingsSide}
+              />
+            )}
+            {showSidebar && (
+              <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+            )}
+          </div>
         </ChromeGate>
       </Suspense>
       {/* min-w-0 -- is ke baghair poora safha daayen se kat jata hai.
@@ -239,26 +245,28 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <main> ke andar khisakta hai -- jo pehle se overflow-y-auto hai,
           aur CSS ke qaide se us ka overflow-x bhi khud auto ho jata hai.
           Yani table apne dabbe mein khisakti hai, poora safha nahi. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">
         <Suspense fallback={null}>
           <ChromeGate>
-            {showSidebar ? (
-              <Topbar
-                subtitle={t("at_website_admin", lang)}
-                searchAction="/admin/dashboard"
-                searchPlaceholder="Search..."
-                notificationsHref="/admin/contact-messages"
-                navGroups={navGroups}
-                lang={lang}
-              />
-            ) : (
-              <CompactNav lang={lang} showPos={showPos} homeHref={homePageForRole(role)} />
-            )}
+            <div className="print:hidden">
+              {showSidebar ? (
+                <Topbar
+                  subtitle={t("at_website_admin", lang)}
+                  searchAction="/admin/dashboard"
+                  searchPlaceholder="Search..."
+                  notificationsHref="/admin/contact-messages"
+                  navGroups={navGroups}
+                  lang={lang}
+                />
+              ) : (
+                <CompactNav lang={lang} showPos={showPos} homeHref={homePageForRole(role)} />
+              )}
+            </div>
           </ChromeGate>
         </Suspense>
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 print:h-auto print:overflow-visible print:p-0">
           {children}
-          <p className="mt-8 text-center text-[11px] text-surface-400 2xl:hidden">{t("at_footer", lang)}</p>
+          <p className="mt-8 text-center text-[11px] text-surface-400 2xl:hidden print:hidden">{t("at_footer", lang)}</p>
         </main>
       </div>
       <Suspense fallback={null}><NavProgress /></Suspense>

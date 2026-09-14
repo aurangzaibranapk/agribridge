@@ -212,7 +212,11 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
         page.drawText(text, { x, y, size: 7.5, font, color: rgb(0.15, 0.15, 0.15) });
         x += cols[c].width;
       }
-      y -= 13;
+      // Har product ke neeche lakeer -- kaghaz par likhne/gin kar farq
+      // nikalne ke liye (malik, 14 September: har product ki apni line).
+      y -= 4;
+      page.drawLine({ start: { x: marginX, y }, end: { x: pageWidth - marginX, y }, thickness: 0.4, color: rgb(0.75, 0.75, 0.75) });
+      y -= 9;
     }
 
     const bytes = await doc.save();

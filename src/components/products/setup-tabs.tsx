@@ -48,7 +48,7 @@ export async function ProductSetupTabs({ current, lang }: { current: SetupTab; l
   };
 
   return (
-    <nav className="mb-4 -mt-2 flex flex-wrap gap-1 border-b border-surface-200 pb-2 text-sm dark:border-surface-800" aria-label="Product Setup">
+    <nav className="mb-4 -mt-2 flex flex-wrap gap-1 border-b border-surface-200 pb-2 text-sm print:hidden dark:border-surface-800" aria-label="Product Setup">
       {TABS.map((tab) => {
         const on = tab.key === current;
         const n = badge[tab.key];
