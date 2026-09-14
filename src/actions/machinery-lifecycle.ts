@@ -18,6 +18,7 @@ import {
   postMachineryPayment,
   postMachineryVendorCollected,
   postVendorCashHandover,
+  postMachineryVendorPayout,
   postCashOut,
   ACC,
   failed,
@@ -3865,6 +3866,207 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
     notice: `Rs ${amount.toLocaleString()} khate mein aa gaya.${
       left > 0.01 ? ` Rs ${left.toLocaleString()} abhi bhi vendor ke paas darj hai.` : ""
     }`,
+  };
+}
+
+// recordVendorPayout (Hissa A.5, 14 September) -- pehle machinery-rental.ts
+// mein tha, jab ke baaqi sab paisa wale actions yahan hain. Sirf jagah
+// badli hai, koi tabdeeli nahi.
+
+export async function recordVendorPayout(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const bookingId = String(formData.get("booking_id") ?? "");
+  const amount = Number(formData.get("amount") ?? 0);
+  const accountId = (formData.get("account_id") as string) || null;
+  if (!bookingId) return { error: "Missing booking id." };
+  if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
+  if (!accountId) return { error: "Account select karein." };
+
+  const { data: booking } = await supabase.from("machinery_bookings").select("vendor_payable, amount_paid_to_vendor, booking_number, vendor_id").eq("id", bookingId).single();
+  if (!booking) return { error: "Booking nahi mili." };
+
+  // Vendor ka hissa kisan ne SEEDHA vendor ko de diya ho (163, "vendor
+  // collected") to wo hissa bhi ada ho chuka hai -- bhale is screen ne
+  // khud kabhi cash nahi diya. Ye check na ho to yehi hua (13 September,
+  // MB-2026-00008): vendor ne farmer se seedha le liya, aur do din baad
+  // isi purani screen se WOHI hissa dobara cash mein ada ho gaya, kyunke
+  // `amount_paid_to_vendor` (jo sirf ye screen khud badalti hai) ko us
+  // seedhi wasooli ka pata hi nahi tha.
+  const { data: collectedRows } = await supabase
+    .from("machinery_payments")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("method", "vendor_collected");
+  const vendorCollectedTotal = (collectedRows ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const vendorOwnShareCollected = Math.min(vendorCollectedTotal, Number(booking.vendor_payable ?? 0));
+
+  const remaining = Math.max(0, Number(booking.vendor_payable ?? 0) - Number(booking.amount_paid_to_vendor) - vendorOwnShareCollected);
+
+  if (remaining <= 0 && vendorOwnShareCollected > 0) {
+    return {
+      error: `Is booking ${booking.booking_number} ka vendor hissa (Rs ${vendorOwnShareCollected.toLocaleString()}) kisan ne pehle hi seedha vendor ko de diya hai (vendor collected) — is se cash mein dobara adaigi nahi honi chahiye. Sirf advance dena ho to wo vendor ke apne khate se dein.`,
+    };
+  }
+
+  // Is booking par jitna dena tha us se ZYADA bhi diya ja sakta hai.
+  //
+  // Malik ka aitraaz (5 September): "vendor ko 30 hazar pay kiya hai to
+  // hona chahiye, bhaley us ka 24,750 banta hai -- baqi raqam bhi to
+  // mere paas hai na us ki." Baat theek hai: paisa waqai haath se nikal
+  // chuka, aur jo cheez waqai ho chuki ho usay darj hone se rokna cash
+  // book ko jhoota kar deta hai (kaghaz par to wo raqam nikli hui hai
+  // hi).
+  //
+  // Magar us zyada raqam ko IS BOOKING ka kharcha likh dena bhi ghalat
+  // hai -- is booking par vendor ka hissa utna hi hai jitna bana. Is
+  // liye zyada raqam vendor ke khate mein ADVANCE ban jati hai (1120):
+  // wo us se agli booking par kat jayegi, aur tab tak nazar mein rehti
+  // hai ke us ke paas hamara itna paisa para hai.
+  // Jis booking par kuch dena hi nahi bacha, us par dobara adaigi NAHI.
+  //
+  // Malik (6 September): *"jab record ho gayi to doubling nahi honi
+  // chahiye -- ek hi farmer par bar bar."*
+  //
+  // Ye rok us din likhi ja rahi hai jis din MB-2026-00004 par Rs 30,000
+  // TEEN dafa nikal chuke the. Zyada raqam ka advance banna theek hai
+  // (5 September ka faisla) -- magar wo ek ASAL adaigi ka bacha hua
+  // hissa hota hai, apne aap mein ek nayi adaigi nahi. Sirf advance
+  // dena ho to wo vendor ke apne khate se hota hai, kisi booking par
+  // nahi.
+  if (remaining <= 0) {
+    return {
+      error: `Is booking par ${booking.booking_number} vendor ko poora paisa ja chuka hai — dobara adaigi darj nahi hoti. Vendor ko sirf advance dena ho to wo us ke apne khate se dein.`,
+    };
+  }
+
+  const payableSettled = Math.min(amount, remaining);
+  const advance = Math.round((amount - payableSettled) * 100) / 100;
+
+  // ART ne is booking par vendor ke liye jo diesel diya, wo isi
+  // adaigi mein wapas aata hai (170).
+  //
+  // Vendor ke naam par jo raqam khari hai wo poori kam hoti hai,
+  // magar cash sirf farq nikalta hai -- baqi wo pehle hi diesel ki
+  // shakal mein ja chuka hai. Alag se "recovery" darj karwana wo
+  // qadam hai jo koi kabhi nahi karta, aur phir 1120 mein ek jor
+  // hamesha ke liye para reh jata hai.
+  const { data: dieselRows } = await supabase
+    .from("machinery_fuel_logs")
+    .select("amount")
+    .eq("booking_id", bookingId)
+    .eq("vendor_recoverable", true)
+    .eq("verification_status", "verified");
+
+  const dieselTotal = (dieselRows ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const alreadyPaid = Number(booking.amount_paid_to_vendor);
+  // Diesel sirf utna hi wapas aata hai jitna abhi tak wapas nahi aaya.
+  const dieselLeft = Math.max(0, Math.round((dieselTotal - alreadyPaid) * 100) / 100);
+  const dieselRecovered = Math.min(dieselLeft, amount);
+  const cashOut = Math.round((amount - dieselRecovered) * 100) / 100;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // BOOKING PAR PEHLE, PAISA BAAD MEIN.
+  //
+  // Ye tarteeb 6 September ki kharabi ke baad badli gayi. Pehle ulta
+  // tha: cash nikalta, ledger mein entry banti, aur SAB SE AAKHIR mein
+  // booking par "itna diya" charhta -- aur us aakhri qadam ki NAKAMI
+  // KOI PARHTA HI NAHI THA.
+  //
+  // MB-2026-00004 par wahi hua. Us booking par kisan ke wade ki tareekh
+  // guzar chuki thi, aur `fn_guard_payment_promise` har update ko rok
+  // raha tha (340 mein theek hua). Update chup chaap nakaam hoti rahi,
+  // safha "Rs 24,750 baqi" dikhata raha, aur Rs 30,000 TEEN dafa nikal
+  // gaye -- Cash in Hand manfi Rs 88,000 par chala gaya.
+  //
+  // Ab agar ye qadam nakaam hota hai to WAHIN ruk jate hain: ek rupya
+  // bhi bahar nahi gaya hota, aur bulane wale ko wajah nazar aati hai.
+  const { error: bookingError } = await supabase
+    .from("machinery_bookings")
+    .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) + payableSettled })
+    .eq("id", bookingId);
+
+  if (bookingError) {
+    return {
+      error: `Booking par adaigi darj nahi ho saki, is liye paisa bhi nahi nikala gaya: ${bookingError.message}`,
+    };
+  }
+
+  /** Booking wapas wahin, jahan se chali thi. */
+  const bookingWapas = async () => {
+    await createServiceClient()
+      .from("machinery_bookings")
+      .update({ amount_paid_to_vendor: Number(booking.amount_paid_to_vendor) })
+      .eq("id", bookingId);
+  };
+
+  // Kharche ki qatar sirf us paise ki banti hai jo waqai bahar gaya.
+  // Diesel ka kharcha us din darj ho chuka tha.
+  let txn: { id: string } | null = null;
+  if (cashOut > 0) {
+    const { data: row, error: txnError } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "expense",
+        category: "Machinery Rental - Vendor Payout",
+        amount: cashOut,
+        transaction_date: aajKaKhana(),
+        notes:
+          dieselRecovered > 0
+            ? `Booking ${booking.booking_number} - Vendor payout (Rs ${dieselRecovered.toLocaleString()} diesel wapas kata)`
+            : `Booking ${booking.booking_number} - Vendor payout`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (txnError || !row) {
+      await bookingWapas();
+      return { error: txnError?.message ?? "Payout darj nahi hua." };
+    }
+    txn = row;
+  }
+
+  // Account ka balance yahan haath se KAM NAHI kiya jata.
+  //
+  // finance_transactions par trigger (trg_finance_transaction_apply) khud
+  // ye kaam karta hai. Pehle yahan dobara bhi kata jata tha, yani Rs 1,000
+  // ke payout par balance Rs 2,000 kam hota tha. Jaanch kar ke dekha:
+  // 0 -> trigger ke baad -1000 -> code ke apne update ke baad -2000.
+
+  const posted = await postMachineryVendorPayout({
+    bookingId,
+    vendorId: booking.vendor_id,
+    amount,
+    advance,
+    dieselRecovered,
+    accountId,
+    description:
+      dieselRecovered > 0
+        ? `Machinery ${booking.booking_number} — vendor ko us ka hissa (ART ka diesel Rs ${dieselRecovered.toLocaleString()} wapas)`
+        : `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: txn ? [{ table: "finance_transactions", rowId: txn.id }] : [],
+    },
+  });
+  if (failed(posted)) {
+    if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    await bookingWapas();
+    return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
+  }
+
+  revalidatePath("/admin/machinery-rental");
+  revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
+  revalidatePath("/admin/finance");
+  return {
+    success: true,
+    notice:
+      advance > 0
+        ? `Rs ${payableSettled.toLocaleString()} is booking ka hissa, aur Rs ${advance.toLocaleString()} vendor ke khate mein ADVANCE — wo us ki agli booking par kat jayega.`
+        : undefined,
   };
 }
 

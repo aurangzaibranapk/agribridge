@@ -26,7 +26,7 @@ import {
   cancelBooking,
   type ActionState,
 } from "@/actions/machinery-lifecycle";
-import { recordVendorPayout } from "@/actions/machinery-rental";
+import { recordVendorPayout } from "@/actions/machinery-lifecycle";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";

@@ -6,13 +6,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   createMachineryVendor,
   createVendorMachine,
-  recordVendorPayout,
   updateMachineryVendor,
   setMachineryVendorActive,
   deleteMachineryVendor,
   type ActionState,
 } from "@/actions/machinery-rental";
-import { setMachineryCommissionRate } from "@/actions/machinery-lifecycle";
+import { setMachineryCommissionRate, recordVendorPayout } from "@/actions/machinery-lifecycle";
 import { createVendorLogin, resetVendorPassword, type VendorActionState } from "@/actions/vendor-portal";
 
 type VendorLoginState = VendorActionState & { loginId?: string; password?: string };
