@@ -234,14 +234,21 @@ export function PosClient({
     // se dash nikal kar milaya jata hai, taake "12345" aur "1-2345" ek hi
     // banda samjhe jayein.
     const qDigits = q.replace(/-/g, "");
+    // Number kabhi "0342..." (mulki) likha jata hai, database mein
+    // "92342..." (international) -- sirf akhri 10 hindse hi asal
+    // pehchan hain, shuru ka "0" ya "92" nahi. Warna "0342" type karne
+    // par "92342..." wala banda milta hi nahi (14 September).
+    const qPhoneCore = q.replace(/\D/g, "").slice(-10);
     return pool
-      .filter(
-        (c) =>
+      .filter((c) => {
+        const cPhoneCore = (c.phone ?? "").replace(/\D/g, "").slice(-10);
+        return (
           c.name.toLowerCase().includes(q) ||
-          (c.phone ?? "").toLowerCase().includes(q) ||
+          (qPhoneCore.length >= 3 && cPhoneCore.includes(qPhoneCore)) ||
           (c.cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits) ||
           c.id.toLowerCase().startsWith(q)
-      )
+        );
+      })
       .slice(0, 8);
   }, [customers, custQuery, custMode, topCustomerIds]);
 

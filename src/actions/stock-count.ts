@@ -106,6 +106,111 @@ export async function startCount(_prev: ActionState, formData: FormData): Promis
  * taake milaan ke waqt ye cheez dikhe aur farq ki wajah ("list mein
  * nahi thi, mili") likhna lazmi ho -- kahin chup chaap na reh jaye.
  */
+interface ExtraItemInput {
+  name: string;
+  quantity: number;
+  purchasePrice: number | null;
+}
+
+/** Ek cheez ke liye asal kaam -- warehouse aur user pehle se tasdeeq shuda. */
+async function addOneExtraItem(
+  service: ReturnType<typeof createServiceClient>,
+  countId: string,
+  warehouseId: string,
+  userId: string,
+  item: ExtraItemInput
+): Promise<{ ok: true; name: string; isNew: boolean } | { ok: false; error: string }> {
+  const { name, quantity, purchasePrice } = item;
+
+  // Naam se milan -- pehle se hai to usi ka stock badhta hai, naya
+  // product nahi banta (do jagah ek hi cheez do naamon se na ho jaye).
+  const { data: existing } = await service
+    .from("products")
+    .select("id")
+    .ilike("name", name)
+    .eq("is_deleted", false)
+    .maybeSingle();
+
+  let productId = existing?.id ?? null;
+
+  if (!productId) {
+    const { data: created, error: createErr } = await service
+      .from("products")
+      .insert({
+        name,
+        purchase_price: purchasePrice ?? 0,
+        // Rate na diya ho to "Rate Baqi" ki fehrist mein khud aa jata
+        // hai -- sifar likhna "ye muft aati hai" kehna hoga.
+        trade_rate_pending: purchasePrice === null,
+        selling_price: 0,
+        is_verified: true,
+        created_by: userId,
+      })
+      .select("id")
+      .single();
+    if (createErr || !created) {
+      return { ok: false, error: `"${name}": naya product nahi ban saka: ${createErr?.message ?? "wajah maloom nahi"}` };
+    }
+    productId = created.id;
+  }
+
+  const { data: existingInv } = await service
+    .from("inventory")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("warehouse_id", warehouseId)
+    .maybeSingle();
+
+  let inventoryId = existingInv?.id ?? null;
+  if (!inventoryId) {
+    const { data: createdInv, error: invErr } = await service
+      .from("inventory")
+      .insert({ product_id: productId, warehouse_id: warehouseId })
+      .select("id")
+      .single();
+    if (invErr || !createdInv) return { ok: false, error: `"${name}": warehouse mein stock ka khana nahi bana: ${invErr?.message}` };
+    inventoryId = createdInv.id;
+  }
+
+  // Stock seedha nahi likha jata -- movement se hi hilta hai (129),
+  // taake "ye kahan se aaya" ka nishan hamesha rahe.
+  const { error: mvErr } = await service.from("stock_movements").insert({
+    inventory_id: inventoryId,
+    movement_type: "adjustment_increase",
+    quantity,
+    reference_type: "stock_count",
+    reference_id: countId,
+    notes: "Ginti ke dauran mila — list mein pehle nahi tha.",
+    created_by: userId,
+  });
+  if (mvErr) return { ok: false, error: `"${name}": stock ki harkat darj nahi ho saki: ${mvErr.message}` };
+
+  // Isi ginti ki apni qatar -- taake milaan mein dikhe aur wajah likhni
+  // paRe, chup chaap gum na ho.
+  const { error: lineErr } = await service.from("stock_count_lines").insert({
+    count_id: countId,
+    product_id: productId,
+    inventory_id: inventoryId,
+    expected_qty: 0,
+    unit_cost: purchasePrice ?? 0,
+    counted_qty: quantity,
+    difference_qty: quantity,
+  });
+  if (lineErr) return { ok: false, error: `"${name}": ginti ki qatar nahi ban saki: ${lineErr.message}` };
+
+  return { ok: true, name, isNew: !existing };
+}
+
+/**
+ * Ginti ke dauran koi cheez mile jo list mein hi nahi thi (malik,
+ * 14 September) -- na naya product banane ka GRN chahiye, na koi
+ * alag manzoori ka chakkar. Seedha Maal Andar jaisa: stock foran
+ * barh jata hai, koi document nahi banta.
+ *
+ * Ek dafa mein ek se zyada cheez bhi darj ho sakti hain (malik ne
+ * kaha "jitni add karna chahoon") -- form apni taraf se qataren jorta
+ * hai, yahan sab ek sath "items" (JSON) mein aati hain.
+ */
 export async function addExtraCountItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const service = createServiceClient();
   const supabase = createClient();
@@ -118,19 +223,34 @@ export async function addExtraCountItem(_prev: ActionState, formData: FormData):
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
 
-  const name = String(formData.get("name") ?? "").trim();
-  if (name.length < 2) return { error: "Cheez ka naam likhein." };
-
-  const qtyRaw = String(formData.get("quantity") ?? "").trim();
-  const quantity = Number(qtyRaw);
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return { error: "Kitni cheez mili, sahi adad likhein — sifar ya manfi nahi." };
+  let rawItems: unknown;
+  try {
+    rawItems = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return { error: "Cheezon ki fehrist saaf nahi." };
+  }
+  if (!Array.isArray(rawItems) || rawItems.length === 0) {
+    return { error: "Koi cheez darj nahi ki gayi." };
   }
 
-  const rateRaw = String(formData.get("purchase_price") ?? "").trim();
-  const purchasePrice = rateRaw === "" ? null : Number(rateRaw);
-  if (purchasePrice !== null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
-    return { error: "Rate sahi nahi likha gaya." };
+  const items: ExtraItemInput[] = [];
+  for (const raw of rawItems) {
+    const r = raw as Record<string, unknown>;
+    const name = String(r.name ?? "").trim();
+    if (name.length < 2) return { error: "Har cheez ka naam likhein." };
+
+    const quantity = Number(r.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return { error: `"${name}": kitni cheez mili, sahi adad likhein — sifar ya manfi nahi.` };
+    }
+
+    const rawRate = r.purchasePrice;
+    const purchasePrice = rawRate === null || rawRate === "" || rawRate === undefined ? null : Number(rawRate);
+    if (purchasePrice !== null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
+      return { error: `"${name}": rate sahi nahi likha gaya.` };
+    }
+
+    items.push({ name, quantity, purchasePrice });
   }
 
   const { data: count } = await service
@@ -157,88 +277,24 @@ export async function addExtraCountItem(_prev: ActionState, formData: FormData):
     }
   }
 
-  // Naam se milan -- pehle se hai to usi ka stock badhta hai, naya
-  // product nahi banta (do jagah ek hi cheez do naamon se na ho jaye).
-  const { data: existing } = await service
-    .from("products")
-    .select("id")
-    .ilike("name", name)
-    .eq("is_deleted", false)
-    .maybeSingle();
-
-  let productId = existing?.id ?? null;
-
-  if (!productId) {
-    const { data: created, error: createErr } = await service
-      .from("products")
-      .insert({
-        name,
-        purchase_price: purchasePrice ?? 0,
-        // Rate na diya ho to "Rate Baqi" ki fehrist mein khud aa jata
-        // hai -- sifar likhna "ye muft aati hai" kehna hoga.
-        trade_rate_pending: purchasePrice === null,
-        selling_price: 0,
-        is_verified: true,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-    if (createErr || !created) {
-      return { error: `Naya product nahi ban saka: ${createErr?.message ?? "wajah maloom nahi"}` };
-    }
-    productId = created.id;
+  const done: string[] = [];
+  const failed: string[] = [];
+  for (const item of items) {
+    const result = await addOneExtraItem(service, countId, count.warehouse_id, user.id, item);
+    if (result.ok) done.push(`${result.name} (${result.isNew ? "naya" : "mojood"})`);
+    else failed.push(result.error);
   }
-
-  const { data: existingInv } = await service
-    .from("inventory")
-    .select("id")
-    .eq("product_id", productId)
-    .eq("warehouse_id", count.warehouse_id)
-    .maybeSingle();
-
-  let inventoryId = existingInv?.id ?? null;
-  if (!inventoryId) {
-    const { data: createdInv, error: invErr } = await service
-      .from("inventory")
-      .insert({ product_id: productId, warehouse_id: count.warehouse_id })
-      .select("id")
-      .single();
-    if (invErr || !createdInv) return { error: `Warehouse mein stock ka khana nahi bana: ${invErr?.message}` };
-    inventoryId = createdInv.id;
-  }
-
-  // Stock seedha nahi likha jata -- movement se hi hilta hai (129),
-  // taake "ye kahan se aaya" ka nishan hamesha rahe.
-  const { error: mvErr } = await service.from("stock_movements").insert({
-    inventory_id: inventoryId,
-    movement_type: "adjustment_increase",
-    quantity,
-    reference_type: "stock_count",
-    reference_id: countId,
-    notes: "Ginti ke dauran mila — list mein pehle nahi tha.",
-    created_by: user.id,
-  });
-  if (mvErr) return { error: `Stock ki harkat darj nahi ho saki: ${mvErr.message}` };
-
-  // Isi ginti ki apni qatar -- taake milaan mein dikhe aur wajah likhni
-  // paRe, chup chaap gum na ho.
-  const { error: lineErr } = await service.from("stock_count_lines").insert({
-    count_id: countId,
-    product_id: productId,
-    inventory_id: inventoryId,
-    expected_qty: 0,
-    unit_cost: purchasePrice ?? 0,
-    counted_qty: quantity,
-    difference_qty: quantity,
-  });
-  if (lineErr) return { error: `Ginti ki qatar nahi ban saki: ${lineErr.message}` };
 
   revalidatePath("/admin/stock-count");
+
+  if (done.length === 0) {
+    return { error: failed.join(" | ") };
+  }
   return {
     success: true,
-    message: existing
-      ? `"${name}" ka stock ${quantity} se barh gaya, aur isi ginti mein qatar bhi ban gayi.`
-      : `"${name}" naya product ban gaya, stock ${quantity} darj ho gaya, aur isi ginti mein qatar bhi ban gayi.`,
+    message:
+      `${done.length} cheez${done.length > 1 ? "en" : ""} darj ho gayi: ${done.join(", ")}.` +
+      (failed.length > 0 ? ` (${failed.length} nahi ho saki: ${failed.join(" | ")})` : ""),
   };
 }
 

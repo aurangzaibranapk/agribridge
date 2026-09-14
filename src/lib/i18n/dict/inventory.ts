@@ -305,6 +305,8 @@ export const stockCountDict = {
   sc_extra_qty: { en: "Quantity", rm: "Kitni mili", ur: "کتنی ملی" },
   sc_extra_rate: { en: "Rate (optional)", rm: "Rate (na likhein to bhi chalega)", ur: "ریٹ (نہ لکھیں تو بھی چلے گا)" },
   sc_extra_add: { en: "Add", rm: "Darj karein", ur: "درج کریں" },
+  sc_extra_add_row: { en: "Add another row", rm: "Ek aur row jorein", ur: "ایک اور قطار جوڑیں" },
+  sc_extra_remove_row: { en: "Remove this row", rm: "Ye row hatayein", ur: "یہ قطار ہٹائیں" },
   sc_extra_close: { en: "Cancel", rm: "Band karein", ur: "بند کریں" },
 
   // --- Milaan ---

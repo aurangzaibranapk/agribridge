@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { startCount, saveCounts, postCount, verifyCount, addExtraCountItem, type ActionState } from "@/actions/stock-count";
-import { EyeOff, AlertTriangle, PlusCircle } from "lucide-react";
+import { EyeOff, AlertTriangle, PlusCircle, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -162,10 +162,29 @@ export function CountingSheet({
  * mile to naya product ban jata hai. Rate khali chhoRa ja sakta hai --
  * "Rate Baqi" ki fehrist mein khud pahunch jayega.
  */
+interface ExtraRow {
+  id: number;
+  name: string;
+  quantity: string;
+  rate: string;
+}
+
+function blankRow(id: number): ExtraRow {
+  return { id, name: "", quantity: "", rate: "" };
+}
+
 function ExtraItemForm({ countId }: { countId: string }) {
   const lang = useLang();
   const [open, setOpen] = useState(false);
   const [state, formAction] = useFormState(addExtraCountItem, initialState);
+  const nextId = useRef(1);
+  const [rows, setRows] = useState<ExtraRow[]>([blankRow(0)]);
+
+  // Kaam ho jaye to fehrist khaali kar dete hain -- taake wahi qatarein
+  // dobara na chali jayen agar banda ek aur cheez darj karna chahe.
+  useEffect(() => {
+    if (state.success) setRows([blankRow(nextId.current++)]);
+  }, [state.success]);
 
   if (!open) {
     return (
@@ -179,39 +198,85 @@ function ExtraItemForm({ countId }: { countId: string }) {
     );
   }
 
+  function updateRow(id: number, field: "name" | "quantity" | "rate", value: string) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  }
+  function addRow() {
+    setRows((rs) => [...rs, blankRow(nextId.current++)]);
+  }
+  function removeRow(id: number) {
+    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== id) : rs));
+  }
+
+  const itemsJson = JSON.stringify(
+    rows
+      .filter((r) => r.name.trim() && r.quantity.trim())
+      .map((r) => ({
+        name: r.name.trim(),
+        quantity: Number(r.quantity),
+        purchasePrice: r.rate.trim() === "" ? null : Number(r.rate),
+      }))
+  );
+
   return (
     <div className="rounded-lg border border-dashed border-surface-300 p-3 dark:border-surface-700">
       <p className="mb-2 text-sm font-medium text-surface-900 dark:text-white">{t("sc_extra_title", lang)}</p>
       <p className="mb-3 text-xs text-surface-500">{t("sc_extra_note", lang)}</p>
-      <form
-        action={formAction}
-        className="grid gap-2 sm:grid-cols-[1fr_120px_120px_auto]"
-      >
+      <form action={formAction} className="space-y-2">
         <input type="hidden" name="count_id" value={countId} />
-        <input
-          name="name"
-          required
-          placeholder={t("sc_extra_name", lang)}
-          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
-        />
-        <input
-          name="quantity"
-          type="number"
-          min={0}
-          step="0.001"
-          required
-          placeholder={t("sc_extra_qty", lang)}
-          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
-        />
-        <input
-          name="purchase_price"
-          type="number"
-          min={0}
-          step="0.01"
-          placeholder={t("sc_extra_rate", lang)}
-          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
-        />
-        <ExtraSubmit label={t("sc_extra_add", lang)} />
+        <input type="hidden" name="items" value={itemsJson} />
+
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <div key={r.id} className="grid gap-2 sm:grid-cols-[1fr_120px_120px_auto]">
+              <input
+                value={r.name}
+                onChange={(e) => updateRow(r.id, "name", e.target.value)}
+                placeholder={t("sc_extra_name", lang)}
+                className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+              />
+              <input
+                value={r.quantity}
+                onChange={(e) => updateRow(r.id, "quantity", e.target.value)}
+                type="number"
+                min={0}
+                step="0.001"
+                placeholder={t("sc_extra_qty", lang)}
+                className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+              />
+              <input
+                value={r.rate}
+                onChange={(e) => updateRow(r.id, "rate", e.target.value)}
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder={t("sc_extra_rate", lang)}
+                className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+              />
+              <button
+                type="button"
+                onClick={() => removeRow(r.id)}
+                disabled={rows.length === 1}
+                className="flex items-center justify-center rounded-lg border border-surface-200 px-2 text-surface-400 hover:text-red-600 disabled:opacity-30 dark:border-surface-700"
+                aria-label={t("sc_extra_remove_row", lang)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={addRow}
+          className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline dark:text-brand-300"
+        >
+          <PlusCircle className="h-3.5 w-3.5" /> {t("sc_extra_add_row", lang)}
+        </button>
+
+        <div>
+          <ExtraSubmit label={t("sc_extra_add", lang)} />
+        </div>
       </form>
       <Feedback state={state} />
       <button type="button" onClick={() => setOpen(false)} className="mt-2 text-xs text-surface-400 underline">
