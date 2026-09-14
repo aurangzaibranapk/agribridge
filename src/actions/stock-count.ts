@@ -239,8 +239,29 @@ async function addOneExtraItem(
     inventoryId = createdInv.id;
   }
 
+  // "Extra Item" un cheezon ke liye hai jo list mein bilkul nahi thi --
+  // agar ye product isi ginti mein pehle se ek qatar rakhta hai (chahe
+  // khali ho ya gin li gayi ho), to usi qatar mein number likhna hai,
+  // dobara "extra" se add karne se ek DOOSRI qatar ban jati jo ginti
+  // khatam hone tak baaqi dikhti chahe pehli mein kuch aa chuka ho.
+  const { data: existingLine } = await service
+    .from("stock_count_lines")
+    .select("id")
+    .eq("count_id", countId)
+    .eq("product_id", productId)
+    .maybeSingle();
+  if (existingLine) {
+    return {
+      ok: false,
+      error: `"${name}" is ginti ki list mein pehle se hai — search se wo qatar dhoond kar seedha wahin adad likhein, "Extra Item" sirf naye/list-se-bahar maal ke liye hai.`,
+    };
+  }
+
   // Stock seedha nahi likha jata -- movement se hi hilta hai (129),
-  // taake "ye kahan se aaya" ka nishan hamesha rahe.
+  // taake "ye kahan se aaya" ka nishan hamesha rahe. Isi waqt chalta
+  // hai (foran istemal ho sake) -- is liye post karte waqt yahi adad
+  // dobara na chala jaye, uska dhyan `postCount` mein rakha gaya hai
+  // (pehle se hui harkat dhoond kar usi qadar ki kami karta hai).
   const { error: mvErr } = await service.from("stock_movements").insert({
     inventory_id: inventoryId,
     movement_type: "adjustment_increase",
@@ -252,16 +273,28 @@ async function addOneExtraItem(
   });
   if (mvErr) return { ok: false, error: `"${name}": stock ki harkat darj nahi ho saki: ${mvErr.message}` };
 
-  // Isi ginti ki apni qatar -- taake milaan mein dikhe aur wajah likhni
-  // paRe, chup chaap gum na ho.
+  // Isi ginti ki apni nayi qatar -- taake milaan mein dikhe aur wajah
+  // likhni paRe, chup chaap gum na ho. `expected_qty` ko yahan WOHI
+  // (upar wali harkat ke BAAD ka) adad dena zaroori hai -- 0 likhne se
+  // milaan ke waqt farq dobara "mila" gin leta aur stock DOBARA barh
+  // jata (ek dafa yahan, ek dafa post karte waqt) -- wahi "do jagah,
+  // ek hi fact" ghalti jo pehle machinery mein Rs 32,000 ka farq bana
+  // chuki thi (313).
+  const { data: freshInv } = await service
+    .from("inventory")
+    .select("quantity_on_hand")
+    .eq("id", inventoryId)
+    .single();
+  const trueQty = Number(freshInv?.quantity_on_hand ?? quantity);
+
   const { error: lineErr } = await service.from("stock_count_lines").insert({
     count_id: countId,
     product_id: productId,
     inventory_id: inventoryId,
-    expected_qty: 0,
+    expected_qty: trueQty,
     unit_cost: purchasePrice ?? 0,
     counted_qty: quantity,
-    difference_qty: quantity,
+    difference_qty: 0,
   });
   if (lineErr) return { ok: false, error: `"${name}": ginti ki qatar nahi ban saki: ${lineErr.message}` };
 
@@ -604,6 +637,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
 
   // Inventory ab gine hue adad par. Asal wohi hai jo godam mein para
   // hai, wo nahi jo kaghaz par likha tha.
+  const INCREASE_TYPES = new Set(["purchase_in", "transfer_in", "adjustment_increase", "return_in"]);
   for (const line of rows) {
     const diff = Number(line.difference_qty ?? 0);
     if (diff === 0 || !line.inventory_id) continue;
@@ -614,10 +648,29 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     // kaam hote the, yani farq dugna lag jata tha.
     void counted;
 
+    // "Extra Item" (ginti ke dauran mila) apna stock USI WAQT chala
+    // deta hai, taake foran istemal ho sake -- is liye us qatar ka
+    // stock yahan DOBARA nahi chalna chahiye. Isi ginti (countId) aur
+    // isi inventory_id par pehle se koi harkat ho chuki ho to us ki
+    // qadar minus kar ke sirf BAQI (agar staff ne baad mein adad theek
+    // kiya ho) chalayen -- poori dobara nahi.
+    const { data: already } = await service
+      .from("stock_movements")
+      .select("movement_type, quantity")
+      .eq("inventory_id", line.inventory_id)
+      .eq("reference_type", "stock_count")
+      .eq("reference_id", countId);
+    const alreadyApplied = (already ?? []).reduce(
+      (sum, m) => sum + (INCREASE_TYPES.has(m.movement_type) ? 1 : -1) * Number(m.quantity),
+      0
+    );
+    const remaining = round2(diff - alreadyApplied);
+    if (remaining === 0) continue;
+
     await service.from("stock_movements").insert({
       inventory_id: line.inventory_id,
-      movement_type: diff < 0 ? "adjustment_decrease" : "adjustment_increase",
-      quantity: Math.abs(diff),
+      movement_type: remaining < 0 ? "adjustment_decrease" : "adjustment_increase",
+      quantity: Math.abs(remaining),
       reference_type: "stock_count",
       reference_id: countId,
       notes: updates.find((u) => u.id === line.id)?.reason ?? "Ginti se milaan",
