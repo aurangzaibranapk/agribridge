@@ -50,11 +50,14 @@ export async function renameProductFromCount(_prev: ActionState, formData: FormD
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  if (!isUnrestricted && !permission?.can_edit) {
-    return { error: "Aap ke paas product ka naam badalne ki ijazat nahi hai." };
-  }
-
-  const skipApproval = isUnrestricted || permission?.edit_needs_approval === false;
+  // Ginti ke dauran naam ki tajweez kabhi FLAT nahi rukni chahiye (malik,
+  // 14 September: "ijazat to di thi, lakin approval admin ne dena thi").
+  // Poore Products module mein "can_edit nahi to koi tajweez bhi nahi"
+  // chalta hai -- yahan jaan boojh kar alag hai: jo bhi ginti kar raha
+  // hai wo galat naam dekh sakta hai, is liye tajweez hamesha ban sakti
+  // hai, sirf FORAN badalne (bina admin dekhe) ke liye can_edit +
+  // edit_needs_approval=false dono chahiye.
+  const skipApproval = isUnrestricted || (permission?.can_edit === true && permission?.edit_needs_approval === false);
 
   if (skipApproval) {
     const { error } = await supabase
