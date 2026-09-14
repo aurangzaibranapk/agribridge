@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   startCount,
@@ -11,6 +11,7 @@ import {
   type ActionState,
 } from "@/actions/stock-count";
 import { previewProductMerge, requestProductMerge } from "@/actions/product-merge";
+import { bestMatches, MATCH_STRONG } from "@/lib/product-match";
 import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save, Merge } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -112,6 +113,24 @@ export function CountingSheet({
   const [doneIds, setDoneIds] = useState<Set<string>>(
     () => new Set(lines.filter((l) => l.counted != null).map((l) => l.id))
   );
+
+  // Duplicate ke liye system khud dekhta hai, staff ko poori list
+  // chhaan kar dhoondna nahi paRta (malik, 14 September) -- wohi milaan
+  // ka tareeqa jo bill/sheet ke naam catalogue se milata hai (product-
+  // match.ts). Jis naam ka doosre naam se score STRONG (0.8+) ho, wo
+  // sujhaav ban jata hai -- staff ko sirf tasdeeq karni hoti hai.
+  const duplicateSuggestions = useMemo(() => {
+    const others = lines.map((l) => ({ id: l.id, name: l.productName }));
+    const map = new Map<string, { name: string; score: number }>();
+    for (const l of lines) {
+      const candidates = others.filter((o) => o.id !== l.id);
+      const [top] = bestMatches(l.productName, null, candidates, 1);
+      if (top && top.score >= MATCH_STRONG) {
+        map.set(l.id, { name: top.item.name, score: top.score });
+      }
+    }
+    return map;
+  }, [lines]);
 
   function handleValueChange(id: string, v: string) {
     setValues((prev) => ({ ...prev, [id]: v }));
@@ -245,7 +264,7 @@ export function CountingSheet({
               <tr key={l.id}>
                 <td className="px-4 py-2 text-right text-xs tabular-nums text-surface-400">{i + 1}</td>
                 <td className="px-4 py-2">
-                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} />
+                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} suggestedDuplicate={duplicateSuggestions.get(l.id)} />
                   {(l.packSize || l.unit) && (
                     <span className="block text-xs text-surface-400">
                       {[l.packSize, l.unit].filter(Boolean).join(" • ")}
@@ -278,7 +297,7 @@ export function CountingSheet({
               <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
                 <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
                 <div className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">
-                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} />
+                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} suggestedDuplicate={duplicateSuggestions.get(l.id)} />
                 </div>
                 <div className="w-40">
                   <CountCell l={l} />
@@ -303,7 +322,17 @@ export function CountingSheet({
  * doosre ke andar nahi ja sakta) -- is liye action seedha function ki
  * tarah bulaya jata hai, apna FormData khud bana kar.
  */
-function ProductNameCell({ productId, name, otherNames }: { productId: string; name: string; otherNames?: string[] }) {
+function ProductNameCell({
+  productId,
+  name,
+  otherNames,
+  suggestedDuplicate,
+}: {
+  productId: string;
+  name: string;
+  otherNames?: string[];
+  suggestedDuplicate?: { name: string; score: number };
+}) {
   const lang = useLang();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
@@ -312,20 +341,27 @@ function ProductNameCell({ productId, name, otherNames }: { productId: string; n
 
   if (!editing) {
     return (
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => {
-            setValue(name);
-            setFeedback({});
-            setEditing(true);
-          }}
-          className="group flex items-center gap-1.5 text-left text-surface-800 dark:text-surface-200"
-        >
-          {name}
-          <Pencil className="h-3 w-3 shrink-0 text-surface-300 group-hover:text-brand-600" />
-        </button>
-        <MergeButton productId={productId} name={name} otherNames={otherNames ?? []} />
+      <div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setValue(name);
+              setFeedback({});
+              setEditing(true);
+            }}
+            className="group flex items-center gap-1.5 text-left text-surface-800 dark:text-surface-200"
+          >
+            {name}
+            <Pencil className="h-3 w-3 shrink-0 text-surface-300 group-hover:text-brand-600" />
+          </button>
+          <MergeButton productId={productId} name={name} otherNames={otherNames ?? []} suggestedTarget={suggestedDuplicate?.name} />
+        </div>
+        {suggestedDuplicate && (
+          <p className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+            {t("sc_maybe_duplicate", lang)} &quot;{suggestedDuplicate.name}&quot;?
+          </p>
+        )}
       </div>
     );
   }
@@ -383,10 +419,20 @@ function ProductNameCell({ productId, name, otherNames }: { productId: string; n
  * "Tajweez bhejein" -- amal (stock hilana + purana naam hataana) sirf
  * Admin/Owner ki tasdeeq par hota hai, yahan kuch nahi badalta.
  */
-function MergeButton({ productId, name, otherNames }: { productId: string; name: string; otherNames: string[] }) {
+function MergeButton({
+  productId,
+  name,
+  otherNames,
+  suggestedTarget,
+}: {
+  productId: string;
+  name: string;
+  otherNames: string[];
+  suggestedTarget?: string;
+}) {
   const lang = useLang();
   const [open, setOpen] = useState(false);
-  const [targetName, setTargetName] = useState("");
+  const [targetName, setTargetName] = useState(suggestedTarget ?? "");
   const [previewState, previewAction] = useFormState(previewProductMerge, {});
   const [requestState, requestAction] = useFormState(requestProductMerge, {});
   const listId = `sc-merge-names-${productId}`;
@@ -399,9 +445,12 @@ function MergeButton({ productId, name, otherNames }: { productId: string; name:
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setTargetName(suggestedTarget ?? "");
+          setOpen(true);
+        }}
         title={t("sc_merge_open", lang)}
-        className="text-surface-300 hover:text-brand-600"
+        className={suggestedTarget ? "text-amber-500 hover:text-amber-700" : "text-surface-300 hover:text-brand-600"}
       >
         <Merge className="h-3 w-3" />
       </button>

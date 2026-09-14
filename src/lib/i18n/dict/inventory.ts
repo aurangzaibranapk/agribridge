@@ -311,6 +311,7 @@ export const stockCountDict = {
   sc_merge_check: { en: "Check", rm: "Dekhein", ur: "دیکھیں" },
   sc_merge_send: { en: "Send request", rm: "Tajweez bhejein", ur: "تجویز بھیجیں" },
   sc_merge_will_move: { en: "Will move:", rm: "Jayega:", ur: "جائے گا:" },
+  sc_maybe_duplicate: { en: "Possible duplicate of", rm: "Shayad duplicate hai", ur: "شاید ڈوپلیکیٹ ہے" },
 
   // --- Extra cheez mili (408) ---
   sc_extra_open: { en: "Found something not on this list?", rm: "Koi cheez mili jo list mein nahi thi?", ur: "کوئی چیز ملی جو لسٹ میں نہیں تھی؟" },
