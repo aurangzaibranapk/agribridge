@@ -139,6 +139,13 @@ export function PaymentForm({
               <option value="wallet">{t("mc_wallet", lang)}</option>
               <option value="khata">{t("mc_khata_credit", lang)}</option>
               <option value="waseela_card">Waseela Card</option>
+              {/* JazzCash/Easypaisa ke apne khate pehle se maujood hain
+                  (migration 330), sirf machinery ki adaigi un ko mana
+                  karti thi -- 406 ne wo rok hata di. Ye "wallet" ke
+                  neeche chhupe nahi rehte: raseed par kisan ko wohi naam
+                  parhna hota hai jo us ne bheja tha. */}
+              <option value="jazzcash">JazzCash</option>
+              <option value="easypaisa">Easypaisa</option>
               <option value="vendor_collected">{t("mc_paid_to_vendor", lang)}</option>
             </Select>
           </div>

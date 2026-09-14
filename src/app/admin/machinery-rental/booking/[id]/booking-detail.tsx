@@ -24,6 +24,7 @@ import {
   cancelFinalBill,
   recordFinalPayment,
   cancelBooking,
+  closeBookingIfSettled,
   type ActionState,
 } from "@/actions/machinery-lifecycle";
 import { recordVendorPayout } from "@/actions/machinery-lifecycle";
@@ -46,29 +47,61 @@ import { PaymentForm, Err, Submit, initialState } from "@/components/machinery/p
  * par ban gaya.
  */
 
+/**
+ * Booking ka safar -- malik ke apne alfaz mein (14 September, B.3).
+ *
+ * DB ke status bilkul nahi badle. `fn_machinery_booking_guard` wohi
+ * purane naam (`new`, `confirmed`, `ready_for_harvest`, `in_progress`,
+ * `bill_pending`, `payment_pending`, `closed`) parhta hai aur waise hi
+ * rokta hai. Yahan sirf wo naam likhe hain jo malik screen par dekhna
+ * chahte hain -- ek lafz ka farq, database par koi asar nahi.
+ *
+ * Do jagah DB ka status akela sach nahi bata pata, is liye do qatarein
+ * indraj se banti hain, status se nahi:
+ *
+ *   "Machine Dispatched" aur "Work Started" DONO `in_progress` hain.
+ *   Farq ye hai ke koi kaam darj hua ya nahi -- machine nikal to gayi
+ *   magar abhi kuch kaata nahi. Ye farq status mein hai hi nahi, aur
+ *   isay status se poochhna ghalat jawab deta.
+ *
+ *   "Confirmed" do status par phaila hai (`confirmed` aur
+ *   `ready_for_harvest`) -- staff ke liye ye ek hi baat hai.
+ */
 const CHAIN = [
-  { key: "new", label: "Booking" },
-  { key: "confirmed", label: "Advance" },
-  { key: "ready_for_harvest", label: "Kisan ki Tasdeeq" },
-  { key: "in_progress", label: "Machine Rawana" },
-  { key: "bill_pending", label: "Asal Kaam" },
-  { key: "payment_pending", label: "Bill" },
-  { key: "closed", label: "Payment" },
+  { key: "new", label: "New" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "dispatched", label: "Machine Dispatched" },
+  { key: "work_started", label: "Work Started" },
+  { key: "work_done", label: "Work Completed" },
+  { key: "payment_pending", label: "Payment Pending" },
+  { key: "closed", label: "Closed" },
 ] as const;
 
 const STATUS_LABEL: Record<string, string> = {
-  new: "Nayi",
+  new: "New",
   confirmed: "Confirmed",
-  scheduled: "Scheduled",
-  machine_assigned: "Machine tay",
-  ready_for_harvest: "Kattai ke liye tayyar",
-  in_progress: "Kaam jari",
-  completed: "Mukammal",
-  bill_pending: "Bill banna hai",
-  payment_pending: "Payment baqi",
-  closed: "Band",
-  cancelled: "Cancel",
+  scheduled: "Confirmed",
+  machine_assigned: "Confirmed",
+  ready_for_harvest: "Confirmed",
+  // `in_progress` do matlab rakhta hai -- `statusLabel()` neeche wala
+  // farq karta hai. Ye sirf us soorat ka jawab hai jab kuch kaam darj
+  // na ho.
+  in_progress: "Machine Dispatched",
+  completed: "Work Completed",
+  bill_pending: "Work Completed",
+  payment_pending: "Payment Pending",
+  closed: "Closed",
+  cancelled: "Cancelled",
 };
+
+/**
+ * Badge par kaunsa naam. `in_progress` par kaam darj ho chuka ho to wo
+ * "Work Started" hai, warna sirf "Machine Dispatched".
+ */
+function statusLabel(status: string, workCount: number): string {
+  if (status === "in_progress" && workCount > 0) return "Work Started";
+  return STATUS_LABEL[status] ?? status;
+}
 
 interface Booking {
   id: string;
@@ -138,7 +171,7 @@ export function BookingDetail({
   liftBreakdown,
 }: {
   booking: Booking;
-  payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null; received_by_name: string | null }>;
+  payments: Array<{ id: string; kind: string; amount: number; method: string; payment_date: string; reference: string | null; evidence_url: string | null; received_by_name: string | null; finance_account_id: string | null }>;
   dispatches: Array<{
     id: string;
     operator_name: string | null;
@@ -259,9 +292,57 @@ export function BookingDetail({
     Math.round((ginneWaleFuel.filter((f) => f.vendor_recoverable).reduce((s2, f) => s2 + f.amount, 0) - paidToVendor) * 100) / 100
   );
 
+  // Kisan se aaya hua poora paisa -- advance aur bill ki adaigi dono.
+  // Ye do adad pehle safhe par do alag jagah pare the; malik ke mockup
+  // mein "Paid" ek hi khana hai, aur wo dono ka jor hai.
+  const paidTotal = Math.round((advanceTotal + finalPaid) * 100) / 100;
+
+  // Hamara hissa. Bill bane baghair ye adad hota hi nahi -- aur us waqt
+  // yahan "Rs 0" likh dena jhoot hai (sifar kehta hai "dekh liya, kuch
+  // nahi bana", jab ke asal baat ye hai ke abhi hisaab hi nahi bana).
+  const artProfit = bill ? bill.commission_amount : null;
+
+  const accountName = (id: string | null) => (id ? accounts.find((a) => a.id === id)?.name ?? null : null);
+
+  // Timeline ki har qatar. Teen qatarein status se nahi, INDRAJ se banti
+  // hain -- kyunke `in_progress` ek hi status mein "machine nikal gayi"
+  // aur "kaam shuru ho gaya" dono chhupe hue hain (B.3).
+  const reached = [
+    true,
+    confirmed || ["confirmed", "ready_for_harvest", "in_progress", "bill_pending", "payment_pending", "closed"].includes(booking.status),
+    dispatches.length > 0,
+    work.length > 0,
+    workFinished || ["bill_pending", "payment_pending", "closed"].includes(booking.status),
+    Boolean(bill),
+    booking.status === "closed",
+  ];
+
+  // Kaunsa khana khula hai. Chaar bade button apne apne khane kholte
+  // hain -- safha khud khula hua koi form nahi rakhta. Yehi malik ki
+  // asal shikayat thi: "har StepCard hamesha khula rehta hai, chahe
+  // kaam ho chuka ho."
+  const [modal, setModal] = useState<"payment" | "diesel" | "work" | "close" | null>(null);
+
+  // Kisan ke khate se aane wala `#payment` link.
+  //
+  // Pehle wo link ek khule hue StepCard par utarta tha. Ab wahan koi
+  // khula khana nahi -- is liye link khud adaigi ka khana khol deta
+  // hai. Warna banda wahan pahunch kar khali safha dekhta aur samajhta
+  // ke link toot gaya.
+  useEffect(() => {
+    // Cancel shuda booking par ye khana nahi khulta -- wahan adaigi ka
+    // sawal hi khatam ho chuka.
+    if (cancelled) return;
+    if (typeof window !== "undefined" && window.location.hash === "#payment") setModal("payment");
+  }, [cancelled]);
+
   return (
     <div className="space-y-4 pb-24">
-      {/* Sarnama */}
+      {/* ---------------------------------------------------------------
+          1. Sarnama -- booking ka number, us ka darja, aur kone mein
+          cancel ka raasta. Cancel bara button nahi hai (malik: "khatam
+          nahi karna" -- magar wo rozana ka kaam bhi nahi).
+          --------------------------------------------------------------- */}
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -271,7 +352,7 @@ export function BookingDetail({
               {booking.farmer_code && ` (${booking.farmer_code})`} — {booking.farmer_phone || "phone darj nahi"}
             </p>
             <p className="text-sm text-surface-500">
-              {[booking.village || booking.farmer_village, booking.crop_type, `${booking.harvest_area} acre`]
+              {[booking.village || booking.farmer_village, booking.crop_type, booking.booking_date]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
@@ -293,9 +374,14 @@ export function BookingDetail({
               </div>
             )}
           </div>
-          <Badge tone={cancelled ? "red" : booking.status === "closed" ? "green" : "blue"}>
-            {STATUS_LABEL[booking.status] ?? booking.status}
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge tone={cancelled ? "red" : booking.status === "closed" ? "green" : "blue"}>
+              {cancelled ? "Cancelled" : statusLabel(booking.status, work.length)}
+            </Badge>
+            {!cancelled && booking.status !== "closed" && (
+              <CancelForm bookingId={booking.id} advanceTotal={advanceTotal} />
+            )}
+          </div>
         </div>
 
         {cancelled && booking.cancellation_reason && (
@@ -303,92 +389,103 @@ export function BookingDetail({
             Cancel ki wajah: {booking.cancellation_reason}
           </p>
         )}
-
-        <ChainStrip status={booking.status} />
       </Card>
 
-      {/* Paise ka khulasa -- teen alag concepts, teen alag khane */}
+      {/* ---------------------------------------------------------------
+          2. Ek nazar mein poori booking.
+          --------------------------------------------------------------- */}
       <Card>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label={t("mc_estimated_rate", lang)} value={booking.estimated_rate ? `Rs ${booking.estimated_rate.toLocaleString()}/acre` : "—"} />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Stat label="Farmer" value={booking.farmer_name} hint={booking.farmer_code || undefined} />
+          {/* Vendor dispatch ke waqt lagta hai (180). Us se pehle wo
+              "abhi tay nahi" hai -- khali lakeer nahi. */}
+          <Stat label="Vendor" value={vendorName ?? "Abhi tay nahi"} />
+          <Stat value={booking.machine_label ?? booking.machine_type_requested ?? "Abhi tay nahi"} label="Machine" />
+          {/* Raqba: kaam darj ho chuka ho to ASAL raqba, warna booking
+              ka andaza -- aur dono par saaf likha hai ke kaun sa hai.
+              Yehi wo farq hai jis ne 14 September ko "13 acre" ka ghalat
+              jawab diya tha: andaze ko asal samajh liya gaya tha. */}
           <Stat
-            label={t("mc_final_rate", lang)}
-            value={booking.final_rate ? `Rs ${booking.final_rate.toLocaleString()}/acre` : "—"}
-            tone={booking.rate_status === "final" ? "green" : booking.rate_status === "agreed" ? "amber" : "gray"}
-            hint={booking.rate_status}
+            label="Acres"
+            value={`${workDone > 0 ? workDone : booking.harvest_area}`}
+            hint={workDone > 0 ? "asal kaam" : "andaza"}
+            tone={workDone > 0 ? "green" : "gray"}
           />
-          <Stat label={t("mc_step_advance", lang)} value={`Rs ${advanceTotal.toLocaleString()}`} />
           <Stat
-            label={bill ? "Baqi" : "Bill"}
-            value={bill ? `Rs ${(balance ?? 0).toLocaleString()}` : "Abhi nahi bana"}
-            tone={bill && (balance ?? 0) > 0 ? "red" : "green"}
+            label="Total Bill"
+            value={bill ? `Rs ${bill.gross_amount.toLocaleString()}` : "Abhi nahi bana"}
+          />
+          <Stat label="Paid" value={`Rs ${paidTotal.toLocaleString()}`} hint="advance + adaigi" />
+          <Stat
+            label="Remaining"
+            value={bill ? `Rs ${(balance ?? 0).toLocaleString()}` : "—"}
+            tone={bill ? ((balance ?? 0) > 0 ? "red" : "green") : "gray"}
+            hint={bill ? undefined : "bill ke baad"}
+          />
+          {/* ART = Al Rana Traders. Bill bane baghair hamara hissa bana
+              hi nahi -- wahan sifar likhna ghalat hoga. */}
+          <Stat
+            label="ART Profit"
+            value={artProfit === null ? "—" : `Rs ${artProfit.toLocaleString()}`}
+            tone={artProfit === null ? "gray" : "green"}
+            hint={artProfit === null ? "bill ke baad" : `commission ${bill?.commission_percentage}%`}
           />
         </div>
       </Card>
 
       {!cancelled && (
         <>
-          {/* Advance */}
-          <StepCard n={1} title={t("mc_advance", lang)} done={advanceTotal > 0 || Boolean(booking.advance_declined_at)}>
-            {payments.filter((p) => p.kind === "advance").length > 0 && (
-              <ul className="mb-3 space-y-1 text-sm">
-                {payments
-                  .filter((p) => p.kind === "advance")
-                  .map((p) => (
-                    <li key={p.id} className="flex justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800">
-                      <span>
-                        {p.payment_date} · {p.method}
-                        {p.reference ? ` · ${p.reference}` : ""}
-                        {p.received_by_name && (
-                          <span className="text-surface-500"> · liya: {p.received_by_name}</span>
-                        )}
-                      </span>
-                      <span className="flex items-center gap-3">
-                        <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
-                        {/* Har adaigi ki apni raseed. Booking ki slip
-                            kaafi nahi -- ek booking par kai adaigiyan
-                            hoti hain, aur kisan ko us adaigi ka kaghaz
-                            chahiye jo us ne abhi ki hai. */}
-                        <Link
-                          href={`/admin/machinery-rental/receipt/${p.id}`}
-                          className="text-xs text-brand-600 underline hover:text-brand-700"
-                        >
-                          {t("mr_receipt_link", lang)}
-                        </Link>
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-            )}
-            {/* Advance ek hi dafa poochha jata hai -- booking ke form par.
-                Yahan wo form sirf us soorat mein khulta hai jab booking ke
-                waqt advance nahi liya gaya tha (kisan ne baad mein dene ka
-                kaha ho). Advance aa chuka ho to dobara poochhna staff ko
-                ye shak deta hai ke shayad pehle wala darj hi nahi hua, aur
-                wohi ek hi raqam do dafa likhwa deta hai.
+          {/* -----------------------------------------------------------
+              3. Chaar bade button. Har ek apna khana kholta hai.
+              ----------------------------------------------------------- */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <BigButton
+              label="Add Payment"
+              hint={bill ? `Baqi Rs ${(balance ?? 0).toLocaleString()}` : advanceTotal > 0 ? "Advance mil chuka" : "Advance ya adaigi"}
+              onClick={() => setModal("payment")}
+            />
+            <BigButton
+              label="Add Diesel"
+              hint={confirmed ? "Litre aur us din ka rate" : "Pehle kisan ki tasdeeq"}
+              disabled={!confirmed}
+              onClick={() => setModal("diesel")}
+            />
+            <BigButton
+              label="Mark Work Complete"
+              hint={!confirmed ? "Pehle kisan ki tasdeeq" : workFinished ? "Kaam mukammal ho chuka" : `${workRemaining} acre baqi`}
+              disabled={!confirmed || workFinished}
+              onClick={() => setModal("work")}
+            />
+            <BigButton
+              label="Close Booking"
+              hint={booking.status === "closed" ? "Band ho chuki" : bill ? ((balance ?? 0) > 0 ? `Rs ${(balance ?? 0).toLocaleString()} baqi` : "Hisaab barabar") : "Pehle bill"}
+              disabled={booking.status === "closed"}
+              onClick={() => setModal("close")}
+            />
+          </div>
 
-                Bill ban jane ke baad advance ka darwaza band: us ke baad
-                jo paisa aata hai wo advance nahi, bill ki adaigi hai --
-                aur us ki apni jagah neeche hai. */}
-            {advanceTotal > 0 ? (
-              <p className="text-xs text-surface-500">
-                {t("mc_advance_already", lang)}
-              </p>
-            ) : bill ? (
-              <p className="text-xs text-surface-500">{t("mc_advance_after_bill", lang)}</p>
-            ) : booking.advance_declined_at ? (
-              /* Kisan ne booking par hi mana kar diya tha. Wo jawab
-                 mehfooz hai -- to sawal dobara nahi poochha jata.
-                 Baad mein de de to darwaza khulta hai, magar us ke
-                 kehne par, safhe ke poochhne par nahi. */
-              <AdvanceDeclined bookingId={booking.id} accounts={accounts} />
-            ) : (
-              <AdvanceForm bookingId={booking.id} accounts={accounts} />
-            )}
-          </StepCard>
+          {/* -----------------------------------------------------------
+              Chhote khane -- jo mockup ke chaar button mein nahi hain
+              magar hatae bhi nahi ja sakte.
 
-          {/* Kisan ki tasdeeq */}
-          <StepCard n={2} title={t("mc_step_confirm", lang)} done={confirmed}>
+              Rate ki tasdeeq ka gate (B.4) aur fasal uthane wala qadam
+              (8) yahan band halat mein rehte hain: raasta khula hai,
+              magar safha un se shuru nahi hota. Bill aur rawangi bhi
+              isi tarah -- un ke baghair booking aage barh hi nahi
+              sakti, magar wo rozana wala kaam nahi hain.
+              ----------------------------------------------------------- */}
+          <Compact
+            title="Rate aur kisan ki tasdeeq"
+            summary={
+              confirmed
+                ? `Tasdeeq ho chuki — Rs ${booking.final_rate?.toLocaleString() ?? "—"}/acre`
+                : booking.rate_confirmation_sent_at
+                ? "Bheja ja chuka — kisan ka jawab darj karein"
+                : "Abhi tasdeeq nahi hui"
+            }
+            tone={confirmed ? "done" : "todo"}
+            open={!confirmed}
+          >
             {confirmed ? (
               <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm dark:border-brand-900/40 dark:bg-brand-950/20">
                 {booking.farmer_confirmed_at ? (
@@ -484,10 +581,20 @@ export function BookingDetail({
                 )}
               </div>
             )}
-          </StepCard>
+          </Compact>
 
-          {/* Machine rawangi */}
-          <StepCard n={3} title={t("mc_step_dispatch", lang)} done={dispatches.length > 0} locked={!confirmed}>
+          <Compact
+            title="Machine ki rawangi"
+            summary={
+              dispatches.length > 0
+                ? `${new Date(dispatches[0].departure_at).toLocaleString()}${dispatches[0].operator_name ? ` · ${dispatches[0].operator_name}` : ""}`
+                : confirmed
+                ? "Abhi nahi bheji gayi"
+                : "Pehle kisan ki tasdeeq"
+            }
+            tone={dispatches.length > 0 ? "done" : "todo"}
+            open={confirmed && dispatches.length === 0}
+          >
             {dispatches.map((d) => (
               <p key={d.id} className="mb-2 text-sm text-surface-600 dark:text-surface-300">
                 {new Date(d.departure_at).toLocaleString()} · {d.operator_name ?? "operator darj nahi"}
@@ -498,190 +605,25 @@ export function BookingDetail({
                 -- pehle ye form khula rehta tha aur agla diesel likhne
                 ke liye staff ise dobara bhar deta tha, jis se ek hi
                 machine do dafa "bheji gayi". */}
-            {confirmed && <DispatchForm
+            {confirmed ? (
+              <DispatchForm
                 bookingId={booking.id}
                 machines={machines}
                 already={dispatches.length > 0}
                 harvestDate={harvestDate}
                 bookingAcres={booking.harvest_area}
-              />}
-          </StepCard>
-
-          {/* Diesel -- jitni baar dala jaye */}
-          {/* Diesel ka apna qadam yahan se hata diya gaya.
-
-              Wo booking bante hi khul jata tha aur poore safhe par
-              khara rehta tha -- jabke diesel ka jawab us waqt kisi
-              ke paas hota hi nahi. Har dafa safha kholne par wohi
-              adhoora khana saamne aata tha.
-
-              Ab diesel ka sawal wahin poochha jata hai jahan us ka
-              jawab maujood hota hai: kaam mukammal darj karte waqt
-              (qadam 5). Do saaf sawal, dono haan/nahi. */}
-
-
-          {/* Asal kaam -- ek din ka nahi, jitne din laga utne din ka */}
-          <StepCard n={4} title={t("mc_step_work", lang)} done={workFinished} locked={!confirmed}>
-            {work.length > 0 && (
-              <div className="mb-3 space-y-1 text-sm">
-                {work.map((w) => (
-                  <div
-                    key={w.id}
-                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
-                  >
-                    <span className="text-surface-600 dark:text-surface-300">
-                      {new Date(w.work_date).toLocaleDateString()}
-                      {w.is_final && ` · ${t("mc_work_done_flag", lang)}`}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      {/* Jis indraj ke sath jagah mehfooz hai us par nishan
-                          aata hai. Ek booking par kai indraj hote hain, is
-                          liye "jahan jahan kattai hui" ka jawab in nishanon
-                          se banta hai -- kisi alag fehrist se nahi. */}
-                      {w.location_lat != null && w.location_lng != null && (
-                        <a
-                          href={`https://www.google.com/maps?q=${w.location_lat},${w.location_lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-brand-700 underline dark:text-brand-300"
-                        >
-                          {t("mc_work_on_map", lang)}
-                        </a>
-                      )}
-                      <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
-                    </span>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between border-t border-surface-200 pt-1 font-display font-semibold dark:border-surface-700">
-                  <span>{t("mc_work_done_total", lang)}</span>
-                  <span>{workDone} acre</span>
-                </div>
-                {!workFinished && (
-                  <p className="text-amber-700 dark:text-amber-300">
-                    {t("mc_work_remaining", lang)}: {workRemaining} acre — {t("mc_work_not_final_hint", lang)}
-                  </p>
-                )}
-                {workFinished && booking.harvest_area !== workDone && (
-                  <p className="text-amber-700 dark:text-amber-300">
-                    Booking par andaza {booking.harvest_area} acre tha — bill asal {workDone} acre ka banega.
-                  </p>
-                )}
-              </div>
-            )}
-            {/* Machine ne kaisa kaam kiya. Ye adad kisi ke bharne se
-                nahi bante -- waqt aur diesel ke indraj se khud nikalte
-                hain. Isi liye in par bharosa kiya ja sakta hai. */}
-            {efficiency && (efficiency.kulGhante || efficiency.kulLitre) && (
-              <div className="mb-3 rounded-lg border border-surface-200 p-3 dark:border-surface-700">
-                <p className="mb-2 text-xs font-medium text-surface-700 dark:text-surface-300">
-                  {t("mc_eff_title", lang)}
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                  {efficiency.kulGhante !== null && (
-                    <Eff label={t("mc_eff_hours", lang)} value={`${efficiency.kulGhante}`} />
-                  )}
-                  {efficiency.kulLitre !== null && (
-                    <Eff label={t("mc_eff_litres", lang)} value={`${efficiency.kulLitre} L`} />
-                  )}
-                  {efficiency.litrePerGhanta !== null && (
-                    <Eff label={t("mc_eff_lph", lang)} value={`${efficiency.litrePerGhanta} L`} />
-                  )}
-                  {efficiency.acrePerGhanta !== null && (
-                    <Eff label={t("mc_eff_aph", lang)} value={`${efficiency.acrePerGhanta}`} />
-                  )}
-                  {efficiency.litrePerAcre !== null && (
-                    <Eff label={t("mc_eff_lpa", lang)} value={`${efficiency.litrePerAcre} L`} />
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-surface-500">{t("mc_eff_note", lang)}</p>
-              </div>
-            )}
-              {/* Jo diesel darj ho chuka. Pehle ye apne qadam mein tha; ab
-                kaam ke sath hai, kyunke diesel usi kaam ka kharcha hai. */}
-            {fuelLogs.length > 0 && (
-              <div className="mb-3 space-y-1 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
-                {fuelLogs.map((f) => {
-                  const mansookh = f.verification_status === "cancelled";
-                  return (
-                    <div key={f.id}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={
-                            mansookh
-                              ? "text-surface-400 line-through dark:text-surface-500"
-                              : "text-surface-600 dark:text-surface-300"
-                          }
-                        >
-                          {f.litres} L ·{" "}
-                          {f.paid_by === "company"
-                            ? t("mc_diesel_by_company", lang)
-                            : f.paid_by === "vendor"
-                            ? t("mc_diesel_by_vendor", lang)
-                            : t("mc_diesel_by_farmer", lang)}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={
-                              mansookh ? "text-surface-400 line-through dark:text-surface-500" : "font-medium"
-                            }
-                          >
-                            Rs {f.amount.toLocaleString()}
-                          </span>
-                          {/* Ghalti se do dafa darj ho jaye to us ka
-                              raasta yahin hona chahiye. Pehle koi raasta
-                              tha hi nahi: qatar mitai nahi ja sakti aur
-                              tasdeeq shuda diesel wapas nahi jata, is
-                              liye ghalat adad hamesha ke liye baith jata
-                              tha (5 September). */}
-                          {!mansookh && <CancelFuelButton fuelId={f.id} />}
-                        </span>
-                      </div>
-                      {mansookh && (
-                        <p className="text-[11px] text-surface-400 dark:text-surface-500">
-                          Mansookh{f.cancelled_reason ? ` — ${f.cancelled_reason}` : ""}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-                {ourFuelRecoverable > 0 && (
-                  <div className="flex justify-between border-t border-surface-200 pt-1 text-xs dark:border-surface-700">
-                    <span className="text-surface-500">{t("mc_fuel_recoverable", lang)}</span>
-                    <span className="font-medium">Rs {ourFuelRecoverable.toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            )}
-            {fuelLogs.length === 0 && booking.diesel_none_at && (
-              <p className="mb-3 rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
-                {t("mc_diesel_none_done", lang)}
-              </p>
-            )}
-            {confirmed && !workFinished && (
-            <WorkForm
-                bookingId={booking.id}
-                estimated={booking.harvest_area}
-                done={workDone}
-                harvestType={booking.harvest_type}
-                accounts={accounts}
               />
+            ) : (
+              <p className="text-sm text-surface-500">{t("mb_gate_note", lang)}</p>
             )}
+          </Compact>
 
-            {/* Kaam mukammal ho gaya magar booking ka poora raqba nahi
-                kata. Ye maamool hai -- fasal kachi thi, ya machine kisi
-                aur khet chali gayi. Baqi ek NAYA kaam hai: nayi
-                tareekh, naya bill. Kisan aur khet wohi rehte hain. */}
-            {workFinished && workRemaining > 0 && (
-              <FollowUpForm
-                bookingId={booking.id}
-                remaining={workRemaining}
-                alreadyMade={booking.follow_up_number}
-              />
-            )}
-          </StepCard>
-
-          {/* Bill */}
-          <StepCard n={5} title={t("mc_step_bill", lang)} done={Boolean(bill)} locked={!workFinished}>
+          <Compact
+            title="Bill"
+            summary={bill ? `${bill.bill_number} — Rs ${bill.gross_amount.toLocaleString()}` : workFinished ? "Ab bill banaya ja sakta hai" : "Pehle kaam mukammal"}
+            tone={bill ? "done" : "todo"}
+            open={workFinished && !bill}
+          >
             {bill ? (
               <div className="rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <p className="mb-2 font-medium text-surface-900 dark:text-surface-100">{bill.bill_number}</p>
@@ -706,10 +648,6 @@ export function BookingDetail({
                 ) : (
                   <Row label={`Machinery charges (${bill.actual_area} acre × Rs ${bill.rate_amount.toLocaleString()})`} value={bill.gross_amount} />
                 )}
-                {/* Kisan ka apna diesel. Ye us ke bill se katta hai --
-                    aur us ka naam saaf likha jata hai, warna kisan
-                    poochhta hai ke "ye kam kyun hai" aur jawab kisi ke
-                    paas nahi hota. */}
                 {/* Riayat. Ye lakeer commission aur vendor ke hisse se
                     UPAR hai, kyunke wohi us ka matlab hai: riayat pehle
                     katti hai, hissa us ke baad bantta hai (194). */}
@@ -735,131 +673,328 @@ export function BookingDetail({
                 </div>
                 <CancelBillForm bookingId={booking.id} billNumber={bill.bill_number} paid={finalPaid} />
               </div>
+            ) : workFinished ? (
+              <BillForm bookingId={booking.id} />
             ) : (
-              workFinished && <BillForm bookingId={booking.id} />
+              <p className="text-sm text-surface-500">{t("mb_gate_note", lang)}</p>
             )}
-          </StepCard>
+          </Compact>
 
-          {/* Kisan se aayi hui payments -- kis ne li, ye saamne */}
-          {payments.filter((p) => p.kind === "final").length > 0 && (
-            <Card>
-              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-                {t("mc_payments_from_farmer", lang)}
-              </h2>
-              <ul className="space-y-1 text-sm">
-                {payments
-                  .filter((p) => p.kind === "final")
-                  .map((p) => (
-                    <li key={p.id} className="flex justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800">
-                      <span>
-                        {p.payment_date} · {p.method}
-                        {p.reference ? ` · ${p.reference}` : ""}
-                        {p.received_by_name && (
-                          <span className="text-surface-500"> · liya: {p.received_by_name}</span>
-                        )}
-                      </span>
-                      <span className="font-medium">Rs {p.amount.toLocaleString()}</span>
-                    </li>
-                  ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* Final payment.
-
-              Pata (id="payment") shart se BAHAR hai, taake kisan ke
-              khate se aane wala link us soorat mein bhi theek jagah
-              utre jab yahan koi baqi na bacha ho -- warna link chup
-              chaap safhe ke shuru mein utar deta aur banda samajhta ke
-              kuch khula hi nahi. */}
-          <div id="payment" className="scroll-mt-20" />
-          {bill && (balance ?? 0) > 0 && (
-            <StepCard n={6} title={t("mc_step_final_payment", lang)} done={false}>
-              <FinalPaymentStep
+          {/* Baqi kaam ki agli booking -- sirf us soorat mein jab kaam
+              mukammal ho chuka ho magar poora raqba na kata ho. */}
+          {workFinished && workRemaining > 0 && (
+            <Compact
+              title="Baqi raqba — agli booking"
+              summary={`${workRemaining} acre baqi reh gaya`}
+              tone="todo"
+              open
+            >
+              <FollowUpForm
                 bookingId={booking.id}
-                accounts={accounts}
-                remaining={balance ?? 0}
-                promiseDate={booking.payment_promise_date}
-                promiseNote={booking.payment_promise_note}
-                willSell={booking.will_sell_to_us}
-                reminders={reminders}
+                remaining={workRemaining}
+                alreadyMade={booking.follow_up_number}
               />
-            </StepCard>
+            </Compact>
           )}
 
-          {/* Vendor ka hissa -- ye kisan wale hisaab se alag hai */}
-          {bill && (
-            <StepCard n={7} title={t("mc_step_vendor_share", lang)} done={vendorRemaining <= 0}>
-              <div className="mb-3 rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
-                <Row label={`Gross bill (${bill.actual_area} acre)`} value={bill.gross_amount} />
-                <Row label={`Hamara commission (${bill.commission_percentage}%)`} value={-bill.commission_amount} />
-                <div className="mt-1 flex justify-between border-t border-surface-200 pt-1 font-medium dark:border-surface-700">
-                  <span>{vendorName ?? "Vendor"} ko dena</span>
-                  <span>Rs {bill.vendor_payable.toLocaleString()}</span>
-                </div>
-                {/* Kisan ka apna diesel vendor ke hisse se kata --
-                    kyunke rate mein diesel shamil tha aur wo kharcha
-                    vendor ka bacha, hamara nahi. */}
-                {bill.diesel_deducted > 0 && (
-                  <p className="mt-1 text-xs text-surface-500">
-                    {t("mc_vendor_diesel_note", lang).replace(
-                      "{amount}",
-                      `Rs ${bill.diesel_deducted.toLocaleString()}`
-                    )}
-                  </p>
-                )}
-                {artDiesel > 0 && (
-                  <Row label={t("mc_diesel_recoverable", lang)} value={-artDiesel} />
-                )}
-                {paidToVendor > 0 && <Row label={t("mc_paid_so_far", lang)} value={-paidToVendor} />}
-                <div className="mt-1 flex justify-between font-display font-semibold">
-                  <span>{t("mc_balance", lang)}</span>
-                  <span className={vendorRemaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-brand-700 dark:text-brand-300"}>
-                    Rs {vendorRemaining.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <p className="mb-3 text-xs text-surface-500">
-                Kisan ka poora paisa hamari aamdani nahi. Bill bante hi commission hamara aur baqi vendor ka ho jata
-                hai — wo raqam sirf hamare paas se guzar rahi hoti hai.
-              </p>
-              {vendorRemaining > 0 && (
-                <VendorPayoutForm
-                  bookingId={booking.id}
-                  accounts={accounts}
-                  remaining={vendorRemaining}
-                  paidSoFar={paidToVendor}
-                  vendorName={vendorName}
-                />
-              )}
-            </StepCard>
-
-          )}
-          {/* Qadam 8 -- fasal kaun uthayega.
+          {/* Fasal kaun uthayega.
               Ye qadam SIRF us booking par aata hai jis par kisan ne kaha
               tha ke fasal hamein bechega. Baqi bookings par ye sawal
               bemaani hai, aur bemaani sawal har safhe par rakh dene se
-              staff sab qadam parhna chhoR deta hai.
-
-              Aur ye kattai ke bill (5) aur adaigi (6) ke BAAD hai, kyunke
-              bill bane baghair "kitna kattai ka baqi hai" ka koi jawab
-              hi nahi hota. */}
+              staff sab qadam parhna chhoR deta hai. */}
           {willSellToUs && (
-            <StepCard
-              n={8}
+            <Compact
               title={t("ar_step_title", lang)}
-              done={lift?.status === "lifted"}
-              locked={!bill}
+              summary={lift?.status === "lifted" ? "Fasal uth chuki" : bill ? "Abhi nahi uthi" : "Pehle bill"}
+              tone={lift?.status === "lifted" ? "done" : "todo"}
+              open={Boolean(bill) && lift?.status !== "lifted"}
             >
-              <CropLiftStep bookingId={booking.id} lift={lift} lifters={lifters} breakdown={liftBreakdown} />
-            </StepCard>
+              {bill ? (
+                <CropLiftStep bookingId={booking.id} lift={lift} lifters={lifters} breakdown={liftBreakdown} />
+              ) : (
+                <p className="text-sm text-surface-500">{t("mb_gate_note", lang)}</p>
+              )}
+            </Compact>
           )}
 
-          {booking.status !== "closed" && <CancelForm bookingId={booking.id} advanceTotal={advanceTotal} />}
+          {/* -----------------------------------------------------------
+              4. Do tables -- jo ho chuka, wo saamne.
+              ----------------------------------------------------------- */}
+          <div id="payment" className="scroll-mt-20" />
+          <Card>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                Payment Records
+              </h2>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setModal("payment")}>
+                <Plus className="h-4 w-4" /> Add
+              </Button>
+            </div>
+            {payments.length === 0 ? (
+              <p className="text-sm text-surface-400">Abhi koi adaigi darj nahi.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-surface-200 text-left text-xs uppercase tracking-wide text-surface-500 dark:border-surface-700">
+                      <th className="py-2 pr-3 font-medium">Date</th>
+                      <th className="py-2 pr-3 font-medium">Paid By</th>
+                      <th className="py-2 pr-3 text-right font-medium">Amount</th>
+                      <th className="py-2 pr-3 font-medium">Account / Khata</th>
+                      <th className="py-2 pr-3 font-medium">Method</th>
+                      <th className="py-2 font-medium">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                        <td className="py-2 pr-3 text-surface-600 dark:text-surface-300">{p.payment_date}</td>
+                        <td className="py-2 pr-3 text-surface-700 dark:text-surface-200">
+                          {p.method === "vendor_collected" ? "Farmer → Vendor" : "Farmer"}
+                          {p.kind === "advance" && <span className="text-surface-400"> · advance</span>}
+                        </td>
+                        <td className="py-2 pr-3 text-right font-medium text-surface-900 dark:text-surface-100">
+                          Rs {p.amount.toLocaleString()}
+                        </td>
+                        {/* Khata sirf wahan likha jata hai jahan waqai
+                            koi khata hota hai. Cash lene wale ki jeb
+                            mein hota hai, khata kisan ke apne hisaab
+                            mein -- un par kisi khate ka naam likh dena
+                            ye kehta hai ke paisa daftar pahunch gaya. */}
+                        <td className="py-2 pr-3 text-surface-600 dark:text-surface-300">
+                          {accountName(p.finance_account_id) ??
+                            (p.method === "cash"
+                              ? "Cash (lene wale ke paas)"
+                              : p.method === "khata"
+                              ? "Kisan ka khata"
+                              : p.method === "vendor_collected"
+                              ? "Vendor ke paas"
+                              : "—")}
+                        </td>
+                        <td className="py-2 pr-3 text-surface-600 dark:text-surface-300">{p.method}</td>
+                        <td className="py-2 text-surface-500">
+                          <span className="flex flex-wrap items-center gap-2">
+                            {p.reference && <span>{p.reference}</span>}
+                            {p.received_by_name && <span className="text-xs">liya: {p.received_by_name}</span>}
+                            {/* Har adaigi ki apni raseed -- ek booking par
+                                kai adaigiyan hoti hain, aur kisan ko us
+                                adaigi ka kaghaz chahiye jo us ne abhi ki. */}
+                            <Link
+                              href={`/admin/machinery-rental/receipt/${p.id}`}
+                              className="text-xs text-brand-600 underline hover:text-brand-700"
+                            >
+                              {t("mr_receipt_link", lang)}
+                            </Link>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                Diesel Records
+              </h2>
+              <Button type="button" variant="ghost" size="sm" disabled={!confirmed} onClick={() => setModal("diesel")}>
+                <Plus className="h-4 w-4" /> Add
+              </Button>
+            </div>
+            {fuelLogs.length === 0 ? (
+              <p className="text-sm text-surface-400">
+                {booking.diesel_none_at ? t("mc_diesel_none_done", lang) : "Abhi koi diesel darj nahi."}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-surface-200 text-left text-xs uppercase tracking-wide text-surface-500 dark:border-surface-700">
+                      <th className="py-2 pr-3 font-medium">Date</th>
+                      <th className="py-2 pr-3 font-medium">Given By</th>
+                      <th className="py-2 pr-3 text-right font-medium">Litres</th>
+                      <th className="py-2 pr-3 text-right font-medium">Rate</th>
+                      <th className="py-2 pr-3 text-right font-medium">Total</th>
+                      <th className="py-2 pr-3 font-medium">Account / Khata</th>
+                      <th className="py-2 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Mansookh shuda diesel kisi jor mein nahi aata (313).
+                        Safhe par wo phir bhi nazar aata hai -- chhupa dene
+                        se ye sawal khara reh jata hai ke "diesel to daala
+                        tha, gaya kahan". */}
+                    {fuelLogs.map((f) => {
+                      const mansookh = f.verification_status === "cancelled";
+                      const dim = mansookh ? "text-surface-400 line-through dark:text-surface-500" : "";
+                      return (
+                        <tr key={f.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                          <td className={`py-2 pr-3 text-surface-600 dark:text-surface-300 ${dim}`}>{f.log_date}</td>
+                          <td className={`py-2 pr-3 text-surface-700 dark:text-surface-200 ${dim}`}>
+                            {f.paid_by === "company"
+                              ? t("mc_diesel_by_company", lang)
+                              : f.paid_by === "vendor"
+                              ? t("mc_diesel_by_vendor", lang)
+                              : t("mc_diesel_by_farmer", lang)}
+                          </td>
+                          <td className={`py-2 pr-3 text-right ${dim}`}>{f.litres ?? "—"}</td>
+                          <td className={`py-2 pr-3 text-right ${dim}`}>
+                            {f.rate_per_litre === null ? "—" : `Rs ${f.rate_per_litre.toLocaleString()}`}
+                          </td>
+                          <td className={`py-2 pr-3 text-right font-medium text-surface-900 dark:text-surface-100 ${dim}`}>
+                            Rs {f.amount.toLocaleString()}
+                          </td>
+                          {/* Khata staff se poochha NAHI jata (B.2) -- wo
+                              khud tay hota hai. Yahan sirf dikhaya jata
+                              hai, taake bande ko pata ho ke ye raqam
+                              kahan gayi. */}
+                          <td className={`py-2 pr-3 text-surface-600 dark:text-surface-300 ${dim}`}>
+                            {f.paid_by === "company"
+                              ? f.vendor_recoverable
+                                ? "Vendor se wasooli"
+                                : "ART ka diesel kharcha"
+                              : f.paid_by === "vendor"
+                              ? "Vendor ka apna"
+                              : "Farmer ka apna — bill se katega"}
+                          </td>
+                          <td className="py-2 text-right">
+                            {mansookh ? (
+                              <span className="text-[11px] text-surface-400 dark:text-surface-500">
+                                Mansookh{f.cancelled_reason ? ` — ${f.cancelled_reason}` : ""}
+                              </span>
+                            ) : (
+                              /* Ghalti se do dafa darj ho jaye to us ka
+                                 raasta yahin hona chahiye (5 September). */
+                              <CancelFuelButton fuelId={f.id} />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {ourFuelRecoverable > 0 && (
+              <p className="mt-2 text-xs text-surface-500">
+                {t("mc_fuel_recoverable", lang)}: Rs {ourFuelRecoverable.toLocaleString()}
+              </p>
+            )}
+          </Card>
+
+          {/* Machine ne kaisa kaam kiya. Ye adad kisi ke bharne se nahi
+              bante -- waqt aur diesel ke indraj se khud nikalte hain.
+              Isi liye in par bharosa kiya ja sakta hai. */}
+          {efficiency && (efficiency.kulGhante || efficiency.kulLitre) && (
+            <Card>
+              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                {t("mc_eff_title", lang)}
+              </h2>
+              <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                {efficiency.kulGhante !== null && <Eff label={t("mc_eff_hours", lang)} value={`${efficiency.kulGhante}`} />}
+                {efficiency.kulLitre !== null && <Eff label={t("mc_eff_litres", lang)} value={`${efficiency.kulLitre} L`} />}
+                {efficiency.litrePerGhanta !== null && <Eff label={t("mc_eff_lph", lang)} value={`${efficiency.litrePerGhanta} L`} />}
+                {efficiency.acrePerGhanta !== null && <Eff label={t("mc_eff_aph", lang)} value={`${efficiency.acrePerGhanta}`} />}
+                {efficiency.litrePerAcre !== null && <Eff label={t("mc_eff_lpa", lang)} value={`${efficiency.litrePerAcre} L`} />}
+              </div>
+              <p className="mt-2 text-xs text-surface-500">{t("mc_eff_note", lang)}</p>
+            </Card>
+          )}
+
+          {/* Jo kaam darj ho chuka. */}
+          {work.length > 0 && (
+            <Card>
+              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                {t("mc_step_work", lang)}
+              </h2>
+              <div className="space-y-1 text-sm">
+                {work.map((w) => (
+                  <div
+                    key={w.id}
+                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
+                  >
+                    <span className="text-surface-600 dark:text-surface-300">
+                      {new Date(w.work_date).toLocaleDateString()}
+                      {w.is_final && ` · ${t("mc_work_done_flag", lang)}`}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {/* Jis indraj ke sath jagah mehfooz hai us par nishan
+                          aata hai -- "jahan jahan kattai hui" ka jawab in
+                          nishanon se banta hai, kisi alag fehrist se nahi. */}
+                      {w.location_lat != null && w.location_lng != null && (
+                        <a
+                          href={`https://www.google.com/maps?q=${w.location_lat},${w.location_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-brand-700 underline dark:text-brand-300"
+                        >
+                          {t("mc_work_on_map", lang)}
+                        </a>
+                      )}
+                      <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-surface-200 pt-1 font-display font-semibold dark:border-surface-700">
+                  <span>{t("mc_work_done_total", lang)}</span>
+                  <span>{workDone} acre</span>
+                </div>
+                {!workFinished && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    {t("mc_work_remaining", lang)}: {workRemaining} acre — {t("mc_work_not_final_hint", lang)}
+                  </p>
+                )}
+                {workFinished && booking.harvest_area !== workDone && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Booking par andaza {booking.harvest_area} acre tha — bill asal {workDone} acre ka bana.
+                  </p>
+                )}
+              </div>
+            </Card>
+          )}
         </>
       )}
 
-      {/* Timeline */}
+      {/* -----------------------------------------------------------------
+          5. Booking Timeline.
+          ----------------------------------------------------------------- */}
+      <Card>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+          Booking Timeline
+        </h2>
+        <Timeline reached={reached} cancelled={cancelled} />
+      </Card>
+
+      {/* -----------------------------------------------------------------
+          6. Settlement Summary -- koi nayi ginti nahi (B.6). Har adad
+          wohi hai jo upar ke khanon mein bhi chal raha hai.
+          ----------------------------------------------------------------- */}
+      <Card>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+          Settlement Summary
+        </h2>
+        <SettlementRows
+          bill={bill}
+          paidTotal={paidTotal}
+          balance={balance}
+          paidToVendor={paidToVendor}
+          vendorRemaining={vendorRemaining}
+          vendorName={vendorName}
+          ourFuelExpense={ourFuelExpense}
+          ourFuelRecoverable={ourFuelRecoverable}
+          othersFuel={othersFuel}
+        />
+        {/* Kisan ka poora paisa hamari aamdani nahi. */}
+        <p className="mt-3 border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+          Kisan ka poora paisa hamari aamdani nahi. Bill bante hi commission hamara aur baqi vendor ka ho jata hai — wo
+          raqam sirf hamare paas se guzar rahi hoti hai.
+        </p>
+      </Card>
+
+      {/* Kis ne kya kiya -- poora waqia, tarteeb se. */}
       <Card>
         <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
           {t("mc_who_did_what", lang)}
@@ -881,6 +1016,86 @@ export function BookingDetail({
           {events.length === 0 && <li className="text-sm text-surface-400">{t("mc_nothing_yet", lang)}</li>}
         </ul>
       </Card>
+
+      {/* -----------------------------------------------------------------
+          Chaar khane. Har ek ke andar WOHI purana form hai jo pehle
+          StepCard mein khula rehta tha -- sirf jagah badli hai, kaam
+          nahi. Koi naya action, koi nayi ginti nahi.
+          ----------------------------------------------------------------- */}
+      <Modal open={modal === "payment"} title="Add Payment" onClose={() => setModal(null)}>
+        <AddPayment
+          booking={booking}
+          accounts={accounts}
+          advanceTotal={advanceTotal}
+          bill={bill}
+          balance={balance}
+          confirmed={confirmed}
+          reminders={reminders}
+          vendorName={vendorName}
+          vendorRemaining={vendorRemaining}
+          paidToVendor={paidToVendor}
+        />
+      </Modal>
+
+      <Modal open={modal === "diesel"} title="Add Diesel" onClose={() => setModal(null)}>
+        {/* Wohi purana FuelForm -- `already` khali hai kyunke khana
+            khud is button se khula hai, safhe par apne aap nahi. */}
+        <FuelForm bookingId={booking.id} accounts={accounts} already={false} />
+        {/* "Is booking par diesel dala hi nahi" -- ye bhi ek jawab hai,
+            aur us ka darj hona zaroori hai: khali khana aur "nahi dala"
+            ek cheez nahi. Pehla kehta hai "kisi ne poochha hi nahi",
+            doosra kehta hai "poochha, aur jawab nahi tha". Booking us
+            waqt tak "diesel darj karna" ki qatar mein khari rehti hai.
+            Jawab pehle se darj ho to us ke wapis lene ka raasta. */}
+        {booking.diesel_none_at ? (
+          <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+            <DieselNone bookingId={booking.id} />
+          </div>
+        ) : (
+          fuelLogs.length === 0 && (
+            <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+              <MarkDieselNoneButton bookingId={booking.id} />
+            </div>
+          )
+        )}
+      </Modal>
+
+      <Modal open={modal === "work"} title="Mark Work Complete" onClose={() => setModal(null)}>
+        {/* Wohi WorkForm -- farq sirf itna ke "kaam mukammal" ka nishan
+            pehle se laga hua aata hai, kyunke button ka naam wohi keh
+            raha hai. Banda chahe to utaar sakta hai (aadha din ka kaam
+            darj karna ho to). */}
+        <WorkForm
+          bookingId={booking.id}
+          estimated={booking.harvest_area}
+          done={workDone}
+          harvestType={booking.harvest_type}
+          accounts={accounts}
+          defaultFinal
+        />
+      </Modal>
+
+      <Modal open={modal === "close"} title="Close Booking" onClose={() => setModal(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-surface-600 dark:text-surface-300">
+            Band karne se pehle poora hisaab saamne — wohi adad jo Settlement Summary mein hain.
+          </p>
+          <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+            <SettlementRows
+              bill={bill}
+              paidTotal={paidTotal}
+              balance={balance}
+              paidToVendor={paidToVendor}
+              vendorRemaining={vendorRemaining}
+              vendorName={vendorName}
+              ourFuelExpense={ourFuelExpense}
+              ourFuelRecoverable={ourFuelRecoverable}
+              othersFuel={othersFuel}
+            />
+          </div>
+          <CloseBookingForm bookingId={booking.id} bill={Boolean(bill)} balance={balance} vendorRemaining={vendorRemaining} />
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -889,29 +1104,508 @@ export function BookingDetail({
 // Chhote hissay
 // ---------------------------------------------------------------------
 
-function ChainStrip({ status }: { status: string }) {
-  const order = ["new", "confirmed", "ready_for_harvest", "in_progress", "bill_pending", "payment_pending", "closed"];
-  const current = order.indexOf(status);
+/**
+ * Booking Timeline -- malik ke mockup wali horizontal patti.
+ *
+ * Har qadam ka "ho gaya ya nahi" upar wale component mein tay hota hai,
+ * yahan nahi. Wajah: teen qadam DB ke status se nahi, INDRAJ se bante
+ * hain (machine nikli, kaam shuru hua) -- aur wo indraj us safhe ke paas
+ * hain, is patti ke paas nahi.
+ */
+function Timeline({ reached, cancelled }: { reached: boolean[]; cancelled: boolean }) {
+  if (cancelled) {
+    return (
+      <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+        Ye booking cancel ho chuki — safar yahin ruk gaya.
+      </p>
+    );
+  }
+  // Aakhri qadam jo ho chuka. Us se aage wale khali dikhte hain, aur
+  // usi par nishan lagta hai ke booking abhi kahan khari hai.
+  const current = reached.lastIndexOf(true);
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <ol className="flex flex-wrap items-start gap-x-1 gap-y-3">
       {CHAIN.map((step, i) => {
-        const done = current >= 0 && i <= current;
+        const done = reached[i];
+        const here = i === current;
         return (
-          <span
-            key={step.key}
-            className={
-              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs " +
-              (done
-                ? "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
-                : "bg-surface-100 text-surface-400 dark:bg-surface-800 dark:text-surface-500")
-            }
-          >
-            {done ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
-            {step.label}
-          </span>
+          <li key={step.key} className="flex items-start">
+            <div className="flex w-24 flex-col items-center text-center sm:w-28">
+              <span
+                className={
+                  "flex h-7 w-7 items-center justify-center rounded-full border-2 " +
+                  (done
+                    ? here
+                      ? "border-brand-600 bg-brand-600 text-white"
+                      : "border-brand-500 bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
+                    : "border-surface-200 bg-surface-50 text-surface-400 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-500")
+                }
+              >
+                {done ? <Check className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              </span>
+              <span
+                className={
+                  "mt-1.5 text-[11px] leading-tight " +
+                  (done
+                    ? "font-medium text-surface-800 dark:text-surface-200"
+                    : "text-surface-400 dark:text-surface-500")
+                }
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < CHAIN.length - 1 && (
+              <span
+                className={
+                  "mt-3.5 hidden h-0.5 w-4 sm:block " +
+                  (reached[i + 1] ? "bg-brand-500" : "bg-surface-200 dark:bg-surface-700")
+                }
+              />
+            )}
+          </li>
         );
       })}
+    </ol>
+  );
+}
+
+/**
+ * Chaar bade button -- mockup ka asal hissa.
+ *
+ * Band button ghayab nahi hota, sirf wajah likh deta hai. Ghayab button
+ * staff ko ye sochne par majboor karta hai ke raasta hai hi nahi, aur
+ * phir wo kisi aur safhe par dhoondhne nikal jata hai.
+ */
+function BigButton({
+  label,
+  hint,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  hint?: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={
+        "flex min-h-[76px] flex-col items-start justify-center gap-1 rounded-card border-2 px-4 py-3 text-left transition " +
+        (disabled
+          ? "cursor-not-allowed border-surface-200 bg-surface-50 text-surface-400 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-500"
+          : "border-brand-500 bg-brand-50 text-brand-800 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-200 dark:hover:bg-brand-900/40")
+      }
+    >
+      <span className="font-display text-sm font-semibold leading-tight">{label}</span>
+      {hint && <span className="text-xs font-normal opacity-80">{hint}</span>}
+    </button>
+  );
+}
+
+/**
+ * Wo khane jo mockup ke chaar button mein nahi hain magar hatae bhi
+ * nahi ja sakte (rate ki tasdeeq, rawangi, bill, fasal uthana).
+ *
+ * Band halat mein ek hi lakeer mein apna haal bata dete hain. Yehi
+ * malik ki asal shikayat ka jawab hai: khana khula rakhna hi wo cheez
+ * thi jo safhe ko "mushkil" bana rahi thi -- magar khana hata dena us
+ * se bura hota, kyunke phir raasta hi na rehta.
+ */
+function Compact({
+  title,
+  summary,
+  tone,
+  open,
+  children,
+}: {
+  title: string;
+  summary: string;
+  tone: "done" | "todo";
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <details open={open}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span className="flex items-center gap-2">
+            <span
+              className={
+                "flex h-5 w-5 items-center justify-center rounded-full " +
+                (tone === "done" ? "bg-brand-600 text-white" : "bg-surface-300 text-white dark:bg-surface-600")
+              }
+            >
+              {tone === "done" ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
+            </span>
+            <span className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{title}</span>
+          </span>
+          <span className="text-right text-xs text-surface-500">{summary}</span>
+        </summary>
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">{children}</div>
+      </details>
+    </Card>
+  );
+}
+
+/**
+ * Ek khana jo button dabane par khulta hai.
+ *
+ * Andar koi naya form nahi banta -- wohi purane form yahan utar aate
+ * hain. Is parat ka kaam sirf itna hai ke form us waqt saamne aaye jab
+ * banda us ka naam khud dabaye.
+ */
+function Modal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  // Escape par band. Chhota sa raasta, magar us ke baghair mobile par
+  // banda phansa hua mehsoos karta hai.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6">
+      {/* Peeche dabane par band -- magar andar dabane par nahi, warna
+          form bharte hue ek ghalat click sab mita deta hai. */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden />
+      <div className="relative z-10 my-auto w-full max-w-2xl rounded-card border border-surface-200 bg-white p-4 shadow-xl dark:border-surface-700 dark:bg-surface-900">
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-surface-100 pb-2 dark:border-surface-800">
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800"
+            aria-label="Band karein"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
+  );
+}
+
+/**
+ * Add Payment ka andar wala hissa -- pehle ye poochha jata hai ke paisa
+ * KIS raaste se aa raha hai, phir wohi purana form khulta hai.
+ *
+ * Har raasta apne mojooda action par jata hai (B.1 ka naqsha):
+ *   Farmer se advance        -> `recordAdvance`
+ *   Farmer se bill ki adaigi -> `recordFinalPayment` (khud PaymentForm)
+ *   ART se Vendor ko         -> `recordVendorPayout`
+ *
+ * Jo raasta is waqt mumkin nahi wo fehrist mein aata hi nahi -- band
+ * raasta dikha kar "kyun nahi" ka sawal khara karna staff ka waqt
+ * khata hai.
+ */
+function AddPayment({
+  booking,
+  accounts,
+  advanceTotal,
+  bill,
+  balance,
+  confirmed,
+  reminders,
+  vendorName,
+  vendorRemaining,
+  paidToVendor,
+}: {
+  booking: Booking;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  advanceTotal: number;
+  bill: { bill_number: string } | null;
+  balance: number | null;
+  confirmed: boolean;
+  reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
+  vendorName: string | null;
+  vendorRemaining: number;
+  paidToVendor: number;
+}) {
+  const lang = useLang();
+  // Advance ek hi dafa. Bill ban jane ke baad us ka darwaza band: us ke
+  // baad jo paisa aata hai wo advance nahi, bill ki adaigi hai.
+  const canAdvance = advanceTotal === 0 && !bill;
+  // Baqi kuch na ho to adaigi ka khana nahi khulta -- bilkul waise hi
+  // jaise pehle safhe par khulta hi nahi tha. Khula hua khana jahan
+  // kuch dena hi na ho wahan sirf ek raasta banata hai: zyada paisa
+  // darj ho jana, aur phir us ko wapas nikalna.
+  const canFinal = Boolean(bill) && (balance ?? 0) > 0;
+  const canVendor = Boolean(bill) && vendorRemaining > 0;
+
+  const options: Array<{ key: string; label: string; hint: string }> = [];
+  if (canAdvance) options.push({ key: "advance", label: "Farmer se advance", hint: "Bill se pehle" });
+  if (canFinal) options.push({ key: "final", label: "Farmer se bill ki payment", hint: `Baqi Rs ${(balance ?? 0).toLocaleString()}` });
+  if (canVendor)
+    options.push({
+      key: "vendor",
+      label: `ART se ${vendorName ?? "Vendor"} ko`,
+      hint: `Dena Rs ${vendorRemaining.toLocaleString()}`,
+    });
+
+  const [choice, setChoice] = useState<string | null>(options.length === 1 ? options[0].key : null);
+
+  if (options.length === 0) {
+    return (
+      <div className="space-y-2 text-sm text-surface-600 dark:text-surface-300">
+        {advanceTotal > 0 && !bill ? (
+          <p>{t("mc_advance_already", lang)}</p>
+        ) : bill ? (
+          <p>Is booking par koi adaigi baqi nahi.</p>
+        ) : (
+          <p>{t("mc_advance_after_bill", lang)}</p>
+        )}
+        {!confirmed && <p className="text-xs text-surface-500">{t("mb_gate_note", lang)}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {options.length > 1 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-surface-800 dark:text-surface-200">Paisa kis raaste se?</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {options.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setChoice(o.key)}
+                className={
+                  "rounded-lg border px-3 py-2 text-left text-sm " +
+                  (choice === o.key
+                    ? "border-brand-500 bg-brand-50 text-brand-800 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-200"
+                    : "border-surface-200 text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800")
+                }
+              >
+                <span className="block font-medium">{o.label}</span>
+                <span className="block text-xs text-surface-500">{o.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {choice && <div className="border-t border-surface-100 pt-3 dark:border-surface-800" />}
+
+      {/* Neeche har soorat mein WOHI purana form hai jo pehle StepCard
+          mein khula rehta tha. Koi naya action nahi. */}
+      {choice === "advance" &&
+        (booking.advance_declined_at ? (
+          /* Kisan ne booking par hi mana kar diya tha. Wo jawab mehfooz
+             hai -- to sawal dobara nahi poochha jata. */
+          <AdvanceDeclined bookingId={booking.id} accounts={accounts} />
+        ) : (
+          <AdvanceForm bookingId={booking.id} accounts={accounts} />
+        ))}
+
+      {choice === "final" && (
+        <FinalPaymentStep
+          bookingId={booking.id}
+          accounts={accounts}
+          remaining={balance ?? 0}
+          promiseDate={booking.payment_promise_date}
+          promiseNote={booking.payment_promise_note}
+          willSell={booking.will_sell_to_us}
+          reminders={reminders}
+        />
+      )}
+
+      {choice === "vendor" && (
+        <VendorPayoutForm
+          bookingId={booking.id}
+          accounts={accounts}
+          remaining={vendorRemaining}
+          paidSoFar={paidToVendor}
+          vendorName={vendorName}
+        />
+      )}
+
+      {/* Vendor ne hamein cash wapas diya ho to wo is booking ka nahi,
+          vendor ke apne khate ka maamla hai -- aur wahan wo khud tasdeeq
+          karta hai. Is liye yahan sirf raasta dikhaya jata hai, dobara
+          khana nahi banaya jata. */}
+      <p className="border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+        Vendor ne hamein paisa wapas diya ho to wo yahan nahi —{" "}
+        <Link href="/admin/machinery-rental/vendor-cash" className="underline hover:text-surface-700">
+          {t("mc_vendor_khata_link", lang)}
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Settlement ki lakeerein -- EK jagah likhi hui.
+ *
+ * Yehi lakeerein safhe ke neeche wale panel mein bhi hain aur "Close
+ * Booking" ke khane mein bhi. Do jagah likhna wohi purana masla banata
+ * (A.3/A.4 usi ko theek kar rahi hai): ek din ek jagah ka adad badalta
+ * aur doosri jagah ka nahi, aur phir koi nahi bata sakta ke sach kaun sa
+ * hai.
+ *
+ * Yahan koi nayi ginti nahi hoti (B.6) -- sab adad upar se aate hain.
+ */
+function SettlementRows({
+  bill,
+  paidTotal,
+  balance,
+  paidToVendor,
+  vendorRemaining,
+  vendorName,
+  ourFuelExpense,
+  ourFuelRecoverable,
+  othersFuel,
+}: {
+  bill: { gross_amount: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
+  paidTotal: number;
+  balance: number | null;
+  paidToVendor: number;
+  vendorRemaining: number;
+  vendorName: string | null;
+  ourFuelExpense: number;
+  ourFuelRecoverable: number;
+  othersFuel: number;
+}) {
+  const lang = useLang();
+  return (
+    <div className="text-sm">
+      {bill ? (
+        <Row label="Total Bill" value={bill.gross_amount} />
+      ) : (
+        <Missing label="Total Bill" note="bill abhi nahi bana" />
+      )}
+      <Row label="Total Paid (advance + adaigi)" value={paidTotal} />
+      {bill ? (
+        <div className="flex justify-between py-0.5 font-medium">
+          <span className="text-surface-700 dark:text-surface-200">Farmer Balance</span>
+          <span className={(balance ?? 0) > 0 ? "text-red-600 dark:text-red-400" : "text-brand-700 dark:text-brand-300"}>
+            Rs {(balance ?? 0).toLocaleString()}
+          </span>
+        </div>
+      ) : (
+        <Missing label="Farmer Balance" note="bill ke baad" />
+      )}
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {bill ? (
+        <>
+          <Row label={`${vendorName ?? "Vendor"} ko dena (vendor payable)`} value={bill.vendor_payable} />
+          {paidToVendor > 0 && <Row label={t("mc_paid_so_far", lang)} value={-paidToVendor} />}
+          <div className="flex justify-between py-0.5 font-medium">
+            <span className="text-surface-700 dark:text-surface-200">Vendor Balance</span>
+            <span className={vendorRemaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-brand-700 dark:text-brand-300"}>
+              Rs {vendorRemaining.toLocaleString()}
+            </span>
+          </div>
+        </>
+      ) : (
+        <Missing label="Vendor Payable" note="bill ke baad" />
+      )}
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {/* Diesel ek adad nahi, teen alag cheezein hain (170). Teenon ko
+          jorh kar "Diesel Cost" likh dena hamare munafe ko jhoota kar
+          deta hai: vendor ki machine par diya hua diesel hamara kharcha
+          hai hi nahi -- wo us ke hisse se wapas aata hai. */}
+      <Row label="Diesel — ART ka apna kharcha" value={ourFuelExpense} />
+      <Row label="Diesel — vendor se wasool hona hai" value={ourFuelRecoverable} />
+      <Row label="Diesel — farmer/vendor ka apna" value={othersFuel} />
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {bill ? (
+        <div className="flex justify-between py-0.5 font-display font-semibold">
+          <span>ART Commission ({bill.commission_percentage}%)</span>
+          <span className="text-brand-700 dark:text-brand-300">Rs {bill.commission_amount.toLocaleString()}</span>
+        </div>
+      ) : (
+        <Missing label="ART Commission" note="bill ke baad" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Jis adad ka abhi wajood hi nahi, us ke saamne "Rs 0" likhna jhoot hai.
+ * Sifar kehta hai "dekh liya, kuch nahi bana" -- yahan baat ye hai ke
+ * hisaab abhi bana hi nahi.
+ */
+function Missing({ label, note }: { label: string; note: string }) {
+  return (
+    <div className="flex justify-between py-0.5">
+      <span className="text-surface-600 dark:text-surface-300">{label}</span>
+      <span className="text-surface-400 dark:text-surface-500">— {note}</span>
+    </div>
+  );
+}
+
+/**
+ * "Confirm & Close".
+ *
+ * Ye khud koi shart nahi parakhta. Band ho sakti hai ya nahi -- wo
+ * faisla `fn_machinery_booking_guard` ka hai (bill maujood ho, aur
+ * farmer ka balance sifar ho), aur wohi apne alfaz mein mana karta hai.
+ * Wahi shart yahan dobara likhna do-jagah-hisaab ki shuruaat hoti.
+ *
+ * Upar summary pehle hi saara hisaab dikha chuki hoti hai, is liye rok
+ * lagne par banda hairaan nahi hota -- wajah us ke saamne thi.
+ *
+ * Vendor ka balance band hone ki shart nahi hai (aaj bhi nahi) --
+ * dikhta hai magar rokta nahi.
+ */
+function CloseBookingForm({
+  bookingId,
+  bill,
+  balance,
+  vendorRemaining,
+}: {
+  bookingId: string;
+  bill: boolean;
+  balance: number | null;
+  vendorRemaining: number;
+}) {
+  const [state, action] = useFormState(closeBookingIfSettled, initialState);
+  const settled = bill && (balance ?? 0) <= 0;
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      {!bill ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          Bill banaye baghair booking band nahi ki ja sakti.
+        </p>
+      ) : (balance ?? 0) > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          Kisan ka Rs {(balance ?? 0).toLocaleString()} abhi baqi hai — pehle wo adaigi darj karein.
+        </p>
+      ) : vendorRemaining > 0 ? (
+        <p className="rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+          Kisan ka hisaab barabar hai. Vendor ka Rs {vendorRemaining.toLocaleString()} abhi baqi hai — ye booking band
+          hone se nahi rokta, magar wo raqam vendor ke khate par khari rahegi.
+        </p>
+      ) : null}
+      <Submit label="Confirm & Close" disabled={!settled} />
+    </form>
   );
 }
 
@@ -947,43 +1641,16 @@ function Row({ label, value }: { label: string; value: number }) {
   );
 }
 
-function StepCard({
-  n,
-  title,
-  done,
-  locked,
-  children,
-}: {
-  n: number;
-  title: string;
-  done: boolean;
-  locked?: boolean;
-  children: React.ReactNode;
-}) {
-  const lang = useLang();
-  return (
-    <Card className={locked ? "opacity-60" : undefined}>
-      <div className="mb-3 flex items-center gap-2 border-b border-surface-100 pb-2 dark:border-surface-800">
-        <span
-          className={
-            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white " +
-            (done ? "bg-brand-600" : "bg-surface-400")
-          }
-        >
-          {done ? <Check className="h-3.5 w-3.5" /> : n}
-        </span>
-        <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h2>
-      </div>
-      {locked ? (
-        <p className="text-sm text-surface-500">{t("mb_gate_note", lang)}</p>
-      ) : (
-        children
-      )}
-    </Card>
-  );
-}
-
-
+/* `StepCard` yahan se hata diya gaya (14 September).
+ *
+ * Ye wo khana tha jo har qadam ke liye HAMESHA khula rehta tha -- aathon
+ * ek sath, chahe kaam ho chuka ho. Malik ki asal shikayat wohi thi:
+ * "booking wala kaam bohat mushkil bana diya hai." Us ki jagah ab teen
+ * cheezein hain: chaar bade button (jo khana khud kholte hain), `Compact`
+ * (jo band rehta hai aur ek lakeer mein apna haal bata deta hai), aur do
+ * table (jo ho chuka wo dikhati hain).
+ *
+ * Andar ke saare form wohi hain -- ek bhi action nahi badla. */
 function Eff({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-surface-50 px-2 py-1.5 dark:bg-surface-800">
@@ -1830,14 +2497,34 @@ function FuelForm({
         </div>
         <div>
           <Label>{t("mc_diesel_paid_by", lang)}</Label>
-          <Select name="paid_by" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+          {/* "Driver" screen par alag dikhta hai magar peeche wohi
+              `vendor` hai (B.2).
+
+              Malik ne driver ko chautha payer maanga tha. Us ke liye
+              `paid_by` mein naya qadar daalna sab se mehnga raasta hota:
+              har wo view aur guard jo aaj `company | vendor | farmer`
+              ginta hai (diesel ki wasooli, vendor settlement, P&L) chup
+              chaap us qatar ko chhoR deta -- aur diesel gum ho jata.
+              Driver vendor ka apna aadmi hai, us ka diya hua diesel
+              vendor ke hisse se hi wapas aata hai, is liye hisaab dono
+              soorton mein bilkul ek jaisa hai. Farq sirf lafz ka hai,
+              aur lafz yahin rehta hai. */}
+          <Select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
             <option value="">—</option>
             <option value="farmer">{t("mc_diesel_by_farmer", lang)}</option>
             <option value="vendor">{t("mc_diesel_by_vendor", lang)}</option>
+            <option value="driver">Driver</option>
             <option value="company">{t("mc_diesel_by_company", lang)}</option>
           </Select>
+          <input type="hidden" name="paid_by" value={paidBy === "driver" ? "vendor" : paidBy} />
         </div>
       </div>
+      {paidBy === "driver" && (
+        <p className="text-xs text-surface-500">
+          Driver ka diya hua diesel vendor ke khate mein darj hota hai — wo vendor ka apna aadmi hai, aur ye raqam usi
+          ke hisse se wapas aati hai.
+        </p>
+      )}
       {paidBy === "company" && (
         <div>
           <Label>{t("mc_diesel_account", lang)}</Label>
@@ -1874,17 +2561,25 @@ function WorkForm({
   done,
   harvestType,
   accounts,
+  defaultFinal,
 }: {
   bookingId: string;
   estimated: number;
   done: number;
   harvestType: string | null;
   accounts: Array<{ id: string; name: string; account_type: string }>;
+  /**
+   * "Mark Work Complete" wale khane se aaye to nishan pehle se laga hua
+   * aata hai -- button ka naam wohi keh raha hai. Banda phir bhi utaar
+   * sakta hai: aadha din ka kaam darj karna ho to wo bhi isi khane se
+   * hota hai.
+   */
+  defaultFinal?: boolean;
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
   const [photo, setPhoto] = useState("");
-  const [isFinal, setIsFinal] = useState(false);
+  const [isFinal, setIsFinal] = useState(Boolean(defaultFinal));
   const [reminder, setReminder] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");

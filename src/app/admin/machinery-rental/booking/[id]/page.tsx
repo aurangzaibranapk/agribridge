@@ -226,6 +226,13 @@ export default async function MachineryBookingPage({ params }: { params: Promise
         reference: p.reference,
         evidence_url: p.evidence_url,
         received_by_name: p.received_by ? actorName.get(p.received_by) ?? "—" : null,
+        // Khate ka naam safhe par dikhta hai (malik ka mockup: Payment
+        // Records mein "Account/Khata" ka khana). Sirf id bhejni parti
+        // hai -- naam `accounts` se mil jata hai jo pehle se ja raha
+        // hai. Khali id ka matlab "is raaste par koi khata hota hi
+        // nahi" (cash, khata, vendor_collected), "khata bhoola gaya"
+        // nahi -- aur safha dono ko alag alag likhta hai.
+        finance_account_id: p.finance_account_id ?? null,
       }))}
       dispatches={(dispatches ?? []).map((d) => ({
         id: d.id,

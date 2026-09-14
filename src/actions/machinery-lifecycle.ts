@@ -2694,6 +2694,66 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
   return { success: true };
 }
 
+/**
+ * Booking band karna jab hisaab pehle hi barabar ho.
+ *
+ * `recordFinalPayment` aakhri adaigi par khud booking band kar deta hai
+ * (upar wali lakeer) -- yani aam soorat mein ye action ki zaroorat hi
+ * nahi parti. Magar ek soorat aisi hai jahan koi adaigi darj hoti hi
+ * nahi: advance itna tha ke bill usi se poora ho gaya. Us waqt balance
+ * sifar hota hai, kaam khatam hota hai, aur booking phir bhi khuli rehti
+ * hai -- kyunke band karne wali lakeer sirf adaigi ke raaste par thi.
+ * Wo booking "payment baqi" wali qatar mein khari rehti hai jahan kuch
+ * baqi hai hi nahi.
+ *
+ * Ye action us khali jagah ko bharta hai aur is se ZYADA kuch nahi
+ * karta: koi ledger entry nahi, koi raqam nahi, koi apna hisaab nahi --
+ * sirf status. "Band ho sakti hai ya nahi" ka faisla yahan likha hi nahi
+ * gaya, jaan boojh kar: wo `fn_machinery_booking_guard` ke paas hai (bill
+ * maujood ho, aur balance sifar ho). Wahi shart yahan dobara likhna us
+ * do-jagah-hisaab ki shuruaat hoti jo is module mein pehle teen dafa
+ * ghalat adad de chuka hai. Guard mana kare to us ka apna paighaam
+ * seedha staff ko dikhaya jata hai -- apne alfaz mein dobara likh kar
+ * nahi, kyunke wajah wohi jaanta hai.
+ */
+export async function closeBookingIfSettled(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const actorId = await currentUserId(supabase);
+  const bookingId = str(formData, "booking_id");
+  if (!bookingId) return { error: "Booking nahi mili." };
+
+  const { data: booking } = await supabase
+    .from("machinery_bookings")
+    .select("id, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "Booking nahi mili." };
+  if (booking.status === "closed") return { notice: "Ye booking pehle hi band hai." };
+  if (booking.status === "cancelled") return { error: "Cancel shuda booking band nahi ki jati." };
+
+  const { error } = await supabase
+    .from("machinery_bookings")
+    .update({ status: "closed", closed_at: new Date().toISOString() })
+    .eq("id", bookingId);
+
+  // Guard ka apna paighaam saamne rakha jata hai -- "kuch ghalat ho gaya"
+  // likh dena staff ko wo ek cheez nahi batata jo usay chahiye: kitna
+  // baqi hai.
+  if (error) return { error: error.message };
+
+  await logEvent({
+    bookingId,
+    eventType: "booking_closed",
+    fromStatus: booking.status,
+    toStatus: "closed",
+    note: "Hisaab pehle se barabar tha — booking band ki gayi",
+    actorId,
+  });
+
+  revalidateAll(bookingId);
+  return { success: true, notice: "Booking band kar di gayi." };
+}
+
 // =====================================================================
 // 8. Cancel
 // =====================================================================
