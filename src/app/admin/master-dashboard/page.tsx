@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
 import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-context";
-import { position } from "@/lib/ledger/reports";
+import { position, partyBalances } from "@/lib/ledger/reports";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
@@ -49,7 +49,18 @@ export default async function MasterDashboardPage() {
   const totalReceivables = haalat.lena;
   const receivablesBreakdown = haalat.lenaRows.map((r) => ({ name: r.name, value: r.amount }));
   const totalPayables = haalat.dena === null ? null : Math.abs(haalat.dena);
-  const payablesBreakdown = haalat.denaRows.map((r) => ({ name: r.name, value: Math.abs(r.amount) }));
+
+  // TO PAY ka breakdown khate ke naam se nahi, BANDE ke naam se -- malik
+  // ka kehna: "alag alag payments aayein naam ke sath, ek total nahi."
+  // Khata ("Supplier ko dena") sab suppliers ko ek jagah mila deta tha;
+  // partyBalances() har supplier/vendor ko alag qatar deta hai.
+  const parties = await partyBalances(aajKaKhana());
+  const payablesBreakdown = parties.error
+    ? haalat.denaRows.map((r) => ({ name: r.name, value: Math.abs(r.amount) }))
+    : parties.rows
+        .filter((r) => r.payable > 0.5)
+        .sort((a, b) => b.payable - a.payable)
+        .map((r) => ({ name: r.name ?? "—", value: r.payable }));
 
   // Inventory breakdown (per category) -- BATCH KI ASAL KHAREED QEEMAT PAR.
   //
