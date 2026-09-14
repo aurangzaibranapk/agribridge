@@ -271,7 +271,9 @@ export function CountingSheet({
             {done.map((l) => (
               <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
                 <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                <span className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">{l.productName}</span>
+                <div className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">
+                  <ProductNameCell productId={l.productId} name={l.productName} />
+                </div>
                 <div className="w-40">
                   <CountCell l={l} />
                 </div>
