@@ -19,6 +19,70 @@ function round2(v: number): number {
 }
 
 /**
+ * Ginti karte waqt hi product ka naam theek karna (malik, 14 September)
+ * -- alag safhe par jane ki zaroorat nahi. Ijazat ka usool wahi hai jo
+ * poore Products module mein hai: Owner/Admin ya "edit_needs_approval =
+ * false" wale seedha badal dete hain; baaqi sab ki tajweez ban jati hai
+ * (`product_edit_requests`), naam FORAN nahi badalta -- Admin ki
+ * tasdeeq ka intezar rehta hai. `changes` mein sirf `name` hai, is liye
+ * manzoori par sirf naam hi badlega, koi aur khana khali nahi hoga.
+ */
+export async function renameProductFromCount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const productId = String(formData.get("product_id") ?? "");
+  if (!productId) return { error: "Product saaf nahi." };
+
+  const newName = String(formData.get("new_name") ?? "").trim();
+  if (newName.length < 2) return { error: "Naya naam likhein." };
+
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isUnrestricted = ["owner", "super_admin", "admin"].includes(me?.role ?? "");
+
+  const { data: permission } = await supabase
+    .from("staff_product_permissions")
+    .select("can_edit, edit_needs_approval")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  if (!isUnrestricted && !permission?.can_edit) {
+    return { error: "Aap ke paas product ka naam badalne ki ijazat nahi hai." };
+  }
+
+  const skipApproval = isUnrestricted || permission?.edit_needs_approval === false;
+
+  if (skipApproval) {
+    const { error } = await supabase
+      .from("products")
+      .update({ name: newName, updated_at: new Date().toISOString() })
+      .eq("id", productId);
+    if (error) return { error: error.message };
+    revalidatePath("/admin/stock-count");
+    return { success: true, message: "Naam badal gaya." };
+  }
+
+  const { data: current } = await supabase.from("products").select("name").eq("id", productId).maybeSingle();
+  const { error } = await supabase.from("product_edit_requests").insert({
+    product_id: productId,
+    proposed_by: user.id,
+    changes: { name: newName },
+    status: "pending",
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products/pending-edits");
+  return {
+    success: true,
+    message: `Tajweez bhej di gayi ("${current?.name ?? "purana naam"}" → "${newName}") — Admin ki tasdeeq ka intezar hai, foran nahi badalega.`,
+  };
+}
+
+/**
  * Ginti shuru karna.
  *
  * Isi lamhe do cheezein mahfooz ho jati hain: system ka adad, aur maal

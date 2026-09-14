@@ -308,6 +308,8 @@ export const stockCountDict = {
   sc_extra_add_row: { en: "Add another row", rm: "Ek aur row jorein", ur: "ایک اور قطار جوڑیں" },
   sc_extra_remove_row: { en: "Remove this row", rm: "Ye row hatayein", ur: "یہ قطار ہٹائیں" },
   sc_extra_close: { en: "Cancel", rm: "Band karein", ur: "بند کریں" },
+  sc_rename_short: { en: "Name is too short.", rm: "Naam bohat chhota hai.", ur: "نام بہت چھوٹا ہے۔" },
+  sc_rename_save: { en: "Save name", rm: "Naam mehfooz karein", ur: "نام محفوظ کریں" },
 
   // --- Milaan ---
   sc_matched: { en: "items matched exactly.", rm: "cheezen bilkul theek milin.", ur: "چیزیں بالکل ٹھیک ملیں۔" },

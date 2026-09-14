@@ -236,6 +236,7 @@ export default async function StockCountPage({
                     countId={current.id}
                     lines={current.lines.map((l) => ({
                       id: l.id,
+                      productId: l.productId,
                       productName: l.productName,
                       unit: l.unit,
                       packSize: l.packSize,

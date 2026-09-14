@@ -1,8 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { startCount, saveCounts, postCount, verifyCount, addExtraCountItem, type ActionState } from "@/actions/stock-count";
-import { EyeOff, AlertTriangle, PlusCircle, X } from "lucide-react";
+import {
+  startCount,
+  saveCounts,
+  postCount,
+  verifyCount,
+  addExtraCountItem,
+  renameProductFromCount,
+  type ActionState,
+} from "@/actions/stock-count";
+import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -87,7 +95,7 @@ export function CountingSheet({
   lines,
 }: {
   countId: string;
-  lines: { id: string; productName: string; unit: string | null; packSize: string | null; counted: number | null }[];
+  lines: { id: string; productId: string; productName: string; unit: string | null; packSize: string | null; counted: number | null }[];
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(saveCounts, initialState);
@@ -122,7 +130,7 @@ export function CountingSheet({
               <tr key={l.id}>
                 <td className="px-4 py-2 text-right text-xs tabular-nums text-surface-400">{i + 1}</td>
                 <td className="px-4 py-2">
-                  <span className="text-surface-800 dark:text-surface-200">{l.productName}</span>
+                  <ProductNameCell productId={l.productId} name={l.productName} />
                   {(l.packSize || l.unit) && (
                     <span className="block text-xs text-surface-400">
                       {[l.packSize, l.unit].filter(Boolean).join(" • ")}
@@ -152,6 +160,82 @@ export function CountingSheet({
     </form>
 
       <ExtraItemForm countId={countId} />
+    </div>
+  );
+}
+
+/**
+ * Naam theek karna -- ginti se bahar jane ki zaroorat nahi (14
+ * September). Yahan `<form>` istemal nahi ho sakta (ye row us bade
+ * `<form>` ke andar hai jo poori ginti save karta hai, aur ek form
+ * doosre ke andar nahi ja sakta) -- is liye action seedha function ki
+ * tarah bulaya jata hai, apna FormData khud bana kar.
+ */
+function ProductNameCell({ productId, name }: { productId: string; name: string }) {
+  const lang = useLang();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<ActionState>({});
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setValue(name);
+          setFeedback({});
+          setEditing(true);
+        }}
+        className="group flex items-center gap-1.5 text-left text-surface-800 dark:text-surface-200"
+      >
+        {name}
+        <Pencil className="h-3 w-3 shrink-0 text-surface-300 group-hover:text-brand-600" />
+      </button>
+    );
+  }
+
+  async function save() {
+    if (value.trim().length < 2) {
+      setFeedback({ error: t("sc_rename_short", lang) });
+      return;
+    }
+    setSaving(true);
+    const fd = new FormData();
+    fd.set("product_id", productId);
+    fd.set("new_name", value.trim());
+    const result = await renameProductFromCount({}, fd);
+    setSaving(false);
+    setFeedback(result);
+    if (result.success) setEditing(false);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        autoFocus
+        className="rounded-lg border border-brand-400 px-2 py-1 text-sm dark:bg-surface-900"
+      />
+      <button
+        type="button"
+        onClick={save}
+        disabled={saving}
+        className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-white disabled:opacity-50"
+        aria-label={t("sc_rename_save", lang)}
+      >
+        <Check className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-surface-200 text-surface-400 dark:border-surface-700"
+        aria-label={t("sc_extra_close", lang)}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+      {feedback.error && <span className="text-xs text-red-600">{feedback.error}</span>}
     </div>
   );
 }
