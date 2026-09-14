@@ -9,7 +9,7 @@ export interface ActionState {
   success?: boolean;
 }
 
-async function getApprovalContext(supabase: ReturnType<typeof createClient>) {
+export async function getApprovalContext(supabase: ReturnType<typeof createClient>) {
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -300,6 +300,18 @@ export const stockCountDict = {
   sc_save_row: { en: "Save this item", rm: "Isi waqt mehfooz karein", ur: "اسی وقت محفوظ کریں" },
   sc_row_saved: { en: "Saved", rm: "Mehfooz ho gaya", ur: "محفوظ ہو گیا" },
 
+  // --- Duplicate product ka merge (416) ---
+  sc_merge_open: { en: "Is this a duplicate of another product?", rm: "Ye kisi doosre product ka duplicate hai?", ur: "کیا یہ کسی دوسرے پروڈکٹ کا ڈوپلیکیٹ ہے؟" },
+  sc_merge_note: {
+    en: "Type the correct (real) name — its stock will move there, only after admin approval.",
+    rm: "Asal (sahi) naam likhein — us ka stock wahan chala jayega, sirf admin ki tasdeeq ke baad.",
+    ur: "اصل (صحیح) نام لکھیں — اس کا اسٹاک وہاں چلا جائے گا، صرف ایڈمن کی تصدیق کے بعد۔",
+  },
+  sc_merge_target: { en: "Real name", rm: "Asal naam", ur: "اصل نام" },
+  sc_merge_check: { en: "Check", rm: "Dekhein", ur: "دیکھیں" },
+  sc_merge_send: { en: "Send request", rm: "Tajweez bhejein", ur: "تجویز بھیجیں" },
+  sc_merge_will_move: { en: "Will move:", rm: "Jayega:", ur: "جائے گا:" },
+
   // --- Extra cheez mili (408) ---
   sc_extra_open: { en: "Found something not on this list?", rm: "Koi cheez mili jo list mein nahi thi?", ur: "کوئی چیز ملی جو لسٹ میں نہیں تھی؟" },
   sc_extra_title: { en: "Add what you found", rm: "Jo mila, darj karein", ur: "جو ملا، درج کریں" },

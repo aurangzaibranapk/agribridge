@@ -10,7 +10,8 @@ import {
   renameProductFromCount,
   type ActionState,
 } from "@/actions/stock-count";
-import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save } from "lucide-react";
+import { previewProductMerge, requestProductMerge } from "@/actions/product-merge";
+import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save, Merge } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -244,7 +245,7 @@ export function CountingSheet({
               <tr key={l.id}>
                 <td className="px-4 py-2 text-right text-xs tabular-nums text-surface-400">{i + 1}</td>
                 <td className="px-4 py-2">
-                  <ProductNameCell productId={l.productId} name={l.productName} />
+                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} />
                   {(l.packSize || l.unit) && (
                     <span className="block text-xs text-surface-400">
                       {[l.packSize, l.unit].filter(Boolean).join(" • ")}
@@ -277,7 +278,7 @@ export function CountingSheet({
               <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
                 <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
                 <div className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">
-                  <ProductNameCell productId={l.productId} name={l.productName} />
+                  <ProductNameCell productId={l.productId} name={l.productName} otherNames={lines.map((x) => x.productName)} />
                 </div>
                 <div className="w-40">
                   <CountCell l={l} />
@@ -302,7 +303,7 @@ export function CountingSheet({
  * doosre ke andar nahi ja sakta) -- is liye action seedha function ki
  * tarah bulaya jata hai, apna FormData khud bana kar.
  */
-function ProductNameCell({ productId, name }: { productId: string; name: string }) {
+function ProductNameCell({ productId, name, otherNames }: { productId: string; name: string; otherNames?: string[] }) {
   const lang = useLang();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
@@ -311,18 +312,21 @@ function ProductNameCell({ productId, name }: { productId: string; name: string 
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          setValue(name);
-          setFeedback({});
-          setEditing(true);
-        }}
-        className="group flex items-center gap-1.5 text-left text-surface-800 dark:text-surface-200"
-      >
-        {name}
-        <Pencil className="h-3 w-3 shrink-0 text-surface-300 group-hover:text-brand-600" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            setValue(name);
+            setFeedback({});
+            setEditing(true);
+          }}
+          className="group flex items-center gap-1.5 text-left text-surface-800 dark:text-surface-200"
+        >
+          {name}
+          <Pencil className="h-3 w-3 shrink-0 text-surface-300 group-hover:text-brand-600" />
+        </button>
+        <MergeButton productId={productId} name={name} otherNames={otherNames ?? []} />
+      </div>
     );
   }
 
@@ -367,6 +371,93 @@ function ProductNameCell({ productId, name }: { productId: string; name: string 
         <X className="h-3.5 w-3.5" />
       </button>
       {feedback.error && <span className="text-xs text-red-600">{feedback.error}</span>}
+    </div>
+  );
+}
+
+/**
+ * Duplicate product ko doosre (asal) naam mein milane ki tajweez (malik,
+ * 14 September): "koi product nikalni ho to request ho jaye ... us ke
+ * against stock ho to duplicate naam par chala jaye, stock duplicate na
+ * ho". Do qadam: pehle preview (kitna stock, kis naam mein), phir
+ * "Tajweez bhejein" -- amal (stock hilana + purana naam hataana) sirf
+ * Admin/Owner ki tasdeeq par hota hai, yahan kuch nahi badalta.
+ */
+function MergeButton({ productId, name, otherNames }: { productId: string; name: string; otherNames: string[] }) {
+  const lang = useLang();
+  const [open, setOpen] = useState(false);
+  const [targetName, setTargetName] = useState("");
+  const [previewState, previewAction] = useFormState(previewProductMerge, {});
+  const [requestState, requestAction] = useFormState(requestProductMerge, {});
+  const listId = `sc-merge-names-${productId}`;
+
+  if (requestState.success) {
+    return <span className="text-xs text-green-700 dark:text-green-400">{requestState.message}</span>;
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title={t("sc_merge_open", lang)}
+        className="text-surface-300 hover:text-brand-600"
+      >
+        <Merge className="h-3 w-3" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed border-surface-300 bg-surface-50 p-2 text-xs dark:border-surface-700 dark:bg-surface-900">
+      <p className="mb-1 text-surface-500">{t("sc_merge_note", lang)}</p>
+      <form action={previewAction} className="flex items-center gap-1">
+        <input type="hidden" name="source_product_id" value={productId} />
+        <input
+          name="target_name"
+          list={listId}
+          value={targetName}
+          onChange={(e) => setTargetName(e.target.value)}
+          placeholder={t("sc_merge_target", lang)}
+          className="w-40 rounded-lg border border-surface-300 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+        />
+        <datalist id={listId}>
+          {otherNames
+            .filter((n) => n !== name)
+            .map((n) => (
+              <option key={n} value={n} />
+            ))}
+        </datalist>
+        <button type="submit" className="rounded-lg border border-surface-300 px-2 py-1 text-surface-600 hover:border-brand-400 dark:border-surface-700">
+          {t("sc_merge_check", lang)}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-surface-400">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </form>
+
+      {previewState.error && <p className="mt-1 text-red-600">{previewState.error}</p>}
+
+      {previewState.preview && (
+        <div className="mt-1.5 rounded-lg bg-amber-50 p-1.5 dark:bg-amber-950/20">
+          <p className="text-amber-800 dark:text-amber-400">
+            {t("sc_merge_will_move", lang)} <b>{previewState.preview.totalQty}</b> → &quot;{previewState.preview.targetName}&quot;
+          </p>
+          {previewState.preview.rows.length > 0 && (
+            <p className="text-[10px] text-amber-700/80 dark:text-amber-400/70">
+              {previewState.preview.rows.map((r) => `${r.warehouseName}: ${r.qty}`).join(", ")}
+            </p>
+          )}
+          <form action={requestAction} className="mt-1">
+            <input type="hidden" name="source_product_id" value={productId} />
+            <input type="hidden" name="target_product_id" value={previewState.preview.targetProductId} />
+            <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-white hover:bg-brand-700">
+              {t("sc_merge_send", lang)}
+            </button>
+          </form>
+        </div>
+      )}
+      {requestState.error && <p className="mt-1 text-red-600">{requestState.error}</p>}
     </div>
   );
 }

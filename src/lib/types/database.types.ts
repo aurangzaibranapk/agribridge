@@ -20931,6 +20931,45 @@ export type Database = {
           },
         ]
       }
+      product_merge_requests: {
+        Row: {
+          created_at: string
+          id: string
+          proposed_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_product_id: string
+          source_stock_snapshot: Json | null
+          status: string
+          target_product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_product_id: string
+          source_stock_snapshot?: Json | null
+          status?: string
+          target_product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_product_id?: string
+          source_stock_snapshot?: Json | null
+          status?: string
+          target_product_id?: string
+        }
+        Relationships: []
+      }
       product_name_history: {
         Row: {
           changed_at: string

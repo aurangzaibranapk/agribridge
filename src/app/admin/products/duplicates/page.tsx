@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { DuplicatesClient } from "./duplicates-client";
+import { MergeRequestsClient } from "./merge-requests-client";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,37 @@ export default async function DuplicateProductsPage() {
     );
   }
 
-  const [{ data: products }, { data: inventoryRows }] = await Promise.all([
+  const [{ data: products }, { data: inventoryRows }, { data: mergeRequests }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, pack_size, purchase_price, selling_price, categories(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("inventory").select("product_id, quantity_on_hand, warehouses(name)"),
+    supabase
+      .from("product_merge_requests")
+      .select(
+        "id, created_at, source_stock_snapshot, source:products!product_merge_requests_source_product_id_fkey(name), target:products!product_merge_requests_target_product_id_fkey(name), profiles(full_name)"
+      )
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
   ]);
+
+  const pendingMerges = (mergeRequests ?? []).map((r: any) => {
+    const source = Array.isArray(r.source) ? r.source[0] : r.source;
+    const target = Array.isArray(r.target) ? r.target[0] : r.target;
+    const proposer = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    const snapshot = (r.source_stock_snapshot ?? []) as { warehouseName: string; qty: number }[];
+    return {
+      id: r.id,
+      created_at: r.created_at,
+      source_name: source?.name ?? "—",
+      target_name: target?.name ?? "—",
+      proposer_name: proposer?.full_name ?? "—",
+      total_qty: snapshot.reduce((s, row) => s + Number(row.qty ?? 0), 0),
+      rows: snapshot,
+    };
+  });
 
   const stockByProduct = new Map<string, { warehouseName: string; qty: number }[]>();
   for (const row of (inventoryRows ?? []) as any[]) {
@@ -79,6 +103,7 @@ export default async function DuplicateProductsPage() {
         title="Duplicate Products"
         description={`${duplicateGroups.length} naam aise hain jin par ek se zyada product ban chuka hai (kul ${totalDuplicateProducts} products) — naam theek karein ya jo istemal mein nahi wo hata dein.`}
       />
+      <MergeRequestsClient requests={pendingMerges} />
       <DuplicatesClient groups={duplicateGroups} />
     </div>
   );
