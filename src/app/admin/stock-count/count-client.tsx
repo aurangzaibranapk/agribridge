@@ -90,15 +90,60 @@ export function StartCountForm({ warehouses }: { warehouses: { id: string; name:
  * na HTML mein. Hidden field mein bhej dena bhi kaafi nahi hota: page ka
  * source dekh kar adad mil jata hai.
  */
+type CountLine = { id: string; productId: string; productName: string; unit: string | null; packSize: string | null; counted: number | null };
+
 export function CountingSheet({
   countId,
   lines,
 }: {
   countId: string;
-  lines: { id: string; productId: string; productName: string; unit: string | null; packSize: string | null; counted: number | null }[];
+  lines: CountLine[];
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(saveCounts, initialState);
+  const [search, setSearch] = useState("");
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(lines.map((l) => [l.id, l.counted != null ? String(l.counted) : ""]))
+  );
+  // Jo cheez gin li gayi (khali nahi) wo "baqi" wali list se hat kar
+  // neeche "gin li gayin" mein chali jati hai -- taake bhari fehrist mein
+  // se sirf wohi bache jo abhi karni hain (14 September, malik ki maang).
+  const [doneIds, setDoneIds] = useState<Set<string>>(
+    () => new Set(lines.filter((l) => l.counted != null).map((l) => l.id))
+  );
+
+  function handleValueChange(id: string, v: string) {
+    setValues((prev) => ({ ...prev, [id]: v }));
+  }
+  function handleBlur(id: string) {
+    setDoneIds((prev) => {
+      const next = new Set(prev);
+      if (values[id]?.trim()) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function CountInput({ l }: { l: CountLine }) {
+    return (
+      <input
+        name={`qty_${l.id}`}
+        type="number"
+        min={0}
+        step="0.001"
+        inputMode="decimal"
+        value={values[l.id] ?? ""}
+        onChange={(e) => handleValueChange(l.id, e.target.value)}
+        onBlur={() => handleBlur(l.id)}
+        placeholder="—"
+        className="w-full rounded-lg border border-surface-300 px-2 py-1.5 text-right text-sm dark:border-surface-700 dark:bg-surface-900"
+      />
+    );
+  }
+
+  const q = search.trim().toLowerCase();
+  const pending = lines.filter((l) => !doneIds.has(l.id) && (!q || l.productName.toLowerCase().includes(q)));
+  const done = lines.filter((l) => doneIds.has(l.id));
 
   return (
     <div className="space-y-3">
@@ -112,9 +157,19 @@ export function CountingSheet({
         </span>
       </div>
 
-      <p className="text-xs font-medium text-surface-500">
-        {t("sc_total_items", lang)}: {lines.length}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-surface-500">
+          {t("sc_total_items", lang)}: {lines.length} · {t("sc_remaining", lang)}: {lines.length - done.length}
+        </p>
+      </div>
+
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={t("sc_search_item", lang)}
+        className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+      />
 
       <div className="overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
         <table className="w-full text-sm">
@@ -126,7 +181,7 @@ export function CountingSheet({
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
-            {lines.map((l, i) => (
+            {pending.map((l, i) => (
               <tr key={l.id}>
                 <td className="px-4 py-2 text-right text-xs tabular-nums text-surface-400">{i + 1}</td>
                 <td className="px-4 py-2">
@@ -138,22 +193,39 @@ export function CountingSheet({
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  <input
-                    name={`qty_${l.id}`}
-                    type="number"
-                    min={0}
-                    step="0.001"
-                    inputMode="decimal"
-                    defaultValue={l.counted ?? ""}
-                    placeholder="—"
-                    className="w-full rounded-lg border border-surface-300 px-2 py-1.5 text-right text-sm dark:border-surface-700 dark:bg-surface-900"
-                  />
+                  <CountInput l={l} />
                 </td>
               </tr>
             ))}
+            {pending.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-sm text-surface-400">
+                  {q ? t("sc_no_match", lang) : t("sc_all_done", lang)}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      {done.length > 0 && (
+        <div className="overflow-hidden rounded-card border border-green-200 dark:border-green-900">
+          <p className="border-b border-green-200 bg-green-50 px-4 py-2 text-xs font-medium text-green-800 dark:border-green-900 dark:bg-green-950/20 dark:text-green-400">
+            {t("sc_counted_done", lang)}: {done.length}
+          </p>
+          <div className="divide-y divide-surface-100 dark:divide-surface-800">
+            {done.map((l) => (
+              <div key={l.id} className="flex items-center gap-2 px-4 py-1.5">
+                <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                <span className="flex-1 truncate text-sm text-surface-600 dark:text-surface-400">{l.productName}</span>
+                <div className="w-24">
+                  <CountInput l={l} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Feedback state={state} />
       <Submit label={t("sc_save_counts", lang)} />

@@ -292,6 +292,11 @@ export const stockCountDict = {
   sc_item: { en: "Item", rm: "Cheez", ur: "چیز" },
   sc_you_counted: { en: "You counted", rm: "Aap ne gina", ur: "آپ نے گنا" },
   sc_save_counts: { en: "Save the counted numbers", rm: "Gine hue adad mahfooz karein", ur: "گنے ہوئے عدد محفوظ کریں" },
+  sc_search_item: { en: "Search item…", rm: "Cheez talaash karein…", ur: "چیز تلاش کریں…" },
+  sc_remaining: { en: "Remaining", rm: "Baqi", ur: "باقی" },
+  sc_no_match: { en: "No item matches this search.", rm: "Is talaash se koi cheez nahi mili.", ur: "اس تلاش سے کوئی چیز نہیں ملی۔" },
+  sc_all_done: { en: "All items are counted.", rm: "Sab cheezein gin li gayi hain.", ur: "سب چیزیں گن لی گئی ہیں۔" },
+  sc_counted_done: { en: "Counted", rm: "Gin li gayin", ur: "گن لی گئیں" },
 
   // --- Extra cheez mili (408) ---
   sc_extra_open: { en: "Found something not on this list?", rm: "Koi cheez mili jo list mein nahi thi?", ur: "کوئی چیز ملی جو لسٹ میں نہیں تھی؟" },
