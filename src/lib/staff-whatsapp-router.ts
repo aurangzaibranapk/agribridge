@@ -5,6 +5,7 @@ import { readBillOrCashPhoto, type BillCashReading } from "@/lib/ai/bill-cash-ph
 import { recordSubmission, type SubmissionKind } from "@/lib/whatsapp-submissions";
 import { looksLikeMilk, handleMilkMessage } from "@/lib/milk-whatsapp";
 import { vehicleForStaff, todaysLog, recordOpening, recordFuel, recordClosing } from "@/lib/vehicle-daily-log";
+import { recordOwnerCommand } from "@/lib/owner-whatsapp-commands";
 
 /**
  * Staff ke WhatsApp message ka jawab.
@@ -292,7 +293,7 @@ export async function handleStaffMessage(msg: IncomingStaffMessage): Promise<str
 
   if (identity.kind !== "verified_staff") return null;
 
-  const { profileId, branchId, fullName } = identity;
+  const { profileId, branchId, fullName, role } = identity;
 
   if (msg.image) {
     return handlePhoto(msg, { profileId, branchId, fullName });
@@ -337,6 +338,15 @@ export async function handleStaffMessage(msg: IncomingStaffMessage): Promise<str
       { profileId, branchId },
       saysCashReceivedText ? "cash_received" : saysCashPaidText ? "cash_paid" : "expense"
     );
+  }
+
+  // Malik ka apna number aur koi jaana pehchana staff pattern nahi mila
+  // -- to ye HELP text nahi, ye ek hidayat hai (Command Center Stage 2).
+  // Sirf owner/super_admin: koi bhi staff "database delete karo" jaisa
+  // paigham bhej kar tawajjah nahi maang sakta.
+  if ((role === "owner" || role === "super_admin") && text.trim().length > 0) {
+    await recordOwnerCommand(msg.fromPhone, profileId, text);
+    return "Samajh gaya — dekh raha hoon, thodi dair mein update dunga.";
   }
 
   return `Assalam-o-Alaikum ${fullName}.\n\n${HELP}`;

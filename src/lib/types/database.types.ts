@@ -87,6 +87,51 @@ export type Database = {
         ]
       }
 
+      owner_whatsapp_commands: {
+        Row: {
+          created_at: string
+          from_phone: string
+          id: string
+          message: string
+          profile_id: string | null
+          resolved_at: string | null
+          responded_at: string | null
+          response_text: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          from_phone: string
+          id?: string
+          message: string
+          profile_id?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          from_phone?: string
+          id?: string
+          message?: string
+          profile_id?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_whatsapp_commands_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
       payment_promises: {
         Row: {
           assigned_to: string | null

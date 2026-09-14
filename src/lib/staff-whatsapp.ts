@@ -21,7 +21,7 @@ const MAX_ATTEMPTS = 3;
 const CNIC_DIGITS = 6;
 
 export type StaffIdentity =
-  | { kind: "verified_staff"; profileId: string; fullName: string; branchId: string | null }
+  | { kind: "verified_staff"; profileId: string; fullName: string; branchId: string | null; role: string }
   | { kind: "awaiting_cnic"; profileId: string; fullName: string }
   | { kind: "not_staff" };
 
@@ -52,7 +52,7 @@ export async function identifyStaffByWhatsApp(fromPhone: string): Promise<StaffI
 
   const { data: rows } = await service
     .from("staff_details")
-    .select("profile_id, phone, whatsapp_number, whatsapp_verified_at, profiles(full_name, is_active, branch_id)")
+    .select("profile_id, phone, whatsapp_number, whatsapp_verified_at, profiles(full_name, is_active, branch_id, role)")
     .eq("is_active", true);
 
   for (const row of rows ?? []) {
@@ -66,6 +66,7 @@ export async function identifyStaffByWhatsApp(fromPhone: string): Promise<StaffI
         profileId: row.profile_id,
         fullName: profile.full_name ?? "Staff",
         branchId: profile.branch_id ?? null,
+        role: profile.role ?? "sales_staff",
       };
     }
 
