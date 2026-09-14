@@ -20931,6 +20931,104 @@ export type Database = {
           },
         ]
       }
+      product_name_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_name: string
+          old_name: string
+          product_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name: string
+          old_name: string
+          product_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name?: string
+          old_name?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_name_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       product_rate_history: {
         Row: {
           batch_id: string | null

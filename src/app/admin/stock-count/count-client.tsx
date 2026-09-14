@@ -1,7 +1,8 @@
 "use client";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { startCount, saveCounts, postCount, verifyCount, type ActionState } from "@/actions/stock-count";
-import { EyeOff, AlertTriangle } from "lucide-react";
+import { startCount, saveCounts, postCount, verifyCount, addExtraCountItem, type ActionState } from "@/actions/stock-count";
+import { EyeOff, AlertTriangle, PlusCircle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -92,6 +93,7 @@ export function CountingSheet({
   const [state, formAction] = useFormState(saveCounts, initialState);
 
   return (
+    <div className="space-y-3">
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="count_id" value={countId} />
 
@@ -142,6 +144,87 @@ export function CountingSheet({
       <Feedback state={state} />
       <Submit label={t("sc_save_counts", lang)} />
     </form>
+
+      <ExtraItemForm countId={countId} />
+    </div>
+  );
+}
+
+/**
+ * Ginti ke dauran koi cheez mile jo list mein nahi thi (14 September).
+ * Naam se milan pehle hota hai -- mile to usi ka stock badhta hai, na
+ * mile to naya product ban jata hai. Rate khali chhoRa ja sakta hai --
+ * "Rate Baqi" ki fehrist mein khud pahunch jayega.
+ */
+function ExtraItemForm({ countId }: { countId: string }) {
+  const lang = useLang();
+  const [open, setOpen] = useState(false);
+  const [state, formAction] = useFormState(addExtraCountItem, initialState);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline dark:text-brand-300"
+      >
+        <PlusCircle className="h-4 w-4" /> {t("sc_extra_open", lang)}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed border-surface-300 p-3 dark:border-surface-700">
+      <p className="mb-2 text-sm font-medium text-surface-900 dark:text-white">{t("sc_extra_title", lang)}</p>
+      <p className="mb-3 text-xs text-surface-500">{t("sc_extra_note", lang)}</p>
+      <form
+        action={formAction}
+        className="grid gap-2 sm:grid-cols-[1fr_120px_120px_auto]"
+      >
+        <input type="hidden" name="count_id" value={countId} />
+        <input
+          name="name"
+          required
+          placeholder={t("sc_extra_name", lang)}
+          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+        />
+        <input
+          name="quantity"
+          type="number"
+          min={0}
+          step="0.001"
+          required
+          placeholder={t("sc_extra_qty", lang)}
+          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+        />
+        <input
+          name="purchase_price"
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder={t("sc_extra_rate", lang)}
+          className="rounded-lg border border-surface-300 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+        />
+        <ExtraSubmit label={t("sc_extra_add", lang)} />
+      </form>
+      <Feedback state={state} />
+      <button type="button" onClick={() => setOpen(false)} className="mt-2 text-xs text-surface-400 underline">
+        {t("sc_extra_close", lang)}
+      </button>
+    </div>
+  );
+}
+
+function ExtraSubmit({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+    >
+      {pending ? "…" : label}
+    </button>
   );
 }
 

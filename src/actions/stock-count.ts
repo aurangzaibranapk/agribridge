@@ -93,6 +93,156 @@ export async function startCount(_prev: ActionState, formData: FormData): Promis
 }
 
 /**
+ * Ginti ke dauran koi cheez mile jo list mein hi nahi thi (malik,
+ * 14 September) -- na naya product banane ka GRN chahiye, na koi
+ * alag manzoori ka chakkar. Seedha Maal Andar jaisa: stock foran
+ * barh jata hai, koi document nahi banta.
+ *
+ * Naam se milan pehle try hota hai (case-insensitive) -- agar wo
+ * product pehle se hai (chahe kisi bhi godam mein), usi ka stock
+ * badhta hai. Na mile to naya product ban jata hai.
+ *
+ * Isi ginti mein ek nayi qatar bhi ban jati hai (expected_qty=0),
+ * taake milaan ke waqt ye cheez dikhe aur farq ki wajah ("list mein
+ * nahi thi, mili") likhna lazmi ho -- kahin chup chaap na reh jaye.
+ */
+export async function addExtraCountItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const service = createServiceClient();
+  const supabase = createClient();
+
+  const countId = String(formData.get("count_id") ?? "");
+  if (!countId) return { error: "Ginti nahi mili." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2) return { error: "Cheez ka naam likhein." };
+
+  const qtyRaw = String(formData.get("quantity") ?? "").trim();
+  const quantity = Number(qtyRaw);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return { error: "Kitni cheez mili, sahi adad likhein — sifar ya manfi nahi." };
+  }
+
+  const rateRaw = String(formData.get("purchase_price") ?? "").trim();
+  const purchasePrice = rateRaw === "" ? null : Number(rateRaw);
+  if (purchasePrice !== null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
+    return { error: "Rate sahi nahi likha gaya." };
+  }
+
+  const { data: count } = await service
+    .from("stock_counts")
+    .select("id, warehouse_id, status")
+    .eq("id", countId)
+    .maybeSingle();
+  if (!count) return { error: "Ginti nahi mili." };
+  if (count.status !== "counting") {
+    return { error: "Ye ginti ab counting ke marhale mein nahi — extra cheez sirf khuli ginti mein darj ho sakti hai." };
+  }
+
+  // Sirf wahi banda jo isi godam ki ginti kar sakta hai -- ijazat wahi
+  // do raaste jo page.tsx par hain (role ya zimmedari), warna koi bhi
+  // logged-in banda kisi aur ki ginti mein cheez daal sakta.
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  const ROLES = ["owner", "super_admin", "admin", "manager", "finance", "warehouse"];
+  const roleSeIjazat = Boolean(me?.is_active) && ROLES.includes(me?.role ?? "");
+  if (!roleSeIjazat) {
+    const { data: mereGodam } = await supabase.rpc("fn_stock_count_mere_godam");
+    const zimmedar = (mereGodam ?? []).some((r) => r.warehouse_id === count.warehouse_id);
+    if (!Boolean(me?.is_active) || !zimmedar) {
+      return { error: "Is godam ki ginti mein aap ki ijazat nahi hai." };
+    }
+  }
+
+  // Naam se milan -- pehle se hai to usi ka stock badhta hai, naya
+  // product nahi banta (do jagah ek hi cheez do naamon se na ho jaye).
+  const { data: existing } = await service
+    .from("products")
+    .select("id")
+    .ilike("name", name)
+    .eq("is_deleted", false)
+    .maybeSingle();
+
+  let productId = existing?.id ?? null;
+
+  if (!productId) {
+    const { data: created, error: createErr } = await service
+      .from("products")
+      .insert({
+        name,
+        purchase_price: purchasePrice ?? 0,
+        // Rate na diya ho to "Rate Baqi" ki fehrist mein khud aa jata
+        // hai -- sifar likhna "ye muft aati hai" kehna hoga.
+        trade_rate_pending: purchasePrice === null,
+        selling_price: 0,
+        is_verified: true,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+    if (createErr || !created) {
+      return { error: `Naya product nahi ban saka: ${createErr?.message ?? "wajah maloom nahi"}` };
+    }
+    productId = created.id;
+  }
+
+  const { data: existingInv } = await service
+    .from("inventory")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("warehouse_id", count.warehouse_id)
+    .maybeSingle();
+
+  let inventoryId = existingInv?.id ?? null;
+  if (!inventoryId) {
+    const { data: createdInv, error: invErr } = await service
+      .from("inventory")
+      .insert({ product_id: productId, warehouse_id: count.warehouse_id })
+      .select("id")
+      .single();
+    if (invErr || !createdInv) return { error: `Warehouse mein stock ka khana nahi bana: ${invErr?.message}` };
+    inventoryId = createdInv.id;
+  }
+
+  // Stock seedha nahi likha jata -- movement se hi hilta hai (129),
+  // taake "ye kahan se aaya" ka nishan hamesha rahe.
+  const { error: mvErr } = await service.from("stock_movements").insert({
+    inventory_id: inventoryId,
+    movement_type: "adjustment_increase",
+    quantity,
+    reference_type: "stock_count",
+    reference_id: countId,
+    notes: "Ginti ke dauran mila — list mein pehle nahi tha.",
+    created_by: user.id,
+  });
+  if (mvErr) return { error: `Stock ki harkat darj nahi ho saki: ${mvErr.message}` };
+
+  // Isi ginti ki apni qatar -- taake milaan mein dikhe aur wajah likhni
+  // paRe, chup chaap gum na ho.
+  const { error: lineErr } = await service.from("stock_count_lines").insert({
+    count_id: countId,
+    product_id: productId,
+    inventory_id: inventoryId,
+    expected_qty: 0,
+    unit_cost: purchasePrice ?? 0,
+    counted_qty: quantity,
+    difference_qty: quantity,
+  });
+  if (lineErr) return { error: `Ginti ki qatar nahi ban saki: ${lineErr.message}` };
+
+  revalidatePath("/admin/stock-count");
+  return {
+    success: true,
+    message: existing
+      ? `"${name}" ka stock ${quantity} se barh gaya, aur isi ginti mein qatar bhi ban gayi.`
+      : `"${name}" naya product ban gaya, stock ${quantity} darj ho gaya, aur isi ginti mein qatar bhi ban gayi.`,
+  };
+}
+
+/**
  * Gine hue adad bharna (ANDHI GINTI ka marhala).
  *
  * Yahan sirf gina hua adad aata hai. Farq ki baat is marhale mein hoti

@@ -99,6 +99,15 @@ export default async function ProductCardPage({ params }: { params: { productId:
         .limit(15)
     : { data: [] as any[] };
 
+  // Naam ki tareekh (408) -- rate se alag, isay dekhne mein raaz jaisi
+  // koi baat nahi, is liye har active staff dekh sakta hai.
+  const { data: nameHistory } = await supabase
+    .from("product_name_history")
+    .select("id, old_name, new_name, changed_at")
+    .eq("product_id", params.productId)
+    .order("changed_at", { ascending: false })
+    .limit(15);
+
   const totalOnHand = (cards ?? []).reduce((s, c) => s + Number(c.on_hand ?? 0), 0);
   const totalReserved = (cards ?? []).reduce((s, c) => s + Number(c.reserved ?? 0), 0);
 
@@ -324,6 +333,31 @@ export default async function ProductCardPage({ params }: { params: { productId:
           )}
         </Card>
       )}
+
+      {/* Naam ki tareekh (408) -- sirf ab se aagey, purani tabdeeliyan
+          kahin mehfooz nahi thin is se pehle. */}
+      <Card className="overflow-x-auto">
+        <p className="mb-1 text-sm font-medium text-surface-800 dark:text-surface-200">{t("pnh_title", lang)}</p>
+        <p className="mb-3 text-xs text-surface-400">{t("pnh_note", lang)}</p>
+        {(nameHistory ?? []).length === 0 ? (
+          <p className="text-sm text-surface-400">{t("pnh_none", lang)}</p>
+        ) : (
+          <table className="w-full min-w-[420px] text-sm">
+            <tbody>
+              {(nameHistory ?? []).map((h: any) => (
+                <tr key={h.id} className="border-b border-surface-100 dark:border-surface-800">
+                  <td className="py-2 text-xs text-surface-500">
+                    {new Date(h.changed_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  </td>
+                  <td className="py-2 text-xs text-surface-600 dark:text-surface-300">{h.old_name}</td>
+                  <td className="py-2 text-xs text-surface-400">→</td>
+                  <td className="py-2 text-xs font-medium text-surface-900 dark:text-surface-100">{h.new_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </div>
   );
 }

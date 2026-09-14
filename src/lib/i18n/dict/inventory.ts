@@ -149,6 +149,19 @@ export const inventoryDict = {
   },
   prh_kind_purchase: { en: "Purchase", rm: "Kharid", ur: "خرید" },
   prh_kind_selling: { en: "Selling", rm: "Bikri", ur: "بکری" },
+
+  // ---- Naam ki tareekh (408) ----
+  pnh_title: { en: "Name history", rm: "Naam ki tareekh", ur: "نام کی تاریخ" },
+  pnh_note: {
+    en: "Only changes from 14 September 2026 onward are recorded — older changes were never saved.",
+    rm: "Sirf 14 September 2026 se aagey ki tabdeeliyan darj hain — is se pehle wali kahin mehfooz nahi thin.",
+    ur: "صرف 14 ستمبر 2026 سے آگے کی تبدیلیاں درج ہیں — اس سے پہلے والی کہیں محفوظ نہیں تھیں۔",
+  },
+  pnh_none: {
+    en: "No name change recorded for this item yet.",
+    rm: "Is cheez ka naam abhi tak ek dafa bhi badla hua darj nahi.",
+    ur: "اس چیز کا نام ابھی تک ایک دفعہ بھی بدلا ہوا درج نہیں۔",
+  },
   inv_pc_no_stock: { en: "No stock row in any warehouse yet.", rm: "Abhi kisi godam mein is ka khana nahi.", ur: "ابھی کسی گودام میں اس کا خانہ نہیں۔" },
   inv_pc_back: { en: "Back to inventory", rm: "Stock ki fehrist par wapas", ur: "اسٹاک کی فہرست پر واپس" },
 
@@ -278,6 +291,20 @@ export const stockCountDict = {
   sc_item: { en: "Item", rm: "Cheez", ur: "چیز" },
   sc_you_counted: { en: "You counted", rm: "Aap ne gina", ur: "آپ نے گنا" },
   sc_save_counts: { en: "Save the counted numbers", rm: "Gine hue adad mahfooz karein", ur: "گنے ہوئے عدد محفوظ کریں" },
+
+  // --- Extra cheez mili (408) ---
+  sc_extra_open: { en: "Found something not on this list?", rm: "Koi cheez mili jo list mein nahi thi?", ur: "کوئی چیز ملی جو لسٹ میں نہیں تھی؟" },
+  sc_extra_title: { en: "Add what you found", rm: "Jo mila, darj karein", ur: "جو ملا، درج کریں" },
+  sc_extra_note: {
+    en: "No document is created — the stock simply increases. If it's an existing product, it's matched by name; otherwise a new product is created.",
+    rm: "Koi document nahi banta — stock seedha barh jata hai. Agar pehle se mojood product hai to naam se milan ho jata hai, warna naya product ban jata hai.",
+    ur: "کوئی دستاویز نہیں بنتی — اسٹاک سیدھا بڑھ جاتا ہے۔ اگر پہلے سے موجود پروڈکٹ ہے تو نام سے ملان ہو جاتا ہے، ورنہ نیا پروڈکٹ بن جاتا ہے۔",
+  },
+  sc_extra_name: { en: "Item name", rm: "Cheez ka naam", ur: "چیز کا نام" },
+  sc_extra_qty: { en: "Quantity", rm: "Kitni mili", ur: "کتنی ملی" },
+  sc_extra_rate: { en: "Rate (optional)", rm: "Rate (na likhein to bhi chalega)", ur: "ریٹ (نہ لکھیں تو بھی چلے گا)" },
+  sc_extra_add: { en: "Add", rm: "Darj karein", ur: "درج کریں" },
+  sc_extra_close: { en: "Cancel", rm: "Band karein", ur: "بند کریں" },
 
   // --- Milaan ---
   sc_matched: { en: "items matched exactly.", rm: "cheezen bilkul theek milin.", ur: "چیزیں بالکل ٹھیک ملیں۔" },
