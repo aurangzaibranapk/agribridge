@@ -325,7 +325,7 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
             {filtered.map((p, i) => {
               const diff = diffFor(p);
               return (
-                <tr key={p.id} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
+                <tr key={p.id} className="border-b border-surface-300 last:border-0 dark:border-surface-700">
                   <td className="px-3 py-2 text-surface-500">{i + 1}</td>
                   <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
                   {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
