@@ -236,10 +236,11 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
       {/* Print par table ke columns barh sakte hain (11 fields tak, +2
           ginti sheet ke liye) -- portrait A4 mein sab nahi aata, dayeen
           taraf ke khane katte hue chhap jate. Landscape + chhota font
-          isi liye, sirf print ke waqt (screen par asar nahi). */}
+          isi liye, sirf print ke waqt (screen par asar nahi). Kaghaz ka
+          size Letter, malik ka apna printer/kaghaz isi par set hai. */}
       <style>{`
         @media print {
-          @page { size: landscape; margin: 8mm; }
+          @page { size: letter landscape; margin: 8mm; }
           .catalog-print-table { font-size: 9px; }
           .catalog-print-table th, .catalog-print-table td { padding: 2px 4px !important; }
         }
