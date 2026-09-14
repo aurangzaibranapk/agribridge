@@ -134,38 +134,57 @@ export default async function StockCountPage({
           <EmptyState title={t("sc_no_warehouse", lang)} description={t("sc_no_warehouse_note", lang)} />
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
-          <div className="space-y-4">
-            {/* ---- Godam chunna ---- */}
-            <Card className="p-4">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("sc_warehouse", lang)}</h2>
-              <ul className="space-y-1">
-                {warehouses.map((w) => (
-                  <li key={w.id}>
-                    <a
-                      href={`/admin/stock-count?w=${w.id}`}
-                      className={`block rounded-lg px-3 py-2 text-sm transition ${
-                        selected === w.id
-                          ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
-                          : "text-surface-700 hover:bg-surface-50 dark:text-surface-300 dark:hover:bg-surface-900"
-                      }`}
-                    >
-                      {w.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            {!current && (
+        <div
+          className={
+            warehouses.length > 1
+              ? "grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]"
+              : "mx-auto w-full max-w-2xl space-y-4"
+          }
+        >
+          {/* Ek se zyada godam ki ijazat ho to hi chunne wali list --
+              ek godam wale (jaise Anwar) ke liye ye khaali box sirf
+              jagah leta, kuch chunne ko hota hi nahi. */}
+          {warehouses.length > 1 && (
+            <div className="space-y-4">
               <Card className="p-4">
-                <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-                  <PackageSearch className="h-4 w-4" /> {t("sc_new_count", lang)}
-                </h2>
-                <StartCountForm warehouses={warehouses} />
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("sc_warehouse", lang)}</h2>
+                <ul className="space-y-1">
+                  {warehouses.map((w) => (
+                    <li key={w.id}>
+                      <a
+                        href={`/admin/stock-count?w=${w.id}`}
+                        className={`block rounded-lg px-3 py-2 text-sm transition ${
+                          selected === w.id
+                            ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
+                            : "text-surface-700 hover:bg-surface-50 dark:text-surface-300 dark:hover:bg-surface-900"
+                        }`}
+                      >
+                        {w.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </Card>
-            )}
-          </div>
+
+              {!current && (
+                <Card className="p-4">
+                  <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
+                    <PackageSearch className="h-4 w-4" /> {t("sc_new_count", lang)}
+                  </h2>
+                  <StartCountForm warehouses={warehouses} />
+                </Card>
+              )}
+            </div>
+          )}
+
+          {warehouses.length === 1 && !current && (
+            <Card className="p-4">
+              <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
+                <PackageSearch className="h-4 w-4" /> {t("sc_new_count", lang)}
+              </h2>
+              <StartCountForm warehouses={warehouses} />
+            </Card>
+          )}
 
           <div className="space-y-4">
             {/* ---- Khuli hui ginti ---- */}

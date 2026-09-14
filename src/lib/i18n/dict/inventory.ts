@@ -288,6 +288,7 @@ export const stockCountDict = {
     rm: "System ka adad jaan boojh kar chhupaya gaya hai. Jo aap ginein, bilkul wohi likhein — agar farq nikla to wo agle safhe par saamne aayega. Adad dekh kar likhne se ginti ka koi faida nahi rehta.",
     ur: "سسٹم کا عدد جان بوجھ کر چھپایا گیا ہے۔ جو آپ گنیں، بالکل وہی لکھیں — اگر فرق نکلا تو وہ اگلے صفحے پر سامنے آئے گا۔ عدد دیکھ کر لکھنے سے گنتی کا کوئی فائدہ نہیں رہتا۔",
   },
+  sc_total_items: { en: "Total items", rm: "Kul cheezein", ur: "کل چیزیں" },
   sc_item: { en: "Item", rm: "Cheez", ur: "چیز" },
   sc_you_counted: { en: "You counted", rm: "Aap ne gina", ur: "آپ نے گنا" },
   sc_save_counts: { en: "Save the counted numbers", rm: "Gine hue adad mahfooz karein", ur: "گنے ہوئے عدد محفوظ کریں" },

@@ -104,17 +104,23 @@ export function CountingSheet({
         </span>
       </div>
 
+      <p className="text-xs font-medium text-surface-500">
+        {t("sc_total_items", lang)}: {lines.length}
+      </p>
+
       <div className="overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
         <table className="w-full text-sm">
           <thead className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-900">
             <tr>
+              <th className="w-10 px-4 py-2 text-right font-medium">#</th>
               <th className="px-4 py-2 font-medium">{t("sc_item", lang)}</th>
               <th className="w-32 px-4 py-2 text-right font-medium">{t("sc_you_counted", lang)}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
-            {lines.map((l) => (
+            {lines.map((l, i) => (
               <tr key={l.id}>
+                <td className="px-4 py-2 text-right text-xs tabular-nums text-surface-400">{i + 1}</td>
                 <td className="px-4 py-2">
                   <span className="text-surface-800 dark:text-surface-200">{l.productName}</span>
                   {(l.packSize || l.unit) && (
