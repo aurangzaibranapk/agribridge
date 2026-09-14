@@ -60,8 +60,8 @@ export default async function OwnerCommandsPage() {
           <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-surface-500" />
           <p className="text-xs text-surface-600 dark:text-surface-400">
             Malik ka WhatsApp paigham yahan &ldquo;Aaya hai&rdquo; ke sath aata hai. Jawab likhna Claude Code
-            session ka kaam hai — jawab abhi khud WhatsApp par wapas nahi jata, yahan padhna hota hai. Kaam ho
-            jane par &ldquo;Kaam ho gaya&rdquo; dabayein.
+            session ka kaam hai — jawab jama karte hi wo seedha malik ke WhatsApp par bhi chala jata hai (agar
+            24 ghante ke andar ho). Kaam ho jane par &ldquo;Kaam ho gaya&rdquo; dabayein.
           </p>
         </div>
       </Card>
