@@ -28433,6 +28433,22 @@ export type Database = {
         }
         Relationships: []
       }
+      v_farmer_combined_balance: {
+        Row: {
+          doodh_baqi: number | null
+          email: string | null
+          farmer_code: string | null
+          farmer_id: string | null
+          full_name: string | null
+          khad_baqi: number | null
+          last_activity: string | null
+          machine_aur_gl_baqi: number | null
+          phone: string | null
+          pos_baqi: number | null
+          total_baqi: number | null
+        }
+        Relationships: []
+      }
       v_finance_balance_check: {
         Row: {
           account_id: string | null
