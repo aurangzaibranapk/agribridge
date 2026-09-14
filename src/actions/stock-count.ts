@@ -209,7 +209,13 @@ async function addOneExtraItem(
         // Rate na diya ho to "Rate Baqi" ki fehrist mein khud aa jata
         // hai -- sifar likhna "ye muft aati hai" kehna hoga.
         trade_rate_pending: purchasePrice === null,
+        // Ye form SALE rate kabhi poochta hi nahi (sirf trade/cost),
+        // is liye selling_price hamesha 0 jata hai -- `sale_rate_pending`
+        // zaroor TRUE hona chahiye, warna POS is 0 ko "waqai muft"
+        // samajh kar counter par bech deta (252 ki wahi rok, agar flag
+        // sahi na ho to kaam nahi karti).
         selling_price: 0,
+        sale_rate_pending: true,
         is_verified: true,
         created_by: userId,
       })
