@@ -99,6 +99,16 @@ Har migration **pehle testing par**, wahan test pass ho to **phir live**
 par. `.env.development.local` hamesha testing ki taraf ho, live ki taraf
 kabhi nahi — warna local testing se asal kisanon ko WhatsApp chala jayega.
 
+**Bill/kharcha (14 September, malik ka faisla):** Testing aur Live abhi
+ek hi Supabase organization ("agribridge") ke Pro plan ke neeche hain —
+Supabase mein plan organization ka hota hai, project ka nahi. Malik ka
+faisla: **Testing ko free plan par le jana hai**, taake bill sirf Live
+ka bane. Is ke liye ek NAYI (alag) organization banani paRegi (jo khud
+free tier par shuru hoti hai) aur Testing project usi mein transfer
+karna hoga — Live apni maujooda "agribridge" (Pro) organization mein hi
+rahega. Abhi tak sirf faisla hua hai, amal nahi — jab malik "karo" kahe
+tab ye qadam uthana.
+
 ## Do usool jo is project mein bar bar kaam aaye
 
 **Sifar aur "hisaab nahi rakha jata" ek cheez nahi.** Sifar kehta hai
