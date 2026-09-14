@@ -3310,59 +3310,70 @@ Phir cPanel: Setup Node.js App → Stop → File Manager → domains/agribridge
 
 ---
 
-## 12-14 September — 27 commit jama hain, Live par abhi tak nahi gaye
+## 12-14 September — migrations sab Live par lag gayin, build abhi baqi
 
 **Aakhri confirmed Live build:** `e6bb556` (11 September, ~18:22 UTC —
 upar wala "5 aur fix" waala). Us ke baad se malik "system par" nahi aaye,
-is liye command HOLD hai — magar kaam rukta nahi raha, ye poori fehrist
-hai jo agli baar ek sath jayegi.
+is liye command HOLD hai — magar kaam rukta nahi raha.
 
-**Migrations — Testing par sab lag chuki, Live par sirf ek baqi:**
-- Live par pehle hi hain: 392 (top customers), customer_import_drafts,
-  394 (Waseela Card), 395 (Khata Recovery), 396 (Data Health Watchdog).
-- **Live par NAHI hai: 397 (`owner_whatsapp_commands` — Command Center
-  Stage 2)**. Testing par lag chuki hai. **Backup ki tasdeeq (P0 rule)
-  Live par ye chalane se pehle chahiye.**
+**Migrations — 397 se 411 tak, SAB ab Live par lag chuki hain**
+(14 September, backup `agribridge-backup-20260914-1413.sql` — 5.6M —
+ki tasdeeq ke baad): 397-401 (Command Center Stage 2/3 + WhatsApp
+confirm loop), 402 (`verified_area`), 403 (mare hue booking khane
+hataye), 404+407 (`art_ke_paas_jama` — do dafa, 404 mein ghalat narrow
+kiya gaya tha, 407 ne asal formula par wapas laya), 406 (JazzCash/
+Easypaisa machinery mein), 408 (product name history), 409 (farmer ↔
+customer phone se jorna), 410 (phone `034...` → `92...` international),
+411 + `411_fix_farmer_combined_double_count_v2` (farmer ka combined
+khata — machine+doodh+khad+POS — Khata Recovery par).
 
-**Code/UI kaam (koi naya migration nahi, sirf build) — `e6bb556` se
-`20355d0` tak, 27 commit:**
-- Master Dashboard: Inventory Value ab batch ki asal khareed qeemat par
-  (trade rate ki jagah), aur TO PAY ka breakdown ab supplier/vendor ke
-  NAAM se (pehle ek lump total tha).
-- Data Health Watchdog (Stage 1) — `/admin/data-health`: dobara payment,
-  gum shuda purchase qatar, stock/ledger farq, manfi cash/bank khud
-  dhoondh kar batata hai (khud kuch theek nahi karta).
-- Command Center Stage 2 — `/admin/owner-commands`: malik ke WhatsApp
-  paigham (jo kisi jaane pehchane staff pattern se match na karein) ab
-  darj hote hain "received" ke sath.
-- Machinery vendor payout guard: vendor-collected settlement dobara cash
-  mein ada hone se rukta hai.
-- Purchase batch collision fix: ek product bill mein do dafa aaye to
-  dusra batch gum nahi hota.
-- Khata Recovery: poora UI malik ki bheji hui reference design jaisa.
-- Product Edit: "Products ki fehrist par wapas" link.
-- Khata & Recovery module: outstanding list, reminders, promise-to-pay,
-  statement sharing.
-- Farmer add: Opening Balance ek sath.
-- Inventory: missing-rate note link, product safha par sold% + 30-din
-  sale; warehouse filter + trade/sale/wholesale/credit value breakdown.
-- Bill Rates: Sale/MRP preview single-botal size se.
-- Kharche: naam search (mobile/CNIC), receipt camera capture, Waseela
-  Card payment method, staff cash-only rok.
-- Duplicate Products: naam theek karne/hataane ka safha.
-- Add Product: dukan/godam chunne ka option.
-- DigiKhata se customers import: draft → review → submit.
-- Payment reminder slip (draft, abhi kahin joda nahi — approval baqi).
-- Shop Rent: agreement/stamp/payment sirf admin/owner ka kaam.
-- Paisa & Khata: language switch (t()) ab poora kaam karta hai.
-- POS: customer search khali ho to top-4 dikhte hain.
-- Mera Kaam: duplicate Quick Actions cards hataye.
-- AI Crop Doctor: seedha camera se tasveer.
+**411 mein khud pakड़i gayi ek ghalti (batana zaroori hai):** pehla
+draft `machine_baqi` do dafa gin raha tha — ek dafa raw machinery
+tables se, ek dafa GL se (`journal_lines` mein `party_type='farmer'`,
+jahan machinery ka hisaab PEHLE SE jata hai). Isay verify karte waqt
+khud pakड़ liya (Akbar 21000→42000 ho raha tha), aur GL ko hi akela
+asal maan kar theek kiya. Filhaal 89 mein se **72 farmer** ka koi na
+koi baqaya Khata Recovery par dikhega.
+
+**Ye 5 customer_import_drafts wapas ulte kiye gaye (reversal entry se,
+mitaya nahi):** Muhammad Usman, Muhammad Akbar, Amir Sultan, Rana
+Sajjad Noon, Muhammad Shoiab Akhtar — inka "machine ka baqaya" pehle
+alag se (import draft ke through) daala gaya tha; ab jab combined view
+seedha GL se live uthati hai, wo alag entry dobara-ginti ban jati
+(ek hi paisa do dafa). GL ki apni figure (jis mein malik ki 13
+September ki durustagiyan bhi shamil hain) ab asal hai: Usman 0,
+Akbar 21,000, Amir Sultan 28,000, Rana Sajjad Noon 2,000, Shoiab 3,850
+— **ye import draft mein pehle daale gaye adad (425/21,000/30,000/
+125/3,850) se do jagah (Usman, Amir Sultan, Rana) mukhtalif hain**,
+kyunke GL ki apni tareekh-wari tareekh malik ki khud ki durustagiyan
+bhi shamil karti hai jo raw-table check mein nahi thin.
+
+**Code/UI kaam (koi naya migration nahi, sirf build) — `e6bb556` se ab
+tak, 23 commit:**
+- Master Dashboard, Data Health Watchdog, Command Center Stage 2/3,
+  Khata Recovery UI + farmer combined balance, POS customer
+  search/import — (13 September tak ki poori fehrist upar record hai)
+- Stock Count: "list nazar nahi aa rahi" ka asal fix (3 FK ambiguous
+  embed ki wajah se `openCount()` hamesha `null` deta tha), serial
+  number + total items + darmiyan wala layout, product name inline
+  rename (+ history), "extra item" (GRN ke baghair, ek se zyada row)
+  ginti ke dauran
+- Machinery: `verified_area`, mare hue booking khane hataye,
+  vendor-cash/vendor-recoverable-diesel ek jagah se, `art_ke_paas_jama`
+  wapas asal formula par, booking-detail safha malik ke mockup ke
+  mutabiq naya, JazzCash/Easypaisa
+- POS: multi-row extra-item entry, phone-format-tolerant customer
+  search (034 ya 92 dono se milta hai), farmer ↔ customer link se
+  POS mein farmer ka pehle se mojood balance
+- Print: sidebar/topbar/tabs print par chhup jate hain; Export
+  Catalogue print fix
 
 **Agli baar malik "system par aa gaya" kahein to poori command ek sath:**
-1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein).
-2. Migration 397 Live par (`owner_whatsapp_commands`).
-3. `git pull` + `npm run build` + package + upload (upar wala do-command
-   tareeqa) — ye upar ki poori fehrist ek build mein le jayega.
-4. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
-   Recovery render ho rahe hain.
+1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein) — migrations
+   sab lag chuki hain, is dafa sirf build/upload hai, koi Live migration
+   nahi chalani.
+2. `git pull` + `npm run build` + package + upload (upar wala do-command
+   tareeqa).
+3. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
+   Recovery (farmer balance bhi dikh rahe hon), Stock Count (list aa
+   rahi ho), Machinery booking-detail render ho rahe hain.
