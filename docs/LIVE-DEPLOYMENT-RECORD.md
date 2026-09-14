@@ -3307,3 +3307,62 @@ ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf 
 ```
 Phir cPanel: Setup Node.js App → Stop → File Manager → domains/agribridge
 → deploy.tar.gz Upload (overwrite) → Extract → Start.
+
+---
+
+## 12-14 September — 27 commit jama hain, Live par abhi tak nahi gaye
+
+**Aakhri confirmed Live build:** `e6bb556` (11 September, ~18:22 UTC —
+upar wala "5 aur fix" waala). Us ke baad se malik "system par" nahi aaye,
+is liye command HOLD hai — magar kaam rukta nahi raha, ye poori fehrist
+hai jo agli baar ek sath jayegi.
+
+**Migrations — Testing par sab lag chuki, Live par sirf ek baqi:**
+- Live par pehle hi hain: 392 (top customers), customer_import_drafts,
+  394 (Waseela Card), 395 (Khata Recovery), 396 (Data Health Watchdog).
+- **Live par NAHI hai: 397 (`owner_whatsapp_commands` — Command Center
+  Stage 2)**. Testing par lag chuki hai. **Backup ki tasdeeq (P0 rule)
+  Live par ye chalane se pehle chahiye.**
+
+**Code/UI kaam (koi naya migration nahi, sirf build) — `e6bb556` se
+`20355d0` tak, 27 commit:**
+- Master Dashboard: Inventory Value ab batch ki asal khareed qeemat par
+  (trade rate ki jagah), aur TO PAY ka breakdown ab supplier/vendor ke
+  NAAM se (pehle ek lump total tha).
+- Data Health Watchdog (Stage 1) — `/admin/data-health`: dobara payment,
+  gum shuda purchase qatar, stock/ledger farq, manfi cash/bank khud
+  dhoondh kar batata hai (khud kuch theek nahi karta).
+- Command Center Stage 2 — `/admin/owner-commands`: malik ke WhatsApp
+  paigham (jo kisi jaane pehchane staff pattern se match na karein) ab
+  darj hote hain "received" ke sath.
+- Machinery vendor payout guard: vendor-collected settlement dobara cash
+  mein ada hone se rukta hai.
+- Purchase batch collision fix: ek product bill mein do dafa aaye to
+  dusra batch gum nahi hota.
+- Khata Recovery: poora UI malik ki bheji hui reference design jaisa.
+- Product Edit: "Products ki fehrist par wapas" link.
+- Khata & Recovery module: outstanding list, reminders, promise-to-pay,
+  statement sharing.
+- Farmer add: Opening Balance ek sath.
+- Inventory: missing-rate note link, product safha par sold% + 30-din
+  sale; warehouse filter + trade/sale/wholesale/credit value breakdown.
+- Bill Rates: Sale/MRP preview single-botal size se.
+- Kharche: naam search (mobile/CNIC), receipt camera capture, Waseela
+  Card payment method, staff cash-only rok.
+- Duplicate Products: naam theek karne/hataane ka safha.
+- Add Product: dukan/godam chunne ka option.
+- DigiKhata se customers import: draft → review → submit.
+- Payment reminder slip (draft, abhi kahin joda nahi — approval baqi).
+- Shop Rent: agreement/stamp/payment sirf admin/owner ka kaam.
+- Paisa & Khata: language switch (t()) ab poora kaam karta hai.
+- POS: customer search khali ho to top-4 dikhte hain.
+- Mera Kaam: duplicate Quick Actions cards hataye.
+- AI Crop Doctor: seedha camera se tasveer.
+
+**Agli baar malik "system par aa gaya" kahein to poori command ek sath:**
+1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein).
+2. Migration 397 Live par (`owner_whatsapp_commands`).
+3. `git pull` + `npm run build` + package + upload (upar wala do-command
+   tareeqa) — ye upar ki poori fehrist ek build mein le jayega.
+4. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
+   Recovery render ho rahe hain.
