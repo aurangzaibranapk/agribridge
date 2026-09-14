@@ -146,9 +146,23 @@ export async function submitImportDraft(_prev: ActionState, formData: FormData):
     customerId = existing.id;
     alreadyExisted = true;
   } else {
+    // Isi phone number ka farmer pehle se ho sakta hai -- juR jaye to
+    // POS mein khaali/doohri qatar (409) dobara nahi banti.
+    const { data: matchedFarmer } = await service
+      .from("farmers")
+      .select("id")
+      .eq("phone_number", draft.phone_number)
+      .eq("is_deleted", false)
+      .maybeSingle();
+
     const { data: created, error: cErr } = await service
       .from("customers")
-      .insert({ name: draft.name, phone_number: draft.phone_number, customer_type: "retail" })
+      .insert({
+        name: draft.name,
+        phone_number: draft.phone_number,
+        customer_type: "retail",
+        farmer_id: matchedFarmer?.id ?? null,
+      })
       .select("id")
       .single();
     if (cErr) return { error: `Customer nahi ban saka: ${cErr.message}` };

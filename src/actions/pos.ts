@@ -170,6 +170,22 @@ async function resolveFarmerCustomerId(farmerId: string): Promise<string | null>
   const { data: farmer } = await service.from("farmers").select("full_name, phone_number, cnic").eq("id", farmerId).eq("is_deleted", false).maybeSingle();
   if (!farmer?.phone_number) return null;
 
+  // Isi phone number ka Customer pehle se ho sakta hai -- jaise bulk
+  // balance import se (409), jo kabhi farmer se juRa hi nahi jata tha.
+  // Naya banane se pehle isi ko link kar dena behtar hai: warna do
+  // record ban jate, ek asal balance ke sath (chup chaap), doosra
+  // khaali (jo POS mein dikhta).
+  const { data: byPhone } = await service
+    .from("customers")
+    .select("id")
+    .eq("phone_number", farmer.phone_number)
+    .is("farmer_id", null)
+    .maybeSingle();
+  if (byPhone) {
+    await service.from("customers").update({ farmer_id: farmerId }).eq("id", byPhone.id);
+    return byPhone.id;
+  }
+
   const { data: created, error } = await service
     .from("customers")
     .insert({
