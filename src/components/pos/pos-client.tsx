@@ -484,7 +484,7 @@ export function PosClient({
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
       <section className="flex flex-col lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
-          <h1 className="max-w-[11rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white">{sellerName} - POS</h1>
+          <h1 className="max-w-[7rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
           <form onSubmit={handleBarcodeSubmit} className="flex min-w-0 flex-[2] items-center gap-2">
             <div className="relative min-w-0 flex-1">
               <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
@@ -492,7 +492,7 @@ export function PosClient({
             </div>
             <button type="button" onClick={() => setShowCameraModal(true)} aria-label="Camera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"><Camera className="h-4 w-4" /></button>
           </form>
-          <div className="relative min-w-0 flex-1">
+          <div className="relative min-w-0 flex-[2]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
             <Input placeholder={t("pos_search_products", lang)} value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 pl-9" />
           </div>
