@@ -107,7 +107,7 @@ export function PosReturn({
 
     let q = supabase
       .from("pos_sales")
-      .select("id, created_at, total_amount, status, payment_mode, customer_id")
+      .select("id, created_at, total_amount, status, payment_mode, customer_id, crm_customer_id")
       .in("status", ["completed", "partially_returned"])
       .gte("created_at", `${from}T00:00:00`)
       .lte("created_at", `${to}T23:59:59`)
@@ -125,11 +125,20 @@ export function PosReturn({
 
     // Gahak ka naam alag sawal se -- embed nakaam ho to wo khali lauta
     // deta hai aur poori fehrist gayab ho jati.
-    const ids = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
-    const { data: custs } = ids.length
-      ? await supabase.from("customers").select("id, name").in("id", ids)
-      : { data: [] as any[] };
-    const nameById = new Map((custs ?? []).map((c: any) => [c.id, c.name]));
+    //
+    // Do khane, do alag khata: `crm_customer_id` (POS ka apna customer
+    // picker -- yahi asal mein bharta hai) `customers` table ki taraf
+    // ishara karta hai, `customer_id` (purana/dealer wala raasta)
+    // `dealer_customers` ki taraf. Sirf pehla dekhna wohi wajah thi ke
+    // har naam "Walk-in customer" nazar aata tha (15 September).
+    const crmIds = Array.from(new Set((data ?? []).map((r: any) => r.crm_customer_id).filter(Boolean)));
+    const dealerIds = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
+    const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
+      crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
+      dealerIds.length ? supabase.from("dealer_customers").select("id, name").in("id", dealerIds) : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const crmNameById = new Map((crmCusts ?? []).map((c: any) => [c.id, c.name]));
+    const dealerNameById = new Map((dealerCusts ?? []).map((c: any) => [c.id, c.name]));
 
     setSales(
       (data ?? []).map((r: any) => ({
@@ -138,7 +147,10 @@ export function PosReturn({
         total_amount: Number(r.total_amount ?? 0),
         status: r.status,
         payment_mode: r.payment_mode,
-        customer_name: r.customer_id ? nameById.get(r.customer_id) ?? null : null,
+        customer_name:
+          (r.crm_customer_id ? crmNameById.get(r.crm_customer_id) : null) ??
+          (r.customer_id ? dealerNameById.get(r.customer_id) : null) ??
+          null,
       }))
     );
     setListLoading(false);
