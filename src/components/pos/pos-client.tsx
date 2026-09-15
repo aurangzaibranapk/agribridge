@@ -516,7 +516,7 @@ export function PosClient({
 
   return (
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
-      <section className="flex flex-col lg:min-h-0">
+      <section className="flex flex-col print:hidden lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
           <h1 className="min-w-0 flex-1 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
           {/* Naam, code, scan bar -- ab ek hi box (malik, 15 September).
@@ -565,15 +565,15 @@ export function PosClient({
 
       {selectedLine && selectedItem && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedId(null)} aria-hidden />
-          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-fit lg:max-h-full lg:w-auto lg:max-w-none lg:overflow-y-auto lg:rounded-card lg:border lg:shadow-card">
+          <div className="fixed inset-0 z-40 bg-black/30 print:hidden lg:hidden" onClick={() => setSelectedId(null)} aria-hidden />
+          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl print:hidden dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-fit lg:max-h-full lg:w-auto lg:max-w-none lg:overflow-y-auto lg:rounded-card lg:border lg:shadow-card">
             <div className="mb-3 flex items-center justify-between"><h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("pos_details", lang)}</h2><button type="button" onClick={() => setSelectedId(null)} className="rounded-md p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-700 dark:hover:bg-surface-800" aria-label={t("sh_cancel", lang)}><X className="h-4 w-4" /></button></div>
             <ItemDetails line={selectedLine} item={selectedItem} lang={lang} perms={perms} onQty={(q) => updateQuantity(selectedLine.product_id, q)} onRate={(r) => updateRate(selectedLine.product_id, r)} onRemove={() => removeLine(selectedLine.product_id)} onClose={() => setSelectedId(null)} />
           </aside>
         </>
       )}
 
-      <Card className="flex flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
         <div className="max-h-64 space-y-2 overflow-y-auto">
           {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
