@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send } from "lucide-react";
+import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send } from "lucide-react";
 import { closeShift, getShiftSummary, shiftCashRecipients, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
@@ -174,6 +175,13 @@ export function ShiftBar({
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-100 bg-gradient-to-r from-brand-50 to-white px-4 py-2.5 dark:border-brand-900/30 dark:from-brand-950/20 dark:to-surface-900">
         <div className="flex flex-wrap items-center gap-2 text-xs text-brand-900 dark:text-brand-300">
+          <Link
+            href="/admin/my-work"
+            className="flex items-center gap-1 rounded-full bg-white px-2 py-1 font-medium text-brand-700 shadow-sm ring-1 ring-brand-100 hover:bg-brand-50 dark:bg-surface-900 dark:text-brand-300 dark:ring-brand-900/40"
+          >
+            <ArrowLeft className="h-3 w-3" /> Dashboard
+          </Link>
+          <span className="text-brand-300">·</span>
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-brand-100 dark:bg-surface-900 dark:ring-brand-900/40">
             <Clock className="h-3.5 w-3.5 text-brand-600" />
           </span>

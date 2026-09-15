@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { ChevronRight, Store, Wallet, Lock } from "lucide-react";
+import { ArrowLeft, ChevronRight, Store, Wallet, Lock } from "lucide-react";
 import { openShift, type ActionState } from "@/actions/pos-counters";
 import { ShiftCashHandoverForm } from "@/components/pos/shift-bar";
 
@@ -49,7 +50,13 @@ export function CounterShiftPicker({
 
   if (!chosen) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
+      <div className="relative flex min-h-[70vh] items-center justify-center px-4 py-12">
+        <Link
+          href="/admin/my-work"
+          className="absolute left-4 top-4 flex items-center gap-1 rounded-full border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-600 shadow-sm hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+        </Link>
         <div className="w-full max-w-md">
           {pendingHandover && (
             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -96,7 +103,13 @@ export function CounterShiftPicker({
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 px-4 py-12">
+    <div className="relative flex min-h-[70vh] flex-col items-center justify-center gap-6 px-4 py-12">
+      <Link
+        href="/admin/my-work"
+        className="absolute left-4 top-4 flex items-center gap-1 rounded-full border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-600 shadow-sm hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+      </Link>
       {pendingHandover && (
         <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
           <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-400">
