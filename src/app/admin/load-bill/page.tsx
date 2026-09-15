@@ -111,24 +111,24 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div>
+    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[42rem] flex-col overflow-hidden">
       <PageHeader
-        title="Load & Bill"
-        description="Mobile load aur customer ke bill — float ke hisaab ke sath"
+        title="Load / Bill"
+        description="Staff Sales Desk — load, bill, udhaar aur payment receive ek hi screen par"
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
               href="/admin/load-bill/reconcile"
               className="inline-flex items-center rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-800 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
             >
-              Shaam ka milan
+              Shaam ka Milan
             </Link>
             {FLOAT_ROLES.includes(me.role) && (
               <Link
                 href="/admin/load-bill/accounts"
                 className="inline-flex items-center rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-800 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
               >
-                Float aur account
+              Float / Accounts
               </Link>
             )}
           </div>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, ReceiptText, Search, Activity } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -248,19 +248,30 @@ export function LoadBillClient({
   const khushKhabri =
     state.notice ?? tidState.notice ?? settleState.notice ?? revState.notice ?? commState.notice ?? loanState.notice ?? wapsiState.notice;
 
+  useEffect(() => {
+    const shortcuts = (event: KeyboardEvent) => {
+      if (event.key === "F1") { event.preventDefault(); setTab("load"); }
+      if (event.key === "F2") { event.preventDefault(); setTab("bill"); }
+      if (event.key === "F3") { event.preventDefault(); setTab("udhaar"); }
+      if (event.key === "F4") { event.preventDefault(); setTab("receive"); }
+    };
+    window.addEventListener("keydown", shortcuts);
+    return () => window.removeEventListener("keydown", shortcuts);
+  }, []);
+
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-1">
       {/* -------- Float ke khane -------- */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex shrink-0 gap-2 overflow-x-auto pb-1">
         {accounts.map((a) => (
-          <Card key={a.id} className="py-3">
+          <Card key={a.id} className="min-w-[11rem] flex-1 py-2.5">
             <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
               <Wallet className="h-3.5 w-3.5" /> {a.title}
             </p>
             <p className="mt-0.5 truncate text-xs text-surface-400">
               {a.providerName === "—" ? "Har provider ke liye" : a.providerName}
             </p>
-            <p className="mt-1 font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
+            <p className="mt-0.5 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">
               {a.float === null ? "—" : rs(a.float)}
             </p>
             {a.float === null && (
@@ -270,6 +281,21 @@ export function LoadBillClient({
             )}
           </Card>
         ))}
+        <Card className="min-w-[9.5rem] flex-1 py-2.5">
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Activity className="h-3.5 w-3.5" /> Today Sales</p>
+          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{rs(handled)}</p>
+          <p className="text-[10px] text-surface-400">{aajKaKaam.length} transactions</p>
+        </Card>
+        <Card className="min-w-[9.5rem] flex-1 py-2.5">
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><ReceiptText className="h-3.5 w-3.5" /> Staff Income</p>
+          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-brand-700">{kamaya ? rs(kamaya) : "—"}</p>
+          <p className="text-[10px] text-surface-400">service charges</p>
+        </Card>
+        <Card className="min-w-[9.5rem] flex-1 py-2.5">
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5" /> Pending Proof</p>
+          <p className={`mt-1 font-display text-lg font-semibold tabular-nums ${sabootBaqi ? "text-amber-600" : "text-surface-900 dark:text-white"}`}>{sabootBaqi}</p>
+          <p className="text-[10px] text-surface-400">TID required</p>
+        </Card>
       </div>
 
       {paighaam && (
@@ -287,10 +313,10 @@ export function LoadBillClient({
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         {/* -------- Form -------- */}
-        <Card>
-          <div className="mb-4 grid gap-2 grid-cols-2 lg:grid-cols-4">
+        <Card className="flex min-h-0 flex-col overflow-hidden p-3">
+          <div className="mb-3 grid shrink-0 gap-2 grid-cols-2 lg:grid-cols-4">
             {(
               [
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
@@ -303,7 +329,7 @@ export function LoadBillClient({
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left transition ${
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
                   tab === key
                     ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
                     : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
@@ -311,13 +337,14 @@ export function LoadBillClient({
               >
                 <Icon className="h-5 w-5 shrink-0 text-brand-600" />
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-surface-900 dark:text-white">{title}</span>
-                  <span className="block truncate text-[11px] text-surface-500">{sub}</span>
+                  <span className="block text-xs font-semibold text-surface-900 dark:text-white">{title}</span>
+                  <span className="block truncate text-[10px] text-surface-500">{sub} · F{key === "load" ? 1 : key === "bill" ? 2 : key === "udhaar" ? 3 : 4}</span>
                 </span>
               </button>
             ))}
           </div>
 
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           {tab === "udhaar" || tab === "receive" ? (
             <UdhaarForm
               kaam={tab === "udhaar" ? "diya" : "wapsi"}
@@ -597,26 +624,22 @@ export function LoadBillClient({
             <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
           </form>
           )}
+          </div>
         </Card>
 
         {/* -------- Aaj ka hisaab -------- */}
-        <div className="space-y-3">
-          <Card className="py-3">
-            <p className="text-xs text-surface-500 dark:text-surface-400">Aaj handle hua</p>
-            <p className="font-display text-2xl font-semibold tabular-nums text-surface-900 dark:text-white">
-              {rs(handled)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-surface-400">{aajKaKaam.length} qatarein</p>
-          </Card>
-          <Card className="py-3">
-            <p className="text-xs text-surface-500 dark:text-surface-400">Aaj ki apni aamdani</p>
-            <p className="font-display text-2xl font-semibold tabular-nums text-surface-900 dark:text-white">
-              {kamaya ? rs(kamaya) : "—"}
-            </p>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-surface-400">
-              Sirf service charge. Company ki commission is mein nahi — wo statement ki tasdeeq ke baad
-              aamdani banti hai.
-            </p>
+        <div className="min-h-0 space-y-3 overflow-y-auto">
+          <Card className="border-brand-200 bg-brand-50/40 py-3 dark:border-brand-900/40 dark:bg-brand-950/20">
+            <p className="text-sm font-semibold text-surface-900 dark:text-white">Live Transaction Summary</p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div className="flex justify-between"><span className="text-surface-500">Work</span><b>{tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive"}</b></div>
+              {(tab === "load" || tab === "bill") && <>
+                <div className="flex justify-between"><span className="text-surface-500">Customer</span><b className="max-w-[9rem] truncate">{mainParty?.name ?? "Guest / Walk-in"}</b></div>
+                <div className="flex justify-between"><span className="text-surface-500">Amount</span><b>{rs(raqam)}</b></div>
+                <div className="flex justify-between"><span className="text-surface-500">Service charge</span><b>{charge ? rs(charge) : "—"}</b></div>
+                <div className="border-t border-brand-200 pt-2 flex justify-between text-sm"><span>Customer Pays</span><b className="text-brand-700">{rs(raqam + charge)}</b></div>
+              </>}
+            </div>
           </Card>
           {sabootBaqi > 0 && (
             <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -642,14 +665,15 @@ export function LoadBillClient({
       </div>
 
       {/* -------- Aaj ki qatarein -------- */}
-      <Card className="p-0">
-        <p className="border-b border-surface-100 px-5 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-          Aaj ki qatarein
-        </p>
+      <Card className="h-52 shrink-0 overflow-hidden p-0">
+        <div className="flex items-center justify-between border-b border-surface-100 px-4 py-2 dark:border-surface-800">
+          <p className="text-sm font-semibold text-surface-900 dark:text-white">Today Transactions</p>
+          <span className="flex items-center gap-1 text-[11px] text-surface-400"><Search className="h-3 w-3" /> All · Load · Bill · Udhaar · Recovery · Pending</span>
+        </div>
         {today.length === 0 ? (
           <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="h-[calc(13rem-2.6rem)] overflow-auto">
             <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
                 <tr>
