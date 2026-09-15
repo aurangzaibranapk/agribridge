@@ -455,8 +455,10 @@ function MergeButton({
   const lang = useLang();
   const [open, setOpen] = useState(false);
   const [targetName, setTargetName] = useState(suggestedTarget ?? "");
-  const [previewState, previewAction] = useFormState(previewProductMerge, {});
-  const [requestState, requestAction] = useFormState(requestProductMerge, {});
+  const [previewState, setPreviewState] = useState<Awaited<ReturnType<typeof previewProductMerge>>>({});
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [requestState, setRequestState] = useState<Awaited<ReturnType<typeof requestProductMerge>>>({});
+  const [requestBusy, setRequestBusy] = useState(false);
   const listId = `sc-merge-names-${productId}`;
 
   if (requestState.success) {
@@ -479,13 +481,33 @@ function MergeButton({
     );
   }
 
+  // Nested <form> ke andar <form> HTML mein ghalat hai (ye row us bade
+  // <form> ke andar hai jo poori ginti save karta hai) -- seedha action
+  // ko function ki tarah bulaya ja raha hai, <form action=...> se nahi.
+  async function handlePreview() {
+    setPreviewBusy(true);
+    const fd = new FormData();
+    fd.set("source_product_id", productId);
+    fd.set("target_name", targetName);
+    setPreviewState(await previewProductMerge({}, fd));
+    setPreviewBusy(false);
+  }
+
+  async function handleRequest() {
+    if (!previewState.preview) return;
+    setRequestBusy(true);
+    const fd = new FormData();
+    fd.set("source_product_id", productId);
+    fd.set("target_product_id", previewState.preview.targetProductId);
+    setRequestState(await requestProductMerge({}, fd));
+    setRequestBusy(false);
+  }
+
   return (
     <div className="rounded-lg border border-dashed border-surface-300 bg-surface-50 p-2 text-xs dark:border-surface-700 dark:bg-surface-900">
       <p className="mb-1 text-surface-500">{t("sc_merge_note", lang)}</p>
-      <form action={previewAction} className="flex items-center gap-1">
-        <input type="hidden" name="source_product_id" value={productId} />
+      <div className="flex items-center gap-1">
         <input
-          name="target_name"
           list={listId}
           value={targetName}
           onChange={(e) => setTargetName(e.target.value)}
@@ -499,13 +521,18 @@ function MergeButton({
               <option key={n} value={n} />
             ))}
         </datalist>
-        <button type="submit" className="rounded-lg border border-surface-300 px-2 py-1 text-surface-600 hover:border-brand-400 dark:border-surface-700">
-          {t("sc_merge_check", lang)}
+        <button
+          type="button"
+          onClick={handlePreview}
+          disabled={previewBusy}
+          className="rounded-lg border border-surface-300 px-2 py-1 text-surface-600 hover:border-brand-400 disabled:opacity-50 dark:border-surface-700"
+        >
+          {previewBusy ? "…" : t("sc_merge_check", lang)}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="text-surface-400">
           <X className="h-3.5 w-3.5" />
         </button>
-      </form>
+      </div>
 
       {previewState.error && <p className="mt-1 text-red-600">{previewState.error}</p>}
 
@@ -519,13 +546,14 @@ function MergeButton({
               {previewState.preview.rows.map((r) => `${r.warehouseName}: ${r.qty}`).join(", ")}
             </p>
           )}
-          <form action={requestAction} className="mt-1">
-            <input type="hidden" name="source_product_id" value={productId} />
-            <input type="hidden" name="target_product_id" value={previewState.preview.targetProductId} />
-            <button type="submit" className="rounded-lg bg-brand-600 px-2 py-1 text-white hover:bg-brand-700">
-              {t("sc_merge_send", lang)}
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleRequest}
+            disabled={requestBusy}
+            className="mt-1 rounded-lg bg-brand-600 px-2 py-1 text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {requestBusy ? "…" : t("sc_merge_send", lang)}
+          </button>
         </div>
       )}
       {requestState.error && <p className="mt-1 text-red-600">{requestState.error}</p>}
@@ -766,27 +794,19 @@ function ExtraSubmit({ label }: { label: string }) {
  * Owner/Admin ko dikhta hai (canApprove) -- staff yahan tak Review par
  * aata bhi nahi.
  */
-function RateCorrectionSubmit() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-40"
-    >
-      {pending ? "…" : "Theek Karein"}
-    </button>
-  );
-}
-
 function RateCorrectionCell({ lineId, unitCost }: { lineId: string; unitCost: number }) {
   const [open, setOpen] = useState(false);
   const [rate, setRate] = useState(String(unitCost));
   const [note, setNote] = useState("");
-  const [state, action] = useFormState(correctStockCountRate, initialState);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [msg, setMsg] = useState("");
 
-  if (state.success) {
-    return <p className="text-[11px] text-green-700 dark:text-green-400">{state.message}</p>;
+  if (status === "saved") {
+    return (
+      <p className="rounded-lg border border-green-300 bg-green-50 px-1.5 py-1 text-[11px] font-medium text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
+        ✓ Saved — {msg}
+      </p>
+    );
   }
 
   if (!open) {
@@ -797,11 +817,30 @@ function RateCorrectionCell({ lineId, unitCost }: { lineId: string; unitCost: nu
     );
   }
 
+  // Nested <form> ke andar <form> HTML mein ghalat hai (ye poora khana
+  // pehle se ReviewSheet ke apne <form> ke andar hai) -- browser is se
+  // "unexpectedly submitted" error deta hai aur click kaam nahi karta.
+  // Isi liye seedha action ko function ki tarah bulaya ja raha hai,
+  // <form action=...> se nahi (jaisa RateCell/MergeButton yahi karte hain).
+  async function handleSave() {
+    setStatus("saving");
+    const fd = new FormData();
+    fd.set("line_id", lineId);
+    fd.set("new_rate", rate);
+    fd.set("note", note);
+    const result = await correctStockCountRate({}, fd);
+    if (result.error) {
+      setStatus("error");
+      setMsg(result.error);
+    } else {
+      setStatus("saved");
+      setMsg(result.message ?? "");
+    }
+  }
+
   return (
-    <form action={action} className="mt-1 w-48 space-y-1 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-1.5 text-left dark:border-amber-800 dark:bg-amber-950/10">
-      <input type="hidden" name="line_id" value={lineId} />
+    <div className="mt-1 w-48 space-y-1 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-1.5 text-left dark:border-amber-800 dark:bg-amber-950/10">
       <input
-        name="new_rate"
         value={rate}
         onChange={(e) => setRate(e.target.value)}
         type="number"
@@ -811,20 +850,26 @@ function RateCorrectionCell({ lineId, unitCost }: { lineId: string; unitCost: nu
         className="w-full rounded-lg border border-amber-300 px-1.5 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
       />
       <input
-        name="note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Wajah (jaise: rate ulta likha gaya tha)"
         className="w-full rounded-lg border border-amber-300 px-1.5 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
       />
       <div className="flex items-center gap-1">
-        <RateCorrectionSubmit />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={status === "saving"}
+          className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-40"
+        >
+          {status === "saving" ? "…" : "Theek Karein"}
+        </button>
         <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-surface-400">
           Cancel
         </button>
       </div>
-      {state.error && <p className="text-[11px] text-red-600">{state.error}</p>}
-    </form>
+      {status === "error" && <p className="text-[11px] text-red-600">{msg}</p>}
+    </div>
   );
 }
 
