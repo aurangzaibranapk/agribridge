@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/ui/layout-primitives";
+import { PageHeader, Card } from "@/components/ui/layout-primitives";
+import { AlertTriangle } from "lucide-react";
 import { RecoveryClient, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   const loose = supabase as any;
   const today = new Date().toISOString().slice(0, 10);
 
-  const [{ data }, { data: reminders }, { data: templates }, { data: customerDueDays }] = await Promise.all([
+  const [{ data, error: recoveryError }, { data: reminders }, { data: templates }, { data: customerDueDays }] = await Promise.all([
     loose.rpc("fn_recovery_outstanding", { p_search: sp.q?.trim() || null }),
     // Last reminder per party, aur aaj kis kis ko reminder ja chuka --
     // yahin se "Last Reminder" column aur "Collected Today" ke liye
@@ -135,6 +136,17 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
+      {recoveryError && (
+        <Card className="border-l-4 border-l-red-500 bg-red-50 p-4 dark:bg-red-950/20">
+          <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Data load nahi ho saka: {recoveryError.message}. Ye khali fehrist "kuch baqaya nahi" ka matlab NAHI —
+              ye ek asal masla hai, safha dobara kholein ya Admin ko batayein.
+            </span>
+          </p>
+        </Card>
+      )}
       <RecoveryClient
         parties={parties}
         templates={reminderTemplates}
