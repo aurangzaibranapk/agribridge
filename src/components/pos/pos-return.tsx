@@ -36,6 +36,14 @@ interface SaleRow {
   status: string;
   payment_mode: string;
   customer_name: string | null;
+  /** Mobile/CNIC se dhoondne ke liye -- naam se nahi, in se bhi milna chahiye (15 September). */
+  customer_phone: string | null;
+  customer_cnic: string | null;
+}
+
+interface PaymentDetail {
+  payment_method: string;
+  amount: number;
 }
 
 interface ReturnableLine {
@@ -52,6 +60,17 @@ interface ReturnableLine {
 
 const CONDITIONS = ["saleable", "damaged", "expired", "other"] as const;
 type Condition = (typeof CONDITIONS)[number];
+
+const PAY_METHOD_LABEL: Record<string, string> = {
+  cash: "Cash",
+  bank_transfer: "Bank",
+  card: "Kisan Card",
+  jazzcash: "JazzCash",
+  easypaisa: "Easypaisa",
+  qr: "QR",
+  khata: "Khata",
+  waseela_card: "Waseela Card",
+};
 
 export function PosReturn({
   lang,
@@ -94,6 +113,9 @@ export function PosReturn({
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [done, setDone] = useState<{ number: string; amount: number; qty: number } | null>(null);
+  /** Payment tareeqe ki poori taqseem (split ho to sab), aur "Wasol kiya" -- click karne par poori tafseel (15 September). */
+  const [payDetails, setPayDetails] = useState<PaymentDetail[]>([]);
+  const [receivedByNote, setReceivedByNote] = useState<string | null>(null);
 
   // Bikri ki fehrist yahin se aati hai, safhe se nahi -- taake tareekh
   // badalne par poora POS dobara na khule.
@@ -134,24 +156,28 @@ export function PosReturn({
     const crmIds = Array.from(new Set((data ?? []).map((r: any) => r.crm_customer_id).filter(Boolean)));
     const dealerIds = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
     const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
-      crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
+      crmIds.length
+        ? supabase.from("customers").select("id, name, phone_number, cnic").in("id", crmIds)
+        : Promise.resolve({ data: [] as any[] }),
       dealerIds.length ? supabase.from("dealer_customers").select("id, name").in("id", dealerIds) : Promise.resolve({ data: [] as any[] }),
     ]);
-    const crmNameById = new Map((crmCusts ?? []).map((c: any) => [c.id, c.name]));
+    const crmById = new Map((crmCusts ?? []).map((c: any) => [c.id, c]));
     const dealerNameById = new Map((dealerCusts ?? []).map((c: any) => [c.id, c.name]));
 
     setSales(
-      (data ?? []).map((r: any) => ({
-        id: r.id,
-        created_at: r.created_at,
-        total_amount: Number(r.total_amount ?? 0),
-        status: r.status,
-        payment_mode: r.payment_mode,
-        customer_name:
-          (r.crm_customer_id ? crmNameById.get(r.crm_customer_id) : null) ??
-          (r.customer_id ? dealerNameById.get(r.customer_id) : null) ??
-          null,
-      }))
+      (data ?? []).map((r: any) => {
+        const crm = r.crm_customer_id ? crmById.get(r.crm_customer_id) : null;
+        return {
+          id: r.id,
+          created_at: r.created_at,
+          total_amount: Number(r.total_amount ?? 0),
+          status: r.status,
+          payment_mode: r.payment_mode,
+          customer_name: crm?.name ?? (r.customer_id ? dealerNameById.get(r.customer_id) : null) ?? null,
+          customer_phone: crm?.phone_number ?? null,
+          customer_cnic: crm?.cnic ?? null,
+        };
+      })
     );
     setListLoading(false);
   }, [supabase, branchId, from, to]);
@@ -172,12 +198,24 @@ export function PosReturn({
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sales;
-    return sales.filter(
-      (s) =>
+    // Naam ke ilawa mobile aur CNIC se bhi -- number "0342..." (mulki)
+    // ya "92342..." (international) kisi bhi shakl mein type ho, sirf
+    // akhri das hindse hi asal pehchan hain (jaisa pos-client.tsx ka
+    // customer picker karta hai). 15 September: "03226275472" likh kar
+    // "No sale found" milta tha kyunke phone yahan check hi nahi hota
+    // tha.
+    const qDigits = q.replace(/-/g, "");
+    const qPhoneCore = q.replace(/\D/g, "").slice(-10);
+    return sales.filter((s) => {
+      const phoneCore = (s.customer_phone ?? "").replace(/\D/g, "").slice(-10);
+      return (
         s.id.toLowerCase().startsWith(q) ||
         (s.customer_name ?? "").toLowerCase().includes(q) ||
-        String(s.total_amount).includes(q)
-    );
+        String(s.total_amount).includes(q) ||
+        (qPhoneCore.length >= 3 && phoneCore.includes(qPhoneCore)) ||
+        (s.customer_cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits)
+      );
+    });
   }, [sales, query]);
 
   /** Is arse ki kul bikri -- jo qatarein saamne hain, unhi ka jama. */
@@ -206,6 +244,23 @@ export function PosReturn({
     setCond({});
     setMsg(null);
     setLoading(true);
+    setPayDetails([]);
+    setReceivedByNote(null);
+
+    // Payment tareeqa (split ho to sab) aur "Wasol kiya" (khata kis ka
+    // hai, maal kaun le gaya alag ho sakte hain) -- alag table se, isi
+    // waqt, taake bill kholte hi poori tafseel ek sath aaye.
+    supabase
+      .from("pos_sale_payment_details")
+      .select("payment_method, amount")
+      .eq("sale_id", s.id)
+      .then(({ data }) => setPayDetails((data ?? []).map((d: any) => ({ payment_method: d.payment_method, amount: Number(d.amount) }))));
+    supabase
+      .from("sales")
+      .select("notes")
+      .eq("id", s.id)
+      .maybeSingle()
+      .then(({ data }) => setReceivedByNote((data?.notes as string | null) ?? null));
 
     // Kitna wapas ho sakta hai -- ye hisaab database ke us khane se aata
     // hai jo bikri aur pichhli wapsiyon dono ko dekhta hai. Yahan dobara
@@ -436,6 +491,7 @@ export function PosReturn({
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
                       {s.customer_name ?? t("ret_walkin", lang)}
+                      {s.customer_phone && <span className="ml-1 font-normal text-surface-400">· {s.customer_phone}</span>}
                     </span>
                     <span className="block text-xs text-surface-500">
                       {new Date(s.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
@@ -467,6 +523,7 @@ export function PosReturn({
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
               {sale.customer_name ?? t("ret_walkin", lang)}
+              {sale.customer_phone && <span className="ml-1 font-normal text-surface-400">· {sale.customer_phone}</span>}
             </p>
             <p className="text-xs text-surface-500">
               {new Date(sale.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
@@ -486,6 +543,23 @@ export function PosReturn({
             {t("ret_other_sale", lang)}
           </button>
         </div>
+
+        {/* Poori tafseel -- payment kis tareeqe se (split ho to sab), aur
+            "Wasol kiya" (khata kis ka hai, maal kaun le gaya, alag ho
+            sakte hain -- malik, 15 September). */}
+        {(payDetails.length > 0 || receivedByNote) && (
+          <div className="rounded-lg bg-surface-50 px-3 py-2 text-xs dark:bg-surface-800/50">
+            {payDetails.length > 0 && (
+              <p className="text-surface-600 dark:text-surface-300">
+                <span className="text-surface-400">{t("pos_payment_mode", lang)}: </span>
+                {payDetails
+                  .map((p) => `${PAY_METHOD_LABEL[p.payment_method] ?? p.payment_method} Rs ${p.amount.toLocaleString()}`)
+                  .join(" + ")}
+              </p>
+            )}
+            {receivedByNote && <p className="mt-0.5 text-surface-600 dark:text-surface-300">{receivedByNote}</p>}
+          </div>
+        )}
 
         {loading ? (
           <p className="py-8 text-center text-sm text-surface-400">…</p>
