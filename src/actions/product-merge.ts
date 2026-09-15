@@ -108,9 +108,88 @@ export async function requestProductMerge(_prev: ActionState, formData: FormData
 }
 
 /**
- * Tasdeeq -- yahin se stock asal mein chalta hai (stock_movements se,
- * seedha inventory nahi -- 129 ka usool) aur source product hataya
- * jata hai (soft-delete, record mehfooz).
+ * Asal kaam -- stock ko source se target mein le jana (stock_movements
+ * se, seedha inventory nahi -- 129 ka usool) aur source product hataya
+ * jana (soft-delete, record mehfooz). `approveProductMerge` (staff ki
+ * request ke baad) aur `mergeProductDirect` (Admin khud, ek hi click
+ * mein) dono isi ko bulate hain -- stock hilane ka tareeqa ek hi jagah
+ * rahe.
+ */
+async function executeMerge(
+  service: ReturnType<typeof createServiceClient>,
+  sourceProductId: string,
+  targetProductId: string,
+  userId: string,
+  referenceId: string
+): Promise<{ totalQty: number; error?: string }> {
+  // LIVE stock -- snapshot par nahi, kyunke request/preview aur asal
+  // hilane ke beech ginti/bikri ho sakti hai.
+  const { data: sourceStock } = await service
+    .from("inventory")
+    .select("id, warehouse_id, quantity_on_hand")
+    .eq("product_id", sourceProductId)
+    .gt("quantity_on_hand", 0);
+
+  let totalQty = 0;
+  for (const row of sourceStock ?? []) {
+    const qty = Number(row.quantity_on_hand);
+    if (qty <= 0) continue;
+    totalQty += qty;
+
+    // Source se ghatana.
+    const { error: outErr } = await service.from("stock_movements").insert({
+      inventory_id: row.id,
+      movement_type: "adjustment_decrease",
+      quantity: qty,
+      reference_type: "product_merge",
+      reference_id: referenceId,
+      notes: "Duplicate product ka merge -- stock doosre naam mein chala gaya.",
+      created_by: userId,
+    });
+    if (outErr) return { totalQty, error: `Stock ghatate waqt masla: ${outErr.message}` };
+
+    // Target ke isi godam mein jama -- inventory row na ho to bana lein.
+    const { data: targetInv } = await service
+      .from("inventory")
+      .select("id")
+      .eq("product_id", targetProductId)
+      .eq("warehouse_id", row.warehouse_id)
+      .maybeSingle();
+
+    let targetInvId = targetInv?.id ?? null;
+    if (!targetInvId) {
+      const { data: created, error: createErr } = await service
+        .from("inventory")
+        .insert({ product_id: targetProductId, warehouse_id: row.warehouse_id })
+        .select("id")
+        .single();
+      if (createErr || !created) return { totalQty, error: `Target ka stock khana nahi bana: ${createErr?.message}` };
+      targetInvId = created.id;
+    }
+
+    const { error: inErr } = await service.from("stock_movements").insert({
+      inventory_id: targetInvId,
+      movement_type: "adjustment_increase",
+      quantity: qty,
+      reference_type: "product_merge",
+      reference_id: referenceId,
+      notes: "Duplicate product ka merge -- doosre naam se stock mila.",
+      created_by: userId,
+    });
+    if (inErr) return { totalQty, error: `Stock jama karte waqt masla: ${inErr.message}` };
+  }
+
+  const { error: deleteErr } = await service
+    .from("products")
+    .update({ is_deleted: true, updated_at: new Date().toISOString() })
+    .eq("id", sourceProductId);
+  if (deleteErr) return { totalQty, error: deleteErr.message };
+
+  return { totalQty };
+}
+
+/**
+ * Tasdeeq -- staff ki bheji hui tajweez par.
  */
 export async function approveProductMerge(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -129,66 +208,8 @@ export async function approveProductMerge(_prev: ActionState, formData: FormData
   if (!request) return { error: "Request nahi mili." };
   if (request.status !== "pending") return { error: "Ye request pehle hi nipat chuki hai." };
 
-  // LIVE stock -- snapshot par nahi, kyunke request aur tasdeeq ke beech
-  // ginti/bikri ho sakti hai.
-  const { data: sourceStock } = await service
-    .from("inventory")
-    .select("id, warehouse_id, quantity_on_hand")
-    .eq("product_id", request.source_product_id)
-    .gt("quantity_on_hand", 0);
-
-  for (const row of sourceStock ?? []) {
-    const qty = Number(row.quantity_on_hand);
-    if (qty <= 0) continue;
-
-    // Source se ghatana.
-    const { error: outErr } = await service.from("stock_movements").insert({
-      inventory_id: row.id,
-      movement_type: "adjustment_decrease",
-      quantity: qty,
-      reference_type: "product_merge",
-      reference_id: requestId,
-      notes: "Duplicate product ka merge -- stock doosre naam mein chala gaya.",
-      created_by: userId,
-    });
-    if (outErr) return { error: `Stock ghatate waqt masla: ${outErr.message}` };
-
-    // Target ke isi godam mein jama -- inventory row na ho to bana lein.
-    const { data: targetInv } = await service
-      .from("inventory")
-      .select("id")
-      .eq("product_id", request.target_product_id)
-      .eq("warehouse_id", row.warehouse_id)
-      .maybeSingle();
-
-    let targetInvId = targetInv?.id ?? null;
-    if (!targetInvId) {
-      const { data: created, error: createErr } = await service
-        .from("inventory")
-        .insert({ product_id: request.target_product_id, warehouse_id: row.warehouse_id })
-        .select("id")
-        .single();
-      if (createErr || !created) return { error: `Target ka stock khana nahi bana: ${createErr?.message}` };
-      targetInvId = created.id;
-    }
-
-    const { error: inErr } = await service.from("stock_movements").insert({
-      inventory_id: targetInvId,
-      movement_type: "adjustment_increase",
-      quantity: qty,
-      reference_type: "product_merge",
-      reference_id: requestId,
-      notes: "Duplicate product ka merge -- doosre naam se stock mila.",
-      created_by: userId,
-    });
-    if (inErr) return { error: `Stock jama karte waqt masla: ${inErr.message}` };
-  }
-
-  const { error: deleteErr } = await service
-    .from("products")
-    .update({ is_deleted: true, updated_at: new Date().toISOString() })
-    .eq("id", request.source_product_id);
-  if (deleteErr) return { error: deleteErr.message };
+  const { error: mergeErr } = await executeMerge(service, request.source_product_id, request.target_product_id, userId, requestId);
+  if (mergeErr) return { error: mergeErr };
 
   const { error: statusErr } = await service
     .from("product_merge_requests")
@@ -200,6 +221,50 @@ export async function approveProductMerge(_prev: ActionState, formData: FormData
   revalidatePath("/admin/products");
   revalidatePath("/admin/stock-count");
   return { success: true, message: "Merge ho gaya -- stock chala gaya, purana naam hata diya gaya." };
+}
+
+/**
+ * Admin khud duplicate dekh kar seedha merge kare -- request/approval
+ * ke do qadam ki zaroorat nahi jab tasdeeq karne wala khud kaam kar raha
+ * ho (malik, 15 September: "Admin ke paas access ho jisay delete karna
+ * ho, stock move kar ke" -- purana "Hide" button stock dekhe baghair hi
+ * product ghayab kar deta tha, stock kahin nahi jata tha).
+ */
+export async function mergeProductDirect(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const { userId, canApprove } = await getApprovalContext(supabase);
+  if (!canApprove || !userId) return { error: "Ye kaam sirf admin/owner kar sakte hain." };
+
+  const sourceProductId = String(formData.get("source_product_id") ?? "");
+  const targetName = String(formData.get("target_name") ?? "").trim();
+  if (!sourceProductId) return { error: "Product saaf nahi." };
+  if (targetName.length < 2) return { error: "Doosra naam likhein." };
+
+  const { data: target } = await service
+    .from("products")
+    .select("id, name")
+    .ilike("name", targetName)
+    .eq("is_deleted", false)
+    .neq("id", sourceProductId)
+    .maybeSingle();
+  if (!target) {
+    return { error: `"${targetName}" naam ka product nahi mila -- naam bilkul sahi likhein.` };
+  }
+
+  const { totalQty, error } = await executeMerge(service, sourceProductId, target.id, userId, sourceProductId);
+  if (error) return { error };
+
+  revalidatePath("/admin/products/duplicates");
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-count");
+  return {
+    success: true,
+    message:
+      totalQty > 0
+        ? `Merge ho gaya -- ${totalQty} stock "${target.name}" mein chala gaya, purana naam hata diya gaya.`
+        : `Merge ho gaya -- koi stock nahi tha, purana naam hata diya gaya.`,
+  };
 }
 
 /**

@@ -104,7 +104,7 @@ export default async function DuplicateProductsPage() {
         description={`${duplicateGroups.length} naam aise hain jin par ek se zyada product ban chuka hai (kul ${totalDuplicateProducts} products) — naam theek karein ya jo istemal mein nahi wo hata dein.`}
       />
       <MergeRequestsClient requests={pendingMerges} allProductNames={(products ?? []).map((p: any) => p.name)} />
-      <DuplicatesClient groups={duplicateGroups} />
+      <DuplicatesClient groups={duplicateGroups} allProductNames={(products ?? []).map((p: any) => p.name)} />
     </div>
   );
 }
