@@ -259,6 +259,10 @@ export function PosClient({
 
   const [discount, setDiscount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  // Khata kis ka hai aur maal kaun le kar ja raha hai alag ho sakte hain
+  // (malik, 15 September: "khata Aurangzaib ka hai, lay ke jaane wala
+  // Mohsin hai") -- sirf record ke liye, `sales.notes` mein.
+  const [receivedBy, setReceivedBy] = useState("");
   const chhoot = Math.min(Math.max(parseFloat(discount) || 0, 0), total);
   const deyRaqam = Math.round((total - chhoot) * 100) / 100;
 
@@ -370,6 +374,7 @@ export function PosClient({
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
     setDiscount("");
     setDiscountReason("");
+    setReceivedBy("");
     barcodeRef.current?.focus();
   }
 
@@ -452,6 +457,7 @@ export function PosClient({
       discount: chhoot,
       discountReason: discountReason.trim(),
       counterId,
+      receivedBy: receivedBy.trim(),
     });
 
     const data = result.saleId;
@@ -596,6 +602,14 @@ export function PosClient({
             </>
           )}
           {wholesaleOn && <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">{t("pf_pos_wholesale_on", lang)}</p>}
+          {custMode !== "walkin" && chosenCustomer && (
+            <input
+              value={receivedBy}
+              onChange={(e) => setReceivedBy(e.target.value)}
+              placeholder="Wasol kiya (agar khata wale se koi aur le ja raha ho)"
+              className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900"
+            />
+          )}
         </div>
 
         <div>

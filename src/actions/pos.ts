@@ -60,6 +60,12 @@ export async function posCheckout(input: {
   discountReason?: string;
   /** POS Counter (366/367) -- diya jaye to staff ke khule Shift se sale juRti hai. */
   counterId?: string | null;
+  /**
+   * Jab khata wale ka naam aur maal lene wala alag ho (malik, 15
+   * September: "khata Aurangzaib ka hai, lay ke jaane wala Mohsin
+   * hai") -- sirf record ke liye, koi ledger/hisaab is se nahi badalta.
+   */
+  receivedBy?: string;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
@@ -141,6 +147,11 @@ export async function posCheckout(input: {
 
   const saleId = saleIdRaw as string | null;
   if (error || !saleId) return { error: error?.message ?? "Bikri nahi ho saki." };
+
+  const receivedBy = (input.receivedBy ?? "").trim();
+  if (receivedBy) {
+    await supabase.from("sales").update({ notes: `Wasol kiya: ${receivedBy}` }).eq("id", saleId);
+  }
 
   const posted = await postSaleToLedger(saleId, user?.id ?? null);
 
