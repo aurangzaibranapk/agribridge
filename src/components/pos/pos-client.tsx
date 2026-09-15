@@ -263,8 +263,20 @@ export function PosClient({
   const deyRaqam = Math.round((total - chhoot) * 100) / 100;
 
   useEffect(() => {
-    setPaymentLines((prev) => rebalanceKhata(prev, deyRaqam));
-  }, [deyRaqam]);
+    setPaymentLines((prev) => {
+      let next = rebalanceKhata(prev, deyRaqam);
+      // Walk-in mein udhaar allowed nahi -- poora cash hamesha barabar
+      // hona chahiye. Staff se khud rakam type karwane se kabhi kam/
+      // zyada likhne ki ghalti ho sakti hai (malik, 15 September) --
+      // is liye jab tak split payment na ho (ek hi line ho), rakam
+      // khud grand total ke barabar ho jati hai.
+      if (custMode === "walkin" && next.length === 1 && next[0].method !== "khata") {
+        const amt = deyRaqam > 0 ? String(deyRaqam) : "";
+        if (next[0].amount !== amt) next = [{ ...next[0], amount: amt }];
+      }
+      return next;
+    });
+  }, [deyRaqam, custMode]);
 
   const totalAllocated = useMemo(
     () => paymentLines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
