@@ -448,7 +448,22 @@ async function grantCompleteAccess(formData: FormData, allDepartments: boolean):
   if (!featureKeys.length) return { error: "Is selection ke templates mein koi permission nahi hai." };
 
   const dataScope: DataScope = target.shop_id ? "own_shop" : target.branch_id ? "own_branch" : "own_records";
-  const { error: permissionError } = await service.from("user_feature_permissions").upsert(
+  // `user_feature_permissions` ka (profile_id, feature_key) taala sirf
+  // expires_at khali hone par lagta hai (346, waqti grants ek sath reh
+  // sakein isi liye) -- yani ye PARTIAL index hai, poora unique constraint
+  // nahi. Seedha `.upsert(..., {onConflict})` isi wajah se "no unique or
+  // exclusion constraint matching" de kar tootta hai (15 September, Anwar
+  // ko access dete waqt pakड़a gaya). Pehle hata kar phir daalna hai --
+  // wahi tareeqa jo saveStaffAccessSetup upar istemal karta hai.
+  const { error: deleteError } = await service
+    .from("user_feature_permissions")
+    .delete()
+    .eq("profile_id", profileId)
+    .in("feature_key", featureKeys)
+    .is("expires_at", null);
+  if (deleteError) return { error: deleteError.message };
+
+  const { error: permissionError } = await service.from("user_feature_permissions").insert(
     featureKeys.map((featureKey) => ({
       profile_id: profileId,
       feature_key: featureKey,
@@ -456,8 +471,7 @@ async function grantCompleteAccess(formData: FormData, allDepartments: boolean):
       data_scope: dataScope,
       reason: allDepartments ? "Malik ne tamam departments ki complete access di." : `Malik ne ${role} department ki complete access di.`,
       granted_by: who.userId,
-    })),
-    { onConflict: "profile_id,feature_key" }
+    }))
   );
   if (permissionError) return { error: permissionError.message };
 
