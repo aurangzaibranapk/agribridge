@@ -889,6 +889,7 @@ export function ReviewSheet({
                 <th className="px-3 py-2 text-right font-medium">{t("sc_expected", lang)}</th>
                 <th className="px-3 py-2 text-right font-medium">{t("sc_found", lang)}</th>
                 <th className="px-3 py-2 text-right font-medium">{t("sc_difference", lang)}</th>
+                <th className="px-3 py-2 text-right font-medium">Rate</th>
                 <th className="px-3 py-2 text-right font-medium">{t("sc_worth", lang)}</th>
               </tr>
             </thead>
@@ -924,13 +925,14 @@ export function ReviewSheet({
                       {diff}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <span className="tabular-nums text-surface-600 dark:text-surface-400">{rs(Math.abs(value))}</span>
+                      <span className="tabular-nums text-surface-700 dark:text-surface-300">{rs(l.unitCost)}</span>
                       {canApprove && (
                         <div className="mt-1">
                           <RateCorrectionCell lineId={l.id} unitCost={l.unitCost} />
                         </div>
                       )}
                     </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">{rs(Math.abs(value))}</td>
                   </tr>
                 );
               })}
