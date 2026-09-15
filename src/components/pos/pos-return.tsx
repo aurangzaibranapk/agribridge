@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { Search, Package, RotateCcw, Minus, Plus, Check } from "lucide-react";
+import { Search, Package, RotateCcw, Minus, Plus, Check, Receipt } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { ReceiptModal } from "@/components/pos/receipt-modal";
 
 /**
  * Wapsi -- usi counter par, usi tarah.
@@ -116,6 +117,8 @@ export function PosReturn({
   /** Payment tareeqe ki poori taqseem (split ho to sab), aur "Wasol kiya" -- click karne par poori tafseel (15 September). */
   const [payDetails, setPayDetails] = useState<PaymentDetail[]>([]);
   const [receivedByNote, setReceivedByNote] = useState<string | null>(null);
+  /** Purana bill dobara -- print/WhatsApp/Email, wahi ReceiptModal jo checkout ke baad khulta hai. */
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Bikri ki fehrist yahin se aati hai, safhe se nahi -- taake tareekh
   // badalne par poora POS dobara na khule.
@@ -530,19 +533,32 @@ export function PosReturn({
               {sale.payment_mode} · Rs {Number(sale.total_amount).toLocaleString()}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSale(null);
-              setLines([]);
-              setQty({});
-              setMsg(null);
-            }}
-            className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
-          >
-            {t("ret_other_sale", lang)}
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Purana bill dobara -- print/WhatsApp/email, jaisa checkout
+                ke foran baad milta hai (malik, 15 September). */}
+            <button
+              type="button"
+              onClick={() => setShowReceipt(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            >
+              <Receipt className="h-3.5 w-3.5" /> {t("pos_receipt", lang)}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSale(null);
+                setLines([]);
+                setQty({});
+                setMsg(null);
+              }}
+              className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+            >
+              {t("ret_other_sale", lang)}
+            </button>
+          </div>
         </div>
+
+        {showReceipt && <ReceiptModal saleId={sale.id} onClose={() => setShowReceipt(false)} lang={lang} />}
 
         {/* Poori tafseel -- payment kis tareeqe se (split ho to sab), aur
             "Wasol kiya" (khata kis ka hai, maal kaun le gaya, alag ho

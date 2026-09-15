@@ -212,7 +212,11 @@ export const posDict = {
 
   // ---- Wapsi (295): asal bill se, ek ek cheez ki ----
   pos_mode_sale: { en: "Sale", rm: "Bikri", ur: "بکری" },
-  pos_mode_return: { en: "Return", rm: "Wapsi", ur: "واپسی" },
+  // 15 September: malik ka kehna "1 he button ko fix kr dena chiy
+  // sales/retunr reports k name sy" -- alag "Return" button ki jagah
+  // ek hi jama button, jahan se purani sale dhoondi, bill dobara
+  // dekha/print kiya, aur wapsi bhi ki ja sakti hai.
+  pos_mode_return: { en: "Sales / Return", rm: "Sales/Return", ur: "سیلز / واپسی" },
   ret_find_sale: { en: "Find the original sale", rm: "Asal bill dhoondein", ur: "اصل بل ڈھونڈیں" },
   ret_find_note: {
     en: "A return always starts from the original sale — that is what keeps the quantity and the rate honest.",
@@ -288,7 +292,11 @@ export const posDict = {
   ret_stock_back: { en: "Items back in", rm: "Maal wapas aaya", ur: "مال واپس آیا" },
   ret_new_sale: { en: "New sale", rm: "Nayi bikri", ur: "نئی بکری" },
   ret_another: { en: "Another return", rm: "Ek aur wapsi", ur: "ایک اور واپسی" },
-  ret_sales_title: { en: "Sales — pick one to return", rm: "Bikri — wapsi ke liye ek chunein", ur: "بکری — واپسی کے لیے ایک چنیں" },
+  ret_sales_title: {
+    en: "Sales — pick one to view the bill or return",
+    rm: "Bikri — bill dekhne ya wapsi ke liye ek chunein",
+    ur: "بکری — بل دیکھنے یا واپسی کے لیے ایک چنیں",
+  },
   ret_from: { en: "From", rm: "Is din se", ur: "اس دن سے" },
   ret_to: { en: "To", rm: "Is din tak", ur: "اس دن تک" },
   ret_bills: { en: "Bills", rm: "Bill", ur: "بل" },
