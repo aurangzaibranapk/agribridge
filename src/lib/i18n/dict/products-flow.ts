@@ -996,9 +996,9 @@ export const productsFlowDict = {
     ur: "{n} پروڈکٹ کا ریٹ چڑھ گیا۔",
   },
   pf_rb_hint: {
-    en: "Fill in what you know and save. A rate you do not know stays blank — never write 0, because 0 means free.",
-    rm: "Jo maloom hai wo bhar kar mehfooz karein. Jo rate maloom nahi wo khali rehne dein — 0 hargiz na likhein, kyunke 0 ka matlab muft hai.",
-    ur: "جو معلوم ہے وہ بھر کر محفوظ کریں۔ جو ریٹ معلوم نہیں وہ خالی رہنے دیں — 0 ہرگز نہ لکھیں، کیونکہ 0 کا مطلب مفت ہے۔",
+    en: "Fill in what you know and save. A rate you do not know stays blank — never write 0, because 0 means free. Quantity is also editable here — useful when Rate and Quantity got swapped while counting.",
+    rm: "Jo maloom hai wo bhar kar mehfooz karein. Jo rate maloom nahi wo khali rehne dein — 0 hargiz na likhein, kyunke 0 ka matlab muft hai. Quantity bhi yahan theek ho sakti hai — kaam aata hai jab ginti ke waqt Rate aur Quantity ka khana ulat jaye.",
+    ur: "جو معلوم ہے وہ بھر کر محفوظ کریں۔ جو ریٹ معلوم نہیں وہ خالی رہنے دیں — 0 ہرگز نہ لکھیں، کیونکہ 0 کا مطلب مفت ہے۔ مقدار بھی یہاں ٹھیک ہو سکتی ہے۔",
   },
 
   // ---- Adhoore products: setup queue (258) ----

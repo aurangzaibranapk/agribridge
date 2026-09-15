@@ -20,6 +20,7 @@ interface Row {
   mrpPrice: number | null;
   saleMissing: boolean;
   tradeMissing: boolean;
+  inventory: { warehouseId: string; warehouseName: string; qty: number }[];
 }
 
 function Submit({ label }: { label: string }) {
@@ -117,6 +118,7 @@ export function RatesClient({ lang, rows }: { lang: Lang; rows: Row[] }) {
                 <th className="py-2">{t("pf_th_name", lang)}</th>
                 <th className="py-2">{t("pf_th_pack", lang)}</th>
                 <th className="py-2 text-right">MRP</th>
+                <th className="py-2 w-24">Quantity</th>
                 <th className="py-2 w-28">{t("pf_f_trade", lang)}</th>
                 <th className="py-2 w-28">{t("pf_f_sale", lang)}</th>
                 <th className="py-2">{t("pf_th_state", lang)}</th>
@@ -156,6 +158,34 @@ export function RatesClient({ lang, rows }: { lang: Lang; rows: Row[] }) {
                   <td className="py-2 pr-2 text-surface-600">{r.packSize ?? "—"}</td>
                   <td className="py-2 pr-2 text-right tabular-nums text-surface-500">
                     {r.mrpPrice == null ? "—" : r.mrpPrice.toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-2">
+                    {/* "Extra Item" mein kai dafa Quantity aur Rate ka
+                        khana ulat gaya (malik, 15 September) -- isi
+                        wajah se yahin, rate ke sath, quantity bhi theek
+                        karne ka mauqa. Godam ek se zyada ho to har ek
+                        apna box. */}
+                    {r.inventory.length === 0 ? (
+                      <span className="text-xs text-surface-400">—</span>
+                    ) : (
+                      r.inventory.map((inv) => (
+                        <div key={inv.warehouseId} className="mb-1 last:mb-0">
+                          <input type="hidden" name={`whid_${r.id}`} value={inv.warehouseId} />
+                          <Input
+                            name={`qty_${r.id}_${inv.warehouseId}`}
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            defaultValue={inv.qty}
+                            className="h-8 text-right"
+                            aria-label={`Quantity — ${inv.warehouseName}`}
+                          />
+                          {r.inventory.length > 1 && (
+                            <span className="mt-0.5 block truncate text-[10px] text-surface-400">{inv.warehouseName}</span>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </td>
                   <td className="py-2 pr-2">
                     {/* Jo maloom nahi wo khali aata hai -- sifar nahi. */}

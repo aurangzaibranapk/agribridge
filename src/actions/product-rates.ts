@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Jin products ka rate baqi tha, un ka rate bharna.
@@ -71,7 +72,9 @@ export async function saveMissingRates(_prev: RateState, formData: FormData): Pr
   };
 
   let saved = 0;
+  let qtyFixed = 0;
   const problems: string[] = [];
+  const service = createServiceClient();
 
   for (const id of ids) {
     const sale = num(String(formData.get(`sale_${id}`) ?? ""));
@@ -84,6 +87,49 @@ export async function saveMissingRates(_prev: RateState, formData: FormData): Pr
       .eq("id", id)
       .maybeSingle();
     if (!p) continue;
+
+    // Quantity bhi yahin theek hoti hai (malik, 15 September) --
+    // "Extra Item" se ginti ke dauran Rate aur Quantity ka khana kai
+    // dafa ulat gaya. Stock seedha nahi likha jata -- movement se hi
+    // hilta hai (129), is liye asal adad aur naye adad ka FARQ ek
+    // adjustment movement ki tarah jata hai, taake "kahan se badla"
+    // ka nishan hamesha rahe. Ye rate/naam se ALAG hai -- upar wale
+    // "kuch nahi badla to chhoRo" wale continue se pehle chalta hai,
+    // taake sirf quantity theek karne wali qatar bhi chal sake.
+    for (const whId of formData.getAll(`whid_${id}`).map(String)) {
+      const rawQty = formData.get(`qty_${id}_${whId}`);
+      if (rawQty === null) continue;
+      const qtyStr = String(rawQty).trim();
+      if (!qtyStr) continue;
+      const newQty = Number(qtyStr.replace(/,/g, ""));
+      if (!Number.isFinite(newQty) || newQty < 0) {
+        problems.push(`${p.name}: quantity sahi likhein.`);
+        continue;
+      }
+      const { data: inv } = await service
+        .from("inventory")
+        .select("id, quantity_on_hand")
+        .eq("product_id", id)
+        .eq("warehouse_id", whId)
+        .maybeSingle();
+      if (!inv) continue;
+      const delta = Math.round((newQty - Number(inv.quantity_on_hand)) * 1000) / 1000;
+      if (delta === 0) continue;
+      const { error: mvErr } = await service.from("stock_movements").insert({
+        inventory_id: inv.id,
+        movement_type: delta > 0 ? "adjustment_increase" : "adjustment_decrease",
+        quantity: Math.abs(delta),
+        reference_type: "rate_baqi_correction",
+        reference_id: id,
+        notes: "Rate Baqi safhe se quantity theek ki gayi — ginti ke waqt Rate/Quantity ulat gaye the.",
+        created_by: user.id,
+      });
+      if (mvErr) {
+        problems.push(`${p.name}: quantity theek nahi ho saki — ${mvErr.message}`);
+      } else {
+        qtyFixed += 1;
+      }
+    }
 
     // Khali naam ka matlab "koi tabdeeli nahi" -- wohi usool jo rate ke
     // khali khane par lagta hai. Naam mita dena product ko be-naam kar
@@ -140,30 +186,33 @@ export async function saveMissingRates(_prev: RateState, formData: FormData): Pr
     saved += 1;
   }
 
-  if (saved > 0) {
+  if (saved > 0 || qtyFixed > 0) {
     await logAudit({
       actionType: "update",
       module: "products",
       recordId: ids[0],
       recordLabel: "Rate baqi",
-      description: `${saved} products theek kiye gaye (rate ya naam)`,
+      description: `${saved} products theek kiye gaye (rate ya naam)${qtyFixed > 0 ? `, ${qtyFixed} quantity theek ki gayi` : ""}`,
     });
   }
 
   revalidatePath("/admin/products/rates-baqi");
   revalidatePath("/admin/products");
   revalidatePath("/admin/pos");
+  revalidatePath("/admin/inventory");
 
-  if (saved === 0) {
+  if (saved === 0 && qtyFixed === 0) {
     return { error: problems.length > 0 ? problems.join(" | ") : "Kuch bhara nahi gaya." };
   }
 
   return {
     success: true,
     saved,
-    notice:
-      problems.length === 0
-        ? undefined
-        : `Kuch qatarein nahi charhin: ${problems.slice(0, 4).join(" | ")}`,
+    notice: [
+      qtyFixed > 0 ? `${qtyFixed} quantity theek ki gayi.` : null,
+      problems.length > 0 ? `Kuch qatarein nahi charhin: ${problems.slice(0, 4).join(" | ")}` : null,
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined,
   };
 }

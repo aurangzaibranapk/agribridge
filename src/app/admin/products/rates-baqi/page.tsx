@@ -46,6 +46,29 @@ export default async function RatesBaqiPage() {
     .order("created_at", { ascending: false })
     .limit(500);
 
+  // Malik (15 September): "Extra Item" se ginti ke dauran kai jagah
+  // rate aur quantity ka khana ulat gaya (jo quantity ka box tha wahan
+  // rate likha gaya, aur ulta). Yahin par, sath mein quantity dikha kar
+  // theek karne ka mauqa dena hai -- alag safhe par bhejna wahi ghalti
+  // wahin chhoR deta jo naam ke liye pehle se maani gayi hai.
+  const productIds = (rows ?? []).map((r) => String(r.id));
+  const { data: invRows } = productIds.length
+    ? await supabase
+        .from("inventory")
+        .select("product_id, warehouse_id, quantity_on_hand, warehouses(name)")
+        .in("product_id", productIds)
+    : { data: [] as never[] };
+  const invByProduct = new Map<string, { warehouseId: string; warehouseName: string; qty: number }[]>();
+  for (const row of (invRows ?? []) as any[]) {
+    const list = invByProduct.get(row.product_id) ?? [];
+    list.push({
+      warehouseId: row.warehouse_id,
+      warehouseName: (Array.isArray(row.warehouses) ? row.warehouses[0]?.name : row.warehouses?.name) ?? "—",
+      qty: Number(row.quantity_on_hand ?? 0),
+    });
+    invByProduct.set(row.product_id, list);
+  }
+
   return (
     <div>
       <PageHeader title={t("pf_rb_title", lang)} description={t("pf_rb_desc", lang)} />
@@ -69,6 +92,7 @@ export default async function RatesBaqiPage() {
             mrpPrice: r.mrp_price == null ? null : Number(r.mrp_price),
             saleMissing: Boolean(r.sale_rate_pending),
             tradeMissing: Boolean(r.trade_rate_pending),
+            inventory: invByProduct.get(String(r.id)) ?? [],
           }))}
         />
       )}
