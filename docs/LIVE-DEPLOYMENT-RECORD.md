@@ -3368,12 +3368,27 @@ tak, 23 commit:**
 - Print: sidebar/topbar/tabs print par chhup jate hain; Export
   Catalogue print fix
 
+**15 September — 2 nayi migrations Testing par lagi, Live par ABHI BAQI hain:**
+- `423_pos_multi_counter_switch.sql` — staff apne kai POS counters par
+  ek sath khula shift rakh sake (shift band kiye baghair switch). Sirf
+  ek index hataya (`uq_pos_shift_open_staff`), koi data nahi badla.
+- `424_farmer_combined_ledger.sql` — Farmer ka combined statement
+  (`fn_farmer_combined_ledger`) + `v_farmer_combined_balance` mein
+  khad (farmer_credit) ka do-dafa-ginti bug fix. **Live par
+  `farmer_credit_ledger` mein abhi koi row nahi, is liye ye migration
+  Live ke maujooda kisi bhi adad ko nahi badalti** — sirf aainda ke
+  liye taala hai.
+
 **Agli baar malik "system par aa gaya" kahein to poori command ek sath:**
-1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein) — migrations
-   sab lag chuki hain, is dafa sirf build/upload hai, koi Live migration
-   nahi chalani.
-2. `git pull` + `npm run build` + package + upload (upar wala do-command
+1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein) —
+   **is dafa 2 nayi migrations bhi Live par chalani hain** (423, 424,
+   upar dekhein) — backup ke baad, build se pehle.
+2. Migrations ke baad ginti (pre/post) — 424 chhoti si tabdeeli hai
+   (koi Live data nahi badalta, sirf function/view), phir bhi P0
+   tarteeb waisi hi.
+3. `git pull` + `npm run build` + package + upload (upar wala do-command
    tareeqa).
-3. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
+4. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
    Recovery (farmer balance bhi dikh rahe hon), Stock Count (list aa
-   rahi ho), Machinery booking-detail render ho rahe hain.
+   rahi ho), Machinery booking-detail render ho rahe hain, POS par
+   "Doosra Counter" switcher (jin staff ke paas kai counter hon).
