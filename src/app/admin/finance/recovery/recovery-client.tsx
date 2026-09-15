@@ -198,14 +198,17 @@ export function RecoveryClient({
   }
 
   async function downloadStatement(p: RecoveryParty) {
-    if (p.type !== "customer") {
+    // Farmer aur Customer ka statement ab isi ek raaste se banta hai
+    // (424) -- Malik: "dono ek hi cheez honi chahiye." Dealer/Supplier
+    // abhi apne alag safhe par hain.
+    if (p.type !== "customer" && p.type !== "farmer") {
       window.open(statementHref(p), "_blank");
       return;
     }
     const res = await fetch(`/api/customer-statements/${p.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channel: "download" }),
+      body: JSON.stringify({ channel: "download", partyType: p.type }),
     });
     if (!res.ok) {
       setNotice("Statement nahi ban saka.");
@@ -353,13 +356,13 @@ export function RecoveryClient({
               <Printer className="h-4 w-4" /> Print
             </button>
             <button
-              disabled={busy || !previewParty || previewParty.type !== "customer"}
+              disabled={busy || !previewParty || (previewParty.type !== "customer" && previewParty.type !== "farmer")}
               onClick={async () => {
                 if (!previewParty) return;
                 const res = await fetch(`/api/customer-statements/${previewParty.id}`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ channel: "email" }),
+                  body: JSON.stringify({ channel: "email", partyType: previewParty.type }),
                 });
                 const json = await res.json().catch(() => ({}));
                 setNotice(res.ok ? "Statement email ho gaya." : json.error || "Email nahi ja saka.");
