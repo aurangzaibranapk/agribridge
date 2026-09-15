@@ -578,6 +578,9 @@ export async function postStaffLedger(args: {
 
   let other: string;
   if (args.sourceType === "month_end_processed") other = ACC.salaryDue;
+  // Ginti ka farq staff ke khate mein -- yahan koi cash nahi hilta,
+  // asal mein stock hi kam hua tha (stock_count_liability, 421).
+  else if (args.sourceType === "stock_count_shortage") other = ACC.stockGoods;
   else if (args.ledgerType === "credit") other = ACC.salaries;
   else other = ACC.cash;
 

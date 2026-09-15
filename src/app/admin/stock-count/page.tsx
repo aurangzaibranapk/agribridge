@@ -3,6 +3,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { StartCountForm, CountingSheet, ReviewSheet } from "./count-client";
+import { LiabilityPanel } from "./liability-client";
 import {
   openCount,
   recentCounts,
@@ -94,12 +95,44 @@ export default async function StockCountPage({
 
   const [history, overdue] = await Promise.all([recentCounts(15), overdueCounts()]);
 
+  // Ginti ka farq jo staff ke khate ke liye bheja gaya hai -- staff
+  // apna hissa yahin qabool/mana karta hai (malik, 15 September: "har
+  // product ke sath button ho verify/acknowledge karne ka"). Admin/
+  // Owner ko sab ki nigrani, baaqi ko sirf apna hissa dikhta hai.
+  let liabilityQuery = supabase
+    .from("stock_count_liability_shares")
+    .select(
+      "id, product_name, reason, share_amount, profile_id, profiles(full_name), stock_count_liability_requests(count_id, stock_counts(count_date, warehouses(name)))"
+    )
+    .eq("status", "pending")
+    .order("id");
+  if (!sabKuchWala && user) liabilityQuery = liabilityQuery.eq("profile_id", user.id);
+  const { data: pendingShares } = user ? await liabilityQuery : { data: null };
+
+  const liabilityShares = (pendingShares ?? []).map((s: any) => {
+    const req = Array.isArray(s.stock_count_liability_requests) ? s.stock_count_liability_requests[0] : s.stock_count_liability_requests;
+    const sc = Array.isArray(req?.stock_counts) ? req.stock_counts[0] : req?.stock_counts;
+    const wh = Array.isArray(sc?.warehouses) ? sc.warehouses[0] : sc?.warehouses;
+    const prof = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
+    return {
+      id: s.id,
+      productName: s.product_name,
+      reason: s.reason ?? "",
+      amount: Number(s.share_amount),
+      staffName: prof?.full_name ?? "—",
+      warehouseName: wh?.name ?? "—",
+      countDate: sc?.count_date ?? "",
+    };
+  });
+
   return (
     <div className="space-y-4">
       <PageHeader
         title={t("sc_title", lang)}
         description={t("sc_subtitle", lang)}
       />
+
+      <LiabilityPanel shares={liabilityShares} isAdmin={sabKuchWala} />
 
       {/* ---- Jin godamon ki ginti nahi hui ---- */}
       {overdue.length > 0 && (

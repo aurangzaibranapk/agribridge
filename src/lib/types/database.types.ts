@@ -25339,6 +25339,134 @@ export type Database = {
           },
         ]
       }
+      stock_count_liability_requests: {
+        Row: {
+          branch_id: string | null
+          count_id: string
+          created_at: string
+          id: string
+          requested_by: string | null
+          total_short_value: number
+        }
+        Insert: {
+          branch_id?: string | null
+          count_id: string
+          created_at?: string
+          id?: string
+          requested_by?: string | null
+          total_short_value: number
+        }
+        Update: {
+          branch_id?: string | null
+          count_id?: string
+          created_at?: string
+          id?: string
+          requested_by?: string | null
+          total_short_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_liability_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_requests_count_id_fkey"
+            columns: ["count_id"]
+            isOneToOne: false
+            referencedRelation: "stock_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      stock_count_liability_shares: {
+        Row: {
+          count_line_id: string
+          id: string
+          product_name: string
+          profile_id: string
+          reason: string | null
+          request_id: string
+          resolved_at: string | null
+          share_amount: number
+          status: string
+        }
+        Insert: {
+          count_line_id: string
+          id?: string
+          product_name: string
+          profile_id: string
+          reason?: string | null
+          request_id: string
+          resolved_at?: string | null
+          share_amount: number
+          status?: string
+        }
+        Update: {
+          count_line_id?: string
+          id?: string
+          product_name?: string
+          profile_id?: string
+          reason?: string | null
+          request_id?: string
+          resolved_at?: string | null
+          share_amount?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_liability_shares_count_line_id_fkey"
+            columns: ["count_line_id"]
+            isOneToOne: false
+            referencedRelation: "stock_count_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_shares_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_shares_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "stock_count_liability_shares_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "stock_count_liability_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_count_lines: {
         Row: {
           count_id: string

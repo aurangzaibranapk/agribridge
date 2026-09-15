@@ -11,6 +11,7 @@ import {
   correctStockCountRate,
   type ActionState,
 } from "@/actions/stock-count";
+import { sendShortageToStaff } from "@/actions/stock-count-liability";
 import { previewProductMerge, requestProductMerge } from "@/actions/product-merge";
 import { saveMissingRates } from "@/actions/product-rates";
 import { bestMatches, MATCH_STRONG } from "@/lib/product-match";
@@ -858,9 +859,11 @@ export function ReviewSheet({
   const lang = useLang();
   const [postState, postAction] = useFormState(postCount, initialState);
   const [verifyState, verifyAction] = useFormState(verifyCount, initialState);
+  const [staffState, staffAction] = useFormState(sendShortageToStaff, initialState);
   const state = canApprove ? postState : verifyState;
   const gaps = lines.filter((l) => (l.difference ?? 0) !== 0);
   const matched = lines.length - gaps.length;
+  const hasShortage = gaps.some((l) => (l.difference ?? 0) < 0);
   // Tasdeeq ke baad reason ke khane already bhare/lock -- dobara wajah
   // maangna Manager se ho chuka kaam dobara karwana hota.
   const readOnlyReasons = status === "verified" && !canApprove;
@@ -944,10 +947,23 @@ export function ReviewSheet({
       {canAct ? (
         <>
           <Feedback state={state} />
-          <Submit
-            label={canApprove ? t("sc_finish_review", lang) : t("sc_verify_review", lang)}
-            variant={gaps.length > 0 ? "amber" : "brand"}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Submit
+              label={canApprove ? t("sc_finish_review", lang) : t("sc_verify_review", lang)}
+              variant={gaps.length > 0 ? "amber" : "brand"}
+            />
+            {canApprove && hasShortage && (
+              <button
+                type="submit"
+                formAction={staffAction}
+                className="rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-surface-900 dark:text-amber-400"
+              >
+                Kami Sale Staff ke khate mein bhejein
+              </button>
+            )}
+          </div>
+          {staffState.error && <p className="text-xs text-red-600">{staffState.error}</p>}
+          {staffState.success && <p className="text-xs text-green-700 dark:text-green-400">{staffState.message}</p>}
         </>
       ) : (
         <p className="rounded-lg bg-surface-100 px-3 py-2 text-sm text-surface-600 dark:bg-surface-800 dark:text-surface-400">
