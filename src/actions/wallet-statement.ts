@@ -1,9 +1,11 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  notice?: string;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -63,25 +65,19 @@ export async function emailWalletStatement(_prev: ActionState, formData: FormDat
   const { generateWalletStatementPdf } = await import("@/lib/wallet-statement-pdf");
   const pdfBuffer = await generateWalletStatementPdf(data);
 
-  try {
-    const nodemailer = await import("nodemailer");
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-      port: 587,
-      secure: false,
-      auth: { user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk", pass: process.env.JOB_SMTP_PASS },
-    });
-    await transporter.sendMail({
-      from: `"Al Rana Traders" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject: `Wallet Statement - ${data.farmerName}`,
-      html: `<p>Assalam-o-Alaikum ${data.farmerName},</p><p>Aapki Wallet Statement is email ke sath attach hai.</p><p>Current Balance: Rs ${data.currentBalance.toLocaleString()}</p><p>Al Rana Traders - AgriBridge</p>`,
-      attachments: [{ filename: `wallet-statement-${data.farmerCode}.pdf`, content: pdfBuffer }],
-    });
-  } catch {
-    return { error: "Email bhejne mein masla hua." };
-  }
-  return { success: true };
+  // Wallet ka hisaab accounts ke khate se (`src/lib/mailer.ts`).
+  const sent = await sendDeptMail({
+    dept: "accounts",
+    to: toEmail,
+    subject: `Wallet Statement - ${data.farmerName}`,
+    html: mailWrapper(
+      `<p>Assalam-o-Alaikum ${data.farmerName},</p><p>Aapki Wallet Statement is email ke sath attach hai.</p><p><strong>Current Balance:</strong> Rs ${data.currentBalance.toLocaleString()}</p>`,
+      "accounts"
+    ),
+    attachments: [{ filename: `wallet-statement-${data.farmerCode}.pdf`, content: pdfBuffer }],
+  });
+  if (!sent.sent) return { error: sent.error };
+  return { success: true, notice: `Statement ${toEmail} par bhej di gayi (${sent.from} se).` };
 }
 
 export { buildStatementData };

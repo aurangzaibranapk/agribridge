@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { placeProduceOrder, type ActionState } from "@/actions/produce";
 import { Wheat, CheckCircle2, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -16,6 +18,7 @@ interface Listing {
 }
 
 export function BuyerMarketplaceClient({ listings }: { listings: Listing[] }) {
+  const lang = useLang();
   const [selected, setSelected] = useState<Listing | null>(null);
 
   return (
@@ -41,7 +44,7 @@ export function BuyerMarketplaceClient({ listings }: { listings: Listing[] }) {
           </button>
         ))}
         {listings.length === 0 && (
-          <p className="col-span-full py-10 text-center text-sm text-surface-400">No listings available right now.</p>
+          <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("ou_no_listings", lang)}</p>
         )}
       </div>
 
@@ -51,6 +54,7 @@ export function BuyerMarketplaceClient({ listings }: { listings: Listing[] }) {
 }
 
 function OrderModal({ listing, onClose }: { listing: Listing; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(placeProduceOrder, initialState);
 
   if (state.success) {
@@ -61,7 +65,7 @@ function OrderModal({ listing, onClose }: { listing: Listing; onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Place Order</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("ou_place_order", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
@@ -72,8 +76,7 @@ function OrderModal({ listing, onClose }: { listing: Listing; onClose: () => voi
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && (
           <p className="mb-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-            <CheckCircle2 className="h-4 w-4" /> Order placed! Waiting for farmer confirmation.
-          </p>
+            <CheckCircle2 className="h-4 w-4" />{t("ou_order_placed", lang)}</p>
         )}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="listing_id" value={listing.id} />

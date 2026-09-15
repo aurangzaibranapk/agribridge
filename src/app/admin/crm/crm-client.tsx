@@ -1,14 +1,18 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/form";
 import { Users, Truck, Building2, Briefcase } from "lucide-react";
 import { CustomerActions } from "@/app/admin/crm/customer-actions";
 import { AddCustomerButton, EditCustomerButton } from "@/app/admin/crm/customer-form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Customer {
   id: string;
   name: string;
   phone_number: string;
+  cnic: string | null;
   contact_person: string | null;
   email: string | null;
   address: string | null;
@@ -60,6 +64,7 @@ export function CrmClient({
   dealers: Dealer[];
 }) {
   const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "companies" | "dealers">("customers");
+  const lang = useLang();
 
   function statusTone(status: string) {
     if (status === "verified") return "green" as const;
@@ -96,12 +101,12 @@ export function CrmClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Name</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Phone</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata Balance</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Edit</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Actions</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("cr_khata_balance", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_edit", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_actions", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -109,8 +114,14 @@ export function CrmClient({
                 <tr key={c.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{c.name}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{c.phone_number}</td>
+                  {/* Adad ab khud khate ka darwaza hai. Pehle sirf kul
+                      raqam nazar aati thi aur ye sawal kahin se jawab
+                      nahi paata tha: "ye kab bana, aur is ne kab kya
+                      diya?" */}
                   <td className={`px-4 py-3 text-right font-semibold ${c.current_balance > 0 ? "text-red-600" : "text-surface-500"}`}>
-                    Rs {c.current_balance.toLocaleString()}
+                    <Link href={`/admin/crm/${c.id}/statement`} className="underline-offset-2 hover:underline">
+                      Rs {c.current_balance.toLocaleString()}
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={c.is_active ? "green" : "gray"}>{c.is_active ? "Active" : "Inactive"}</Badge>
@@ -119,13 +130,21 @@ export function CrmClient({
                     <EditCustomerButton customer={c} />
                   </td>
                   <td className="px-4 py-3">
-                    <CustomerActions customerId={c.id} isActive={c.is_active} />
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/admin/crm/${c.id}/statement`}
+                        className="text-xs font-medium text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
+                      >
+                        Khata
+                      </Link>
+                      <CustomerActions customerId={c.id} isActive={c.is_active} />
+                    </div>
                   </td>
                 </tr>
               ))}
               {customers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-surface-400">No customers yet.</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-surface-400">{t("cr_no_customers", lang)}</td>
                 </tr>
               )}
             </tbody>
@@ -138,10 +157,10 @@ export function CrmClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Name</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Contact</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Phone</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Payable</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("fp_contact", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_payable", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -157,7 +176,7 @@ export function CrmClient({
               ))}
               {suppliers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">No suppliers yet.</td>
+                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">{t("cr_no_suppliers", lang)}</td>
                 </tr>
               )}
             </tbody>
@@ -170,9 +189,9 @@ export function CrmClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Name</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Contact</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Phone</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("fp_contact", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +204,7 @@ export function CrmClient({
               ))}
               {companies.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center text-surface-400">No companies yet.</td>
+                  <td colSpan={3} className="px-4 py-10 text-center text-surface-400">{t("cr_no_companies", lang)}</td>
                 </tr>
               )}
             </tbody>
@@ -198,10 +217,10 @@ export function CrmClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Business Name</th>
-                <th className="px-4 py-3 font-medium text-surface-500">District</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Payable</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_business_name", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_district", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_payable", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -219,7 +238,7 @@ export function CrmClient({
               ))}
               {dealers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">No dealers yet.</td>
+                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">{t("dl_none_yet", lang)}</td>
                 </tr>
               )}
             </tbody>

@@ -9,7 +9,7 @@
 -- not built here since AgriBridge itself isn't being resold as a
 -- platform-managed SaaS in this pass, just isolated per-tenant).
 
-alter table profiles add column organization_id uuid references organizations(id);
+alter table profiles add column if not exists organization_id uuid references organizations(id);
 
 update profiles set organization_id = fn_default_organization_id() where organization_id is null;
 

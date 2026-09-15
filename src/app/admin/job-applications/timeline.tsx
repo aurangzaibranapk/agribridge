@@ -1,4 +1,7 @@
+"use client";
 import { Clock } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface ActivityEntry {
   id: string;
@@ -22,13 +25,13 @@ const EVENT_COLORS: Record<string, string> = {
 };
 
 export function ApplicationTimeline({ events }: { events: ActivityEntry[] }) {
+  const lang = useLang();
   if (events.length === 0) return null;
 
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
-        <Clock className="h-3.5 w-3.5" /> Application Timeline
-      </p>
+        <Clock className="h-3.5 w-3.5" />{t("at_application_timeline", lang)}</p>
       <div className="space-y-2.5">
         {events.map((e) => (
           <div key={e.id} className="flex gap-2.5">

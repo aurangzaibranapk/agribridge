@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { BranchStatementClient } from "./statement-client";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,19 @@ export default async function BranchStatementPage({
   const endDate = sp.end ?? now.toISOString().slice(0, 10);
 
   const supabase = createClient();
+
+  // Manager/sales_staff sirf apni branch ka statement dekh sakte hain
+  // -- koi auth check hi nahi tha, URL se kisi bhi branch ka poora
+  // credit statement khul jata tha.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: me } = await supabase.from("profiles").select("role, branch_id").eq("id", user.id).maybeSingle();
+  if (!me) redirect("/login");
+  const broad = UNRESTRICTED_ROLES.includes(me.role) || me.role === "finance";
+  if (!broad && me.branch_id !== branchId) {
+    redirect(me.branch_id ? `/admin/branches/${me.branch_id}/statement` : "/admin/branches");
+  }
+
   const { data: branch } = await supabase.from("branches").select("id, name, district").eq("id", branchId).single();
 
   const { data: rawTxns } = await supabase

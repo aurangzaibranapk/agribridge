@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 import type { createClient } from "@/lib/supabase/server";
 import { getCompanyProducts, getFarmerContext, getMandiRate, escalateToExpert } from "@/lib/kisan-knowledge-tools";
 
@@ -118,7 +119,7 @@ export async function processFarmerAiMessage(
   farmerId: string,
   input: { text?: string; audioBase64?: string; audioMimeType?: string }
 ): Promise<ProcessResult> {
-  const ai = new GoogleGenAI({ apiKey: process.env.BRIDGE_AI_GEMINI_API_KEY! });
+  const ai = new GoogleGenAI({ apiKey: geminiApiKey()! });
   const chat = ai.chats.create({
     model: "gemini-3.6-flash",
     config: {

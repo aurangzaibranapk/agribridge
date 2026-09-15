@@ -1,5 +1,7 @@
 "use server";
 
+import { resolveUnit } from "@/lib/units";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -66,7 +68,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       usage_instructions: (formData.get("usage_instructions") as string) || null,
       safety_information: (formData.get("safety_information") as string) || null,
       pack_size: (formData.get("pack_size") as string) || null,
-      unit: (formData.get("unit") as string) || null,
+      ...(await unitFields(formData.get("unit") as string | null)),
       barcode: (formData.get("barcode") as string) || null,
       manufacture_date: (formData.get("manufacture_date") as string) || null,
       expiry_date: (formData.get("expiry_date") as string) || null,
@@ -75,6 +77,9 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       purchase_price: Number(formData.get("purchase_price")),
       selling_price: Number(formData.get("selling_price")),
       mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+      // Thok ka rate NULL rehta hai jab tak diya na jaye -- har cheez
+      // thok par nahi milti, aur sifar ka matlab "thok par muft" hota.
+      wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
       min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
       is_verified: skipApproval,
       created_by: userId,
@@ -84,10 +89,20 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 
   if (error) return { error: error.message };
 
-  const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
-  const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
-  if (warehouse) {
-    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouse.id, quantity_on_hand: 0 });
+  // Kaun sa godam -- banda ne khud chuna ho to wahi (13 September:
+  // "kuch warehouse mein hai kuch POS mein" wale confusion ki jaR yehi
+  // thi -- har naya product hamesha Central mein ban jata tha, chahe
+  // banda kisi bhi dukan ke liye soch raha ho). Kuch na chuna ho to
+  // purana raasta -- product ke apne branch ka MAIN godam.
+  const chosenWarehouseId = (formData.get("warehouse_id") as string) || null;
+  let warehouseId = chosenWarehouseId;
+  if (!warehouseId) {
+    const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
+    const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
+    warehouseId = warehouse?.id ?? null;
+  }
+  if (warehouseId) {
+    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouseId, quantity_on_hand: 0 });
   }
 
   await supabase.from("activity_logs").insert({ user_id: userId, action: "create", entity_name: "Product", entity_id: data.id });
@@ -100,6 +115,67 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   }
 
   redirect("/admin/products");
+}
+
+/**
+ * Bill Rates se seedha naya product (10 September).
+ *
+ * Malik ka kehna: "jab system ne bill se naam diya, neeche main khud
+ * naam de raha hoon, system ko wahi naam save karna chahiye" -- yani
+ * "koi product nahi mila" par safha chhoR kar Products par jana aur
+ * wapas aana faaltu chakkar hai. Yahan se bina redirect ke, bina kisi
+ * approval-flow ke (jo Owner/Admin/Warehouse bill rates par kaam kar
+ * raha hai wo product bhi bana sakta hai) -- rate wahi jo us line par
+ * abhi tak likha ja chuka hai, dobara nahi poochna.
+ */
+export async function quickCreateProduct(input: {
+  name: string;
+  packSize?: string | null;
+  purchasePrice: number;
+  sellingPrice?: number | null;
+  wholesalePrice?: number | null;
+  mrpPrice?: number | null;
+}): Promise<{ id: string } | { error: string }> {
+  const supabase = createClient();
+  const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
+  if (!isUnrestricted && !permission?.can_add) {
+    return { error: "Aapke paas Product Add karne ki ijazat nahi hai." };
+  }
+  const name = input.name.trim();
+  if (!name) return { error: "Product ka naam saaf nahi." };
+  if (!Number.isFinite(input.purchasePrice) || input.purchasePrice < 0) {
+    return { error: "Trade rate saaf nahi -- pehle wo bharein." };
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      name,
+      pack_size: input.packSize?.trim() || null,
+      purchase_price: input.purchasePrice,
+      // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
+      // Baqi wala nishan isi se lagta hai (rates-baqi/page.tsx).
+      selling_price: input.sellingPrice ?? 0,
+      wholesale_price: input.wholesalePrice ?? null,
+      mrp_price: input.mrpPrice ?? null,
+      is_verified: isUnrestricted || permission?.add_needs_approval === false,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Product nahi ban saka." };
+
+  const { data: product } = await supabase.from("products").select("branch_id").eq("id", data.id).single();
+  const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", product?.branch_id ?? "").eq("code", "MAIN").single();
+  if (warehouse) {
+    await supabase.from("inventory").insert({ product_id: data.id, warehouse_id: warehouse.id, quantity_on_hand: 0 });
+  }
+
+  await supabase.from("activity_logs").insert({ user_id: userId, action: "create", entity_name: "Product", entity_id: data.id });
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/bill-rates");
+
+  return { id: data.id };
 }
 
 export async function updateProduct(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -126,7 +202,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     usage_instructions: (formData.get("usage_instructions") as string) || null,
     safety_information: (formData.get("safety_information") as string) || null,
     pack_size: (formData.get("pack_size") as string) || null,
-    unit: (formData.get("unit") as string) || null,
+    ...(await unitFields(formData.get("unit") as string | null)),
     barcode: (formData.get("barcode") as string) || null,
     manufacture_date: (formData.get("manufacture_date") as string) || null,
     expiry_date: (formData.get("expiry_date") as string) || null,
@@ -135,6 +211,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     purchase_price: Number(formData.get("purchase_price")),
     selling_price: Number(formData.get("selling_price")),
     mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
+    wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
     min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
   };
 
@@ -184,4 +261,17 @@ export async function deleteProduct(_prev: FormState, formData: FormData): Promi
 
   revalidatePath("/admin/products");
   return { success: true };
+}
+
+/**
+ * Form "unit" mein master ka code bhejta hai (273); purane safhe/labels
+ * ke liye products.unit mein label rehta hai aur unit_code alag. Code na
+ * mile (purani built-in fehrist ka text) to text waise hi unit mein.
+ */
+async function unitFields(raw: string | null): Promise<{ unit: string | null; unit_code: string | null }> {
+  const v = (raw ?? "").trim();
+  if (!v) return { unit: null, unit_code: null };
+  const u = await resolveUnit(v);
+  if (u) return { unit: u.label, unit_code: u.code };
+  return { unit: v, unit_code: null };
 }

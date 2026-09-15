@@ -76,7 +76,7 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                     <div className="flex items-center gap-1.5">
                       <Sprout className="h-3.5 w-3.5 text-brand-600" />
                       <span className="font-medium text-surface-900">{c.cropName}</span>
-                      <EditCropButton crop={{ id: c.id, crop_name: c.cropName, sowing_date: c.sowingDate }} />
+                      <EditCropButton crop={{ id: c.id, crop_name: c.cropName, sowing_date: c.sowingDate, area_sown_acres: c.areaSownAcres }} />
                       <form action={deleteCropAction} onSubmit={(e) => { if (!confirm(t("confirm_delete_crop", lang))) e.preventDefault(); }}>
                         <input type="hidden" name="crop_id" value={c.id} />
                         <button type="submit" className="text-red-400 hover:text-red-600">
@@ -113,6 +113,8 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                     <td colSpan={7} className="bg-surface-50 px-3 py-3">
                       <CropExpensePanel
                         cropHistoryId={c.id}
+                        cropName={c.cropName}
+                        farmName={c.farmName}
                         expenses={c.expenses}
                         areaSownAcres={c.areaSownAcres}
                         isReadyToHarvest={isReady}

@@ -4,9 +4,17 @@ import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
 import { getMotivationMessage } from "@/lib/utils/motivation";
-import { FarmerProfileForm } from "./farmer-profile-form";
+import { FarmerProfileForm, ConfirmProfileCard } from "./farmer-profile-form";
+import { UsernameCard } from "./username-card";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+
+const PROFILE_STATUS_LABEL: Record<string, string> = {
+  basic_registered: "Registered — buniyadi tafseel",
+  profile_incomplete: "Profile adhoori",
+  profile_complete: "Profile mukammal (aap ne confirm ki)",
+  verified: "Tasdeeq shuda",
+};
 
 export default async function FarmerProfilePage() {
   const supabase = createClient();
@@ -22,7 +30,11 @@ export default async function FarmerProfilePage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">← {t("back_to_dashboard", lang)}</Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("complete_your_profile", lang)}</h1>
+      {/* Sidebar mein "My Profile" likha hai -- yahan hamesha "Complete
+          Your Profile" aata tha, chahe profile poori ho chuki ho. Naam
+          consistent rakha, "complete karein" wala paighaam neeche wale
+          badge mein pehle se hai (malik, 11 September). */}
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("nav_profile", lang)}</h1>
       <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-900">
         <span className="text-sm text-surface-600">{completion.percent}% {t("percent_complete", lang)}</span>
         <div className="ml-3 h-2 flex-1 overflow-hidden rounded-full bg-surface-200">
@@ -41,8 +53,23 @@ export default async function FarmerProfilePage() {
           {t("profile_incomplete_msg", lang)}
         </div>
       )}
+
+      {/* Darja database khud nikalta hai (migration 124) -- yahan sirf
+          dikhaya jata hai. Do jagah alag alag hisaab rakhna hi wo cheez
+          hai jis se ek din dono alag ho jate hain. */}
+      <p className="mt-2 text-xs text-surface-400">
+        Darja: {PROFILE_STATUS_LABEL[(farmer as any).profile_status] ?? (farmer as any).profile_status}
+      </p>
+
       <div className="mt-6">
+        <UsernameCard current={(farmer as any).username ?? null} />
+
         <FarmerProfileForm farmer={farmer} completion={completion} lang={lang} />
+        <ConfirmProfileCard
+          completion={completion}
+          confirmedAt={(farmer as any).profile_confirmed_at ?? null}
+          isVerified={Boolean(farmer.is_verified)}
+        />
       </div>
     </div>
   );

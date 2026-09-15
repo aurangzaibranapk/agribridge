@@ -20,10 +20,16 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
     name,
     contact_person: (formData.get("contact_person") as string) || null,
     phone_number: phoneNumber,
+    cnic: (formData.get("cnic") as string)?.trim() || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
     credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,
     payment_due_days: formData.get("payment_due_days") ? Number(formData.get("payment_due_days")) : 0,
+    // Thok wali dukan par POS khud thok ka rate lagata hai (246). Ye
+    // darja gahak par ek dafa likha jata hai, har bill par nahi chuna
+    // jata -- warna rate counter wale ki marzi par aa jata.
+    customer_type:
+      formData.get("customer_type") === "wholesale_shop" ? "wholesale_shop" : "retail",
   };
 
   const { error } = await supabase.from("customers").insert(payload);
@@ -48,10 +54,16 @@ export async function updateCustomer(_prev: ActionState, formData: FormData): Pr
     name,
     contact_person: (formData.get("contact_person") as string) || null,
     phone_number: phoneNumber,
+    cnic: (formData.get("cnic") as string)?.trim() || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
     credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,
     payment_due_days: formData.get("payment_due_days") ? Number(formData.get("payment_due_days")) : 0,
+    // Thok wali dukan par POS khud thok ka rate lagata hai (246). Ye
+    // darja gahak par ek dafa likha jata hai, har bill par nahi chuna
+    // jata -- warna rate counter wale ki marzi par aa jata.
+    customer_type:
+      formData.get("customer_type") === "wholesale_shop" ? "wholesale_shop" : "retail",
   };
 
   const { error } = await supabase.from("customers").update(payload).eq("id", id);

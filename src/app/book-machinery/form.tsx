@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { quickFarmerMachineryBooking, type QuickBookingState } from "@/actions/quick-farmer-booking";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +25,31 @@ export function GeneralBookingForm() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [willSell, setWillSell] = useState<"" | "yes" | "no">("");
   const [wantsReminder, setWantsReminder] = useState<"" | "yes" | "no">("");
+
+  /**
+   * Bhejne ka button hamesha dabta hai.
+   *
+   * Pehle wo un do sawalon ka jawab aane tak band rehta tha. Band button
+   * kuch nahi batata: banda usay dabata hai, kuch nahi hota, aur wo
+   * samajhta hai ke form kharab hai -- ye jaan'ne ke liye ke kis khane
+   * ka intezar hai, usay poora form upar se neeche parhna paRta hai.
+   *
+   * Ab dabane par form khud us khane tak le jata hai jo khali hai, aur
+   * wo khana laal ho jata hai.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+  const sellRef = useRef<HTMLDivElement>(null);
+  const reminderRef = useRef<HTMLDivElement>(null);
+  const [touched, setTouched] = useState(false);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    setTouched(true);
+    const missing = willSell === "" ? sellRef.current : wantsReminder === "" ? reminderRef.current : null;
+    if (missing) {
+      e.preventDefault();
+      missing.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
 
   async function handleOAuth(provider: "google" | "facebook") {
     const supabase = createClient();
@@ -86,7 +111,7 @@ export function GeneralBookingForm() {
       </div>
 
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-right text-xs text-red-700">{state.error}</p>}
-      <form action={formAction} className="space-y-3">
+      <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-surface-600">آپ کا نام *</label>
           <input type="text" name="full_name" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" placeholder="اپنا پورا نام لکھیں" />
@@ -152,22 +177,24 @@ export function GeneralBookingForm() {
           <input type="text" name="location_address" className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm" placeholder="گاؤں / علاقے کا نام لکھیں" />
         </div>
 
-        <div className={`rounded-lg border-2 p-3 ${willSell === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
+        <div ref={sellRef} className={`rounded-lg border-2 p-3 ${touched && willSell === "" ? "border-red-500 bg-red-50" : "border-surface-200"}`}>
           <label className="block text-sm font-medium text-surface-700">کیا آپ ہمیں فصل بیچیں گے؟ *</label>
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setWillSell("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
             <button type="button" onClick={() => setWillSell("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${willSell === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
           </div>
           <input type="hidden" name="will_sell_to_us" value={willSell} />
+          {touched && willSell === "" && <p className="mt-2 text-xs font-medium text-red-600">اس کا جواب ضروری ہے۔</p>}
         </div>
 
-        <div className={`rounded-lg border-2 p-3 ${wantsReminder === "" ? "border-red-300 bg-red-50" : "border-surface-200"}`}>
+        <div ref={reminderRef} className={`rounded-lg border-2 p-3 ${touched && wantsReminder === "" ? "border-red-500 bg-red-50" : "border-surface-200"}`}>
           <label className="block text-sm font-medium text-surface-700">کیا اگلی فصل کے لیے مشینری بکنگ کی یاد دہانی چاہیے؟ *</label>
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setWantsReminder("yes")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "yes" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>ہاں</button>
             <button type="button" onClick={() => setWantsReminder("no")} className={`flex-1 rounded-lg border py-2 text-sm font-medium ${wantsReminder === "no" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>نہیں</button>
           </div>
           <input type="hidden" name="wants_next_season_reminder" value={wantsReminder} />
+          {touched && wantsReminder === "" && <p className="mt-2 text-xs font-medium text-red-600">اس کا جواب ضروری ہے۔</p>}
         </div>
 
         <div>
@@ -175,16 +202,16 @@ export function GeneralBookingForm() {
           <textarea name="notes" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
 
-        <SubmitButton disabled={willSell === "" || wantsReminder === ""} />
+        <SubmitButton />
       </form>
     </div>
   );
 }
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending || disabled} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+    <button type="submit" disabled={pending} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
       {pending && <Loader2 className="h-4 w-4 animate-spin" />}
       {pending ? "بھیجا جا رہا ہے..." : "بکنگ کی درخواست بھیجیں"}
     </button>

@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { PaymentSlipClient } from "./payment-slip-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function PaymentSlipPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
@@ -14,7 +17,7 @@ export default async function PaymentSlipPage({ params }: { params: Promise<{ id
     .maybeSingle();
 
   if (!payment) {
-    return <div className="p-8 text-center text-surface-400">Payment nahi mili.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("gb_payment_not_found", lang)}</div>;
   }
 
   const { data: financeAccounts } = await supabase.from("finance_accounts").select("id, name").eq("is_active", true).order("account_type");

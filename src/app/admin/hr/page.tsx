@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { HRClient } from "./hr-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HRPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const { data: profiles } = await supabase
     .from("profiles")
@@ -65,10 +68,19 @@ export default async function HRPage() {
     staff_name: staffNameMap.get(s.profile_id) ?? "-",
   }));
 
+  // Tankhwah dete waqt khata poochha jata hai (warna paisa kisi kitab
+  // mein nahi jata). Fehrist yahin se aati hai.
+  const { data: accountRows } = await supabase
+    .from("finance_accounts")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("account_type");
+  const accounts = (accountRows ?? []).map((a) => ({ id: a.id, name: a.name }));
+
   return (
     <div>
-      <PageHeader title="HR - Staff Management" description="Staff details, attendance, and salary records" />
-      <HRClient staff={staff} attendance={attendance} salaries={salaries} branches={branches ?? []} />
+      <PageHeader title={t("hr_title", lang)} description={t("hr_subtitle", lang)} />
+      <HRClient staff={staff} attendance={attendance} salaries={salaries} branches={branches ?? []} accounts={accounts} />
     </div>
   );
 }

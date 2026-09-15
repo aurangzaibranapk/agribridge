@@ -9,7 +9,7 @@
 -- visibility stays cross-branch (any shop can see what any other shop
 -- has in stock) so transfer requests can be planned sensibly.
 
-alter table profiles add column branch_id uuid references branches(id);
+alter table profiles add column if not exists branch_id uuid references branches(id);
 
 -- True for super_admin/admin regardless of branch_id, since they see everything.
 create or replace function fn_is_admin_level() returns boolean as $$

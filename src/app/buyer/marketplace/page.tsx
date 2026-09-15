@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BuyerMarketplaceClient } from "@/app/buyer/marketplace/buyer-marketplace-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function BuyerMarketplacePage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
     data: { user },
@@ -15,7 +18,7 @@ export default async function BuyerMarketplacePage() {
   if (!buyer) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">This account is not linked to a buyer profile.</p>
+        <p className="text-surface-600">{t("ou_no_buyer_profile", lang)}</p>
       </div>
     );
   }
@@ -28,7 +31,7 @@ export default async function BuyerMarketplacePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
-      <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">Produce Marketplace</h1>
+      <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("ou_marketplace", lang)}</h1>
       <p className="mt-1 text-surface-500">Welcome, {buyer.business_name} - browse and order fresh produce from verified farmers.</p>
 
       <div className="mt-6">

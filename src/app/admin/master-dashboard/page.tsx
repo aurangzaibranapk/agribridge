@@ -1,14 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
+import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
 import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-context";
+import { position, partyBalances } from "@/lib/ledger/reports";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MasterDashboardPage() {
   const supabase = createClient();
   const businessContext = await getBusinessContext();
+  const lang = getLanguageFromCookies("rm");
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
@@ -19,19 +24,59 @@ export default async function MasterDashboardPage() {
   const showAgri = businessContext === "master" || businessContext === "karyana" || businessContext === "agri_inputs";
   const showCompanyWideFinancials = businessContext === "master";
 
-  // Bank/Cash breakdown (per account)
-  const { data: bankAccounts } = await supabase.from("finance_accounts").select("name, current_balance").eq("is_active", true).eq("account_type", "bank");
-  const totalBankBalance = (bankAccounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
-  const bankBreakdown = (bankAccounts ?? []).map((a) => ({ name: a.name, value: Number(a.current_balance) }));
+  // ===== Paisa, lena, dena -- teenon ledger se =====
+  //
+  // Ye teenon adad pehle yahin, alag alag jagah se, apne taur par gine
+  // jate the -- aur teenon GHALAT the:
+  //
+  //   BANK/CASH  finance_accounts mein se sirf account_type='bank'.
+  //              Cash in Hand aur CBA wallet us shart se bahar the:
+  //              screen par Rs 9,545, asal Rs 44,066.
+  //   TO RECEIVE sirf branch_credit_transactions. Kisan ka lena
+  //              (khata 1150) us table mein hota hi nahi: screen par
+  //              SIFAR, asal Rs 80,450. Aur sifar jhoot bolta hai --
+  //              wo kehta hai "dekh liya, kuch nahi".
+  //   TO PAY     suppliers.current_payable, jab ke ledger kuch aur
+  //              kehta tha. Do adad, dono theek lagte the.
+  //
+  // Ab teenon ek hi jagah se aate hain: trial balance. Wahi jagah jahan
+  // POS, kharid, machinery aur doodh pehle se likhte hain.
+  const haalat = await position(aajKaKhana());
+  const ledgerNaKhula = Boolean(haalat.error);
 
-  // Inventory breakdown (per category)
-  const { data: inventoryRows } = await supabase.from("inventory").select("quantity_on_hand, products(purchase_price, categories(name))");
+  const totalBankBalance = haalat.naqdi;
+  const bankBreakdown = haalat.naqdiRows.map((r) => ({ name: r.name, value: r.amount }));
+  const totalReceivables = haalat.lena;
+  const receivablesBreakdown = haalat.lenaRows.map((r) => ({ name: r.name, value: r.amount }));
+  const totalPayables = haalat.dena === null ? null : Math.abs(haalat.dena);
+
+  // TO PAY ka breakdown khate ke naam se nahi, BANDE ke naam se -- malik
+  // ka kehna: "alag alag payments aayein naam ke sath, ek total nahi."
+  // Khata ("Supplier ko dena") sab suppliers ko ek jagah mila deta tha;
+  // partyBalances() har supplier/vendor ko alag qatar deta hai.
+  const parties = await partyBalances(aajKaKhana());
+  const payablesBreakdown = parties.error
+    ? haalat.denaRows.map((r) => ({ name: r.name, value: Math.abs(r.amount) }))
+    : parties.rows
+        .filter((r) => r.payable > 0.5)
+        .sort((a, b) => b.payable - a.payable)
+        .map((r) => ({ name: r.name ?? "—", value: r.payable }));
+
+  // Inventory breakdown (per category) -- BATCH KI ASAL KHAREED QEEMAT PAR.
+  //
+  // Pehle products.purchase_price (CURRENT/aaj ki rate) se ginte the.
+  // Rate waqt ke sath badalti hai -- is liye purani khareedi hui qatarein
+  // NAYI rate par gin jati thin, aur ledger ka khata 1200 (jo har batch ki
+  // ASAL khareed qeemat par bana hai) se hamesha Rs 3,442 tak ka farq
+  // dikhata tha, bhale stock ki ginti (quantity) barabar ho. Ab har batch
+  // ki apni `unit_cost` istemal hoti hai -- yehi wo qeemat hai jo waqai
+  // ledger mein gayi thi, is liye dono adad ab milte hain.
+  const { data: batchRows } = await supabase.from("stock_batches").select("remaining_quantity, unit_cost, products(categories(name))");
   let totalInventoryValue = 0;
   const inventoryByCategory: Record<string, number> = {};
-  (inventoryRows ?? []).forEach((r: any) => {
+  (batchRows ?? []).forEach((r: any) => {
     const product = Array.isArray(r.products) ? r.products[0] : r.products;
-    const price = Number(product?.purchase_price ?? 0);
-    const value = Number(r.quantity_on_hand) * price;
+    const value = Number(r.remaining_quantity ?? 0) * Number(r.unit_cost ?? 0);
     totalInventoryValue += value;
     const category = Array.isArray(product?.categories) ? product?.categories[0]?.name : product?.categories?.name;
     const catName = category ?? "Uncategorized";
@@ -39,24 +84,21 @@ export default async function MasterDashboardPage() {
   });
   const inventoryBreakdown = Object.entries(inventoryByCategory).map(([name, value]) => ({ name, value }));
 
-  // Receivables breakdown (per branch that owes us)
-  const { data: creditTxns } = await supabase.from("branch_credit_transactions").select("transaction_type, amount, branches(name)");
-  const branchOutstanding: Record<string, number> = {};
-  (creditTxns ?? []).forEach((t: any) => {
-    const branchName = Array.isArray(t.branches) ? t.branches[0]?.name : t.branches?.name;
-    if (!branchName) return;
-    const amount = Number(t.amount);
-    branchOutstanding[branchName] = (branchOutstanding[branchName] ?? 0) + (t.transaction_type === "order_charge" ? amount : t.transaction_type === "advance_payment" ? -amount : 0);
-  });
-  const totalReceivables = Object.values(branchOutstanding).reduce((s, v) => s + Math.max(0, v), 0);
-  const receivablesBreakdown = Object.entries(branchOutstanding)
-    .filter(([, v]) => v > 0)
-    .map(([name, value]) => ({ name, value }));
-
-  // Payables breakdown (per supplier)
-  const { data: suppliers } = await supabase.from("suppliers").select("name, current_payable").gt("current_payable", 0);
-  const totalPayables = (suppliers ?? []).reduce((s, sup) => s + Number(sup.current_payable ?? 0), 0);
-  const payablesBreakdown = (suppliers ?? []).map((s) => ({ name: s.name, value: Number(s.current_payable) }));
+  // Stock ke DO adad -- jaan boojh kar dono.
+  //
+  // Malik ka usool (6 September): *"supplier se stock aaye ya hum
+  // individual transfer karein, wo hamesha TRADE RATE ke hisaab se count
+  // ho... jab sale karenge to profit aayega."* Is liye godam ki ginti
+  // yahan kharid (trade) rate par lagti hai, sale rate par nahi.
+  //
+  // Doosra adad ledger ka khata 1200 hai. Aaj dono barabar NAHI hain,
+  // kyunki kharid ki journal entry banti hi nahi thi. Wo ab banti hai --
+  // magar purani kharid ledger mein abhi nahi gayi.
+  //
+  // Farq chhupaya nahi jata. Ek adad dekh kar ye nahi kaha ja sakta ke
+  // wo durust hai; do sath hon to ghalati khud nazar aati hai.
+  const stockLedger = haalat.stock;
+  const stockFarq = stockLedger === null ? null : Math.round((totalInventoryValue - stockLedger) * 100) / 100;
 
   // AgriBridge Ordering revenue (this month, completed orders)
   const { data: completedOrders } = await supabase
@@ -90,8 +132,17 @@ export default async function MasterDashboardPage() {
   const totalAdjustedVolume = (milkEntries ?? []).reduce((s, e) => s + Number(e.adjusted_volume ?? e.quantity_liters ?? 0), 0);
   const milkGrossIncome = totalAdjustedVolume * serviceRate;
 
-  const { data: salaryPayments } = await supabase.from("salary_payments").select("amount").gte("payment_date", monthStart).lte("payment_date", monthEnd);
-  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Ye sawal toota hua tha: `amount` aur `payment_date` naam ke khane
+  // salary_payments mein hain hi nahi (wo net_salary aur paid_date hain).
+  // Sawal chup chaap nakaam hota tha aur is dashboard par tankhwah ka
+  // adad HAR MAHINE sifar aata tha.
+  const { data: salaryPayments } = await supabase
+    .from("salary_payments")
+    .select("net_salary")
+    .eq("status", "paid")
+    .gte("paid_date", monthStart)
+    .lte("paid_date", monthEnd);
+  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.net_salary ?? 0), 0);
 
   const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
   const milkPetrolCost = (fuelLogs ?? []).reduce((s, f) => s + Number(f.fuel_cost ?? 0), 0);
@@ -144,14 +195,15 @@ export default async function MasterDashboardPage() {
   const totalRevenue = (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
   const netProfit = totalRevenue - totalAllExpenses;
-  const currentPosition = totalBankBalance + totalInventoryValue + totalReceivables - totalPayables;
+  // Position bhi ledger se. Jawab na mile to NULL -- sifar nahi.
+  const currentPosition = haalat.position;
 
-  const noDataYetBusinesses = ["grain_procurement", "machinery_fleet"];
+  const noDataYetBusinesses = ["grain_procurement", "machinery_fleet", "vet"];
 
   return (
     <div>
       <PageHeader
-        title="Master Dashboard"
+        title={t("md_title", lang)}
         description={
           businessContext === "master"
             ? "Poora business ek nazar mein - box par click karein, neeche graph khulega"
@@ -166,6 +218,31 @@ export default async function MasterDashboardPage() {
       )}
 
       <MasterDashboardActions />
+
+      {ledgerNaKhula && (
+        <div className="mb-6 rounded-card border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+          <p className="font-semibold">Ledger ka jawab nahi mila — paisa, lena, dena aur position khali hain.</p>
+          <p className="mt-1 text-xs">
+            Ye adad SIFAR nahi hain, gine hi nahi ja sake: {haalat.error}
+          </p>
+        </div>
+      )}
+
+      {stockFarq !== null && Math.abs(stockFarq) > 1 && (
+        <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
+          <p className="mt-1 text-xs leading-relaxed">
+            Godam ki ginti (batch ki asal khareed qeemat par): <strong>Rs {Math.round(totalInventoryValue).toLocaleString()}</strong> ·
+            Ledger ka khata 1200: <strong>Rs {Math.round(stockLedger ?? 0).toLocaleString()}</strong> ·
+            Farq: <strong>Rs {Math.round(stockFarq).toLocaleString()}</strong>
+          </p>
+          <p className="mt-1 text-xs leading-relaxed">
+            Wajah: kisi product ka koi batch bina record hue reh gaya hai (quantity to inventory mein hai, magar
+            us ka batch/qeemat kahin darj nahi) — is liye us ka hissa upar wali ginti mein nahi aa raha. Inventory
+            &gt; wo product dekhein jahan Godam ki qatarein poori nahi lagtin.
+          </p>
+        </div>
+      )}
 
       <ClickableCards
         totalCapitalInvested={totalCapitalInvested}
@@ -182,9 +259,7 @@ export default async function MasterDashboardPage() {
       />
 
       {!showCompanyWideFinancials && (
-        <p className="mb-4 text-xs text-surface-400">
-          Note: Bank/Inventory/Receivables/Payables abhi business-wise split nahi hain (poori company ke combined numbers hain) - ye Phase 9 mein aayega.
-        </p>
+        <p className="mb-4 text-xs text-surface-400">{t("at_note_split", lang)}</p>
       )}
 
       {(showAgri || showDairy) && (
@@ -194,7 +269,7 @@ export default async function MasterDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Revenue</p>
+              <p className="text-xs text-surface-400">{t("md_total_revenue", lang)}</p>
               <p className="font-display text-lg font-semibold text-green-600">Rs {totalRevenue.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `AgriBridge: Rs ${agriRevenue.toLocaleString()}`}
@@ -203,7 +278,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">Total Expenses</p>
+              <p className="text-xs text-surface-400">{t("md_total_expenses", lang)}</p>
               <p className="font-display text-lg font-semibold text-red-600">Rs {totalAllExpenses.toLocaleString()}</p>
               <p className="mt-1 text-[10px] text-surface-400">
                 {showAgri && `Company: Rs ${totalExpenses.toLocaleString()}`}
@@ -212,7 +287,7 @@ export default async function MasterDashboardPage() {
               </p>
             </div>
             <div className={`rounded-lg p-3 text-center ${netProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-              <p className="text-xs text-surface-400">Net Profit/Loss</p>
+              <p className="text-xs text-surface-400">{t("md_net_pl", lang)}</p>
               <p className={`font-display text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>Rs {netProfit.toLocaleString()}</p>
             </div>
           </div>
