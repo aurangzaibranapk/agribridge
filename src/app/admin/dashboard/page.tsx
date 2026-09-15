@@ -204,7 +204,7 @@ export default async function AdminDashboardPage({
   const [{ data: productsData }, { data: inventoryRows }, { count: pendingStockTransfers }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, purchase_price, selling_price, is_available, min_stock_threshold, categories(name)")
+      .select("id, name, purchase_price, selling_price, is_available, min_stock_threshold, sale_rate_pending, categories(name)")
       .eq("is_deleted", false),
     supabase.from("inventory").select("product_id, quantity_on_hand"),
     supabase.from("stock_transfers").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -218,6 +218,11 @@ export default async function AdminDashboardPage({
 
   const totalProducts = (productsData ?? []).length;
   const activeProducts = (productsData ?? []).filter((p) => p.is_available).length;
+  // Malik (15 September): "POS mein bikta nahi, ye Admin ko highlight
+  // ho kar dikhna chahiye" -- POS pehle se yehi ginti chhupaya kar
+  // dikhati hai, ab Admin Dashboard par bhi wahi ginti, alag safhe par
+  // click kiye baghair.
+  const saleRatePendingCount = (productsData ?? []).filter((p) => p.sale_rate_pending).length;
   const outOfStockProducts = (productsData ?? []).filter((p) => (stockByProduct.get(p.id) ?? 0) <= 0).length;
   const totalStockValue = (productsData ?? []).reduce(
     (sum, p) => sum + (stockByProduct.get(p.id) ?? 0) * Number(p.purchase_price ?? 0),
@@ -338,6 +343,22 @@ export default async function AdminDashboardPage({
   return (
     <div>
       <PageHeader title={t("db_title", lang)} description={t("db_business_summary", lang)} />
+
+      {saleRatePendingCount > 0 && (
+        <Link
+          href="/admin/products/rates-baqi"
+          className="mt-4 flex items-center justify-between gap-3 rounded-card border-l-4 border-l-red-500 bg-red-50 p-4 text-sm shadow-card transition hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30"
+        >
+          <span className="flex items-start gap-2 text-red-800 dark:text-red-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              <strong>{saleRatePendingCount} products</strong> ka sale rate abhi tak nahi laga — POS mein nahi bikte, dukan par
+              staff ko nazar bhi nahi aate.
+            </span>
+          </span>
+          <span className="shrink-0 whitespace-nowrap font-semibold text-red-700 underline dark:text-red-400">Rate bharein &rarr;</span>
+        </Link>
+      )}
 
       <div className="mt-4">
         <DateRangeFilter current={range} />

@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { renameDuplicateProduct, hideDuplicateProduct, type ActionState } from "@/actions/product-duplicates";
 import { mergeProductDirect, type ActionState as MergeActionState } from "@/actions/product-merge";
-import { EyeOff, Pencil, Merge, X } from "lucide-react";
+import { saveMissingRates, type RateState } from "@/actions/product-rates";
+import { EyeOff, Pencil, Merge, X, Tag, Save } from "lucide-react";
 
 const initialState: ActionState = {};
 const initialMergeState: MergeActionState = {};
+const initialRateState: RateState = {};
 
 interface ProductItem {
   id: string;
@@ -16,6 +18,8 @@ interface ProductItem {
   category_name: string | null;
   purchase_price: number;
   selling_price: number;
+  sale_rate_pending: boolean;
+  trade_rate_pending: boolean;
   stock: { warehouseName: string; qty: number }[];
 }
 
@@ -60,10 +64,9 @@ function MergeDeleteButton({ productId, otherNames, onMerged }: { productId: str
     return (
       <button
         onClick={() => setOpen(true)}
-        title="Merge kar ke hatayein (stock doosre naam par chala jayega)"
-        className="rounded-lg p-1.5 text-surface-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+        className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
       >
-        <Merge className="h-3.5 w-3.5" />
+        <Merge className="h-3.5 w-3.5" /> Merge & Delete
       </button>
     );
   }
@@ -91,6 +94,77 @@ function MergeDeleteButton({ productId, otherNames, onMerged }: { productId: str
       </button>
       {mergeState.error && <p className="w-full text-xs text-red-600">{mergeState.error}</p>}
     </form>
+  );
+}
+
+/**
+ * Rate abhi tak maloom nahi (Rate Baqi) to isi row se bhar dein --
+ * malik (15 September): "rate set ho sake" -- doosre safhe (Rates
+ * Baqi) par jane ki zaroorat nahi jab duplicate saaf kar rahe hon.
+ */
+function RateFixCell({ productId, saleRatePending, tradeRatePending }: { productId: string; saleRatePending: boolean; tradeRatePending: boolean }) {
+  const [sale, setSale] = useState("");
+  const [trade, setTrade] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [msg, setMsg] = useState("");
+
+  if (!saleRatePending && !tradeRatePending) return null;
+  if (status === "saved") {
+    return <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-400">Rate mehfooz ho gaya.</p>;
+  }
+
+  async function handleSave() {
+    if (!sale.trim() && !trade.trim()) return;
+    setStatus("saving");
+    const fd = new FormData();
+    fd.set("id", productId);
+    if (sale.trim()) fd.set(`sale_${productId}`, sale.trim());
+    if (trade.trim()) fd.set(`trade_${productId}`, trade.trim());
+    const result = await saveMissingRates(initialRateState, fd);
+    if (result.error) {
+      setStatus("error");
+      setMsg(result.error);
+    } else {
+      setStatus("saved");
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-1.5 dark:border-amber-800 dark:bg-amber-950/10">
+      <Tag className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+      <span className="text-xs text-amber-700 dark:text-amber-400">Rate baqi:</span>
+      {saleRatePending && (
+        <input
+          value={sale}
+          onChange={(e) => setSale(e.target.value)}
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="Sale Rs"
+          className="w-24 rounded-lg border border-amber-300 px-2 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
+        />
+      )}
+      {tradeRatePending && (
+        <input
+          value={trade}
+          onChange={(e) => setTrade(e.target.value)}
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="Trade Rs"
+          className="w-24 rounded-lg border border-amber-300 px-2 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
+        />
+      )}
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={status === "saving" || (!sale.trim() && !trade.trim())}
+        className="flex items-center gap-1 rounded-lg bg-amber-600 px-2 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-40"
+      >
+        <Save className="h-3 w-3" /> Save
+      </button>
+      {status === "error" && <span className="text-xs text-red-600">{msg}</span>}
+    </div>
   );
 }
 
@@ -141,11 +215,15 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
             <span className="text-amber-600 dark:text-amber-400">Koi stock nahi — is duplicate ko hata dena mehfooz hai</span>
           )}
         </p>
+        <RateFixCell productId={item.id} saleRatePending={item.sale_rate_pending} tradeRatePending={item.trade_rate_pending} />
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         {!editing && (
-          <button onClick={() => setEditing(true)} title="Naam badlein" className="rounded-lg p-1.5 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800">
-            <Pencil className="h-3.5 w-3.5" />
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            <Pencil className="h-3.5 w-3.5" /> Naam Badlein
           </button>
         )}
         {totalStock > 0 ? (
@@ -157,8 +235,11 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
         ) : (
           <form action={hideAction}>
             <input type="hidden" name="id" value={item.id} />
-            <button type="submit" title="Hata dein (list se gayab, record mehfooz)" className="rounded-lg p-1.5 text-surface-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30">
-              <EyeOff className="h-3.5 w-3.5" />
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
+            >
+              <EyeOff className="h-3.5 w-3.5" /> Hata Dein
             </button>
           </form>
         )}

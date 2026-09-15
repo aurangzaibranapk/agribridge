@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ProductSetupTabs } from "@/components/products/setup-tabs";
 import { DuplicatesClient } from "./duplicates-client";
 import { MergeRequestsClient } from "./merge-requests-client";
 
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function DuplicateProductsPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -31,7 +34,7 @@ export default async function DuplicateProductsPage() {
   const [{ data: products }, { data: inventoryRows }, { data: mergeRequests }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, pack_size, purchase_price, selling_price, categories(name)")
+      .select("id, name, pack_size, purchase_price, selling_price, sale_rate_pending, trade_rate_pending, categories(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("inventory").select("product_id, quantity_on_hand, warehouses(name)"),
@@ -72,11 +75,30 @@ export default async function DuplicateProductsPage() {
 
   const groups = new Map<
     string,
-    { id: string; name: string; pack_size: string | null; category_name: string | null; purchase_price: number; selling_price: number; stock: { warehouseName: string; qty: number }[] }[]
+    {
+      id: string;
+      name: string;
+      pack_size: string | null;
+      category_name: string | null;
+      purchase_price: number;
+      selling_price: number;
+      sale_rate_pending: boolean;
+      trade_rate_pending: boolean;
+      stock: { warehouseName: string; qty: number }[];
+    }[]
   >();
   for (const p of (products ?? []) as any[]) {
-    const norm = String(p.name ?? "").trim().toLowerCase();
-    if (!norm) continue;
+    const nameNorm = String(p.name ?? "").trim().toLowerCase();
+    if (!nameNorm) continue;
+    // Pack size bhi shamil -- warna alag pack size wale legitimate
+    // products (500g vs 1kg) "duplicate" lagte hain, jab ke wo alag
+    // SKU hain (malik, 14 September: "ek naam ki 4 packing duplicate
+    // nahi ginti"). Isi galat grouping ki wajah se 15 September ko
+    // Surf Excel Powder, Supreme Black Tea Leaf, White Chanay Motay
+    // aur Sunsilk Shampoo ke dono pack sahi hote huye bhi "duplicate"
+    // dikhe aur ghalti se hata diye gaye the.
+    const packNorm = String(p.pack_size ?? "").trim().toLowerCase();
+    const norm = `${nameNorm}|${packNorm}`;
     const list = groups.get(norm) ?? [];
     list.push({
       id: p.id,
@@ -85,6 +107,8 @@ export default async function DuplicateProductsPage() {
       category_name: Array.isArray(p.categories) ? p.categories[0]?.name ?? null : p.categories?.name ?? null,
       purchase_price: Number(p.purchase_price),
       selling_price: Number(p.selling_price),
+      sale_rate_pending: Boolean(p.sale_rate_pending),
+      trade_rate_pending: Boolean(p.trade_rate_pending),
       stock: stockByProduct.get(p.id) ?? [],
     });
     groups.set(norm, list);
@@ -103,6 +127,7 @@ export default async function DuplicateProductsPage() {
         title="Duplicate Products"
         description={`${duplicateGroups.length} naam aise hain jin par ek se zyada product ban chuka hai (kul ${totalDuplicateProducts} products) — naam theek karein ya jo istemal mein nahi wo hata dein.`}
       />
+      <ProductSetupTabs current="duplicates" lang={lang} />
       <MergeRequestsClient requests={pendingMerges} allProductNames={(products ?? []).map((p: any) => p.name)} />
       <DuplicatesClient groups={duplicateGroups} allProductNames={(products ?? []).map((p: any) => p.name)} />
     </div>

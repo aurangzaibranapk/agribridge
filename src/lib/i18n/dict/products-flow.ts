@@ -312,6 +312,7 @@ export const productsFlowDict = {
   pf_ps_t_images: { en: "Images", rm: "Tasveerein", ur: "تصویریں" },
   pf_ps_t_import: { en: "Import CSV", rm: "CSV se", ur: "CSV سے" },
   pf_ps_t_export: { en: "Export", rm: "Export", ur: "ایکسپورٹ" },
+  pf_ps_t_duplicates: { en: "Duplicates", rm: "Duplicate", ur: "ڈپلیکیٹ" },
   pd_all_categories: { en: "All", rm: "Sab", ur: "سب" },
 
   // ---- Ijazat ki darkhwast (Guided ERP G, 270) ----

@@ -3,7 +3,7 @@ import { BINA_QISM } from "@/lib/pos/constants";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
-import { ShiftBar, ShiftCashHandoverForm } from "@/components/pos/shift-bar";
+import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
@@ -444,18 +444,6 @@ export default async function PosPage() {
    */
   return (
     <>
-      {pendingHandover && (
-        <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-          <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-400">
-            Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
-          </p>
-          <ShiftCashHandoverForm
-            shiftId={pendingHandover.shiftId}
-            branchId={pendingHandover.branchId}
-            countedCash={pendingHandover.countedCash}
-          />
-        </div>
-      )}
       {openShiftInfo && activeCounterName && (
         <ShiftBar
           shiftId={openShiftInfo.id}
@@ -465,6 +453,7 @@ export default async function PosPage() {
           openingCash={openShiftInfo.openingCash}
           openedAt={openShiftInfo.openedAt}
           branchId={branch?.id ?? null}
+          pendingHandover={pendingHandover}
         />
       )}
       <PosClient

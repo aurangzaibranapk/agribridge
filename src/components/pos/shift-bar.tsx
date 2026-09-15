@@ -130,6 +130,7 @@ export function ShiftBar({
   openingCash,
   openedAt,
   branchId,
+  pendingHandover,
 }: {
   shiftId: string;
   shiftNumber: string;
@@ -138,8 +139,11 @@ export function ShiftBar({
   openingCash: number;
   openedAt: string;
   branchId: string | null;
+  /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
+  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null } | null;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [handoverOpen, setHandoverOpen] = useState(false);
   const [state, action] = useFormState(closeShift, KHALI);
   const [summary, setSummary] = useState<ShiftCashSummary | null>(null);
 
@@ -189,13 +193,51 @@ export function ShiftBar({
             </>
           )}
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm transition hover:bg-red-50 dark:border-red-900/40 dark:bg-surface-900"
-        >
-          <Lock className="h-3 w-3" /> Shift Band Karein
-        </button>
+        <div className="flex items-center gap-2">
+          {pendingHandover && (
+            <button
+              onClick={() => setHandoverOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-sm transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+              title="Pichli shift ka cash abhi bhejna baqi hai"
+            >
+              <AlertTriangle className="h-3 w-3" /> Purani Rs {Math.round(pendingHandover.countedCash).toLocaleString()} bhejna baqi
+            </button>
+          )}
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm transition hover:bg-red-50 dark:border-red-900/40 dark:bg-surface-900"
+          >
+            <Lock className="h-3 w-3" /> Shift Band Karein
+          </button>
+        </div>
       </div>
+
+      {pendingHandover && handoverOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
+            <div className="flex items-center justify-between border-b border-surface-100 px-5 py-4 dark:border-surface-800">
+              <p className="text-sm font-semibold text-surface-900 dark:text-white">Purani Shift ka Cash Bhejein</p>
+              <button
+                onClick={() => setHandoverOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-surface-400 hover:bg-surface-100 hover:text-surface-600 dark:hover:bg-surface-800"
+                aria-label="Band karein"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-5 py-5">
+              <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
+                Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+              </p>
+              <ShiftCashHandoverForm
+                shiftId={pendingHandover.shiftId}
+                branchId={pendingHandover.branchId}
+                countedCash={pendingHandover.countedCash}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

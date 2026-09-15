@@ -3,13 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 export type SetupTab =
-  | "queue" | "propose" | "pending" | "edits" | "intake" | "bill" | "rates" | "labels" | "images" | "import" | "export";
+  | "queue" | "propose" | "pending" | "edits" | "duplicates" | "intake" | "bill" | "rates" | "labels" | "images" | "import" | "export";
 
 const TABS: { key: SetupTab; href: string; label: TranslationKey }[] = [
   { key: "queue", href: "/admin/products/setup", label: "pf_ps_t_queue" },
   { key: "propose", href: "/admin/products/propose", label: "pf_ps_t_propose" },
   { key: "pending", href: "/admin/products/pending", label: "pf_ps_t_pending" },
   { key: "edits", href: "/admin/products/pending-edits", label: "pf_ps_t_edits" },
+  { key: "duplicates", href: "/admin/products/duplicates", label: "pf_ps_t_duplicates" },
   { key: "intake", href: "/admin/products/intake", label: "pf_ps_t_intake" },
   { key: "bill", href: "/admin/products/bill-rates", label: "pf_ps_t_bill" },
   { key: "rates", href: "/admin/products/rates-baqi", label: "pf_ps_t_rates" },
@@ -40,6 +41,7 @@ export async function ProductSetupTabs({ current, lang }: { current: SetupTab; l
     queue: Number(counts?.total_products ?? 0),
     pending: pending ?? 0,
     edits: edits ?? 0,
+    duplicates: Number((counts as { duplicate_groups?: number } | null)?.duplicate_groups ?? 0),
     intake: Number(counts?.intake_open ?? 0),
     bill: bills ?? 0,
     rates: Number(counts?.rate_pending ?? 0),
