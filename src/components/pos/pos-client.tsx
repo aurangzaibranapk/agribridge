@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   ChevronRight,
   Search,
-  ScanLine,
   Camera,
   Plus,
   Minus,
@@ -181,7 +180,6 @@ export function PosClient({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
-  const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
@@ -320,16 +318,34 @@ export function PosClient({
     return inventory.find((item) => item.products?.barcode === trimmed || item.products?.internal_barcode === trimmed);
   }
 
-  function handleBarcodeSubmit(e: React.FormEvent) {
+  /**
+   * Naam, code, aur scanner -- ab ek hi box (malik, 15 September: "ek
+   * hi searching box banain jis mein naam se, code se, aur scan bar se
+   * bhi search ho"). Barcode scanner ek code type kar ke Enter bhejta
+   * hai -- yahan pehle EXACT barcode/internal_barcode dekha jata hai
+   * (scan ka tareeqa); na mile aur filter se sirf EK hi cheez bachi ho
+   * to wahi (jaise koi naam likh kar Enter dabaye); dono mein kuch na
+   * mile to "nahi mila" dikhta hai, list wale rug ki tarah nahi jo
+   * chhup jaye.
+   */
+  function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const match = findByBarcode(barcodeInput);
-    if (match) {
-      addToCart(match);
+    const q = search.trim();
+    if (!q) return;
+    const exact = findByBarcode(q);
+    if (exact) {
+      addToCart(exact);
       setBarcodeError(null);
-    } else {
-      setBarcodeError(`No product found for barcode "${barcodeInput.trim()}"`);
+      setSearch("");
+      return;
     }
-    setBarcodeInput("");
+    if (filteredInventory.length === 1) {
+      addToCart(filteredInventory[0]);
+      setBarcodeError(null);
+      setSearch("");
+      return;
+    }
+    setBarcodeError(filteredInventory.length === 0 ? `"${q}" ke liye koi product nahi mila.` : null);
   }
 
   function handleCameraDetected(code: string) {
@@ -502,18 +518,15 @@ export function PosClient({
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
       <section className="flex flex-col lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
-          <h1 className="max-w-[7rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
-          <form onSubmit={handleBarcodeSubmit} className="flex min-w-0 flex-[2] items-center gap-2">
+          <h1 className="max-w-[18rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
+          {/* Naam, code, scan bar -- ab ek hi box (malik, 15 September). */}
+          <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-[3] items-center gap-2">
             <div className="relative min-w-0 flex-1">
-              <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
-              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder={t("pos_scan_hint", lang)} className="h-11 pl-9" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+              <Input ref={barcodeRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pos_search_products", lang)} className="h-11 pl-9" />
             </div>
             <button type="button" onClick={() => setShowCameraModal(true)} aria-label="Camera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"><Camera className="h-4 w-4" /></button>
           </form>
-          <div className="relative min-w-0 flex-[2]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
-            <Input placeholder={t("pos_search_products", lang)} value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 pl-9" />
-          </div>
           {groups.length > 0 && (
             <Select value={group} onChange={(e) => setGroup(e.target.value)} className="h-11 w-[9rem] shrink-0">
               <option value="">{t("pos_all_groups", lang)}</option>
