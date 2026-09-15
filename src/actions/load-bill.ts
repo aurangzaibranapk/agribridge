@@ -155,6 +155,9 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
     .maybeSingle();
   if (!me?.is_active) return { error: "Aap ka khata band hai." };
 
+  const shopId = String(formData.get("shop_id") ?? "").trim();
+  if (!shopId) return { error: "Shop chunein — shaam ka hisaab isi se banta hai." };
+
   const accountId = String(formData.get("account_id") ?? "").trim();
   const kind = String(formData.get("kind") ?? "load").trim();
   const reference = String(formData.get("reference") ?? "").trim();
@@ -280,6 +283,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       status: providerTid ? "darj" : "saboot_baqi",
       float_settled: settled,
       branch_id: branchId,
+      shop_id: shopId,
       created_by: user.id,
     })
     .select("id")

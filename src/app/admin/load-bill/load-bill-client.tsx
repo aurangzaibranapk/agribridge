@@ -101,6 +101,8 @@ function Submit({ label }: { label: string }) {
 
 export function LoadBillClient({
   shuruKind,
+  shops,
+  defaultShopId,
   providers,
   accounts,
   financeAccounts,
@@ -111,6 +113,9 @@ export function LoadBillClient({
 }: {
   /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
   shuruKind: "load" | "bill";
+  /** Shaam ko "is shop se kitna hua" poochne ke liye (425) -- account se nahi nikalta. */
+  shops: { id: string; name: string }[];
+  defaultShopId: string | null;
   providers: Provider[];
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
@@ -182,6 +187,7 @@ export function LoadBillClient({
   );
 
   const [accountId, setAccountId] = useState(kaamKeAccounts[0]?.id ?? accounts[0]?.id ?? "");
+  const [shopId, setShopId] = useState(defaultShopId ?? "");
   const [principal, setPrincipal] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
   const [reference, setReference] = useState("");
@@ -329,6 +335,22 @@ export function LoadBillClient({
           ) : (
           <form action={action} className="space-y-3">
             <input type="hidden" name="kind" value={kind} />
+
+            <div>
+              <Label htmlFor="shop_id">Ye kaam kis shop mein ho raha hai</Label>
+              <Select id="shop_id" name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} required>
+                <option value="">— shop chunein —</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-[11px] text-surface-500">
+                Shaam ko "Shop ka hisaab" isi se banta hai — jis shop se galat chuni gayi, us ka hisaab
+                doosri shop mein chala jayega.
+              </p>
+            </div>
 
             <div>
               <Label htmlFor="account_id">Paisa kis account se</Label>

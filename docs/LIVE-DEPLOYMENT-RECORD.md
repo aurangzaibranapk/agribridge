@@ -3368,27 +3368,39 @@ tak, 23 commit:**
 - Print: sidebar/topbar/tabs print par chhup jate hain; Export
   Catalogue print fix
 
-**15 September — 2 nayi migrations Testing par lagi, Live par ABHI BAQI hain:**
-- `423_pos_multi_counter_switch.sql` — staff apne kai POS counters par
-  ek sath khula shift rakh sake (shift band kiye baghair switch). Sirf
-  ek index hataya (`uq_pos_shift_open_staff`), koi data nahi badla.
-- `424_farmer_combined_ledger.sql` — Farmer ka combined statement
-  (`fn_farmer_combined_ledger`) + `v_farmer_combined_balance` mein
-  khad (farmer_credit) ka do-dafa-ginti bug fix. **Live par
-  `farmer_credit_ledger` mein abhi koi row nahi, is liye ye migration
-  Live ke maujooda kisi bhi adad ko nahi badalti** — sirf aainda ke
-  liye taala hai.
+**15 September — 423 aur 424 migrations: check kiya, Live par pehle se lagi hui hain**
+(`fn_farmer_combined_ledger` maujood hai, `uq_pos_shift_open_staff`
+index gayab hai) — pichhli baar ye note "ABHI BAQI" likha reh gaya tha,
+wo GHALAT tha, ab theek kar diya. Inhein dobara chalane ki zaroorat
+nahi.
+
+**15 September — `425_load_bill_shop_scope.sql` Testing aur Live dono
+par lagi hai** (additive: naya `shop_id` khana `load_transactions`
+par, naya `fn_shop_day_summary()` function — na koi purana khana chhera
+gaya, na koi purana data badla). Malik ka sawal tha: "load bill her
+shop k ana chaye sham close krin pata chaly load sy kitni ammount bill
+sy kitni ammoun udhar kitna dia naqad cash kitna shop ki sale kitni."
+Jaanch se pata chala branch kaafi nahi thi — ek branch mein kai shops
+hoti hain. Ab Load/Bill form mein "Shop" chunna zaroori hai (staff
+darj karte waqt batata hai), aur naya safha `/admin/load-bill/
+shop-summary` shop + tareekh chun kar Load, Bill aur POS sale ek sath,
+tareeqe (cash/khata/bank/card/JazzCash/Easypaisa/QR) ke hisaab se
+dikhata hai.
+
+**Code/UI abhi baqi hai** (migration lag chuki, safha/form ka build
+abhi Live par nahi gaya): `src/actions/load-bill.ts`,
+`src/app/admin/load-bill/page.tsx`, `load-bill-client.tsx`, aur nayi
+`shop-summary/` files.
 
 **Agli baar malik "system par aa gaya" kahein to poori command ek sath:**
-1. Pehle backup ki tasdeeq poochni hai (file ka size chat mein) —
-   **is dafa 2 nayi migrations bhi Live par chalani hain** (423, 424,
-   upar dekhein) — backup ke baad, build se pehle.
-2. Migrations ke baad ginti (pre/post) — 424 chhoti si tabdeeli hai
-   (koi Live data nahi badalta, sirf function/view), phir bhi P0
-   tarteeb waisi hi.
-3. `git pull` + `npm run build` + package + upload (upar wala do-command
+1. Backup ki tasdeeq (file ka size chat mein) — is dafa koi naya
+   migration Live par lagana baqi NAHI hai (423/424/425 teenon lag
+   chuki hain), sirf build.
+2. `git pull` + `npm run build` + package + upload (upar wala do-command
    tareeqa).
-4. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
+3. Smoke test: Master Dashboard, Data Health, Owner Commands, Khata
    Recovery (farmer balance bhi dikh rahe hon), Stock Count (list aa
    rahi ho), Machinery booking-detail render ho rahe hain, POS par
-   "Doosra Counter" switcher (jin staff ke paas kai counter hon).
+   "Doosra Counter" switcher (jin staff ke paas kai counter hon), Load
+   & Bill mein Shop chunna (naya khana), `/admin/load-bill/
+   shop-summary` khul raha ho.

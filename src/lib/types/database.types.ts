@@ -13659,6 +13659,7 @@ export type Database = {
           reference: string
           reversal_of: string | null
           service_charge: number | null
+          shop_id: string | null
           status: string
           txn_number: string
         }
@@ -13686,6 +13687,7 @@ export type Database = {
           reference: string
           reversal_of?: string | null
           service_charge?: number | null
+          shop_id?: string | null
           status?: string
           txn_number: string
         }
@@ -13750,6 +13752,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
           {
@@ -33879,6 +33888,30 @@ export type Database = {
       fn_set_staff_auth_code: {
         Args: { p_code: string; p_profile_id: string }
         Returns: undefined
+      }
+      fn_shop_day_summary: {
+        Args: { p_shop: string; p_date: string }
+        Returns: {
+          shop_name: string | null
+          load_principal: number
+          load_count: number
+          bill_principal: number
+          bill_count: number
+          lb_cash: number
+          lb_khata: number
+          lb_bank: number
+          lb_wallet: number
+          pos_sale_total: number
+          pos_khata_total: number
+          pos_sale_count: number
+          pos_cash: number
+          pos_bank_transfer: number
+          pos_card: number
+          pos_jazzcash: number
+          pos_easypaisa: number
+          pos_qr: number
+          pos_waseela_card: number
+        }[]
       }
       fn_sod_attach_triggers: { Args: never; Returns: number }
       fn_stock_count_mere_godam: {
