@@ -8,8 +8,9 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 export const dynamic = "force-dynamic";
-export default async function PosPage() {
+export default async function PosPage({ searchParams }: { searchParams: Promise<{ counter?: string }> }) {
   const lang = getLanguageFromCookies("rm");
+  const sp = await searchParams;
   const supabase = createClient();
   const {
     data: { user },
@@ -35,6 +36,7 @@ export default async function PosPage() {
   let activeCounterName: string | null = null;
   let openShiftInfo: { id: string; shiftNumber: string; openedAt: string; openingCash: number } | null = null;
   let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null } | null = null;
+  let otherCounters: { id: string; name: string; shopName: string; hasOpenShift: boolean }[] = [];
 
   if (!dealer) {
     const { data: profile } = await supabase
@@ -72,12 +74,16 @@ export default async function PosPage() {
       }));
 
     if (myCounters.length > 0) {
-      const { data: openShift } = await supabase
+      // Ek staff ab apne kai counters par ek sath khula shift rakh
+      // sakta hai (423) -- Malik: "2/3 POS hon to shift band kiye
+      // baghair doosre pay ja sakay". Is liye yahan poori fehrist,
+      // `.maybeSingle()` nahi.
+      const { data: openShiftRows } = await supabase
         .from("pos_shifts")
         .select("id, shift_number, counter_id, opened_at, opening_cash")
         .eq("staff_id", user.id)
-        .eq("status", "open")
-        .maybeSingle();
+        .eq("status", "open");
+      const openShifts = openShiftRows ?? [];
 
       // Pichli band hui shift ka cash abhi Manager/Finance ko bheja
       // nahi gaya -- malik ka kaam #3 (8 September). "Cash bheja gaya
@@ -100,12 +106,33 @@ export default async function PosPage() {
           }
         : null;
 
+      // ?counter=<id> se banda khud chunta hai kaunsa counter dekhna
+      // hai (switcher se aya link) -- warna jo pehla khula shift mile.
+      const requestedCounterId =
+        sp.counter && myCounters.some((c) => c.id === sp.counter) ? sp.counter : null;
+      const targetCounterId = requestedCounterId ?? openShifts[0]?.counter_id ?? null;
+      const openShift = targetCounterId ? openShifts.find((s) => s.counter_id === targetCounterId) : undefined;
       const active = openShift ? myCounters.find((c) => c.id === openShift.counter_id) : undefined;
 
+      otherCounters = myCounters
+        .filter((c) => c.id !== active?.id)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          shopName: c.shopName,
+          hasOpenShift: openShifts.some((s) => s.counter_id === c.id),
+        }));
+
       if (!active) {
-        // Koi shift khula nahi -- POS/inventory dikhane se pehle
-        // counter chunwana aur Shift Open karwana zaroori hai (Phase 6).
-        return <CounterShiftPicker counters={myCounters} pendingHandover={pendingHandover} />;
+        // Requested counter par abhi shift khula nahi -- seedha usi
+        // counter ka "Shift Open" form (switcher se poori fehrist
+        // dobara dikhane ki zaroorat nahi). Koi counter request nahi
+        // hua aur koi shift kahin khula bhi nahi to poori fehrist.
+        const pickerCounters = requestedCounterId
+          ? myCounters.filter((c) => c.id === requestedCounterId)
+          : myCounters;
+        const backHref = openShifts[0] ? `/admin/pos?counter=${openShifts[0].counter_id}` : "/admin/my-work";
+        return <CounterShiftPicker counters={pickerCounters} pendingHandover={pendingHandover} backHref={backHref} />;
       }
 
       const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
@@ -454,6 +481,7 @@ export default async function PosPage() {
           openedAt={openShiftInfo.openedAt}
           branchId={branch?.id ?? null}
           pendingHandover={pendingHandover}
+          otherCounters={otherCounters}
         />
       )}
       <PosClient

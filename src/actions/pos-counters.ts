@@ -223,8 +223,9 @@ export async function openShift(_prev: ActionState, formData: FormData): Promise
     .select("id")
     .single();
   if (error) {
+    // Staff ke apne kai counters par ek sath khula shift ho sakta hai
+    // (423) -- sirf ek counter par ek waqt mein ek shift ki hadd hai.
     if (error.message.includes("uq_pos_shift_open_counter")) return { error: "Is counter par pehle se koi shift khula hai." };
-    if (error.message.includes("uq_pos_shift_open_staff")) return { error: "Aapka pehle se ek shift khula hai — pehle wo band karein." };
     return { error: error.message };
   }
 

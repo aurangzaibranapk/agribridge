@@ -40,10 +40,13 @@ function OpenShiftButton() {
 export function CounterShiftPicker({
   counters,
   pendingHandover,
+  backHref = "/admin/my-work",
 }: {
   counters: Counter[];
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
   pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null } | null;
+  /** Kahan wapas jayen -- agar kahin aur pehle se shift khula hai to usi POS par, warna Dashboard (423). */
+  backHref?: string;
 }) {
   const [chosen, setChosen] = useState<Counter | null>(counters.length === 1 ? counters[0] : null);
   const [state, action] = useFormState(openShift, KHALI);
@@ -52,10 +55,10 @@ export function CounterShiftPicker({
     return (
       <div className="relative flex min-h-[70vh] items-center justify-center px-4 py-12">
         <Link
-          href="/admin/my-work"
+          href={backHref}
           className="absolute left-4 top-4 flex items-center gap-1 rounded-full border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-600 shadow-sm hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+          <ArrowLeft className="h-3.5 w-3.5" /> {backHref === "/admin/my-work" ? "Dashboard" : "Wapas"}
         </Link>
         <div className="w-full max-w-md">
           {pendingHandover && (
@@ -105,10 +108,10 @@ export function CounterShiftPicker({
   return (
     <div className="relative flex min-h-[70vh] flex-col items-center justify-center gap-6 px-4 py-12">
       <Link
-        href="/admin/my-work"
+        href={backHref}
         className="absolute left-4 top-4 flex items-center gap-1 rounded-full border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-600 shadow-sm hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-300"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+        <ArrowLeft className="h-3.5 w-3.5" /> {backHref === "/admin/my-work" ? "Dashboard" : "Wapas"}
       </Link>
       {pendingHandover && (
         <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">

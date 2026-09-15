@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send } from "lucide-react";
+import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown } from "lucide-react";
 import { closeShift, getShiftSummary, shiftCashRecipients, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
@@ -116,6 +116,60 @@ function CloseButton() {
 }
 
 /**
+ * Doosre counters par jump karne ka button -- shift band kiye baghair
+ * (423). Malik: "2/3 POS hon to shift close kiye baghair doosre pay ja
+ * sakay, aur wahan wahi button ho wapis pehle wale pay aane ke liye."
+ * Isi ek switcher se dono taraf switch hota hai -- jo counter khula hai
+ * wahan seedha wapas jata hai, jahan shift khula nahi wahan Shift Open
+ * ka form khulta hai.
+ */
+function CounterSwitcher({
+  counters,
+}: {
+  counters: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
+}) {
+  const [open, setOpen] = useState(false);
+  if (counters.length === 0) return null;
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-700 shadow-sm transition hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
+      >
+        <Repeat className="h-3 w-3" /> Doosra Counter <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-surface-200 bg-white py-1 shadow-lg dark:border-surface-700 dark:bg-surface-900">
+            {counters.map((c) => (
+              <Link
+                key={c.id}
+                href={`/admin/pos?counter=${c.id}`}
+                className="flex items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-surface-50 dark:hover:bg-surface-800"
+              >
+                <span className="min-w-0 truncate text-surface-700 dark:text-surface-300">
+                  {c.shopName} · {c.name}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                    c.hasOpenShift
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                      : "bg-surface-100 text-surface-500 dark:bg-surface-800"
+                  }`}
+                >
+                  {c.hasOpenShift ? "Khula" : "Band"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
  * Shift ki patti -- POS ke sab se upar. Phase 6/17.
  *
  * Malik (8 September): "system ko khud balance batana chahiye, kya sale
@@ -132,6 +186,7 @@ export function ShiftBar({
   openedAt,
   branchId,
   pendingHandover,
+  otherCounters,
 }: {
   shiftId: string;
   shiftNumber: string;
@@ -142,6 +197,8 @@ export function ShiftBar({
   branchId: string | null;
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
   pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null } | null;
+  /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
+  otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [handoverOpen, setHandoverOpen] = useState(false);
@@ -202,6 +259,7 @@ export function ShiftBar({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {otherCounters && otherCounters.length > 0 && <CounterSwitcher counters={otherCounters} />}
           {pendingHandover && (
             <button
               onClick={() => setHandoverOpen(true)}
