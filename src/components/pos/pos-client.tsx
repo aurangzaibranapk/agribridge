@@ -518,9 +518,11 @@ export function PosClient({
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
       <section className="flex flex-col lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
-          <h1 className="max-w-[18rem] shrink-0 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
-          {/* Naam, code, scan bar -- ab ek hi box (malik, 15 September). */}
-          <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-[3] items-center gap-2">
+          <h1 className="min-w-0 flex-1 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
+          {/* Naam, code, scan bar -- ab ek hi box (malik, 15 September).
+              Naam aur search box barabar jagah lete hain (malik: "half
+              pay name half pay search bar"). */}
+          <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-1 items-center gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
               <Input ref={barcodeRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pos_search_products", lang)} className="h-11 pl-9" />

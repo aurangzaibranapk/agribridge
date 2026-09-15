@@ -7,6 +7,7 @@ import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 export const dynamic = "force-dynamic";
 export default async function PosPage({ searchParams }: { searchParams: Promise<{ counter?: string }> }) {
   const lang = getLanguageFromCookies("rm");
@@ -41,9 +42,10 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   if (!dealer) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("branch_id, shop_id")
+      .select("branch_id, shop_id, role")
       .eq("id", user.id)
       .maybeSingle();
+    const unrestricted = UNRESTRICTED_ROLES.includes(String(profile?.role ?? ""));
 
     /**
      * POS Counter (366/367): agar is staff ko kisi counter ki ijazat
@@ -53,16 +55,28 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
      * tak koi Manager use kisi counter par nahi laga deta), us ke liye
      * ye poora hissa khali rehta hai aur neeche wala PURANA raasta
      * bilkul waisa hi chalta hai jaisa 366 se pehle chalta tha.
+     *
+     * Owner/Admin (423): ye role har counter par shift khol sakta hai
+     * bina `pos_counter_staff` mein qatar ke (`openShift` mein yehi
+     * chhoot pehle se hai) -- is liye "Doosra Counter" switcher mein
+     * bhi COMPANY KI HAR active counter dikhni chahiye, sirf wo nahi
+     * jin par explicit assign hui ho -- warna admin ko switcher kabhi
+     * nazar hi nahi aata.
      */
-    const { data: myCounterRows } = await supabase
-      .from("pos_counter_staff")
-      .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name))")
-      .eq("profile_id", user.id)
-      .eq("is_active", true)
-      .eq("pos_counters.is_active", true);
+    const { data: myCounterRows } = unrestricted
+      ? await supabase
+          .from("pos_counters")
+          .select("id, name, branch_id, shop_id, is_active, branches(name), shops(name)")
+          .eq("is_active", true)
+      : await supabase
+          .from("pos_counter_staff")
+          .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name))")
+          .eq("profile_id", user.id)
+          .eq("is_active", true)
+          .eq("pos_counters.is_active", true);
 
     const myCounters = ((myCounterRows ?? []) as any[])
-      .map((r) => (Array.isArray(r.pos_counters) ? r.pos_counters[0] : r.pos_counters))
+      .map((r) => (unrestricted ? r : Array.isArray(r.pos_counters) ? r.pos_counters[0] : r.pos_counters))
       .filter(Boolean)
       .map((c: any) => ({
         id: c.id as string,
