@@ -122,9 +122,23 @@ export function ReceiptModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:bg-transparent">
+      {/*
+        Thermal printer ka apna "kaghaz ka size" hota hai -- bina bataye
+        browser use A4/Letter maan leta hai, aur receipt us bade safhe
+        ke ek kone mein chhoti si print hoti hai (ya kaT kar kai safhon
+        mein bikhar jati hai). Ye rule SIRF is Modal ke khule hone tak
+        maujood hai, is liye Export Catalogue jaisi Letter-size print par
+        koi asar nahi (15 September).
+      */}
+      <style>{`
+        @media print {
+          @page { size: 80mm auto; margin: 3mm; }
+          html, body { margin: 0; background: #fff; }
+        }
+      `}</style>
       <div
         id="receipt-print-area"
-        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900 print:max-h-none print:shadow-none"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-full print:p-0 print:text-black print:shadow-none"
       >
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_receipt", lang)}</h3>
