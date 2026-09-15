@@ -48,18 +48,21 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Dev par webpack ka disk cache band.
+  // Webpack ka disk cache band -- dev AUR build dono mein.
   //
-  // Malik ki Windows machine par `.next` ka cache baar baar kharab hua
-  // ("Caching failed for pack: unexpected end of file"), aur us ka
-  // nateeja har dafa yehi tha: safha nange HTML mein khulta -- CSS aur JS
-  // ki file 404. Har baar `rm -rf .next` karna paRta tha.
+  // Malik ki Windows machine par `.next\cache\webpack\*.pack` files baar
+  // baar kharab/lock ho jati hain ("Caching failed for pack: unexpected
+  // end of file" dev mein; "Access is denied" / "process cannot access
+  // the file" build mein, 15 September) -- lagta hai koi security/backup
+  // software (Acronis Active Protection wagaira) in tezi se likhi jaane
+  // wali badi files ko lock kar leta hai. Pehle sirf `dev` ke liye band
+  // ki gayi thi; ab wahi masla `next build` mein bhi aa raha hai.
   //
-  // Cache band karne se dobara compile thoda sust hota hai, magar aisi
-  // adhoori file banti hi nahi. Ye sirf `next dev` par hai -- asal build
-  // (jo server par jata hai) par koi asar nahi.
-  webpack: (config, { dev }) => {
-    if (dev) config.cache = false;
+  // Cache band karne se har build poora naya (thoda sust) hota hai, magar
+  // aisi adhoori/locked file kabhi banti hi nahi -- rm -rf .next ka
+  // chakkar khatam.
+  webpack: (config) => {
+    config.cache = false;
     return config;
   },
 };
