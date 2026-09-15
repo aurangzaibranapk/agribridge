@@ -8,6 +8,7 @@ import {
   verifyCount,
   addExtraCountItem,
   renameProductFromCount,
+  correctStockCountRate,
   type ActionState,
 } from "@/actions/stock-count";
 import { previewProductMerge, requestProductMerge } from "@/actions/product-merge";
@@ -757,6 +758,76 @@ function ExtraSubmit({ label }: { label: string }) {
 }
 
 /**
+ * "Extra Item" se joRi gayi cheez ka rate kabhi ulta likha jata hai
+ * (malik, 15 September: "rate ki jagah quantity, quantity ki jagah
+ * rate") -- ye seedha Milan ke journal entry mein chala jata hai, is
+ * liye Owner/Admin ko yahin se theek karne ka raasta chahiye. Sirf
+ * Owner/Admin ko dikhta hai (canApprove) -- staff yahan tak Review par
+ * aata bhi nahi.
+ */
+function RateCorrectionSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-40"
+    >
+      {pending ? "…" : "Theek Karein"}
+    </button>
+  );
+}
+
+function RateCorrectionCell({ lineId, unitCost }: { lineId: string; unitCost: number }) {
+  const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState(String(unitCost));
+  const [note, setNote] = useState("");
+  const [state, action] = useFormState(correctStockCountRate, initialState);
+
+  if (state.success) {
+    return <p className="text-[11px] text-green-700 dark:text-green-400">{state.message}</p>;
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="text-[10px] text-surface-400 underline hover:text-brand-600">
+        Rate: {rs(unitCost)} — ghalat hai?
+      </button>
+    );
+  }
+
+  return (
+    <form action={action} className="mt-1 w-48 space-y-1 rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-1.5 text-left dark:border-amber-800 dark:bg-amber-950/10">
+      <input type="hidden" name="line_id" value={lineId} />
+      <input
+        name="new_rate"
+        value={rate}
+        onChange={(e) => setRate(e.target.value)}
+        type="number"
+        min={0}
+        step="0.01"
+        placeholder="Sahi rate"
+        className="w-full rounded-lg border border-amber-300 px-1.5 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
+      />
+      <input
+        name="note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Wajah (jaise: rate ulta likha gaya tha)"
+        className="w-full rounded-lg border border-amber-300 px-1.5 py-1 text-xs dark:border-amber-800 dark:bg-surface-900"
+      />
+      <div className="flex items-center gap-1">
+        <RateCorrectionSubmit />
+        <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-surface-400">
+          Cancel
+        </button>
+      </div>
+      {state.error && <p className="text-[11px] text-red-600">{state.error}</p>}
+    </form>
+  );
+}
+
+/**
  * Milaan ka safha -- ab dono adad saamne hain, aur har farq par wajah
  * maangi jati hai.
  */
@@ -849,8 +920,13 @@ export function ReviewSheet({
                       {diff > 0 ? "+" : ""}
                       {diff}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
-                      {rs(Math.abs(value))}
+                    <td className="px-3 py-2 text-right">
+                      <span className="tabular-nums text-surface-600 dark:text-surface-400">{rs(Math.abs(value))}</span>
+                      {canApprove && (
+                        <div className="mt-1">
+                          <RateCorrectionCell lineId={l.id} unitCost={l.unitCost} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

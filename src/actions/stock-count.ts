@@ -708,3 +708,41 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
         : `Ginti mukammal. ${updates.length} cheezon mein farq mila: Rs ${shortValue.toLocaleString()} ka maal kam, Rs ${overValue.toLocaleString()} ka zyada. Nuqsan "Stock ka nuqsan" khate mein chala gaya.`,
   };
 }
+
+/**
+ * Milan (Review) se pehle rate theek karna -- malik (15 September):
+ * "Extra Item" se joRi gayi cheez ka rate ulta likha gaya tha (jaise
+ * "surfexcel" Rs 9, jab ke asal Rs 250+ hai) -- ye rate seedha Milan ke
+ * journal entry (Stock Loss/Stock Goods) mein chala jata hai, is liye
+ * ghalat rehne se asal hisaab bhi ghalat ban jata.
+ *
+ * `stock_count_lines.unit_cost` seedhi UPDATE se mehfooz hai
+ * (`fn_stock_count_guard`) -- ye action ek tang, SECURITY DEFINER
+ * raaste (`fn_correct_stock_count_unit_cost`) se guzarta hai jo sirf
+ * Owner/Admin ko, sirf jab tak ginti posted na ho, wajah ke sath
+ * ijazat deta hai, aur audit mein likh deta hai.
+ */
+export async function correctStockCountRate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const lineId = String(formData.get("line_id") ?? "");
+  const newRate = Number(formData.get("new_rate") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  if (!lineId) return { error: "Qatar saaf nahi." };
+  if (!Number.isFinite(newRate) || newRate < 0) return { error: "Sahi rate likhein." };
+  if (note.length < 5) return { error: "Wajah likhein (kam az kam 5 huroof) — rate kyun theek kiya ja raha hai." };
+
+  const { error } = await supabase.rpc("fn_correct_stock_count_unit_cost", {
+    p_line_id: lineId,
+    p_new_unit_cost: newRate,
+    p_note: note,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/stock-count");
+  return { success: true, message: `Rate theek ho gaya — ab Rs ${newRate.toLocaleString()}.` };
+}
