@@ -5,6 +5,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { computeShiftCash, type ShiftCashSummary } from "@/lib/pos/shift-cash";
+import { postJournal } from "@/lib/ledger/post";
+import { ACC } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -282,7 +284,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   const service = createServiceClient();
   const { data: shift } = await service
     .from("pos_shifts")
-    .select("id, staff_id, opening_cash, status")
+    .select("id, staff_id, opening_cash, status, shift_number")
     .eq("id", shiftId)
     .maybeSingle();
   if (!shift) return { error: "Shift nahi mila." };
@@ -305,6 +307,46 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
     })
     .eq("id", shiftId);
   if (error) return { error: error.message };
+
+  // Ginti hui cash ab is staff ki custody mein hai -- ledger mein bhi
+  // yehi kehna chahiye, warna "Cash Bhejein" (my_custody) hamesha "aap
+  // ke paas Rs 0 hai" kehta rahega, chahe golak mein waqai raqam ho.
+  //
+  // POS sale ke waqt hi ACC.cash (1000) debit ho chuka hota hai -- ye
+  // koi naya paisa nahi, sirf usi cash ko "company ke aam khate" se
+  // "isi bande ke haath mein" reclassify karna hai. Cash Bhejein
+  // (my_custody) is se 1030 ko sender se receiver tak le jata hai,
+  // aur receiveCash usay wapas 1000 mein le aata hai -- poora chakkar
+  // khud ko barabar rakhta hai, koi rupya dugna ya ghaib nahi hota.
+  //
+  // Malik (16 September, Anwar ka screenshot): "aap ke paas zero hai
+  // magar cash 1,070 bheja ja raha hai" -- yehi khaali qadam tha.
+  if (countedCash > 0) {
+    const posted = await postJournal({
+      description: `Shift ${shift.shift_number} band — ginti hui cash ${who.naam} ki custody mein`,
+      sourceModule: "pos_shift_close",
+      sourceId: shiftId,
+      branchId: who.branchId,
+      createdBy: who.userId,
+      lines: [
+        { account: ACC.cashWithPerson, debit: countedCash, partyType: "staff", partyId: shift.staff_id, memo: `Shift ${shift.shift_number}` },
+        { account: ACC.cash, credit: countedCash, memo: `Shift ${shift.shift_number} — golak se ${who.naam} ke haath mein` },
+      ],
+    });
+    // Custody entry na ban saki to bhi shift band rehti hai (staff ka
+    // kaam ruk nahi sakta) -- magar chup nahi rehte: error log hota hai
+    // taake "Cash Bhejein" par jo "Rs 0" dikhega, us ki wajah kahin
+    // darj ho.
+    if ("error" in posted) {
+      await logAudit({
+        actionType: "update",
+        module: "pos-shifts",
+        recordId: shiftId,
+        recordLabel: shiftId,
+        description: `Shift ${shift.shift_number}: custody entry nahi ban saki — ${posted.error}`,
+      });
+    }
+  }
 
   await logAudit({
     actionType: "update",
