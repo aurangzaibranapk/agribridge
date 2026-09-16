@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { RecentSalesTable } from "./recent-sales-table";
 
 export const dynamic = "force-dynamic";
 
@@ -92,7 +93,7 @@ export default async function SalesReportPage({
   let salesQuery = supabase
     .from("pos_sales")
     .select(
-      "id, total_amount, cash_paid, khata_amount, payment_mode, created_at, branch_id, shop_id, created_by, branches(name), dealers(business_name)"
+      "id, total_amount, cash_paid, khata_amount, payment_mode, created_at, branch_id, shop_id, created_by, customer_id, crm_customer_id, branches(name), dealers(business_name)"
     )
     .gte("created_at", start.toISOString())
     .lte("created_at", end.toISOString())
@@ -108,6 +109,25 @@ export default async function SalesReportPage({
     ? await supabase.from("profiles").select("id, full_name").in("id", cashierIds)
     : { data: [] };
   const cashierMap = new Map((cashiers ?? []).map((c) => [c.id, c.full_name]));
+
+  /**
+   * "Kaun le gaya" -- malik (16 September): "jo sale ho rahi hain, agar
+   * kisi ki sale check karna ho ke wo kya kya le gaya, kaun le gaya, wo
+   * hona chahiye." Do khate, do alag khata: `crm_customer_id` (POS ka
+   * apna customer picker, `customers` table) aur `customer_id` (purana
+   * dealer wala raasta, `dealer_customers` table) -- pehla hi zyada tar
+   * bharta hai (pos-return.tsx mein bhi yehi tafseel, 15 September).
+   */
+  const crmIds = [...new Set((sales ?? []).map((s: any) => s.crm_customer_id).filter(Boolean))];
+  const dealerCustIds = [...new Set((sales ?? []).map((s: any) => s.customer_id).filter(Boolean))];
+  const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
+    crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
+    dealerCustIds.length
+      ? supabase.from("dealer_customers").select("id, name").in("id", dealerCustIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const crmCustName = new Map((crmCusts ?? []).map((c: any) => [c.id, c.name]));
+  const dealerCustName = new Map((dealerCusts ?? []).map((c: any) => [c.id, c.name]));
 
   /**
    * Malik ka maanga hua "dukan ka poora din" (6 September):
@@ -366,6 +386,7 @@ export default async function SalesReportPage({
       cashier: cashierMap.get(s.created_by) ?? "-",
       paymentMode: s.payment_mode,
       amount: Number(s.total_amount ?? 0),
+      customer: (s.crm_customer_id ? crmCustName.get(s.crm_customer_id) : null) ?? (s.customer_id ? dealerCustName.get(s.customer_id) : null) ?? null,
     };
   });
 
@@ -658,34 +679,7 @@ export default async function SalesReportPage({
         <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
           {t("rs_recent_sales", lang)}
         </h2>
-        {rows.length === 0 ? (
-          <p className="text-sm text-surface-400">{t("rs_no_sales_period", lang)}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-surface-100 text-xs text-surface-500">
-                  <th className="py-2 pr-3">{t("c_date", lang)}</th>
-                  <th className="py-2 pr-3">{t("c_location", lang)}</th>
-                  <th className="py-2 pr-3">{t("rs_cashier", lang)}</th>
-                  <th className="py-2 pr-3">{t("c_payment_mode", lang)}</th>
-                  <th className="py-2 pr-3">{t("c_amount", lang)}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-surface-50 last:border-0">
-                    <td className="py-2 pr-3 text-surface-500">{new Date(r.date).toLocaleString()}</td>
-                    <td className="py-2 pr-3 text-surface-700">{r.location}</td>
-                    <td className="py-2 pr-3 text-surface-700">{r.cashier}</td>
-                    <td className="py-2 pr-3 capitalize text-surface-600">{r.paymentMode.replace("_", " ")}</td>
-                    <td className="py-2 pr-3 font-medium text-surface-900">{rs(r.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <RecentSalesTable rows={rows} lang={lang} />
       </div>
     </div>
   );
