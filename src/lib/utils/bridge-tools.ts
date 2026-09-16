@@ -281,25 +281,14 @@ async function broadcastToFarmers(
   }
 
   if (args.target === "specific" && args.farmer_phone) {
-    const { data: farmer } = await supabase
-      .from("farmers")
-      .select("whatsapp_number, phone_number")
-      .or(`whatsapp_number.eq.${args.farmer_phone},phone_number.eq.${args.farmer_phone}`)
-      .maybeSingle();
-    if (!farmer) return { sent: false, message: "Ye Farmer number database mein nahi mila." };
-
-    const { sendWhatsAppMessage } = await import("@/lib/whatsapp-client");
-    const targetNumber = farmer.whatsapp_number ?? farmer.phone_number;
-    if (!targetNumber) return { sent: false, message: "Is farmer ka koi number darj nahi hai." };
-    // AI ko sach batana yahan aur bhi zaroori hai: wo apne jawab mein
-    // wahi likhta hai jo yahan se milta hai, aur "bhej diya gaya" keh
-    // dena banda us par bharosa kar ke aage barh jata hai.
-    try {
-      await sendWhatsAppMessage(targetNumber, `${args.title}\n\n${args.message}`);
-    } catch (e) {
-      return { sent: false, message: `WhatsApp message nahi ja saka: ${e instanceof Error ? e.message : "wajah maloom nahi"}` };
-    }
-    return { sent: true, message: `WhatsApp message ${targetNumber} ko bhej diya gaya.` };
+    // Malik (16 September): WhatsApp sirf OTP, Khata Recovery, aur
+    // bill/statement ke liye -- ye AI se mansooba (ad-hoc) WhatsApp
+    // bhi usi kharche mein shamil hota tha. AI ko sach batana zaroori
+    // hai, warna wo "bhej diya" keh kar jhoot bolega.
+    return {
+      sent: false,
+      message: "Ad-hoc WhatsApp message ab band hai (kharcha bachane ke liye) — sirf Announcement (in-app) bheji ja sakti hai.",
+    };
   }
 
   const { error } = await supabase.from("announcements").insert({

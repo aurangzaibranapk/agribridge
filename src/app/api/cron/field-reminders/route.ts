@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { notifyRoles } from "@/lib/notifications";
 import { collectWatchItems, PENDING_ALERT_HOURS } from "@/lib/field-watch";
 
@@ -49,21 +48,10 @@ export async function GET(request: Request) {
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
     const vehicle = Array.isArray(log.vehicles) ? log.vehicles[0] : log.vehicles;
-    // Har paighaam apni jagah. Ek number kharab ho to poori fehrist
-    // rukni nahi chahiye -- baqi sab ko yaad dihani milti rehni chahiye.
-    // Ginti bhi tabhi barhti hai jab paighaam waqai chala gaya ho.
-    try {
-      await sendWhatsAppMessage(
-        staff.whatsapp_number,
-        `Yaad dihani: aaj ka shaam wala meter abhi nahi aaya.\n\n` +
-          `Gaari: ${vehicle?.vehicle_name ?? "aap ki gaari"}\n` +
-          `Subah ka meter: ${Number(log.opening_km).toLocaleString()} km\n\n` +
-          `Kaam khatam hone par meter ki photo bhej dein — warna aaj ka hisaab adhoora reh jayega.`
-      );
-      staffReminders += 1;
-    } catch (e) {
-      failures.push(`meter (${vehicle?.vehicle_name ?? "gaari"}): ${e instanceof Error ? e.message : "wajah maloom nahi"}`);
-    }
+    // Malik (16 September): staff ke WhatsApp reminders band -- apni
+    // app aa rahi hai, wahin ye kaam hoga. Yahan sirf gin kar likh diya
+    // jata hai ke paighaam banta to tha, bheja nahi gaya.
+    failures.push(`meter (${vehicle?.vehicle_name ?? "gaari"}): WhatsApp reminders band hain (kharcha bachane ke liye)`);
   }
 
   // ---- 2) Oil badalne ki yaad dihani ----
@@ -100,19 +88,8 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
-    try {
-      await sendWhatsAppMessage(
-        staff.whatsapp_number,
-        `Yaad dihani: ${vehicle.vehicle_name} ka oil badalne ka waqt ho gaya.\n\n` +
-          `Aakhri service: ${Math.round(Number(vehicle.last_service_km ?? 0)).toLocaleString()} km\n` +
-          `Ab tak chali: ${Math.round(since).toLocaleString()} km (hadd ${interval.toLocaleString()} km)\n\n` +
-          `Oil badalwa kar bill ki tafseel manager ko de dein.`
-      );
-    } catch (e) {
-      failures.push(`oil (${vehicle.vehicle_name}): ${e instanceof Error ? e.message : "wajah maloom nahi"}`);
-      continue;
-    }
-    oilReminders += 1;
+    // Malik (16 September): staff ke WhatsApp reminders band.
+    failures.push(`oil (${vehicle.vehicle_name}): WhatsApp reminders band hain (kharcha bachane ke liye)`);
   }
 
   // ---- 3) Manager ko: jo cheezein der se pari hain ----
