@@ -12,6 +12,7 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitch } from "@/components/ui/language-switch";
 import { LogoutButton } from "@/components/layout/logout-button";
+import { LiveDashboardRefresh } from "@/components/guided/live-dashboard-refresh";
 import * as I from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +151,7 @@ export default async function MyWorkReferencePage() {
 
   return (
     <div className="fixed inset-0 z-30 overflow-auto bg-[#f7faf8] text-surface-900 dark:bg-surface-950 dark:text-white">
+      <LiveDashboardRefresh userId={user.id} />
       <div className="grid min-h-screen lg:grid-cols-[214px_minmax(0,1fr)]">
         <aside className="hidden min-h-screen border-r border-surface-200 bg-white lg:flex lg:flex-col dark:border-surface-800 dark:bg-surface-900">
           <div className="flex h-[66px] items-center gap-2 border-b border-surface-100 px-5 dark:border-surface-800">
