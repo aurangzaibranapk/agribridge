@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity, Printer, MessageCircle, UserRound, Phone, Percent, Info } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity, Printer, MessageCircle, UserRound, Phone, Percent, Info, X } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -208,6 +208,8 @@ export function LoadBillClient({
   // sakta hai.
   const andaza = useMemo(() => andazaNetwork(reference), [reference]);
   const [providerId, setProviderId] = useState("");
+  const [billCategory, setBillCategory] = useState("");
+  const [providerTid, setProviderTid] = useState("");
 
   useEffect(() => {
     if (kind !== "load" || !andaza || providerId) return;
@@ -241,6 +243,7 @@ export function LoadBillClient({
   const [udhaarAccount, setUdhaarAccount] = useState("cash");
   const [udhaarCategory, setUdhaarCategory] = useState("FMCG Udhaar");
   const [udhaarReference, setUdhaarReference] = useState("");
+  const [showTransactions, setShowTransactions] = useState(false);
 
   const chunaHua = accounts.find((a) => a.id === accountId) ?? null;
   const raqam = Number(principal.replace(/,/g, "")) || 0;
@@ -260,18 +263,51 @@ export function LoadBillClient({
     return transaction.kind === txnFilter;
   });
 
+  const selectedProvider = providers.find((provider) => provider.id === providerId)?.name ?? "—";
+  const selectedFinanceAccount = financeAccounts.find((account) => account.id === udhaarAccount)?.name;
+  const receiptTitle = tab === "load" ? "Mobile Load Receipt" : tab === "bill" ? "Bill Payment Receipt" : tab === "udhaar" ? "Udhaar Slip" : "Recovery Receipt";
+  const receiptRows: Array<[string, string]> = tab === "load" || tab === "bill"
+    ? [
+        ["Customer", mainParty?.name ?? "Guest / Walk-in"],
+        [tab === "load" ? "Mobile" : "Consumer / Reference", reference || "—"],
+        [tab === "load" ? "Network" : "Bill Provider", selectedProvider],
+        ...(tab === "bill" ? [["Bill Type", billCategory || "—"] as [string, string]] : []),
+        ["From Account", chunaHua?.title ?? "—"],
+        ["Payment Received In", paisaKahan === "cash" ? "Cash" : paisaKahan === "wallet" ? "Customer Wallet" : paisaKahan === "khata" ? "Khata" : financeAccounts.find((account) => `acct:${account.id}` === paisaKahan)?.name ?? "—"],
+        [tab === "load" ? "Load Amount" : "Bill Amount", rs(raqam)],
+        ["Service Charge", charge ? rs(charge) : "—"],
+        ["Customer Pays", rs(raqam + charge)],
+        ["Provider TID", providerTid || "Pending"],
+      ]
+    : [
+        [tab === "udhaar" ? "Party" : "Customer", udhaarParty?.name ?? "—"],
+        [tab === "udhaar" ? "Category" : "Account / Khata", udhaarCategory],
+        ...(tab === "receive" ? [["Previous Balance", udhaarParty?.balance == null ? "—" : rs(udhaarParty.balance)] as [string, string]] : []),
+        [tab === "udhaar" ? "Amount" : "Amount Received", rs(Number(udhaarAmount) || 0)],
+        ...(tab === "receive" ? [["Remaining Balance", udhaarParty?.balance == null ? "—" : rs(Math.max(0, udhaarParty.balance - (Number(udhaarAmount) || 0)))] as [string, string]] : []),
+        ["Payment Method", udhaarAccount === "cash" ? "Cash" : selectedFinanceAccount ?? "Account"],
+        ["Reference", udhaarReference || "—"],
+      ];
+
+  const receiptText = () => [
+    "AgriBridge — Al Rana Traders",
+    receiptTitle,
+    new Date().toLocaleString("en-PK"),
+    "",
+    ...receiptRows.map(([label, value]) => `${label}: ${value}`),
+  ].join("\n");
+
   const whatsappReceipt = () => {
-    const work = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive";
-    const receipt = [
-      "AgriBridge — Al Rana Traders",
-      work,
-      `Customer: ${mainParty?.name ?? "Guest / Walk-in"}`,
-      reference ? `Reference: ${reference}` : "",
-      `Amount: ${rs(raqam)}`,
-      charge ? `Service charge: ${rs(charge)}` : "",
-      `Total: ${rs(raqam + charge)}`,
-    ].filter(Boolean).join("\n");
+    const receipt = receiptText();
     window.open(`https://wa.me/?text=${encodeURIComponent(receipt)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const printReceipt = () => {
+    const popup = window.open("", "_blank", "width=430,height=720");
+    if (!popup) return;
+    const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] ?? character);
+    popup.document.write(`<!doctype html><html><head><title>${escapeHtml(receiptTitle)}</title><style>@page{size:80mm auto;margin:5mm}body{font-family:Arial,sans-serif;width:70mm;margin:0 auto;color:#111;font-size:12px}.brand{text-align:center;font-size:17px;font-weight:700}.sub{text-align:center;margin:3px 0 14px}.row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed #bbb}.row span:first-child{color:#555}.row b{text-align:right}.footer{text-align:center;margin-top:16px;font-size:10px;color:#555}</style></head><body><div class="brand">AgriBridge</div><div class="sub">Al Rana Traders<br>${escapeHtml(receiptTitle)}<br>${escapeHtml(new Date().toLocaleString("en-PK"))}</div>${receiptRows.map(([label, value]) => `<div class="row"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join("")}<div class="footer">Customer Copy<br>AgriBridge ERP</div><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
+    popup.document.close();
   };
 
   const paighaam =
@@ -459,7 +495,7 @@ export function LoadBillClient({
               <>
                 <div>
                   <Label htmlFor="provider_id">Kis cheez ka bill</Label>
-                  <Select id="provider_id" name="provider_id" required defaultValue="">
+                  <Select id="provider_id" name="provider_id" required value={providerId} onChange={(event) => setProviderId(event.target.value)}>
                     <option value="">— chunein —</option>
                     {kaamKeProviders.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -470,7 +506,7 @@ export function LoadBillClient({
                 </div>
                 <div>
                   <Label htmlFor="bill_category">Bill ki qism</Label>
-                  <Select id="bill_category" name="bill_category" defaultValue="">
+                  <Select id="bill_category" name="bill_category" value={billCategory} onChange={(event) => setBillCategory(event.target.value)}>
                     <option value="">— chunein —</option>
                     <option value="electricity">Bijli</option>
                     <option value="gas">Gas</option>
@@ -491,7 +527,7 @@ export function LoadBillClient({
 
             <div>
               <Label htmlFor="provider_tid">Provider TID / Reference</Label>
-              <Input id="provider_tid" name="provider_tid" disabled={savePending} placeholder="Jazz/Easypaisa app se copy karein" />
+              <Input id="provider_tid" name="provider_tid" disabled={savePending} value={providerTid} onChange={(event) => setProviderTid(event.target.value)} placeholder="Jazz/Easypaisa app se copy karein" />
             </div>
 
             <div>
@@ -581,16 +617,20 @@ export function LoadBillClient({
         {/* -------- Aaj ka hisaab -------- */}
         <div className="min-h-0 space-y-3">
           <Card className="h-full border-surface-200 bg-white px-5 py-4 dark:bg-surface-900">
-            <p className="text-lg font-bold text-surface-950 dark:text-white">{tab === "udhaar" ? "Live Udhaar Summary" : tab === "receive" ? "Live Recovery Summary" : "Live Transaction Summary"}</p>
+            <p className="text-lg font-bold text-surface-950 dark:text-white">{tab === "load" ? "Live Load Summary" : tab === "bill" ? "Live Bill Summary" : tab === "udhaar" ? "Live Udhaar Summary" : "Live Recovery Summary"}</p>
             <p className="mt-2 flex items-center gap-2 border-b border-surface-200 pb-3 text-xs text-brand-700"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Ready to process</p>
             <div className="mt-4 space-y-4 text-sm">
               {(tab === "load" || tab === "bill") && <>
                 <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><UserRound className="h-4 w-4 text-brand-700" /> Customer</span><b className="max-w-[9rem] truncate">{mainParty?.name ?? "Walk-in"}</b></div>
                 <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><Phone className="h-4 w-4 text-brand-700" /> {kind === "load" ? "Mobile" : "Reference"}</span><b className="truncate">{reference || "—"}</b></div>
+                <div className="flex justify-between gap-3"><span className="text-surface-500">{kind === "load" ? "Network" : "Bill Provider"}</span><b className="truncate">{selectedProvider}</b></div>
+                {kind === "bill" && <div className="flex justify-between gap-3"><span className="text-surface-500">Bill Type</span><b>{billCategory || "—"}</b></div>}
+                <div className="flex justify-between gap-3"><span className="text-surface-500">From Account</span><b className="max-w-[9rem] truncate">{chunaHua?.title ?? "—"}</b></div>
                 <div className="flex justify-between"><span className="flex items-center gap-2 text-surface-500"><Banknote className="h-4 w-4 text-brand-700" /> {kind === "load" ? "Load Amount" : "Bill Amount"}</span><b>{rs(raqam)}</b></div>
                 <div className="flex justify-between"><span className="flex items-center gap-2 text-surface-500"><Percent className="h-4 w-4 text-brand-700" /> Service Charge</span><b>{charge ? rs(charge) : "—"}</b></div>
                 <div className="border-t border-surface-200 pt-4 flex justify-between text-base"><span>Customer Pays</span><b>{rs(raqam + charge)}</b></div>
                 <div className="flex justify-between text-base"><span className="text-brand-700">Staff Income</span><b className="text-brand-700">{staffIncome ? rs(staffIncome) : "—"}</b></div>
+                <div className="flex justify-between gap-3"><span className="text-surface-500">Provider TID</span><b className="max-w-[9rem] truncate">{providerTid || "Pending"}</b></div>
               </>}
               {(tab === "udhaar" || tab === "receive") && <>
                 <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><UserRound className="h-4 w-4 text-brand-700" /> {tab === "udhaar" ? "Party" : "Customer"}</span><b className="max-w-[9rem] truncate">{udhaarParty?.name ?? "—"}</b></div>
@@ -606,7 +646,7 @@ export function LoadBillClient({
               <div className="mt-6 border-t border-surface-200 pt-4">
                 <Button type="submit" form="load-bill-form" className="h-12 w-full text-base"><CheckCircle2 className="mr-2 h-5 w-5" /> {kind === "load" ? "Load Complete — Save" : "Bill Complete — Save"}</Button>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
+                <Button type="button" variant="secondary" size="sm" onClick={printReceipt}>
                   <Printer className="mr-1.5 h-4 w-4" /> Print Receipt
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}>
@@ -618,16 +658,23 @@ export function LoadBillClient({
             {(tab === "udhaar" || tab === "receive") && (
               <div className="mt-6 border-t border-surface-200 pt-4">
                 <Button type="submit" form={tab === "udhaar" ? "udhaar-form" : "receive-form"} className="h-12 w-full text-base"><CheckCircle2 className="mr-2 h-5 w-5" /> {tab === "udhaar" ? "Udhaar Entry — Save" : "Payment Received — Save"}</Button>
-                <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="secondary" size="sm" onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> {tab === "udhaar" ? "Print Slip" : "Print Receipt"}</Button><Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</Button></div>
+                <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="secondary" size="sm" onClick={printReceipt}><Printer className="mr-1.5 h-4 w-4" /> {tab === "udhaar" ? "Print Slip" : "Print Receipt"}</Button><Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</Button></div>
               </div>
             )}
           </Card>
         </div>
-        <button type="button" className="hidden h-64 self-start rounded-xl border border-surface-200 bg-white text-xs font-medium text-surface-700 shadow-sm [writing-mode:vertical-rl] dark:bg-surface-900 dark:text-surface-200 lg:block">‹&nbsp;&nbsp; Customer Quick View</button>
+        <button
+          type="button"
+          onClick={() => setShowTransactions(true)}
+          className="hidden h-64 self-start rounded-xl border border-surface-200 bg-white text-xs font-medium text-surface-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 [writing-mode:vertical-rl] dark:bg-surface-900 dark:text-surface-200 lg:block"
+        >
+          ‹&nbsp;&nbsp; Today&apos;s Transactions
+        </button>
       </div>
 
       {/* -------- Aaj ki qatarein -------- */}
-      <Card className="h-52 shrink-0 overflow-hidden p-0">
+      {showTransactions && <button type="button" aria-label="Close transactions" onClick={() => setShowTransactions(false)} className="fixed inset-0 z-40 bg-black/25" />}
+      <Card className={`${showTransactions ? "fixed" : "hidden"} bottom-4 right-4 top-20 z-50 w-[min(58rem,calc(100vw-2rem))] overflow-hidden p-0 shadow-2xl`}>
         <div className="flex items-center justify-between gap-3 border-b border-surface-100 px-4 py-2 dark:border-surface-800">
           <p className="text-base font-bold text-surface-900 dark:text-white">{tab === "udhaar" ? "Today's Udhaar Entries" : tab === "receive" ? "Today's Recovery Transactions" : "Today's Transactions"}</p>
           <div className="flex items-center gap-1">
@@ -642,12 +689,13 @@ export function LoadBillClient({
                 {filter === "receive" ? "Recovery" : filter}
               </button>
             ))}
+            <button type="button" onClick={() => setShowTransactions(false)} className="ml-2 rounded-lg p-1.5 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
         </div>
         {today.length === 0 ? (
           <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
         ) : (
-          <div className="h-[calc(13rem-2.6rem)] overflow-auto">
+          <div className="h-[calc(100%-2.6rem)] overflow-auto">
             <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
                 <tr>
