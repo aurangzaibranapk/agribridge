@@ -3463,5 +3463,27 @@ liye Chrome chhoti receipt ko poore viewport-height ke beech center
 karta aur kaghaz ke upar-neeche khali reh jata (malik ka screenshot, 16
 September). `print:static print:block` se hata diya.
 
+**Staff Sales Desk / notification live push (426):** "AGRIBRIDGE STAFF
+SALES DESK" handoff (`testing/staff-dashboard-reference` branch se, 16
+September) doosri dafa aane par malik ne tasdeeq ki ke ye asal kaam
+hai. Jaanch mein khula ke iska core (Load/Bill/Udhaar/Recovery, 4 tab,
+customer/kisan ka khata sahi model, `/admin/load-bill`) hamari isi
+branch par 6-7 September se maujood hai (`customer-udhaar.ts`,
+`load-bill-client.tsx`) — dobara nahi banaya. `notifications` table
+Testing par `supabase_realtime` publication mein KISI AUR zariye se
+pehle hi lagi mili (koi hamari migration nahi) — migration 426 ne isay
+idempotent tareeqe se record kiya aur Live par bhi laga di.
+
+Aaj add hua: NotificationBell ab live push sunta hai (45s polling ke
+sath), Load/Bill/Udhaar/Recovery save hote hi khud ko notification
+milti hai, Udhaar/Recovery mein "Qism" khana (FMCG/Khaad/Wanda/
+Pesticide/Milk/Machinery Khata) add hua.
+
+**Abhi baqi hai** (handoff ke baqi hisse): in char tabs ke liye
+thermal receipt print + WhatsApp bhejna (jaisa POS ka hai), "Aaj ki
+qatarein" ko drawer banana, udhaar/recovery ko bhi "Aaj ki qatarein"
+mein dikhana (abhi sirf load/bill dikhte hain — udhaar/recovery kisi
+list mein nahi dikhte, sirf ledger mein jate hain).
+
 **Build abhi upload nahi hua** — malik "system par aa gaya" kahenge to
 dono command (pull+build, package) is fehrist ke sath bhejni hain.
