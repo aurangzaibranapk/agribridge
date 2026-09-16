@@ -62,6 +62,25 @@ interface ReturnableLine {
 const CONDITIONS = ["saleable", "damaged", "expired", "other"] as const;
 type Condition = (typeof CONDITIONS)[number];
 
+/**
+ * Waqt AM/PM ke sath.
+ *
+ * `toLocaleString("en-GB", { dateStyle, timeStyle })` 24-ghante wala
+ * waqt deta hai ("18:51") -- malik (16 September): "ye time AM/PM mein
+ * ana chahiye." `hour12: true` explicit likha gaya hai taake ye kisi
+ * bhi browser/locale mein badle nahi.
+ */
+function waqtAmPm(iso: string): string {
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 const PAY_METHOD_LABEL: Record<string, string> = {
   cash: "Cash",
   bank_transfer: "Bank",
@@ -497,7 +516,7 @@ export function PosReturn({
                       {s.customer_phone && <span className="ml-1 font-normal text-surface-400">· {s.customer_phone}</span>}
                     </span>
                     <span className="block text-xs text-surface-500">
-                      {new Date(s.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
+                      {waqtAmPm(s.created_at)} ·{" "}
                       {s.payment_mode}
                       {s.status === "partially_returned" ? ` · ${t("ret_partly", lang)}` : ""}
                       {/* Miyaad guzar chuki ho to wajah wahin likhi jati
@@ -529,7 +548,7 @@ export function PosReturn({
               {sale.customer_phone && <span className="ml-1 font-normal text-surface-400">· {sale.customer_phone}</span>}
             </p>
             <p className="text-xs text-surface-500">
-              {new Date(sale.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
+              {waqtAmPm(sale.created_at)} ·{" "}
               {sale.payment_mode} · Rs {Number(sale.total_amount).toLocaleString()}
             </p>
           </div>
