@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, ReceiptText, Search, Activity } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -108,6 +108,8 @@ export function LoadBillClient({
   farmers,
   today,
   canReverse,
+  cashInHand,
+  todayRecovery,
 }: {
   /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
   shuruKind: "load" | "bill";
@@ -118,6 +120,8 @@ export function LoadBillClient({
   farmers: { id: string; name: string; phone: string | null; cnic: string | null; farmerCode: string }[];
   today: Txn[];
   canReverse: boolean;
+  cashInHand: number;
+  todayRecovery: number;
 }) {
   /**
    * Chaar khane, ek hi safha.
@@ -136,6 +140,7 @@ export function LoadBillClient({
    * nahi. Is liye `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
    */
   const [tab, setTab] = useState<"load" | "bill" | "udhaar" | "receive">(shuruKind);
+  const [txnFilter, setTxnFilter] = useState<"all" | "load" | "bill" | "pending">("all");
   const kind: "load" | "bill" = tab === "load" || tab === "bill" ? tab : "load";
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
@@ -239,9 +244,14 @@ export function LoadBillClient({
 
   const aajKaKaam = today.filter((t) => t.status !== "wapas");
   const handled = aajKaKaam.reduce((s, t) => s + t.principal, 0);
-  const kamaya = aajKaKaam.reduce((s, t) => s + (t.serviceCharge ?? 0), 0);
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
+  const totalFloat = accounts.reduce((sum, account) => sum + (account.float ?? 0), 0);
+  const filteredTransactions = today.filter((transaction) => {
+    if (txnFilter === "all") return true;
+    if (txnFilter === "pending") return transaction.status === "saboot_baqi" || !transaction.settled;
+    return transaction.kind === txnFilter;
+  });
 
   const paighaam =
     state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
@@ -262,34 +272,26 @@ export function LoadBillClient({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-1">
       {/* -------- Float ke khane -------- */}
-      <div className="flex shrink-0 gap-2 overflow-x-auto pb-1">
-        {accounts.map((a) => (
-          <Card key={a.id} className="min-w-[11rem] flex-1 py-2.5">
-            <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
-              <Wallet className="h-3.5 w-3.5" /> {a.title}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-surface-400">
-              {a.providerName === "—" ? "Har provider ke liye" : a.providerName}
-            </p>
-            <p className="mt-0.5 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">
-              {a.float === null ? "—" : rs(a.float)}
-            </p>
-            {a.float === null && (
-              <p className="mt-0.5 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
-                Is ke saath koi asal khata juRa nahi — "Float aur account" par ja kar chunein
-              </p>
-            )}
-          </Card>
-        ))}
+      <div className="grid shrink-0 grid-cols-2 gap-2 pb-1 md:grid-cols-5">
+        <Card className="py-2.5">
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Wallet className="h-3.5 w-3.5" /> Float Balance</p>
+          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{accounts.some((a) => a.float === null) ? "—" : rs(totalFloat)}</p>
+          <p className="truncate text-[10px] text-surface-400">{accounts.length} active account{accounts.length === 1 ? "" : "s"}</p>
+        </Card>
+        <Card className="py-2.5">
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Banknote className="h-3.5 w-3.5" /> Cash in Hand</p>
+          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{rs(cashInHand)}</p>
+          <p className="text-[10px] text-surface-400">cash accounts</p>
+        </Card>
         <Card className="min-w-[9.5rem] flex-1 py-2.5">
           <p className="flex items-center gap-1.5 text-xs text-surface-500"><Activity className="h-3.5 w-3.5" /> Today Sales</p>
           <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{rs(handled)}</p>
           <p className="text-[10px] text-surface-400">{aajKaKaam.length} transactions</p>
         </Card>
         <Card className="min-w-[9.5rem] flex-1 py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><ReceiptText className="h-3.5 w-3.5" /> Staff Income</p>
-          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-brand-700">{kamaya ? rs(kamaya) : "—"}</p>
-          <p className="text-[10px] text-surface-400">service charges</p>
+          <p className="flex items-center gap-1.5 text-xs text-surface-500"><HandCoins className="h-3.5 w-3.5" /> Today Recovery</p>
+          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-brand-700">{rs(todayRecovery)}</p>
+          <p className="text-[10px] text-surface-400">udhaar received</p>
         </Card>
         <Card className="min-w-[9.5rem] flex-1 py-2.5">
           <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5" /> Pending Proof</p>
@@ -354,7 +356,7 @@ export function LoadBillClient({
               wapsiAction={wapsiAction}
             />
           ) : (
-          <form action={action} className="space-y-3">
+          <form action={action} className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             <input type="hidden" name="kind" value={kind} />
 
             <div>
@@ -608,7 +610,7 @@ export function LoadBillClient({
               </label>
             )}
 
-            <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
+            <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50 xl:col-span-2">
               <div className="flex justify-between">
                 <span className="text-surface-500">Customer dega</span>
                 <span className="font-semibold tabular-nums text-surface-900 dark:text-white">
@@ -621,7 +623,9 @@ export function LoadBillClient({
               </div>
             </div>
 
-            <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
+            <div className="xl:col-span-2">
+              <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
+            </div>
           </form>
           )}
           </div>
@@ -666,9 +670,21 @@ export function LoadBillClient({
 
       {/* -------- Aaj ki qatarein -------- */}
       <Card className="h-52 shrink-0 overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-surface-100 px-4 py-2 dark:border-surface-800">
+        <div className="flex items-center justify-between gap-3 border-b border-surface-100 px-4 py-2 dark:border-surface-800">
           <p className="text-sm font-semibold text-surface-900 dark:text-white">Today Transactions</p>
-          <span className="flex items-center gap-1 text-[11px] text-surface-400"><Search className="h-3 w-3" /> All · Load · Bill · Udhaar · Recovery · Pending</span>
+          <div className="flex items-center gap-1">
+            <Search className="mr-1 h-3 w-3 text-surface-400" />
+            {(["all", "load", "bill", "pending"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setTxnFilter(filter)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] capitalize transition ${txnFilter === filter ? "border-brand-600 bg-brand-600 text-white" : "border-surface-200 text-surface-500 hover:bg-surface-50 dark:border-surface-700"}`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
         </div>
         {today.length === 0 ? (
           <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
@@ -689,7 +705,7 @@ export function LoadBillClient({
                 </tr>
               </thead>
               <tbody>
-                {today.map((t) => (
+                {filteredTransactions.map((t) => (
                   <tr key={t.id} className="border-t border-surface-100 dark:border-surface-800">
                     <td className="px-4 py-2 text-xs tabular-nums text-surface-500">
                       {new Date(t.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}

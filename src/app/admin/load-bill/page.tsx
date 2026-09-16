@@ -62,11 +62,11 @@ export default async function LoadBillPage({
   const service = createServiceClient();
   const aaj = aajKaKhana();
 
-  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }] =
+  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }, { data: recoveryRows }] =
     await Promise.all([
       service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
       service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
-      service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
+      service.from("finance_accounts").select("id, name, account_type, current_balance").eq("is_active", true).order("name"),
       // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
       // form mein customer chunne ka khana tha hi nahi -- is liye
       // "Khata" chunne par server hamesha "customer chunna zaroori hai"
@@ -77,7 +77,18 @@ export default async function LoadBillPage({
       // hain taake picker un se bhi dhoond sake — sirf naam se dhoondna
       // sainkron kisanon mein kaam nahi karta.
       service.from("farmers").select("id, full_name, farmer_code, phone_number, cnic, credit_limit").eq("is_deleted", false).order("full_name"),
+      service
+        .from("finance_transactions")
+        .select("amount")
+        .eq("transaction_type", "income")
+        .eq("category", "customer_udhaar_wapsi")
+        .eq("transaction_date", aaj),
     ]);
+
+  const cashInHand = (financeAccounts ?? [])
+    .filter((a) => a.account_type === "cash")
+    .reduce((sum, a) => sum + Number(a.current_balance ?? 0), 0);
+  const todayRecovery = (recoveryRows ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
   // nahi, is liye do adad ban hi nahi sakte.
@@ -186,6 +197,8 @@ export default async function LoadBillPage({
             id: f.id as string,
             name: f.name as string,
           }))}
+          cashInHand={cashInHand}
+          todayRecovery={todayRecovery}
           today={(aajKiQatarein ?? []).map((t) => ({
             id: t.id as string,
             number: t.txn_number as string,
