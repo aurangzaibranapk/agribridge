@@ -8,6 +8,7 @@ import { postJournal } from "@/lib/ledger/post";
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { logAudit } from "@/lib/audit";
+import { notifyUser } from "@/lib/notifications";
 
 /**
  * Customer ka udhaar -- dukan se paisa lena, aur wapas karna.
@@ -169,7 +170,9 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   const rakam = paisa(formData.get("rakam"));
   // "cash" ya kisi finance account ki id.
   const kahanSe = String(formData.get("kahan_se") ?? "cash").trim();
-  const wajah = String(formData.get("wajah") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim() || null;
+  const wajahMatn = String(formData.get("wajah") ?? "").trim();
+  const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -281,6 +284,8 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     description: `Naqad udhaar diya: Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
   });
 
+  await notifyUser(g.userId, "Udhaar darj", `Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""}`, "/admin/load-bill");
+
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
@@ -312,7 +317,9 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   const partyId = String(formData.get("party_id") ?? "").trim();
   const rakam = paisa(formData.get("rakam"));
   const kahanAaya = String(formData.get("kahan_aaya") ?? "cash").trim();
-  const wajah = String(formData.get("wajah") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim() || null;
+  const wajahMatn = String(formData.get("wajah") ?? "").trim();
+  const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -419,6 +426,8 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     recordLabel: name,
     description: `Udhaar wapas aaya: Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""} (${posted.entryNumber})`,
   });
+
+  await notifyUser(g.userId, "Recovery darj", `Rs ${rakam.toLocaleString()} — ${name}${wajah ? ` (${wajah})` : ""}`, "/admin/load-bill");
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/crm");

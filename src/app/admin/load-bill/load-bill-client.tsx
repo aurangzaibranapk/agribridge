@@ -62,6 +62,19 @@ interface Txn {
 // Malik (7 September): "50 ka load kabhi nahi hota, minimum 100 rupay hai."
 const RAQAM = [100, 200, 500, 1000];
 
+// Malik (16 September, Staff Sales Desk): udhaar KIS liye diya/liya —
+// sirf reporting ke liye, ledger ka khata (1100/1150) hamesha wahi ek
+// rehta hai chahe qism koi bhi ho. Pehla hamesha default.
+const UDHAAR_CATEGORIES = [
+  "Raqam / Cash Udhaar",
+  "FMCG Udhaar",
+  "Khaad Udhaar",
+  "Wanda Udhaar",
+  "Pesticide Udhaar",
+  "Milk Payment Incoming",
+  "Machinery Khata",
+];
+
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
@@ -873,6 +886,17 @@ function UdhaarForm({
       <div>
         <Label htmlFor="udhaar_rakam">Raqam</Label>
         <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" />
+      </div>
+
+      <div>
+        <Label htmlFor="udhaar_category">Qism</Label>
+        <Select id="udhaar_category" name="category" defaultValue={UDHAAR_CATEGORIES[0]}>
+          {UDHAAR_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <div>

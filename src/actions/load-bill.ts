@@ -8,6 +8,7 @@ import { postJournal, reverseJournal, type JournalLine } from "@/lib/ledger/post
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
 import { cashBookLikhein, cashBookUlti, type CashBookQatar } from "@/lib/ledger/cash-book";
 import { recordError } from "@/lib/errors/record";
+import { notifyUser } from "@/lib/notifications";
 
 export interface LoadState {
   error?: string;
@@ -400,6 +401,16 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       actorId: user.id,
     });
   }
+
+  // Staff apne dashboard (ghanti) par yehi transaction foran dekhe --
+  // Malik ka Staff Sales Desk ka usool (16 September): "transaction
+  // save hote hi logged-in staff ke naam notification create hoti hai."
+  await notifyUser(
+    user.id,
+    kind === "bill" ? "Bill Payment darj" : "Mobile Load darj",
+    `${number} — ${reference} — Rs ${total.toLocaleString()}`,
+    "/admin/load-bill"
+  );
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");

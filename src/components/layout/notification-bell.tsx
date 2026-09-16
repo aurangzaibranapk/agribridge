@@ -49,6 +49,8 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[] | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
 
   const refreshCount = useCallback(async () => {
     const supabase = createClient();
@@ -68,6 +70,42 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
     const interval = setInterval(refreshCount, 45000);
     return () => clearInterval(interval);
   }, [refreshCount]);
+
+  // 16 September: 45-second polling ke ilawa ab live push bhi -- Staff
+  // Sales Desk (Load/Bill/Udhaar/Recovery) par transaction save hote hi
+  // foran ghanti par nazar aana chahiye, agle poll ka intezar nahi.
+  // `notifications` migration 426 mein `supabase_realtime` publication
+  // mein daali gayi; is se pehle ye channel kabhi kuch sunta hi nahi
+  // tha, sirf polling chalti thi.
+  useEffect(() => {
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_user_id=eq.${user.id}` },
+          () => {
+            void refreshCount();
+            if (openRef.current) void load();
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Bahar click ya Escape -- panel band.
   useEffect(() => {
