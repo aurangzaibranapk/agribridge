@@ -124,7 +124,7 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[48rem] flex-col overflow-hidden">
+    <div className="flex h-[calc(100dvh-5.5rem)] min-h-0 flex-col overflow-hidden">
       <PageHeader
         title="Staff Sales Desk"
         description="Al Rana Traders  |  Main Branch Mahabali"
