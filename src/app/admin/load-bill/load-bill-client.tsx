@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity, Printer, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -140,7 +140,7 @@ export function LoadBillClient({
    * nahi. Is liye `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
    */
   const [tab, setTab] = useState<"load" | "bill" | "udhaar" | "receive">(shuruKind);
-  const [txnFilter, setTxnFilter] = useState<"all" | "load" | "bill" | "pending">("all");
+  const [txnFilter, setTxnFilter] = useState<"all" | "load" | "bill" | "udhaar" | "receive" | "pending">("all");
   const kind: "load" | "bill" = tab === "load" || tab === "bill" ? tab : "load";
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
@@ -247,11 +247,26 @@ export function LoadBillClient({
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
   const totalFloat = accounts.reduce((sum, account) => sum + (account.float ?? 0), 0);
+  const staffIncome = charge;
   const filteredTransactions = today.filter((transaction) => {
     if (txnFilter === "all") return true;
     if (txnFilter === "pending") return transaction.status === "saboot_baqi" || !transaction.settled;
     return transaction.kind === txnFilter;
   });
+
+  const whatsappReceipt = () => {
+    const work = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive";
+    const receipt = [
+      "AgriBridge — Al Rana Traders",
+      work,
+      `Customer: ${mainParty?.name ?? "Guest / Walk-in"}`,
+      reference ? `Reference: ${reference}` : "",
+      `Amount: ${rs(raqam)}`,
+      charge ? `Service charge: ${rs(charge)}` : "",
+      `Total: ${rs(raqam + charge)}`,
+    ].filter(Boolean).join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(receipt)}`, "_blank", "noopener,noreferrer");
+  };
 
   const paighaam =
     state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
@@ -642,8 +657,19 @@ export function LoadBillClient({
                 <div className="flex justify-between"><span className="text-surface-500">Amount</span><b>{rs(raqam)}</b></div>
                 <div className="flex justify-between"><span className="text-surface-500">Service charge</span><b>{charge ? rs(charge) : "—"}</b></div>
                 <div className="border-t border-brand-200 pt-2 flex justify-between text-sm"><span>Customer Pays</span><b className="text-brand-700">{rs(raqam + charge)}</b></div>
+                <div className="flex justify-between text-sm"><span className="text-surface-500">Staff Income</span><b className="text-brand-700">{staffIncome ? rs(staffIncome) : "—"}</b></div>
               </>}
             </div>
+            {(tab === "load" || tab === "bill") && (
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-brand-200 pt-3">
+                <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
+                  <Printer className="mr-1.5 h-4 w-4" /> Print Receipt
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}>
+                  <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
+                </Button>
+              </div>
+            )}
           </Card>
           {sabootBaqi > 0 && (
             <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -674,14 +700,14 @@ export function LoadBillClient({
           <p className="text-sm font-semibold text-surface-900 dark:text-white">Today Transactions</p>
           <div className="flex items-center gap-1">
             <Search className="mr-1 h-3 w-3 text-surface-400" />
-            {(["all", "load", "bill", "pending"] as const).map((filter) => (
+            {(["all", "load", "bill", "udhaar", "receive", "pending"] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
                 onClick={() => setTxnFilter(filter)}
                 className={`rounded-full border px-2.5 py-1 text-[11px] capitalize transition ${txnFilter === filter ? "border-brand-600 bg-brand-600 text-white" : "border-surface-200 text-surface-500 hover:bg-surface-50 dark:border-surface-700"}`}
               >
-                {filter}
+                {filter === "receive" ? "Recovery" : filter}
               </button>
             ))}
           </div>
@@ -811,7 +837,7 @@ export function LoadBillClient({
                               </Button>
                             </form>
                           )}
-                        {canReverse && t.status !== "wapas" && (
+                        {canReverse && (t.kind === "load" || t.kind === "bill") && t.status !== "wapas" && (
                           <form action={revAction} className="flex items-center gap-1">
                             <input type="hidden" name="id" value={t.id} />
                             <Input name="reason" placeholder="wapas ki wajah" className="h-8 w-32 text-xs" required />

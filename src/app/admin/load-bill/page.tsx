@@ -79,16 +79,18 @@ export default async function LoadBillPage({
       service.from("farmers").select("id, full_name, farmer_code, phone_number, cnic, credit_limit").eq("is_deleted", false).order("full_name"),
       service
         .from("finance_transactions")
-        .select("amount")
-        .eq("transaction_type", "income")
-        .eq("category", "customer_udhaar_wapsi")
-        .eq("transaction_date", aaj),
+        .select("id, transaction_type, category, amount, notes, created_at")
+        .in("category", ["customer_udhaar", "customer_udhaar_wapsi"])
+        .eq("transaction_date", aaj)
+        .order("created_at", { ascending: false }),
     ]);
 
   const cashInHand = (financeAccounts ?? [])
     .filter((a) => a.account_type === "cash")
     .reduce((sum, a) => sum + Number(a.current_balance ?? 0), 0);
-  const todayRecovery = (recoveryRows ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const todayRecovery = (recoveryRows ?? [])
+    .filter((row) => row.category === "customer_udhaar_wapsi" && row.transaction_type === "income")
+    .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
   // nahi, is liye do adad ban hi nahi sakte.
@@ -199,24 +201,44 @@ export default async function LoadBillPage({
           }))}
           cashInHand={cashInHand}
           todayRecovery={todayRecovery}
-          today={(aajKiQatarein ?? []).map((t) => ({
-            id: t.id as string,
-            number: t.txn_number as string,
-            kind: t.kind as string,
-            reference: t.reference as string,
-            principal: Number(t.principal),
-            serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
-            commissionExpected: t.commission_expected === null ? null : Number(t.commission_expected),
-            commissionConfirmed: t.commission_confirmed === null ? null : Number(t.commission_confirmed),
-            commissionStatus: t.commission_status as string,
-            method: t.payment_method as string,
-            tid: (t.provider_tid as string | null) ?? null,
-            status: t.status as string,
-            settled: Boolean(t.float_settled),
-            customer: (t.customer_name as string | null) ?? null,
-            waqt: String(t.created_at),
-            provider: providerName.get(t.provider_id as string) ?? "—",
-          }))}
+          today={[
+            ...(aajKiQatarein ?? []).map((t) => ({
+              id: t.id as string,
+              number: t.txn_number as string,
+              kind: t.kind as string,
+              reference: t.reference as string,
+              principal: Number(t.principal),
+              serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
+              commissionExpected: t.commission_expected === null ? null : Number(t.commission_expected),
+              commissionConfirmed: t.commission_confirmed === null ? null : Number(t.commission_confirmed),
+              commissionStatus: t.commission_status as string,
+              method: t.payment_method as string,
+              tid: (t.provider_tid as string | null) ?? null,
+              status: t.status as string,
+              settled: Boolean(t.float_settled),
+              customer: (t.customer_name as string | null) ?? null,
+              waqt: String(t.created_at),
+              provider: providerName.get(t.provider_id as string) ?? "—",
+            })),
+            ...(recoveryRows ?? []).map((row) => ({
+              id: row.id as string,
+              number: "—",
+              kind: row.category === "customer_udhaar_wapsi" ? "receive" : "udhaar",
+              reference: (row.notes as string | null) ?? "—",
+              principal: Number(row.amount),
+              serviceCharge: null,
+              commissionExpected: null,
+              commissionConfirmed: null,
+              commissionStatus: "nahi_lagti",
+              method: row.transaction_type as string,
+              tid: null,
+              status: "darj",
+              settled: true,
+              customer: null,
+              waqt: String(row.created_at),
+              provider: row.category === "customer_udhaar_wapsi" ? "Recovery" : "Udhaar",
+            })),
+          ].sort((left, right) => new Date(right.waqt).getTime() - new Date(left.waqt).getTime())}
           canReverse={FLOAT_ROLES.includes(me.role)}
         />
       )}
