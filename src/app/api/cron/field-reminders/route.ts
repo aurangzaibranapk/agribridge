@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { collectWatchItems, PENDING_ALERT_HOURS } from "@/lib/field-watch";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +49,17 @@ export async function GET(request: Request) {
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
     const vehicle = Array.isArray(log.vehicles) ? log.vehicles[0] : log.vehicles;
-    // Malik (16 September): staff ke WhatsApp reminders band -- apni
-    // app aa rahi hai, wahin ye kaam hoga. Yahan sirf gin kar likh diya
-    // jata hai ke paighaam banta to tha, bheja nahi gaya.
-    failures.push(`meter (${vehicle?.vehicle_name ?? "gaari"}): WhatsApp reminders band hain (kharcha bachane ke liye)`);
+    // Malik (16 September): "jahan WhatsApp free hai wahan chalay" --
+    // ye free-form paighaam hai, kharcha nahi hota.
+    try {
+      await sendWhatsAppMessage(
+        staff.whatsapp_number,
+        `Yaad dihani: ${vehicle?.vehicle_name ?? "gaari"} ka aaj shaam ka meter (closing km) abhi darj nahi hua.`
+      );
+      staffReminders++;
+    } catch (e) {
+      failures.push(`meter (${vehicle?.vehicle_name ?? "gaari"}): ${e instanceof Error ? e.message : "send failed"}`);
+    }
   }
 
   // ---- 2) Oil badalne ki yaad dihani ----
@@ -88,8 +96,15 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (!staff?.whatsapp_number || !staff.whatsapp_verified_at) continue;
 
-    // Malik (16 September): staff ke WhatsApp reminders band.
-    failures.push(`oil (${vehicle.vehicle_name}): WhatsApp reminders band hain (kharcha bachane ke liye)`);
+    try {
+      await sendWhatsAppMessage(
+        staff.whatsapp_number,
+        `Yaad dihani: ${vehicle.vehicle_name} ka oil change ka waqt aa gaya hai (${since.toLocaleString()} km chal chuki hai pichle service ke baad).`
+      );
+      oilReminders++;
+    } catch (e) {
+      failures.push(`oil (${vehicle.vehicle_name}): ${e instanceof Error ? e.message : "send failed"}`);
+    }
   }
 
   // ---- 3) Manager ko: jo cheezein der se pari hain ----

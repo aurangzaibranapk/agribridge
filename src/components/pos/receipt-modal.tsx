@@ -121,7 +121,7 @@ export function ReceiptModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:bg-transparent">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:h-auto print:min-h-0 print:bg-transparent print:p-0">
       {/*
         Thermal printer ka apna "kaghaz ka size" hota hai -- bina bataye
         browser use A4/Letter maan leta hai, aur receipt us bade safhe
@@ -129,6 +129,14 @@ export function ReceiptModal({
         mein bikhar jati hai). Ye rule SIRF is Modal ke khule hone tak
         maujood hai, is liye Export Catalogue jaisi Letter-size print par
         koi asar nahi (15 September).
+
+        16 September: is se bhi bara masla -- ye wrapper `fixed inset-0
+        flex items-center justify-center` hai (screen par modal ko
+        center karne ke liye), aur ye print mein bhi laagu rehta tha.
+        Chrome ka print engine chhoti receipt ko poore viewport-height
+        box ke beech mein center karta, aur upar-neeche khali kaghaz bach
+        jata. `print:static print:block` se print ke waqt ye centering
+        hatt jati hai, receipt seedha kaghaz ke upar se shuru hoti hai.
       */}
       <style>{`
         @media print {

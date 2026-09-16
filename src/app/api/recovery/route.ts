@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp-client";
 
 /**
  * Recovery dashboard se teen kaam: promise darj karna, reminder schedule
@@ -63,41 +62,18 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     if (action === "send" && channel === "whatsapp") {
-      const template = process.env.WHATSAPP_PAYMENT_REMINDER_TEMPLATE;
-      if (!template) {
-        await service
-          .from("payment_reminders")
-          .update({ delivery_status: "failed", failure_reason: "WHATSAPP_PAYMENT_REMINDER_TEMPLATE set nahi hai." })
-          .in(
-            "id",
-            inserted.map((r: any) => r.id)
-          );
-        return NextResponse.json({ error: "WhatsApp reminder template server par set nahi hai." }, { status: 400 });
-      }
-      // `inserted` isi order mein wapas aata hai jis order mein rows
-      // bheji gayin (ek hi INSERT ... VALUES statement, Postgres is
-      // tarteeb ko badalta nahi) -- is liye index se seedha jorna theek
-      // hai.
-      let sent = 0;
-      for (let i = 0; i < parties.length; i++) {
-        const p = parties[i];
-        try {
-          if (!p.phone) throw new Error("WhatsApp number missing.");
-          await sendWhatsAppTemplate(p.phone, template, process.env.WHATSAPP_PAYMENT_REMINDER_LANGUAGE || "en", [
-            p.name,
-            Math.round(Number(p.outstanding)).toLocaleString("en-PK"),
-            body.dueDate || "as soon as possible",
-          ]);
-          await service.from("payment_reminders").update({ delivery_status: "sent", sent_at: new Date().toISOString() }).eq("id", inserted[i].id);
-          sent++;
-        } catch (err) {
-          await service
-            .from("payment_reminders")
-            .update({ delivery_status: "failed", failure_reason: err instanceof Error ? err.message : "Send failed" })
-            .eq("id", inserted[i].id);
-        }
-      }
-      return NextResponse.json({ success: true, count: parties.length, sent });
+      // Malik (16 September): WhatsApp ka paid (template) raasta filhal
+      // band -- sirf free-form paighaam chalta rehta hai. Recovery
+      // reminder template se jata hai (24-ghante ki window se bahar bhi
+      // pahunchna hota hai), is liye ye abhi nahi bheja jata.
+      await service
+        .from("payment_reminders")
+        .update({ delivery_status: "failed", failure_reason: "WhatsApp (paid) reminders filhal band hain — kharcha bachane ke liye." })
+        .in(
+          "id",
+          inserted.map((r: any) => r.id)
+        );
+      return NextResponse.json({ success: true, count: parties.length, sent: 0 });
     }
     return NextResponse.json({ success: true, count: rows.length });
   }

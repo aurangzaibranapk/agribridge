@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 
 /**
  * Kisan ko payment ki yaad dahani.
@@ -58,13 +59,16 @@ export async function sendPaymentReminder(
     ok = false;
     error = "Kisan ka phone number darj nahi hai.";
   } else {
-    // Malik (16 September): "payment reminder bhi hum koshish karenge
-    // SMS se jaye" -- WhatsApp ka bill kaafi paRta hai. Jab tak SMS
-    // gateway nahi juRta, ye reminder BHEJA nahi jata -- record phir
-    // bhi banta hai (sach bolta hai: "WhatsApp band hai", "bheja gaya"
-    // nahi).
-    ok = false;
-    error = "WhatsApp reminders band hain (kharcha bachane ke liye) — SMS gateway aane tak.";
+    // Malik (16 September): "jahan WhatsApp free hai wahan chalay" --
+    // ye free-form paighaam hai (template nahi), is liye kharcha nahi
+    // hota. Sirf paid template wale raaste (OTP, Khata Recovery) band
+    // hain.
+    try {
+      await sendWhatsAppMessage(target.phone, message);
+    } catch (e) {
+      ok = false;
+      error = e instanceof Error ? e.message : "Send failed";
+    }
   }
 
   await service.from("machinery_payment_reminders").insert({
