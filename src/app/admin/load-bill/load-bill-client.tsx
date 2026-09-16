@@ -241,7 +241,7 @@ export function LoadBillClient({
   const [udhaarParty, setUdhaarParty] = useState<PersonOption | null>(null);
   const [udhaarAmount, setUdhaarAmount] = useState("");
   const [udhaarAccount, setUdhaarAccount] = useState("cash");
-  const [udhaarCategory, setUdhaarCategory] = useState("FMCG Udhaar");
+  const [udhaarCategory, setUdhaarCategory] = useState("Raqam / Cash Udhaar");
   const [udhaarReference, setUdhaarReference] = useState("");
   const [showTransactions, setShowTransactions] = useState(false);
 
@@ -285,7 +285,7 @@ export function LoadBillClient({
         ...(tab === "receive" ? [["Previous Balance", udhaarParty?.balance == null ? "—" : rs(udhaarParty.balance)] as [string, string]] : []),
         [tab === "udhaar" ? "Amount" : "Amount Received", rs(Number(udhaarAmount) || 0)],
         ...(tab === "receive" ? [["Remaining Balance", udhaarParty?.balance == null ? "—" : rs(Math.max(0, udhaarParty.balance - (Number(udhaarAmount) || 0)))] as [string, string]] : []),
-        ["Payment Method", udhaarAccount === "cash" ? "Cash" : selectedFinanceAccount ?? "Account"],
+        [tab === "udhaar" ? "Paid From Account" : "Payment Received In", udhaarAccount === "cash" ? "Cash / Golak" : selectedFinanceAccount ?? "Account"],
         ["Reference", udhaarReference || "—"],
       ];
 
@@ -638,7 +638,7 @@ export function LoadBillClient({
                 {tab === "receive" && <div className="flex justify-between"><span className="text-surface-500">Previous Balance</span><b>{udhaarParty?.balance == null ? "—" : rs(udhaarParty.balance)}</b></div>}
                 <div className="flex justify-between"><span className="text-surface-500">{tab === "udhaar" ? "Amount" : "Amount Received"}</span><b>{rs(Number(udhaarAmount) || 0)}</b></div>
                 {tab === "receive" && <div className="flex justify-between"><span className="text-surface-500">Remaining Balance</span><b>{udhaarParty?.balance == null ? "—" : rs(Math.max(0, udhaarParty.balance - (Number(udhaarAmount) || 0)))}</b></div>}
-                <div className="flex justify-between"><span className="text-surface-500">Payment Method</span><b>{udhaarAccount === "cash" ? "Cash" : financeAccounts.find((a) => a.id === udhaarAccount)?.name ?? "Account"}</b></div>
+                <div className="flex justify-between gap-3"><span className="text-surface-500">{tab === "udhaar" ? "Paid From Account" : "Payment Received In"}</span><b className="max-w-[9rem] truncate">{udhaarAccount === "cash" ? "Cash / Golak" : financeAccounts.find((a) => a.id === udhaarAccount)?.name ?? "Account"}</b></div>
                 {udhaarReference && <div className="flex justify-between gap-3"><span className="text-surface-500">Reference</span><b className="truncate">{udhaarReference}</b></div>}
               </>}
             </div>
@@ -863,7 +863,7 @@ function UdhaarForm({
 }) {
   const diya = kaam === "diya";
   const formId = diya ? "udhaar-form" : "receive-form";
-  const categories = ["FMCG Udhaar", "Khaad Udhaar", "Wanda Udhaar", "Pesticide Udhaar", "Milk Payment Incoming", "Machinery Khata"];
+  const categories = ["Raqam / Cash Udhaar", "FMCG Udhaar", "Khaad Udhaar", "Wanda Udhaar", "Pesticide Udhaar", "Milk Payment Incoming", "Machinery Khata"];
   const remaining = party?.balance == null ? null : Math.max(0, party.balance - (Number(amount) || 0));
 
   return (
@@ -888,8 +888,7 @@ function UdhaarForm({
       <div className="space-y-2.5">
         <div><Label htmlFor="udhaar_rakam">{diya ? "Amount" : "Amount Received"}</Label><Input id="udhaar_rakam" name="rakam" required inputMode="decimal" value={amount} onChange={(e) => onAmountChange(e.target.value)} placeholder={diya ? "Enter amount" : "Enter received amount"} /></div>
         {!diya && <div><Label>Remaining Balance</Label><Input readOnly value={remaining == null ? "—" : rs(remaining)} /></div>}
-        <div><Label htmlFor="udhaar_khata">{diya ? "Payment Received In" : "Payment Method"}</Label><Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(e) => onAccountChange(e.target.value)}><option value="cash">Cash</option>{financeAccounts.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></div>
-        {diya && <div><Label>Deposit Account</Label><Select value={account} onChange={(e) => onAccountChange(e.target.value)}><option value="cash">Cash / Golak</option>{financeAccounts.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></div>}
+        <div><Label htmlFor="udhaar_khata">{diya ? "Amount Paid From Account" : "Payment Received In"}</Label><Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(e) => onAccountChange(e.target.value)}><option value="cash">Cash / Golak</option>{financeAccounts.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></div>
         <div><Label>Reference / Transaction ID</Label><Input name="reference" value={reference} onChange={(e) => onReferenceChange(e.target.value)} placeholder="Enter reference or transaction ID" /></div>
         <div className={diya ? "grid grid-cols-2 gap-3" : ""}><div><Label htmlFor="udhaar_tareekh">{diya ? "Date" : "Received By"}</Label>{diya ? <Input id="udhaar_tareekh" name="tareekh" type="date" defaultValue={aajKaKhana()} /> : <Input readOnly value="Current Staff" />}</div>{diya && <div><Label>Received By</Label><Input readOnly value="Current Staff" /></div>}</div>
         <div><Label htmlFor="udhaar_notes">Notes</Label><Input id="udhaar_notes" placeholder="Add any note (optional)" /></div>
