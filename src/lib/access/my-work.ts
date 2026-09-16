@@ -328,6 +328,86 @@ export async function loadFourthKpi(branchId: string | null, allowedRoutes: stri
   }
 }
 
+export interface PaymentBreakdown {
+  methods: { key: string; label: string; amount: number }[];
+  loadAmount: number;
+  total: number;
+}
+
+const PAY_METHOD_LABEL: Record<string, string> = {
+  cash: "Cash",
+  bank_transfer: "Bank",
+  card: "Kisan Card",
+  jazzcash: "JazzCash",
+  easypaisa: "Easypaisa",
+  qr: "QR",
+  khata: "Khata",
+  waseela_card: "Waseela Card",
+};
+
+/**
+ * "Aaj kis tareeqe se kitna aaya" -- staff ke apne Mera Kaam par.
+ *
+ * Malik (16 September, Anwar ka dashboard): "cash sale kitna howa, card
+ * say kitna howa, QR say kitna howa, bank say kitna howa, easypaisa
+ * sy kitna howa, load sy kitna howa, phir total balance bhi ana
+ * chahiye." Isi staff ki AAJ ki POS bikri (payment method ke hisaab
+ * se, `pos_sale_payment_details` se -- wohi naqsha jo Reports > Sales
+ * bhi parhta hai) + isi ka aaj ka Mobile Load.
+ *
+ * Sirf isi bande ki -- `created_by` se, poori branch ki nahi. Jis khate
+ * ka koi len-den hi nahi hua, wo fehrist mein nahi aata (sifar likh kar
+ * "khata hai magar khali" kehna jhoot hoga jab asal mein us tareeqe ka
+ * istemal hi nahi hota).
+ */
+export async function loadPaymentBreakdown(userId: string): Promise<PaymentBreakdown | null> {
+  try {
+    const service = createServiceClient();
+    const aaj = aajKaKhana();
+
+    const { data: sales } = await service
+      .from("pos_sales")
+      .select("id")
+      .eq("created_by", userId)
+      .neq("status", "voided")
+      .gte("created_at", `${aaj}T00:00:00`)
+      .lte("created_at", `${aaj}T23:59:59`);
+    const saleIds = (sales ?? []).map((s) => s.id as string);
+
+    const [{ data: payRows }, { data: loadRows }] = await Promise.all([
+      saleIds.length > 0
+        ? service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
+        : Promise.resolve({ data: [] as { payment_method: string; amount: number }[] }),
+      service
+        .from("load_transactions")
+        .select("principal")
+        .eq("created_by", userId)
+        .eq("kind", "load")
+        .neq("status", "wapas")
+        .gte("created_at", `${aaj}T00:00:00`)
+        .lte("created_at", `${aaj}T23:59:59`),
+    ]);
+
+    const byMethod = new Map<string, number>();
+    for (const r of (payRows ?? []) as { payment_method: string; amount: number }[]) {
+      const amt = Number(r.amount ?? 0);
+      if (amt <= 0) continue;
+      byMethod.set(r.payment_method, (byMethod.get(r.payment_method) ?? 0) + amt);
+    }
+    const methods = [...byMethod.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, amount]) => ({ key, label: PAY_METHOD_LABEL[key] ?? key, amount }));
+
+    const loadAmount = (loadRows ?? []).reduce((s, r: any) => s + Number(r.principal ?? 0), 0);
+    const total = methods.reduce((s, m) => s + m.amount, 0) + loadAmount;
+
+    if (methods.length === 0 && loadAmount === 0) return null;
+    return { methods, loadAmount, total };
+  } catch {
+    return null;
+  }
+}
+
 export interface ActivityItem {
   key: string;
   labelKey: "mw_activity_sale" | "mw_activity_expense" | "mw_activity_labour";

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadPaymentBreakdown, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -141,13 +141,22 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     : { data: null };
   const branchName = branch?.name ?? null;
 
+  // Quick Actions aur Payment Breakdown dono ko chahiye -- yahan upar
+  // le aaya gaya taake neeche Promise.all mein bhi istemal ho sake.
+  const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
+
   // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
   // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
   // dobara dikhaya ja raha hai.
-  const [fourthKpi, recentActivity] = await Promise.all([
+  const [fourthKpi, recentActivity, paymentBreakdown] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
     loadRecentActivity(me.branch_id, allowed),
+    // Malik (16 September): "cash sale kitna, card se kitna, QR se
+    // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
+    // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
+    // liye ye sawal hi nahi banta.
+    canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
   ]);
   const kpis: { key: string; label: string; value: number | null }[] = [
     { key: "approvals", label: t("mw_kpi_pending_approvals", lang), value: attentionItems.filter((i) => i.tone === "amber").length },
@@ -159,7 +168,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
   // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
   // chuna hua raasta.
-  const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
   type QuickAction = { href: string; label: string; icon: string };
 
   // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
@@ -279,6 +287,43 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         ))}
       </div>
+
+      {/* "Aaj kis tareeqe se kitna aaya" -- malik (16 September, Anwar
+          ka dashboard): "cash sale kitna, card se kitna, QR se kitna,
+          bank se kitna, easypaisa se kitna, load se kitna, total
+          balance bhi." Sirf jin ke paas aaj koi len-den hua ho -- na
+          ho to card hi nahi banta. */}
+      {paymentBreakdown && (
+        <div className="mb-4 rounded-card border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
+            Aaj kis tareeqe se kitna aaya
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {paymentBreakdown.methods.map((m) => (
+              <div key={m.key}>
+                <p className="text-lg font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                  Rs {m.amount.toLocaleString()}
+                </p>
+                <p className="text-[12px] text-surface-500">{m.label}</p>
+              </div>
+            ))}
+            {paymentBreakdown.loadAmount > 0 && (
+              <div>
+                <p className="text-lg font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                  Rs {paymentBreakdown.loadAmount.toLocaleString()}
+                </p>
+                <p className="text-[12px] text-surface-500">Mobile Load</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 flex items-baseline justify-between border-t border-surface-100 pt-2 dark:border-surface-800">
+            <span className="text-sm font-semibold text-surface-900 dark:text-white">Total Balance</span>
+            <span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">
+              Rs {paymentBreakdown.total.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
 
       {model.totalCards === 0 ? (
         // Ye soorat chhupai nahi jati. Khali safha dekh kar banda samajhta
