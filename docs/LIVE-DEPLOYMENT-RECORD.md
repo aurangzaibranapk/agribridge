@@ -3438,3 +3438,30 @@ hai magar kaam nahi kar raha" jaisa dikhe jahan Live server kisi
 BAHAR ki cheez se baat karta ho (WhatsApp API, email, koi aur webhook)
 — pehle yehi shak karna: server khud us tak pahunch pa raha hai ya
 nahi, na ke app ka code/data ghalat hai.
+
+## 16 September — pending code build (commit `55f1103`), migration nahi hai
+
+**WhatsApp kharcha control:** malik ka usool — "jahan WhatsApp free hai
+wahan chalay, jahan paid hai wahan filhal band." Meta ke 2 tareeqe: paid
+template (24-ghante ki window se bahar bhi ja sakta hai, har paighaam
+ka bill) aur free-form (sirf 24-ghante ki window ke andar jata hai,
+warna chup chaap fail, kabhi kharcha nahi).
+
+- Band (paid `sendWhatsAppTemplate`): OTP (`farmers/otp.ts` — SMS
+  gateway na hone ki wajah se abhi WhatsApp hi OTP ka wahid raasta hai,
+  is liye ye NAHI chheda), Khata Recovery manual send + roz ka cron
+  (`api/recovery/route.ts`, `cron/payment-reminders/route.ts`) — dono
+  ab "failed" par sach likhte hain, koi paisa nahi lagta.
+- Chalu (free-form `sendWhatsAppMessage`): Machinery payment reminder,
+  Field/Vehicle staff reminders (meter/oil) — 15 September ko galti se
+  band kiye thay ye soch kar ke "reminder" naam se kharcha hoga, asal
+  mein free hain, ab wapas chalu.
+
+**Receipt print:** outer modal wrapper (`fixed inset-0 flex
+items-center justify-center`) print ke waqt bhi laagu rehta tha, is
+liye Chrome chhoti receipt ko poore viewport-height ke beech center
+karta aur kaghaz ke upar-neeche khali reh jata (malik ka screenshot, 16
+September). `print:static print:block` se hata diya.
+
+**Build abhi upload nahi hua** — malik "system par aa gaya" kahenge to
+dono command (pull+build, package) is fehrist ke sath bhejni hain.
