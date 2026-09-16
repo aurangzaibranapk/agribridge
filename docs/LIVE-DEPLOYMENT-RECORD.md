@@ -3404,3 +3404,37 @@ abhi Live par nahi gaya): `src/actions/load-bill.ts`,
    "Doosra Counter" switcher (jin staff ke paas kai counter hon), Load
    & Bill mein Shop chunna (naya khana), `/admin/load-bill/
    shop-summary` khul raha ho.
+
+## 15-16 September — Live login poora din band raha, asal wajah "fetch failed" (server ka apna network)
+
+**Zaroori: build folder ab `agribridge-live` hai, `agribridge` nahi.**
+Purani `agribridge` folder mein malik ka terminal kisi waqt `testing/
+staff-dashboard-reference` (ek bilkul alag, purana branch) par chala
+gaya tha, aur uska working tree bina commit hue mila-jula ho chuka tha
+(is session ki `git pull origin claude/code-...` commands us purane
+branch ke upar merge hoti rahin). Fresh clone (`agribridge-live`,
+sahi branch) bana kar masla hal kiya. **Ab se hamesha yehi folder
+istemal honi hai**, aur pehle `git log -1` se commit confirm karna hai
+ke sahi branch par hain.
+
+**Asal login masla (ghalat branch theek hone ke BAAD bhi baqi raha):**
+"Ghalat ID ya password" — password/branch/env teenon baar baar check/
+theek kiye (dono LIVE accounts ka password bhi reset kiya), phir bhi
+wahi error. Ek maqami (temporary) badlaav se asal Supabase error
+dikhaya gaya — jawab mila: **"fetch failed"**. Matlab password ka
+sawal hi nahi tha — Live server (cPanel Node.js app) khud Supabase
+(`ktskwawkslaznkjjacni.supabase.co`) tak pahunch hi nahi pa raha tha.
+Aam wajah: shared/VPS hosting ka IPv6 raasta kharab hota hai, DNS pehle
+IPv6 address deta hai, connection wahin atak jata hai.
+
+**Hal:** naya `instrumentation.ts` (project root) + `next.config.js`
+mein `experimental.instrumentationHook: true` — server shuru hote hi
+Node ko `dns.setDefaultResultOrder("ipv4first")` bata deta hai. Isi
+build ke baad login chal gaya. Maqami diagnostic tabdeeli foran wapas
+hata di gayi.
+
+**Sabaq (Aage ke liye):** agar koi doosra feature kabhi "sab kuch theek
+hai magar kaam nahi kar raha" jaisa dikhe jahan Live server kisi
+BAHAR ki cheez se baat karta ho (WhatsApp API, email, koi aur webhook)
+— pehle yehi shak karna: server khud us tak pahunch pa raha hai ya
+nahi, na ke app ka code/data ghalat hai.
