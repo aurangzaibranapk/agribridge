@@ -124,7 +124,7 @@ function rebalanceKhata(lines: PaymentLine[], amountDue: number): PaymentLine[] 
 
 export function PosClient({
   sellerName,
-  inventory,
+  inventory: initialInventory,
   groups = [],
   customers,
   topCustomerIds = [],
@@ -147,8 +147,18 @@ export function PosClient({
   lang: Lang;
 }) {
   const supabase = createClient();
+  // Sale ke baad stock ka badge foran kam dikhna chahiye -- warna banda
+  // dekhta hai "29" wahin ka wahin, jab ke bottle bik chuki hai (malik,
+  // 16 September). Godam se asal deduction server par ho chuki hoti hai
+  // (create_pos_sale); yahan sirf safhe ka apna dikhawa taaza karna hai,
+  // is liye prop ko local state banaya -- checkout ke baad khud kam kar
+  // dete hain, poora safha dobara load karne ka intezar nahi.
+  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
+  // Malik (16 September): "search box k sath price wise products ana
+  // chahiye -- kam se kam ya zyada se zyada price wise."
+  const [sortBy, setSortBy] = useState<"" | "price_asc" | "price_desc">("");
   const [custQuery, setCustQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -199,7 +209,7 @@ export function PosClient({
 
   const filteredInventory = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return inventory.filter((item) => {
+    const filtered = inventory.filter((item) => {
       if (group === BINA_QISM) {
         if (item.products?.category_name) return false;
       } else if (group && item.products?.category_name !== group) {
@@ -213,7 +223,10 @@ export function PosClient({
         p?.internal_barcode?.toLowerCase().includes(q)
       );
     });
-  }, [inventory, search, group]);
+    if (sortBy === "price_asc") return [...filtered].sort((a, b) => a.selling_price - b.selling_price);
+    if (sortBy === "price_desc") return [...filtered].sort((a, b) => b.selling_price - a.selling_price);
+    return filtered;
+  }, [inventory, search, group, sortBy]);
 
   const custMatches = useMemo(() => {
     const wantWholesale = custMode === "wholesale";
@@ -493,6 +506,16 @@ export function PosClient({
         ? { type: "error", text: `${t("pos_sale_done", lang)} — magar ${result.notice}` }
         : { type: "success", text: t("pos_sale_done", lang) }
     );
+    // Godam se maal to seedha server par kat chuka hai -- yahan sirf
+    // safhe ka badge usi hisaab se taaza karna hai.
+    const soldQty = new Map(cart.map((l) => [l.product_id, l.quantity]));
+    setInventory((prev) =>
+      prev.map((item) =>
+        soldQty.has(item.product_id)
+          ? { ...item, stock_quantity: Math.max(0, item.stock_quantity - soldQty.get(item.product_id)!) }
+          : item
+      )
+    );
     setCompletedSaleId(data);
     resetSale();
     setSubmitting(false);
@@ -535,6 +558,15 @@ export function PosClient({
               {groups.map((g) => <option key={g.name} value={g.name}>{g.name === BINA_QISM ? t("pos_no_group", lang) : g.name} ({g.count})</option>)}
             </Select>
           )}
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "" | "price_asc" | "price_desc")}
+            className="h-11 w-[9.5rem] shrink-0"
+          >
+            <option value="">{t("pos_sort_default", lang)}</option>
+            <option value="price_asc">{t("pos_sort_price_low", lang)}</option>
+            <option value="price_desc">{t("pos_sort_price_high", lang)}</option>
+          </Select>
           <button type="button" onClick={() => setMode("return")} className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-surface-200 px-3 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"><RotateCcw className="h-4 w-4" /> {t("pos_mode_return", lang)}</button>
         </div>
         {rateBaqiCount > 0 && <p className="-mt-1 mb-2 shrink-0 text-xs text-amber-700">{t("pos_rate_baqi_hidden", lang).replace("{n}", String(rateBaqiCount))} <Link href="/admin/products/rates-baqi" className="underline">{t("pos_rate_baqi_link", lang)}</Link></p>}
@@ -656,7 +688,13 @@ export function PosClient({
               {chhoot > 0 && discountReason.trim().length < 3 && <p className="mt-1 text-[11px] text-amber-600">Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.</p>}
             </div>
           )}
-          <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_paid", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {totalAllocated.toLocaleString()}</span></div>
+          {/* "Paid" sirf wo raqam hai jo WAQAI mili -- cash/bank/wallet.
+              Khata ka hissa yahan nahi aata: wo raqam mili nahi, sirf
+              gahak ke zimme chaRhi hai. Pehle `totalAllocated` (khata
+              samet) dikhta tha, is liye Khata par poori sale karne par
+              bhi "Paid: Rs 80" likha aata (malik, 16 September: "khata
+              mein di to paid amount slip par kyun a rahi hai"). */}
+          <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_paid", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {(totalAllocated - khataTotal).toLocaleString()}</span></div>
         </div>
         <div className="flex items-center justify-between"><span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span><span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">Rs {deyRaqam.toLocaleString()}</span></div>
         <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : remaining < 0 ? "Zyada Amount" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>

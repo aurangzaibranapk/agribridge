@@ -210,6 +210,12 @@ export const posDict = {
   },
   pos_someone: { en: "someone", rm: "koi", ur: "کوئی" },
 
+  // Malik (16 September): "search box k sath price wise products ana
+  // chahiye -- kam se kam ya zyada se zyada price wise."
+  pos_sort_default: { en: "Default order", rm: "Maamool tarteeb", ur: "معمول ترتیب" },
+  pos_sort_price_low: { en: "Price: Low to High", rm: "Rate: Kam se Zyada", ur: "ریٹ: کم سے زیادہ" },
+  pos_sort_price_high: { en: "Price: High to Low", rm: "Rate: Zyada se Kam", ur: "ریٹ: زیادہ سے کم" },
+
   // ---- Wapsi (295): asal bill se, ek ek cheez ki ----
   pos_mode_sale: { en: "Sale", rm: "Bikri", ur: "بکری" },
   // 15 September: malik ka kehna "1 he button ko fix kr dena chiy
