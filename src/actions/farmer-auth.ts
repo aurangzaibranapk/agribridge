@@ -389,12 +389,7 @@ export async function loginWithIdentifier(
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  // MAQAMI TASHKHEES (15 September) -- asal wajah dikhane ke liye,
-  // foran hatani hai. Malik ko baar baar "Ghalat ID ya password" mil
-  // raha tha jab ke password/branch/env sab tasdeeq shuda hain -- is
-  // liye Supabase ka apna asal error dikhana zaroori hai.
-  if (error) return { error: `DEBUG: ${error.status ?? "?"} -- ${error.message}` };
-  if (!data.user) return ghalat;
+  if (error || !data.user) return ghalat;
 
   const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
   if (!profile) return { error: "Account setup adhoora hai. Support se rabta karein." };
