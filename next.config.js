@@ -23,6 +23,9 @@ const nextConfig = {
   // karni paRe to `SHARED_HOST_BUILD=1` laga dein -- purana behaviour
   // wapas aa jayega.
   experimental: {
+    // instrumentation.ts chalane ke liye zaroori (Next 14 mein ye
+    // default se band hai) -- "fetch failed" ka IPv4 fix wahin hai.
+    instrumentationHook: true,
     cpus: process.env.SHARED_HOST_BUILD === "1" ? 1 : Math.max(2, require("os").cpus().length - 1),
     workerThreads: false,
     // Next.js apne taur par client-side navigation (Link se, sidebar se)
