@@ -8,6 +8,7 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadPaymentBreakdown, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
+import { LiveNotificationsPanel } from "@/components/guided/live-notifications-panel";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
@@ -149,7 +150,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
   // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
   // dobara dikhaya ja raha hai.
-  const [fourthKpi, recentActivity, paymentBreakdown] = await Promise.all([
+  const [fourthKpi, recentActivity, paymentBreakdown, { data: initialNotifications }] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
     loadRecentActivity(me.branch_id, allowed),
     // Malik (16 September): "cash sale kitna, card se kitna, QR se
@@ -157,6 +158,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
     // liye ye sawal hi nahi banta.
     canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
+    // Live Notifications panel ka shuruati data -- baad mein ye khud
+    // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
+    // nahi parhta.
+    supabase
+      .from("notifications")
+      .select("id, title, message, link_url, is_read, created_at")
+      .eq("recipient_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8),
   ]);
   const kpis: { key: string; label: string; value: number | null }[] = [
     { key: "approvals", label: t("mw_kpi_pending_approvals", lang), value: attentionItems.filter((i) => i.tone === "amber").length },
@@ -372,6 +382,17 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
 
         <div className="flex flex-col gap-4">
+          <LiveNotificationsPanel
+            initial={(initialNotifications ?? []).map((n) => ({
+              id: n.id as string,
+              title: n.title as string,
+              message: n.message as string,
+              link_url: (n.link_url as string | null) ?? null,
+              is_read: Boolean(n.is_read),
+              created_at: String(n.created_at),
+            }))}
+          />
+
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
               <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, ListOrdered, X } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -19,10 +19,44 @@ import {
   giveCustomerLoan,
   takeCustomerRepayment,
   type UdhaarState,
+  type UdhaarReceipt,
 } from "@/actions/customer-udhaar";
+import { SimpleReceiptModal } from "@/components/load-bill/simple-receipt-modal";
 
 const initial: LoadState = {};
 const udhaarInitial: UdhaarState = {};
+
+// Malik (16 September): "AgriBridge load BHEJTA nahi" -- isi tarah ye
+// safha khud ek dukan nahi, Al Rana Traders ka counter hai. Receipt par
+// yehi naam jata hai, chahe kaam kisi bhi shop se ho raha ho.
+const SELLER_NAME = "Al Rana Traders";
+
+interface ReceiptRowData {
+  label: string;
+  value: string;
+  strong?: boolean;
+  tone?: "red" | "amber";
+}
+
+interface ReceiptData {
+  title: string;
+  txnNumber: string;
+  date: string;
+  rows: ReceiptRowData[];
+  totalLabel: string;
+  totalValue: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  footerNote?: string | null;
+}
+
+function methodDisplay(method: string): string {
+  if (method === "cash") return "Cash";
+  if (method === "bank") return "Bank";
+  if (method === "wallet") return "Customer Wallet";
+  if (method === "khata") return "Khata (Udhaar)";
+  return method;
+}
 
 interface Provider {
   id: string;
@@ -77,6 +111,69 @@ const UDHAAR_CATEGORIES = [
 
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
+}
+
+/** Mobile Load / Bill Payment ki qatar se receipt ka data. */
+function txnReceipt(t: Txn): ReceiptData {
+  const rows: ReceiptRowData[] = [
+    { label: t.kind === "load" ? "Network" : "Provider", value: t.provider },
+    { label: t.kind === "load" ? "Mobile Number" : "Consumer / Reference No.", value: t.reference },
+    { label: t.kind === "load" ? "Load Amount" : "Bill Amount", value: rs(t.principal) },
+  ];
+  if (t.serviceCharge) rows.push({ label: "Service Charge", value: rs(t.serviceCharge) });
+  rows.push({ label: "Payment Method", value: methodDisplay(t.method) });
+  if (t.kind === "bill") {
+    rows.push({
+      label: "Status",
+      value: t.settled ? "Provider tak pahunch gaya" : "Abhi float mein — ada baqi",
+      tone: t.settled ? undefined : "amber",
+    });
+  }
+  return {
+    title: t.kind === "load" ? "Mobile Load" : "Bill Payment",
+    txnNumber: t.number,
+    date: t.waqt,
+    rows,
+    totalLabel: "Total",
+    totalValue: rs(t.principal + (t.serviceCharge ?? 0)),
+    customerName: t.customer,
+    // Load ka "reference" khud customer ka mobile number hai. Bill ka
+    // reference consumer number hai -- kisi ka mobile number nahi, is
+    // liye WhatsApp button wahan number khali chhoR kar khud khulega.
+    customerPhone: t.kind === "load" ? t.reference : null,
+    footerNote:
+      t.status === "saboot_baqi"
+        ? "Saboot baqi — provider ki TID abhi lagni baqi hai."
+        : t.tid
+          ? `Provider TID: ${t.tid}`
+          : null,
+  };
+}
+
+/** Udhaar / Recovery ki UdhaarReceipt se receipt ka data. */
+function udhaarReceipt(kaam: "diya" | "wapsi", r: UdhaarReceipt): ReceiptData {
+  const diya = kaam === "diya";
+  const baqiKhali = Math.abs(r.balanceAfter) < 0.005;
+  const credit = r.balanceAfter < -0.005;
+  return {
+    title: diya ? "Udhaar" : "Recovery",
+    txnNumber: r.entryNumber,
+    date: r.date,
+    rows: [
+      { label: "Category", value: r.category ?? "—" },
+      { label: diya ? "Amount Given" : "Amount Received", value: rs(r.amount) },
+      { label: diya ? "Paid From" : "Received In", value: r.method },
+    ],
+    totalLabel: diya ? "Balance Due" : credit ? "Credit Balance" : "Balance Remaining",
+    totalValue: baqiKhali ? "Rs 0 — Clear" : rs(Math.abs(r.balanceAfter)),
+    customerName: r.name,
+    customerPhone: r.phone,
+    footerNote: diya
+      ? "Ye udhaar hai — bikri nahi, sirf naqad udhaar."
+      : credit
+        ? "Zyada aaya paisa credit mein jama — agli udhaar ya kharche mein khud katega."
+        : null,
+  };
 }
 
 /**
@@ -162,6 +259,34 @@ export function LoadBillClient({
   const [commState, commAction] = useFormState(confirmLoadCommission, initial);
   const [loanState, loanAction] = useFormState(giveCustomerLoan, udhaarInitial);
   const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
+
+  /**
+   * Receipt/Slip -- Print aur WhatsApp ke liye.
+   *
+   * Malik (16 September): "Mobile Load, Bill Payment, Udhaar aur
+   * Recovery -- chaaron ke liye proper related Print Receipt/Slip
+   * banayein... WhatsApp receipt add karein, jisme sirf us transaction
+   * ki correct information ho."
+   *
+   * Udhaar/Recovery "Aaj ki qatarein" table mein hain hi nahi (wo sirf
+   * load_transactions dikhati hai) -- is liye un ki receipt save hote
+   * hi khud khulti hai. Load/Bill wahan maujood hain, is liye un par
+   * button kaafi hai.
+   */
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  useEffect(() => {
+    if (loanState.success && loanState.receipt) setReceipt(udhaarReceipt("diya", loanState.receipt));
+  }, [loanState]);
+  useEffect(() => {
+    if (wapsiState.success && wapsiState.receipt) setReceipt(udhaarReceipt("wapsi", wapsiState.receipt));
+  }, [wapsiState]);
+
+  /**
+   * Malik (16 September): "Today's Transactions ko neeche permanent
+   * table rakhne ke bajaye right-side drawer/panel banayein" -- taake
+   * poora page desktop par ek viewport mein fit ho jaye (agla point).
+   */
+  const [qataarKhula, setQataarKhula] = useState(false);
 
   /**
    * Udhaar dukan ke customer ko bhi milta hai aur kisan ko bhi — is
@@ -268,9 +393,9 @@ export function LoadBillClient({
     state.notice ?? tidState.notice ?? settleState.notice ?? revState.notice ?? commState.notice ?? loanState.notice ?? wapsiState.notice;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden">
       {/* -------- Float ke khane -------- */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {accounts.map((a) => (
           <Card key={a.id} className="py-3">
             <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
@@ -292,24 +417,24 @@ export function LoadBillClient({
       </div>
 
       {paighaam && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
+        <Card className="shrink-0 border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {paighaam}
           </p>
         </Card>
       )}
       {khushKhabri && !paighaam && (
-        <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20">
+        <Card className="shrink-0 border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20">
           <p className="flex items-start gap-2 text-sm text-brand-800 dark:text-brand-200">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {khushKhabri}
           </p>
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:overflow-hidden">
         {/* -------- Form -------- */}
-        <Card>
-          <div className="mb-4 grid gap-2 grid-cols-2 lg:grid-cols-4">
+        <Card className="flex flex-col lg:min-h-0 lg:overflow-hidden">
+          <div className="mb-4 shrink-0 grid gap-2 grid-cols-2 lg:grid-cols-4">
             {(
               [
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
@@ -337,6 +462,11 @@ export function LoadBillClient({
             ))}
           </div>
 
+          {/* Malik (16 September): "poora page scroll na ho... zarurat
+              par sirf form ka internal section scroll ho" -- tabs aur
+              header hamesha jagah par rehte hain, sirf ye andar wala
+              hissa scroll karta hai jab form lamba ho jata hai. */}
+          <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
           {tab === "udhaar" || tab === "receive" ? (
             <UdhaarForm
               kaam={tab === "udhaar" ? "diya" : "wapsi"}
@@ -632,10 +762,11 @@ export function LoadBillClient({
             <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
           </form>
           )}
+          </div>
         </Card>
 
         {/* -------- Aaj ka hisaab -------- */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:min-h-0 lg:overflow-y-auto">
           <Card className="py-3">
             <p className="text-xs text-surface-500 dark:text-surface-400">Aaj handle hua</p>
             <p className="font-display text-2xl font-semibold tabular-nums text-surface-900 dark:text-white">
@@ -659,7 +790,7 @@ export function LoadBillClient({
                 <Clock className="h-4 w-4" /> {sabootBaqi} par saboot baqi
               </p>
               <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
-                Provider ki TID lagayein — neeche fehrist mein.
+                Provider ki TID lagayein — "Aaj ki qatarein" mein.
               </p>
             </Card>
           )}
@@ -673,14 +804,34 @@ export function LoadBillClient({
               </p>
             </Card>
           )}
+
+          {/* Malik (16 September): "Today's Transactions ko neeche
+              permanent table rakhne ke bajaye right-side drawer/panel
+              banayein." Button khud button, panel neeche render hota
+              hai. */}
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setQataarKhula(true)}>
+            <ListOrdered className="h-4 w-4" /> Aaj ki qatarein ({today.length})
+          </Button>
         </div>
       </div>
 
-      {/* -------- Aaj ki qatarein -------- */}
-      <Card className="p-0">
-        <p className="border-b border-surface-100 px-5 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-          Aaj ki qatarein
-        </p>
+      {/* -------- Aaj ki qatarein: right-side drawer -------- */}
+      {qataarKhula && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setQataarKhula(false)} />
+          <div className="relative flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl dark:bg-surface-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-surface-100 px-5 py-3 dark:border-surface-800">
+              <p className="text-sm font-semibold text-surface-900 dark:text-white">
+                Aaj ki qatarein <span className="font-normal text-surface-400">({today.length})</span>
+              </p>
+              <button
+                onClick={() => setQataarKhula(false)}
+                className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
         {today.length === 0 ? (
           <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
         ) : (
@@ -748,6 +899,11 @@ export function LoadBillClient({
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        {t.status !== "wapas" && (
+                          <Button type="button" size="sm" variant="ghost" onClick={() => setReceipt(txnReceipt(t))}>
+                            Receipt
+                          </Button>
+                        )}
                         {t.status === "saboot_baqi" && (
                           <form action={tidAction} className="flex items-center gap-1">
                             <input type="hidden" name="id" value={t.id} />
@@ -823,7 +979,26 @@ export function LoadBillClient({
             </table>
           </div>
         )}
-      </Card>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {receipt && (
+        <SimpleReceiptModal
+          onClose={() => setReceipt(null)}
+          sellerName={SELLER_NAME}
+          title={receipt.title}
+          txnNumber={receipt.txnNumber}
+          date={receipt.date}
+          rows={receipt.rows}
+          totalLabel={receipt.totalLabel}
+          totalValue={receipt.totalValue}
+          customerName={receipt.customerName}
+          customerPhone={receipt.customerPhone}
+          footerNote={receipt.footerNote}
+        />
+      )}
     </div>
   );
 }

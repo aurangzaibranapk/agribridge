@@ -9,6 +9,7 @@ import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { logAudit } from "@/lib/audit";
 import { notifyUser } from "@/lib/notifications";
+import { requireAction } from "@/lib/access/guard";
 
 /**
  * Customer ka udhaar -- dukan se paisa lena, aur wapas karna.
@@ -56,10 +57,23 @@ import { notifyUser } from "@/lib/notifications";
  * project mein wo pehle bhi ho chuka hai (127, 139).
  */
 
+export interface UdhaarReceipt {
+  entryNumber: string;
+  name: string;
+  phone: string | null;
+  amount: number;
+  category: string | null;
+  method: string;
+  date: string;
+  balanceAfter: number;
+}
+
 export interface UdhaarState {
   error?: string;
   success?: boolean;
   notice?: string;
+  /** Save hote hi receipt dikhane ke liye -- naya fetch karne ki zaroorat nahi (16 September). */
+  receipt?: UdhaarReceipt;
 }
 
 function paisa(value: FormDataEntryValue | null): number | null {
@@ -70,29 +84,31 @@ function paisa(value: FormDataEntryValue | null): number | null {
   return Math.round(n * 100) / 100;
 }
 
-/** Naqad udhaar dena aur wapas lena -- dono baRe faisle hain. */
-const UDHAAR_ROLES = ["owner", "super_admin", "admin", "finance", "manager"];
+/** Payment ka tareeqa -- receipt par likhne layak naam. */
+async function methodLabel(idOrCash: string): Promise<string> {
+  if (idOrCash === "cash") return "Cash";
+  const service = createServiceClient();
+  const { data } = await service.from("finance_accounts").select("name").eq("id", idOrCash).maybeSingle();
+  return (data?.name as string | null) ?? "Bank";
+}
 
+/**
+ * Naqad udhaar dena aur wapas lena.
+ *
+ * Pehle ye sirf Manager/Finance/Admin ka kaam tha (hardcoded role
+ * fehrist). Malik ka Staff Sales Desk (16 September) isi kaam ko
+ * counter par baithe staff ke haath deta hai -- "Udhaar" aur "Recovery"
+ * usi ke 4 tabs mein se do hain. Ab isi feature ki asal ijazat
+ * (`load-bill` → `create`) poochi jati hai, jo `/admin/load-bill`
+ * khud bhi poochta hai -- ek hi jagah se, jis ke paas ye safha hai
+ * usi ke paas ye kaam bhi hai. Data scope wahi (own_shop) jo baaqi
+ * Load & Bill ke liye hai.
+ */
 async function darwaza() {
+  const guard = await requireAction("load-bill", "create");
+  if ("error" in guard) return { ok: false as const, error: guard.error };
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false as const, error: "Pehle login karein." };
-
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("role, branch_id, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!me?.is_active) return { ok: false as const, error: "Aap ka khata band hai." };
-  if (!UDHAAR_ROLES.includes(me.role)) {
-    return {
-      ok: false as const,
-      error: "Naqad udhaar dena ya wapas lena sirf Manager, Finance ya Admin ka kaam hai.",
-    };
-  }
-  return { ok: true as const, userId: user.id, branchId: (me.branch_id as string | null) ?? null, supabase };
+  return { ok: true as const, userId: guard.caller.userId, branchId: guard.caller.branchId, supabase };
 }
 
 /**
@@ -189,24 +205,27 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   let hadd: number | null;
   const account = partyType === "customer" ? ACC.customerDue : ACC.farmerDue;
 
+  let phone: string | null = null;
   if (partyType === "customer") {
     const { data: customer } = await service
       .from("customers")
-      .select("id, name, current_balance, credit_limit")
+      .select("id, name, phone_number, current_balance, credit_limit")
       .eq("id", partyId)
       .maybeSingle();
     if (!customer) return { error: "Customer nahi mila." };
     name = customer.name ?? "Customer";
+    phone = (customer.phone_number as string | null) ?? null;
     abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
     hadd = customer.credit_limit == null ? null : Number(customer.credit_limit);
   } else {
     const { data: farmer } = await service
       .from("farmers")
-      .select("id, full_name, farmer_code, credit_limit")
+      .select("id, full_name, farmer_code, phone_number, credit_limit")
       .eq("id", partyId)
       .maybeSingle();
     if (!farmer) return { error: "Kisan nahi mila." };
     name = farmer.full_name ?? farmer.farmer_code;
+    phone = (farmer.phone_number as string | null) ?? null;
     abTak = await farmerKaAbhiKaBaqi(g.supabase, partyId);
     hadd = farmer.credit_limit == null ? null : Number(farmer.credit_limit);
   }
@@ -300,6 +319,16 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       abTakBaad < -0.005
         ? `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Purana credit isi mein se kat gaya — ab bhi Rs ${Math.abs(abTakBaad).toLocaleString()} credit baqi hai.`
         : `Rs ${rakam.toLocaleString()} ${name} ke khate par chaRh gaye. Ab un ka baqi Rs ${abTakBaad.toLocaleString()} hai.`,
+    receipt: {
+      entryNumber: posted.entryNumber,
+      name,
+      phone,
+      amount: rakam,
+      category,
+      method: await methodLabel(kahanSe),
+      date: new Date().toISOString(),
+      balanceAfter: abTakBaad,
+    },
   };
 }
 
@@ -330,26 +359,29 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
 
   const service = createServiceClient();
   let name: string;
+  let phone: string | null = null;
   let abTak: number;
   const account = partyType === "customer" ? ACC.customerDue : ACC.farmerDue;
 
   if (partyType === "customer") {
     const { data: customer } = await service
       .from("customers")
-      .select("id, name, current_balance")
+      .select("id, name, current_balance, phone_number")
       .eq("id", partyId)
       .maybeSingle();
     if (!customer) return { error: "Customer nahi mila." };
     name = customer.name ?? "Customer";
+    phone = customer.phone_number ?? null;
     abTak = customer.current_balance == null ? 0 : Number(customer.current_balance);
   } else {
     const { data: farmer } = await service
       .from("farmers")
-      .select("id, full_name, farmer_code")
+      .select("id, full_name, farmer_code, phone_number")
       .eq("id", partyId)
       .maybeSingle();
     if (!farmer) return { error: "Kisan nahi mila." };
     name = farmer.full_name ?? farmer.farmer_code;
+    phone = farmer.phone_number ?? null;
     abTak = await farmerKaAbhiKaBaqi(g.supabase, partyId);
   }
 
@@ -442,5 +474,15 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
         : bacha < 0.005
           ? `Rs ${rakam.toLocaleString()} aa gaye. ${name} ka khata ab saaf hai.`
           : `Rs ${rakam.toLocaleString()} aa gaye. ${name} par ab Rs ${bacha.toLocaleString()} baqi hain.`,
+    receipt: {
+      entryNumber: posted.entryNumber,
+      name,
+      phone,
+      amount: rakam,
+      category,
+      method: await methodLabel(kahanAaya),
+      date: new Date().toISOString(),
+      balanceAfter: bacha,
+    },
   };
 }
