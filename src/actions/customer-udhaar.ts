@@ -8,6 +8,7 @@ import { postJournal } from "@/lib/ledger/post";
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { logAudit } from "@/lib/audit";
+import { notifyUser } from "@/lib/notifications";
 
 /**
  * Customer ka udhaar -- dukan se paisa lena, aur wapas karna.
@@ -287,6 +288,14 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
+  await notifyUser(
+    g.userId,
+    "Udhaar Entry Saved",
+    `Rs ${rakam.toLocaleString()} ${name} ko diye gaye — ${category || "Raqam / Cash Udhaar"} (${posted.entryNumber})`,
+    "/admin/load-bill"
+  );
+  revalidatePath("/admin/my-work");
+  revalidatePath("/admin/my-work-reference");
   // Agar is bande ke paas pehle se credit tha (zyada wapsi se), to naya
   // udhaar khud usi credit mein se katta hai -- ledger ka apna hisaab,
   // alag se kuch adjust nahi karna parta.
@@ -428,6 +437,14 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
+  await notifyUser(
+    g.userId,
+    "Recovery Payment Received",
+    `Rs ${rakam.toLocaleString()} ${name} se receive hue — ${category || "Udhaar Recovery"} (${posted.entryNumber})`,
+    "/admin/load-bill"
+  );
+  revalidatePath("/admin/my-work");
+  revalidatePath("/admin/my-work-reference");
   const bacha = Math.round((abTak - rakam) * 100) / 100;
   return {
     success: true,
