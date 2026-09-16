@@ -236,6 +236,11 @@ export function LoadBillClient({
   const chunaHuaKhata = khataChuna ? paisaKahan.slice(5) : "";
   const [settled, setSettled] = useState(true);
   const [savePending, setSavePending] = useState(false);
+  const [udhaarParty, setUdhaarParty] = useState<PersonOption | null>(null);
+  const [udhaarAmount, setUdhaarAmount] = useState("");
+  const [udhaarAccount, setUdhaarAccount] = useState("cash");
+  const [udhaarCategory, setUdhaarCategory] = useState("FMCG Udhaar");
+  const [udhaarReference, setUdhaarReference] = useState("");
 
   const chunaHua = accounts.find((a) => a.id === accountId) ?? null;
   const raqam = Number(principal.replace(/,/g, "")) || 0;
@@ -326,7 +331,7 @@ export function LoadBillClient({
         </Card>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem_2.75rem]">
         {/* -------- Form -------- */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
@@ -366,6 +371,16 @@ export function LoadBillClient({
               financeAccounts={financeAccounts}
               loanAction={loanAction}
               wapsiAction={wapsiAction}
+              party={udhaarParty}
+              onPartyChange={setUdhaarParty}
+              amount={udhaarAmount}
+              onAmountChange={setUdhaarAmount}
+              account={udhaarAccount}
+              onAccountChange={setUdhaarAccount}
+              category={udhaarCategory}
+              onCategoryChange={setUdhaarCategory}
+              reference={udhaarReference}
+              onReferenceChange={setUdhaarReference}
             />
           ) : (
           <form id="load-bill-form" action={action} className="grid grid-cols-1 gap-x-8 gap-y-3 xl:grid-cols-2">
@@ -566,7 +581,7 @@ export function LoadBillClient({
         {/* -------- Aaj ka hisaab -------- */}
         <div className="min-h-0 space-y-3">
           <Card className="h-full border-surface-200 bg-white px-5 py-4 dark:bg-surface-900">
-            <p className="text-lg font-bold text-surface-950 dark:text-white">Live Transaction Summary</p>
+            <p className="text-lg font-bold text-surface-950 dark:text-white">{tab === "udhaar" ? "Live Udhaar Summary" : tab === "receive" ? "Live Recovery Summary" : "Live Transaction Summary"}</p>
             <p className="mt-2 flex items-center gap-2 border-b border-surface-200 pb-3 text-xs text-brand-700"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Ready to process</p>
             <div className="mt-4 space-y-4 text-sm">
               {(tab === "load" || tab === "bill") && <>
@@ -576,6 +591,15 @@ export function LoadBillClient({
                 <div className="flex justify-between"><span className="flex items-center gap-2 text-surface-500"><Percent className="h-4 w-4 text-brand-700" /> Service Charge</span><b>{charge ? rs(charge) : "—"}</b></div>
                 <div className="border-t border-surface-200 pt-4 flex justify-between text-base"><span>Customer Pays</span><b>{rs(raqam + charge)}</b></div>
                 <div className="flex justify-between text-base"><span className="text-brand-700">Staff Income</span><b className="text-brand-700">{staffIncome ? rs(staffIncome) : "—"}</b></div>
+              </>}
+              {(tab === "udhaar" || tab === "receive") && <>
+                <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><UserRound className="h-4 w-4 text-brand-700" /> {tab === "udhaar" ? "Party" : "Customer"}</span><b className="max-w-[9rem] truncate">{udhaarParty?.name ?? "—"}</b></div>
+                <div className="flex justify-between gap-3"><span className="text-surface-500">{tab === "udhaar" ? "Category" : "Account / Khata"}</span><b>{udhaarCategory}</b></div>
+                {tab === "receive" && <div className="flex justify-between"><span className="text-surface-500">Previous Balance</span><b>{udhaarParty?.balance == null ? "—" : rs(udhaarParty.balance)}</b></div>}
+                <div className="flex justify-between"><span className="text-surface-500">{tab === "udhaar" ? "Amount" : "Amount Received"}</span><b>{rs(Number(udhaarAmount) || 0)}</b></div>
+                {tab === "receive" && <div className="flex justify-between"><span className="text-surface-500">Remaining Balance</span><b>{udhaarParty?.balance == null ? "—" : rs(Math.max(0, udhaarParty.balance - (Number(udhaarAmount) || 0)))}</b></div>}
+                <div className="flex justify-between"><span className="text-surface-500">Payment Method</span><b>{udhaarAccount === "cash" ? "Cash" : financeAccounts.find((a) => a.id === udhaarAccount)?.name ?? "Account"}</b></div>
+                {udhaarReference && <div className="flex justify-between gap-3"><span className="text-surface-500">Reference</span><b className="truncate">{udhaarReference}</b></div>}
               </>}
             </div>
             {(tab === "load" || tab === "bill") && (
@@ -591,14 +615,21 @@ export function LoadBillClient({
                 </div>
               </div>
             )}
+            {(tab === "udhaar" || tab === "receive") && (
+              <div className="mt-6 border-t border-surface-200 pt-4">
+                <Button type="submit" form={tab === "udhaar" ? "udhaar-form" : "receive-form"} className="h-12 w-full text-base"><CheckCircle2 className="mr-2 h-5 w-5" /> {tab === "udhaar" ? "Udhaar Entry — Save" : "Payment Received — Save"}</Button>
+                <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="secondary" size="sm" onClick={() => window.print()}><Printer className="mr-1.5 h-4 w-4" /> {tab === "udhaar" ? "Print Slip" : "Print Receipt"}</Button><Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}><MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp</Button></div>
+              </div>
+            )}
           </Card>
         </div>
+        <button type="button" className="hidden h-64 self-start rounded-xl border border-surface-200 bg-white text-xs font-medium text-surface-700 shadow-sm [writing-mode:vertical-rl] dark:bg-surface-900 dark:text-surface-200 lg:block">‹&nbsp;&nbsp; Customer Quick View</button>
       </div>
 
       {/* -------- Aaj ki qatarein -------- */}
       <Card className="h-52 shrink-0 overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-surface-100 px-4 py-2 dark:border-surface-800">
-          <p className="text-sm font-semibold text-surface-900 dark:text-white">Today Transactions</p>
+          <p className="text-base font-bold text-surface-900 dark:text-white">{tab === "udhaar" ? "Today's Udhaar Entries" : tab === "receive" ? "Today's Recovery Transactions" : "Today's Transactions"}</p>
           <div className="flex items-center gap-1">
             <Search className="mr-1 h-3 w-3 text-surface-400" />
             {(["all", "load", "bill", "udhaar", "receive", "pending"] as const).map((filter) => (
@@ -620,15 +651,12 @@ export function LoadBillClient({
             <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
                 <tr>
-                  <th className="px-4 py-2">Waqt</th>
-                  <th className="px-4 py-2">Number</th>
-                  <th className="px-4 py-2">Provider</th>
-                  <th className="px-4 py-2">Reference</th>
-                  <th className="px-4 py-2 text-right">Raqam</th>
-                  <th className="px-4 py-2 text-right">Service charge</th>
-                  <th className="px-4 py-2 text-right">Commission</th>
-                  <th className="px-4 py-2">Halat</th>
-                  <th className="px-4 py-2"></th>
+                  <th className="px-4 py-2">Time</th>
+                  <th className="px-4 py-2">Customer</th>
+                  <th className="px-4 py-2">Type</th>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -637,49 +665,22 @@ export function LoadBillClient({
                     <td className="px-4 py-2 text-xs tabular-nums text-surface-500">
                       {new Date(t.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">{t.number}</td>
-                    <td className="px-4 py-2">{t.provider}</td>
-                    <td className="px-4 py-2 tabular-nums">{t.reference}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{rs(t.principal)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {t.serviceCharge === null ? "—" : rs(t.serviceCharge)}
-                    </td>
-                    <td className="px-4 py-2 text-right text-xs">
-                      {/*
-                        Andaza aur asal raqam ek nazar mein alag nazar
-                        aate hain. "~" wala adad kabhi kitab mein nahi
-                        gaya -- wo sirf qaide se gina hua andaza hai.
-                        Qaida hi na ho to "qaida nahi" likha jata hai,
-                        "Rs 0" nahi: dekha hi nahi gaya aur sifar do alag
-                        baatein hain.
-                      */}
-                      {t.commissionStatus === "tasdeeq" ? (
-                        <span className="font-medium text-brand-700 tabular-nums">
-                          {t.commissionConfirmed === null ? "tasdeeq shuda" : rs(t.commissionConfirmed)}
-                        </span>
-                      ) : t.commissionStatus === "nahi_mili" ? (
-                        <span className="text-red-600">nahi mili</span>
-                      ) : (
-                        <span className="text-surface-400">
-                          {t.commissionExpected === null
-                            ? "qaida nahi"
-                            : `~${rs(t.commissionExpected)} muntazir`}
-                        </span>
-                      )}
-                    </td>
+                    <td className="px-4 py-2">{t.customer ?? (t.reference !== "—" ? t.reference : "Walk-in")}</td>
+                    <td className="px-4 py-2 font-medium">{t.kind === "load" ? "Mobile Load" : t.kind === "bill" ? "Bill Payment" : t.kind === "udhaar" ? "Udhaar" : "Recovery"}</td>
+                    <td className="px-4 py-2 tabular-nums">{rs(t.principal + (t.serviceCharge ?? 0))}</td>
                     <td className="px-4 py-2">
                       {t.status === "wapas" ? (
-                        <Badge tone="red">wapas</Badge>
+                        <Badge tone="red">Reversed</Badge>
                       ) : t.status === "saboot_baqi" ? (
-                        <Badge tone="amber">saboot baqi</Badge>
+                        <Badge tone="amber">Proof Pending</Badge>
                       ) : !t.settled ? (
-                        <Badge tone="amber">ada baqi</Badge>
+                        <Badge tone="amber">Payment Pending</Badge>
                       ) : (
-                        <Badge tone="green">darj</Badge>
+                        <Badge tone="green">Completed</Badge>
                       )}
                     </td>
                     <td className="px-4 py-2">
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5"><Button type="button" size="sm" variant="secondary">View</Button>
                         {t.status === "saboot_baqi" && (
                           <form action={tidAction} className="flex items-center gap-1">
                             <input type="hidden" name="id" value={t.id} />
@@ -785,83 +786,70 @@ function UdhaarForm({
   financeAccounts,
   loanAction,
   wapsiAction,
+  party,
+  onPartyChange,
+  amount,
+  onAmountChange,
+  account,
+  onAccountChange,
+  category,
+  onCategoryChange,
+  reference,
+  onReferenceChange,
 }: {
   kaam: "diya" | "wapsi";
   people: PersonOption[];
   financeAccounts: { id: string; name: string }[];
   loanAction: (fd: FormData) => void;
   wapsiAction: (fd: FormData) => void;
+  party: PersonOption | null;
+  onPartyChange: (person: PersonOption | null) => void;
+  amount: string;
+  onAmountChange: (value: string) => void;
+  account: string;
+  onAccountChange: (value: string) => void;
+  category: string;
+  onCategoryChange: (value: string) => void;
+  reference: string;
+  onReferenceChange: (value: string) => void;
 }) {
-  const [chuna, setChuna] = useState<PersonOption | null>(null);
   const diya = kaam === "diya";
+  const formId = diya ? "udhaar-form" : "receive-form";
+  const categories = ["FMCG Udhaar", "Khaad Udhaar", "Wanda Udhaar", "Pesticide Udhaar", "Milk Payment Incoming", "Machinery Khata"];
+  const remaining = party?.balance == null ? null : Math.max(0, party.balance - (Number(amount) || 0));
 
   return (
-    <form action={diya ? loanAction : wapsiAction} className="space-y-3">
-      <div>
-        <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
+    <form id={formId} action={diya ? loanAction : wapsiAction} className="grid grid-cols-1 gap-x-8 gap-y-2.5 xl:grid-cols-2">
+      <h2 className="xl:col-span-2 text-lg font-bold text-surface-950 dark:text-white">{diya ? "Udhaar Entry Details" : "Payment Receive Details"}</h2>
+      <div className="space-y-2.5">
+        <div>
+        <Label htmlFor="udhaar_customer">{diya ? "Dukan / Party" : "Customer / Guest"}</Label>
         <PersonPicker
           people={people}
           partyTypeName="party_type"
           partyIdName="party_id"
-          onChange={setChuna}
+          onChange={onPartyChange}
         />
-        {chuna && (
-          <div className="mt-2">
-            <PartyStrip person={chuna} />
-          </div>
-        )}
-        <p className="mt-1 text-[11px] text-surface-500">
-          Fehrist mein na ho to pehle CRM ya Farmers par us ka indraj karein.
-        </p>
+        </div>
+        <div><Label>Mobile / CNIC</Label><Input value={party?.phone ?? party?.cnic ?? ""} readOnly placeholder="Enter mobile number or CNIC" /></div>
+        <div><Label>{diya ? "Village / Address" : "Account / Khata"}</Label>{diya ? <Input placeholder="Select village / address" /> : <Select value={category} onChange={(e) => onCategoryChange(e.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</Select>}</div>
+        <div><Label>{diya ? "Udhaar Category" : "Recovery Type"}</Label><Select value={category} onChange={(e) => onCategoryChange(e.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</Select></div>
+        {diya ? <div><Label htmlFor="udhaar_wajah">Description / Reason</Label><Input id="udhaar_wajah" name="wajah" placeholder="Udhaar ka maqsad / wajah" /></div> : <div><Label>Outstanding Balance</Label><Input readOnly value={party?.balance == null ? "—" : rs(party.balance)} /></div>}
       </div>
 
-      <div>
-        <Label htmlFor="udhaar_rakam">Raqam</Label>
-        <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" />
+      <div className="space-y-2.5">
+        <div><Label htmlFor="udhaar_rakam">{diya ? "Amount" : "Amount Received"}</Label><Input id="udhaar_rakam" name="rakam" required inputMode="decimal" value={amount} onChange={(e) => onAmountChange(e.target.value)} placeholder={diya ? "Enter amount" : "Enter received amount"} /></div>
+        {!diya && <div><Label>Remaining Balance</Label><Input readOnly value={remaining == null ? "—" : rs(remaining)} /></div>}
+        <div><Label htmlFor="udhaar_khata">{diya ? "Payment Received In" : "Payment Method"}</Label><Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(e) => onAccountChange(e.target.value)}><option value="cash">Cash</option>{financeAccounts.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></div>
+        {diya && <div><Label>Deposit Account</Label><Select value={account} onChange={(e) => onAccountChange(e.target.value)}><option value="cash">Cash / Golak</option>{financeAccounts.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></div>}
+        <div><Label>Reference / Transaction ID</Label><Input name="reference" value={reference} onChange={(e) => onReferenceChange(e.target.value)} placeholder="Enter reference or transaction ID" /></div>
+        <div className={diya ? "grid grid-cols-2 gap-3" : ""}><div><Label htmlFor="udhaar_tareekh">{diya ? "Date" : "Received By"}</Label>{diya ? <Input id="udhaar_tareekh" name="tareekh" type="date" defaultValue={aajKaKhana()} /> : <Input readOnly value="Current Staff" />}</div>{diya && <div><Label>Received By</Label><Input readOnly value="Current Staff" /></div>}</div>
+        <div><Label htmlFor="udhaar_notes">Notes</Label><Input id="udhaar_notes" placeholder="Add any note (optional)" /></div>
       </div>
 
-      <div>
-        <Label htmlFor="udhaar_khata">{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
-        <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} defaultValue="cash">
-          <option value="cash">Cash — golak</option>
-          {financeAccounts.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <input type="hidden" name="category" value={category} />
 
-      <div>
-        <Label htmlFor="udhaar_tareekh">Kis din</Label>
-        <Input id="udhaar_tareekh" name="tareekh" type="date" defaultValue={aajKaKhana()} />
-      </div>
-
-      <div>
-        <Label htmlFor="udhaar_wajah">Wajah / note (marzi ka)</Label>
-        <Input
-          id="udhaar_wajah"
-          name="wajah"
-          placeholder={diya ? "jaise: beej ke liye" : "jaise: fasal bikne par"}
-        />
-      </div>
-
-      <div className="rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
-        {diya ? (
-          <>
-            Ye <b>bikri nahi</b> hai — koi maal nahi gaya, sirf paisa gaya. Is liye is se nafa nahi banta;
-            raqam <b>&ldquo;Customer se lena&rdquo;</b> par chali jati hai aur us ke khate mein nazar aati
-            hai.
-          </>
-        ) : (
-          <>
-            Raqam customer ke khate se <b>kam</b> ho jayegi aur jis khate mein aayi us mein <b>baRh</b>
-            jayegi — dono ek sath.
-          </>
-        )}
-      </div>
-
-      <Submit label={diya ? "Udhaar darj karein" : "Wapsi darj karein"} />
+      <div className="xl:col-span-2 flex gap-3 rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-xs text-surface-700"><Info className="h-5 w-5 shrink-0 text-brand-700" /><span>{diya ? "Category aur account sahi select karein — FMCG, Khaad, Wanda, Pesticide aur Milk ka hisaab alag rahega." : "Customer ko receipt issue karein aur payment ko sahi separate khate mein update karein."}</span></div>
     </form>
   );
 }

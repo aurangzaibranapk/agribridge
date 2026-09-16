@@ -170,6 +170,8 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   // "cash" ya kisi finance account ki id.
   const kahanSe = String(formData.get("kahan_se") ?? "cash").trim();
   const wajah = String(formData.get("wajah") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim();
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -225,7 +227,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     return { error: "Paisa kis khate se gaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Naqad udhaar — ${name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Naqad udhaar — ${name}${category ? ` — ${category}` : ""}${wajah ? ` (${wajah})` : ""}${reference ? ` [Ref: ${reference}]` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
@@ -313,6 +315,8 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   const rakam = paisa(formData.get("rakam"));
   const kahanAaya = String(formData.get("kahan_aaya") ?? "cash").trim();
   const wajah = String(formData.get("wajah") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim();
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -364,7 +368,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     return { error: "Paisa kis khate mein aaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Udhaar ki wapsi — ${name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Udhaar ki wapsi — ${name}${category ? ` — ${category}` : ""}${wajah ? ` (${wajah})` : ""}${reference ? ` [Ref: ${reference}]` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
