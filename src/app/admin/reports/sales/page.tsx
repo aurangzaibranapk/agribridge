@@ -191,9 +191,16 @@ export default async function SalesReportPage({
   for (const a of (adaigiyan ?? []) as { payment_method: string; amount: number }[]) {
     const raqam = Number(a.amount ?? 0);
     if (raqam <= 0) continue;
-    // Jis tareeqe ka khata darj nahi, usay CHUPCHAAP kisi khaate mein
-    // nahi daala jata -- wo apne naam se nazar aata hai, taake mapping
-    // ki kami saamne rahe.
+    // Khata (udhaar) kisi asal khate mein paisa laata hi nahi -- credit
+    // hai, cash/bank nahi. Yahan gin lena "khata (khata darj nahi)"
+    // jaisa ghalat-fehmi paida karne wala label deta tha (malik, 16
+    // September: "khata darj nahi hui" -- asal mein koi masla nahi tha,
+    // yehi label tha). Khata ka sahi jawab neeche "Udhaar (Khata)" mein
+    // hai (`udhaarDiya`, `sales.khata_amount` se) -- yahan dobara nahi.
+    if (a.payment_method === "khata") continue;
+    // Baqi jis tareeqe ka khata darj nahi, usay CHUPCHAAP kisi khaate
+    // mein nahi daala jata -- wo apne naam se nazar aata hai, taake
+    // mapping ki kami saamne rahe.
     const naam = khataKaNaam.get(a.payment_method) ?? `${a.payment_method} (khata darj nahi)`;
     khaateWaliSale.set(naam, (khaateWaliSale.get(naam) ?? 0) + raqam);
   }
