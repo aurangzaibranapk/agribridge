@@ -5,6 +5,8 @@ import { PosClient } from "@/components/pos/pos-client";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
+import { PosWorkspace } from "@/components/pos/pos-workspace";
+import LoadBillPage from "@/app/admin/load-bill/page";
 export const dynamic = "force-dynamic";
 export default async function PosPage() {
   const lang = getLanguageFromCookies("rm");
@@ -291,34 +293,21 @@ export default async function PosPage() {
 
   const sellerName = dealer ? dealer.business_name : shopName ? `${branch!.name} - ${shopName}` : branch!.name;
 
-  /**
-   * Load aur Bill POS se nikal gaye.
-   *
-   * Malik (6 September): *"POS se bill aur load bhi hata do. Slide bar
-   * mein 1 tag banao Load/Bill ka, is par load aur bill ho ga."*
-   *
-   * Wo pehle bhi yehi keh chuke the: *"jab hum ye ordering bridge de
-   * rahe hain to POS ke andar ordering app ke tuk nahi banta, wahan phir
-   * nahi honi chahiye."* Wohi baat load aur bill par bhi lagti hai --
-   * counter par bikri hoti hai; load aur bill alag kaam hain aur un ka
-   * apna safha maujood hai.
-   *
-   * Safha `/admin/load-bill` waise ka waisa hai; sirf POS ke ooper se
-   * us ke khane hataye gaye hain. Menu mein wo ek hi tag ban kar rehta
-   * hai.
-   */
   return (
-    <>
-      <PosClient
-        lang={lang}
-        sellerName={sellerName}
-        inventory={inventory}
-        groups={groups}
-        customers={rawCustomers ?? []}
-        branchId={branch?.id ?? null}
-        rateBaqiCount={rateBaqiCount}
-        perms={perms}
-      />
-    </>
+    <PosWorkspace
+      products={
+        <PosClient
+          lang={lang}
+          sellerName={sellerName}
+          inventory={inventory}
+          groups={groups}
+          customers={rawCustomers ?? []}
+          branchId={branch?.id ?? null}
+          rateBaqiCount={rateBaqiCount}
+          perms={perms}
+        />
+      }
+      services={<LoadBillPage searchParams={{}} />}
+    />
   );
 }
