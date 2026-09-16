@@ -8,6 +8,7 @@ import { postJournal, reverseJournal, type JournalLine } from "@/lib/ledger/post
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
 import { cashBookLikhein, cashBookUlti, type CashBookQatar } from "@/lib/ledger/cash-book";
 import { recordError } from "@/lib/errors/record";
+import { notifyUser } from "@/lib/notifications";
 
 export interface LoadState {
   error?: string;
@@ -399,6 +400,14 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  await notifyUser(
+    user.id,
+    kind === "bill" ? "Bill Payment Saved" : "Mobile Load Saved",
+    `${number} — Rs ${total.toLocaleString()}${customerName ? ` — ${customerName}` : ` — ${reference}`}`,
+    "/admin/load-bill"
+  );
+  revalidatePath("/admin/my-work");
+  revalidatePath("/admin/my-work-reference");
   return {
     success: true,
     txnNumber: number,
