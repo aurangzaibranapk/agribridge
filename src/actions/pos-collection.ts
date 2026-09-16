@@ -76,6 +76,9 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
   const depositDate = String(formData.get("deposit_date") ?? "");
   const slipUrl = (formData.get("slip_url") as string) || "";
   const note = (formData.get("staff_note") as string)?.trim() || null;
+  // Shift Close ke "Cash Bhejein" se aaya ho to -- taake us shift ki
+  // "cash bhejna baqi" patti is jama ke baad dobara na dikhe (430).
+  const shiftId = (formData.get("shift_id") as string) || null;
 
   if (!shopId) return { error: "Shop nahi mili." };
   if (!bankAccountId) return { error: "Bank khata select karein." };
@@ -106,6 +109,7 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
       slip_url: slipUrl,
       staff_note: note,
       outstanding_before: outstanding.outstanding,
+      shift_id: shiftId,
     })
     .select("id")
     .single();
@@ -134,6 +138,7 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
 
   revalidatePath("/admin/my-collection");
   revalidatePath("/admin/finance/pos-deposits");
+  revalidatePath("/admin/pos");
   return {
     success: true,
     message: `${depositNumber} darj ho gaya — Rs ${amount.toLocaleString()} Finance ki tasdeeq ka intezar kar raha hai.`,

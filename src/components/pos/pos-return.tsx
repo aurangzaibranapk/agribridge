@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { Search, Package, RotateCcw, Minus, Plus, Check, Receipt } from "lucide-react";
+import { Search, Package, RotateCcw, Minus, Plus, Check, Receipt, X } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
 
@@ -537,11 +537,19 @@ export function PosReturn({
     );
   }
 
-  // ---- Qadam 2 aur 3: qatarein aur wapsi ka cart ----
+  // ---- Qadam 2 aur 3: bill + wapsi -- ab chhoti si popup mein
+  //
+  // Malik (16 September): "is par click karne se usi page par chota sa
+  // view open ho jaise POS bill ka hota hai print karne ke liye ... agar
+  // sale return karni ho to usi bill ke neeche mein aa raha ho -- Return
+  // sale page is tarah na open ho." Pehle ye poore-safhe ka do-column
+  // grid tha, alag "Return" safhe jaisa lagta tha. Ab ek hi tang column,
+  // POS ki apni ReceiptModal jaisa popup -- bill upar, wapsi ka hissa
+  // neeche isi ke andar.
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <Card className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-md space-y-3 overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
               {sale.customer_name ?? t("ret_walkin", lang)}
@@ -570,9 +578,10 @@ export function PosReturn({
                 setQty({});
                 setMsg(null);
               }}
-              className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+              aria-label={t("ret_other_sale", lang)}
+              className="rounded-lg border border-surface-200 p-1.5 text-surface-500 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
             >
-              {t("ret_other_sale", lang)}
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -705,9 +714,11 @@ export function PosReturn({
             )}
           </div>
         )}
-      </Card>
 
-      <Card className="flex h-fit flex-col gap-3">
+        {/* Wapsi ka hissa -- isi popup ke andar, neeche, jaisa malik ne
+            manga: "agar sale return karni ho to usi bill ke neeche mein
+            aa raha ho." */}
+        <div className="space-y-3 border-t border-surface-100 pt-3 dark:border-surface-800">
         <div className="flex items-center gap-2">
           <RotateCcw className="h-4 w-4 text-brand-600" />
           <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">
@@ -814,7 +825,8 @@ export function PosReturn({
         <Button onClick={submit} disabled={submitting || cart.length === 0} className="py-3 text-base">
           {submitting ? "…" : t("ret_confirm", lang)}
         </Button>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

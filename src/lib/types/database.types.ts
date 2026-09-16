@@ -18912,6 +18912,7 @@ export type Database = {
           id: string
           outstanding_after: number | null
           outstanding_before: number
+          shift_id: string | null
           shop_id: string
           slip_url: string
           staff_id: string
@@ -18933,6 +18934,7 @@ export type Database = {
           id?: string
           outstanding_after?: number | null
           outstanding_before: number
+          shift_id?: string | null
           shop_id: string
           slip_url: string
           staff_id: string
@@ -18954,6 +18956,7 @@ export type Database = {
           id?: string
           outstanding_after?: number | null
           outstanding_before?: number
+          shift_id?: string | null
           shop_id?: string
           slip_url?: string
           staff_id?: string
@@ -19004,6 +19007,13 @@ export type Database = {
             columns: ["finance_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
             referencedColumns: ["id"]
           },
           {

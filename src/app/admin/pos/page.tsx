@@ -32,11 +32,12 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     .maybeSingle();
   let branch: { id: string; name: string } | null = null;
   let shopName: string | null = null;
+  let shopId: string | null = null;
   let warehouseId: string | null = null;
   let activeCounterId: string | null = null;
   let activeCounterName: string | null = null;
   let openShiftInfo: { id: string; shiftNumber: string; openedAt: string; openingCash: number } | null = null;
-  let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null } | null = null;
+  let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null; shopId: string | null } | null = null;
   let otherCounters: { id: string; name: string; shopName: string; hasOpenShift: boolean }[] = [];
 
   if (!dealer) {
@@ -102,7 +103,12 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       // Pichli band hui shift ka cash abhi Manager/Finance ko bheja
       // nahi gaya -- malik ka kaam #3 (8 September). "Cash bheja gaya
       // ya nahi" NULL/NOT-NULL se maloom hota hai, sifar se nahi.
-      const { data: pendingClosed } = await supabase
+      //
+      // Do raaste "bhej diya" ginte hain: kisi bande ke hath (`pos_
+      // shifts.cash_handover_id`) ya bank mein khud jama karwa kar slip
+      // lagana (`pos_collection_deposits.shift_id`, 430) -- dono mein
+      // se koi bhi ho to patti dobara nahi dikhti.
+      const { data: pendingClosedRows } = await supabase
         .from("pos_shifts")
         .select("id, counter_id, counted_cash")
         .eq("staff_id", user.id)
@@ -110,13 +116,26 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         .is("cash_handover_id", null)
         .gt("counted_cash", 0)
         .order("closed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(5);
+      let pendingClosed: { id: string; counter_id: string; counted_cash: number } | null = null;
+      if (pendingClosedRows && pendingClosedRows.length > 0) {
+        const { data: alreadyDeposited } = await supabase
+          .from("pos_collection_deposits")
+          .select("shift_id")
+          .in(
+            "shift_id",
+            pendingClosedRows.map((r) => r.id)
+          );
+        const depositedShiftIds = new Set((alreadyDeposited ?? []).map((r: any) => r.shift_id as string));
+        const found = pendingClosedRows.find((r) => !depositedShiftIds.has(r.id));
+        pendingClosed = found ? { id: found.id, counter_id: found.counter_id, counted_cash: Number(found.counted_cash) } : null;
+      }
       pendingHandover = pendingClosed
         ? {
             shiftId: pendingClosed.id,
             countedCash: Number(pendingClosed.counted_cash),
-            branchId: myCounters.find((c) => c.id === pendingClosed.counter_id)?.branchId ?? null,
+            branchId: myCounters.find((c) => c.id === pendingClosed!.counter_id)?.branchId ?? null,
+            shopId: myCounters.find((c) => c.id === pendingClosed!.counter_id)?.shopId ?? null,
           }
         : null;
 
@@ -152,6 +171,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
       branch = { id: active.branchId, name: active.branchName };
       shopName = active.shopName;
+      shopId = active.shopId;
       warehouseId = counterRow?.warehouse_id ?? null;
       activeCounterId = active.id;
       activeCounterName = active.name;
@@ -491,6 +511,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
           shiftNumber={openShiftInfo.shiftNumber}
           counterName={activeCounterName}
           shopName={shopName ?? "—"}
+          shopId={shopId}
           openingCash={openShiftInfo.openingCash}
           openedAt={openShiftInfo.openedAt}
           branchId={branch?.id ?? null}

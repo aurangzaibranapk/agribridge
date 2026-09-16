@@ -40,10 +40,29 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
   // bhi: wo dabata hai, kuch nahi hota, aur samajh nahi aata kis se
   // kahe. Is liye jo kaam us ka nahi, us ka button aata hi nahi -- aur
   // us ki jagah wo raasta aata hai jo us ka HAI: tajweez.
-  const [banaSakta, badalSakta] = await Promise.all([
+  const [banaSakta, badalSakta, dekhSakta] = await Promise.all([
     canDo("products", "create"),
     canDo("products", "edit"),
+    canDo("products", "view"),
   ]);
+
+  // Ye safha sirf apni button chhupata tha ("Add Product"), khud safha
+  // kabhi nahi -- koi bhi logged-in bande URL seedha khol kar poori
+  // fehrist (purchase price samet) dekh sakta tha. Malik (16 September,
+  // Anwar ke screenshot): "ye to sale staff ko diya nahi hai" -- root
+  // cause alag nikla (ek broad access-grant), magar ye safha khud bhi
+  // sirf sidebar par bharosa kar raha tha, jo koi asal rok nahi.
+  if (!isUnrestricted && !dekhSakta) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-surface-600 dark:text-surface-400">Ye safha aap ke liye khula nahi hai.</p>
+      </div>
+    );
+  }
+  // Lagat (purchase price) sirf unhein jo waqai maal sambhalte hain --
+  // baaqi sabhi ke liye khaali lakeer, "Rs 0" nahi (jo galat munafa
+  // dikhata) aur asal qeemat bhi nahi (jo staff ko nahi dikhni chahiye).
+  const lagatDekhSakta = isUnrestricted || banaSakta || badalSakta;
 
   let query = supabase
     .from("products")
@@ -78,7 +97,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
     {
       header: "Purchase Price",
       accessor: (p) =>
-        p.trade_rate_pending ? (
+        !lagatDekhSakta ? (
+          <span className="text-surface-400">—</span>
+        ) : p.trade_rate_pending ? (
           <span className="text-amber-700">— baqi</span>
         ) : (
           formatCurrency(p.purchase_price)
