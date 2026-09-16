@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity, Printer, MessageCircle } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Search, Activity, Printer, MessageCircle, UserRound, Phone, Percent, Info } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -235,6 +235,7 @@ export function LoadBillClient({
   const method = khataChuna ? "bank" : paisaKahan;
   const chunaHuaKhata = khataChuna ? paisaKahan.slice(5) : "";
   const [settled, setSettled] = useState(true);
+  const [savePending, setSavePending] = useState(false);
 
   const chunaHua = accounts.find((a) => a.id === accountId) ?? null;
   const raqam = Number(principal.replace(/,/g, "")) || 0;
@@ -285,33 +286,28 @@ export function LoadBillClient({
   }, []);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-1">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-1">
       {/* -------- Float ke khane -------- */}
-      <div className="grid shrink-0 grid-cols-2 gap-2 pb-1 md:grid-cols-5">
-        <Card className="py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Wallet className="h-3.5 w-3.5" /> Float Balance</p>
-          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{accounts.some((a) => a.float === null) ? "—" : rs(totalFloat)}</p>
-          <p className="truncate text-[10px] text-surface-400">{accounts.length} active account{accounts.length === 1 ? "" : "s"}</p>
+      <div className="grid shrink-0 grid-cols-2 gap-4 pb-1 md:grid-cols-5">
+        <Card className="flex min-h-24 items-center gap-4 border-brand-200 px-5 py-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><Wallet className="h-7 w-7" /></div>
+          <div><p className="text-sm text-surface-600">Float Balance</p><p className="mt-1 font-display text-2xl font-bold tabular-nums text-surface-950 dark:text-white">{accounts.some((a) => a.float === null) ? "—" : rs(totalFloat)}</p></div>
         </Card>
-        <Card className="py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Banknote className="h-3.5 w-3.5" /> Cash in Hand</p>
-          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{rs(cashInHand)}</p>
-          <p className="text-[10px] text-surface-400">cash accounts</p>
+        <Card className="flex min-h-24 items-center gap-4 px-5 py-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><Banknote className="h-7 w-7" /></div>
+          <div><p className="text-sm text-surface-600">Cash in Hand</p><p className="mt-1 font-display text-2xl font-bold tabular-nums text-surface-950 dark:text-white">{rs(cashInHand)}</p></div>
         </Card>
-        <Card className="min-w-[9.5rem] flex-1 py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Activity className="h-3.5 w-3.5" /> Today Sales</p>
-          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-surface-900 dark:text-white">{rs(handled)}</p>
-          <p className="text-[10px] text-surface-400">{aajKaKaam.length} transactions</p>
+        <Card className="flex min-h-24 items-center gap-4 px-5 py-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><Activity className="h-7 w-7" /></div>
+          <div><p className="text-sm text-surface-600">Today Sales</p><p className="mt-1 font-display text-2xl font-bold tabular-nums text-surface-950 dark:text-white">{rs(handled)}</p></div>
         </Card>
-        <Card className="min-w-[9.5rem] flex-1 py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><HandCoins className="h-3.5 w-3.5" /> Today Recovery</p>
-          <p className="mt-1 font-display text-lg font-semibold tabular-nums text-brand-700">{rs(todayRecovery)}</p>
-          <p className="text-[10px] text-surface-400">udhaar received</p>
+        <Card className="flex min-h-24 items-center gap-4 px-5 py-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><HandCoins className="h-7 w-7" /></div>
+          <div><p className="text-sm text-surface-600">Today Recovery</p><p className="mt-1 font-display text-2xl font-bold tabular-nums text-surface-950 dark:text-white">{rs(todayRecovery)}</p></div>
         </Card>
-        <Card className="min-w-[9.5rem] flex-1 py-2.5">
-          <p className="flex items-center gap-1.5 text-xs text-surface-500"><Clock className="h-3.5 w-3.5" /> Pending Proof</p>
-          <p className={`mt-1 font-display text-lg font-semibold tabular-nums ${sabootBaqi ? "text-amber-600" : "text-surface-900 dark:text-white"}`}>{sabootBaqi}</p>
-          <p className="text-[10px] text-surface-400">TID required</p>
+        <Card className="flex min-h-24 items-center gap-4 border-amber-200 bg-amber-50/40 px-5 py-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700"><FileText className="h-7 w-7" /></div>
+          <div><p className="text-sm text-surface-600">Pending Proof</p><p className="mt-1 font-display text-2xl font-bold tabular-nums text-surface-950 dark:text-white">{sabootBaqi}</p></div>
         </Card>
       </div>
 
@@ -330,10 +326,10 @@ export function LoadBillClient({
         </Card>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* -------- Form -------- */}
-        <Card className="flex min-h-0 flex-col overflow-hidden p-3">
-          <div className="mb-3 grid shrink-0 gap-2 grid-cols-2 lg:grid-cols-4">
+        <div className="flex min-h-0 flex-col gap-3">
+          <div className="grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
             {(
               [
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
@@ -346,22 +342,23 @@ export function LoadBillClient({
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                className={`flex min-h-16 items-center gap-3 rounded-xl border px-5 py-3 text-left transition ${
                   tab === key
-                    ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
+                    ? "border-brand-700 bg-brand-700 text-white shadow-sm dark:border-brand-600 dark:bg-brand-800"
                     : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
                 }`}
               >
-                <Icon className="h-5 w-5 shrink-0 text-brand-600" />
+                <Icon className={`h-7 w-7 shrink-0 ${tab === key ? "text-white" : "text-brand-700"}`} />
                 <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-surface-900 dark:text-white">{title}</span>
-                  <span className="block truncate text-[10px] text-surface-500">{sub} · F{key === "load" ? 1 : key === "bill" ? 2 : key === "udhaar" ? 3 : 4}</span>
+                  <span className={`block text-sm font-semibold ${tab === key ? "text-white" : "text-surface-900 dark:text-white"}`}>{title}</span>
+                  <span className={`block truncate text-xs ${tab === key ? "text-brand-100" : "text-surface-500"}`}>{sub}</span>
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <Card className="min-h-0 flex-1 overflow-hidden px-5 py-4">
+          <div className="min-h-0 h-full overflow-y-auto pr-1">
           {tab === "udhaar" || tab === "receive" ? (
             <UdhaarForm
               kaam={tab === "udhaar" ? "diya" : "wapsi"}
@@ -371,26 +368,9 @@ export function LoadBillClient({
               wapsiAction={wapsiAction}
             />
           ) : (
-          <form action={action} className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <form id="load-bill-form" action={action} className="grid grid-cols-1 gap-x-8 gap-y-3 xl:grid-cols-2">
             <input type="hidden" name="kind" value={kind} />
-
-            <div>
-              <Label htmlFor="account_id">Paisa kis account se</Label>
-              <Select
-                id="account_id"
-                name="account_id"
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                required
-              >
-                {kaamKeAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title}
-                    {a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            <h2 className="xl:col-span-2 text-lg font-bold text-surface-950 dark:text-white">{kind === "load" ? "Mobile Load Details" : "Bill Payment Details"}</h2>
 
             {/* Malik (7 September): "Customer select karein... Result
                 Existing Farmer/Member/Customer master se aaye." Ye
@@ -398,23 +378,29 @@ export function LoadBillClient({
                 hai (neeche), aur "khata" method par isi ka party_type/
                 party_id ledger mein jata hai. */}
             <div>
-              <Label htmlFor="main_party">Customer (marzi ka — Guest bhi chal jata hai)</Label>
+              <Label htmlFor="main_party">Customer / Guest</Label>
               <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
               {mainParty && (
                 <div className="mt-2">
                   <PartyStrip person={mainParty} />
                 </div>
               )}
-              <p className="mt-1 text-[11px] text-surface-500">
-                Fehrist mein na ho to Guest/Walk-in maan kar aage barhein — har mobile-load customer ko
-                farmer banana zaroori nahi.
-              </p>
             </div>
 
             <div>
-              <Label htmlFor="reference">
-                {kind === "load" ? "Mobile number" : "Consumer / reference number"}
-              </Label>
+              <Label htmlFor="paisa_kahan">Payment Received In</Label>
+              <Select id="paisa_kahan" value={paisaKahan} onChange={(e) => setPaisaKahan(e.target.value)}>
+                <option value="cash">Cash — Golak mein aaya</option>
+                {financeAccounts.map((f) => <option key={f.id} value={`acct:${f.id}`}>{f.name}</option>)}
+                <option value="wallet">Customer ke apne wallet se</option>
+                <option value="khata">Khata — udhaar likh dein</option>
+              </Select>
+              <input type="hidden" name="payment_method" value={method} />
+              <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
+            </div>
+
+            <div>
+              <Label htmlFor="reference">{kind === "load" ? "Mobile Number" : "Consumer / Reference Number"}</Label>
               <Input
                 id="reference"
                 name="reference"
@@ -424,12 +410,11 @@ export function LoadBillClient({
                 onChange={(e) => setReference(e.target.value)}
                 placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
               />
-              {kind === "load" && mainParty?.phone && reference && reference !== mainParty.phone && (
-                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
-                  Profile number: {mainParty.phone} — load doosre number ({reference}) par ja raha hai.
-                  Financial transaction phir bhi {mainParty.name} ke khate mein hi jayegi.
-                </p>
-              )}
+            </div>
+
+            <div>
+              <Label htmlFor="service_charge">Service Charge</Label>
+              <div className="relative"><Percent className="absolute left-3 top-2.5 h-4 w-4 text-brand-700" /><Input className="pl-10" id="service_charge" name="service_charge" inputMode="decimal" value={serviceCharge} onChange={(e) => setServiceCharge(e.target.value)} placeholder="20" /></div>
             </div>
 
             {kind === "load" && (
@@ -483,17 +468,29 @@ export function LoadBillClient({
             )}
 
             <div>
-              <Label htmlFor="principal">{kind === "load" ? "Load ki raqam" : "Bill ki raqam"}</Label>
+              <Label htmlFor="account_id">From Account</Label>
+              <Select id="account_id" name="account_id" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+                {kaamKeAccounts.map((a) => <option key={a.id} value={a.id}>{a.title}{a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}</option>)}
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="provider_tid">Provider TID / Reference</Label>
+              <Input id="provider_tid" name="provider_tid" disabled={savePending} placeholder="Jazz/Easypaisa app se copy karein" />
+            </div>
+
+            <div>
+              <Label>Quick Amount</Label>
               {kind === "load" && (
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {RAQAM.map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setPrincipal(String(r))}
-                      className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                      className={`min-w-20 rounded-lg border px-3 py-2 text-sm transition ${
                         principal === String(r)
-                          ? "border-brand-500 bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/30 dark:text-brand-200"
+                          ? "border-brand-700 bg-brand-700 font-semibold text-white"
                           : "border-surface-200 hover:bg-surface-50 dark:border-surface-700 dark:hover:bg-surface-800"
                       }`}
                     >
@@ -502,15 +499,8 @@ export function LoadBillClient({
                   ))}
                 </div>
               )}
-              <Input
-                id="principal"
-                name="principal"
-                required
-                inputMode="decimal"
-                value={principal}
-                onChange={(e) => setPrincipal(e.target.value)}
-                placeholder="1000"
-              />
+              <Label className="mt-3 block" htmlFor="principal">Custom Amount</Label>
+              <Input id="principal" name="principal" required inputMode="decimal" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="Enter amount" />
               {kamPara && (
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-red-700 dark:text-red-300">
                   <AlertTriangle className="h-3.5 w-3.5" />
@@ -519,62 +509,15 @@ export function LoadBillClient({
               )}
             </div>
 
-            <div>
-              <Label htmlFor="paisa_kahan">Payment kahan aayi</Label>
-              {/* EK FEHRIST, ASAL KHATON KE SATH.
-                  Pehle yahan sirf qism likhi thi -- "Bank / Card",
-                  "Wallet" -- aur khata chunne ka khana us ke BAAD alag
-                  se khulta tha, wo bhi sirf "Bank" par.
-
-                  Malik (6 September): *"yahan jo hamare ACTUAL account
-                  hain wo aane chahiyen ke kis account mein payment hui
-                  hai... jaise hi bank select hua hamein pata ho ga ye
-                  is bank mein hai; JazzCash to pata hai, Easypaisa hai
-                  to pata hai, QR code hai to pata hai."*
-
-                  Wo theek keh rahe the. Counter par khara banda "qism"
-                  nahi sochta -- wo ye sochta hai ke "paisa Easypaisa
-                  mein aaya". Us se qism poochna aur phir khata poochna
-                  do sawal hain jahan ek kaafi tha; aur usi do-qadam ki
-                  wajah se 6 September ko wo "Wallet" chun baithe (jo is
-                  nizam mein CUSTOMER ka jama shuda paisa hai, hamara
-                  Easypaisa nahi) aur khate ka khana khula hi nahi.
-
-                  Ab ek hi fehrist hai. Andar ki qism (`payment_method`)
-                  aur khata (`finance_account_id`) chhupe hue khanon
-                  mein jate hain -- server ka hisaab bilkul wahi rehta
-                  hai. */}
-              <Select
-                id="paisa_kahan"
-                value={paisaKahan}
-                onChange={(e) => setPaisaKahan(e.target.value)}
-              >
-                <option value="cash">Cash — golak mein aaya</option>
-                {financeAccounts.map((f) => (
-                  <option key={f.id} value={`acct:${f.id}`}>
-                    {f.name}
-                  </option>
-                ))}
-                <option value="wallet">Customer ke apne wallet se</option>
-                <option value="khata">Khata — udhaar likh dein</option>
-              </Select>
-              <input type="hidden" name="payment_method" value={method} />
-              <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
-            </div>
-
-            <div>
-              <Label htmlFor="service_charge">Customer se extra (service charge)</Label>
-              <Input
-                id="service_charge"
-                name="service_charge"
-                inputMode="decimal"
-                value={serviceCharge}
-                onChange={(e) => setServiceCharge(e.target.value)}
-                placeholder="khali chhor dein agar extra nahi liya"
-              />
-              <p className="mt-1 text-[11px] text-surface-500">
-                Khali = customer se kuch extra nahi liya. Sifar likhne ki zaroorat nahi.
-              </p>
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 rounded-lg py-1 text-sm text-surface-700 dark:text-surface-200">
+                <input type="checkbox" checked={savePending} onChange={(e) => setSavePending(e.target.checked)} className="mt-0.5 h-4 w-4 rounded" />
+                <span><b>Save as Pending Proof</b><span className="mt-1 block text-xs font-normal text-surface-500">Nishan laga dein agar abhi customer ne paisa nahi diya.</span></span>
+              </label>
+              <div className="flex gap-3 rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-xs text-surface-600">
+                <Info className="h-5 w-5 shrink-0 text-brand-700" />
+                <span>Customer ko load milte hi SMS aayega.<br />Network issues ki surat mein transaction ko Pending Proof mein save kar sakte hain.</span>
+              </div>
             </div>
 
             {/* Khata par likhna hai to KIS ka khata -- ye ab upar
@@ -586,8 +529,8 @@ export function LoadBillClient({
                 udhaar ke ledger mein jate hain -- cash par server
                 khud unhein nazarandaz kar deta hai. */}
 
-            <div>
-              <Label htmlFor="customer_name">Customer ka naam (marzi ka)</Label>
+            <div className="hidden">
+              <Label htmlFor="customer_name">Customer ka naam</Label>
               <NameSuggest
                 key={mainParty ? `${mainParty.type}:${mainParty.id}` : "guest"}
                 id="customer_name"
@@ -596,17 +539,6 @@ export function LoadBillClient({
                 defaultValue={mainParty?.name ?? ""}
                 placeholder="Guest / Walk-in — chhora ja sakta hai"
               />
-            </div>
-
-            {/* Saboot -- is poore safhe ki sab se ahem cheez. */}
-            <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-900/40 dark:bg-brand-950/20">
-              <Label htmlFor="provider_tid">Provider ki TID / reference</Label>
-              <Input id="provider_tid" name="provider_tid" placeholder="Jazz/Easypaisa app se copy karein" />
-              <p className="mt-1 text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
-                AgriBridge load khud nahi bhejta — wo provider ki app se jata hai. Ye TID hi is baat ka
-                saboot hai ke kaam waqai hua. Abhi na ho to baad mein bhi lag sakti hai; tab tak qatar par
-                <b> &ldquo;saboot baqi&rdquo;</b> likha rahega.
-              </p>
             </div>
 
             {kind === "bill" && (
@@ -625,72 +557,41 @@ export function LoadBillClient({
               </label>
             )}
 
-            <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50 xl:col-span-2">
-              <div className="flex justify-between">
-                <span className="text-surface-500">Customer dega</span>
-                <span className="font-semibold tabular-nums text-surface-900 dark:text-white">
-                  {rs(raqam + charge)}
-                </span>
-              </div>
-              <div className="mt-1 flex justify-between text-xs">
-                <span className="text-surface-400">Is mein apni aamdani</span>
-                <span className="tabular-nums text-surface-500">{charge ? rs(charge) : "—"}</span>
-              </div>
-            </div>
-
-            <div className="xl:col-span-2">
-              <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
-            </div>
           </form>
           )}
           </div>
-        </Card>
+          </Card>
+        </div>
 
         {/* -------- Aaj ka hisaab -------- */}
-        <div className="min-h-0 space-y-3 overflow-y-auto">
-          <Card className="border-brand-200 bg-brand-50/40 py-3 dark:border-brand-900/40 dark:bg-brand-950/20">
-            <p className="text-sm font-semibold text-surface-900 dark:text-white">Live Transaction Summary</p>
-            <div className="mt-3 space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-surface-500">Work</span><b>{tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive"}</b></div>
+        <div className="min-h-0 space-y-3">
+          <Card className="h-full border-surface-200 bg-white px-5 py-4 dark:bg-surface-900">
+            <p className="text-lg font-bold text-surface-950 dark:text-white">Live Transaction Summary</p>
+            <p className="mt-2 flex items-center gap-2 border-b border-surface-200 pb-3 text-xs text-brand-700"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Ready to process</p>
+            <div className="mt-4 space-y-4 text-sm">
               {(tab === "load" || tab === "bill") && <>
-                <div className="flex justify-between"><span className="text-surface-500">Customer</span><b className="max-w-[9rem] truncate">{mainParty?.name ?? "Guest / Walk-in"}</b></div>
-                <div className="flex justify-between"><span className="text-surface-500">Amount</span><b>{rs(raqam)}</b></div>
-                <div className="flex justify-between"><span className="text-surface-500">Service charge</span><b>{charge ? rs(charge) : "—"}</b></div>
-                <div className="border-t border-brand-200 pt-2 flex justify-between text-sm"><span>Customer Pays</span><b className="text-brand-700">{rs(raqam + charge)}</b></div>
-                <div className="flex justify-between text-sm"><span className="text-surface-500">Staff Income</span><b className="text-brand-700">{staffIncome ? rs(staffIncome) : "—"}</b></div>
+                <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><UserRound className="h-4 w-4 text-brand-700" /> Customer</span><b className="max-w-[9rem] truncate">{mainParty?.name ?? "Walk-in"}</b></div>
+                <div className="flex justify-between gap-3"><span className="flex items-center gap-2 text-surface-500"><Phone className="h-4 w-4 text-brand-700" /> {kind === "load" ? "Mobile" : "Reference"}</span><b className="truncate">{reference || "—"}</b></div>
+                <div className="flex justify-between"><span className="flex items-center gap-2 text-surface-500"><Banknote className="h-4 w-4 text-brand-700" /> {kind === "load" ? "Load Amount" : "Bill Amount"}</span><b>{rs(raqam)}</b></div>
+                <div className="flex justify-between"><span className="flex items-center gap-2 text-surface-500"><Percent className="h-4 w-4 text-brand-700" /> Service Charge</span><b>{charge ? rs(charge) : "—"}</b></div>
+                <div className="border-t border-surface-200 pt-4 flex justify-between text-base"><span>Customer Pays</span><b>{rs(raqam + charge)}</b></div>
+                <div className="flex justify-between text-base"><span className="text-brand-700">Staff Income</span><b className="text-brand-700">{staffIncome ? rs(staffIncome) : "—"}</b></div>
               </>}
             </div>
             {(tab === "load" || tab === "bill") && (
-              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-brand-200 pt-3">
+              <div className="mt-6 border-t border-surface-200 pt-4">
+                <Button type="submit" form="load-bill-form" className="h-12 w-full text-base"><CheckCircle2 className="mr-2 h-5 w-5" /> {kind === "load" ? "Load Complete — Save" : "Bill Complete — Save"}</Button>
+                <div className="mt-3 grid grid-cols-2 gap-2">
                 <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
                   <Printer className="mr-1.5 h-4 w-4" /> Print Receipt
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={whatsappReceipt}>
                   <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
                 </Button>
+                </div>
               </div>
             )}
           </Card>
-          {sabootBaqi > 0 && (
-            <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-200">
-                <Clock className="h-4 w-4" /> {sabootBaqi} par saboot baqi
-              </p>
-              <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
-                Provider ki TID lagayein — neeche fehrist mein.
-              </p>
-            </Card>
-          )}
-          {adaBaqi > 0 && (
-            <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                {adaBaqi} bill abhi provider tak nahi pahunche
-              </p>
-              <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
-                Ye paisa hamare paas hai magar hamara nahi.
-              </p>
-            </Card>
-          )}
         </div>
       </div>
 

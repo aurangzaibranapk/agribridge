@@ -124,10 +124,10 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[42rem] flex-col overflow-hidden">
+    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[48rem] flex-col overflow-hidden">
       <PageHeader
-        title="Load / Bill"
-        description="Staff Sales Desk — load, bill, udhaar aur payment receive ek hi screen par"
+        title="Staff Sales Desk"
+        description="Al Rana Traders  |  Main Branch Mahabali"
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
