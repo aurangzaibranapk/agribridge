@@ -87,8 +87,14 @@ export function SimpleReceiptModal({
 
   function handleWhatsApp() {
     const text = encodeURIComponent(buildText());
-    const phone = customerPhone ? customerPhone.replace(/\D/g, "") : "";
-    const base = phone ? `https://wa.me/92${phone.replace(/^0/, "")}` : `https://wa.me/`;
+    const digits = customerPhone ? customerPhone.replace(/\D/g, "") : "";
+    // Customer/farmer records save the number already with "92" (jaise
+    // 923009990001), jabke staff load/bill ke waqt "0" wala local number
+    // type karta hai (jaise 03211234567) -- dono ko "92XXXXXXXXXX" par
+    // le aana hai, "92" do dafa nahi lagana (17 September ka bug: is
+    // customer/kisan ke number par 9292... ban raha tha).
+    const pkNumber = digits.startsWith("92") ? digits : digits.startsWith("0") ? `92${digits.slice(1)}` : digits ? `92${digits}` : "";
+    const base = pkNumber ? `https://wa.me/${pkNumber}` : `https://wa.me/`;
     window.open(`${base}?text=${text}`, "_blank");
   }
 
