@@ -3487,3 +3487,161 @@ list mein nahi dikhte, sirf ledger mein jate hain).
 
 **Build abhi upload nahi hua** — malik "system par aa gaya" kahenge to
 dono command (pull+build, package) is fehrist ke sath bhejni hain.
+
+## 18 September — pending code build (commits `f741ccc`, `7e53852`,
+`cd2224c`, `27a3d1f`), migration 431 abhi kahin nahi lagi
+
+**Cash in Hand — do bug, ek khandaan (`f741ccc`):**
+Load & Bill ka "Cash in Hand" card poori company ka cash dikha raha
+tha, sirf logged-in staff ki apni shop ka nahi (malik: *"cash in hand
+sirf us ko apni shop k nazar ana chaye pori company ka ni"*). Ab
+`fn_shop_day_summary(shop_id, date)` se, sirf us shop ka Load/Bill +
+POS cash. Sath hi: udhaar dena ab cash-only hai (client + server dono
+par lock, bank/card/QR staff ke liye band), Payment Receive tab mein
+Outstanding Balance ab Recovery Type se pehle.
+
+**Ek doosri, alag session ne isi waqt Load-Bill field reorder ka wohi
+kaam alag se push kar diya tha (`01950d7`).** Push par conflict aaya,
+`27a3d1f` mein resolve kiya — us session ka order rakha (Shop →
+From Account → Payment Received In), kyunki malik ke alfaz se zyada
+milta tha aur "koi shift khuli nahi" wala hint bhi sath tha.
+
+**Finance ka balance — poore khandaan ka doosra bug (`7e53852`):**
+`finance_accounts.current_balance` sirf un raqmon se hilta hai jo purani
+`finance_transactions` (cash book) se guzrein — kharcha, diesel, vendor
+payout. Load/Bill, machinery advance/final payment, POS seedha ledger
+(`journal_lines`) mein jate hain aur is column ko chhoote hi nahi.
+Malik ne poocha: *"machine ki payment easypaisa mein aayi, cash in hand
+mein kyun aa rahi hai?"* — jawab: aa nahi rahi thi, Easypaisa ka apna
+number hi hilta nahi tha (dikha raha tha Rs 2,495, ledger mein asal Rs
+42,495 tha — do Rs 20,000 ki machinery payments kabhi nazar hi nahi
+aayin). `/admin/finance`, `/admin/reports/finance`, `/admin/kharche`,
+`/admin/finance/banks`, aur bank statement safha — paanchon ab
+`trialBalance`/`accountLedger` (maujooda, pehle se tested ledger
+functions) se seedha balance/history nikalte hain, koi naya hisaab
+nahi banaya.
+
+**customers.credit_limit NULL bug (`cd2224c`, migration `431` — abhi
+kahin nahi lagi):** `customers.ts` khali "Credit Limit" khane ko `0`
+likh deta tha (`farmers` ka wahi khana hamesha se `NULL` raha hai).
+Muhammad Akhtar (18 September) is ki wajah se udhaar nahi le pa raha
+tha — us ki hadd kabhi kisi ne tay hi nahi ki thi, sirf khali chhoRi
+gayi thi, aur system ne khud "0" likh diya. Code theek: ab customers
+bhi farmers ki tarah blank → NULL. **Migration 431** (column ka DEFAULT
+NULL) na Testing par lagi hai na Live par — sirf code fix commit hua
+hai. Purane 0 wale record jaan boojh kar backfill nahi kiye (kuch
+waqai 0 ho sakte hain).
+
+**Udhaar ki hadd — Live par seedha data se (koi code/migration nahi,
+malik ke hukm se):**
+- Muhammad Akhtar: Rs 10,000 (individual fix, jab masla report hua)
+- Baqi 86 customers: sab Rs 10,000 (malik: *"jitny bhi... customer hn
+  sb ki had 10 hazar kr do"*)
+- Aurangzaib (923226275476), customer record: Rs 500,000
+- **Farmers ko haath nahi lagaya.** `fn_guard_farmer_credit` (341) rok
+  laga deta hai jab tak profile poori (CNIC, pata, zameen/fasal,
+  bank/wallet, CNIC ki dono copies) na ho AUR `is_verified = true` na
+  ho. Check kiya: 91 farmers mein se **koi bhi eligible nahi** — 90 ki
+  profile adhoori, aur khud Aurangzaib ki farmer profile poori hai
+  magar wo verified nahi hai. Us ki farmer wali hadd tab set hogi jab
+  malik/staff us ko CRM/Members se verify kar dein (kaghaz aankh se
+  dekh kar) — us ke baad set karna sirf ek UPDATE hai, code/migration
+  nahi chahiye.
+
+**Build abhi upload nahi hua** — malik "system par aa gaya" kahenge to
+dono command (pull+build, package) is fehrist ke sath bhejni hain,
+aur Aurangzaib ki farmer wali hadd ka reminder bhi.
+
+## 18 September (shaam) — mockup-based polish, 5 safhe (migration nahi)
+
+Malik ne 5 safhon ke mockup screenshot bheje (Staff Sales Desk,
+Machinery Booking, Khata Recovery, My Work, Admin Dashboard) aur "100%
+same to same" ka hukm diya. Har jagah usool wahi raha: **look/layout
+mockup se, adad hamesha asal database se** — kahin bhi fake number ya
+sample task nahi banaya.
+
+**Khata Recovery** (`/admin/finance/recovery`) — pehle se ~95% match
+tha. Do gaps band kiye: date-range filter (From/To, Due Date par), aur
+Payment Reminder Preview mein "Khata Ref" line (party id se banta hai,
+har baar wahi rehta hai). WhatsApp ka 16 September wala disabled-by-
+design lock nahi chheda.
+
+**Machinery Booking detail** — structure (cards, timeline, settlement,
+Payment/Diesel Records) pehle se maujood tha. 4 bade button par ab apna
+icon + rang ka dabba (Add Payment=green Wallet, Add Diesel=blue Fuel,
+Mark Work Complete=amber CheckCircle, Close Booking=green Flag) aur
+chevron laga, breadcrumb "Home > Machinery > Booking" bhi add hua.
+
+**Staff Sales Desk — "Today's Transactions"** — sab se bara gap: pehle
+ye ek chhupi hui vertical-tab drawer thi, sirf Load/Bill dikhati thi.
+Ab hamesha nazar aati hai (page ka fixed-height/no-scroll wrapper hata
+kar), aur Udhaar/Recovery bhi isi table mein shamil hain (filter pills:
+All/Load/Bill/Udhaar/Recovery/Pending). Udhaar/Recovery ki qatarein
+ledger se seedha (branch-scoped, shop_id ledger mein hai hi nahi) —
+Receipt aur "Wapas" button sirf Load/Bill par hi rakhe (Udhaar/Recovery
+ki id load_transactions ki nahi, journal_lines ki hai).
+
+**My Work dashboard** — mockup ke "Order Funnel"/"Customer Health"/
+donut chart ke numbers khud jama kar ke 100% se upar jate the, aur
+"Today's Tasks" mein "call Farmer XYZ" jaisi generic/fake sample cheez
+thi — malik se poocha, jawab mila: sirf look copy karo, adad asal ho.
+Naye cards: "Aaj ka Ledger" (paymentBreakdown se, donut chart sath),
+"Order Funnel" (`agri_orders.status` se), "Customer Health" (Recovery
+ke due/overdue + naye farmers is hafte), "Farmers at a Glance" (jin ki
+profile poori hai magar tasdeeq baqi — Aurangzaib jaisa case — seedha
+"Approve" button ke sath, wahi `VerifyFarmerButton`/`verifyFarmer`
+istemal kiya jo `/admin/farmers` par hai). "Team Tasks" (My/Team split)
+jaan boojh kar nahi banaya — is ka koi asal data source nahi hai.
+
+**Admin Dashboard (Command Center) — ek bonus bug mila.** "Cash
+Position" tile bhi ussi purani `finance_accounts.current_balance` wale
+bug se pareshan tha jo Finance safhon mein isi din fix hua (18
+September). Ab wo bhi `trialBalance` (ledger) se. "Payables" tile
+pehle hamesha `null` tha (`loadMoneyToday()` mein kisi ne kabhi bharaa
+hi nahi tha) — ab liability khaton (2000-2060) ke asal jama se. Naye
+add hue: "Sales Trend" (30 din, POS se, line chart), "Sales by
+Department" (donut, `depts.revenue` se — koi nayi ginti nahi),
+"Financial Position" (Cash/Receivable/Payable bars), "Branch
+Performance" aur "Top Shops (MTD)" (POS se, is mahine vs pichla poora
+mahina growth % ke sath — pichla mahina sifar ho to farq "—", "0%"
+nahi).
+
+**Verify:** `npm run build` har qadam ke baad clean. Khata Recovery aur
+Machinery live login se dekh nahi saka (Owner/Admin ka password reset
+is session mein security-block ho raha tha) — Staff Sales Desk aur My
+Work Playwright se Anwar (Sales Staff) ke login se dekhe, dono sahi
+kaam kar rahe the (Anwar ke paas jin cheezon ki permission nahi hai wo
+card sirey se nahi bante, fake khaali card nahi dikhta).
+
+**Build abhi upload nahi hua** — upar wali fehrist (18 September,
+subah) ke sath yehi bhi ek sath jayega.
+
+## 18 September (raat) — POS checkout tootne wala bug, MIGRATION 432 LIVE PAR LAG CHUKI
+
+Malik ka live report: POS par akeli Waseela Card se checkout karte
+waqt "new row for relation pos_sales violates check constraint
+pos_sales_payment_mode_check" aa raha tha, sale ruk jati thi.
+
+**Asal wajah:** `pos_sales.payment_mode` ka check constraint 42
+migrations se purana reh gaya tha — sirf `cash, khata, split, bank,
+kisan_card` allow karta tha. POS client (`pos-client.tsx`) jab payment
+EK hi line ho (split nahi) to us method ka ASAL naam seedha bhejta hai
+(`bank_transfer`, `card`, `jazzcash`, `easypaisa`, `qr`,
+`waseela_card`) — jo purane constraint mein tha hi nahi.
+`pos_sale_payment_details` ka apna constraint (090, 394) pehle hi theek
+tha; sirf `pos_sales` peechhe reh gayi thi.
+
+**Asar sirf Waseela Card tak mehdood nahi tha** — JazzCash, Easypaisa,
+QR, Bank Transfer se **akeli** (split na ho) koi bhi bikri isi wajah se
+tootti hogi. Sirf Cash, Khata, ya "Add Split Payment" istemal karne
+wali bikri bachi hui thi.
+
+**Migration 432** — constraint ko asal naamon ke sath baRhaya (purane
+`bank`/`kisan_card` hataye nahi, purani qatarein un ke sath pari hain).
+Testing par lagi, verify hui, phir **malik ke Live backup screenshot
+(17 September ka scheduled physical backup) ki tasdeeq ke baad Live par
+bhi lag chuki hai** — dono jagah `pg_get_constraintdef` se confirm
+kiya, asal naam sab shamil hain.
+
+Sirf migration hai, koi naya build/code deploy zaroori nahi is fix ke
+liye — asar foran chalu ho gaya.

@@ -431,7 +431,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       {/* Aaj ke kaam (poori fehrist) + Jaldi wale kaam, aur Haal ka
           len-den -- maujooda systems (Needs Attention, permitted routes,
           asal transactions) se, koi nayi table nahi. */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
           <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
             <Icons.ClipboardList className="h-4 w-4" /> {t("mw_tasks_title", lang)}
