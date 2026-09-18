@@ -56,6 +56,12 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
+/** Party ka apna raasta-nishan -- asal id se, taake har baar wahi bane. */
+function khataRef(p: RecoveryParty): string {
+  const stage = p.type === "farmer" ? "UD" : "KH";
+  return `ART-${stage}-${p.id.replace(/-/g, "").slice(-5).toUpperCase()}`;
+}
+
 function statusBadge(p: RecoveryParty) {
   if (p.status === "overdue") return <Badge tone="red">Overdue</Badge>;
   if (p.status === "due_today") return <Badge tone="amber">Due Today</Badge>;
@@ -113,6 +119,8 @@ export function RecoveryClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RecoveryParty["status"]>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | string>("all");
+  const [dueFrom, setDueFrom] = useState("");
+  const [dueTo, setDueTo] = useState("");
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<"schedule" | "promise" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -127,10 +135,14 @@ export function RecoveryClient({
     return parties.filter((p) => {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (typeFilter !== "all" && p.type !== typeFilter) return false;
+      // Due date na ho to andaza hi nahi -- aisi qatarein range se bahar
+      // nahi ki jatin, warna "shuruat hi nahi hui" wale khate chhup jate.
+      if (dueFrom && p.dueDate && p.dueDate < dueFrom) return false;
+      if (dueTo && p.dueDate && p.dueDate > dueTo) return false;
       if (q && !p.name.toLowerCase().includes(q) && !(p.phone ?? "").includes(q)) return false;
       return true;
     });
-  }, [parties, search, statusFilter, typeFilter]);
+  }, [parties, search, statusFilter, typeFilter, dueFrom, dueTo]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
@@ -327,6 +339,28 @@ export function RecoveryClient({
               <option value="dealer">Dealer</option>
               <option value="supplier">Supplier</option>
             </select>
+            <div className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-2 py-1.5 text-sm dark:border-surface-700">
+              <CalendarClock className="h-4 w-4 text-surface-400" />
+              <input
+                type="date"
+                value={dueFrom}
+                onChange={(e) => {
+                  setDueFrom(e.target.value);
+                  setPage(0);
+                }}
+                className="bg-transparent text-xs text-surface-600 dark:text-surface-300"
+              />
+              <span className="text-surface-400">–</span>
+              <input
+                type="date"
+                value={dueTo}
+                onChange={(e) => {
+                  setDueTo(e.target.value);
+                  setPage(0);
+                }}
+                className="bg-transparent text-xs text-surface-600 dark:text-surface-300"
+              />
+            </div>
           </div>
 
           {/* ---- Bulk action buttons ---- */}
@@ -549,6 +583,10 @@ export function RecoveryClient({
               <div className="flex justify-between">
                 <dt className="text-surface-500">Due Date:</dt>
                 <dd className="font-medium text-surface-800 dark:text-surface-200">{previewParty.dueDate ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-surface-500">Khata Ref:</dt>
+                <dd className="font-medium text-surface-800 dark:text-surface-200">{khataRef(previewParty)}</dd>
               </div>
             </dl>
             <p className="whitespace-pre-wrap border-t border-surface-200 pt-3 text-xs leading-relaxed text-surface-700 dark:border-surface-700 dark:text-surface-300">
