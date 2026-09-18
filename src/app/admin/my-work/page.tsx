@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { shopStockPosition, shopWhereIsMyMoney, shopTodayFlow } from "@/lib/pos/shop-360";
 import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
+import { computeShiftCash } from "@/lib/pos/shift-cash";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
@@ -110,7 +111,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   let myShopId: string | null = me.shop_id ?? null;
   const { data: khulaShift } = await supabase
     .from("pos_shifts")
-    .select("pos_counters(shop_id)")
+    .select("id, opening_cash, pos_counters(shop_id)")
     .eq("staff_id", user.id)
     .eq("status", "open")
     .limit(1)
@@ -118,6 +119,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const shiftShop = khulaShift?.pos_counters as { shop_id?: string } | { shop_id?: string }[] | null;
   const shiftShopId = Array.isArray(shiftShop) ? shiftShop[0]?.shop_id : shiftShop?.shop_id;
   if (shiftShopId) myShopId = shiftShopId;
+  const myOpenShiftId = (khulaShift?.id as string | undefined) ?? null;
+  const myOpenShiftOpeningCash = Number(khulaShift?.opening_cash ?? 0);
 
   // Training Mode (D): apne department ka module -- pehle N kaam.
   const dept = departmentForRole(me.role);
@@ -193,6 +196,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     shopMoney,
     shopFlow,
     { data: udhaarDiyaRows },
+    shiftCash,
   ] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
     // Malik (16 September): "cash sale kitna, card se kitna, QR se
@@ -239,6 +243,11 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           .eq("journal_entries.entry_date", aaj)
           .gt("debit", 0)
       : Promise.resolve({ data: [] as { debit: number }[] }),
+    // Malik (18 September): "yahan par Expected Cash nahi aa raha" --
+    // Shift Band Karein wahi hisaab (opening + cash sale − returns +
+    // load/bill cash + recovery cash − udhaar diya cash) yahan bhi,
+    // isi khuli shift se.
+    myOpenShiftId ? computeShiftCash(myOpenShiftId, myOpenShiftOpeningCash) : Promise.resolve(null),
   ]);
   const udhaarDiyaAajTotal = (udhaarDiyaRows ?? []).reduce((s, r) => s + Number(r.debit), 0);
 
@@ -406,7 +415,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
                 aaj ki recovery, udhaar diya -- ye sab ana chahiye." Sab
                 Shop 360/ledger ke pehle se bane hisaab se -- koi naya
                 hisaab nahi bana. */}
-            {(shopStock || shopMoney || shopFlow || udhaarDiyaAajTotal > 0) && (
+            {(shopStock || shopMoney || shopFlow || udhaarDiyaAajTotal > 0 || shiftCash) && (
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-emerald-100 pt-3 dark:border-emerald-900/40 sm:grid-cols-4">
                 <div>
                   <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
@@ -420,9 +429,18 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
                   </p>
                   <p className="text-[10px] text-surface-500">Pending Payment</p>
                 </div>
+                {/* Malik (18 September): "aaj Rs 300 recovery aayi thi,
+                    wo nazar nahi aa rahi" -- `shopFlow.recovery` sirf
+                    Paisa & Khata module (company_expense_requests) ki
+                    recovery dekhta hai; Customer Udhaar module (journal
+                    se, jo Live Notifications mein "Recovery darj" dikhata
+                    hai) alag table mein hoti hai. Dono jama -- warna
+                    ek qism ki recovery hamesha chupi rehti. */}
                 <div>
                   <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                    {shopFlow ? `Rs ${shopFlow.recovery.total.toLocaleString()}` : "—"}
+                    {shopFlow || shiftCash
+                      ? `Rs ${((shopFlow?.recovery.total ?? 0) + (shiftCash?.recoveryCashTotal ?? 0)).toLocaleString()}`
+                      : "—"}
                   </p>
                   <p className="text-[10px] text-surface-500">Aaj ki Recovery</p>
                 </div>
@@ -432,6 +450,39 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
                   </p>
                   <p className="text-[10px] text-surface-500">Udhaar Diya Aaj</p>
                 </div>
+                {/* Malik (18 September): "yahan par Expected Cash nahi a
+                    raha" -- Shift Band Karein jaisa hi hisaab, khuli
+                    shift ho tabhi (band shift ke liye ye sawal nahi
+                    banta). */}
+                {shiftCash && (
+                  <div>
+                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                      Rs {shiftCash.expectedCash.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-surface-500">Expected Cash (golak)</p>
+                  </div>
+                )}
+                {/* Malik (18 September): "Load ya Bill ke tags nazar
+                    nahi aa rahe" -- ye ab payment donut ke Cash/Bank
+                    buckets mein chup jate hain (asal cash-in-hand ke
+                    liye zaroori tha), is liye yahan alag se dikha dete
+                    hain -- sirf isi khuli shift ki Bill/Load, jab hui ho. */}
+                {shiftCash && shiftCash.billTotal > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                      Rs {shiftCash.billTotal.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-surface-500">Bill Payment</p>
+                  </div>
+                )}
+                {shiftCash && shiftCash.loadTotal > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                      Rs {shiftCash.loadTotal.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-surface-500">Mobile Load</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
