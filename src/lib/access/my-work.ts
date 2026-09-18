@@ -472,3 +472,135 @@ export async function loadRecentActivity(branchId: string | null, allowedRoutes:
 
   return items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 6);
 }
+
+export interface OrderFunnel {
+  naye: number;
+  processing: number;
+  masla: number;
+}
+
+/**
+ * "Order Funnel" -- agri_orders ke asal status se, teen dabbon mein.
+ *
+ * Sirf un ke liye jin ke paas AgriBridge Ordering khulta hai -- baqi ke
+ * liye ye sawal hi nahi hai.
+ */
+export async function loadOrderFunnel(branchId: string | null, allowedRoutes: string[] | null): Promise<OrderFunnel | null> {
+  const can = allowedRoutes === null || routeAllowed(allowedRoutes, "/admin/agri-orders");
+  if (!can) return null;
+  try {
+    const service = createServiceClient();
+    let q = service.from("agri_orders").select("status");
+    if (branchId) q = q.eq("branch_id", branchId);
+    const { data, error } = await q;
+    if (error || !data) return null;
+    let naye = 0;
+    let processing = 0;
+    let masla = 0;
+    for (const row of data as { status: string }[]) {
+      if (row.status === "draft" || row.status === "submitted") naye++;
+      else if (row.status === "rejected" || row.status === "cancelled") masla++;
+      else if (row.status !== "completed") processing++;
+    }
+    return { naye, processing, masla };
+  } catch {
+    return null;
+  }
+}
+
+export interface CustomerHealth {
+  dueParties: number;
+  newFarmersWeek: number;
+}
+
+/**
+ * "Customer Health" -- Recovery ke asal outstanding se (Due Today +
+ * Overdue ki ginti, raqam nahi), aur is hafte ke naye farmers.
+ */
+export async function loadCustomerHealth(branchId: string | null, allowedRoutes: string[] | null): Promise<CustomerHealth | null> {
+  const canRecovery = allowedRoutes === null || routeAllowed(allowedRoutes, "/admin/finance/recovery");
+  const canFarmers = allowedRoutes === null || routeAllowed(allowedRoutes, "/admin/farmers");
+  if (!canRecovery && !canFarmers) return null;
+  try {
+    const service = createServiceClient();
+    const today = aajKaKhana();
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
+    let dueParties = 0;
+    if (canRecovery) {
+      const { data } = await service.rpc("fn_recovery_outstanding", { p_search: undefined });
+      dueParties = ((data ?? []) as { outstanding: number }[]).filter((p) => Number(p.outstanding) > 0).length;
+    }
+
+    let newFarmersWeek = 0;
+    if (canFarmers) {
+      let q = service
+        .from("farmers")
+        .select("id", { count: "exact", head: true })
+        .eq("is_deleted", false)
+        .gte("created_at", `${weekAgo}T00:00:00`);
+      if (branchId) q = q.eq("branch_id", branchId);
+      const { count } = await q;
+      newFarmersWeek = count ?? 0;
+    }
+
+    return { dueParties, newFarmersWeek };
+  } catch {
+    return null;
+  }
+}
+
+export interface FarmerToVerify {
+  id: string;
+  name: string;
+  code: string | null;
+}
+
+/**
+ * "Farmers at a Glance" -- jin ki profile poori hai magar tasdeeq baqi
+ * hai, isi liye un ki udhaar hadd abhi nahi barh sakti (341). Yehi
+ * fehrist hai jis ne 18 September ko Aurangzaib ka masla pakra tha.
+ *
+ * Wohi hisaab jo `fn_farmer_profile_complete` (341) database mein
+ * karta hai -- yahan dobara likha gaya taake ek-ek farmer ke liye RPC
+ * na bulani pare, magar sharten bilkul wahi hain.
+ */
+export async function loadFarmersToVerify(branchId: string | null, allowedRoutes: string[] | null): Promise<FarmerToVerify[]> {
+  const can = allowedRoutes === null || routeAllowed(allowedRoutes, "/admin/farmers");
+  if (!can) return [];
+  try {
+    const service = createServiceClient();
+    let q = service
+      .from("farmers")
+      .select(
+        "id, full_name, farmer_code, father_name, cnic, phone_number, village, tehsil, district, address, land_size_acres, crop_types, bank_account_number, mobile_wallet_number, cnic_image_url, cnic_back_image_url"
+      )
+      .eq("is_deleted", false)
+      .eq("is_verified", false)
+      .limit(50);
+    if (branchId) q = q.eq("branch_id", branchId);
+    const { data } = await q;
+    const complete = (f: any) =>
+      Boolean(
+        f.full_name?.trim() &&
+          f.father_name?.trim() &&
+          f.cnic?.trim() &&
+          f.phone_number?.trim() &&
+          f.village?.trim() &&
+          f.tehsil?.trim() &&
+          f.district?.trim() &&
+          f.address?.trim() &&
+          f.land_size_acres != null &&
+          (f.crop_types?.length ?? 0) > 0 &&
+          (f.bank_account_number?.trim() || f.mobile_wallet_number?.trim()) &&
+          f.cnic_image_url?.trim() &&
+          f.cnic_back_image_url?.trim()
+      );
+    return (data ?? [])
+      .filter(complete)
+      .slice(0, 5)
+      .map((f: any) => ({ id: f.id as string, name: (f.full_name as string | null) ?? "—", code: (f.farmer_code as string | null) ?? null }));
+  } catch {
+    return [];
+  }
+}

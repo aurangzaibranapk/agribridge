@@ -6,8 +6,20 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadPaymentBreakdown, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
+import {
+  buildMyWork,
+  defaultDashboardForRole,
+  loadFourthKpi,
+  loadPaymentBreakdown,
+  loadRecentActivity,
+  loadOrderFunnel,
+  loadCustomerHealth,
+  loadFarmersToVerify,
+  QUICK_BY_ROLE,
+} from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
+import { PaymentDonut } from "@/components/guided/payment-donut";
+import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { LiveNotificationsPanel } from "@/components/guided/live-notifications-panel";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -150,30 +162,28 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
   // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
   // dobara dikhaya ja raha hai.
-  const [fourthKpi, recentActivity, paymentBreakdown, { data: initialNotifications }] = await Promise.all([
-    loadFourthKpi(me.branch_id, allowed, lang),
-    loadRecentActivity(me.branch_id, allowed),
-    // Malik (16 September): "cash sale kitna, card se kitna, QR se
-    // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
-    // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
-    // liye ye sawal hi nahi banta.
-    canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
-    // Live Notifications panel ka shuruati data -- baad mein ye khud
-    // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
-    // nahi parhta.
-    supabase
-      .from("notifications")
-      .select("id, title, message, link_url, is_read, created_at")
-      .eq("recipient_user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(8),
-  ]);
-  const kpis: { key: string; label: string; value: number | null }[] = [
-    { key: "approvals", label: t("mw_kpi_pending_approvals", lang), value: attentionItems.filter((i) => i.tone === "amber").length },
-    { key: "open", label: t("mw_kpi_open_tasks", lang), value: attentionItems.length },
-    { key: "urgent", label: t("mw_kpi_urgent_today", lang), value: attentionItems.filter((i) => i.tone === "red").length },
-    ...(fourthKpi ? [fourthKpi] : []),
-  ];
+  const [fourthKpi, recentActivity, paymentBreakdown, { data: initialNotifications }, orderFunnel, customerHealth, farmersToVerify] =
+    await Promise.all([
+      loadFourthKpi(me.branch_id, allowed, lang),
+      loadRecentActivity(me.branch_id, allowed),
+      // Malik (16 September): "cash sale kitna, card se kitna, QR se
+      // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
+      // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
+      // liye ye sawal hi nahi banta.
+      canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
+      // Live Notifications panel ka shuruati data -- baad mein ye khud
+      // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
+      // nahi parhta.
+      supabase
+        .from("notifications")
+        .select("id, title, message, link_url, is_read, created_at")
+        .eq("recipient_user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(8),
+      loadOrderFunnel(me.branch_id, allowed),
+      loadCustomerHealth(me.branch_id, allowed),
+      loadFarmersToVerify(me.branch_id, allowed),
+    ]);
 
   // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
   // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
@@ -287,53 +297,106 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       )}
 
-      {/* KPI patti -- teen fixed + ek role-specific. Ginti na mile to
-          "—", jhooti sifar nahi (project ka locked usool). */}
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {kpis.map((k) => (
-          <div key={k.key} className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
-            <p className="text-2xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">{k.value ?? "—"}</p>
-            <p className="mt-0.5 text-[12px] text-surface-500">{k.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* "Aaj kis tareeqe se kitna aaya" -- malik (16 September, Anwar
-          ka dashboard): "cash sale kitna, card se kitna, QR se kitna,
-          bank se kitna, easypaisa se kitna, load se kitna, total
-          balance bhi." Sirf jin ke paas aaj koi len-den hua ho -- na
-          ho to card hi nahi banta. */}
-      {paymentBreakdown && (
-        <div className="mb-4 rounded-card border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
-            Aaj kis tareeqe se kitna aaya
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {paymentBreakdown.methods.map((m) => (
-              <div key={m.key}>
-                <p className="text-lg font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                  Rs {m.amount.toLocaleString()}
-                </p>
-                <p className="text-[12px] text-surface-500">{m.label}</p>
-              </div>
-            ))}
-            {paymentBreakdown.loadAmount > 0 && (
+      {/* Chaar bade dabbe -- 18 September, mockup ka andaz liya gaya hai
+          (rangeen border, icon, bada adad), magar har adad wahi asal
+          hisaab hai jo pehle bhi is safhe par tha (KPI patti + Payment
+          Breakdown) -- koi nayi/jhooti ginti nahi bani, sirf dikhane ka
+          tareeqa upgrade hua. Jis card ka sawal is bande par laagu nahi
+          hota (jaise Order Funnel jis ke paas Ordering nahi khulta), wo
+          card sirey se nahi banta -- khali dabba nahi dikhaya jata. */}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {paymentBreakdown && (
+          <div className="rounded-card border-2 border-emerald-200 bg-white p-4 dark:border-emerald-900/40 dark:bg-surface-900 lg:col-span-2">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                <Icons.Wallet className="h-3.5 w-3.5" /> Aaj ka Ledger
+              </p>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                Live Ledger
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-lg font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                  Rs {paymentBreakdown.loadAmount.toLocaleString()}
+                <p className="font-display text-2xl font-bold tabular-nums text-surface-900 dark:text-white">
+                  Rs {paymentBreakdown.total.toLocaleString()}
                 </p>
-                <p className="text-[12px] text-surface-500">Mobile Load</p>
+                <p className="text-[11px] text-surface-500">Aaj kis tareeqe se kitna aaya</p>
               </div>
-            )}
+              <PaymentDonut
+                slices={[
+                  ...paymentBreakdown.methods,
+                  ...(paymentBreakdown.loadAmount > 0 ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }] : []),
+                ]}
+              />
+            </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-surface-100 pt-2 dark:border-surface-800">
-            <span className="text-sm font-semibold text-surface-900 dark:text-white">Total Balance</span>
-            <span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">
-              Rs {paymentBreakdown.total.toLocaleString()}
-            </span>
+        )}
+        {orderFunnel && (
+          <div className="rounded-card border-2 border-sky-200 bg-white p-4 dark:border-sky-900/40 dark:bg-surface-900">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+              <Icons.PackageSearch className="h-3.5 w-3.5" /> Order Funnel
+            </p>
+            <div className="mt-2 space-y-1">
+              <p className="flex items-baseline justify-between">
+                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{orderFunnel.naye}</span>
+                <span className="text-[11px] text-surface-500">Naye</span>
+              </p>
+              <p className="flex items-baseline justify-between">
+                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{orderFunnel.processing}</span>
+                <span className="text-[11px] text-surface-500">Processing</span>
+              </p>
+              <p className="flex items-baseline justify-between">
+                <span className={`font-display text-xl font-bold tabular-nums ${orderFunnel.masla > 0 ? "text-red-600" : "text-surface-900 dark:text-white"}`}>
+                  {orderFunnel.masla}
+                </span>
+                <span className="text-[11px] text-surface-500">Masla</span>
+              </p>
+            </div>
+          </div>
+        )}
+        {customerHealth && (
+          <div className="rounded-card border-2 border-violet-200 bg-white p-4 dark:border-violet-900/40 dark:bg-surface-900">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-400">
+              <Icons.Users className="h-3.5 w-3.5" /> Customer Health
+            </p>
+            <div className="mt-2 space-y-1">
+              <p className="flex items-baseline justify-between">
+                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{customerHealth.dueParties}</span>
+                <span className="text-[11px] text-surface-500">Due/Overdue Khate</span>
+              </p>
+              <p className="flex items-baseline justify-between">
+                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{customerHealth.newFarmersWeek}</span>
+                <span className="text-[11px] text-surface-500">Naye farmers (7 din)</span>
+              </p>
+              {fourthKpi && (
+                <p className="flex items-baseline justify-between border-t border-surface-100 pt-1 dark:border-surface-800">
+                  <span className="text-sm font-semibold tabular-nums text-surface-700 dark:text-surface-200">{fourthKpi.value ?? "—"}</span>
+                  <span className="text-[11px] text-surface-500">{fourthKpi.label}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="rounded-card border-2 border-surface-300 bg-white p-4 dark:border-surface-600 dark:bg-surface-900">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-600 dark:text-surface-300">
+            <Icons.AlertTriangle className="h-3.5 w-3.5" /> Urgent Approvals
+          </p>
+          <div className="mt-2 space-y-1">
+            <p className="flex items-baseline justify-between">
+              <span className="font-display text-xl font-bold tabular-nums text-amber-600">
+                {attentionItems.filter((i) => i.tone === "amber").length}
+              </span>
+              <span className="text-[11px] text-surface-500">Pending</span>
+            </p>
+            <p className="flex items-baseline justify-between">
+              <span className="font-display text-xl font-bold tabular-nums text-red-600">
+                {attentionItems.filter((i) => i.tone === "red").length}
+              </span>
+              <span className="text-[11px] text-surface-500">Urgent</span>
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
       {model.totalCards === 0 ? (
         // Ye soorat chhupai nahi jati. Khali safha dekh kar banda samajhta
@@ -392,6 +455,30 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               created_at: String(n.created_at),
             }))}
           />
+
+          {/* Farmers at a Glance -- jin ki profile poori hai magar
+              tasdeeq baqi hai, is liye un ki udhaar hadd abhi nahi
+              barh sakti (341). Yehi fehrist ne 18 September ko
+              Aurangzaib ka masla pakra tha -- ab har roz yahan nazar
+              aayegi, kisi ko alag se khoj nahi karni paRegi. */}
+          {farmersToVerify.length > 0 && (
+            <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+              <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+                <Icons.Sprout className="h-4 w-4" /> Farmers at a Glance
+              </h2>
+              <div className="divide-y divide-surface-100 dark:divide-surface-800">
+                {farmersToVerify.map((f) => (
+                  <div key={f.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[13.5px] font-medium text-surface-800 dark:text-surface-100">{f.name}</p>
+                      <p className="text-[12px] text-surface-500">{f.code ?? "profile poori, tasdeeq baqi"}</p>
+                    </div>
+                    <VerifyFarmerButton id={f.id} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
