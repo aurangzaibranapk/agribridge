@@ -3681,3 +3681,26 @@ band (archive) kar diye gaye.
 - Udhaar (dena) ab sirf cash se, Cash in Hand shop-scoped
 - CRM: "Purana Baqaya (Digikhata)" Edit/Add Customer form ke andar,
   naam/mobile/CNIC se search
+
+## 18 September (shaam) — My Work Stock/Payment/Recovery row, receipt shop name
+
+Commit `4d42c9f`, push ho chuki, **Live par abhi build/deploy nahi hua**
+(malik ne isi commit se PEHLE ek purana build Live par dala tha —
+20-30 minute pehle — us mein ye kaam shamil nahi).
+
+**Code (branch par, Testing DB se verified):**
+- My Work "Aaj ka Ledger": Stock Value (FIFO), Pending Payment (branch
+  receivable), Aaj ki Recovery, Udhaar Diya Aaj — Shop 360 library se
+  (`shopStockPosition`/`shopWhereIsMyMoney`/`shopTodayFlow`), NULL
+  jahan pata nahi, kabhi jhooti 0 nahi.
+- Payment breakdown donut ki list ab % ki jagah exact Rs amount
+  dikhati hai (tooltip pehle se Rs mein tha).
+
+**Migration 433** (`get_sale_receipt` mein `shop_name` add, receipt
+header par shop ka naam bold/bara, branch ka naam neeche chhota) —
+**sirf Testing (`hwaiuwxqldxsoukkfefn`) par lagi hai, Live par abhi
+nahi** — backup tasdeeq se pehle Live par nahi jayegi (P0 rule).
+
+**Live par baqi kaam:**
+1. Migration 433 — backup verify → chalao → verify.
+2. Naya build (commit `4d42c9f` ya us se aage) upload.
