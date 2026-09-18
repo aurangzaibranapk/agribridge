@@ -3719,4 +3719,15 @@ Live par bhi lag chuki — verify: usi "dingdong" sale par ab
 
 **Live par baqi kaam:**
 1. ~~Migration 433~~ — DONE (upar dekhein).
-2. Naya build (commit `4d42c9f` ya us se aage) upload — abhi baqi hai.
+2. ~~Naya build upload~~ — DONE, malik ne khud confirm kiya (18 September,
+   raat). Commit `2ba26ea` tak (My Work Stock/Payment/Recovery,
+   receipt shop-name/header, Shift Close Khata double-count + Bill/
+   Load/Udhaar/Recovery reconciliation, Abram rename + check_system_errors
+   tool) Live par upload ho chuki.
+
+Is dauran Shift Band Karein modal ka Expected Cash malik ke sath
+asal shift (SHIFT-26-00002, shop: Kisaan Karyana Mahabali) ke live
+numbers se cross-check kiya — Rs 2,470 sahi nikla (Total Sale 8,935,
+Cash 3,890, Digital 445, Khata 4,600, Recovery +300, Udhaar Diya
+-2,300, Opening 630 — sab pos_sales/pos_sale_payment_details/
+journal_lines se seedha match), malik ne tasdeeq kar di.
