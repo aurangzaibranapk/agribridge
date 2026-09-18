@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/layout-primitives";
-import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals } from "@/lib/command-center";
+import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals, loadSalesTrend, loadBranchPerformance, loadTopShops } from "@/lib/command-center";
+import { SalesTrendChart, DeptSalesDonut } from "@/components/dashboard/command-center-charts";
 import {
   AlertTriangle,
   ArrowRight,
@@ -78,7 +79,7 @@ export default async function CommandCenterPage() {
     return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
 
-  const [money, depts, alerts, entityCounts] = await Promise.all([
+  const [money, depts, alerts, entityCounts, salesTrend, branchPerformance, topShops] = await Promise.all([
     loadMoneyToday(),
     loadDeptKpis(lang),
     loadAlerts(),
@@ -88,6 +89,9 @@ export default async function CommandCenterPage() {
         return error ? null : count;
       })
     ),
+    loadSalesTrend(),
+    loadBranchPerformance(),
+    loadTopShops(),
   ]);
   const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
@@ -98,6 +102,7 @@ export default async function CommandCenterPage() {
     { label: "Net Position", value: rs(money.net), href: "/admin/reports/pnl", icon: TrendingUp, danger: money.net < 0, iconClass: "bg-emerald-50 text-emerald-700" },
     { label: "Cash Position", value: rs(money.cash), href: "/admin/finance", icon: Wallet, iconClass: "bg-blue-50 text-blue-600" },
     { label: "Receivables", value: rs(money.receivable), href: "/admin/branch-credit", icon: CreditCard, iconClass: "bg-amber-50 text-amber-700" },
+    { label: "Payables", value: rs(money.payable), href: "/admin/finance/accounts", icon: Landmark, iconClass: "bg-rose-50 text-rose-600" },
   ];
 
   const entityLinks = [
@@ -132,7 +137,7 @@ export default async function CommandCenterPage() {
       </div>
 
       {/* Primary business position */}
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
         {topTiles.map((tile) => {
           const Icon = tile.icon;
           return (
@@ -188,6 +193,43 @@ export default async function CommandCenterPage() {
                   </Link>
                 );
               })}
+            </div>
+          </Card>
+
+          {/* Sales Trend (real, POS se) */}
+          <Card className="p-3.5">
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Sales Trend (Last 30 Days)</h2>
+            <p className="mb-1 text-xs text-surface-500">POS bikri, roz ke hisaab se</p>
+            <SalesTrendChart points={salesTrend} />
+          </Card>
+
+          {/* Sales by Department -- depts.revenue se, koi nayi ginti nahi */}
+          <Card className="p-3.5">
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Sales by Department (MTD)</h2>
+            <p className="mb-1 text-xs text-surface-500">Har department ka apna hisaab (upar wale se)</p>
+            <DeptSalesDonut slices={depts.map((d) => ({ key: d.key, label: d.label, amount: d.revenue ?? 0 }))} />
+          </Card>
+
+          {/* Financial Position -- Cash/Receivable/Payable, sab ledger se */}
+          <Card className="p-3.5 xl:col-span-2">
+            <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Financial Position</h2>
+            <p className="mb-3 text-xs text-surface-500">Ledger se seedha -- koi cached number nahi</p>
+            <div className="space-y-2.5">
+              {[
+                { label: "Cash & Bank", value: money.cash, max: Math.max(money.cash, money.receivable ?? 0, money.payable ?? 0, 1), tone: "bg-emerald-500" },
+                { label: "Receivables", value: money.receivable, max: Math.max(money.cash, money.receivable ?? 0, money.payable ?? 0, 1), tone: "bg-sky-500" },
+                { label: "Payables", value: money.payable, max: Math.max(money.cash, money.receivable ?? 0, money.payable ?? 0, 1), tone: "bg-rose-500" },
+              ].map((row) => (
+                <div key={row.label}>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="text-surface-500">{row.label}</span>
+                    <span className="font-semibold tabular-nums text-surface-800 dark:text-surface-100">{rs(row.value)}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
+                    {row.value != null && <div className={`h-full rounded-full ${row.tone}`} style={{ width: `${Math.max(2, (row.value / row.max) * 100)}%` }} />}
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
 
@@ -264,6 +306,51 @@ export default async function CommandCenterPage() {
 
         {/* Right management rail */}
         <aside className="space-y-3 2xl:min-h-0">
+          {/* Branch Performance / Top Shops -- POS ki asal MTD bikri,
+              pichle poore mahine ke muqable farq ke sath. Jis branch/shop
+              ka pichla mahina sifar tha, us ka farq "—" hai, "0%" nahi --
+              nisbat tab bemaani hoti hai. */}
+          {branchPerformance.length > 0 && (
+            <Card className="p-3.5">
+              <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-sm font-semibold">Branch Performance</h2><Link href="/admin/branches" className="text-[11px] text-brand-700 hover:underline">View all →</Link></div>
+              <table className="w-full text-xs">
+                <thead className="text-surface-400"><tr><th className="pb-1.5 text-left font-medium">Branch</th><th className="pb-1.5 text-right font-medium">Sales (MTD)</th><th className="pb-1.5 text-right font-medium">Growth</th></tr></thead>
+                <tbody>
+                  {branchPerformance.map((r) => (
+                    <tr key={r.id} className="border-t border-surface-100 dark:border-surface-800">
+                      <td className="py-1.5 font-medium text-surface-800 dark:text-surface-200">{r.name}</td>
+                      <td className="py-1.5 text-right tabular-nums">{rs(r.salesMtd)}</td>
+                      <td className={`py-1.5 text-right tabular-nums ${r.growthPct == null ? "text-surface-400" : r.growthPct >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {r.growthPct == null ? "—" : `${r.growthPct >= 0 ? "↑" : "↓"} ${Math.abs(r.growthPct)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {topShops.length > 0 && (
+            <Card className="p-3.5">
+              <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-sm font-semibold">Top Shops (MTD)</h2><Link href="/admin/shops" className="text-[11px] text-brand-700 hover:underline">View all →</Link></div>
+              <table className="w-full text-xs">
+                <thead className="text-surface-400"><tr><th className="pb-1.5 text-left font-medium">#</th><th className="pb-1.5 text-left font-medium">Shop</th><th className="pb-1.5 text-right font-medium">Sales</th><th className="pb-1.5 text-right font-medium">Growth</th></tr></thead>
+                <tbody>
+                  {topShops.map((r, i) => (
+                    <tr key={r.id} className="border-t border-surface-100 dark:border-surface-800">
+                      <td className="py-1.5 text-surface-400">{i + 1}</td>
+                      <td className="py-1.5 font-medium text-surface-800 dark:text-surface-200">{r.name}</td>
+                      <td className="py-1.5 text-right tabular-nums">{rs(r.salesMtd)}</td>
+                      <td className={`py-1.5 text-right tabular-nums ${r.growthPct == null ? "text-surface-400" : r.growthPct >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {r.growthPct == null ? "—" : `${r.growthPct >= 0 ? "↑" : "↓"} ${Math.abs(r.growthPct)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
           <Card className="border-t-2 border-t-amber-400 p-3.5">
             <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-sm font-semibold">Attention Queue</h2><Link href="/admin/submissions" className="text-[11px] text-brand-700 hover:underline">View all</Link></div>
             <div className="space-y-1.5">

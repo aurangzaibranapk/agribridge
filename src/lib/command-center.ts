@@ -5,6 +5,7 @@ import { t } from "@/lib/i18n/translations";
 import type { Lang } from "@/lib/i18n/translations";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
 import { quantityReport } from "@/lib/ledger/quantity-money";
+import { trialBalance } from "@/lib/ledger/statements";
 
 /**
  * Owner Command Center ke aankre.
@@ -134,15 +135,8 @@ export async function loadMoneyToday(): Promise<MoneyToday> {
   const service = createServiceClient();
   const t = today();
 
-  const [
-    { data: sales },
-    { data: posRet },
-    { data: posRetItems },
-    { data: grainSales },
-    { data: expenses },
-    { data: accounts },
-    { data: credit },
-  ] = await Promise.all([
+  const [{ data: sales }, { data: posRet }, { data: posRetItems }, { data: grainSales }, { data: expenses }, ledgerTb, { data: credit }] =
+    await Promise.all([
       service.from("pos_sales").select("total_amount, profit").gte("created_at", t),
       // Aaj ki wapsiyaan. Bikri se ghatani parti hain -- warna wapas hui
       // cheez bhi aamdani mein ginti rehti hai.
@@ -156,9 +150,17 @@ export async function loadMoneyToday(): Promise<MoneyToday> {
         .gte("pos_returns.created_at", t),
       service.from("grain_sales").select("total_amount, profit").eq("sale_date", t),
       service.from("company_expense_requests").select("amount").eq("status", "approved").gte("created_at", t),
-      service.from("finance_accounts").select("current_balance").eq("is_active", true),
+      // `finance_accounts.current_balance` istemal nahi karte -- wo
+      // sirf purani cash book se hilta hai, aur Load/Bill, machinery,
+      // POS jaisi adhiktar raqamein seedha ledger mein jati hain, is
+      // column ko chhoti hi nahi (18 September, Finance safhe ka fix).
+      // Payable bhi isi se -- pehle hamesha `null` tha, kisi ne kabhi
+      // bharaa hi nahi tha.
+      trialBalance("1900-01-01", t),
       service.from("branch_credit_transactions").select("transaction_type, amount"),
     ]);
+  const cash = ledgerTb.rows.filter((r) => r.account_type === "asset" && r.code.startsWith("10")).reduce((s, r) => s + r.balance, 0);
+  const payable = ledgerTb.error ? null : ledgerTb.rows.filter((r) => r.account_type === "liability").reduce((s, r) => s + r.balance, 0);
 
   // Wapsi bikri se GHATTI hai.
   //
@@ -196,9 +198,9 @@ export async function loadMoneyToday(): Promise<MoneyToday> {
     revenue,
     expenses: spent,
     net: grossProfit - spent,
-    cash: sumOf(accounts, "current_balance"),
+    cash,
     receivable,
-    payable: null,
+    payable,
   };
 }
 
@@ -546,6 +548,103 @@ export function deptTotals(depts: DeptKpi[]): DeptTotals {
     attention: depts.reduce((total, d) => total + d.pending, 0),
   };
 }
+
+export interface SalesTrendPoint {
+  date: string;
+  amount: number;
+}
+
+/**
+ * "Sales Trend" -- pichle 30 din ki POS bikri, din ke hisaab se.
+ *
+ * Sirf POS (`pos_sales`) -- grain/milk/machinery ki apni alag raftar
+ * aur paimana hai, ek hi lakeer mein mila dena har department ka trend
+ * chhupa deta hai.
+ */
+export async function loadSalesTrend(): Promise<SalesTrendPoint[]> {
+  const service = createServiceClient();
+  const from = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+  const { data } = await service
+    .from("pos_sales")
+    .select("total_amount, created_at")
+    .gte("created_at", `${from}T00:00:00`);
+
+  const byDay = new Map<string, number>();
+  for (const row of (data ?? []) as { total_amount: number; created_at: string }[]) {
+    const day = row.created_at.slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + n(row.total_amount));
+  }
+
+  const points: SalesTrendPoint[] = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10);
+    points.push({ date: d, amount: byDay.get(d) ?? 0 });
+  }
+  return points;
+}
+
+export interface RankedRow {
+  id: string;
+  name: string;
+  salesMtd: number;
+  /** Pichle poore mahine ke muqable farq -- pichla mahina sifar ho to null (nisbat bemaani hai). */
+  growthPct: number | null;
+}
+
+/**
+ * Branch/Shop ki is mahine ki POS bikri, aur pichle poore mahine ke
+ * muqable farq. Sirf POS -- yehi wo qatar hai jis par branch_id/shop_id
+ * dono seedhe maujood hain, doosre modules (grain/milk/machinery) ka
+ * apna hisaab alag hai (upar Department Overview mein hai).
+ */
+async function loadRanked(groupCol: "branch_id" | "shop_id", namesTable: "branches" | "shops"): Promise<RankedRow[]> {
+  const service = createServiceClient();
+  const now = new Date();
+  const mtdStart = monthStart();
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+  const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+
+  const [{ data: names }, { data: mtdRows }, { data: prevRows }] = await Promise.all([
+    service.from(namesTable).select("id, name"),
+    service.from("pos_sales").select(`${groupCol}, total_amount`).gte("created_at", `${mtdStart}T00:00:00`),
+    service
+      .from("pos_sales")
+      .select(`${groupCol}, total_amount`)
+      .gte("created_at", `${prevMonthStart}T00:00:00`)
+      .lte("created_at", `${prevMonthEnd}T23:59:59`),
+  ]);
+
+  const mtdByGroup = new Map<string, number>();
+  for (const r of (mtdRows ?? []) as Record<string, unknown>[]) {
+    const key = r[groupCol] as string | null;
+    if (!key) continue;
+    mtdByGroup.set(key, (mtdByGroup.get(key) ?? 0) + n(r.total_amount));
+  }
+  const prevByGroup = new Map<string, number>();
+  for (const r of (prevRows ?? []) as Record<string, unknown>[]) {
+    const key = r[groupCol] as string | null;
+    if (!key) continue;
+    prevByGroup.set(key, (prevByGroup.get(key) ?? 0) + n(r.total_amount));
+  }
+
+  return (names ?? [])
+    .map((row) => {
+      const salesMtd = mtdByGroup.get(row.id as string) ?? 0;
+      const prev = prevByGroup.get(row.id as string) ?? 0;
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        salesMtd,
+        growthPct: prev > 0 ? Math.round(((salesMtd - prev) / prev) * 1000) / 10 : null,
+      };
+    })
+    .filter((r) => r.salesMtd > 0)
+    .sort((a, b) => b.salesMtd - a.salesMtd)
+    .slice(0, 5);
+}
+
+export const loadBranchPerformance = () => loadRanked("branch_id", "branches");
+export const loadTopShops = () => loadRanked("shop_id", "shops");
 
 export async function loadAlerts(): Promise<Alert[]> {
   const service = createServiceClient();
