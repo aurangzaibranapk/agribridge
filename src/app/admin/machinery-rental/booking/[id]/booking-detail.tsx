@@ -34,7 +34,7 @@ import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { CropLiftStep, type CropLiftInfo } from "./crop-lift-step";
 import { CancelFuelButton } from "./cancel-fuel-button";
-import { Check, Circle, Plus, X, Undo2, CheckCircle2 } from "lucide-react";
+import { Check, Circle, Plus, X, Undo2, CheckCircle2, Wallet, Fuel, Flag, ChevronRight } from "lucide-react";
 
 import { PaymentForm, Err, Submit, initialState } from "@/components/machinery/payment-form";
 
@@ -338,6 +338,16 @@ export function BookingDetail({
 
   return (
     <div className="space-y-4 pb-24">
+      <p className="text-xs text-surface-500">
+        <Link href="/admin/dashboard" className="hover:underline">
+          Home
+        </Link>{" "}
+        &gt;{" "}
+        <Link href="/admin/machinery-rental" className="hover:underline">
+          Machinery
+        </Link>{" "}
+        &gt; Booking
+      </p>
       {/* ---------------------------------------------------------------
           1. Sarnama -- booking ka number, us ka darja, aur kone mein
           cancel ka raasta. Cancel bara button nahi hai (malik: "khatam
@@ -440,23 +450,31 @@ export function BookingDetail({
               ----------------------------------------------------------- */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <BigButton
+              icon={Wallet}
+              tone="green"
               label="Add Payment"
               hint={bill ? `Baqi Rs ${(balance ?? 0).toLocaleString()}` : advanceTotal > 0 ? "Advance mil chuka" : "Advance ya adaigi"}
               onClick={() => setModal("payment")}
             />
             <BigButton
+              icon={Fuel}
+              tone="blue"
               label="Add Diesel"
               hint={confirmed ? "Litre aur us din ka rate" : "Pehle kisan ki tasdeeq"}
               disabled={!confirmed}
               onClick={() => setModal("diesel")}
             />
             <BigButton
+              icon={CheckCircle2}
+              tone="amber"
               label="Mark Work Complete"
               hint={!confirmed ? "Pehle kisan ki tasdeeq" : workFinished ? "Kaam mukammal ho chuka" : `${workRemaining} acre baqi`}
               disabled={!confirmed || workFinished}
               onClick={() => setModal("work")}
             />
             <BigButton
+              icon={Flag}
+              tone="green"
               label="Close Booking"
               hint={booking.status === "closed" ? "Band ho chuki" : bill ? ((balance ?? 0) > 0 ? `Rs ${(balance ?? 0).toLocaleString()} baqi` : "Hisaab barabar") : "Pehle bill"}
               disabled={booking.status === "closed"}
@@ -1206,12 +1224,22 @@ function Timeline({ reached, cancelled }: { reached: boolean[]; cancelled: boole
  * staff ko ye sochne par majboor karta hai ke raasta hai hi nahi, aur
  * phir wo kisi aur safhe par dhoondhne nikal jata hai.
  */
+const BIG_BUTTON_TONES = {
+  green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  blue: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+} as const;
+
 function BigButton({
+  icon: Icon,
+  tone,
   label,
   hint,
   onClick,
   disabled,
 }: {
+  icon: typeof Wallet;
+  tone: keyof typeof BIG_BUTTON_TONES;
   label: string;
   hint?: string;
   onClick: () => void;
@@ -1223,14 +1251,25 @@ function BigButton({
       onClick={onClick}
       disabled={disabled}
       className={
-        "flex min-h-[76px] flex-col items-start justify-center gap-1 rounded-card border-2 px-4 py-3 text-left transition " +
+        "flex min-h-[76px] items-center gap-3 rounded-card border-2 px-4 py-3 text-left transition " +
         (disabled
           ? "cursor-not-allowed border-surface-200 bg-surface-50 text-surface-400 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-500"
           : "border-brand-500 bg-brand-50 text-brand-800 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-200 dark:hover:bg-brand-900/40")
       }
     >
-      <span className="font-display text-sm font-semibold leading-tight">{label}</span>
-      {hint && <span className="text-xs font-normal opacity-80">{hint}</span>}
+      <span
+        className={
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg " +
+          (disabled ? "bg-surface-200 text-surface-400 dark:bg-surface-700 dark:text-surface-500" : BIG_BUTTON_TONES[tone])
+        }
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="flex-1">
+        <span className="block font-display text-sm font-semibold leading-tight">{label}</span>
+        {hint && <span className="block text-xs font-normal opacity-80">{hint}</span>}
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
     </button>
   );
 }
