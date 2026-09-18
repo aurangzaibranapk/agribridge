@@ -4,6 +4,8 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { DueSoon } from "@/components/purchases/due-soon";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { FinanceClient } from "@/app/admin/finance/finance-client";
+import { trialBalance } from "@/lib/ledger/statements";
+import { aajKaKhana } from "@/lib/utils/format";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export default async function AdminFinancePage() {
 
   const { data: accounts } = await supabase
     .from("finance_accounts")
-    .select("id, name, account_type, current_balance, opening_balance, bank_name, account_title, account_number")
+    .select("id, name, account_type, gl_code, current_balance, opening_balance, bank_name, account_title, account_number")
     .eq("is_active", true)
     .order("created_at");
 
@@ -49,6 +51,16 @@ export default async function AdminFinancePage() {
     .order("created_at", { ascending: false })
     .limit(200);
 
+  // Balance ab seedha ledger se -- `current_balance` sirf un raqmon se
+  // hilta hai jo `finance_transactions` (purani cash book) se guzarti
+  // hain. Machinery ki payment, Load/Bill, POS jaisi adhiktar raqamein
+  // seedha ledger (`journal_lines`) mein jati hain aur is column ko
+  // kabhi chhoti hi nahi -- is liye Easypaisa jaisa khata mahinon purana
+  // adad dikhata reh jata tha jabke paisa waqai aa chuka hota tha (18
+  // September, Rs 40,000 ki machinery payment ka waqia).
+  const tb = await trialBalance("1900-01-01", aajKaKhana());
+  const ledgerBalance = new Map(tb.rows.map((r) => [r.code, r.balance]));
+
   const transactions = (rawTransactions ?? []).map((t) => ({
     id: t.id,
     account_id: t.account_id,
@@ -72,7 +84,8 @@ export default async function AdminFinancePage() {
           id: a.id,
           name: a.name,
           account_type: a.account_type,
-          current_balance: Number(a.current_balance),
+          current_balance:
+            tb.error || !a.gl_code ? Number(a.current_balance) : ledgerBalance.get(a.gl_code) ?? 0,
           bank_name: a.bank_name,
           account_title: a.account_title,
           account_number: a.account_number,

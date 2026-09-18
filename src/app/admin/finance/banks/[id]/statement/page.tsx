@@ -1,8 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatementClient } from "./statement-client";
+import { trialBalance, accountLedger } from "@/lib/ledger/money-trail";
 
 export const dynamic = "force-dynamic";
+
+function dayBefore(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
 
 export default async function BankStatementPage({
   params,
@@ -21,51 +28,51 @@ export default async function BankStatementPage({
   const supabase = createClient();
   const { data: bank } = await supabase
     .from("finance_accounts")
-    .select("id, name, account_number, opening_balance, current_balance")
+    .select("id, name, account_number, gl_code")
     .eq("id", bankId)
     .single();
 
-  // Teen naam ghalat the: description/type/created_at. Table mein wo
-  // notes/transaction_type/transaction_date hain -- is liye ye poora
-  // select fail hota tha aur statement hamesha khali aata tha.
-  //
-  // Tareekh ab transaction_date se chhanti hai, created_at se nahi:
-  // raat ko 11 baje darj ki gayi kal ki entry kal hi ki hai, aaj ki
-  // nahi. Bank statement mein ye farq maini rakhta hai.
-  const { data: rawTxns } = await supabase
-    .from("finance_transactions")
-    .select("id, transaction_date, notes, category, amount, transaction_type")
-    .eq("account_id", bankId)
-    .gte("transaction_date", startDate)
-    .lte("transaction_date", endDate)
-    .order("transaction_date", { ascending: true })
-    .order("created_at", { ascending: true });
+  // Statement ab seedha ledger (`journal_lines`) se -- `finance_transactions`
+  // (purani cash book) mein machinery, Load/Bill, POS jaisi adhiktar
+  // raqamein kabhi jati hi nahi thin, is liye statement adhoora dikhta
+  // tha aur balance bhi purana (18 September, Easypaisa Rs 40,000 iska
+  // sabse taaza saboot -- dekho `/admin/finance` ka fix).
+  const glCode = bank?.gl_code ?? null;
 
-  let runningBalance = Number(bank?.opening_balance ?? 0);
+  const [openingTb, ledgerLines] = await Promise.all([
+    glCode ? trialBalance({ to: dayBefore(startDate) }) : Promise.resolve(null),
+    glCode ? accountLedger(glCode, { from: startDate, to: endDate }, 500) : Promise.resolve([]),
+  ]);
+
+  const openingBalance = openingTb ? openingTb.rows.find((r) => r.code === glCode)?.balance ?? 0 : 0;
+
+  let runningBalance = openingBalance;
   let totalCredit = 0;
   let totalDebit = 0;
-  // transfer_in bhi aamad hai. Pehle sirf "income" ko aamad mana jata
-  // tha, is liye ek khate se doosre mein aayi hui raqam statement par
-  // kharch bun kar dikhti -- aur closing balance ghalat aata.
-  const transactions = (rawTxns ?? []).map((row) => {
-    const amount = Number(row.amount);
-    const isCredit = row.transaction_type === "income" || row.transaction_type === "transfer_in";
-    if (isCredit) {
-      totalCredit += amount;
-      runningBalance += amount;
-    } else {
-      totalDebit += amount;
-      runningBalance -= amount;
-    }
-    return {
-      id: row.id,
-      date: row.transaction_date,
-      description: row.notes ?? row.category ?? row.transaction_type,
-      amount,
-      isCredit,
-      runningBalance,
-    };
-  });
+  // Purane data mein bhi "transfer_in" ko aamad mana jata tha -- ledger
+  // mein iski zaroorat nahi, kyunke debit-normal khate par debit hamesha
+  // aamad hai, credit hamesha rawangi.
+  const transactions = [...ledgerLines]
+    .sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.entryNumber.localeCompare(b.entryNumber))
+    .map((line, index) => {
+      const isCredit = line.debit > 0;
+      const amount = isCredit ? line.debit : line.credit;
+      if (isCredit) {
+        totalCredit += amount;
+        runningBalance += amount;
+      } else {
+        totalDebit += amount;
+        runningBalance -= amount;
+      }
+      return {
+        id: `${line.entryNumber}-${index}`,
+        date: line.entryDate,
+        description: line.memo || line.description,
+        amount,
+        isCredit,
+        runningBalance,
+      };
+    });
 
   return (
     <div>
@@ -75,7 +82,7 @@ export default async function BankStatementPage({
         accountNumber={bank?.account_number ?? null}
         startDate={startDate}
         endDate={endDate}
-        openingBalance={Number(bank?.opening_balance ?? 0)}
+        openingBalance={openingBalance}
         transactions={transactions}
         totalCredit={totalCredit}
         totalDebit={totalDebit}

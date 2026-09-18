@@ -393,10 +393,9 @@ export function KharcheClient({
         Malik (6 September): *"wo realtime shop ke balance ke sath
         chalega."*
 
-        Ye adad `finance_accounts.current_balance` se aata hai, jo SIRF
-        Cash Book se banta hai (127) -- yani wohi adad jo Finance ke safhe
-        par nazar aata hai. Do jagah alag hisaab lagane se ek din do alag
-        jawab aa jate hain.
+        Ye adad seedha ledger se aata hai (18 September se) -- yani wohi
+        adad jo Finance ke safhe par nazar aata hai. Do jagah alag hisaab
+        lagane se ek din do alag jawab aa jate hain.
 
         Ek baat saaf likhi hui hai: ye khate poori company ke hain, har
         dukan ke apne nahi. Chhupa dene se dukan par baitha banda samajhta

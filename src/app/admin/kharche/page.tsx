@@ -11,6 +11,8 @@ import { ArrowDownCircle, ArrowUpCircle, Clock, Wallet } from "lucide-react";
 import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { trialBalance } from "@/lib/ledger/statements";
+import { aajKaKhana } from "@/lib/utils/format";
 
 export const dynamic = "force-dynamic";
 
@@ -105,10 +107,9 @@ export default async function KharchePage({
   ] = await Promise.all([
       q,
       mq,
-      // `current_balance` sirf Cash Book se banta hai (127) -- yehi wo
-      // adad hai jo Finance ke safhe par nazar aata hai, is liye yahan
-      // bhi wohi parha ja raha hai. Do jagah alag hisaab lagane se ek din
-      // do alag jawab aate hain.
+      // Balance neeche `khataBalance()` se ledger ka nikala jata hai --
+      // yehi wo hisaab hai jo Finance ke safhe par bhi hota hai. Do jagah
+      // alag hisaab lagane se ek din do alag jawab aate hain.
       service
         .from("finance_accounts")
         .select("id, name, gl_code, is_active, current_balance, account_type")
@@ -119,6 +120,15 @@ export default async function KharchePage({
       service.from("farmers").select("id, full_name, phone_number, cnic").eq("is_deleted", false).order("full_name").limit(1000),
       service.from("customers").select("id, name, phone_number, cnic").order("name").limit(1000),
     ]);
+
+  // Balance ab dono jagah (yahan aur Finance ke safhe par) ledger se --
+  // `current_balance` sirf Cash Book se hilta hai aur machinery/Load-Bill/
+  // POS jaisi adhiktar raqamein seedha ledger mein jati hain, is column
+  // ko chhoti hi nahi (18 September, Easypaisa ka Rs 40,000 iska saboot).
+  const tb = await trialBalance("1900-01-01", aajKaKhana());
+  const ledgerBalance = new Map(tb.rows.map((r) => [r.code, r.balance]));
+  const khataBalance = (glCode: string | null, cached: number) =>
+    tb.error || !glCode ? cached : ledgerBalance.get(glCode) ?? 0;
 
   const rows = ((rawRows ?? []) as any[]).map((r) => ({
     id: r.id as string,
@@ -307,7 +317,7 @@ export default async function KharchePage({
           id: k.id,
           name: k.name,
           gl_code: k.gl_code,
-          balance: Number(k.current_balance ?? 0),
+          balance: khataBalance(k.gl_code, Number(k.current_balance ?? 0)),
           account_type: k.account_type as string,
         }))}
         isUnrestricted={sabKuchWala}
