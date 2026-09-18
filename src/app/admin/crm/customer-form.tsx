@@ -137,6 +137,22 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
               <Input name="payment_due_days" type="number" defaultValue={customer?.payment_due_days} />
             </div>
           </div>
+
+          {/* Malik (18 September): purane DigiKhata se pehle ka baqaya
+              yahin se darj ho jaye, alag import safha na kholna paRe.
+              Ye khana JAAN BOOJH KAR kabhi bhara hua nahi khulta (koi
+              defaultValue nahi) -- "Save Changes" dobara dabane par
+              yehi purani raqam dobara ledger mein nahi chaRhti. */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+            <Label htmlFor="purana_baqaya">Purana Baqaya (Digikhata se) — sirf ek dafa ke liye</Label>
+            <Input id="purana_baqaya" name="purana_baqaya" type="number" step="0.01" placeholder="e.g. 5000" />
+            <p className="mt-1 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+              Khali chhoRein agar kuch add nahi karna. Bharne par ye raqam customer ke khate mein
+              "lena hai" ban jayegi (manfi likhen agar customer ka pehle se credit/advance para hai).
+              Sirf Manager/Admin/Owner kar sakte hain.
+            </p>
+          </div>
+
           <SubmitButton isEditMode={isEditMode} />
         </form>
       </div>
