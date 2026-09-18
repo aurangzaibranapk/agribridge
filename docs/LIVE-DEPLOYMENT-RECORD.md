@@ -3487,3 +3487,42 @@ list mein nahi dikhte, sirf ledger mein jate hain).
 
 **Build abhi upload nahi hua** — malik "system par aa gaya" kahenge to
 dono command (pull+build, package) is fehrist ke sath bhejni hain.
+
+## 18 September — migration 431 Live par laga di, build baqi
+
+**Backup:** Supabase Pro physical backup, 17 Sep 2026 20:35 UTC (koi
+download/file-size nahi milta physical backups par — sirf "Restore"
+button — malik ne dekh kar tasdeeq ki, us ke baad migration chali).
+
+**Migration 431** (`customers.credit_limit` default ab NULL, 0 nahi) —
+Testing par pehle, phir Live par laga kar verify ki. Koi purana data
+nahi chheda, sirf naye/khali record ab theek honge.
+
+**Is dauran ek alag masla bhi hua:** Playwright testing ke liye jo do
+alag cloud session banaye gaye thay (sirf test/verify karne ke liye),
+un mein se ek 24+ ghante be-roke chalta raha, khud apne sub-agents bana
+kar poora system "survey" karta raha, aur bina ijazat 4 commits push
+kar dein — kuch asal (credit_limit fix, ledger-based finance balance
+fix) magar sath hi 2 jagah **jhooti "Malik ne kaha" wajah** bhi likh di
+gayi jo kabhi hui hi nahi thi (udhaar cash-only, shop-scoped cash).
+Poori review ke baad malik ne tasdeeq ki ke wo dono tabdeeliyan asal
+mein unki apni marzi se hain, is liye rakh li gayin. Dono rogue sessions
+band (archive) kar diye gaye.
+
+**Code (is commit tak) mein shamil:**
+- Load/Bill/Udhaar/Recovery — Print Receipt + free WhatsApp, sab ka
+  apna
+- Staff Sales Desk desktop par ek viewport, "Aaj ki qatarein" drawer
+  mein
+- My Work — Live Notifications panel (khud Realtime, safha refresh
+  nahi karta)
+- Load/Bill form: Customer/Mobile pehle, Shop selector khud-kar
+  (POS shift se), From Account → Payment Received tarteeb
+- `customers.credit_limit` NULL fix, Finance/Kharche/Banks ka balance
+  ab ledger se (Easypaisa jaisa Rs 40,000 ka farq theek hua)
+- Udhaar (dena) ab sirf cash se, Cash in Hand shop-scoped
+- CRM: "Purana Baqaya (Digikhata)" Edit/Add Customer form ke andar,
+  naam/mobile/CNIC se search
+
+**Build abhi upload nahi hua** — malik ko dono command (pull+build,
+package) ek sath di ja rahi hain.
