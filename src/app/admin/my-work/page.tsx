@@ -376,34 +376,61 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
                 Live Ledger
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="font-display text-2xl font-bold tabular-nums text-surface-900 dark:text-white">
-                  Rs {(
-                    shopSales
-                      ? shopSales.reduce((s, r) => s + r.sales, 0) + (paymentBreakdown?.loadAmount ?? 0)
-                      : paymentBreakdown?.total ?? 0
-                  ).toLocaleString()}
-                </p>
-                {/* Malik (18 September): "kis kis method se kya sale ki hai
-                    ye pata chalna chahiye" -- is shop ke POS ke saare 8
-                    tareeqe, jis se aaj kuch hua hi nahi us ka Rs 0 (sach,
-                    fake nahi -- Shop 360 ka pehle se banaya hisaab). */}
-                <p className="text-[11px] text-surface-500">Aaj kis tareeqe se kitna aaya</p>
-              </div>
-              <PaymentDonut
-                slices={
-                  shopSales
-                    ? shopSales.map((r) => ({ key: r.method, label: r.label, amount: r.sales }))
-                    : [
-                        ...(paymentBreakdown?.methods ?? []),
-                        ...(paymentBreakdown && paymentBreakdown.loadAmount > 0
-                          ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }]
-                          : []),
-                      ]
-                }
-              />
-            </div>
+            {(() => {
+              // Malik (18 September): "load jo cash par hua hai wo humein
+              // alag dikh raha ho... cash mein itni hai, bank mein itni
+              // hai" -- `shopPaymentMethodBreakdown` ab is shop ka Load +
+              // Bill bhi apne payment_method (cash/bank/wallet/khata) ke
+              // hisaab se cash/bank_transfer/khata/wallet buckets mein
+              // shamil karta hai (shop-payment-methods.ts dekhein) -- is
+              // liye `shopSales` maujood ho to load alag se jama nahi
+              // karna, warna do dafa gin liya jayega. Sirf jab shopSales
+              // na ho (koi shop hi nahi mila) tab `paymentBreakdown` ka
+              // apna flat loadAmount fallback ke tor par dikhaya jata hai.
+              const baseSlices = shopSales
+                ? shopSales.map((r) => ({ key: r.method, label: r.label, amount: r.sales }))
+                : (paymentBreakdown?.methods ?? []);
+              const slices = shopSales
+                ? baseSlices
+                : [
+                    ...baseSlices,
+                    ...(paymentBreakdown && paymentBreakdown.loadAmount > 0
+                      ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }]
+                      : []),
+                  ];
+              const total = slices.reduce((s, r) => s + r.amount, 0);
+              // Malik (18 September, reference image): total ke neeche
+              // Cash vs Digital ka chhota split -- "Digital" yahan
+              // Khata (abhi paisa mila hi nahi) chhoR kar baqi saare
+              // tareeqon (Bank/Card/JazzCash/Easypaisa/QR/Waseela/Load)
+              // ka jama hai.
+              const cashAmt = slices.find((s) => s.key === "cash")?.amount ?? 0;
+              const khataAmt = slices.find((s) => s.key === "khata")?.amount ?? 0;
+              const digitalAmt = total - cashAmt - khataAmt;
+              return (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="font-display text-2xl font-bold tabular-nums text-surface-900 dark:text-white">
+                      Rs {total.toLocaleString()}
+                    </p>
+                    {/* Malik (18 September): "kis kis method se kya sale ki hai
+                        ye pata chalna chahiye" -- is shop ke POS ke saare 8
+                        tareeqe, jis se aaj kuch hua hi nahi us ka Rs 0 (sach,
+                        fake nahi -- Shop 360 ka pehle se banaya hisaab). */}
+                    <p className="text-[11px] text-surface-500">Aaj kis tareeqe se kitna aaya</p>
+                    <div className="mt-1.5 flex gap-4 text-xs">
+                      <p className="text-surface-700 dark:text-surface-300">
+                        Cash <span className="font-semibold tabular-nums text-surface-900 dark:text-white">Rs {cashAmt.toLocaleString()}</span>
+                      </p>
+                      <p className="text-surface-700 dark:text-surface-300">
+                        Digital <span className="font-semibold tabular-nums text-surface-900 dark:text-white">Rs {digitalAmt.toLocaleString()}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <PaymentDonut slices={slices} />
+                </div>
+              );
+            })()}
             {/* Malik (18 September): "stock ki value, pending payment,
                 aaj ki recovery, udhaar diya -- ye sab ana chahiye." Sab
                 Shop 360/ledger ke pehle se bane hisaab se -- koi naya
@@ -503,6 +530,33 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             </p>
           </div>
         </div>
+
+        {/* Malik (18 September): Quick Actions ab yahan, KPI cards ke
+            sath upar -- pehle safhe ke bilkul neeche ek bara alag box
+            tha (scroll kar ke dhoondna paRta tha). Chhota, sirf itne
+            hi raaste jitne is bande ke kaam ke -- koi nayi ijazat nahi. */}
+        {quickActions.length > 0 && (
+          <div className="rounded-card border-2 border-surface-300 bg-white p-4 dark:border-surface-600 dark:bg-surface-900">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-600 dark:text-surface-300">
+              <Icons.Zap className="h-3.5 w-3.5" /> {t("mw_quick_actions_title", lang)}
+            </p>
+            <div className="mt-1.5 space-y-0.5">
+              {quickActions.slice(0, 4).map((qa) => {
+                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
+                return (
+                  <Link
+                    key={qa.href}
+                    href={qa.href}
+                    className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-[12.5px] font-medium text-surface-700 hover:bg-surface-50 dark:text-surface-200 dark:hover:bg-surface-800"
+                  >
+                    <QaIcon className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+                    <span className="truncate">{qa.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {model.totalCards === 0 ? (
@@ -586,29 +640,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               </div>
             </div>
           )}
-
-          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
-            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
-              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
-            </h2>
-            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
-              {quickActions.map((qa) => {
-                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
-                return (
-                  <Link
-                    key={qa.href}
-                    href={qa.href}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                      <QaIcon className="h-[18px] w-[18px]" />
-                    </span>
-                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
