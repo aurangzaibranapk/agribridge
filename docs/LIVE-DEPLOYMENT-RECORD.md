@@ -3701,6 +3701,12 @@ header par shop ka naam bold/bara, branch ka naam neeche chhota) —
 **sirf Testing (`hwaiuwxqldxsoukkfefn`) par lagi hai, Live par abhi
 nahi** — backup tasdeeq se pehle Live par nahi jayegi (P0 rule).
 
+**Migration 433 Live par lag chuki (18 September, ~11:20 UTC):** backup
+17 Sep 2026 20:35 UTC (Physical, Supabase dashboard screenshot se
+tasdeeq) → migration chali → verify: `get_sale_receipt` par asal
+"dingdong" sale (Aurangzaib) se `shop_name: "Kisaan Karyana Mahabali"`,
+`seller_name: "Main Branch Mahabali"` dono sahi aa rahe hain.
+
 **Live par baqi kaam:**
-1. Migration 433 — backup verify → chalao → verify.
-2. Naya build (commit `4d42c9f` ya us se aage) upload.
+1. ~~Migration 433~~ — DONE (upar dekhein).
+2. Naya build (commit `4d42c9f` ya us se aage) upload — abhi baqi hai.
