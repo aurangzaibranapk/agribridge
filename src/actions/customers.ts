@@ -23,7 +23,12 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
     cnic: (formData.get("cnic") as string)?.trim() || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
-    credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,
+    // Malik ka usool (customer-udhaar.ts mein bhi likha hai): khali
+    // chhoRna "hadd tay hi nahi hui" hai, "hadd sifar hai" nahi. Pehle
+    // yahan khali khana 0 ban jata tha -- is se har naye customer ki
+    // udhaar hamesha ke liye band ho jati thi, bina kisi ke faisla
+    // kiye (18 September, Muhammad Akhtar ke saath yehi hua).
+    credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : null,
     payment_due_days: formData.get("payment_due_days") ? Number(formData.get("payment_due_days")) : 0,
     // Thok wali dukan par POS khud thok ka rate lagata hai (246). Ye
     // darja gahak par ek dafa likha jata hai, har bill par nahi chuna
@@ -57,7 +62,7 @@ export async function updateCustomer(_prev: ActionState, formData: FormData): Pr
     cnic: (formData.get("cnic") as string)?.trim() || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
-    credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,
+    credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : null,
     payment_due_days: formData.get("payment_due_days") ? Number(formData.get("payment_due_days")) : 0,
     // Thok wali dukan par POS khud thok ka rate lagata hai (246). Ye
     // darja gahak par ek dafa likha jata hai, har bill par nahi chuna
