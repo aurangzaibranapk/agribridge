@@ -69,7 +69,10 @@ export const sharedDict = {
   ws_help: { en: "Help", rm: "Madad", ur: "مدد" },
   ws_training: { en: "Training", rm: "Training", ur: "ٹریننگ" },
   ws_suggestions: { en: "Suggestions", rm: "Tajaweez", ur: "تجاویز" },
-  ws_assistant_card: { en: "AgriBridge Assistant", rm: "AgriBridge Assistant", ur: "ایگری برج اسسٹنٹ" },
+  // Malik (18 September): admin panel ka apna assistant ab naam se —
+  // "Abram" — public website ka farmer-facing chatbot alag hai
+  // (chatbot-widget.tsx, sp_assistant), wo nahi badla.
+  ws_assistant_card: { en: "Abram", rm: "Abram", ur: "ابرام" },
   ws_assistant_sub: { en: "Any question? Just ask me.", rm: "Koi sawal? Mujh se poochein.", ur: "کوئی سوال؟ مجھ سے پوچھیں۔" },
   // Assistant panel (276) -- Assistant | Paighaam | Tajaweez
   ap_tab_ai: { en: "Assistant", rm: "Assistant", ur: "اسسٹنٹ" },

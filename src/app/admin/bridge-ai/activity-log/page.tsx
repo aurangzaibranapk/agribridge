@@ -60,7 +60,7 @@ export default async function BridgeAiActivityLogPage() {
     <div>
       <PageHeader
         title={t("ba_activity_log", lang)}
-        description="Bridge AI se ab tak jitne sawal poochay gaye hain, unki list aur analytics - sirf dekhne ke liye. AI abhi database mein kuch change nahi karta, sirf jawab deta hai."
+        description="Abram se ab tak jitne sawal poochay gaye hain, unki list aur analytics - sirf dekhne ke liye. AI abhi database mein kuch change nahi karta, sirf jawab deta hai."
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">

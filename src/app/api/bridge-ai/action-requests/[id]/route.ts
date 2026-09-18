@@ -71,7 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           purchase_date: aajKaKhana(),
           status: "pending",
           total_amount: totalAmount,
-          notes: "Bridge AI proposal se banaya gaya (admin approved)",
+          notes: "Abram proposal se banaya gaya (admin approved)",
           created_by: user?.id ?? null,
         })
         .select("id")

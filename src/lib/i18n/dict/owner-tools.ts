@@ -39,7 +39,7 @@ export const ownerToolsDict = {
   cc_total_cost: { en: "Total cost", rm: "Kul lagat", ur: "کل لاگت" },
   cc_net: { en: "Net profit / loss", rm: "Saaf nafa / nuqsan", ur: "صاف نفع / نقصان" },
   cc_needs_attention_count: { en: "Needs attention", rm: "Tawajjah chahiye", ur: "توجہ چاہیے" },
-  cc_insight: { en: "AgriBridge AI Insight", rm: "AgriBridge AI ki raye", ur: "ایگری برج AI کی رائے" },
+  cc_insight: { en: "Abram Insight", rm: "Abram ki raye", ur: "ابرام کی رائے" },
   cc_incomplete: { en: "Data incomplete", rm: "Hisaab adhoora", ur: "حساب ادھورا" },
   cc_untracked: { en: "Not tracked", rm: "Track nahi hoti", ur: "ٹریک نہیں ہوتی" },
   // ---- Kaam ka haath badalna ----

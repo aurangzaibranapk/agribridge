@@ -44,7 +44,7 @@ export const DASHBOARD_BLUEPRINTS: Record<string, DashboardBlueprint> = {
   audit: { ...defaultBlueprint, eyebrow: "Risk & compliance", operationsTitle: "Audit Operations", operationsHint: "Approvals, reconciliation, exceptions and evidence", chartTitle: "Control Mix", coverageTitle: "Audit Coverage", accent: "rose" },
   reports: { ...defaultBlueprint, eyebrow: "Business intelligence", operationsTitle: "Reports & Analytics", chartTitle: "Reporting Mix", coverageTitle: "Report Coverage", accent: "blue" },
   website: { ...defaultBlueprint, eyebrow: "Digital presence", operationsTitle: "Website & CMS", operationsHint: "Pages, media, enquiries and publishing", chartTitle: "Content Mix", coverageTitle: "Website Coverage", accent: "blue" },
-  ai: { ...defaultBlueprint, eyebrow: "Intelligence command", operationsTitle: "Bridge AI Operations", operationsHint: "Suggestions, actions, usage and human escalation", chartTitle: "AI Work Mix", coverageTitle: "AI Coverage", accent: "violet" },
+  ai: { ...defaultBlueprint, eyebrow: "Intelligence command", operationsTitle: "Abram Operations", operationsHint: "Suggestions, actions, usage and human escalation", chartTitle: "AI Work Mix", coverageTitle: "AI Coverage", accent: "violet" },
   admin: { ...defaultBlueprint, eyebrow: "Platform governance", operationsTitle: "Administration & Security", operationsHint: "Users, access, configuration and platform health", chartTitle: "Governance Mix", coverageTitle: "Admin Coverage", accent: "rose" },
 };
 

@@ -175,9 +175,9 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Administration",
     items: [
       { href: "/admin/messages", label: "Paighaam", icon: MessageCircle },
-      { href: "/admin/bridge-ai", label: "Bridge AI", icon: Sparkles },
-      { href: "/admin/bridge-ai/activity-log", label: "Bridge AI Activity Log", icon: History },
-      { href: "/admin/bridge-ai/action-requests", label: "Bridge AI Action Requests", icon: ClipboardCheck },
+      { href: "/admin/bridge-ai", label: "Abram", icon: Sparkles },
+      { href: "/admin/bridge-ai/activity-log", label: "Abram Activity Log", icon: History },
+      { href: "/admin/bridge-ai/action-requests", label: "Abram Action Requests", icon: ClipboardCheck },
       { href: "/admin/ai-instructions", label: "AI ki Hidayaat", icon: SlidersHorizontal },
       { href: "/admin/ai-usage", label: "AI ka khata", icon: CircleDollarSign },
       { href: "/admin/platform", label: "Platform / Clients", icon: Globe },

@@ -275,10 +275,10 @@ export default async function CommandCenterPage() {
           <Card className="p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-white"><Sparkles className="h-4 w-4 text-brand-600"/>Bridge AI</h2>
+                <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-white"><Sparkles className="h-4 w-4 text-brand-600"/>Abram</h2>
                 <p className="text-xs text-surface-500">Suggestions, actions aur human escalation</p>
               </div>
-              <Link href="/admin/bridge-ai" className="text-xs font-medium text-brand-700 hover:underline">Open Bridge AI →</Link>
+              <Link href="/admin/bridge-ai" className="text-xs font-medium text-brand-700 hover:underline">Open Abram →</Link>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-2">
               <Link href="/admin/bridge-ai/activity-log" className="rounded-lg border border-surface-200 p-2 dark:border-surface-800"><p className="text-[10px] text-surface-500">AI Activity</p><p className="text-xs font-semibold">Activity Log</p></Link>

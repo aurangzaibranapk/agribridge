@@ -162,7 +162,7 @@ export async function loadInbox(limitPerSource = 20): Promise<InboxResult> {
       return (data ?? []).map((r) => ({
         id: `ai:${r.id}`,
         source: "ai_draft" as const,
-        kisNe: "AgriBridge AI",
+        kisNe: "Abram",
         kya: line(r.description) ?? line(r.action_type) ?? "AI ka draft",
         tafseel: line(r.action_type),
         kab: String(r.created_at),

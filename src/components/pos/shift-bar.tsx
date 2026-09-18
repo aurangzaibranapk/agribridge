@@ -471,6 +471,34 @@ export function ShiftBar({
                       <span className="tabular-nums">− {rs(summary!.cashReturnsTotal)}</span>
                     </div>
                   )}
+                  {/* Malik (18 September): "Bill, Load, Udhaar, Recovery
+                      bhi golak ke hisaab mein aane chahiye" -- isi shift
+                      (staff + shop, opened_at se ab tak) ke Load & Bill
+                      aur Udhaar/Recovery ki CASH wali qatarein. */}
+                  {(summary?.billTotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-surface-500">
+                      <span>Bill Payment</span>
+                      <span className="tabular-nums">{rs(summary!.billTotal)}</span>
+                    </div>
+                  )}
+                  {(summary?.loadTotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-surface-500">
+                      <span>Mobile Load</span>
+                      <span className="tabular-nums">{rs(summary!.loadTotal)}</span>
+                    </div>
+                  )}
+                  {(summary?.recoveryCashTotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-surface-500">
+                      <span>Recovery (Cash)</span>
+                      <span className="tabular-nums">+ {rs(summary!.recoveryCashTotal)}</span>
+                    </div>
+                  )}
+                  {(summary?.udhaarGivenCashTotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-surface-500">
+                      <span>Udhaar Diya (Cash)</span>
+                      <span className="tabular-nums">− {rs(summary!.udhaarGivenCashTotal)}</span>
+                    </div>
+                  )}
                   <div className="mt-1.5 flex items-center justify-between border-t border-surface-200 pt-1.5 text-surface-500 dark:border-surface-700">
                     <span>Opening Cash</span>
                     <span className="tabular-nums">{rs(openingCash)}</span>

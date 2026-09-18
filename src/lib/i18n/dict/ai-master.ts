@@ -19,9 +19,9 @@
  * se bara khana hai.
  */
 export const aiMasterDict = {
-  // ---- Bridge AI ----
-  ba_title: { en: "Bridge AI", rm: "Bridge AI", ur: "برج AI" },
-  ba_action_requests: { en: "Bridge AI — Action Requests", rm: "Bridge AI -- kaam ki darkhwastein", ur: "برج AI — کام کی درخواستیں" },
+  // ---- Bridge AI (malik, 18 September: naam "Abram") ----
+  ba_title: { en: "Abram", rm: "Abram", ur: "ابرام" },
+  ba_action_requests: { en: "Abram — Action Requests", rm: "Abram -- kaam ki darkhwastein", ur: "ابرام — کام کی درخواستیں" },
   ba_loading: { en: "Loading...", rm: "Aa raha hai...", ur: "آ رہا ہے..." },
   ba_no_pending: { en: "No pending requests.", rm: "Koi darkhwast intezar mein nahi.", ur: "کوئی درخواست انتظار میں نہیں۔" },
   ba_select: { en: "Select", rm: "Chunein", ur: "چنیں" },
@@ -32,7 +32,7 @@ export const aiMasterDict = {
     ur: "نوٹ (مرضی سے) — جیسے رد کرنے یا بدلنے کی وجہ",
   },
   ba_no_decision_yet: { en: "No decision has been made yet.", rm: "Abhi tak koi faisla nahi hua.", ur: "ابھی تک کوئی فیصلہ نہیں ہوا۔" },
-  ba_activity_log: { en: "Bridge AI Activity Log", rm: "Bridge AI ka indraj", ur: "برج AI کا اندراج" },
+  ba_activity_log: { en: "Abram Activity Log", rm: "Abram ka indraj", ur: "ابرام کا اندراج" },
   ba_total_questions: { en: "Total Questions", rm: "Kul sawal", ur: "کل سوال" },
   ba_today_questions: { en: "Today's Questions", rm: "Aaj ke sawal", ur: "آج کے سوال" },
   ba_answers_without_data: { en: "Answers without data", rm: "Bina record ke jawab", ur: "بغیر ریکارڈ کے جواب" },
@@ -41,7 +41,7 @@ export const aiMasterDict = {
   ba_top_tools: { en: "Most-used Tools", rm: "Sab se ziyada chalne wale tools", ur: "سب سے زیادہ چلنے والے ٹولز" },
   ba_no_activity: { en: "No activity yet.", rm: "Abhi tak koi kaam nahi hua.", ur: "ابھی تک کوئی کام نہیں ہوا۔" },
   ba_ask_anything: { en: "Ask anything — for example:", rm: "Kuch bhi poochhein -- jaise:", ur: "کچھ بھی پوچھیں — جیسے:" },
-  ba_thinking: { en: "Bridge AI is thinking...", rm: "Bridge AI soch raha hai...", ur: "برج AI سوچ رہا ہے..." },
+  ba_thinking: { en: "Abram is thinking...", rm: "Abram soch raha hai...", ur: "ابرام سوچ رہا ہے..." },
   ba_write_question: { en: "Write your question...", rm: "Apna sawal likhein...", ur: "اپنا سوال لکھیں..." },
 
   // ---- Naukri ki darkhwastein ----
