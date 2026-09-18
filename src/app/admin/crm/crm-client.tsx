@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/form";
-import { Users, Truck, Building2, Briefcase } from "lucide-react";
+import { Badge, Input } from "@/components/ui/form";
+import { Users, Truck, Building2, Briefcase, Search } from "lucide-react";
 import { CustomerActions } from "@/app/admin/crm/customer-actions";
 import { AddCustomerButton, EditCustomerButton } from "@/app/admin/crm/customer-form";
 import { t } from "@/lib/i18n/translations";
@@ -66,6 +66,21 @@ export function CrmClient({
   const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "companies" | "dealers">("customers");
   const lang = useLang();
 
+  // Malik (18 September): "mobile no, name, cnic no k sath search ka
+  // button bhi add karein." Fehrist pehle se poori load ho chuki hai,
+  // is liye seedha yahin chhan lena kaafi hai -- koi nayi query nahi.
+  const [customerSearch, setCustomerSearch] = useState("");
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone_number.toLowerCase().includes(q) ||
+        (c.cnic ?? "").toLowerCase().includes(q)
+    );
+  }, [customers, customerSearch]);
+
   function statusTone(status: string) {
     if (status === "verified") return "green" as const;
     if (status === "pending") return "amber" as const;
@@ -97,6 +112,18 @@ export function CrmClient({
       </div>
 
       {activeTab === "customers" && (
+        <div className="mb-3 relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          <Input
+            value={customerSearch}
+            onChange={(e) => setCustomerSearch(e.target.value)}
+            placeholder="Naam, mobile ya CNIC se dhoondein"
+            className="pl-9"
+          />
+        </div>
+      )}
+
+      {activeTab === "customers" && (
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
@@ -110,7 +137,7 @@ export function CrmClient({
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {filteredCustomers.map((c) => (
                 <tr key={c.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{c.name}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{c.phone_number}</td>
@@ -142,9 +169,11 @@ export function CrmClient({
                   </td>
                 </tr>
               ))}
-              {customers.length === 0 && (
+              {filteredCustomers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-surface-400">{t("cr_no_customers", lang)}</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-surface-400">
+                    {customerSearch ? "Is naam/number/CNIC se koi customer nahi mila." : t("cr_no_customers", lang)}
+                  </td>
                 </tr>
               )}
             </tbody>
