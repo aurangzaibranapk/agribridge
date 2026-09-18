@@ -3707,6 +3707,16 @@ tasdeeq) → migration chali → verify: `get_sale_receipt` par asal
 "dingdong" sale (Aurangzaib) se `shop_name: "Kisaan Karyana Mahabali"`,
 `seller_name: "Main Branch Mahabali"` dono sahi aa rahe hain.
 
+**Migration 434 (18 September, ~11:35 UTC):** malik: subtitle mein
+"Main Branch" ke sath location ("Mahabali") nahi aana chahiye — upar
+bold header mein shop ka poora naam already hai. `seller_name` ab
+`branches.is_main_branch` se — main branch ho to generic `"Main
+Branch"`, warna branch ka poora naam jaisa tha (naam ka hissa kaat kar
+nahi banaya, is liye kal koi nayi shakh bane to bhi theek rahega).
+Testing par lagi + verify, phir isi backup (17 Sep) ki tasdeeq ke sath
+Live par bhi lag chuki — verify: usi "dingdong" sale par ab
+`seller_name: "Main Branch"` (pehle "Main Branch Mahabali" tha).
+
 **Live par baqi kaam:**
 1. ~~Migration 433~~ — DONE (upar dekhein).
 2. Naya build (commit `4d42c9f` ya us se aage) upload — abhi baqi hai.
