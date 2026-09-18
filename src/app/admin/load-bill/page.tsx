@@ -68,7 +68,7 @@ export default async function LoadBillPage({
     await Promise.all([
       service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
       service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
-      service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
+      service.from("finance_accounts").select("id, name, account_type, current_balance").eq("is_active", true).order("name"),
       // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
       // form mein customer chunne ka khana tha hi nahi -- is liye
       // "Khata" chunne par server hamesha "customer chunna zaroori hai"
@@ -129,6 +129,26 @@ export default async function LoadBillPage({
     .order("created_at", { ascending: false })
     .limit(60);
 
+  // "Aaj ki Recovery" — Udhaar/Recovery is table mein hain hi nahi (upar
+  // ka comment dekhein), is liye seedha ledger se: customer/farmer ke
+  // "lena" khate (1100/1150) par jitna CREDIT customer_udhaar module se
+  // aaj laga, wohi wapasi hai (udhaar dene par isi khate par DEBIT lagta
+  // hai, is liye "credit hi wapasi hai" ka farq khud theek hai).
+  const { data: recoveryLines } = await service
+    .from("journal_lines")
+    .select("credit, journal_entries!inner(entry_date, source_module)")
+    .in("account_code", ["1100", "1150"])
+    .eq("journal_entries.source_module", "customer_udhaar")
+    .eq("journal_entries.entry_date", aaj)
+    .gt("credit", 0);
+  const todayRecovery = (recoveryLines ?? []).reduce((s, r) => s + Number(r.credit), 0);
+
+  // Cash in Hand -- seedha finance_accounts se, jo khud journal se
+  // update hota hai (127). Andaza nahi, asal cash-type khaton ka jama.
+  const cashInHand = (financeAccounts ?? [])
+    .filter((a) => a.account_type === "cash")
+    .reduce((sum, a) => sum + Number(a.current_balance ?? 0), 0);
+
   const providerName = new Map((providers ?? []).map((p) => [p.id as string, p.name as string]));
 
   // Counter par aane wala banda POS se yahan aata hai, is liye wohi teen
@@ -136,10 +156,10 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div>
+    <div className="flex h-[calc(100dvh-5.5rem)] min-h-0 flex-col overflow-hidden">
       <PageHeader
-        title="Load & Bill"
-        description="Mobile load aur customer ke bill — float ke hisaab ke sath"
+        title="Staff Sales Desk"
+        description="Al Rana Traders  |  Load & Bill"
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -238,6 +258,8 @@ export default async function LoadBillPage({
             provider: providerName.get(t.provider_id as string) ?? "—",
           }))}
           canReverse={FLOAT_ROLES.includes(me.role)}
+          cashInHand={cashInHand}
+          todayRecovery={todayRecovery}
         />
       )}
     </div>

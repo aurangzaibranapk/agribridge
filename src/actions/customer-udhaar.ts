@@ -66,6 +66,7 @@ export interface UdhaarReceipt {
   method: string;
   date: string;
   balanceAfter: number;
+  reference: string | null;
 }
 
 export interface UdhaarState {
@@ -189,6 +190,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   const category = String(formData.get("category") ?? "").trim() || null;
   const wajahMatn = String(formData.get("wajah") ?? "").trim();
   const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
+  const reference = String(formData.get("reference") ?? "").trim() || null;
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -247,7 +249,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     return { error: "Paisa kis khate se gaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Naqad udhaar — ${name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Naqad udhaar — ${name}${wajah ? ` (${wajah})` : ""}${reference ? ` · Ref: ${reference}` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
@@ -328,6 +330,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       method: await methodLabel(kahanSe),
       date: new Date().toISOString(),
       balanceAfter: abTakBaad,
+      reference,
     },
   };
 }
@@ -349,6 +352,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   const category = String(formData.get("category") ?? "").trim() || null;
   const wajahMatn = String(formData.get("wajah") ?? "").trim();
   const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
+  const reference = String(formData.get("reference") ?? "").trim() || null;
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
 
   if (partyType !== "customer" && partyType !== "farmer") {
@@ -403,7 +407,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
     return { error: "Paisa kis khate mein aaya — wo khata dobara chunein." };
   }
 
-  const tafseel = `Udhaar ki wapsi — ${name}${wajah ? ` (${wajah})` : ""}`;
+  const tafseel = `Udhaar ki wapsi — ${name}${wajah ? ` (${wajah})` : ""}${reference ? ` · Ref: ${reference}` : ""}`;
 
   const posted = await postJournal({
     description: tafseel,
@@ -483,6 +487,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
       method: await methodLabel(kahanAaya),
       date: new Date().toISOString(),
       balanceAfter: bacha,
+      reference,
     },
   };
 }

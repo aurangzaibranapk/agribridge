@@ -1035,6 +1035,18 @@ export function BookingDetail({
           vendorRemaining={vendorRemaining}
           paidToVendor={paidToVendor}
         />
+        {/* Malik (17 September): "Work Complete ke baad Diesel, phir
+            Payment, phir Close — isi tarteeb se ho." Hisaab barabar ho
+            chuka ho (bill ban chuka aur baqi sifar) to yahin se Close
+            Booking ka raasta bhi mil jata hai — dobara top ke button
+            tak wapas jane ki zaroorat nahi. */}
+        {bill && (balance ?? 0) <= 0 && (
+          <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+            <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("close")}>
+              Ab Booking Close karein →
+            </Button>
+          </div>
+        )}
       </Modal>
 
       <Modal open={modal === "diesel"} title="Add Diesel" onClose={() => setModal(null)}>
@@ -1058,6 +1070,15 @@ export function BookingDetail({
             </div>
           )
         )}
+        {/* Diesel ke baad agla qadam Payment hai (malik ka tarteeb wala
+            usool, 17 September) -- chahe diesel abhi darj hui ho ya
+            "nahi dala" kaha ho, dono soorton mein agla sawal payment ka
+            hai. */}
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("payment")}>
+            Ab Payment darj karein →
+          </Button>
+        </div>
       </Modal>
 
       <Modal open={modal === "work"} title="Mark Work Complete" onClose={() => setModal(null)}>
@@ -1073,6 +1094,15 @@ export function BookingDetail({
           accounts={accounts}
           defaultFinal
         />
+        {/* Malik (17 September): "Work Complete ke andar Diesel ka bhi
+            sawal-jawab ho, phir Payment, phir Close" -- kaam mukammal
+            darj hote hi agla qadam seedha yahin se, top ke chaar button
+            mein se dhoondna na paray. */}
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("diesel")}>
+            Ab Diesel darj karein →
+          </Button>
+        </div>
       </Modal>
 
       <Modal open={modal === "close"} title="Close Booking" onClose={() => setModal(null)}>
