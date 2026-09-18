@@ -571,11 +571,12 @@ export function LoadBillClient({
             <input type="hidden" name="kind" value={kind} />
             <h2 className="xl:col-span-2 text-lg font-bold text-surface-950 dark:text-white">{kind === "load" ? "Mobile Load Details" : "Bill Payment Details"}</h2>
 
-            {/* Malik (7 September): "Customer select karein... Result
-                Existing Farmer/Member/Customer master se aaye." Ye
-                chunaHua yahin se mobile number aur naam auto-fill karta
-                hai (neeche), aur "khata" method par isi ka party_type/
-                party_id ledger mein jata hai. */}
+            {/* Malik (18 September): "pehle customer name aaye, search ho
+                jo hamare existing member ya farmer hain, uske baad
+                mobile number aaye aur change karna ho jaye." Customer
+                sab se pehla khana, mobile/reference foran uske baad --
+                yahin se dono auto-fill hote hain, aur "khata" method par
+                isi ka party_type/party_id ledger mein jata hai. */}
             <div>
               <Label htmlFor="main_party">Customer / Guest</Label>
               <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
@@ -584,30 +585,6 @@ export function LoadBillClient({
                   <PartyStrip person={mainParty} />
                 </div>
               )}
-            </div>
-
-            <div>
-              <Label htmlFor="shop_id">Ye kaam kis shop mein ho raha hai</Label>
-              <Select id="shop_id" name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} required>
-                <option value="">— shop chunein —</option>
-                {shops.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="paisa_kahan">Payment Received In</Label>
-              <Select id="paisa_kahan" value={paisaKahan} onChange={(e) => setPaisaKahan(e.target.value)}>
-                <option value="cash">Cash — Golak mein aaya</option>
-                {financeAccounts.map((f) => <option key={f.id} value={`acct:${f.id}`}>{f.name}</option>)}
-                <option value="wallet">Customer ke apne wallet se</option>
-                <option value="khata">Khata — udhaar likh dein</option>
-              </Select>
-              <input type="hidden" name="payment_method" value={method} />
-              <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
             </div>
 
             <div>
@@ -621,6 +598,54 @@ export function LoadBillClient({
                 onChange={(e) => setReference(e.target.value)}
                 placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
               />
+            </div>
+
+            {/* Malik (18 September): "ye kaam kis shop mein ho raha hai
+                nahi ana chahiye kyunki already POS open hai, entry usi
+                se ho gi." Isi khane ki jagah ab "From Account" aata hai
+                -- shop khud defaultShopId (khuli shift ya profile) se
+                hidden field mein chala jata hai, sirf tab poochte hain
+                jab wo khud maloom na ho. */}
+            {shopId ? (
+              <input type="hidden" name="shop_id" value={shopId} />
+            ) : (
+              <div>
+                <Label htmlFor="shop_id">Ye kaam kis shop mein ho raha hai</Label>
+                <Select id="shop_id" name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} required>
+                  <option value="">— shop chunein —</option>
+                  {shops.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1 text-[11px] text-surface-500">
+                  Aap ki koi shift khuli nahi mili, is liye shop khud chunein.
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="account_id">From Account</Label>
+              <Select id="account_id" name="account_id" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+                {kaamKeAccounts.map((a) => <option key={a.id} value={a.id}>{a.title}{a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}</option>)}
+              </Select>
+            </div>
+
+            {/* Malik (18 September): "payment received kis account ya
+                method se hui, wo doosri side -- yahan sab account ab
+                aayega, us ke neeche aaye." From Account (upar, provider
+                float) ke theek neeche. */}
+            <div>
+              <Label htmlFor="paisa_kahan">Payment Received In</Label>
+              <Select id="paisa_kahan" value={paisaKahan} onChange={(e) => setPaisaKahan(e.target.value)}>
+                <option value="cash">Cash — Golak mein aaya</option>
+                {financeAccounts.map((f) => <option key={f.id} value={`acct:${f.id}`}>{f.name}</option>)}
+                <option value="wallet">Customer ke apne wallet se</option>
+                <option value="khata">Khata — udhaar likh dein</option>
+              </Select>
+              <input type="hidden" name="payment_method" value={method} />
+              <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
             </div>
 
             <div>
@@ -677,13 +702,6 @@ export function LoadBillClient({
                 </div>
               </>
             )}
-
-            <div>
-              <Label htmlFor="account_id">From Account</Label>
-              <Select id="account_id" name="account_id" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
-                {kaamKeAccounts.map((a) => <option key={a.id} value={a.id}>{a.title}{a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}</option>)}
-              </Select>
-            </div>
 
             <div>
               <Label htmlFor="provider_tid">Provider TID / Reference</Label>
