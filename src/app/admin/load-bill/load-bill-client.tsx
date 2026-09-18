@@ -13,12 +13,10 @@ import {
   HandCoins,
   Banknote,
   Activity,
-  Search,
   UserRound,
   Phone,
   Percent,
   Info,
-  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
@@ -239,6 +237,7 @@ export function LoadBillClient({
   canReverse,
   cashInHand,
   todayRecovery,
+  todayUdhaarTxns,
 }: {
   /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
   shuruKind: "load" | "bill";
@@ -256,6 +255,8 @@ export function LoadBillClient({
   cashInHand: number;
   /** Ledger se seedha — customer/kisan udhaar ki aaj ki wapasi (page.tsx dekhein). */
   todayRecovery: number;
+  /** Aaj ki Udhaar/Recovery qatarein, ledger se (page.tsx) -- "Today's Transactions" mein Load/Bill ke saath. */
+  todayUdhaarTxns: { id: string; kind: "udhaar" | "recovery"; customer: string; amount: number; waqt: string }[];
 }) {
   /**
    * Chaar khane, ek hi safha.
@@ -274,7 +275,7 @@ export function LoadBillClient({
    * nahi. Is liye `tab` alag hai aur `kind` sirf pehle do khanon ke liye.
    */
   const [tab, setTab] = useState<"load" | "bill" | "udhaar" | "receive">(shuruKind);
-  const [txnFilter, setTxnFilter] = useState<"all" | "load" | "bill" | "udhaar" | "receive" | "pending">("all");
+  const [txnFilter, setTxnFilter] = useState<"all" | "load" | "bill" | "udhaar" | "recovery" | "pending">("all");
   const kind: "load" | "bill" = tab === "load" || tab === "bill" ? tab : "load";
   const [state, action] = useFormState(createLoadTransaction, initial);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
@@ -310,7 +311,6 @@ export function LoadBillClient({
     if (wapsiState.success && wapsiState.receipt) showReceipt(udhaarReceipt("wapsi", wapsiState.receipt));
   }, [wapsiState]);
 
-  const [showTransactions, setShowTransactions] = useState(false);
 
   /**
    * Udhaar dukan ke customer ko bhi milta hai aur kisan ko bhi — is
@@ -424,7 +424,30 @@ export function LoadBillClient({
   const staffIncome = charge;
   const selectedProvider = kaamKeProviders.find((p) => p.id === providerId)?.name ?? "—";
   const selectedFinanceAccount = financeAccounts.find((a) => a.id === udhaarAccount)?.name;
-  const filteredTransactions = today.filter((t) => {
+
+  // "Aaj ki qatarein" ab Load/Bill + Udhaar/Recovery, ek hi table mein
+  // (18 September mockup ka takaza) -- warna is desk se hui aadhi
+  // adaigi kisi list mein kabhi nazar hi nahi aati thi.
+  const udhaarAsTxn: Txn[] = todayUdhaarTxns.map((u) => ({
+    id: u.id,
+    number: "—",
+    kind: u.kind,
+    reference: "",
+    principal: u.amount,
+    serviceCharge: null,
+    commissionExpected: null,
+    commissionConfirmed: null,
+    commissionStatus: "na",
+    method: "",
+    tid: null,
+    status: "darj",
+    settled: true,
+    customer: u.customer,
+    waqt: u.waqt,
+    provider: u.kind === "udhaar" ? "Udhaar" : "Recovery",
+  }));
+  const allTxns = [...today, ...udhaarAsTxn].sort((a, b) => b.waqt.localeCompare(a.waqt));
+  const filteredTransactions = allTxns.filter((t) => {
     if (txnFilter === "all") return true;
     if (txnFilter === "pending") return t.status === "saboot_baqi" || !t.settled;
     return t.kind === txnFilter;
@@ -515,7 +538,7 @@ export function LoadBillClient({
         </Card>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem_2.75rem]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* -------- Form -------- */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
@@ -851,23 +874,21 @@ export function LoadBillClient({
             )}
           </Card>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowTransactions(true)}
-          className="hidden h-64 self-start rounded-xl border border-surface-200 bg-white text-xs font-medium text-surface-700 shadow-sm transition hover:border-brand-300 hover:bg-brand-50 [writing-mode:vertical-rl] dark:bg-surface-900 dark:text-surface-200 lg:block"
-        >
-          ‹&nbsp;&nbsp; Today&apos;s Transactions
-        </button>
       </div>
 
       {/* -------- Aaj ki qatarein -------- */}
-      {showTransactions && <button type="button" aria-label="Close transactions" onClick={() => setShowTransactions(false)} className="fixed inset-0 z-40 bg-black/25" />}
-      <Card className={`${showTransactions ? "fixed" : "hidden"} bottom-4 right-4 top-20 z-50 w-[min(58rem,calc(100vw-2rem))] overflow-hidden p-0 shadow-2xl`}>
-        <div className="flex items-center justify-between gap-3 border-b border-surface-100 px-4 py-2 dark:border-surface-800">
-          <p className="text-base font-bold text-surface-900 dark:text-white">{tab === "udhaar" ? "Today's Udhaar Entries" : tab === "receive" ? "Today's Recovery Transactions" : "Today's Transactions"}</p>
-          <div className="flex items-center gap-1">
-            <Search className="mr-1 h-3 w-3 text-surface-400" />
-            {(["all", "load", "bill", "pending"] as const).map((filter) => (
+      {/* Malik (18 September): ye table ab hamesha nazar aati hai --
+          pehle sirf ek chhoti vertical tab dabane par khulti thi, aur
+          us mein Udhaar/Recovery kabhi nazar hi nahi aate the (sirf
+          Load/Bill), jab ke mockup mein poora din ka kaam ek hi jagah
+          ek nazar mein hai. */}
+      <Card className="mt-1 overflow-hidden p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 px-4 py-2 dark:border-surface-800">
+          <p className="flex items-center gap-1.5 text-base font-bold text-surface-900 dark:text-white">
+            <FileText className="h-4 w-4 text-surface-400" /> Today&apos;s Transactions
+          </p>
+          <div className="flex flex-wrap items-center gap-1">
+            {(["all", "load", "bill", "udhaar", "recovery", "pending"] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -877,13 +898,12 @@ export function LoadBillClient({
                 {filter}
               </button>
             ))}
-            <button type="button" onClick={() => setShowTransactions(false)} className="ml-2 rounded-lg p-1.5 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
         </div>
-        {today.length === 0 ? (
+        {allTxns.length === 0 ? (
           <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
         ) : (
-          <div className="h-[calc(100%-2.6rem)] overflow-auto">
+          <div className="max-h-96 overflow-auto">
             <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
                 <tr>
@@ -939,7 +959,10 @@ export function LoadBillClient({
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        {t.status !== "wapas" && (
+                        {/* Udhaar/Recovery ki apni asal id journal_lines se hai,
+                            load_transactions se nahi -- receipt aur wapas
+                            dono sirf Load/Bill ki qatar par chalte hain. */}
+                        {(t.kind === "load" || t.kind === "bill") && t.status !== "wapas" && (
                           <Button type="button" size="sm" variant="ghost" onClick={() => showReceipt(txnReceipt(t))}>
                             Receipt
                           </Button>
@@ -991,7 +1014,7 @@ export function LoadBillClient({
                               </Button>
                             </form>
                           )}
-                        {canReverse && t.status !== "wapas" && (
+                        {canReverse && (t.kind === "load" || t.kind === "bill") && t.status !== "wapas" && (
                           <form action={revAction} className="flex items-center gap-1">
                             <input type="hidden" name="id" value={t.id} />
                             <Input name="reason" placeholder="wapas ki wajah" className="h-8 w-32 text-xs" required />

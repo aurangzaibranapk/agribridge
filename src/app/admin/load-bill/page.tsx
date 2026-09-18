@@ -143,6 +143,37 @@ export default async function LoadBillPage({
     .gt("credit", 0);
   const todayRecovery = (recoveryLines ?? []).reduce((s, r) => s + Number(r.credit), 0);
 
+  // "Aaj ki qatarein" mein Udhaar aur Recovery bhi -- warna is desk se
+  // hui har dusri qism ki adaigi table mein kabhi nazar hi nahi aati
+  // thi, sirf Load/Bill dikhte the (18 September, mockup ka takaza).
+  // Ledger mein shop_id nahi hota (sirf branch_id, jaisa Cash in Hand ke
+  // comment mein bhi likha hai) -- is liye ye do qism sirf BRANCH se
+  // chhanti hain, Load/Bill jitni theek shop-scoped nahi ho saktin.
+  let udhaarQuery = service
+    .from("journal_lines")
+    .select("id, debit, credit, party_type, party_id, memo, journal_entries!inner(created_at, entry_date, branch_id, source_module)")
+    .in("account_code", ["1100", "1150"])
+    .eq("journal_entries.source_module", "customer_udhaar")
+    .eq("journal_entries.entry_date", aaj);
+  if (!unrestricted && me.branch_id) udhaarQuery = udhaarQuery.eq("journal_entries.branch_id", me.branch_id);
+  const { data: udhaarRows } = await udhaarQuery;
+
+  const customerNameById = new Map((customers ?? []).map((c) => [c.id as string, (c.name as string | null) ?? "—"]));
+  const farmerNameById = new Map((farmers ?? []).map((f) => [f.id as string, (f.full_name as string | null) ?? "—"]));
+  const partyName = (type: string, id: string) => (type === "farmer" ? farmerNameById.get(id) : customerNameById.get(id)) ?? "—";
+
+  const todayUdhaarTxns = (udhaarRows ?? []).map((r: any) => {
+    const entry = Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries;
+    const giving = Number(r.debit) > 0;
+    return {
+      id: r.id as string,
+      kind: (giving ? "udhaar" : "recovery") as "udhaar" | "recovery",
+      customer: partyName(r.party_type, r.party_id),
+      amount: giving ? Number(r.debit) : Number(r.credit),
+      waqt: String(entry?.created_at ?? `${aaj}T00:00:00`),
+    };
+  });
+
   // Cash in Hand -- SIRF is shop ka, poori company ka nahi.
   //
   // 18 September: malik ne poocha "ye adad kahan se aa raha hai" -- pehle
@@ -169,7 +200,7 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] min-h-0 flex-col overflow-hidden">
+    <div className="flex min-h-[calc(100dvh-5.5rem)] flex-col">
       <PageHeader
         title="Staff Sales Desk"
         description="Al Rana Traders  |  Load & Bill"
@@ -273,6 +304,7 @@ export default async function LoadBillPage({
           canReverse={FLOAT_ROLES.includes(me.role)}
           cashInHand={cashInHand}
           todayRecovery={todayRecovery}
+          todayUdhaarTxns={todayUdhaarTxns}
         />
       )}
     </div>
