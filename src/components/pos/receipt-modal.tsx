@@ -144,6 +144,16 @@ export function ReceiptModal({
         @media print {
           @page { size: 80mm auto; margin: 3mm; }
           html, body { margin: 0; background: #fff; }
+          /* 18 September, malik: print par receipt ke upar/neeche
+             peeche wale safhe ka content (jaise Khata ki table, Sold/
+             Can Return button) bhi chhap raha tha -- receipt ka koi
+             fixed height/isolation nahi tha, is liye poora page print
+             ho raha tha, sirf receipt nahi. Ab sab kuch chhupa dete
+             hain, sirf #receipt-print-area (aur us ke andar jo
+             print:hidden nahi hai) dikhta hai. */
+          body * { visibility: hidden; }
+          #receipt-print-area, #receipt-print-area * { visibility: visible; }
+          #receipt-print-area { position: absolute; left: 0; top: 0; width: 100%; }
           /* Halka grey thermal printer par mit jata hai -- print ke
              liye sab kuch pakka siyah, aur dashed lines mota. */
           #receipt-print-area, #receipt-print-area * { color: #000 !important; }

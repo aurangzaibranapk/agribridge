@@ -14,11 +14,9 @@ import {
   defaultDashboardForRole,
   loadFourthKpi,
   loadPaymentBreakdown,
-  loadRecentActivity,
   loadOrderFunnel,
   loadCustomerHealth,
   loadFarmersToVerify,
-  QUICK_BY_ROLE,
 } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { PaymentDonut } from "@/components/guided/payment-donut";
@@ -185,7 +183,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const [
     fourthKpi,
-    recentActivity,
     paymentBreakdown,
     { data: initialNotifications },
     orderFunnel,
@@ -198,7 +195,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     { data: udhaarDiyaRows },
   ] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
-    loadRecentActivity(me.branch_id, allowed),
     // Malik (16 September): "cash sale kitna, card se kitna, QR se
     // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
     // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
@@ -245,31 +241,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       : Promise.resolve({ data: [] as { debit: number }[] }),
   ]);
   const udhaarDiyaAajTotal = (udhaarDiyaRows ?? []).reduce((s, r) => s + Number(r.debit), 0);
-
-  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
-  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
-  // chuna hua raasta.
-  type QuickAction = { href: string; label: string; icon: string };
-
-  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
-  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
-  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
-  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
-  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
-  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
-  const sidebarHrefs = nav.unrestricted
-    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
-    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
-
-  const quickActions: QuickAction[] = [
-    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
-    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
-    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
-    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
-    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
-  ]
-    .filter((x): x is QuickAction => x !== null)
-    .filter((qa) => !sidebarHrefs.has(qa.href));
 
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
@@ -530,33 +501,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             </p>
           </div>
         </div>
-
-        {/* Malik (18 September): Quick Actions ab yahan, KPI cards ke
-            sath upar -- pehle safhe ke bilkul neeche ek bara alag box
-            tha (scroll kar ke dhoondna paRta tha). Chhota, sirf itne
-            hi raaste jitne is bande ke kaam ke -- koi nayi ijazat nahi. */}
-        {quickActions.length > 0 && (
-          <div className="rounded-card border-2 border-surface-300 bg-white p-4 dark:border-surface-600 dark:bg-surface-900">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-600 dark:text-surface-300">
-              <Icons.Zap className="h-3.5 w-3.5" /> {t("mw_quick_actions_title", lang)}
-            </p>
-            <div className="mt-1.5 space-y-0.5">
-              {quickActions.slice(0, 4).map((qa) => {
-                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
-                return (
-                  <Link
-                    key={qa.href}
-                    href={qa.href}
-                    className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-[12.5px] font-medium text-surface-700 hover:bg-surface-50 dark:text-surface-200 dark:hover:bg-surface-800"
-                  >
-                    <QaIcon className="h-3.5 w-3.5 shrink-0 text-brand-600" />
-                    <span className="truncate">{qa.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {model.totalCards === 0 ? (
@@ -600,7 +544,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           {/* Malik (8 September): "page kabhi scroll na karni paRe." Is
               fehrist ki lambai yahan tak seemit -- agar zyada items hon
               to sirf ISI dabbe ke andar scroll ho, poora safha nahi. */}
-          <div className="overflow-y-auto p-4" style={{ maxHeight: "min(50vh, 420px)" }}>
+          <div className="overflow-y-auto p-4" style={{ maxHeight: "min(30vh, 260px)" }}>
             <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact />
           </div>
         </div>
@@ -640,49 +584,9 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
               </div>
             </div>
           )}
-
-          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
-            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
-              <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}
-            </h2>
-            <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(35vh, 300px)" }}>
-              {recentActivity.length === 0 ? (
-                <p className="px-5 py-4 text-sm text-surface-400">{t("mw_activity_empty", lang)}</p>
-              ) : (
-                recentActivity.map((a) => (
-                  <div key={a.key} className="flex items-center justify-between gap-3 px-5 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium text-surface-800 dark:text-surface-100">{t(a.labelKey, lang)}</p>
-                      <p className="truncate text-[12px] text-surface-500">
-                        {[a.subtitle, relativeTime(a.createdAt, lang)].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    {a.amount != null && (
-                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                        Rs {a.amount.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
     </InPageWorkspace>
   );
-}
-
-/** "5 minute pehle" jaisa halka jumla -- koi library nahi, chhota hisaab. */
-function relativeTime(iso: string, lang: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const min = Math.max(0, Math.round(diffMs / 60000));
-  const isUrdu = lang === "ur";
-  if (min < 1) return isUrdu ? "ابھی" : "abhi";
-  if (min < 60) return isUrdu ? `${min} منٹ پہلے` : `${min} minute pehle`;
-  const hrs = Math.round(min / 60);
-  if (hrs < 24) return isUrdu ? `${hrs} گھنٹے پہلے` : `${hrs} ghante pehle`;
-  const days = Math.round(hrs / 24);
-  return isUrdu ? `${days} دن پہلے` : `${days} din pehle`;
 }

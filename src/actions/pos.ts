@@ -6,6 +6,7 @@ import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/po
 import type { Json } from "@/lib/types/database.types";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { requireAction } from "@/lib/access/guard";
+import { notifyUser } from "@/lib/notifications";
 
 export interface PosCheckoutState {
   error?: string;
@@ -154,6 +155,13 @@ export async function posCheckout(input: {
   }
 
   const posted = await postSaleToLedger(saleId, user?.id ?? null);
+
+  // Malik (18 September): "My Work par Bill, Load, Udhaar, Recovery to
+  // Live Notifications mein pehle se hain (load-bill.ts, customer-
+  // udhaar.ts ke notifyUser se) -- sirf POS Sale isi tarah nazar nahi
+  // aati thi." Load & Bill wale isi pattern ke barabar.
+  const saleTotal = input.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) - discount;
+  await notifyUser(user?.id ?? null, "POS Sale darj", `Rs ${saleTotal.toLocaleString()}`, "/admin/pos");
 
   // Bikri ho chuki hai aur maal gahak ke haath mein ja chuka hai. Usay
   // mitana ab ghalat hoga. Magar chup rehna us se bhi bura: bulane wale

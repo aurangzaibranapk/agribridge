@@ -91,7 +91,7 @@ export function LiveNotificationsPanel({ initial }: { initial: Item[] }) {
           {zinda ? "Live" : "Live nahi"}
         </span>
       </div>
-      <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(35vh, 300px)" }}>
+      <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(30vh, 260px)" }}>
         {items.length === 0 ? (
           <p className="px-5 py-4 text-sm text-surface-400">Abhi koi ittila nahi.</p>
         ) : (
