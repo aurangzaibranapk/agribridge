@@ -62,98 +62,108 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">
+      {/* Poora dialog ab apne max-height tak mehdood hai, header aur
+          Save button hamesha nazar aate hain (kabhi scroll ke peeche
+          nahi chhupte) -- sirf beech ka form-body scroll karta hai,
+          agar screen chhoti ho to (18 September, malik: chhota/pyara
+          form, cross aur Save hamesha dikhen, poora safha scroll na
+          ho). */}
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-card bg-white shadow-xl dark:bg-surface-900">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-100 px-4 py-2.5 dark:border-surface-800">
+          <h3 className="font-display text-sm font-semibold text-surface-900 dark:text-white">
             {isEditMode ? "Edit Customer" : "New Customer"}
           </h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
         </div>
-        {state.error && (
-          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-            {state.error}
-          </p>
-        )}
-        {state.success && (
-          <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_saved", lang)}</p>
-        )}
-        <form action={formAction} className="space-y-3">
-          {isEditMode && <input type="hidden" name="id" value={customer.id} />}
-          <div>
-            <Label>{t("at_customer_name_req", lang)}</Label>
-            <Input name="name" defaultValue={customer?.name} required />
-          </div>
-          <div>
-            <Label>{t("c_contact_person", lang)}</Label>
-            <Input name="contact_person" defaultValue={customer?.contact_person ?? ""} />
-          </div>
-          <div>
-            <Label>{t("at_phone_number_req", lang)}</Label>
-            <Input name="phone_number" defaultValue={customer?.phone_number} required />
-          </div>
-          <div>
-            <Label>CNIC</Label>
-            <Input name="cnic" defaultValue={customer?.cnic ?? ""} placeholder="00000-0000000-0" />
-          </div>
-          <div>
-            <Label>{t("c_email", lang)}</Label>
-            <Input name="email" type="email" defaultValue={customer?.email ?? ""} />
-          </div>
-          <div>
-            <Label>{t("c_address", lang)}</Label>
-            <Textarea name="address" rows={2} defaultValue={customer?.address ?? ""} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>{t("cr_credit_limit_dot", lang)}</Label>
-              <Input name="credit_limit" type="number" step="0.01" defaultValue={customer?.credit_limit} />
-            </div>
-            <div className="sm:col-span-2">
-              {/* Ye darja EK DAFA yahan likha jata hai. POS par har bill
-                  par "thok ya retail" chunne se rate counter wale ki
-                  marzi par aa jata, aur mahine baad ye sawal ka jawab
-                  nahi hota ke falan bill par thok kyun laga tha. */}
-              <label className="flex items-start gap-2 text-sm text-surface-700 dark:text-surface-300">
-                <input
-                  type="checkbox"
-                  name="customer_type"
-                  value="wholesale_shop"
-                  defaultChecked={customer?.customer_type === "wholesale_shop"}
-                  className="mt-0.5"
-                />
-                <span>
-                  Ye <strong>thok wali dukan</strong> hai — hum isay maal dete hain
-                  <span className="block text-xs text-surface-500">
-                    POS par is ke bill par thok ka rate khud lagega. Jis cheez par thok ka rate darj
-                    nahi, us par retail lagega.
+        <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
+            {isEditMode && <input type="hidden" name="id" value={customer.id} />}
+            {state.error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                {state.error}
+              </p>
+            )}
+            {state.success && (
+              <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_saved", lang)}</p>
+            )}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="col-span-2">
+                <Label className="mb-1 text-xs">{t("at_customer_name_req", lang)}</Label>
+                <Input className="h-9" name="name" defaultValue={customer?.name} required />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">{t("at_phone_number_req", lang)}</Label>
+                <Input className="h-9" name="phone_number" defaultValue={customer?.phone_number} required />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">{t("c_contact_person", lang)}</Label>
+                <Input className="h-9" name="contact_person" defaultValue={customer?.contact_person ?? ""} />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">CNIC</Label>
+                <Input className="h-9" name="cnic" defaultValue={customer?.cnic ?? ""} placeholder="00000-0000000-0" />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">{t("c_email", lang)}</Label>
+                <Input className="h-9" name="email" type="email" defaultValue={customer?.email ?? ""} />
+              </div>
+              <div className="col-span-2">
+                <Label className="mb-1 text-xs">{t("c_address", lang)}</Label>
+                <Textarea name="address" rows={2} defaultValue={customer?.address ?? ""} />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">{t("cr_credit_limit_dot", lang)}</Label>
+                <Input className="h-9" name="credit_limit" type="number" step="0.01" defaultValue={customer?.credit_limit} />
+              </div>
+              <div>
+                <Label className="mb-1 text-xs">{t("cr_payment_due_days", lang)}</Label>
+                <Input className="h-9" name="payment_due_days" type="number" defaultValue={customer?.payment_due_days} />
+              </div>
+              <div className="col-span-2">
+                {/* Ye darja EK DAFA yahan likha jata hai. POS par har bill
+                    par "thok ya retail" chunne se rate counter wale ki
+                    marzi par aa jata, aur mahine baad ye sawal ka jawab
+                    nahi hota ke falan bill par thok kyun laga tha. */}
+                <label className="flex items-start gap-2 text-xs text-surface-700 dark:text-surface-300">
+                  <input
+                    type="checkbox"
+                    name="customer_type"
+                    value="wholesale_shop"
+                    defaultChecked={customer?.customer_type === "wholesale_shop"}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Ye <strong>thok wali dukan</strong> hai — hum isay maal dete hain
+                    <span className="block text-[11px] text-surface-500">
+                      POS par is ke bill par thok ka rate khud lagega. Jis cheez par thok ka rate darj
+                      nahi, us par retail lagega.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              </div>
             </div>
-            <div>
-              <Label>{t("cr_payment_due_days", lang)}</Label>
-              <Input name="payment_due_days" type="number" defaultValue={customer?.payment_due_days} />
+
+            {/* Malik (18 September): purane DigiKhata se pehle ka baqaya
+                yahin se darj ho jaye, alag import safha na kholna paRe.
+                Ye khana JAAN BOOJH KAR kabhi bhara hua nahi khulta (koi
+                defaultValue nahi) -- "Save Changes" dobara dabane par
+                yehi purani raqam dobara ledger mein nahi chaRhti. */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <Label htmlFor="purana_baqaya" className="mb-1 text-xs">Purana Baqaya (Digikhata se) — sirf ek dafa ke liye</Label>
+              <Input id="purana_baqaya" className="h-9" name="purana_baqaya" type="number" step="0.01" placeholder="e.g. 5000" />
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+                Khali chhoRein agar kuch add nahi karna. Bharne par ye raqam customer ke khate mein
+                "lena hai" ban jayegi (manfi likhen agar customer ka pehle se credit/advance para hai).
+                Sirf Manager/Admin/Owner kar sakte hain.
+              </p>
             </div>
           </div>
 
-          {/* Malik (18 September): purane DigiKhata se pehle ka baqaya
-              yahin se darj ho jaye, alag import safha na kholna paRe.
-              Ye khana JAAN BOOJH KAR kabhi bhara hua nahi khulta (koi
-              defaultValue nahi) -- "Save Changes" dobara dabane par
-              yehi purani raqam dobara ledger mein nahi chaRhti. */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-            <Label htmlFor="purana_baqaya">Purana Baqaya (Digikhata se) — sirf ek dafa ke liye</Label>
-            <Input id="purana_baqaya" name="purana_baqaya" type="number" step="0.01" placeholder="e.g. 5000" />
-            <p className="mt-1 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
-              Khali chhoRein agar kuch add nahi karna. Bharne par ye raqam customer ke khate mein
-              "lena hai" ban jayegi (manfi likhen agar customer ka pehle se credit/advance para hai).
-              Sirf Manager/Admin/Owner kar sakte hain.
-            </p>
+          <div className="shrink-0 border-t border-surface-100 px-4 py-2.5 dark:border-surface-800">
+            <SubmitButton isEditMode={isEditMode} />
           </div>
-
-          <SubmitButton isEditMode={isEditMode} />
         </form>
       </div>
     </div>
