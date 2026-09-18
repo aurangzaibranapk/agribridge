@@ -21,6 +21,7 @@ interface ReceiptData {
   khata_amount: number;
   outstanding_balance: number;
   seller_name: string;
+  shop_name: string | null;
   seller_phone: string | null;
   cashier_name: string;
   customer_name: string;
@@ -66,7 +67,8 @@ export function ReceiptModal({
 
   function buildReceiptText(r: ReceiptData) {
     const lines = [
-      `${r.seller_name}`,
+      r.shop_name ? `${r.shop_name}` : `${r.seller_name}`,
+      r.shop_name ? `${r.seller_name}` : "",
       r.seller_phone ? `Ph: ${r.seller_phone}` : "",
       formatDate(r.created_at),
       r.customer_name ? `Customer: ${r.customer_name}` : "",
@@ -165,8 +167,11 @@ export function ReceiptModal({
           <>
             <div className="text-center">
               <p className="font-display text-lg font-bold uppercase tracking-wide text-surface-900 dark:text-white">
-                {receipt.seller_name}
+                {receipt.shop_name ?? receipt.seller_name}
               </p>
+              {receipt.shop_name && (
+                <p className="text-[11px] uppercase tracking-wide text-surface-500">{receipt.seller_name}</p>
+              )}
               {receipt.seller_phone && <p className="mt-0.5 text-xs text-surface-500">Ph: {receipt.seller_phone}</p>}
               <p className="mt-1 text-xs text-surface-500">{formatDate(receipt.created_at)}</p>
             </div>

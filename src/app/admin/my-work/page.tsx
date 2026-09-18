@@ -3,6 +3,9 @@ import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { shopStockPosition, shopWhereIsMyMoney, shopTodayFlow } from "@/lib/pos/shop-360";
+import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
@@ -98,10 +101,25 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, role, training_mode, branch_id")
+    .select("full_name, role, training_mode, branch_id, shop_id")
     .eq("id", user.id)
     .maybeSingle();
   if (!me) redirect("/login");
+
+  // Shop kahan se maloom hoti hai -- POS ki tarah: pehle khuli hui
+  // shift ka counter, warna profile ki apni shop (Load & Bill isi
+  // tarah karta hai, dekhein admin/load-bill/page.tsx).
+  let myShopId: string | null = me.shop_id ?? null;
+  const { data: khulaShift } = await supabase
+    .from("pos_shifts")
+    .select("pos_counters(shop_id)")
+    .eq("staff_id", user.id)
+    .eq("status", "open")
+    .limit(1)
+    .maybeSingle();
+  const shiftShop = khulaShift?.pos_counters as { shop_id?: string } | { shop_id?: string }[] | null;
+  const shiftShopId = Array.isArray(shiftShop) ? shiftShop[0]?.shop_id : shiftShop?.shop_id;
+  if (shiftShopId) myShopId = shiftShopId;
 
   // Training Mode (D): apne department ka module -- pehle N kaam.
   const dept = departmentForRole(me.role);
@@ -162,28 +180,71 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
   // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
   // dobara dikhaya ja raha hai.
-  const [fourthKpi, recentActivity, paymentBreakdown, { data: initialNotifications }, orderFunnel, customerHealth, farmersToVerify] =
-    await Promise.all([
-      loadFourthKpi(me.branch_id, allowed, lang),
-      loadRecentActivity(me.branch_id, allowed),
-      // Malik (16 September): "cash sale kitna, card se kitna, QR se
-      // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
-      // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
-      // liye ye sawal hi nahi banta.
-      canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
-      // Live Notifications panel ka shuruati data -- baad mein ye khud
-      // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
-      // nahi parhta.
-      supabase
-        .from("notifications")
-        .select("id, title, message, link_url, is_read, created_at")
-        .eq("recipient_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(8),
-      loadOrderFunnel(me.branch_id, allowed),
-      loadCustomerHealth(me.branch_id, allowed),
-      loadFarmersToVerify(me.branch_id, allowed),
-    ]);
+  const aaj = new Date().toISOString().slice(0, 10);
+  const service = createServiceClient();
+
+  const [
+    fourthKpi,
+    recentActivity,
+    paymentBreakdown,
+    { data: initialNotifications },
+    orderFunnel,
+    customerHealth,
+    farmersToVerify,
+    shopStock,
+    shopSales,
+    shopMoney,
+    shopFlow,
+    { data: udhaarDiyaRows },
+  ] = await Promise.all([
+    loadFourthKpi(me.branch_id, allowed, lang),
+    loadRecentActivity(me.branch_id, allowed),
+    // Malik (16 September): "cash sale kitna, card se kitna, QR se
+    // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
+    // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
+    // liye ye sawal hi nahi banta.
+    canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
+    // Live Notifications panel ka shuruati data -- baad mein ye khud
+    // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
+    // nahi parhta.
+    supabase
+      .from("notifications")
+      .select("id, title, message, link_url, is_read, created_at")
+      .eq("recipient_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    loadOrderFunnel(me.branch_id, allowed),
+    loadCustomerHealth(me.branch_id, allowed),
+    loadFarmersToVerify(me.branch_id, allowed),
+    // 18 September, malik: "jo uske paas stock hai, value aani chahiye" --
+    // is shop ka asal stock, FIFO cost se (Shop 360 jo hisaab pehle se
+    // istemal karta hai, koi naya nahi banaya).
+    myShopId && canRoute("/admin/pos") ? shopStockPosition(myShopId, aaj, aaj) : Promise.resolve(null),
+    // "kis kis method se kya sale hui" -- is shop ki aaj ki, poore
+    // 8 method (sale na ho to us method ka Rs 0, fake nahi -- sach mein
+    // aaj us se kuch nahi hua).
+    myShopId && canRoute("/admin/pos") ? shopPaymentMethodBreakdown(myShopId, aaj, aaj) : Promise.resolve(null),
+    // "pending payment kitni hai" -- receivable, branch tak (shop tak
+    // udhaar/wasooli darj nahi hoti, dekhein shopWhereIsMyMoney ka note).
+    myShopId ? shopWhereIsMyMoney(myShopId) : Promise.resolve(null),
+    // "aaj ki recovery kahan hai" -- isi shop ki aaj ki wasooli.
+    myShopId ? shopTodayFlow(myShopId, aaj) : Promise.resolve(null),
+    // "udhaar diya hai to kahan hai" -- ledger se, is branch ki aaj ki
+    // udhaar-dene wali (debit) qatarein. Shop_id ledger mein nahi hota
+    // (Load & Bill ke Cash-in-Hand comment mein bhi likha hai), is liye
+    // branch tak.
+    me.branch_id
+      ? service
+          .from("journal_lines")
+          .select("debit, journal_entries!inner(entry_date, source_module, branch_id)")
+          .in("account_code", ["1100", "1150"])
+          .eq("journal_entries.source_module", "customer_udhaar")
+          .eq("journal_entries.branch_id", me.branch_id)
+          .eq("journal_entries.entry_date", aaj)
+          .gt("debit", 0)
+      : Promise.resolve({ data: [] as { debit: number }[] }),
+  ]);
+  const udhaarDiyaAajTotal = (udhaarDiyaRows ?? []).reduce((s, r) => s + Number(r.debit), 0);
 
   // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
   // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
@@ -305,7 +366,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           hota (jaise Order Funnel jis ke paas Ordering nahi khulta), wo
           card sirey se nahi banta -- khali dabba nahi dikhaya jata. */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {paymentBreakdown && (
+        {(shopSales || paymentBreakdown) && (
           <div className="rounded-card border-2 border-emerald-200 bg-white p-4 dark:border-emerald-900/40 dark:bg-surface-900 lg:col-span-2">
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
@@ -318,17 +379,63 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="font-display text-2xl font-bold tabular-nums text-surface-900 dark:text-white">
-                  Rs {paymentBreakdown.total.toLocaleString()}
+                  Rs {(
+                    shopSales
+                      ? shopSales.reduce((s, r) => s + r.sales, 0) + (paymentBreakdown?.loadAmount ?? 0)
+                      : paymentBreakdown?.total ?? 0
+                  ).toLocaleString()}
                 </p>
+                {/* Malik (18 September): "kis kis method se kya sale ki hai
+                    ye pata chalna chahiye" -- is shop ke POS ke saare 8
+                    tareeqe, jis se aaj kuch hua hi nahi us ka Rs 0 (sach,
+                    fake nahi -- Shop 360 ka pehle se banaya hisaab). */}
                 <p className="text-[11px] text-surface-500">Aaj kis tareeqe se kitna aaya</p>
               </div>
               <PaymentDonut
-                slices={[
-                  ...paymentBreakdown.methods,
-                  ...(paymentBreakdown.loadAmount > 0 ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }] : []),
-                ]}
+                slices={
+                  shopSales
+                    ? shopSales.map((r) => ({ key: r.method, label: r.label, amount: r.sales }))
+                    : [
+                        ...(paymentBreakdown?.methods ?? []),
+                        ...(paymentBreakdown && paymentBreakdown.loadAmount > 0
+                          ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }]
+                          : []),
+                      ]
+                }
               />
             </div>
+            {/* Malik (18 September): "stock ki value, pending payment,
+                aaj ki recovery, udhaar diya -- ye sab ana chahiye." Sab
+                Shop 360/ledger ke pehle se bane hisaab se -- koi naya
+                hisaab nahi bana. */}
+            {(shopStock || shopMoney || shopFlow || udhaarDiyaAajTotal > 0) && (
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-emerald-100 pt-3 dark:border-emerald-900/40 sm:grid-cols-4">
+                <div>
+                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                    {shopStock?.stockValueFifo == null ? "—" : `Rs ${shopStock.stockValueFifo.toLocaleString()}`}
+                  </p>
+                  <p className="text-[10px] text-surface-500">Stock Value</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                    {shopMoney?.receivableBranchLevel == null ? "—" : `Rs ${shopMoney.receivableBranchLevel.toLocaleString()}`}
+                  </p>
+                  <p className="text-[10px] text-surface-500">Pending Payment</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                    {shopFlow ? `Rs ${shopFlow.recovery.total.toLocaleString()}` : "—"}
+                  </p>
+                  <p className="text-[10px] text-surface-500">Aaj ki Recovery</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
+                    Rs {udhaarDiyaAajTotal.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-surface-500">Udhaar Diya Aaj</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {orderFunnel && (

@@ -46,7 +46,7 @@ export function PaymentDonut({ slices }: { slices: { key: string; label: string;
               <span className="truncate">{s.label}</span>
             </span>
             <span className="shrink-0 font-medium tabular-nums text-surface-800 dark:text-surface-100">
-              {Math.round((s.amount / total) * 100)}%
+              Rs {s.amount.toLocaleString()}
             </span>
           </li>
         ))}
