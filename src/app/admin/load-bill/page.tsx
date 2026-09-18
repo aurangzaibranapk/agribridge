@@ -68,7 +68,7 @@ export default async function LoadBillPage({
     await Promise.all([
       service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
       service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
-      service.from("finance_accounts").select("id, name, account_type, current_balance").eq("is_active", true).order("name"),
+      service.from("finance_accounts").select("id, name").eq("is_active", true).order("name"),
       // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
       // form mein customer chunne ka khana tha hi nahi -- is liye
       // "Khata" chunne par server hamesha "customer chunna zaroori hai"
@@ -143,11 +143,24 @@ export default async function LoadBillPage({
     .gt("credit", 0);
   const todayRecovery = (recoveryLines ?? []).reduce((s, r) => s + Number(r.credit), 0);
 
-  // Cash in Hand -- seedha finance_accounts se, jo khud journal se
-  // update hota hai (127). Andaza nahi, asal cash-type khaton ka jama.
-  const cashInHand = (financeAccounts ?? [])
-    .filter((a) => a.account_type === "cash")
-    .reduce((sum, a) => sum + Number(a.current_balance ?? 0), 0);
+  // Cash in Hand -- SIRF is shop ka, poori company ka nahi.
+  //
+  // 18 September: malik ne poocha "ye adad kahan se aa raha hai" -- pehle
+  // ye ledger ke GL 1000 (Cash in Hand) ka poora jama tha, jo HAR shop ki
+  // POS bikri aur Load/Bill ka mila-jula hisaab hai. Us se Karyana shop
+  // wala staff doosri shops ka cash bhi apna samajh sakta tha. Ledger mein
+  // shop_id hai hi nahi (sirf branch_id), is liye `fn_shop_day_summary`
+  // istemal kiya -- wahi function jo "Shop ka hisaab" (shaam ka milan)
+  // safhe par pehle se load/bill aur POS dono ko shop_id se chhanta hai.
+  // "Aaj ka" hai, hamesha ka running balance nahi -- isi tarah jaisa poora
+  // shaam ka hisaab roz ka hota hai, kal ka paisa handover/deposit se nikal
+  // chuka maana jata hai.
+  let cashInHand = 0;
+  if (defaultShopId) {
+    const { data: shopDay } = await supabase.rpc("fn_shop_day_summary", { p_shop: defaultShopId, p_date: aaj });
+    const row = Array.isArray(shopDay) ? shopDay[0] : shopDay;
+    cashInHand = row ? Number(row.lb_cash ?? 0) + Number(row.pos_cash ?? 0) : 0;
+  }
 
   const providerName = new Map((providers ?? []).map((p) => [p.id as string, p.name as string]));
 

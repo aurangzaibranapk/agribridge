@@ -185,8 +185,11 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   const partyType = String(formData.get("party_type") ?? "").trim();
   const partyId = String(formData.get("party_id") ?? "").trim();
   const rakam = paisa(formData.get("rakam"));
-  // "cash" ya kisi finance account ki id.
-  const kahanSe = String(formData.get("kahan_se") ?? "cash").trim();
+  // Malik (18 September): "Udhaar ki payment sirf cash payment se
+  // dena hai — kisi bank account ya card/QR code se staff ko allow
+  // nahi." UI dropdown hata di gayi hai, magar form data seedhi bhi
+  // bheji ja sakti hai -- is liye taala yahan bhi, sirf UI mein nahi.
+  const kahanSe = "cash";
   const category = String(formData.get("category") ?? "").trim() || null;
   const wajahMatn = String(formData.get("wajah") ?? "").trim();
   const wajah = [category, wajahMatn].filter(Boolean).join(" — ");

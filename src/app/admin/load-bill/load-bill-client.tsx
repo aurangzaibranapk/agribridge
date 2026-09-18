@@ -587,15 +587,16 @@ export function LoadBillClient({
             </div>
 
             <div>
-              <Label htmlFor="shop_id">Ye kaam kis shop mein ho raha hai</Label>
-              <Select id="shop_id" name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} required>
-                <option value="">— shop chunein —</option>
-                {shops.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
+              <Label htmlFor="reference">{kind === "load" ? "Mobile Number" : "Consumer / Reference Number"}</Label>
+              <Input
+                id="reference"
+                name="reference"
+                required
+                inputMode="numeric"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
+              />
             </div>
 
             <div>
@@ -611,17 +612,34 @@ export function LoadBillClient({
             </div>
 
             <div>
-              <Label htmlFor="reference">{kind === "load" ? "Mobile Number" : "Consumer / Reference Number"}</Label>
-              <Input
-                id="reference"
-                name="reference"
-                required
-                inputMode="numeric"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
-              />
+              <Label htmlFor="account_id">From Account</Label>
+              <Select id="account_id" name="account_id" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+                {kaamKeAccounts.map((a) => <option key={a.id} value={a.id}>{a.title}{a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}</option>)}
+              </Select>
             </div>
+
+            {/* Malik (18 September): "Ye kaam kis shop mein ho raha
+                hai" wala khana yahan dikhana hi nahi chahiye -- POS
+                pehle se khula hota hai, us ke counter se hi shop maloom
+                hai. Khamoshi se wohi (defaultShopId) bhej dete hain.
+                Agar kisi ke paas na khula shift ho na profile shop
+                (dono khali), tab hi ye chunna padta hai -- warna staff
+                ko ek fazool sawal roz poochha jata. */}
+            {shopId ? (
+              <input type="hidden" name="shop_id" value={shopId} />
+            ) : (
+              <div>
+                <Label htmlFor="shop_id">Ye kaam kis shop mein ho raha hai</Label>
+                <Select id="shop_id" name="shop_id" value={shopId} onChange={(e) => setShopId(e.target.value)} required>
+                  <option value="">— shop chunein —</option>
+                  {shops.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="service_charge">Service Charge</Label>
@@ -652,7 +670,7 @@ export function LoadBillClient({
             )}
 
             {kind === "bill" && (
-              <>
+              <div className="space-y-3">
                 <div>
                   <Label htmlFor="provider_id">Kis cheez ka bill</Label>
                   <Select id="provider_id" name="provider_id" required value={providerId} onChange={(event) => setProviderId(event.target.value)}>
@@ -675,15 +693,8 @@ export function LoadBillClient({
                     <option value="other">Deegar</option>
                   </Select>
                 </div>
-              </>
+              </div>
             )}
-
-            <div>
-              <Label htmlFor="account_id">From Account</Label>
-              <Select id="account_id" name="account_id" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
-                {kaamKeAccounts.map((a) => <option key={a.id} value={a.id}>{a.title}{a.float !== null ? ` (${rs(a.float)})` : " (khata juRa nahi)"}</option>)}
-              </Select>
-            </div>
 
             <div>
               <Label htmlFor="provider_tid">Provider TID / Reference</Label>
@@ -1085,6 +1096,17 @@ function UdhaarForm({
             </div>
           )}
         </div>
+        {/* Malik (18 September): "jo pehle wala kaam wo pehle hona
+            chahiye" -- Wapsi (recovery) mein "abhi kitna baqi hai" wo
+            sawal hai jo Amount se PEHLE dekhna hota hai (faisla isi se
+            hota hai), is liye Category se pehle aata hai; Udhaar
+            (diya) mein ye sawal hai hi nahi, wahan tarteeb wahi purani. */}
+        {!diya && (
+          <div>
+            <Label>Outstanding Balance</Label>
+            <Input readOnly value={party?.balance == null ? "—" : rs(party.balance)} />
+          </div>
+        )}
         <div>
           <Label htmlFor="udhaar_category">{diya ? "Udhaar Category" : "Recovery Type"}</Label>
           <Select id="udhaar_category" value={category} onChange={(e) => onCategoryChange(e.target.value)}>
@@ -1095,15 +1117,10 @@ function UdhaarForm({
             ))}
           </Select>
         </div>
-        {diya ? (
+        {diya && (
           <div>
             <Label htmlFor="udhaar_wajah">Description / Reason</Label>
             <Input id="udhaar_wajah" name="wajah" placeholder="Udhaar ka maqsad / wajah" />
-          </div>
-        ) : (
-          <div>
-            <Label>Outstanding Balance</Label>
-            <Input readOnly value={party?.balance == null ? "—" : rs(party.balance)} />
           </div>
         )}
       </div>
@@ -1129,14 +1146,26 @@ function UdhaarForm({
         )}
         <div>
           <Label htmlFor="udhaar_khata">{diya ? "Amount Paid From Account" : "Payment Received In"}</Label>
-          <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(e) => onAccountChange(e.target.value)}>
-            <option value="cash">Cash / Golak</option>
-            {financeAccounts.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </Select>
+          {diya ? (
+            // Malik (18 September): "Udhaar ki payment sirf cash se
+            // dena hai — kisi bank account ya card/QR se staff ko
+            // allow nahi, wo sirf cash se de sakta hai." Dropdown
+            // dikhana hi ghalat tha: dikhata hai ke koi aur raasta
+            // chuna ja sakta hai, jab ke nahi ja sakta.
+            <>
+              <Input id="udhaar_khata" readOnly value="Cash / Golak" />
+              <input type="hidden" name="kahan_se" value="cash" />
+            </>
+          ) : (
+            <Select id="udhaar_khata" name="kahan_aaya" value={account} onChange={(e) => onAccountChange(e.target.value)}>
+              <option value="cash">Cash / Golak</option>
+              {financeAccounts.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
         <div>
           <Label htmlFor="udhaar_reference">Reference / Transaction ID</Label>
