@@ -3764,6 +3764,15 @@ aur database mein botal ke bhejta hai (stock/POS botal mein hi chalte
 hain); wholesale rate pet ka likha jata hai, system fi-botal nikaal
 kar rakhta hai.
 
+**Migration 439 (19 September, sham — admin panel total review se):**
+Live par poora "Sales & POS" menu section khali tha — POS, POS Returns,
+Khata, POS Counters, Settlements, Produce Orders, Bridge Orders sidebar
+mein kahin nahi the (Testing par sab maujood). +8 links Live/Testing
+par (Live links 220→228), aur `/admin/business-dashboard` ka feature
+band kiya (safha code mein hai hi nahi tha — sidebar se 404 khulta
+tha). Review ka tareeqa: filesystem ke 285 admin pages vs database ka
+menu, dono taraf ka farq.
+
 **Naye build mein ye bhi hai (19 September, sham):** sidebar
 auto-expand (jo safha khula ho us ka group khud khule), Zero-Leakage
 "Fully Matched" ab aa sakta hai (mustaqil Khata-note ab status nahi

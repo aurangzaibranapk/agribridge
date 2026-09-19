@@ -136,6 +136,19 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
+      {/* Ye teen safhe bane hue the magar kahin se raasta hi nahi tha
+          (admin panel review, 19 September) -- ab yahan se khulte hain. */}
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link href="/admin/finance/recovery/history" className="rounded-lg border border-surface-200 bg-white px-3 py-1.5 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:hover:bg-surface-800">
+          Recovery History
+        </Link>
+        <Link href="/admin/finance/recovery/promises" className="rounded-lg border border-surface-200 bg-white px-3 py-1.5 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:hover:bg-surface-800">
+          Wade (Promises)
+        </Link>
+        <Link href="/admin/finance/recovery/templates" className="rounded-lg border border-surface-200 bg-white px-3 py-1.5 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:hover:bg-surface-800">
+          Reminder Templates
+        </Link>
+      </div>
       {recoveryError && (
         <Card className="border-l-4 border-l-red-500 bg-red-50 p-4 dark:bg-red-950/20">
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-300">
