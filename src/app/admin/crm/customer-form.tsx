@@ -169,7 +169,29 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
               <Label htmlFor="purana_baqaya" className="mb-1 text-xs">Purana Baqaya (Digikhata se) — sirf ek dafa ke liye</Label>
               <Input id="purana_baqaya" className="h-9" name="purana_baqaya" type="number" step="0.01" placeholder="e.g. 5000" />
-              <p className="mt-1 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div>
+                  <Label className="mb-1 text-[11px] text-amber-800 dark:text-amber-300">Baqaya kis cheez ka?</Label>
+                  <select
+                    name="purana_baqaya_type"
+                    className="h-8 w-full rounded-md border border-amber-200 bg-white px-2 text-xs text-surface-800 dark:border-amber-900/40 dark:bg-surface-900 dark:text-surface-200"
+                  >
+                    <option value="">— chunein —</option>
+                    <option value="karyana">Kisan Karyana (karyana)</option>
+                    <option value="kisan_dukan">Kisan Dukan (pesticide, wanda, khad)</option>
+                    <option value="other">Other Amount</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="mb-1 text-[11px] text-amber-800 dark:text-amber-300">Short Note (ikhtiyari)</Label>
+                  <Input
+                    name="purana_baqaya_note"
+                    className="h-8 text-xs"
+                    placeholder="jaise: pichle saal ka hisaab"
+                  />
+                </div>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
                 Khali chhoRein agar kuch add nahi karna. Bharne par ye raqam customer ke khate mein
                 "lena hai" ban jayegi (manfi likhen agar customer ka pehle se credit/advance para hai).
                 Sirf Manager/Admin/Owner kar sakte hain.

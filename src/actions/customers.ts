@@ -39,8 +39,20 @@ async function postOpeningAdjustment(
   const amount = Math.round(Number(raw) * 100) / 100;
   if (!Number.isFinite(amount) || amount === 0) return {};
 
+  const baqayaType = String(formData.get("purana_baqaya_type") ?? "").trim();
+  const baqayaNote = String(formData.get("purana_baqaya_note") ?? "").trim();
+
+  const typeLabel =
+    baqayaType === "karyana" ? "Kisan Karyana" :
+    baqayaType === "kisan_dukan" ? "Kisan Dukan (pesticide/wanda/khad)" :
+    baqayaType === "other" ? "Other" : "";
+
   const service = createServiceClient();
-  const tafseel = `Purana baqaya (purane khata se) — ${customerName}`;
+  const tafseel = [
+    `Purana baqaya (purane khata se) — ${customerName}`,
+    typeLabel,
+    baqayaNote,
+  ].filter(Boolean).join(" — ");
   const abs = Math.abs(amount);
   const lena = amount > 0;
 
@@ -74,7 +86,7 @@ async function postOpeningAdjustment(
     module: "crm",
     recordId: customerId,
     recordLabel: customerName,
-    description: `Purana baqaya darj hua: ${customerName} — Rs ${abs.toLocaleString()} (${lena ? "lena hai" : "credit/advance"})`,
+    description: `Purana baqaya darj hua: ${customerName} — Rs ${abs.toLocaleString()} (${lena ? "lena hai" : "credit/advance"})${typeLabel ? ` — ${typeLabel}` : ""}${baqayaNote ? ` — ${baqayaNote}` : ""}`,
   });
 
   return {};

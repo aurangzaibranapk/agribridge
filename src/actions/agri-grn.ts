@@ -229,14 +229,27 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   // branch's MAIN warehouse inventory - stock is added regardless of
   // discrepancy status, since goods physically arrived; only the
   // FINANCIAL charge waits for discrepancy resolution.
-  const { data: order } = await supabase.from("agri_orders").select("order_to_branch_id, payment_terms").eq("id", orderId).single();
+  const { data: orderRaw } = await supabase.from("agri_orders").select("order_to_branch_id, payment_terms").eq("id", orderId).single();
+  // order_to_warehouse_id: migration 442 — fetched separately until types regenerate.
+  const { data: orderWh } = await (supabase as any).from("agri_orders").select("order_to_warehouse_id").eq("id", orderId).single() as { data: { order_to_warehouse_id: string | null } | null; error: unknown };
+  const order = orderRaw ? { ...orderRaw, order_to_warehouse_id: orderWh?.order_to_warehouse_id ?? null } : null;
   if (order?.order_to_branch_id) {
-    const { data: warehouse } = await supabase
-      .from("warehouses")
-      .select("id")
-      .eq("branch_id", order.order_to_branch_id)
-      .eq("code", "MAIN")
-      .maybeSingle();
+    // Destination warehouse: pehle order mein jo set ki gayi hai (seller
+    // ki shop godam), phir branch ki MAIN warehouse.
+    let warehouse: { id: string } | null = null;
+    if (order.order_to_warehouse_id) {
+      const { data: explicit } = await supabase.from("warehouses").select("id").eq("id", order.order_to_warehouse_id).eq("is_active", true).maybeSingle();
+      warehouse = explicit ?? null;
+    }
+    if (!warehouse) {
+      const { data: main } = await supabase
+        .from("warehouses")
+        .select("id")
+        .eq("branch_id", order.order_to_branch_id)
+        .eq("code", "MAIN")
+        .maybeSingle();
+      warehouse = main ?? null;
+    }
 
     if (warehouse) {
       for (const item of items) {
