@@ -303,7 +303,7 @@ export function PosClient({
       // zyada likhne ki ghalti ho sakti hai (malik, 15 September) --
       // is liye jab tak split payment na ho (ek hi line ho), rakam
       // khud grand total ke barabar ho jati hai.
-      if (custMode === "walkin" && next.length === 1 && next[0].method !== "khata") {
+      if (next.length === 1 && next[0].method !== "khata") {
         const amt = deyRaqam > 0 ? String(deyRaqam) : "";
         if (next[0].amount !== amt) next = [{ ...next[0], amount: amt }];
       }
@@ -426,19 +426,34 @@ export function PosClient({
   }
 
   function addPaymentLine() {
-    setPaymentLines((prev) => [
-      ...prev,
-      { id: Date.now().toString(), method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
-    ]);
+    setPaymentLines((prev) => {
+      const otherAllocated = prev.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+      const autoFill = Math.max(0, Math.round((deyRaqam - otherAllocated) * 100) / 100);
+      return [
+        ...prev,
+        { id: Date.now().toString(), method: "cash", amount: autoFill > 0 ? String(autoFill) : "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
+      ];
+    });
   }
   function removePaymentLine(id: string) {
     setPaymentLines((prev) => rebalanceKhata(prev.length > 1 ? prev.filter((l) => l.id !== id) : prev, deyRaqam));
   }
   function updatePaymentLine(id: string, field: keyof PaymentLine, value: any) {
     setPaymentLines((prev) => {
-      const next = prev.map((l) => (l.id === id ? { ...l, [field]: value } : l));
+      const line = prev.find((l) => l.id === id);
+      let updates: Partial<PaymentLine> = { [field]: value };
+      // Method badalne par us line ka remaining auto-fill karo
+      if (field === "method" && value !== "khata") {
+        const otherAllocated = prev
+          .filter((l) => l.id !== id)
+          .reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+        const autoFill = Math.max(0, Math.round((deyRaqam - otherAllocated) * 100) / 100);
+        updates.amount = autoFill > 0 ? String(autoFill) : (line?.amount ?? "");
+      }
+      const next = prev.map((l) => (l.id === id ? { ...l, ...updates } : l));
       return rebalanceKhata(next, deyRaqam);
     });
+    if (field === "amount" || field === "method") setMessage(null);
   }
   function fillRemaining(id: string) {
     const line = paymentLines.find((l) => l.id === id);
