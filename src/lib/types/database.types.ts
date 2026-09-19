@@ -21583,6 +21583,7 @@ export type Database = {
           trade_rate_pending: boolean
           unit: string | null
           unit_code: string | null
+          units_per_pack: number | null
           updated_at: string
           usage_instructions: string | null
           wholesale_price: number | null
@@ -21628,6 +21629,7 @@ export type Database = {
           trade_rate_pending?: boolean
           unit?: string | null
           unit_code?: string | null
+          units_per_pack?: number | null
           updated_at?: string
           usage_instructions?: string | null
           wholesale_price?: number | null
@@ -21673,6 +21675,7 @@ export type Database = {
           trade_rate_pending?: boolean
           unit?: string | null
           unit_code?: string | null
+          units_per_pack?: number | null
           updated_at?: string
           usage_instructions?: string | null
           wholesale_price?: number | null

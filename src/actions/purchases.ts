@@ -35,6 +35,8 @@ type PurchaseItemInput = {
   wholesale_rate?: number;
   mrp_rate?: number;
   sale_rate?: number;
+  /** Pet mein kitni botal (438) -- rates/quantity form se FI BOTAL aa chuke hote hain. */
+  units_per_pack?: number;
   batch_number?: string;
   manufacture_date?: string;
   expiry_date?: string;
@@ -206,6 +208,8 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     if (item.wholesale_rate != null && item.wholesale_rate > 0) rateUpdate.wholesale_price = item.wholesale_rate;
     if (item.mrp_rate != null && item.mrp_rate > 0) rateUpdate.mrp_price = item.mrp_rate;
     if (item.sale_rate != null && item.sale_rate > 0) rateUpdate.selling_price = item.sale_rate;
+    // Pet mein kitni botal -- agli purchase par khud bhara aayega (438).
+    if (item.units_per_pack != null && item.units_per_pack > 0) rateUpdate.units_per_pack = item.units_per_pack;
     if (Object.keys(rateUpdate).length > 0) {
       const { error: rateErr } = await supabase.from("products").update(rateUpdate).eq("id", item.product_id);
       // Purchase order ruk kar wapas nahi hoti agar sirf rate na charh

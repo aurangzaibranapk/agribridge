@@ -59,7 +59,7 @@ export default async function AdminPurchasesPage() {
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
     supabase
       .from("products")
-      .select("id, name, pack_size, purchase_price, selling_price, mrp_price, wholesale_price")
+      .select("id, name, pack_size, purchase_price, selling_price, mrp_price, wholesale_price, units_per_pack")
       .eq("is_deleted", false)
       .order("name"),
     isAdminLevel

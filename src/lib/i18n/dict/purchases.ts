@@ -67,6 +67,21 @@ export const purchasesDict = {
   pu_wholesale_rate: { en: "Wholesale rate (Rs.)", rm: "Wholesale rate (Rs.)", ur: "ہول سیل ریٹ (روپے)" },
   pu_mrp_rate: { en: "MRP rate (Rs.)", rm: "MRP rate (Rs.)", ur: "ایم آر پی ریٹ (روپے)" },
   pu_sale_rate: { en: "Sale rate (Rs.)", rm: "Sale rate (Rs.)", ur: "سیل ریٹ (روپے)" },
+
+  // ---- Pet aur botal (438) ----
+  pu_units_in_pack: { en: "Bottles per pack", rm: "Pet mein kitni botal?", ur: "پیٹ میں کتنی بوتل؟" },
+  pu_qty_pets: { en: "Quantity (packs)", rm: "Tadaad (kitne pet)", ur: "تعداد (کتنے پیٹ)" },
+  pu_pet_cost: { en: "Pack rate (Rs.)", rm: "Pet ka rate (Rs.)", ur: "پیٹ کا ریٹ (روپے)" },
+  pu_per_bottle: { en: "per bottle", rm: "1 botal", ur: "فی بوتل" },
+  pu_pet_math: { en: "{pets} packs × {units} = {total} bottles", rm: "{pets} pet × {units} botal = {total} botal", ur: "{pets} پیٹ × {units} بوتل = {total} بوتل" },
+  pu_wholesale_pet: { en: "Wholesale rate — per pack (Rs.)", rm: "Wholesale rate — pet ka (Rs.)", ur: "ہول سیل ریٹ — پیٹ کا (روپے)" },
+  pu_sale_bottle: { en: "Sale rate — single bottle (Rs.)", rm: "Sale rate — 1 botal (Rs.)", ur: "سیل ریٹ — ایک بوتل (روپے)" },
+  pu_mrp_bottle: { en: "MRP — single bottle (Rs.)", rm: "MRP — 1 botal (Rs.)", ur: "ایم آر پی — ایک بوتل (روپے)" },
+  pu_pet_hint: {
+    en: "Bill has the pack rate; the shop sells single bottles. Write pack numbers here — the per-bottle rate is worked out and saved automatically.",
+    rm: "Bill par pet ka rate hota hai, shop par sale single botal ki. Yahan pet ke adad likhein — botal ka rate system khud nikaal kar mehfooz karta hai.",
+    ur: "بل پر پیٹ کا ریٹ ہوتا ہے، شاپ پر سیل سنگل بوتل کی۔ یہاں پیٹ کے عدد لکھیں — بوتل کا ریٹ سسٹم خود نکال کر محفوظ کرتا ہے۔",
+  },
   pu_batch_optional: { en: "Batch number (optional)", rm: "Batch number (marzi se)", ur: "بیچ نمبر (مرضی سے)" },
   pu_expiry: { en: "Expiry date", rm: "Miyaad ki tareekh", ur: "میعاد کی تاریخ" },
   pu_total: { en: "Total", rm: "Kul", ur: "کل" },

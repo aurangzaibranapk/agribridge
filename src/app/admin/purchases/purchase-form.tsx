@@ -22,9 +22,12 @@ interface Product {
   selling_price: number | null;
   mrp_price: number | null;
   wholesale_price: number | null;
+  units_per_pack: number | null;
 }
 interface Line {
   product_id: string;
+  /** Pet (peti) mein kitni botal -- bill ka "1X6" (438). Khali/1 = pet nahi. */
+  units_in_pack: string;
   quantity: string;
   unit_cost: string;
   wholesale_rate: string;
@@ -36,6 +39,7 @@ interface Line {
 }
 const emptyLine: Line = {
   product_id: "",
+  units_in_pack: "",
   quantity: "",
   unit_cost: "",
   wholesale_rate: "",
@@ -45,6 +49,12 @@ const emptyLine: Line = {
   manufacture_date: "",
   expiry_date: "",
 };
+/** Pet mode: units > 1 -- quantity/rate pet ke, database mein botal ke jate hain. */
+function lineUnits(line: Line): number {
+  const u = parseFloat(line.units_in_pack);
+  return Number.isFinite(u) && u > 0 ? u : 0;
+}
+const rupee2 = (v: number) => (Math.round(v * 100) / 100).toLocaleString();
 /** Adaigi ki slip: raqam + tareekh + tasveer (436). */
 interface Slip {
   amount: string;
@@ -129,13 +139,23 @@ export function PurchaseForm({
         const updated = { ...line, [field]: value };
         if (field === "product_id") {
           const product = products.find((p) => p.id === value);
+          // Pet mein kitni botal -- pichli dafa jo likha tha wahi khud
+          // aa jata hai (438).
+          if (product && !updated.units_in_pack && product.units_per_pack != null && product.units_per_pack > 1) {
+            updated.units_in_pack = String(product.units_per_pack);
+          }
+          const u = parseFloat(updated.units_in_pack);
+          const units = Number.isFinite(u) && u > 1 ? u : 1;
+          // Database mein rate hamesha FI BOTAL hai; form par pet mode
+          // mein PET ka rate dikhana hai -- is liye × units.
           if (product && !updated.unit_cost) {
-            updated.unit_cost = String(product.purchase_price);
+            updated.unit_cost = String(Math.round(product.purchase_price * units * 100) / 100);
           }
           // Maujooda rate dikha dete hain -- khali chhoR dein to wahi
           // rahega, badalna ho to yahin badal jayega (19 September).
+          // Wholesale pet ka hota hai (Boss), MRP/Sale single botal ke.
           if (product && !updated.wholesale_rate && product.wholesale_price != null) {
-            updated.wholesale_rate = String(product.wholesale_price);
+            updated.wholesale_rate = String(Math.round(product.wholesale_price * units * 100) / 100);
           }
           if (product && !updated.mrp_rate && product.mrp_price != null) {
             updated.mrp_rate = String(product.mrp_price);
@@ -157,17 +177,28 @@ export function PurchaseForm({
     return JSON.stringify(
       lines
         .filter((l) => l.product_id && l.quantity && l.unit_cost)
-        .map((l) => ({
-          product_id: l.product_id,
-          quantity: parseFloat(l.quantity),
-          unit_cost: parseFloat(l.unit_cost),
-          wholesale_rate: l.wholesale_rate ? parseFloat(l.wholesale_rate) : undefined,
-          mrp_rate: l.mrp_rate ? parseFloat(l.mrp_rate) : undefined,
-          sale_rate: l.sale_rate ? parseFloat(l.sale_rate) : undefined,
-          batch_number: l.batch_number || undefined,
-          manufacture_date: l.manufacture_date || undefined,
-          expiry_date: l.expiry_date || undefined,
-        }))
+        .map((l) => {
+          // Pet mode (438): form par pet ke adad, database mein botal
+          // ke -- stock botal mein chalta hai aur POS botal bechta hai.
+          // 12 pet × Rs 753.41 = 72 botal × Rs 125.5683... -- kul wahi.
+          const units = lineUnits(l);
+          const pet = units > 1;
+          const qty = parseFloat(l.quantity);
+          const cost = parseFloat(l.unit_cost);
+          const wholesale = l.wholesale_rate ? parseFloat(l.wholesale_rate) : undefined;
+          return {
+            product_id: l.product_id,
+            quantity: pet ? qty * units : qty,
+            unit_cost: pet ? cost / units : cost,
+            wholesale_rate: wholesale != null ? (pet ? wholesale / units : wholesale) : undefined,
+            mrp_rate: l.mrp_rate ? parseFloat(l.mrp_rate) : undefined,
+            sale_rate: l.sale_rate ? parseFloat(l.sale_rate) : undefined,
+            units_per_pack: units > 0 ? units : undefined,
+            batch_number: l.batch_number || undefined,
+            manufacture_date: l.manufacture_date || undefined,
+            expiry_date: l.expiry_date || undefined,
+          };
+        })
     );
   }, [lines]);
   return (
@@ -360,6 +391,13 @@ export function PurchaseForm({
                     </button>
                   )}
                 </div>
+                {(() => {
+                  const units = lineUnits(line);
+                  const pet = units > 1;
+                  const qty = parseFloat(line.quantity) || 0;
+                  const cost = parseFloat(line.unit_cost) || 0;
+                  const wholesale = parseFloat(line.wholesale_rate) || 0;
+                  return (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2">
                     <ProductPicker
@@ -369,40 +407,74 @@ export function PurchaseForm({
                       placeholder={t("pu_select_product", lang)}
                     />
                   </div>
+                  {line.product_id && (
+                    <div className="col-span-2">
+                      <Label className="mb-1 text-xs">{t("pu_units_in_pack", lang)}</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={line.units_in_pack}
+                        onChange={(e) => updateLine(idx, "units_in_pack", e.target.value)}
+                        placeholder="jaise 1X6 = 6"
+                      />
+                    </div>
+                  )}
                   <Input
                     type="number"
-                    placeholder={t("pu_quantity", lang)}
+                    placeholder={t(pet ? "pu_qty_pets" : "pu_quantity", lang)}
                     value={line.quantity}
                     onChange={(e) => updateLine(idx, "quantity", e.target.value)}
                   />
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder={t("pu_unit_cost", lang)}
+                    placeholder={t(pet ? "pu_pet_cost" : "pu_unit_cost", lang)}
                     value={line.unit_cost}
                     onChange={(e) => updateLine(idx, "unit_cost", e.target.value)}
                   />
+                  {/* Pet ka hisaab wahin ke wahin: kitni botal banti hain
+                      aur 1 botal kis rate par paRti hai (438). */}
+                  {pet && qty > 0 && cost > 0 && (
+                    <p className="col-span-2 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-800 dark:bg-brand-900/30 dark:text-brand-200">
+                      {t("pu_pet_math", lang)
+                        .replace("{pets}", String(qty))
+                        .replace("{units}", String(units))
+                        .replace("{total}", String(qty * units))}
+                      {" · "}
+                      {t("pu_per_bottle", lang)}: Rs {rupee2(cost / units)}
+                    </p>
+                  )}
                   {line.product_id && line.quantity && line.unit_cost && (
                     <div className="col-span-2 grid grid-cols-3 gap-2 rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
-                      <div className="col-span-3 text-xs text-surface-500">{t("pu_rate_hint", lang)}</div>
+                      <div className="col-span-3 text-xs text-surface-500">
+                        {t(pet ? "pu_pet_hint" : "pu_rate_hint", lang)}
+                      </div>
+                      <div>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder={t(pet ? "pu_wholesale_pet" : "pu_wholesale_rate", lang)}
+                          value={line.wholesale_rate}
+                          onChange={(e) => updateLine(idx, "wholesale_rate", e.target.value)}
+                        />
+                        {pet && wholesale > 0 && (
+                          <p className="mt-0.5 text-[11px] text-surface-500">
+                            {t("pu_per_bottle", lang)}: Rs {rupee2(wholesale / units)}
+                          </p>
+                        )}
+                      </div>
                       <Input
                         type="number"
                         step="0.01"
-                        placeholder={t("pu_wholesale_rate", lang)}
-                        value={line.wholesale_rate}
-                        onChange={(e) => updateLine(idx, "wholesale_rate", e.target.value)}
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder={t("pu_mrp_rate", lang)}
+                        placeholder={t(pet ? "pu_mrp_bottle" : "pu_mrp_rate", lang)}
                         value={line.mrp_rate}
                         onChange={(e) => updateLine(idx, "mrp_rate", e.target.value)}
                       />
                       <Input
                         type="number"
                         step="0.01"
-                        placeholder={t("pu_sale_rate", lang)}
+                        placeholder={t(pet ? "pu_sale_bottle" : "pu_sale_rate", lang)}
                         value={line.sale_rate}
                         onChange={(e) => updateLine(idx, "sale_rate", e.target.value)}
                       />
@@ -424,6 +496,8 @@ export function PurchaseForm({
                     </>
                   )}
                 </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

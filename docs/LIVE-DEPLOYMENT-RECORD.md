@@ -3756,6 +3756,14 @@ backup ki tasdeeq ke tehat; sirf additive menu-data). Verify: Live
 features 219→222, links 214→220. Ye links bina naye build ke bhi
 foran nazar aate hain (menu database se banta hai).
 
+**Migration 438 (19 September, sham):** `products.units_per_pack`
+(pet/carton mein kitni botal — bill "CC PET1L 1X6" wala hisaab).
+Additive column, Testing + Live dono par lagi (wahi 18 Sep backup ki
+tasdeeq ke tehat). Purchase form ab pet mode mein pet ke adad leta hai
+aur database mein botal ke bhejta hai (stock/POS botal mein hi chalte
+hain); wholesale rate pet ka likha jata hai, system fi-botal nikaal
+kar rakhta hai.
+
 **Naye build mein ye bhi hai (19 September, sham):** sidebar
 auto-expand (jo safha khula ho us ka group khud khule), Zero-Leakage
 "Fully Matched" ab aa sakta hai (mustaqil Khata-note ab status nahi
