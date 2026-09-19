@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, ChevronDown } from "lucide-react";
@@ -48,6 +48,22 @@ export function Sidebar({
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     new Set(activeGroupLabel ? [activeGroupLabel] : [])
   );
+  // Boss (19 September): "jo link browser mein khula ho, sidebar mein
+  // wo nazar aaye/highlight ho." Highlight pehle se tha, magar group
+  // sirf pehli dafa khulta tha -- aage navigate karne par naya active
+  // safha band group ke andar chhupa rehta tha. Ab jab bhi rasta
+  // badle, us ka group khud khul jata hai (baqi khule group band nahi
+  // hote -- banda jo khud khol chuka hai wo waise ka waisa rehta hai).
+  useEffect(() => {
+    if (!activeGroupLabel) return;
+    setOpenGroups((prev) => {
+      if (prev.has(activeGroupLabel)) return prev;
+      const next = new Set(prev);
+      next.add(activeGroupLabel);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, activeGroupLabel]);
   function toggleGroup(label: string) {
     setOpenGroups((prev) => {
       const next = new Set(prev);

@@ -10,10 +10,14 @@ export function Card({ className, children }: { className?: string; children: Re
 }
 
 export function PageHeader({
-  title, description, actions, showBack,
+  title, description, actions, showBack = true,
 }: {
   title: string; description?: string; actions?: React.ReactNode;
-  /** Malik (19 September): "jis page se aaye usi par jaana ka option chahiye." */
+  /**
+   * Boss (19 September): "har page par back ka option chahiye" -- ab ye
+   * DEFAULT hai, har PageHeader wale safhe par khud aata hai. Kisi
+   * khaas safhe par chhupana ho to showBack={false} dein.
+   */
   showBack?: boolean;
 }) {
   return (

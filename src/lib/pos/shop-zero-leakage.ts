@@ -225,8 +225,17 @@ export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, 
   if (stockSaleMatch.posVsStockSaleDifference != null && Math.abs(stockSaleMatch.posVsStockSaleDifference) >= 1) {
     blockers.push(`POS sale aur selling-rate sale_out mein Rs ${Math.abs(stockSaleMatch.posVsStockSaleDifference).toLocaleString()} farq hai; discount/rate/movement verify karein.`);
   }
-  blockers.push("Customer Khata/Receivable abhi har source se shop-level attributable nahi hai.");
   if (cash.openShiftsCount > 0) blockers.push(`${cash.openShiftsCount} POS shift abhi khuli hai; physical cash final nahi.`);
+
+  // Ye pehle blockers mein tha -- jis se HAR shop hamesha "incomplete"
+  // rehti thi aur "Fully Matched" kabhi aa hi nahi sakta tha (Boss, 19
+  // September: "ye kaise verify hoga?"). Baat sach hai magar is par
+  // koi amal nahi kar sakta, is liye ab ye DISCLOSED note hai: match ki
+  // hadd saaf likhi jati hai, magar status un cheezon se banta hai jo
+  // waqai theek ki ja sakti hain.
+  const notes: string[] = [
+    "Customer Khata/Receivable abhi har source se shop-level attributable nahi hai -- ye match cash/stock ki hadd tak hai.",
+  ];
 
   return {
     stock,
@@ -237,6 +246,7 @@ export async function shopZeroLeakageSnapshot(shopId: string, fromDate: string, 
     investment,
     status: blockers.length ? "incomplete" as const : (Math.abs(cash.fullDifference) < 1 ? "matched" as const : "difference" as const),
     blockers,
+    notes,
   };
 }
 

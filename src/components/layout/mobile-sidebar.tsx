@@ -32,6 +32,19 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
     new Set(activeGroupLabel ? [activeGroupLabel] : [])
   );
 
+  // Wahi jo bari sidebar mein hai (19 September): rasta badle to active
+  // safhe ka group khud khul jaye, taake khulta hua safha nazar aaye.
+  useEffect(() => {
+    if (!activeGroupLabel) return;
+    setOpenGroups((prev) => {
+      if (prev.has(activeGroupLabel)) return prev;
+      const next = new Set(prev);
+      next.add(activeGroupLabel);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, activeGroupLabel]);
+
   function toggleGroup(label: string) {
     setOpenGroups((prev) => {
       const next = new Set(prev);

@@ -79,6 +79,8 @@ export default async function Shop360MatchPage({ searchParams }: { searchParams?
         <div className="text-right"><p className="text-xs text-surface-500">Unexplained Cash Difference</p><p className="text-2xl font-bold tabular-nums">{money(snap.cash.fullDifference)}</p></div>
       </div>
       {snap.blockers.length > 0 && <div className="mt-4 space-y-1 border-t pt-3">{snap.blockers.map((b,i) => <p key={i} className="flex gap-2 text-xs text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0"/>{b}</p>)}</div>}
+      {/* Hadd ka disclosure -- status nahi rokta, magar chhupta bhi nahi (19 September). */}
+      {snap.notes.length > 0 && <div className="mt-3 space-y-1 border-t pt-3">{snap.notes.map((n,i) => <p key={i} className="text-xs text-surface-500">{n}</p>)}</div>}
     </Card>
 
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

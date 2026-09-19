@@ -3749,6 +3749,20 @@ tarteeb poori hui —
 
 Ab naya build Live par ja sakta hai.
 
+**Migration 437 (19 September, dopahar):** sidebar ke menu-data mein
+Shop 360 / Zero-Leakage / POS Shift Report ke links (features +3,
+dashboard_features +6). Testing par lagi, phir Live par (wahi 18 Sep
+backup ki tasdeeq ke tehat; sirf additive menu-data). Verify: Live
+features 219→222, links 214→220. Ye links bina naye build ke bhi
+foran nazar aate hain (menu database se banta hai).
+
+**Naye build mein ye bhi hai (19 September, sham):** sidebar
+auto-expand (jo safha khula ho us ka group khud khule), Zero-Leakage
+"Fully Matched" ab aa sakta hai (mustaqil Khata-note ab status nahi
+rokta), har PageHeader wale safhe par Back button (default), aur
+topbar search ab database ke menu (features/dashboards) + staff mein
+dhoondta hai, choti spelling ghalti ("perchase") ke sath bhi.
+
 **Is build mein kya hai (abhi commit hona baqi):** ProductPicker
 (purchase order par product search), purchase line par Wholesale/MRP/
 Sale rate (products par lagte hain), payment slips (kai slips, har ek
