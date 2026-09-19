@@ -34,6 +34,13 @@ export interface ImportRow {
   sellingPrice: number | null;
   mrpPrice: number | null;
   wholesalePrice: number | null;
+  /**
+   * Pet/carton mein kitni botal (438). Jab ye 1 se zyada ho to TRADE
+   * aur WHOLESALE ke likhe hue adad PET ke maane jate hain (bill par
+   * wohi hota hai) aur "kitne aaye" PET ginta hai -- database mein sab
+   * FI BOTAL ja kar hi likha jata hai. Sale aur MRP hamesha 1 botal ke.
+   */
+  unitsPerPack: number | null;
   manufactureDate: string | null;
   expiryDate: string | null;
   minStock: number | null;
@@ -90,6 +97,11 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   expiry: "expiryDate", "expiry date": "expiryDate", exp: "expiryDate",
   expairy: "expiryDate", "expairy date": "expiryDate", experi: "expiryDate",
   "experi date": "expiryDate", expire: "expiryDate", "expire date": "expiryDate",
+  // Pet/carton mein kitni botal -- bill ka "1X6" (438).
+  botal: "unitsPerPack", bottle: "unitsPerPack", bottles: "unitsPerPack",
+  pet: "unitsPerPack", "pet size": "unitsPerPack", "1x": "unitsPerPack",
+  "units per pack": "unitsPerPack", "per pack": "unitsPerPack",
+  "carton size": "unitsPerPack",
   "min stock": "minStock", "minimum stock": "minStock", minstock: "minStock",
   // "Kitne aaye" -- ye product ka khana nahi, stock ka hai. Isi liye
   // wo tabhi charhta hai jab banda warehouse chunta hai (253).
@@ -206,11 +218,15 @@ async function canImport() {
  * Faida ye ke jo preview mein nazar aata hai, bilkul wohi charhta hai:
  * dono jagah ek hi hisaab, do nahi.
  */
-type RowEdit = Partial<Record<"name" | "packSize" | "purchasePrice" | "sellingPrice" | "wholesalePrice" | "expiryDate" | "manufactureDate" | "barcode", string>>;
+type RowEdit = Partial<Record<"name" | "packSize" | "purchasePrice" | "sellingPrice" | "wholesalePrice" | "mrpPrice" | "unitsPerPack" | "openingQty" | "expiryDate" | "manufactureDate" | "barcode", string>>;
 
 const EDITABLE = new Set([
-  "name", "packSize", "purchasePrice", "sellingPrice", "wholesalePrice", "expiryDate", "manufactureDate", "barcode",
+  "name", "packSize", "purchasePrice", "sellingPrice", "wholesalePrice", "mrpPrice", "unitsPerPack", "openingQty", "expiryDate", "manufactureDate", "barcode",
 ]);
+
+/** Pet mode ka zarb: botal likhi ho to wahi, warna 1 (yani koi tabdeeli nahi). */
+const petU = (r: Pick<ImportRow, "unitsPerPack">): number =>
+  r.unitsPerPack != null && r.unitsPerPack > 1 ? r.unitsPerPack : 1;
 
 function parseEdits(raw: FormDataEntryValue | null): Map<number, RowEdit> {
   const out = new Map<number, RowEdit>();
@@ -363,8 +379,9 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     const barcode = (pick("barcode") ?? "").trim() || null;
     const purchasePrice = toNumber(pick("purchasePrice"));
     const sellingPrice = toNumber(pick("sellingPrice"));
-    const mrpPrice = toNumber(at(r, "mrpPrice"));
+    const mrpPrice = toNumber(pick("mrpPrice"));
     const wholesalePrice = toNumber(pick("wholesalePrice"));
+    const unitsPerPack = toNumber(pick("unitsPerPack"));
 
     const row: ImportRow = {
       line: lineNo,
@@ -376,10 +393,11 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       sellingPrice,
       mrpPrice,
       wholesalePrice,
+      unitsPerPack,
       manufactureDate: toDate(pick("manufactureDate")),
       expiryDate: toDate(pick("expiryDate")),
       minStock: toNumber(at(r, "minStock")),
-      openingQty: toNumber(at(r, "openingQty")),
+      openingQty: toNumber(pick("openingQty")),
       existingId: null,
       categoryName: (at(r, "categoryName") ?? "").trim() || null,
       brandName: (at(r, "brandName") ?? "").trim() || null,
@@ -418,11 +436,26 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       notes.push("Sale rate nahi diya — product ban jayega magar bikega nahi, jab tak rate na bhara jaye.");
     }
 
+    // Pet mode (438): botal likhi ho to trade/wholesale PET ke likhe
+    // gaye hain -- muqablay aur database FI BOTAL par chalte hain.
+    const u = petU(row);
+    const tradeUnit = purchasePrice !== null ? purchasePrice / u : null;
+    const wholesaleUnit = wholesalePrice !== null ? wholesalePrice / u : null;
+    if (u > 1) {
+      const hisaab: string[] = [];
+      if (tradeUnit !== null) hisaab.push(`trade 1 botal Rs ${Math.round(tradeUnit * 100) / 100}`);
+      if (wholesaleUnit !== null) hisaab.push(`wholesale 1 botal Rs ${Math.round(wholesaleUnit * 100) / 100}`);
+      if ((row.openingQty ?? 0) > 0) hisaab.push(`"kitne aaye" ${row.openingQty} pet = ${Number(row.openingQty) * u} botal`);
+      notes.push(
+        `Pet mein ${u} botal — trade/wholesale PET ke maane jayenge${hisaab.length ? ` (${hisaab.join(", ")})` : ""}. Sale/MRP 1 botal ke.`
+      );
+    }
+
     // Sale rate trade rate se kam ho to har bikri par nuqsan hota hai.
     // Ye rok nahi, khabardari hai -- kabhi jaan boojh kar bhi aisa hota
     // hai (khatam karne wala maal).
-    if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
-      notes.push("Sale rate trade rate se KAM hai — har bikri par nuqsan hoga.");
+    if (tradeUnit !== null && sellingPrice !== null && sellingPrice < tradeUnit) {
+      notes.push("Sale rate (1 botal) trade rate se KAM hai — har bikri par nuqsan hoga.");
     }
 
     if (purchasePrice === null) {
@@ -432,11 +465,11 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
     // Thok ka rate lagat se kam bhi ho sakta hai (purana maal nikalna)
     // aur retail ke barabar bhi. Is liye ROK nahi -- sirf khabardari,
     // taake faisla soch kar ho.
-    if (wholesalePrice !== null && purchasePrice !== null && wholesalePrice < purchasePrice) {
+    if (wholesaleUnit !== null && tradeUnit !== null && wholesaleUnit < tradeUnit) {
       notes.push("Thok ka rate trade rate se KAM hai — thok par nuqsan hoga.");
     }
-    if (wholesalePrice !== null && sellingPrice !== null && wholesalePrice > sellingPrice) {
-      notes.push("Thok ka rate retail se ZYADA hai — dekh lein, aksar ulta hota hai.");
+    if (wholesaleUnit !== null && sellingPrice !== null && wholesaleUnit > sellingPrice) {
+      notes.push("Thok ka rate (1 botal) retail se ZYADA hai — dekh lein, aksar ulta hota hai.");
     }
 
     if (row.expiryDate && row.manufactureDate && row.expiryDate < row.manufactureDate) {
@@ -598,8 +631,9 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     barcode: r.barcode,
     // Trade rate na ho to sifar jata hai (khana NOT NULL hai) MAGAR
     // us par nishan lagta hai. Nishan ke baghair ye sifar munafe mein
-    // chup chaap juR jata.
-    purchase_price: r.purchasePrice ?? 0,
+    // chup chaap juR jata. Pet mode mein sheet ka adad PET ka hai --
+    // database mein FI BOTAL jata hai (438).
+    purchase_price: r.purchasePrice !== null ? r.purchasePrice / petU(r) : 0,
     trade_rate_pending: r.purchasePrice === null,
     // Sale rate na ho to bhi sifar jata hai (khana NOT NULL hai) magar
     // nishan ke sath -- aur nishan par taala hai: bikega nahi (252).
@@ -607,8 +641,9 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
     sale_rate_pending: r.sellingPrice === null,
     mrp_price: r.mrpPrice,
     // Thok ka rate NULL rehta hai jab tak diya na jaye. Sifar likhne ka
-    // matlab "thok par muft" hota.
-    wholesale_price: r.wholesalePrice,
+    // matlab "thok par muft" hota. Pet mode: PET ka likha, FI BOTAL gaya.
+    wholesale_price: r.wholesalePrice !== null ? r.wholesalePrice / petU(r) : null,
+    units_per_pack: r.unitsPerPack,
     manufacture_date: r.manufactureDate,
     expiry_date: r.expiryDate,
     min_stock_threshold: r.minStock,
@@ -668,13 +703,18 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       // lagao". `null` bhejna aur na bhejna database mein ek hi baat
       // hai; types ke liye na bhejna sahi hai.
       p_sale: r.sellingPrice ?? undefined,
-      p_trade: r.purchasePrice ?? undefined,
-      p_wholesale: r.wholesalePrice ?? undefined,
+      // Pet mode: sheet par PET ka rate, database mein FI BOTAL (438).
+      p_trade: r.purchasePrice !== null ? r.purchasePrice / petU(r) : undefined,
+      p_wholesale: r.wholesalePrice !== null ? r.wholesalePrice / petU(r) : undefined,
       p_source: "import",
     });
     if (rateErr) {
       updateProblems.push(`${r.name}: ${rateErr.message}`);
       continue;
+    }
+    // Botal ki ginti bhi yaad rahe -- agli purchase/sheet par khud bhari aaye.
+    if (r.unitsPerPack != null && r.unitsPerPack > 0) {
+      await supabase.from("products").update({ units_per_pack: r.unitsPerPack }).eq("id", r.existingId as string);
     }
     updated += 1;
   }
@@ -765,10 +805,17 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
 
     const purchaseNumber = `PO-${Date.now()}`;
     const purchaseDate = aajKaKhana();
+    // Pet ho ya botal, total wahi banta hai: pet-tadaad x pet-rate.
     const totalAmount = withQty.reduce(
       (sum, x) => sum + Number(x.row.openingQty ?? 0) * Number(x.row.purchasePrice ?? 0),
       0
     );
+
+    // Bill ka discount aur tax (Boss, 19 September) -- wahi khane jo
+    // purchases par pehle se hain; receive par ledger inhi se poora
+    // discount/tax hisaab karta hai (389).
+    const discountAmount = toNumber(String(formData.get("discount_amount") ?? ""));
+    const taxAmount = toNumber(String(formData.get("tax_amount") ?? ""));
 
     // Adaigi ki shartein wahi jo haath se banne wali purchase par hain
     // -- ek hi hisaab, ek hi jagah (lib/purchase-terms). Sheet ka
@@ -795,6 +842,9 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         // Sheet ka draft: manzoori ke baghair receive nahi (259).
         review_status: "submitted",
         total_amount: totalAmount,
+        discount_amount: discountAmount != null && discountAmount > 0 ? discountAmount : null,
+        tax_amount: taxAmount != null && taxAmount > 0 ? taxAmount : null,
+        tax_label: taxAmount != null && taxAmount > 0 ? "Advance Tax" : null,
         payment_terms: terms.terms,
         credit_days: terms.creditDays,
         due_date: terms.dueDate,
@@ -834,8 +884,10 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       }
 
       for (const x of withQty) {
-        const qty = Number(x.row.openingQty ?? 0);
-        const cost = Number(x.row.purchasePrice ?? 0);
+        // Pet mode (438): sheet par pet, stock/kharid FI BOTAL.
+        const uu = petU(x.row);
+        const qty = Number(x.row.openingQty ?? 0) * uu;
+        const cost = Number(x.row.purchasePrice ?? 0) / uu;
 
         const { data: batch } = await supabase
           .from("stock_batches")
@@ -891,12 +943,15 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         inventoryId = created.id;
       }
 
+      // Pet mode (438): sheet par pet, stock FI BOTAL.
+      const uu = petU(x.row);
+      const openQty = Number(x.row.openingQty ?? 0) * uu;
       const { error: mvErr } = await supabase.from("stock_movements").insert({
         inventory_id: inventoryId,
         // Ye kharid nahi hai -- kisi supplier ka dena is se nahi banta.
         // Is liye "purchase_in" likhna jhoot hoga.
         movement_type: "adjustment_increase",
-        quantity: Number(x.row.openingQty ?? 0),
+        quantity: openQty,
         reference_type: "opening_stock",
         created_by: user.id,
       });
@@ -914,9 +969,9 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
         warehouse_id: warehouseId as string,
         manufacture_date: x.row.manufactureDate,
         expiry_date: x.row.expiryDate,
-        initial_quantity: Number(x.row.openingQty ?? 0),
-        remaining_quantity: Number(x.row.openingQty ?? 0),
-        unit_cost: x.row.purchasePrice,
+        initial_quantity: openQty,
+        remaining_quantity: openQty,
+        unit_cost: x.row.purchasePrice !== null ? x.row.purchasePrice / uu : null,
       });
       if (sbErr) stockProblems.push(`${x.row.name}: batch nahi bana: ${sbErr.message}`);
     }

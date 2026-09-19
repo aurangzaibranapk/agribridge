@@ -13,10 +13,10 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const initial: ImportState = {};
 
-const SAMPLE = `name,pack_size,unit,barcode,sale_rate,wholesale,trade_rate,mrp,expiry,category,brand
-Tapal Danedar Chai,250g,Packet,,650,610,,700,12/2027,Chai,Tapal
-Sufi Cooking Oil,1 Litre,Bottle,,540,505,485,560,06/2027,Ghee aur Tel,Sufi
-Lifebuoy Sabun,100g,Piece,,120,,,130,,Sabun,Lifebuoy`;
+const SAMPLE = `name,pack_size,botal,qty,trade_rate,sale_rate,wholesale,mrp,expiry,category,brand
+Coke 1L,1L,6,12,753.41,160,700,170,12/2027,Cold Drinks,Coca-Cola
+Sufi Cooking Oil,1 Litre,,,485,540,505,560,06/2027,Ghee aur Tel,Sufi
+Lifebuoy Sabun,100g,,,,120,,130,,Sabun,Lifebuoy`;
 
 function Submit({ label, icon }: { label: string; icon?: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -56,7 +56,10 @@ const LABEL_KEY: Record<
  * pehli hi tabdeeli par apni qatar kho deti.
  */
 type RowEdit = Partial<
-  Record<"name" | "packSize" | "purchasePrice" | "sellingPrice" | "wholesalePrice" | "expiryDate", string>
+  Record<
+    "name" | "packSize" | "purchasePrice" | "sellingPrice" | "wholesalePrice" | "mrpPrice" | "unitsPerPack" | "openingQty" | "expiryDate",
+    string
+  >
 >;
 
 export function ImportClient({
@@ -120,6 +123,31 @@ export function ImportClient({
 
   const s = previewState.summary;
   const rows = previewState.rows ?? [];
+
+  // Bill jaisa hisaab (Boss, 19 September): har qatar ka Amount = tadaad
+  // x trade rate, neeche Total/Discount/Tax/Grand. Durusti likhte hi
+  // adad yahin badal jata hai -- server dobara preview par wohi ginta hai.
+  const [discount, setDiscount] = useState("");
+  const [tax, setTax] = useState("");
+  const eff = (r: ImportRow, key: "openingQty" | "purchasePrice" | "unitsPerPack"): number | null => {
+    const e = edits[r.line]?.[key];
+    if (e !== undefined) {
+      const n = parseFloat(e.replace(/,/g, ""));
+      return Number.isFinite(n) ? n : null;
+    }
+    const v = r[key];
+    return v == null ? null : Number(v);
+  };
+  const lineAmount = (r: ImportRow): number | null => {
+    const q = eff(r, "openingQty");
+    const t = eff(r, "purchasePrice");
+    return q != null && t != null ? q * t : null;
+  };
+  const billTotal = rows
+    .filter((r) => r.status !== "skipped" && r.status !== "error" && r.status !== "duplicate" && !skips.includes(r.line))
+    .reduce((sum, r) => sum + (lineAmount(r) ?? 0), 0);
+  const grandTotal = billTotal - (parseFloat(discount) || 0) + (parseFloat(tax) || 0);
+  const money = (v: number) => `Rs ${(Math.round(v * 100) / 100).toLocaleString()}`;
 
   return (
     <div className="space-y-4">
@@ -190,10 +218,12 @@ export function ImportClient({
               <code>price</code>, <code>qeemat</code>).
             </p>
             <p>
-              <strong>{t("pf_optional", lang)}</strong> <code>pack_size</code>, <code>unit</code>, <code>barcode</code>,{" "}
+              <strong>{t("pf_optional", lang)}</strong> <code>pack_size</code>, <code>botal</code> (pet mein kitni),{" "}
+              <code>qty</code> (kitne aaye), <code>unit</code>, <code>barcode</code>,{" "}
               <code>trade_rate</code>, <code>wholesale</code> (ya <code>thok</code>), <code>mrp</code>,{" "}
               <code>mfg</code>, <code>expiry</code>, <code>min_stock</code>, <code>category</code>,{" "}
-              <code>brand</code>, <code>company</code>.
+              <code>brand</code>, <code>company</code>. Botal likhi ho to trade/wholesale{" "}
+              <strong>pet ke</strong> maane jate hain aur qty bhi pet ginti hai — system 1 botal ka khud nikaalta hai.
             </p>
             <p>
               {t("pf_date_rule", lang)
@@ -250,17 +280,25 @@ export function ImportClient({
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-xs">
+            {/* table-fixed: har sarkhi ki chauRai yahan TH par bandhi
+                hai, is liye sarkhi hamesha apne neeche wale box ke
+                THEEK UPAR rehti hai -- agay peechay nahi hoti (Boss,
+                19 September). */}
+            <table className="w-full min-w-[74rem] table-fixed text-xs">
               <thead>
                 <tr className="border-b border-surface-200 text-left uppercase text-surface-500">
-                  <th className="py-1.5">#</th>
-                  <th className="py-1.5">{t("pf_th_name", lang)}</th>
-                  <th className="py-1.5">{t("pf_th_pack", lang)}</th>
-                  <th className="py-1.5 text-right">{t("pf_th_trade", lang)}</th>
-                  <th className="py-1.5 text-right">{t("pf_th_sale", lang)}</th>
-                  <th className="py-1.5 text-right">{t("pf_th_wholesale", lang)}</th>
-                  <th className="py-1.5">{t("pf_th_expiry", lang)}</th>
-                  <th className="py-1.5">{t("pf_th_state", lang)}</th>
+                  <th className="w-8 py-1.5 pr-1">#</th>
+                  <th className="py-1.5 pr-1">{t("pf_th_name", lang)}</th>
+                  <th className="w-16 py-1.5 pr-1">{t("pf_th_pack", lang)}</th>
+                  <th className="w-16 py-1.5 pr-1 text-right">{t("pf_th_botal", lang)}</th>
+                  <th className="w-16 py-1.5 pr-1 text-right">{t("pf_th_qty", lang)}</th>
+                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_trade", lang)}</th>
+                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_amount", lang)}</th>
+                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_sale", lang)}</th>
+                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_wholesale", lang)}</th>
+                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_mrp", lang)}</th>
+                  <th className="w-24 py-1.5 pr-1">{t("pf_th_expiry", lang)}</th>
+                  <th className="w-48 py-1.5">{t("pf_th_state", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,7 +323,26 @@ export function ImportClient({
                       <td className="min-w-[9rem] py-1.5 pr-1 font-medium">
                         {cell("name", r.name, "font-medium")}
                       </td>
-                      <td className="w-20 py-1.5 pr-1">{cell("packSize", r.packSize ?? "")}</td>
+                      <td className="w-16 py-1.5 pr-1">{cell("packSize", r.packSize ?? "")}</td>
+                      {/* Pet mein kitni botal (438) -- likhi ho to trade/
+                          wholesale PET ke maane jate hain. */}
+                      <td className="w-14 py-1.5 pr-1">
+                        {cell("unitsPerPack", r.unitsPerPack === null ? "" : String(r.unitsPerPack), "text-right")}
+                      </td>
+                      <td className="w-14 py-1.5 pr-1">
+                        {cell("openingQty", r.openingQty === null ? "" : String(r.openingQty), "text-right")}
+                        {/* Pet likhte hi botal khud (Boss, 19 September):
+                            "10 pet hain... wo khud calculate kare ga". */}
+                        {(() => {
+                          const u = eff(r, "unitsPerPack");
+                          const q = eff(r, "openingQty");
+                          return !off && u != null && u > 1 && q != null && q > 0 ? (
+                            <span className="block whitespace-nowrap text-[10px] font-medium text-brand-700">
+                              = {(Math.round(q * u * 100) / 100).toLocaleString()} botal
+                            </span>
+                          ) : null;
+                        })()}
+                      </td>
                       {/* Trade rate na ho to "0" nahi likha jata --
                           khana khali rehta hai aur us par nishan lagta
                           hai. */}
@@ -294,6 +351,20 @@ export function ImportClient({
                         {r.purchasePrice === null && !off && (
                           <span className="block text-[10px] text-amber-700">{t("pf_pending_word", lang)}</span>
                         )}
+                        {/* Pet ka rate likha, 1 botal ka khud nikal aaya. */}
+                        {(() => {
+                          const u = eff(r, "unitsPerPack");
+                          const tr = eff(r, "purchasePrice");
+                          return !off && u != null && u > 1 && tr != null && tr > 0 ? (
+                            <span className="block whitespace-nowrap text-[10px] font-medium text-brand-700">
+                              1 botal: Rs {(Math.round((tr / u) * 100) / 100).toLocaleString()}
+                            </span>
+                          ) : null;
+                        })()}
+                      </td>
+                      {/* Bill jaisa Amount = tadaad x trade -- likhte hi badalta hai. */}
+                      <td className="w-20 py-1.5 pr-1 text-right font-medium tabular-nums text-surface-700">
+                        {(() => { const a = lineAmount(r); return a == null || off ? "—" : (Math.round(a * 100) / 100).toLocaleString(); })()}
                       </td>
                       <td className="w-20 py-1.5 pr-1">
                         {cell("sellingPrice", r.sellingPrice === null ? "" : String(r.sellingPrice), "text-right")}
@@ -302,6 +373,19 @@ export function ImportClient({
                           matlab "thok par muft" hota. */}
                       <td className="w-20 py-1.5 pr-1">
                         {cell("wholesalePrice", r.wholesalePrice === null ? "" : String(r.wholesalePrice), "text-right")}
+                        {(() => {
+                          const u = eff(r, "unitsPerPack");
+                          const e = edits[r.line]?.wholesalePrice;
+                          const w = e !== undefined ? parseFloat(e.replace(/,/g, "")) : r.wholesalePrice == null ? NaN : Number(r.wholesalePrice);
+                          return !off && u != null && u > 1 && Number.isFinite(w) && w > 0 ? (
+                            <span className="block whitespace-nowrap text-[10px] font-medium text-brand-700">
+                              1 botal: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}
+                            </span>
+                          ) : null;
+                        })()}
+                      </td>
+                      <td className="w-20 py-1.5 pr-1">
+                        {cell("mrpPrice", r.mrpPrice === null ? "" : String(r.mrpPrice), "text-right")}
                       </td>
                       <td className="w-28 py-1.5 pr-1">{cell("expiryDate", r.expiryDate ?? "")}</td>
                       <td className="py-1.5">
@@ -339,6 +423,37 @@ export function ImportClient({
               </tbody>
             </table>
           </div>
+
+          {/* Bill jaisa neeche ka hisaab (Boss, 19 September). */}
+          {billTotal > 0 && (
+            <div className="mt-3 flex flex-col items-end gap-1 border-t border-surface-200 pt-2 text-sm">
+              <div className="flex w-64 items-center justify-between">
+                <span className="text-surface-600">{t("pf_sum_total", lang)}</span>
+                <span className="font-semibold tabular-nums">{money(billTotal)}</span>
+              </div>
+              {(parseFloat(discount) > 0 || parseFloat(tax) > 0) && (
+                <>
+                  {parseFloat(discount) > 0 && (
+                    <div className="flex w-64 items-center justify-between text-emerald-700">
+                      <span>{t("pf_sum_discount", lang)}</span>
+                      <span className="tabular-nums">− {money(parseFloat(discount) || 0)}</span>
+                    </div>
+                  )}
+                  {parseFloat(tax) > 0 && (
+                    <div className="flex w-64 items-center justify-between text-surface-600">
+                      <span>{t("pf_sum_tax", lang)}</span>
+                      <span className="tabular-nums">+ {money(parseFloat(tax) || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex w-64 items-center justify-between border-t border-surface-200 pt-1">
+                    <span className="font-medium">{t("pf_sum_grand", lang)}</span>
+                    <span className="font-bold tabular-nums">{money(grandTotal)}</span>
+                  </div>
+                </>
+              )}
+              <p className="text-[11px] text-surface-400">{t("pf_sum_note", lang)}</p>
+            </div>
+          )}
 
           {s.ready + s.updates > 0 && (
             <form action={importAction} className="mt-4 space-y-3 border-t border-surface-200 pt-3">
@@ -419,6 +534,37 @@ export function ImportClient({
                   hai ke wo raqam "Bill aur Dena" par kabhi due nahi
                   dikhti -- yani wo yaad dilane wale nizam se hi bahar
                   ho jati hai. Dena maujood, magar kisi ko yaad nahi. */}
+              {/* Bill ka discount aur tax -- purchase par mehfooz hote
+                  hain, receive par ledger inhi se hisaab karta hai (389). */}
+              {stockSource === "supplier" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="imp-disc">{t("pf_sum_discount", lang)}</Label>
+                    <Input
+                      id="imp-disc"
+                      name="discount_amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="imp-tax">{t("pf_sum_tax", lang)}</Label>
+                    <Input
+                      id="imp-tax"
+                      name="tax_amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={tax}
+                      onChange={(e) => setTax(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
               {stockSource === "supplier" && (
                 <div>
                   <p className="mb-1 text-sm font-medium text-surface-700 dark:text-surface-300">
