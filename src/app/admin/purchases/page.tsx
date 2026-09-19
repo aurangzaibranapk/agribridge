@@ -172,12 +172,20 @@ export default async function AdminPurchasesPage() {
       <PageHeader title={t("pu_title", lang)} description={t("pu_subtitle", lang)} />
       {/* Andar aane ke teenon raaste ek jagah (naqsha 4 September) --
           yahan sirf link hai, kaam wahi purana. */}
-      <Link
-        href="/admin/purchases/new"
-        className="mb-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-      >
-        + {t("np_title", lang)}
-      </Link>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Link
+          href="/admin/purchases/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          + {t("np_title", lang)}
+        </Link>
+        <Link
+          href="/admin/purchases/tax-report"
+          className="inline-flex items-center gap-2 rounded-lg border border-surface-200 px-3.5 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+        >
+          Tax & Discount Statement
+        </Link>
+      </div>
 
       {/* Boss (19 September): "purchase order ko darmiyan mein le
           aayein, khoobsurat lagegi" -- form ab page ke beech mein,
