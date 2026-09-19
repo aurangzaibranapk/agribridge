@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils/format";
+import { BackButton } from "@/components/ui/back-button";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -8,10 +9,17 @@ export function Card({ className, children }: { className?: string; children: Re
   );
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: React.ReactNode }) {
+export function PageHeader({
+  title, description, actions, showBack,
+}: {
+  title: string; description?: string; actions?: React.ReactNode;
+  /** Malik (19 September): "jis page se aaye usi par jaana ka option chahiye." */
+  showBack?: boolean;
+}) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
+        {showBack && <BackButton />}
         <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{title}</h1>
         {description && <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">{description}</p>}
       </div>

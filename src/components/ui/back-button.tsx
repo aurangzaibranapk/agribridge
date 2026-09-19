@@ -3,35 +3,23 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 /**
- * Peechhe jane ka button.
+ * "Jis page se aaye usi par wapas jaana" -- malik (19 September).
  *
- * Ye jaan boojh kar browser ki apni history par chalta hai, kisi tay
- * shuda safhe par nahi. Wajah: is safhe tak kai raaste aate hain --
- * qatar se, fehrist se, kisan ke safhe se, ya kisan ki farmaish se.
- * "Machinery par wapas" likh kar sab ko ek hi jagah bhej dena us bande
- * ko us jagah se hata deta hai jahan wo kaam kar raha tha, aur usay
- * dobara wahan tak pohanchna parta hai.
- *
- * History khali ho (kisi ne seedha link khola ho) to `fallback` par
- * jata hai -- warna button dab kar kuch nahi hota, jo us se bhi bura
- * hai.
+ * Sidebar link ya fixed URL istemal nahi kiya, kyunke bohot se safhon
+ * (jaise Reorder) par ek se zyada raaste se pahuncha ja sakta hai
+ * (Needs Attention chip, Command Center, Product Management sidebar) --
+ * browser history (`router.back()`) hamesha wahi safha deti hai jahan se
+ * asal mein banda aaya tha, chahe wo kahin se bhi ho.
  */
-export function BackButton({ fallback = "/admin", label }: { fallback?: string; label: string }) {
+export function BackButton({ label = "Back" }: { label?: string }) {
   const router = useRouter();
   return (
     <button
       type="button"
-      onClick={() => {
-        if (typeof window !== "undefined" && window.history.length > 1) {
-          router.back();
-        } else {
-          router.push(fallback);
-        }
-      }}
-      className="mb-3 inline-flex items-center gap-1.5 text-sm text-surface-500 transition hover:text-brand-700 dark:hover:text-brand-300"
+      onClick={() => router.back()}
+      className="mb-2 flex items-center gap-1 text-sm font-medium text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200"
     >
-      <ArrowLeft className="h-4 w-4" />
-      {label}
+      <ArrowLeft className="h-4 w-4" /> {label}
     </button>
   );
 }

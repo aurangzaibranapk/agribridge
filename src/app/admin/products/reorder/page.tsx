@@ -41,7 +41,7 @@ export default async function ReorderPage() {
 
   return (
     <div>
-      <PageHeader title={t("pf_ro_title", lang)} description={t("pf_ro_desc", lang)} />
+      <PageHeader title={t("pf_ro_title", lang)} description={t("pf_ro_desc", lang)} showBack />
       <ReorderClient
         lang={lang}
         suppliers={suppliers ?? []}
