@@ -3734,19 +3734,20 @@ journal_lines se seedha match), malik ne tasdeeq kar di.
 
 ## 19 September — Purchases: rates + slips (Live par abhi kuch nahi gaya)
 
-**Migrations sirf Testing par lagi hain, Live par NAHI (P0 rule —
-pehle backup tasdeeq):**
+**Migrations 435 + 436 Live par lag chukin (19 September):** P0
+tarteeb poori hui —
 
-1. **Migration 435** (`customers.business_name` — wholesale customer ka
-   shop name, POS/CRM par dikhta hai) — Testing par lagi + code build
-   ho chuka; Live baqi.
-2. **Migration 436** (`purchase_payment_slips` table — purchase ki
-   adaigi ki slips: raqam + tareekh + tasveer, bucket `payment-slips`
-   dono DB par pehle se maujood) — Testing par lagi + verify; Live baqi.
+- Backup tasdeeq: 18 Sep 2026 20:33:33 UTC (Physical), Boss ne
+  dashboard ka screenshot bheja.
+- Pre-migration ginti (Live): customers 88, purchases 3; 435 ka column
+  aur 436 ka table dono ghair-maujood.
+- Migration 435 (`customers.business_name`) chali → success.
+- Migration 436 (`purchase_payment_slips` + RLS + 3 policies) chali →
+  success.
+- Verify: ginti wahi ki wahi (88/3), column maujood, table maujood,
+  RLS on, 3 policies. Bucket `payment-slips` Live par pehle se tha.
 
-**Tarteeb jab Boss system par aayen:** backup tasdeeq → 435 → 436 →
-verify → naya build upload. Build in migrations se PEHLE Live par nahi
-jana chahiye (naya code in tables/columns ko parhta hai).
+Ab naya build Live par ja sakta hai.
 
 **Is build mein kya hai (abhi commit hona baqi):** ProductPicker
 (purchase order par product search), purchase line par Wholesale/MRP/
