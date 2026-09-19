@@ -81,9 +81,15 @@ Sirf `.next` server par jata hai. Baqi source files pehle hi `git pull`
 se un ki machine par pahunch jati hain — unhen alag se bhejne ki
 zaroorat nahi.
 
-Windows / Git Bash: project `/c/Users/Dx Home Films Lab 8K/Downloads/agribridge`
+Windows / Git Bash: project `/c/Users/Dx Home Films Lab 8K/Downloads/agribridge-live`
 par hai (naam mein space hai, quotes lagti hain). Ctrl+V kaam nahi karta —
 right-click → Paste, ya Shift+Insert.
+
+**19 September:** folder ka naam `agribridge-live` hai (pehle `agribridge`
+likha jata tha, us mein galat branch/local changes phans gaye the —
+`agribridge-live` verify shuda saaf clone hai, sahi remote + branch +
+clean working tree). `agribridge` (bina "-live") sirf data/storage ke
+liye hai, code us se build nahi hota.
 
 ## Baat cheet
 
