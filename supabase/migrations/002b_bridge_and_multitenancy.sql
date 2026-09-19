@@ -56,8 +56,8 @@ declare t text;
 begin
   for t in select unnest(array['companies','suppliers','products','farmers','customers','sales','purchases'])
   loop
-    execute format('alter table %I add column organization_id uuid references organizations(id)', t);
-    execute format('alter table %I add column branch_id uuid references branches(id)', t);
+    execute format('alter table %I add column if not exists organization_id uuid references organizations(id)', t);
+    execute format('alter table %I add column if not exists branch_id uuid references branches(id)', t);
     execute format('update %I set organization_id = fn_default_organization_id(), branch_id = fn_default_branch_id()', t);
     execute format('alter table %I alter column organization_id set not null', t);
     execute format('alter table %I alter column organization_id set default fn_default_organization_id()', t);
@@ -181,7 +181,7 @@ create index idx_investment_ledger_deal on investment_ledger(deal_id, created_at
 -- this set is investor stock; sales against it flow through the same
 -- sales/bridge_orders tables as everything else — investor reporting is
 -- just a filtered view on the same data, not a parallel system.
-alter table stock_batches add column investment_deal_id uuid references investment_deals(id);
+alter table stock_batches add column if not exists investment_deal_id uuid references investment_deals(id);
 
 -- Running balance for a deal, same mechanism as fn_apply_ledger_entry
 -- for customers: investment_in and profit_credit increase the investor's

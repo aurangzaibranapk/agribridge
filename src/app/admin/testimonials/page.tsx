@@ -4,20 +4,23 @@ import { Badge } from "@/components/ui/form";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteTestimonial } from "@/actions/cms";
 import { NewTestimonialForm } from "@/app/admin/testimonials/new-testimonial-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminTestimonialsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("testimonials").select("*").order("display_order");
 
   return (
     <div>
-      <PageHeader title="Testimonials" description="Shown on the homepage and the /testimonials page" />
+      <PageHeader title={t("at_testimonials", lang)} description="Shown on the homepage and the /testimonials page" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No testimonials yet" />
+            <EmptyState title={t("at_no_testimonials", lang)} />
           ) : (
             <div className="space-y-3">
               {items.map((t) => (

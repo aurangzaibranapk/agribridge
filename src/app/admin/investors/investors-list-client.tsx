@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/layout-primitives";
 import { bulkUpdateInvestorStatus, bulkDeleteInvestors, type ActionState } from "@/actions/investors-bulk";
 import { CheckSquare, FileText } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -40,6 +42,7 @@ function dealTypeLabel(type: string) {
 }
 
 export function InvestorsListClient({ investors }: { investors: Investor[] }) {
+  const lang = useLang();
   const [selected, setSelected] = useState<string[]>([]);
 
   function toggleSelect(id: string) {
@@ -51,7 +54,7 @@ export function InvestorsListClient({ investors }: { investors: Investor[] }) {
   }
 
   if (investors.length === 0) {
-    return <EmptyState title="No investors yet" description="Convert an investor inquiry to create your first investor." />;
+    return <EmptyState title={t("iv_none", lang)} description="Convert an investor inquiry to create your first investor." />;
   }
 
   return (
@@ -72,7 +75,7 @@ export function InvestorsListClient({ investors }: { investors: Investor[] }) {
                 <div>
                   <p className="font-medium text-surface-900 dark:text-white">
                     {inv.full_name} <span className="ml-1 font-mono text-xs text-surface-400">({inv.investor_code})</span>
-                    {!inv.is_active && <span className="ml-2 rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-500">Inactive</span>}
+                    {!inv.is_active && <span className="ml-2 rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-500">{t("c_inactive", lang)}</span>}
                   </p>
                   <p className="text-xs text-surface-400 dark:text-surface-500">
                     {inv.phone_number ?? "-"} - Joined {formatDateTime(inv.created_at)}
@@ -84,8 +87,7 @@ export function InvestorsListClient({ investors }: { investors: Investor[] }) {
                   Total Invested: Rs {inv.total_invested.toLocaleString()}
                 </p>
                 <Link href={`/admin/investors/${inv.id}/statement`} className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1.5 text-xs text-surface-600 hover:bg-surface-50">
-                  <FileText className="h-3.5 w-3.5" /> Statement
-                </Link>
+                  <FileText className="h-3.5 w-3.5" />{t("c_statement", lang)}</Link>
               </div>
             </div>
             {inv.deals.length > 0 && (
@@ -111,6 +113,7 @@ export function InvestorsListClient({ investors }: { investors: Investor[] }) {
 }
 
 function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone: () => void }) {
+  const lang = useLang();
   const [statusState, statusAction] = useFormState(bulkUpdateInvestorStatus, initialState);
   const [deleteState, deleteAction] = useFormState(bulkDeleteInvestors, initialState);
 
@@ -124,12 +127,12 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="true" />
-        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">Active Karein</button>
+        <button type="submit" className="rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200">{t("c_activate", lang)}</button>
       </form>
       <form action={statusAction} className="flex gap-1">
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
         <input type="hidden" name="is_active" value="false" />
-        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">Inactive Karein</button>
+        <button type="submit" className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200">{t("c_deactivate", lang)}</button>
       </form>
       <form
         action={deleteAction}
@@ -138,7 +141,7 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
         }}
       >
         <input type="hidden" name="ids" value={selectedIds.join(",")} />
-        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">Delete Karein</button>
+        <button type="submit" className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200">{t("c_delete", lang)}</button>
       </form>
     </div>
   );

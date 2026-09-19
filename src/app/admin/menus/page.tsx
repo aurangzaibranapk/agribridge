@@ -4,20 +4,23 @@ import { Badge } from "@/components/ui/form";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteMenuItem } from "@/actions/cms";
 import { NewMenuItemForm } from "@/app/admin/menus/new-menu-item-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMenusPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("menu_items").select("*").order("menu_location").order("display_order");
 
   return (
     <div>
-      <PageHeader title="Menus" description="Header and footer navigation links" />
+      <PageHeader title={t("at_menus", lang)} description="Header and footer navigation links" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No custom menu items yet" description="The site uses its built-in default navigation until items are added here." />
+            <EmptyState title={t("at_no_menu_items", lang)} description="The site uses its built-in default navigation until items are added here." />
           ) : (
             <div className="space-y-2">
               {items.map((m) => (

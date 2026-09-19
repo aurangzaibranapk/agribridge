@@ -4,20 +4,23 @@ import { Badge } from "@/components/ui/form";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { deleteGalleryItem } from "@/actions/cms";
 import { NewGalleryItemForm } from "@/app/admin/gallery/new-gallery-item-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminGalleryPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: items } = await supabase.from("gallery_items").select("*").order("display_order");
 
   return (
     <div>
-      <PageHeader title="Gallery" description="Photos and videos shown on the /gallery page" />
+      <PageHeader title={t("at_gallery", lang)} description="Photos and videos shown on the /gallery page" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {!items || items.length === 0 ? (
-            <EmptyState title="No gallery items yet" />
+            <EmptyState title={t("at_no_gallery", lang)} />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {items.map((g) => (

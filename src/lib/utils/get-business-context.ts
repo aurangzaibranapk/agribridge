@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import type { BusinessContext } from "@/actions/business-context";
 
-const VALID: BusinessContext[] = ["master", "karyana", "agri_inputs", "grain_procurement", "dairy", "machinery_fleet"];
+const VALID: BusinessContext[] = ["master", "karyana", "agri_inputs", "grain_procurement", "dairy", "machinery_fleet", "vet"];
 
 export async function getBusinessContext(): Promise<BusinessContext> {
   const cookieStore = await cookies();
@@ -17,4 +17,5 @@ export const BUSINESS_LABELS: Record<BusinessContext, string> = {
   grain_procurement: "Grain Procurement",
   dairy: "Dairy",
   machinery_fleet: "Machinery & Fleet",
+  vet: "Vets",
 };

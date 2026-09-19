@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-export type BusinessContext = "master" | "karyana" | "agri_inputs" | "grain_procurement" | "dairy" | "machinery_fleet";
+export type BusinessContext = "master" | "karyana" | "agri_inputs" | "grain_procurement" | "dairy" | "machinery_fleet" | "vet";
 
 export async function setBusinessContext(formData: FormData): Promise<void> {
   const value = String(formData.get("business") ?? "master") as BusinessContext;

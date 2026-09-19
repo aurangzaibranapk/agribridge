@@ -4,11 +4,14 @@ import { useFormState, useFormStatus } from "react-dom";
 import { createDealer, type ActionState } from "@/actions/dealers";
 import { Button, Input, Label } from "@/components/ui/form";
 import { MapPin, Loader2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function DealerForm() {
   const [state, formAction] = useFormState(createDealer, initialState);
+  const lang = useLang();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -34,43 +37,41 @@ export function DealerForm() {
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">New Dealer</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("dl_new", lang)}</h2>
       {state.error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
           {state.error}
         </p>
       )}
       {state.success && (
-        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Dealer created! An invite email was sent to set their password.
-        </p>
+        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_dealer_created", lang)}</p>
       )}
       <form action={formAction} className="space-y-3">
         <div>
-          <Label>Business Name *</Label>
-          <Input name="business_name" required placeholder="e.g. ABC Traders" />
+          <Label>{t("at_business_name_req", lang)}</Label>
+          <Input name="business_name" required placeholder={t("dl_business_eg", lang)} />
         </div>
         <div>
-          <Label>Email * (invite sent here)</Label>
+          <Label>{t("at_email_invite", lang)}</Label>
           <Input name="email" type="email" required />
         </div>
         <div>
-          <Label>Phone *</Label>
+          <Label>{t("at_phone_req", lang)}</Label>
           <Input name="phone_number" required />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>District</Label>
+            <Label>{t("c_district", lang)}</Label>
             <Input name="district" />
           </div>
           <div>
-            <Label>Tehsil</Label>
+            <Label>{t("c_tehsil", lang)}</Label>
             <Input name="tehsil" />
           </div>
         </div>
 
         <div>
-          <Label>Dealer ki Location (Marketplace Delivery ke liye lazmi) *</Label>
+          <Label>{t("at_dealer_location_req", lang)}</Label>
           <button
             type="button"
             onClick={handleUseMyLocation}
@@ -86,18 +87,18 @@ export function DealerForm() {
         </div>
 
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">Bank Details (Payment ke liye)</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("c_bank_details", lang)}</p>
           <div className="space-y-2">
             <div>
-              <Label>Bank Name</Label>
+              <Label>{t("c_bank_name", lang)}</Label>
               <Input name="bank_name" />
             </div>
             <div>
-              <Label>Account Title</Label>
+              <Label>{t("c_account_title", lang)}</Label>
               <Input name="bank_account_title" />
             </div>
             <div>
-              <Label>Account Number</Label>
+              <Label>{t("c_account_number", lang)}</Label>
               <Input name="bank_account_number" />
             </div>
             <div>

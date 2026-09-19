@@ -21,13 +21,21 @@ interface Benchmark {
   sampleCount: number;
 }
 
+const OTHER_CROP = "__other__";
+
 export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; benchmarks: Record<string, Benchmark> }) {
   const { language: lang } = useLanguage();
   const [selectedFarmId, setSelectedFarmId] = useState("");
   const [selectedCrop, setSelectedCrop] = useState(CROP_NAMES[0] ?? "");
+  const [customCrop, setCustomCrop] = useState("");
   const [areaAcre, setAreaAcre] = useState("");
   const [areaKanal, setAreaKanal] = useState("");
   const [areaMarla, setAreaMarla] = useState("");
+
+  const isOther = selectedCrop === OTHER_CROP;
+  // Fehrist mein na ho -- kisan khud likh de. Sirf 10 fasal ki list se
+  // rok dena baqi sab ko "Add Crop" istemal karne se hi rok deta.
+  const finalCropName = isOther ? customCrop.trim() : selectedCrop;
 
   const selectedFarm = farmLand.find((f) => f.id === selectedFarmId);
 
@@ -38,7 +46,7 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
     return acre + kanal / 8 + marla / 160;
   }, [areaAcre, areaKanal, areaMarla]);
 
-  const benchmark = benchmarks[selectedCrop];
+  const benchmark = benchmarks[finalCropName];
   const prediction = useMemo(() => {
     if (!benchmark || totalAreaAcres <= 0 || benchmark.sampleCount < 1) return null;
     const expectedCost = benchmark.costPerAcre * totalAreaAcres;
@@ -79,8 +87,6 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
       <div>
         <label className="text-xs font-medium text-surface-600">{t("crop", lang)}</label>
         <select
-          name="crop_name"
-          required
           value={selectedCrop}
           onChange={(e) => setSelectedCrop(e.target.value)}
           className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
@@ -90,7 +96,21 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
               {name}
             </option>
           ))}
+          <option value={OTHER_CROP}>{t("other_crop", lang)}</option>
         </select>
+        {isOther && (
+          <input
+            type="text"
+            value={customCrop}
+            onChange={(e) => setCustomCrop(e.target.value)}
+            placeholder={t("other_crop_placeholder", lang)}
+            required
+            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          />
+        )}
+        {/* Asal jo form submit karta hai -- fehrist se chuna hua naam ya
+            "Other" ke saath likha hua naam, dono ek hi khane se. */}
+        <input type="hidden" name="crop_name" value={finalCropName} />
       </div>
 
       <div>
@@ -115,7 +135,7 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
       {totalAreaAcres > 0 && (
         <div className="rounded-card border border-green-200 bg-green-50 p-3">
           <h3 className="flex items-center gap-1.5 text-xs font-semibold text-green-800">
-            <TrendingUp className="h-3.5 w-3.5" /> {t("profit_prediction", lang)} ({selectedCrop}, {totalAreaAcres.toFixed(1)} {t("unit_acre", lang)})
+            <TrendingUp className="h-3.5 w-3.5" /> {t("profit_prediction", lang)} ({finalCropName || t("other_crop", lang)}, {totalAreaAcres.toFixed(1)} {t("unit_acre", lang)})
           </h3>
           {prediction ? (
             <>

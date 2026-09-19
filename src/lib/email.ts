@@ -1,57 +1,38 @@
-import nodemailer from "nodemailer";
 import { createServiceClient } from "@/lib/supabase/service";
 import { generateOfferLetterPDF } from "@/lib/offer-letter-pdf";
+import { sendDeptMail, mailWrapper, type MailDept } from "@/lib/mailer";
 
 const SITE_URL = "https://alranatraders.pk";
 
-function getJobTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST ?? "mail.alranatraders.pk",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.JOB_SMTP_USER ?? "job@alranatraders.pk",
-      pass: process.env.JOB_SMTP_PASS,
-    },
-  });
+/**
+ * Mail bhejne ka apna transporter yahan se nikal gaya (`src/lib/mailer.ts`).
+ *
+ * Malik ka kehna (5 September): *"job ke hawale se mail job se jaye, HR
+ * ke hawale se HR se."* Ye do alag baatein hain aur pehle dono ek hi
+ * khate se jati thin:
+ *
+ *   - NAUKRI dhoondhne wale ko (application, interview, offer) -> jobs
+ *   - MULAZIM ko (welcome, login, password) -> hr
+ *
+ * Farq sirf naam ka nahi. Umeedwar apni application ka jawab jis pate
+ * par bhejta hai wo naukriyon ka inbox hona chahiye; mulazim apne login
+ * ka masla HR ko likhta hai. Ek hi khate mein dono aayen to dono gum
+ * hote hain.
+ */
+function emailWrapper(bodyHtml: string, dept: MailDept = "jobs"): string {
+  return mailWrapper(bodyHtml, dept);
 }
 
-function emailWrapper(bodyHtml: string): string {
-  return `
-  <div style="font-family: Arial, Helvetica, sans-serif; background:#f4f6f4; padding:32px 16px;">
-    <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-      <div style="background:#1a1f36; padding:24px; text-align:center;">
-        <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700;">Al Rana Traders</p>
-        <p style="margin:4px 0 0; color:#94a3b8; font-size:12px;">Human Resources Department</p>
-      </div>
-      <div style="padding:28px 24px; color:#1f2937; font-size:14px; line-height:1.6;">
-        ${bodyHtml}
-      </div>
-      <div style="background:#f9fafb; padding:18px 24px; text-align:center; border-top:1px solid #e5e7eb;">
-        <p style="margin:0 0 6px; font-size:12px; color:#6b7280;">
-          alranatraders.pk &nbsp;|&nbsp; job@alranatraders.pk
-        </p>
-        <p style="margin:0; font-size:11px; color:#9ca3af;">
-          &copy; ${new Date().getFullYear()} Al Rana Traders. All rights reserved.
-        </p>
-      </div>
-    </div>
-  </div>`;
-}
-
-async function send(toEmail: string, subject: string, html: string, attachments?: { filename: string; content: Buffer }[]) {
-  try {
-    const transporter = getJobTransporter();
-    await transporter.sendMail({
-      from: `"Al Rana Traders - HR" <${process.env.JOB_SMTP_USER ?? "job@alranatraders.pk"}>`,
-      to: toEmail,
-      subject,
-      html,
-      attachments,
-    });
-  } catch (err) {
-    console.error("Failed to send email:", err);
-  }
+async function send(
+  dept: MailDept,
+  toEmail: string,
+  subject: string,
+  html: string,
+  attachments?: { filename: string; content: Buffer }[]
+) {
+  const result = await sendDeptMail({ dept, to: toEmail, subject, html, attachments });
+  if (!result.sent) console.error("Failed to send email:", result.error);
+  return result;
 }
 
 async function getCustomTemplate(key: string): Promise<{ subject: string; body: string } | null> {
@@ -68,18 +49,26 @@ function fillPlaceholders(text: string, vars: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-async function sendWithTemplate(templateKey: string, toEmail: string, vars: Record<string, string>, fallbackSubject: string, fallbackBody: string) {
+async function sendWithTemplate(
+  dept: MailDept,
+  templateKey: string,
+  toEmail: string,
+  vars: Record<string, string>,
+  fallbackSubject: string,
+  fallbackBody: string
+) {
   const custom = await getCustomTemplate(templateKey);
   if (custom) {
-    await send(toEmail, fillPlaceholders(custom.subject, vars), emailWrapper(fillPlaceholders(custom.body, vars)));
+    await send(dept, toEmail, fillPlaceholders(custom.subject, vars), emailWrapper(fillPlaceholders(custom.body, vars), dept));
   } else {
-    await send(toEmail, fallbackSubject, emailWrapper(fallbackBody));
+    await send(dept, toEmail, fallbackSubject, emailWrapper(fallbackBody, dept));
   }
 }
 
 export async function sendApplicationReceivedEmail(toEmail: string, fullName: string, jobTitle: string, applicationId: string) {
   const vars = { fullName, jobTitle, applicationId: applicationId.slice(0, 8).toUpperCase(), date: new Date().toLocaleDateString() };
   await sendWithTemplate(
+    "jobs",
     "application_received",
     toEmail,
     vars,
@@ -99,6 +88,7 @@ export async function sendApplicationReceivedEmail(toEmail: string, fullName: st
 export async function sendUnderReviewEmail(toEmail: string, fullName: string, jobTitle: string) {
   const vars = { fullName, jobTitle };
   await sendWithTemplate(
+    "jobs",
     "under_review",
     toEmail,
     vars,
@@ -113,7 +103,8 @@ export async function sendEligibilityEmail(toEmail: string, fullName: string, jo
   const vars = { fullName, jobTitle };
   if (eligible) {
     await sendWithTemplate(
-      "eligibility_shortlisted",
+    "hr",
+    "eligibility_shortlisted",
       toEmail,
       vars,
       `You Have Been Shortlisted - ${jobTitle}`,
@@ -123,7 +114,8 @@ export async function sendEligibilityEmail(toEmail: string, fullName: string, jo
     );
   } else {
     await sendWithTemplate(
-      "eligibility_rejected",
+    "hr",
+    "eligibility_rejected",
       toEmail,
       vars,
       `Application Status - ${jobTitle}`,
@@ -138,6 +130,7 @@ export async function sendInterviewInvitationEmail(toEmail: string, fullName: st
   const formattedDate = new Date(interviewDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vars = { fullName, jobTitle, interviewDate: formattedDate };
   await sendWithTemplate(
+    "jobs",
     "interview_invitation",
     toEmail,
     vars,
@@ -156,6 +149,7 @@ export async function sendInterviewRescheduledEmail(toEmail: string, fullName: s
   const formattedDate = new Date(newDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vars = { fullName, jobTitle, interviewDate: formattedDate };
   await sendWithTemplate(
+    "jobs",
     "interview_rescheduled",
     toEmail,
     vars,
@@ -173,6 +167,7 @@ export async function sendInterviewReminderEmail(toEmail: string, fullName: stri
   const formattedDate = new Date(interviewDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vars = { fullName, jobTitle, interviewDate: formattedDate };
   await sendWithTemplate(
+    "jobs",
     "interview_reminder",
     toEmail,
     vars,
@@ -191,7 +186,8 @@ export async function sendInterviewResultEmail(toEmail: string, fullName: string
   const vars = { fullName, jobTitle };
   if (selected) {
     await sendWithTemplate(
-      "interview_result_pass",
+    "hr",
+    "interview_result_pass",
       toEmail,
       vars,
       `Interview Outcome - ${jobTitle} | Al Rana Traders`,
@@ -202,7 +198,8 @@ export async function sendInterviewResultEmail(toEmail: string, fullName: string
     );
   } else {
     await sendWithTemplate(
-      "interview_result_fail",
+    "hr",
+    "interview_result_fail",
       toEmail,
       vars,
       `Interview Outcome - ${jobTitle} | Al Rana Traders`,
@@ -250,12 +247,13 @@ export async function sendJobOfferEmail(
       </p>
       <p style="color:#6b7280; font-size:12px;">Agar button kaam na kare, ye link browser mein paste karein:<br/>${link}</p>`;
 
-  await send(toEmail, subject, emailWrapper(body), [{ filename: `Offer-Letter-${fullName.replace(/\s+/g, "-")}.pdf`, content: pdfBuffer }]);
+  await send("jobs", toEmail, subject, emailWrapper(body, "jobs"), [{ filename: `Offer-Letter-${fullName.replace(/\s+/g, "-")}.pdf`, content: pdfBuffer }]);
 }
 
 export async function sendOfferExpiredEmail(toEmail: string, fullName: string, jobTitle: string) {
   const vars = { fullName, jobTitle };
   await sendWithTemplate(
+    "jobs",
     "offer_expired",
     toEmail,
     vars,
@@ -269,6 +267,7 @@ export async function sendOfferExpiredEmail(toEmail: string, fullName: string, j
 export async function sendWelcomeEmail(toEmail: string, fullName: string, designation: string) {
   const vars = { fullName, designation };
   await sendWithTemplate(
+    "hr",
     "welcome",
     toEmail,
     vars,
@@ -298,8 +297,8 @@ export async function sendOfficialLoginEmail(toEmail: string, fullName: string, 
       <p style="margin:4px 0 0;"><strong>SMTP Server:</strong> mail.alranatraders.pk (Port 587)</p>
     </div>
     <p style="color:#b91c1c; font-size:13px;">Barah-e-meherbani apna password pehli login ke baad badal lein, aur ye details kisi ke sath share na karein.</p>
-  `);
-  await send(toEmail, "Aapka Official Login - Al Rana Traders", html);
+  `, "hr");
+  await send("hr", toEmail, "Aapka Official Login - Al Rana Traders", html);
 }
 
 export async function sendPasswordResetEmail(toEmail: string, fullName: string, resetLink: string) {
@@ -313,8 +312,8 @@ export async function sendPasswordResetEmail(toEmail: string, fullName: string, 
     </p>
     <p style="color:#6b7280; font-size:12px;">Agar button kaam na kare, ye link browser mein paste karein:<br/>${resetLink}</p>
     <p style="color:#6b7280; font-size:12px;">Agar aap ne ye request nahi ki, is email ko nazar-andaz kar dein.</p>
-  `);
-  await send(toEmail, "Password Reset - Al Rana Traders", html);
+  `, "hr");
+  await send("hr", toEmail, "Password Reset - Al Rana Traders", html);
 }
 
 export const EMAIL_TEMPLATE_DEFAULTS: { key: string; name: string; subject: string; body: string }[] = [

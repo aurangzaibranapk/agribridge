@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: post } = await supabase.from("blog_posts").select("*").eq("slug", params.slug).eq("is_published", true).single();
   if (!post) notFound();
@@ -40,7 +43,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
       {related && related.length > 0 && (
         <div className="mt-16 border-t border-surface-200 pt-8 dark:border-surface-800">
-          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">Related Articles</h2>
+          <h2 className="mb-4 font-display text-lg font-semibold text-surface-900 dark:text-white">{t("sp_related_articles", lang)}</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {related.map((r) => (
               <Link key={r.id} href={`/blog/${r.slug}`} className="rounded-card border border-surface-200 bg-white p-3 text-sm font-medium text-surface-800 hover:text-brand-700 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-200">

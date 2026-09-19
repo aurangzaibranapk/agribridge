@@ -21,32 +21,37 @@ export default async function FarmerStatementPage({
   const supabase = createClient();
   const { data: farmer } = await supabase.from("farmers").select("id, full_name, farmer_code, phone_number").eq("id", farmerId).single();
 
-  const { data: rawLedger } = await supabase
-    .from("farmer_credit_ledger")
-    .select("ledger_type, source_type, amount, balance_after, notes, created_at")
-    .eq("farmer_id", farmerId)
-    .gte("created_at", startDate)
-    .lte("created_at", `${endDate}T23:59:59`)
-    .order("created_at", { ascending: true });
+  // Farmer aur Customer ka statement ab EK hi jagah se banta hai (424)
+  // -- Malik: "farmer ho ya customer, dono ek hi cheez honi chahiye."
+  // Machine/GL + khad + doodh + POS, chaar sub-ledger ek fehrist mein
+  // (sirf khad_baqi nahi, jaisa pehle is safhe par tha).
+  const openingEnd = new Date(`${startDate}T00:00:00Z`);
+  openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
+  const [{ data: rawLedger }, { data: openingRows }] = await Promise.all([
+    (supabase.rpc as any)("fn_farmer_combined_ledger", { p_farmer: farmerId, p_start: startDate, p_end: endDate }),
+    (supabase.rpc as any)("fn_farmer_combined_ledger", { p_farmer: farmerId, p_start: null, p_end: openingEnd.toISOString().slice(0, 10) }),
+  ]);
 
   type Entry = { date: string; description: string; debit: number; credit: number; runningBalance: number };
   let totalDebit = 0;
   let totalCredit = 0;
-  const entries: Entry[] = (rawLedger ?? []).map((l) => {
-    const isDebit = l.ledger_type === "debit";
-    const amount = Number(l.amount);
-    if (isDebit) totalDebit += amount;
-    else totalCredit += amount;
+  let runningBalance = (openingRows ?? []).reduce((sum: number, r: any) => sum + Number(r.debit || 0) - Number(r.credit || 0), 0);
+  const entries: Entry[] = (rawLedger ?? []).map((l: any) => {
+    const debit = Number(l.debit ?? 0);
+    const credit = Number(l.credit ?? 0);
+    totalDebit += debit;
+    totalCredit += credit;
+    runningBalance += debit - credit;
     return {
-      date: new Date(l.created_at).toLocaleDateString(),
-      description: `${l.source_type?.replace(/_/g, " ") ?? ""}${l.notes ? ` - ${l.notes}` : ""}`,
-      debit: isDebit ? amount : 0,
-      credit: isDebit ? 0 : amount,
-      runningBalance: Number(l.balance_after ?? 0),
+      date: new Date(l.entry_date).toLocaleDateString(),
+      description: `${l.module?.replace(/_/g, " ") ?? ""}${l.tafseel ? ` - ${l.tafseel}` : ""}`,
+      debit,
+      credit,
+      runningBalance,
     };
   });
 
-  const closingBalance = entries.length > 0 ? entries[entries.length - 1].runningBalance : 0;
+  const closingBalance = entries.length > 0 ? entries[entries.length - 1].runningBalance : runningBalance;
 
   return (
     <div>

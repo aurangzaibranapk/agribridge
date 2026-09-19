@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { Wallet, Search, History } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface KhataAccount {
   id: string;
@@ -29,6 +31,7 @@ export function KhataClient({
   accounts: KhataAccount[];
 }) {
   const supabase = createClient();
+  const lang = useLang();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<KhataAccount | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -125,7 +128,7 @@ export function KhataClient({
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
             <Input
-              placeholder="Search customer..."
+              placeholder={t("sh_search_customer", lang)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -137,9 +140,9 @@ export function KhataClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                <th className="px-4 py-3 font-medium text-surface-500">Customer</th>
-                <th className="px-4 py-3 font-medium text-surface-500">Phone</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">Balance</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("db_customer", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
               </tr>
             </thead>
             <tbody>
@@ -166,9 +169,7 @@ export function KhataClient({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center text-surface-400">
-                    No customers found.
-                  </td>
+                  <td colSpan={3} className="px-4 py-10 text-center text-surface-400">{t("sh_no_customers", lang)}</td>
                 </tr>
               )}
             </tbody>
@@ -185,18 +186,18 @@ export function KhataClient({
             </div>
 
             {loadingTx ? (
-              <p className="py-6 text-center text-sm text-surface-400">Loading...</p>
+              <p className="py-6 text-center text-sm text-surface-400">{t("ba_loading", lang)}</p>
             ) : transactions.length === 0 ? (
-              <p className="py-6 text-center text-sm text-surface-400">No transactions yet.</p>
+              <p className="py-6 text-center text-sm text-surface-400">{t("sh_no_transactions", lang)}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-surface-100 text-left dark:border-surface-800">
-                      <th className="py-2 font-medium text-surface-500">Date</th>
-                      <th className="py-2 font-medium text-surface-500">Type</th>
-                      <th className="py-2 font-medium text-surface-500">Note</th>
-                      <th className="py-2 text-right font-medium text-surface-500">Amount</th>
+                      <th className="py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+                      <th className="py-2 font-medium text-surface-500">{t("c_type", lang)}</th>
+                      <th className="py-2 font-medium text-surface-500">{t("sh_note", lang)}</th>
+                      <th className="py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -238,15 +239,11 @@ export function KhataClient({
       <Card className="flex h-fit flex-col gap-4">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5 text-brand-600" />
-          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Record Payment
-          </h2>
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("sh_record_payment", lang)}</h2>
         </div>
 
         {!selected ? (
-          <p className="py-6 text-center text-sm text-surface-400">
-            Select a customer from the list to record a payment.
-          </p>
+          <p className="py-6 text-center text-sm text-surface-400">{t("sh_select_customer", lang)}</p>
         ) : (
           <>
             <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
@@ -259,7 +256,7 @@ export function KhataClient({
             </div>
 
             <div>
-              <Label>Payment Amount</Label>
+              <Label>{t("sh_payment_amount", lang)}</Label>
               <Input
                 type="number"
                 min={0}
@@ -270,8 +267,8 @@ export function KhataClient({
             </div>
 
             <div>
-              <Label>Note (optional)</Label>
-              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Cash received" />
+              <Label>{t("sh_note_optional", lang)}</Label>
+              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("sh_eg_cash_received", lang)} />
             </div>
 
             {message && (

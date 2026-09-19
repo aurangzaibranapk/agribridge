@@ -1,0 +1,301 @@
+/**
+ * Kharidari aur supplier ke alfaz.
+ *
+ * Istilahat glossary.ts se: supplier, kharidari, cheez, tadaad, lagat,
+ * raqam, kul, baqi, shakh, tareekh, wajah, bill, adaigi, godam.
+ *
+ * Do lafz yahan tay ho rahe hain:
+ *
+ *   Purchase Order   Kharidari ka Order    خریداری کا آرڈر
+ *   Payable          Dena hai              دینا ہے
+ *
+ * "Payable" ke liye "baqi" nahi liya gaya. Baqi dono taraf chalta hai --
+ * gahak se lena bhi baqi, supplier ko dena bhi baqi. Supplier ke safhe
+ * par "dena hai" likha ho to ek nazar mein pata chalta hai ke paisa
+ * hamare zimme hai.
+ *
+ * "Filer" / "Non-Filer" ka tarjuma NAHI kiya: ye FBR ke apne lafz hain
+ * aur har kaghaz par isi tarah likhe milte hain.
+ */
+export const purchasesDict = {
+  pu_title: { en: "Purchases", rm: "Kharidari", ur: "خریداری" },
+  pu_subtitle: {
+    en: "Purchase orders to suppliers, and receiving the stock",
+    rm: "Supplier ko kharidari ke order, aur maal wusool karna",
+    ur: "سپلائر کو خریداری کے آرڈر، اور مال وصول کرنا",
+  },
+  pu_empty: { en: "No purchase order yet", rm: "Abhi koi kharidari ka order nahi", ur: "ابھی کوئی خریداری کا آرڈر نہیں" },
+  pu_po_no: { en: "PO #", rm: "Order #", ur: "آرڈر #" },
+  pu_supplier: { en: "Supplier", rm: "Supplier", ur: "سپلائر" },
+  pu_branch: { en: "Branch", rm: "Shakh", ur: "شاخ" },
+  pu_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
+  pu_amount: { en: "Amount", rm: "Raqam", ur: "رقم" },
+  pu_discount: { en: "Discount", rm: "Discount", ur: "ڈسکاؤنٹ" },
+  pu_tax: { en: "Tax", rm: "Tax", ur: "ٹیکس" },
+  pu_status: { en: "Status", rm: "Halat", ur: "حالت" },
+  pu_action: { en: "Action", rm: "Kaam", ur: "کام" },
+  pu_delete: { en: "Delete", rm: "Mitayein", ur: "مٹائیں" },
+
+  // --- Halatein ---
+  pu_s_pending: { en: "Not received yet", rm: "Maal aana baqi", ur: "مال آنا باقی" },
+  pu_s_received: { en: "Received", rm: "Maal aa gaya", ur: "مال آ گیا" },
+  pu_s_cancelled: { en: "Cancelled", rm: "Mansookh", ur: "منسوخ" },
+
+  // --- Naya order ---
+  pu_new_order: { en: "New Purchase Order", rm: "Nayi Kharidari ka Order", ur: "نئی خریداری کا آرڈر" },
+  pu_created: {
+    en: 'The purchase order is made. Mark it "Received" from the list once the stock arrives.',
+    rm: 'Kharidari ka order ban gaya. Maal aa jaye to fehrist se "Maal aa gaya" laga dein.',
+    ur: 'خریداری کا آرڈر بن گیا۔ مال آ جائے تو فہرست سے "مال آ گیا" لگا دیں۔',
+  },
+  pu_supplier_req: { en: "Supplier *", rm: "Supplier *", ur: "سپلائر *" },
+  pu_select: { en: "— select —", rm: "— chunein —", ur: "— منتخب کریں —" },
+  pu_purchase_date: { en: "Purchase Date", rm: "Kharidari ki Tareekh", ur: "خریداری کی تاریخ" },
+  pu_branch_req: { en: "Branch *", rm: "Shakh *", ur: "شاخ *" },
+  pu_notes: { en: "Notes", rm: "Notes", ur: "نوٹس" },
+  pu_products: { en: "Products", rm: "Cheezein", ur: "چیزیں" },
+  pu_add_product: { en: "Add a product", rm: "Cheez shamil karein", ur: "چیز شامل کریں" },
+  pu_line: { en: "Line", rm: "Line", ur: "لائن" },
+  pu_select_product: { en: "— select a product —", rm: "— cheez chunein —", ur: "— چیز منتخب کریں —" },
+  pu_quantity: { en: "Quantity", rm: "Tadaad", ur: "تعداد" },
+  pu_unit_cost: { en: "Unit cost (Rs.)", rm: "Ek ki lagat (Rs.)", ur: "ایک کی لاگت (روپے)" },
+  pu_rate_hint: {
+    en: "Optional — fill in to update this product's selling rates along with this purchase. Leave blank to keep the current rate.",
+    rm: "Marzi se — bharen to is cheez ke sale rate isi purchase ke sath update ho jayenge. Khali chhoRein to maujooda rate wahi rahega.",
+    ur: "مرضی سے — بھریں تو اس چیز کے سیل ریٹ اسی پرچیز کے ساتھ اپڈیٹ ہو جائیں گے۔ خالی چھوڑیں تو موجودہ ریٹ وہی رہے گا۔",
+  },
+  pu_wholesale_rate: { en: "Wholesale rate (Rs.)", rm: "Wholesale rate (Rs.)", ur: "ہول سیل ریٹ (روپے)" },
+  pu_mrp_rate: { en: "MRP rate (Rs.)", rm: "MRP rate (Rs.)", ur: "ایم آر پی ریٹ (روپے)" },
+  pu_sale_rate: { en: "Sale rate (Rs.)", rm: "Sale rate (Rs.)", ur: "سیل ریٹ (روپے)" },
+
+  // ---- Pet aur botal (438) ----
+  pu_units_in_pack: { en: "Bottles per pack", rm: "Pet mein kitni botal?", ur: "پیٹ میں کتنی بوتل؟" },
+  pu_qty_pets: { en: "Quantity (packs)", rm: "Tadaad (kitne pet)", ur: "تعداد (کتنے پیٹ)" },
+  pu_pet_cost: { en: "Pack rate (Rs.)", rm: "Pet ka rate (Rs.)", ur: "پیٹ کا ریٹ (روپے)" },
+  pu_per_bottle: { en: "per bottle", rm: "1 botal", ur: "فی بوتل" },
+  pu_pet_math: { en: "{pets} packs × {units} = {total} bottles", rm: "{pets} pet × {units} botal = {total} botal", ur: "{pets} پیٹ × {units} بوتل = {total} بوتل" },
+  pu_wholesale_pet: { en: "Wholesale rate — per pack (Rs.)", rm: "Wholesale rate — pet ka (Rs.)", ur: "ہول سیل ریٹ — پیٹ کا (روپے)" },
+  pu_sale_bottle: { en: "Sale rate — single bottle (Rs.)", rm: "Sale rate — 1 botal (Rs.)", ur: "سیل ریٹ — ایک بوتل (روپے)" },
+  pu_mrp_bottle: { en: "MRP — single bottle (Rs.)", rm: "MRP — 1 botal (Rs.)", ur: "ایم آر پی — ایک بوتل (روپے)" },
+  pu_pet_hint: {
+    en: "Bill has the pack rate; the shop sells single bottles. Write pack numbers here — the per-bottle rate is worked out and saved automatically.",
+    rm: "Bill par pet ka rate hota hai, shop par sale single botal ki. Yahan pet ke adad likhein — botal ka rate system khud nikaal kar mehfooz karta hai.",
+    ur: "بل پر پیٹ کا ریٹ ہوتا ہے، شاپ پر سیل سنگل بوتل کی۔ یہاں پیٹ کے عدد لکھیں — بوتل کا ریٹ سسٹم خود نکال کر محفوظ کرتا ہے۔",
+  },
+  // ---- CSV se purchase order (19 September) ----
+  pu_csv_btn: { en: "Fill from CSV", rm: "CSV se bharein", ur: "سی ایس وی سے بھریں" },
+  pu_csv_hint: {
+    en: "CSV columns: product, qty, rate, bottles (optional), batch, expiry. First row can be headings.",
+    rm: "CSV ke khane: product, tadaad, rate, botal (marzi se), batch, expiry. Pehli qatar sarkhiyan ho sakti hai.",
+    ur: "سی ایس وی کے خانے: پروڈکٹ، تعداد، ریٹ، بوتل (مرضی سے)، بیچ، ایکسپائری۔ پہلی قطار سرخیاں ہو سکتی ہے۔",
+  },
+  pu_csv_ok: { en: "{n} lines filled from the CSV.", rm: "CSV se {n} lines bhar gayin.", ur: "سی ایس وی سے {n} لائنیں بھر گئیں۔" },
+  pu_csv_unmatched: {
+    en: "Could not match these — pick the product on those lines yourself:",
+    rm: "In ka product nahi mila — in lines par product khud chunein:",
+    ur: "ان کا پروڈکٹ نہیں ملا — ان لائنوں پر پروڈکٹ خود منتخب کریں:",
+  },
+  pu_csv_empty: { en: "No usable rows found in this file.", rm: "Is file mein kaam ki koi qatar nahi mili.", ur: "اس فائل میں کام کی کوئی قطار نہیں ملی۔" },
+  pu_batch_optional: { en: "Batch number (optional)", rm: "Batch number (marzi se)", ur: "بیچ نمبر (مرضی سے)" },
+  pu_expiry: { en: "Expiry date", rm: "Miyaad ki tareekh", ur: "میعاد کی تاریخ" },
+  pu_total: { en: "Total", rm: "Kul", ur: "کل" },
+  pu_create: { en: "Create the Purchase Order", rm: "Kharidari ka Order Banayein", ur: "خریداری کا آرڈر بنائیں" },
+  pu_creating: { en: "Creating...", rm: "Ban raha hai...", ur: "بن رہا ہے..." },
+
+  // --- Maal wusool karna ---
+  pu_mark_received: { en: "Mark Received", rm: "Maal Aa Gaya", ur: "مال آ گیا" },
+  pu_receiving: { en: "Receiving...", rm: "Wusool ho raha hai...", ur: "وصول ہو رہا ہے..." },
+
+  // --- Mitana ---
+  pu_delete_title_1: { en: "Delete purchase", rm: "Kharidari", ur: "خریداری" },
+  pu_delete_title_2: { en: "?", rm: "mitayein?", ur: "مٹائیں؟" },
+  pu_delete_warn: {
+    en: "This cannot be undone — the stock will come back down too. A reason must be written.",
+    rm: "Ye wapas nahi hota — stock bhi wapis kam ho jayega. Wajah likhna zaroori hai.",
+    ur: "یہ واپس نہیں ہوتا — اسٹاک بھی واپس کم ہو جائے گا۔ وجہ لکھنا ضروری ہے۔",
+  },
+  pu_delete_reason_ph: {
+    en: "Write the reason for deleting (required)...",
+    rm: "Mitane ki wajah likhein (zaroori hai)...",
+    ur: "مٹانے کی وجہ لکھیں (ضروری ہے)...",
+  },
+  pu_confirm_delete: { en: "Confirm Delete", rm: "Mitana Pakka Karein", ur: "مٹانا پکا کریں" },
+  pu_deleting: { en: "Deleting...", rm: "Mit raha hai...", ur: "مٹ رہا ہے..." },
+
+  // --- Supplier ---
+  su_title: { en: "Suppliers", rm: "Suppliers", ur: "سپلائرز" },
+  su_subtitle: {
+    en: "The companies and vendors you buy stock from",
+    rm: "Jin companies aur vendors se maal kharida jata hai",
+    ur: "جن کمپنیوں اور وینڈرز سے مال خریدا جاتا ہے",
+  },
+  su_none: { en: "There is no supplier.", rm: "Koi supplier nahi hai.", ur: "کوئی سپلائر نہیں ہے۔" },
+  su_payable: { en: "We owe", rm: "Dena hai", ur: "دینا ہے" },
+  su_view_cnic: { en: "View CNIC", rm: "CNIC Dekhein", ur: "شناختی کارڈ دیکھیں" },
+  su_view_ntn: { en: "View NTN", rm: "NTN Dekhein", ur: "این ٹی این دیکھیں" },
+  su_edit: { en: "Edit", rm: "Badlein", ur: "بدلیں" },
+  su_statement: { en: "Statement", rm: "Hisaab", ur: "حساب" },
+  su_active: { en: "Active", rm: "Chalu", ur: "چالو" },
+  su_inactive: { en: "Inactive", rm: "Band", ur: "بند" },
+  su_suspended: { en: "Suspended", rm: "Roka hua", ur: "روکا ہوا" },
+
+  // ---- Adaigi ki shartein (255) ----
+  pu_terms: { en: "Payment", rm: "Adaigi", ur: "ادائیگی" },
+  pu_terms_paid: { en: "Paid in full", rm: "Poora diya", ur: "پورا دیا" },
+  pu_terms_partial: { en: "Partly paid", rm: "Kuch diya", ur: "کچھ دیا" },
+  pu_terms_credit: { en: "On credit", rm: "Udhaar", ur: "ادھار" },
+  pu_paid_now: { en: "Paid now (Rs)", rm: "Abhi diye (Rs)", ur: "ابھی دیے (Rs)" },
+  pu_credit_days: { en: "Credit days", rm: "Kitne din ka udhaar", ur: "کتنے دن کا ادھار" },
+  pu_due_date: { en: "Due date", rm: "Adaigi ki tareekh", ur: "ادائیگی کی تاریخ" },
+  pu_terms_hint: {
+    en: "What you pay now is recorded as a supplier payment — the same place every payment goes. Nothing is written twice.",
+    rm: "Jo abhi diya wo supplier ki adaigi mein likha jata hai — wahi jagah jahan har adaigi jati hai. Kuch do dafa nahi likha jata.",
+    ur: "جو ابھی دیا وہ سپلائر کی ادائیگی میں لکھا جاتا ہے — وہی جگہ جہاں ہر ادائیگی جاتی ہے۔ کچھ دو دفعہ نہیں لکھا جاتا۔",
+  },
+  // ---- Adaigi ki slips (436) ----
+  pu_slips_title: { en: "Payment slips", rm: "Adaigi ki slips", ur: "ادائیگی کی سلپس" },
+  pu_slips_hint: {
+    en: "Attach each payment's slip with its amount and date — e.g. one slip Rs 10,000, another Rs 20,000 on a different date. Proof stays with the purchase.",
+    rm: "Har adaigi ki slip us ki raqam aur tareekh ke sath lagayein — jaise ek slip Rs 10,000 ki, doosri Rs 20,000 ki kisi aur tareekh ki. Saboot purchase ke sath mehfooz rehta hai.",
+    ur: "ہر ادائیگی کی سلپ اس کی رقم اور تاریخ کے ساتھ لگائیں — جیسے ایک سلپ 10,000 کی، دوسری 20,000 کی کسی اور تاریخ کی۔ ثبوت پرچیز کے ساتھ محفوظ رہتا ہے۔",
+  },
+  pu_add_slip: { en: "Add a slip", rm: "Slip shamil karein", ur: "سلپ شامل کریں" },
+  pu_slip_amount: { en: "Amount (Rs)", rm: "Raqam (Rs)", ur: "رقم (روپے)" },
+  pu_slip_date: { en: "Payment date", rm: "Adaigi ki tareekh", ur: "ادائیگی کی تاریخ" },
+  pu_slip_photo: { en: "Slip photo", rm: "Slip ki tasveer", ur: "سلپ کی تصویر" },
+  pu_slip_uploading: { en: "Uploading...", rm: "Charh rahi hai...", ur: "چڑھ رہی ہے..." },
+  pu_slip_incomplete: {
+    en: "A slip is missing its amount, date or photo — complete or remove it.",
+    rm: "Kisi slip ki raqam, tareekh ya tasveer adhoori hai — poori karein ya hata dein.",
+    ur: "کسی سلپ کی رقم، تاریخ یا تصویر ادھوری ہے — پوری کریں یا ہٹا دیں۔",
+  },
+  pu_slip: { en: "Slip", rm: "Slip", ur: "سلپ" },
+  pu_slips_paid_total: { en: "Paid (from slips)", rm: "Diya (slips se)", ur: "دیا (سلپس سے)" },
+  pu_slips_outstanding: { en: "Still to pay", rm: "Baqi dena", ur: "باقی دینا" },
+  pu_slips_fully_paid: { en: "Nothing left to pay", rm: "Kuch dena baqi nahi", ur: "کچھ دینا باقی نہیں" },
+  pu_slips_overpaid: {
+    en: "Slips add up to more than this order's total — check the amounts.",
+    rm: "Slips ka jama is order ke kul se zyada hai — raqmein check karein.",
+    ur: "سلپس کا جمع اس آرڈر کے کل سے زیادہ ہے — رقمیں چیک کریں۔",
+  },
+
+  pu_paid_more_than_total: {
+    en: "Paid now cannot be more than the purchase total.",
+    rm: "Abhi diye hue paise kharid ke kul se zyada nahi ho sakte.",
+    ur: "ابھی دیے ہوئے پیسے خرید کے کل سے زیادہ نہیں ہو سکتے۔",
+  },
+  pu_partial_needs_amount: {
+    en: '"Partly paid" needs an amount above zero.',
+    rm: '"Kuch diya" ke sath adad likhna zaroori hai, sifar nahi.',
+    ur: '"کچھ دیا" کے ساتھ عدد لکھنا ضروری ہے، صفر نہیں۔',
+  },
+
+  sb_due_title: { en: "Payments due", rm: "Adaigi ka calendar", ur: "ادائیگی کا کیلنڈر" },
+  sb_due_7: { en: "Due in the next 7 days", rm: "Agle 7 din mein dena", ur: "اگلے 7 دن میں دینا" },
+  sb_overdue: { en: "Overdue", rm: "Tareekh guzar gayi", ur: "تاریخ گزر گئی" },
+  sb_due_none: {
+    en: "No purchase has a due date in the next 7 days.",
+    rm: "Agle 7 din mein kisi purchase ki adaigi ki tareekh nahi.",
+    ur: "اگلے 7 دن میں کسی پرچیز کی ادائیگی کی تاریخ نہیں۔",
+  },
+  sb_due_purchase: { en: "Purchase", rm: "Purchase", ur: "پرچیز" },
+  sb_due_when: { en: "Due", rm: "Kab tak", ur: "کب تک" },
+  sb_due_days: { en: "{n} days", rm: "{n} din", ur: "{n} دن" },
+  sb_due_today: { en: "today", rm: "aaj", ur: "آج" },
+  sb_due_late: { en: "{n} days late", rm: "{n} din late", ur: "{n} دن لیٹ" },
+  sb_paid_on_this: { en: "Paid on this", rm: "Is par diya", ur: "اس پر دیا" },
+  sb_supplier_total: { en: "Supplier's total payable", rm: "Supplier ka kul dena", ur: "سپلائر کا کل دینا" },
+  sb_not_received: { en: "not received yet", rm: "maal abhi nahi aaya", ur: "مال ابھی نہیں آیا" },
+  sb_due_note: {
+    en: "The amount still owed on one purchase is not shown on purpose: payments sit on the supplier's account, not on one bill. Counting a per-bill balance would invent a number that does not exist.",
+    rm: "Ek purchase ka apna \"baqi\" jaan boojh kar nahi likha: adaigi supplier ke khate par hoti hai, kisi ek bill par nahi. Ek bill ka baqi ginna wo adad banana hai jo asal mein hai hi nahi.",
+    ur: "ایک پرچیز کا اپنا \"باقی\" جان بوجھ کر نہیں لکھا: ادائیگی سپلائر کے کھاتے پر ہوتی ہے، کسی ایک بل پر نہیں۔ ایک بل کا باقی گننا وہ عدد بنانا ہے جو اصل میں ہے ہی نہیں۔",
+  },
+
+  // ---- GRN: kitna aaya, kitna toota, kitna kam (256) ----
+  grn_title: { en: "Count the goods", rm: "Maal ginein", ur: "مال گنیں" },
+  grn_hint: {
+    en: "Write what actually arrived. Received + damaged + short must equal the invoice quantity — nothing goes missing quietly.",
+    rm: "Jo asal mein aaya wo likhein. Aaya + toota + kam = invoice ki tadad — kuch chup chaap gum nahi hota.",
+    ur: "جو اصل میں آیا وہ لکھیں۔ آیا + ٹوٹا + کم = انوائس کی تعداد — کچھ چپ چاپ گم نہیں ہوتا۔",
+  },
+  grn_invoice_qty: { en: "On invoice", rm: "Invoice par", ur: "انوائس پر" },
+  grn_received: { en: "Arrived OK", rm: "Theek aaya", ur: "ٹھیک آیا" },
+  grn_damaged: { en: "Damaged", rm: "Toota", ur: "ٹوٹا" },
+  grn_short: { en: "Short", rm: "Kam", ur: "کم" },
+  grn_all_ok: { en: "All arrived as invoiced", rm: "Sab invoice jitna aaya", ur: "سب انوائس جتنا آیا" },
+  grn_photo: { en: "Photo (evidence)", rm: "Tasveer (saboot)", ur: "تصویر (ثبوت)" },
+  grn_photo_hint: {
+    en: "Optional — but when something is damaged or short, a photo settles the argument with the supplier later.",
+    rm: "Ikhtiyari — magar jab kuch toota ya kam ho, tasveer baad mein supplier se behes khatam kar deti hai.",
+    ur: "اختیاری — مگر جب کچھ ٹوٹا یا کم ہو، تصویر بعد میں سپلائر سے بحث ختم کر دیتی ہے۔",
+  },
+  grn_note: { en: "Note", rm: "Note", ur: "نوٹ" },
+  grn_note_req: {
+    en: "When something is damaged or short, write a note — what and why.",
+    rm: "Jab kuch toota ya kam ho to note likhein — kya aur kyun.",
+    ur: "جب کچھ ٹوٹا یا کم ہو تو نوٹ لکھیں — کیا اور کیوں۔",
+  },
+  grn_confirm: { en: "Confirm & bring stock in", rm: "Tasdeeq karein, maal andar layein", ur: "تصدیق کریں، مال اندر لائیں" },
+  grn_payable_note: {
+    en: "The supplier is owed only for what arrived OK. Damaged and short units are not paid for — the difference stays visible on the purchase.",
+    rm: "Supplier ka dena sirf utna banega jitna maal theek aaya. Toota aur kam — dono ka paisa nahi banta; farq purchase par nazar aata rehta hai.",
+    ur: "سپلائر کا دینا صرف اتنا بنے گا جتنا مال ٹھیک آیا۔ ٹوٹا اور کم — دونوں کا پیسہ نہیں بنتا؛ فرق پرچیز پر نظر آتا رہتا ہے۔",
+  },
+  grn_adds_up_err: {
+    en: "{name}: arrived + damaged is more than the invoice quantity ({qty}).",
+    rm: "{name}: aaya + toota invoice ki tadad ({qty}) se zyada hai.",
+    ur: "{name}: آیا + ٹوٹا انوائس کی تعداد ({qty}) سے زیادہ ہے۔",
+  },
+  grn_done: {
+    en: "Received. {ok} units in, {dmg} damaged, {short} short.",
+    rm: "Receive ho gaya. {ok} andar aaye, {dmg} toote, {short} kam.",
+    ur: "ریسیو ہو گیا۔ {ok} اندر آئے، {dmg} ٹوٹے، {short} کم۔",
+  },
+  grn_discrepancy: { en: "Invoice vs arrived", rm: "Invoice banam aaya", ur: "انوائس بمقابلہ آیا" },
+
+  // ---- Manzoori, wapas, baat (259) ----
+  pu_rv_submitted: { en: "Awaiting approval", rm: "Manzoori baqi", ur: "منظوری باقی" },
+  pu_rv_sent_back: { en: "Sent back", rm: "Wapas bheji", ur: "واپس بھیجی" },
+  pu_rv_approved: { en: "Approved", rm: "Manzoor", ur: "منظور" },
+  pu_rv_rejected: { en: "Rejected", rm: "Radd", ur: "رد" },
+  pu_rv_open: { en: "Review", rm: "Jaanch", ur: "جانچ" },
+  pu_rv_title: { en: "Purchase review", rm: "Purchase ki jaanch", ur: "پرچیز کی جانچ" },
+  pu_rv_hint: {
+    en: "Approve to let the warehouse count it in. Send back with a question if something looks wrong. Reject cancels it.",
+    rm: "Manzoor karein to warehouse maal gin sakta hai. Kuch ghalat lage to sawal likh kar wapas bhejein. Radd karne se purchase mansookh ho jati hai.",
+    ur: "منظور کریں تو ویئرہاؤس مال گن سکتا ہے۔ کچھ غلط لگے تو سوال لکھ کر واپس بھیجیں۔ رد کرنے سے پرچیز منسوخ ہو جاتی ہے۔",
+  },
+  pu_rv_comment: { en: "Comment / question", rm: "Baat / sawal", ur: "بات / سوال" },
+  pu_rv_approve: { en: "Approve", rm: "Manzoor karein", ur: "منظور کریں" },
+  pu_rv_send_back: { en: "Send back", rm: "Wapas bhejein", ur: "واپس بھیجیں" },
+  pu_rv_reject: { en: "Reject", rm: "Radd karein", ur: "رد کریں" },
+  pu_rv_reply: { en: "Reply", rm: "Jawab likhein", ur: "جواب لکھیں" },
+  pu_rv_resubmit: { en: "Reply & resubmit", rm: "Jawab de kar dobara bhejein", ur: "جواب دے کر دوبارہ بھیجیں" },
+  pu_rv_thread_empty: { en: "No comments yet.", rm: "Abhi koi baat nahi.", ur: "ابھی کوئی بات نہیں۔" },
+  pu_rv_not_approved: {
+    en: "Not approved yet — the warehouse cannot count it in.",
+    rm: "Abhi manzoor nahi — warehouse maal nahi gin sakta.",
+    ur: "ابھی منظور نہیں — ویئرہاؤس مال نہیں گن سکتا۔",
+  },
+  pu_rv_done: { en: "Saved.", rm: "Ho gaya.", ur: "ہو گیا۔" },
+  pu_rv_k_submit: { en: "sent for approval", rm: "manzoori ke liye bheji", ur: "منظوری کے لیے بھیجی" },
+  pu_rv_k_send_back: { en: "sent back", rm: "wapas bheji", ur: "واپس بھیجی" },
+  pu_rv_k_approve: { en: "approved", rm: "manzoor ki", ur: "منظور کی" },
+  pu_rv_k_reject: { en: "rejected", rm: "radd ki", ur: "رد کی" },
+  pu_rv_k_resubmit: { en: "resubmitted", rm: "dobara bheji", ur: "دوبارہ بھیجی" },
+  pu_rv_k_comment: { en: "wrote", rm: "likha", ur: "لکھا" },
+  pu_rv_k_edit: { en: "changed a line", rm: "line badli", ur: "لائن بدلی" },
+  pu_rv_items_title: { en: "Products in this order", rm: "Is order mein products", ur: "اس آرڈر میں پروڈکٹس" },
+  pu_rv_items_empty: { en: "No products found on this order.", rm: "Is order par koi product nahi mila.", ur: "اس آرڈر پر کوئی پروڈکٹ نہیں ملا۔" },
+  pu_rv_update: { en: "Update", rm: "Update karein", ur: "اپڈیٹ کریں" },
+  pu_rv_owner_admin: { en: "Approval needed: Owner/Admin", rm: "Manzoori chahiye: Owner/Admin", ur: "منظوری چاہیے: مالک/ایڈمن" },
+  pu_rv_verified: { en: "Verified by manager", rm: "Manager ki tasdeeq shuda", ur: "منیجر کی تصدیق شدہ" },
+  pu_rv_verify: { en: "Verify", rm: "Tasdeeq karein", ur: "تصدیق کریں" },
+  pu_rv_k_verify: { en: "verified", rm: "tasdeeq ki", ur: "تصدیق کی" },
+  pu_rv_waiting_approval: {
+    en: "Verified — waiting for Owner/Admin's final approval.",
+    rm: "Tasdeeq shuda — Owner/Admin ke final manzoori ka intezar hai.",
+    ur: "تصدیق شدہ — مالک/ایڈمن کی فائنل منظوری کا انتظار ہے۔",
+  },
+} as const;

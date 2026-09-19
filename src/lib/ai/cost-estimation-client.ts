@@ -1,3 +1,4 @@
+import { geminiApiKey } from "@/lib/ai/gemini-key";
 // AI-powered cost estimation for services that don't have a fixed price
 // (machinery rental, fertilizer/input purchases). Uses Gemini with
 // Google Search grounding so the estimate reflects current Pakistani
@@ -10,7 +11,7 @@ export interface CostEstimate {
 }
 
 async function callGeminiWithSearch(prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = geminiApiKey();
   if (!apiKey) return null;
 
   try {

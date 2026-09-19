@@ -1,222 +1,282 @@
-export type Lang = "en" | "ur";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { MachineryPageClient } from "./machinery-page-client";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 
-const dict = {
-  app_name: { en: "AgriBridge", ur: "ایگری برج" },
-  farmer_portal: { en: "Farmer Portal", ur: "کسان پورٹل" },
-  back_to_website: { en: "Back to Website", ur: "ویب سائٹ پر واپس" },
-  back_to_dashboard: { en: "Back to Dashboard", ur: "ڈیش بورڈ پر واپس" },
+/**
+ * Kisan ka machinery wala safha.
+ *
+ * Is file mein pehle ek TARJUME KI FEHRIST parhi hui thi -- wohi jo
+ * src/lib/i18n/translations.ts mein hai. Safha yahan tha hi nahi, is
+ * liye poora project build hi nahi hota tha: Next us folder mein page.tsx
+ * dekhta hai aur us se `default` maangta hai, jo is fehrist mein tha
+ * nahi. Repo ke pehle commit se yahi haal tha.
+ *
+ * Safha wapas banaya gaya hai, banaya nahi gaya se aage barh kar: doosre
+ * hisse (machinery-page-client, machinery-form, MachineryChart) pehle se
+ * poore mojood the aur theek the -- unhein bulane wala koi nahi tha.
+ *
+ * Kaam ka tareeqa: kisan apna khet chunta hai, us khet par jo fasal
+ * likhi hai us ke saamne "ye machine chahiye" ka button aata hai, aur
+ * dabane par neeche wala form khud bhar jata hai. Ye is liye ke kisan se
+ * ye poochhna ke "kitne acre?" aksar andaze ka jawab laata hai, jabke
+ * raqba pehle se us ke khet ke record mein maujood hai.
+ */
 
-  // Sidebar
-  nav_dashboard: { en: "Dashboard", ur: "ڈیش بورڈ" },
-  nav_profile: { en: "My Profile", ur: "میری پروفائل" },
-  nav_wallet: { en: "My Wallet", ur: "میرا بٹوہ" },
-  nav_farms: { en: "My Farms", ur: "میرے کھیت" },
-  nav_livestock: { en: "Livestock", ur: "مویشی" },
-  nav_crops: { en: "My Crops", ur: "میری فصلیں" },
-  nav_fertilizer: { en: "Fertilizer", ur: "کھاد" },
-  nav_machinery: { en: "Machinery", ur: "مشینری" },
-  nav_farm_management: { en: "Farm Management", ur: "فارم مینجمنٹ" },
+// Kaun si fasal par kaun si machine. Ye fehrist jaan boojh kar chhoti
+// hai: ye sirf pehla mashwara hai, form mein kisan ise badal sakta hai.
+const MACHINE_FOR_CROP: Record<string, { value: string; label: string }> = {
+  wheat: { value: "harvester", label: "Harvester" },
+  gandum: { value: "harvester", label: "Harvester" },
+  rice: { value: "harvester", label: "Harvester" },
+  chawal: { value: "harvester", label: "Harvester" },
+  maize: { value: "thresher", label: "Thresher" },
+  makai: { value: "thresher", label: "Thresher" },
+  cotton: { value: "rotavator", label: "Rotavator" },
+  sugarcane: { value: "tractor", label: "Tractor" },
+};
 
-  // Dashboard
-  welcome: { en: "Welcome", ur: "خوش آمدید" },
-  farmer_code: { en: "Farmer Code", ur: "کسان کوڈ" },
-  profile: { en: "Profile", ur: "پروفائل" },
-  complete: { en: "Complete", ur: "مکمل" },
-  harvest_profit: { en: "Harvest Profit", ur: "فصل کا منافع" },
-  recent_activity: { en: "Recent Activity", ur: "حالیہ سرگرمی" },
-  activity_subtitle: { en: "All your service requests in one place.", ur: "آپ کی تمام سروس درخواستیں ایک جگہ۔" },
-  quick_links: { en: "Quick Links", ur: "فوری روابط" },
-  sell_produce: { en: "Sell Produce", ur: "پیداوار بیچیں" },
-  marketplace: { en: "Marketplace", ur: "مارکیٹ پلیس" },
-  place_order_bridge: { en: "Place Order (Bridge)", ur: "آرڈر دیں (برج)" },
-  no_activity_yet: { en: "No activity yet. Request a service above to get started.", ur: "ابھی کوئی سرگرمی نہیں۔ شروع کرنے کے لیے اوپر سروس کی درخواست کریں۔" },
-  my_wallet_stat: { en: "My Wallet", ur: "میرا بٹوہ" },
-  my_farms_stat: { en: "My Farms", ur: "میرے کھیت" },
-  my_crops_stat: { en: "My Crops", ur: "میری فصلیں" },
-  machinery_stat: { en: "Machinery", ur: "مشینری" },
-  fertilizer_stat: { en: "Fertilizer", ur: "کھاد" },
-  livestock_stat: { en: "Livestock", ur: "مویشی" },
-  district_not_set: { en: "District not set", ur: "ضلع درج نہیں" },
-  mobile_not_set: { en: "Mobile not set", ur: "موبائل درج نہیں" },
-  harvest_link: { en: "Harvest", ur: "فصل کی کٹائی" },
+function machineFor(cropName: string) {
+  return MACHINE_FOR_CROP[cropName.trim().toLowerCase()] ?? { value: "rotavator", label: "Rotavator" };
+}
 
-  // Profile page
-  complete_your_profile: { en: "Complete Your Profile", ur: "اپنی پروفائل مکمل کریں" },
-  percent_complete: { en: "complete", ur: "مکمل" },
-  profile_complete_msg: { en: "Profile Complete", ur: "پروفائل مکمل ہے" },
-  profile_incomplete_msg: { en: "Profile Incomplete", ur: "پروفائل نامکمل ہے" },
-  basic_information: { en: "Basic Information", ur: "بنیادی معلومات" },
-  documents_upload: { en: "Documents Upload", ur: "دستاویزات اپ لوڈ" },
-  full_name: { en: "Full Name", ur: "پورا نام" },
-  cnic: { en: "CNIC / ID Card", ur: "شناختی کارڈ" },
-  village: { en: "Village", ur: "گاؤں" },
-  city: { en: "City", ur: "شہر" },
-  whatsapp_updates: { en: "Send me updates on WhatsApp", ur: "مجھے واٹس ایپ پر اپڈیٹس بھیجیں" },
-  cnic_front: { en: "CNIC Front", ur: "شناختی کارڈ اگلا حصہ" },
-  cnic_back: { en: "CNIC Back", ur: "شناختی کارڈ پچھلا حصہ" },
-  save_profile: { en: "Save Profile", ur: "پروفائل محفوظ کریں" },
-  saving: { en: "Saving...", ur: "محفوظ ہو رہا ہے..." },
-  tap_photo_hint: { en: "Tap the photo icon to update your picture", ur: "تصویر بدلنے کے لیے کیمرہ آئیکن دبائیں" },
-  your_name_placeholder: { en: "Your Name", ur: "آپ کا نام" },
+export default async function PortalMachineryPage() {
+  const supabase = createClient();
+  const lang = getLanguageFromCookies();
 
-  // My Farms page
-  my_farms_title: { en: "My Farms", ur: "میرے کھیت" },
-  my_farms_subtitle: { en: "Add each of your lands/fields separately.", ur: "اپنی ہر زمین/کھیت الگ الگ شامل کریں۔" },
-  total_land_auto: { en: "Total Land (Auto)", ur: "کل زمین (خودکار)" },
-  total_farms_auto: { en: "Total Farms (Auto)", ur: "کل کھیت (خودکار)" },
-  add_new_farm: { en: "Add New Farm", ur: "نیا کھیت شامل کریں" },
-  farm_name: { en: "Farm Name", ur: "کھیت کا نام" },
-  area_acres: { en: "Area (Acres)", ur: "رقبہ (ایکڑ)" },
-  village_optional: { en: "Village (optional)", ur: "گاؤں (اختیاری)" },
-  district_optional: { en: "District (optional)", ur: "ضلع (اختیاری)" },
-  owned_or_rented: { en: "Is the land owned or rented?", ur: "زمین اپنی ہے یا کرائے پر؟" },
-  owned: { en: "Owned", ur: "اپنی" },
-  rented: { en: "Rented", ur: "کرائے پر" },
-  rent_per_acre: { en: "Rent Per Acre (Rs.) - if rented", ur: "کرایہ فی ایکڑ (روپے) - اگر کرائے پر ہے" },
-  pin_location_optional: { en: "Pin Location (Optional)", ur: "مقام نشان زد کریں (اختیاری)" },
-  use_current_location: { en: "Use My Current Location", ur: "میرا موجودہ مقام استعمال کریں" },
-  add_farm_btn: { en: "Add Farm", ur: "کھیت شامل کریں" },
-  unverified_hint: { en: "A new farm will show as \"Unverified\" - admin will verify it, but you can keep working.", ur: "نیا کھیت \"غیر تصدیق شدہ\" دکھائے گا - ایڈمن اسے تصدیق کرے گا، لیکن آپ کام جاری رکھ سکتے ہیں۔" },
-  my_farms_list: { en: "My Farms List", ur: "میرے کھیتوں کی فہرست" },
-  no_farms_yet: { en: "No farms added yet.", ur: "ابھی تک کوئی کھیت شامل نہیں کیا گیا۔" },
-  verified: { en: "Verified", ur: "تصدیق شدہ" },
-  unverified: { en: "Unverified", ur: "غیر تصدیق شدہ" },
-  view_on_map: { en: "View on Map", ur: "نقشے پر دیکھیں" },
-  harvest_records: { en: "Harvest Records", ur: "فصل کے ریکارڈ" },
-  crops_grown: { en: "Crops Grown", ur: "اگائی گئی فصلیں" },
-  total_profit_loss: { en: "Total Profit/Loss", ur: "کل نفع/نقصان" },
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  // My Crops page
-  my_crops_title: { en: "My Crops", ur: "میری فصلیں" },
-  my_crops_subtitle: { en: "Add your crop, track expenses, and see progress to harvest.", ur: "اپنی فصل شامل کریں، اخراجات ٹریک کریں، اور کٹائی تک کی پیش رفت دیکھیں۔" },
-  farm_land_status: { en: "Farm Land Status", ur: "کھیت کی زمین کی صورتحال" },
-  add_new_crop: { en: "Add New Crop", ur: "نئی فصل شامل کریں" },
-  select_farm: { en: "Select a farm", ur: "کھیت منتخب کریں" },
-  crop: { en: "Crop", ur: "فصل" },
-  sowing_date: { en: "Sowing Date", ur: "بوائی کی تاریخ" },
-  area_optional: { en: "Area - Optional (Acre / Kanal / Marla)", ur: "رقبہ - اختیاری (ایکڑ / کنال / مرلہ)" },
-  land_available_hint: { en: "Only this much land is available on this farm.", ur: "اس کھیت میں صرف اتنی زمین دستیاب ہے۔" },
-  add_crop_btn: { en: "Add Crop", ur: "فصل شامل کریں" },
-  profit_prediction: { en: "Profit Prediction", ur: "منافع کا اندازہ" },
-  expected_cost: { en: "Expected Cost", ur: "متوقع خرچہ" },
-  expected_revenue: { en: "Expected Revenue", ur: "متوقع آمدنی" },
-  expected_profit: { en: "Expected Profit", ur: "متوقع منافع" },
-  not_enough_data: { en: "Not enough data yet for this crop to make an estimate.", ur: "اس فصل کے لیے ابھی اندازہ لگانے کے لیے کافی ڈیٹا نہیں ہے۔" },
-  active_crops: { en: "Active Crops", ur: "موجودہ فصلیں" },
-  total_expense_col: { en: "Cost", ur: "خرچہ" },
-  per_acre_col: { en: "Per Acre", ur: "فی ایکڑ" },
-  details_btn: { en: "Details", ur: "تفصیلات" },
-  no_crops_yet: { en: "No crops added yet.", ur: "ابھی تک کوئی فصل شامل نہیں کی گئی۔" },
+  const { data: farmer } = await supabase.from("farmers").select("id").eq("user_id", user.id).single();
+  if (!farmer) redirect("/login");
 
-  // Crops Table (new keys)
-  table_progress_header: { en: "Progress", ur: "پیش رفت" },
-  ready_label: { en: "Ready", ur: "تیار" },
-  confirm_delete_crop: { en: "Are you sure? This crop will be deleted.", ur: "کیا آپ کو یقین ہے؟ یہ فصل حذف ہو جائے گی۔" },
+  // Profile ka darwaza yahan jaan boojh kar NAHI hai. Machinery booking
+  // wo pehla kaam hai jo naya kisan karna chahta hai; usay "pehle apni
+  // profile mukammal karein" keh kar rok dena ka matlab hai ke wo phone
+  // rakh de aur kisi aur se machine le le.
+  const { data: farms } = await supabase
+    .from("farms")
+    .select("id, name, area_acres, latitude, longitude")
+    .eq("farmer_id", farmer.id)
+    .order("name");
 
-  // Add Crop Form (new keys)
-  farm_label: { en: "Farm", ur: "کھیت" },
-  land_total_label: { en: "Total", ur: "کل" },
-  land_used_label: { en: "Used", ur: "استعمال شدہ" },
-  land_available_label: { en: "Available", ur: "باقی" },
-  only_available_prefix: { en: "Only", ur: "صرف" },
-  only_available_suffix: { en: "is available on this farm.", ur: "اس کھیت میں دستیاب ہے۔" },
-  unit_acre: { en: "Acre", ur: "ایکڑ" },
-  unit_kanal: { en: "Kanal", ur: "کنال" },
-  unit_marla: { en: "Marla", ur: "مرلہ" },
-  andazan_kharcha: { en: "Estimated Cost", ur: "اندازاً خرچہ" },
-  andazan_kamai: { en: "Estimated Revenue", ur: "اندازاً کمائی" },
-  andazan_munafa: { en: "Estimated Profit", ur: "اندازاً منافع" },
-  prediction_disclaimer_prefix: { en: "Based on average of", ur: "اوسط پر مبنی" },
-  prediction_disclaimer_suffix: { en: "past crops - actual result may vary with weather/rate.", ur: "پرانی فصلوں کا - اصل نتیجہ موسم/ریٹ کے ساتھ بدل سکتا ہے۔" },
+  const farmIds = (farms ?? []).map((f) => f.id);
+  const { data: crops } = farmIds.length
+    ? await supabase
+        .from("crop_history")
+        .select("farm_id, crop_name, area_sown_acres")
+        .in("farm_id", farmIds)
+        .is("harvest_booked_at", null)
+    : { data: [] };
 
-  // Credit Request Form (new keys)
-  your_response_needed: { en: "Your Response Needed", ur: "آپ کا جواب درکار ہے" },
-  new_credit_request: { en: "New Credit Request", ur: "نئی کریڈٹ درخواست" },
-  request_sent_msg: { en: "Request sent.", ur: "درخواست بھیج دی گئی۔" },
-  category_label: { en: "Category", ur: "قسم" },
-  category_group_filter: { en: "Category Group (Product Filter)", ur: "زمرہ (پروڈکٹ فلٹر)" },
-  all_products_option: { en: "All Products", ur: "تمام پروڈکٹس" },
-  product_label: { en: "Product", ur: "پروڈکٹ" },
-  select_placeholder: { en: "- select -", ur: "- منتخب کریں -" },
-  quantity_label: { en: "Quantity", ur: "مقدار" },
-  eg_2: { en: "e.g. 2", ur: "مثلاً 2" },
-  credit_request_history: { en: "Credit Request History", ur: "کریڈٹ درخواست کی تاریخ" },
-  mrp_rate_label: { en: "MRP Rate", ur: "ایم آر پی ریٹ" },
-  base_amount_label: { en: "Base Amount", ur: "بنیادی رقم" },
-  credit_charge_label: { en: "Credit Charge", ur: "کریڈٹ چارج" },
-  total_payable_label: { en: "Total Payable", ur: "کل قابل ادائیگی" },
-  admin_note_label: { en: "Admin Note", ur: "ایڈمن نوٹ" },
-  status_pending: { en: "Under Admin Review", ur: "ایڈمن کے زیر جائزہ" },
-  status_admin_approved: { en: "Your Response Needed", ur: "آپ کا جواب درکار ہے" },
-  status_farmer_accepted: { en: "Accepted", ur: "قبول کر لیا گیا" },
-  status_farmer_rejected: { en: "Rejected", ur: "مسترد کر دیا گیا" },
-  status_admin_rejected: { en: "Rejected by Admin", ur: "ایڈمن نے مسترد کیا" },
-  accept_btn: { en: "Accept", ur: "قبول کریں" },
-  reject_btn: { en: "Reject", ur: "مسترد کریں" },
-  sending_label: { en: "Sending...", ur: "بھیجا جا رہا ہے..." },
-  send_request_btn: { en: "Send Request", ur: "درخواست بھیجیں" },
-  cat_seed: { en: "Seed", ur: "بیج" },
-  cat_pesticide: { en: "Pesticide", ur: "کیڑے مار دوا" },
+  const farmData = (farms ?? []).map((f) => {
+    const mine = (crops ?? []).filter((c) => c.farm_id === f.id);
+    const sown = mine.reduce((sum, c) => sum + Number(c.area_sown_acres ?? 0), 0);
+    const totalArea = Number(f.area_acres ?? 0);
+    return {
+      id: f.id,
+      name: f.name,
+      totalArea,
+      crops: mine.map((c) => {
+        const m = machineFor(c.crop_name ?? "");
+        return {
+          cropName: c.crop_name ?? "-",
+          area: Number(c.area_sown_acres ?? 0),
+          suggestedMachine: m.value,
+          suggestedMachineLabel: m.label,
+        };
+      }),
+      // Khali zameen kabhi manfi nahi dikhti: agar record mein fasal ka
+      // raqba khet se zyada likha ho (aisa hota hai) to "-2 acre khali"
+      // likhna sirf uljhan paida karta hai.
+      khaliZameen: Math.max(0, totalArea - sown),
+      // Khet ki jagah pehle se maujood ho to booking par dobara nahi
+      // maangi jati -- yehi is poore rishte ka faida hai.
+      hasLocation: f.latitude !== null && f.longitude !== null,
+    };
+  });
 
-  // Fertilizer page
-  fertilizer_title: { en: "Fertilizer / Seed / Pesticide Credit", ur: "کھاد / بیج / کیڑے مار ادویات کریڈٹ" },
-  fertilizer_subtitle: { en: "Select a product, get credit at MRP rate - admin approves, then you accept.", ur: "پروڈکٹ منتخب کریں، ایم آر پی ریٹ پر کریڈٹ لیں - ایڈمن منظوری دے گا، پھر آپ قبول کریں۔" },
-  credit_balance_label: { en: "Your Total Credit Balance (Seed/Fertilizer/Pesticide/Machinery)", ur: "آپ کا کل کریڈٹ بیلنس (بیج/کھاد/کیڑے مار ادویات/مشینری)" },
+  // Kisan ki apni bookings ki live haalat.
+  //
+  // Ye jaan boojh kar us ke apne safhe par hai: farmaish bhejne ke baad
+  // kisan ka agla sawal hamesha "ab kya ho raha hai?" hota hai, aur us
+  // ka jawab abhi tak sirf phone kar ke milta tha. Adad wohi hain jo
+  // hisaab mein hain -- yahan dobara ginti nahi ki gayi.
+  const { data: bookings } = await supabase
+    .from("machinery_bookings")
+    .select("id, booking_number, status, booking_date, crop_type, harvest_area, final_rate")
+    .eq("farmer_id", farmer.id)
+    .order("booking_date", { ascending: false })
+    .limit(10);
 
-  // Machinery page (new keys)
-  no_requests_yet: { en: "No requests yet.", ur: "ابھی تک کوئی درخواست نہیں ہوئی۔" },
-  ai_estimated_cost_label: { en: "AI Estimated Cost", ur: "اے آئی اندازہ خرچہ" },
-  ai_estimate_pending: { en: "AI estimate is being prepared...", ur: "اے آئی اندازہ تیار ہو رہا ہے..." },
-  machine_thresher: { en: "Thresher", ur: "تھریشر" },
-  machine_harvester: { en: "Harvester", ur: "ہارویسٹر" },
-  machine_rotavator: { en: "Rotavator", ur: "روٹاویٹر" },
-  machine_tractor: { en: "Tractor", ur: "ٹریکٹر" },
+  const bookingIds = (bookings ?? []).map((b) => b.id);
+  const [{ data: bills }, { data: pays }] = bookingIds.length
+    ? await Promise.all([
+        supabase
+          .from("machinery_bills")
+          .select("booking_id, bill_number, gross_amount, discount_amount, advance_adjusted, balance_payable")
+          .in("booking_id", bookingIds)
+          .is("cancelled_at", null),
+        supabase
+          .from("machinery_payments")
+          .select("booking_id, kind, amount, verification_status")
+          .in("booking_id", bookingIds),
+      ])
+    : [{ data: [] }, { data: [] }];
 
-  // Machinery page
-  machinery_title: { en: "Machinery Rental Request", ur: "مشینری کرائے کی درخواست" },
-  machinery_subtitle: { en: "Select a farm - the system will tell you which machine you need.", ur: "کھیت منتخب کریں - سسٹم بتائے گا آپ کو کون سی مشین چاہیے۔" },
+  const bookingRows = (bookings ?? []).map((b) => {
+    const bill = (bills ?? []).find((x) => x.booking_id === b.id) ?? null;
+    const mine = (pays ?? []).filter((p) => p.booking_id === b.id);
+    const paid = mine
+      .filter((p) => p.kind === "final" && p.verification_status === "verified")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    const advanceVerified = mine
+      .filter((p) => p.kind === "advance" && p.verification_status === "verified")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    // Dawa alag rakha jata hai. Kisan ko ye dikhana zaroori hai --
+    // warna wo samajhta hai ke us ka paisa gum ho gaya -- magar use
+    // baqi mein se ghataya NAHI jata, kyunke tasdeeq abhi baqi hai.
+    const advanceClaimed = mine
+      .filter((p) => p.kind === "advance" && p.verification_status === "claimed")
+      .reduce((s, p) => s + Number(p.amount), 0);
+    return {
+      id: b.id,
+      bookingNumber: b.booking_number,
+      status: b.status,
+      bookingDate: b.booking_date,
+      cropType: b.crop_type,
+      area: Number(b.harvest_area ?? 0),
+      rate: b.final_rate === null ? null : Number(b.final_rate),
+      billNumber: bill?.bill_number ?? null,
+      gross: bill ? Number(bill.gross_amount) : null,
+      balance: bill ? Math.max(Number(bill.balance_payable) - paid, 0) : null,
+      paid,
+      advanceVerified,
+      advanceClaimed,
+    };
+  });
 
-  // Livestock page
-  livestock_title: { en: "Livestock", ur: "مویشی" },
-  livestock_subtitle: { en: "Keep your animal details and request loan/financing when needed.", ur: "اپنے جانوروں کی تفصیلات رکھیں اور ضرورت پڑنے پر قرض/فنانسنگ کی درخواست کریں۔" },
-  livestock_loan_request: { en: "Livestock Loan Request", ur: "مویشی قرض کی درخواست" },
-  past_requests: { en: "Past Requests", ur: "پرانی درخواستیں" },
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
+        ← {t("back_to_dashboard", lang)}
+      </Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("machinery_title", lang)}</h1>
+      <p className="mt-1 text-sm text-surface-500">{t("machinery_subtitle", lang)}</p>
+      {bookingRows.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 font-display text-sm font-semibold text-surface-900">
+            {t("my_bookings_heading", lang)}
+          </h2>
+          <div className="space-y-2">
+            {bookingRows.map((b) => (
+              <BookingStatusCard key={b.id} booking={b} lang={lang} />
+            ))}
+          </div>
+        </div>
+      )}
 
-  // Farm Management (Harvest) page
-  farm_mgmt_title: { en: "Farm Management", ur: "فارم مینجمنٹ" },
-  farm_mgmt_subtitle: { en: "Add your harvest record and see production history.", ur: "اپنا فصل کی کٹائی کا ریکارڈ شامل کریں اور پیداوار کی تاریخ دیکھیں۔" },
-  crop_history_title: { en: "Crop History", ur: "فصل کی تاریخ" },
+      <div className="mt-6">
+        <MachineryPageClient farms={farmData} />
+      </div>
+    </div>
+  );
+}
 
-  // Wallet page
-  my_wallet_title: { en: "My Wallet", ur: "میرا بٹوہ" },
+// Kisan ki zabaan mein halat. Andar ke naam (bill_pending waghera)
+// system ke liye hain, kisan ke liye nahi.
+const FARMER_STATUS: Record<string, Parameters<typeof t>[0]> = {
+  new: "farmer_status_new",
+  ready_for_harvest: "farmer_status_scheduled",
+  in_progress: "farmer_status_working",
+  bill_pending: "farmer_status_bill_making",
+  payment_pending: "farmer_status_payment_due",
+  closed: "farmer_status_closed",
+  cancelled: "farmer_status_cancelled",
+};
 
-  // Marketplace/Sell Produce
-  marketplace_title: { en: "Marketplace", ur: "مارکیٹ پلیس" },
-  sell_produce_title: { en: "Sell Your Produce", ur: "اپنی پیداوار بیچیں" },
+function BookingStatusCard({
+  booking,
+  lang,
+}: {
+  booking: {
+    bookingNumber: string;
+    status: string;
+    bookingDate: string;
+    cropType: string | null;
+    area: number;
+    rate: number | null;
+    billNumber: string | null;
+    gross: number | null;
+    balance: number | null;
+    paid: number;
+    advanceVerified: number;
+    advanceClaimed: number;
+  };
+  lang: ReturnType<typeof getLanguageFromCookies>;
+}) {
+  const statusKey = FARMER_STATUS[booking.status] ?? "farmer_status_new";
+  return (
+    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-xs text-surface-400">{booking.bookingNumber}</p>
+          <p className="text-sm font-medium text-surface-900">
+            {booking.cropType ?? "-"} · {booking.area} {t("acres_unit", lang)}
+          </p>
+          <p className="text-xs text-surface-500">{booking.bookingDate}</p>
+        </div>
+        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+          {t(statusKey, lang)}
+        </span>
+      </div>
 
-  // Location picker
-  loc_getting: { en: "Getting your location...", ur: "آپ کا مقام حاصل کیا جا رہا ہے..." },
-  loc_captured: { en: "Location captured", ur: "مقام حاصل ہو گیا" },
-  loc_use_current: { en: "Use My Current Location", ur: "میرا موجودہ مقام استعمال کریں" },
-  loc_error: { en: "Could not get location. Check browser settings.", ur: "مقام حاصل نہیں ہو سکا۔ براؤزر کی سیٹنگز چیک کریں۔" },
+      {booking.rate !== null && (
+        <p className="mt-2 text-xs text-surface-600">
+          {t("rate_label_portal", lang)}: Rs {booking.rate.toLocaleString()} / {t("acres_unit", lang)}
+        </p>
+      )}
 
-  // Misc units
-  acres_unit: { en: "acres", ur: "ایکڑ" },
-  error_prefix: { en: "Error", ur: "خرابی" },
-  add_new_farm_heading: { en: "Add New Farm", ur: "نیا کھیت شامل کریں" },
-  eg_farm_name: { en: "e.g. Uncle's Farm", ur: "مثلاً چچا کا کھیت" },
-  eg_area: { en: "e.g. 5", ur: "مثلاً 5" },
-  eg_rent: { en: "e.g. 30000", ur: "مثلاً 30000" },
-  farm_overall_loss: { en: "This farm is running an overall loss.", ur: "اس کھیت میں مجموعی طور پر نقصان ہو رہا ہے۔" },
-  farm_recurring_loss: { en: "keeps having repeated losses.", ur: "میں بار بار نقصان ہو رہا ہے۔" },
-  farm_overall_good: { en: "This farm's overall result is good.", ur: "اس کھیت کا مجموعی نتیجہ اچھا ہے۔" },
+      {booking.gross !== null && (
+        <div className="mt-2 space-y-0.5 border-t border-surface-100 pt-2 text-sm">
+          <Row label={t("bill_label_portal", lang)} value={booking.gross} />
+          {booking.advanceVerified > 0 && (
+            <Row label={t("advance_label_portal", lang)} value={-booking.advanceVerified} />
+          )}
+          {booking.paid > 0 && <Row label={t("paid_label_portal", lang)} value={-booking.paid} />}
+          <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold">
+            <span>{t("outstanding_label_portal", lang)}</span>
+            <span className={(booking.balance ?? 0) > 0 ? "text-red-600" : "text-brand-700"}>
+              Rs {(booking.balance ?? 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
 
-  // Language toggle
-  language: { en: "Language", ur: "زبان" },
-} as const;
+      {booking.advanceClaimed > 0 && (
+        <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
+          {t("advance_claim_waiting", lang)}: Rs {booking.advanceClaimed.toLocaleString()}
+        </p>
+      )}
+    </div>
+  );
+}
 
-export type TranslationKey = keyof typeof dict;
-
-export function t(key: TranslationKey, lang: Lang): string {
-  return dict[key]?.[lang] ?? String(key);
+function Row({ label, value }: { label: string; value: number }) {
+  // Manfi sifar ko sifar likha jaye: kharche wali lakeerein `value={-x}`
+  // bhejti hain, aur x sifar ho to JavaScript mein `-0` banta hai. `-0 < 0`
+  // GHALAT hai, is liye neeche wali shart usay manfi nahi samajhti aur
+  // seedha "-0" chhaap deti hai. Paise ke safhe par "Rs -0" parh kar banda
+  // rukta hai aur sochta hai kya cheez manfi hai. Kuch bhi nahi.
+  const v = value === 0 ? 0 : value;
+  return (
+    <div className="flex justify-between text-surface-600">
+      <span>{label}</span>
+      <span>{v < 0 ? `- Rs ${Math.abs(v).toLocaleString()}` : `Rs ${v.toLocaleString()}`}</span>
+    </div>
+  );
 }
