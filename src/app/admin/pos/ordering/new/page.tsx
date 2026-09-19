@@ -30,24 +30,11 @@ export default async function NewBranchOrderPage() {
     .eq("is_deleted", false)
     .eq("is_verified", true)
     .order("name");
-  // Central Warehouse stock (Main Branch's warehouse) shown per product,
-  // same pattern as the HQ order form.
-  const { data: mainBranch } = await supabase.from("branches").select("id").eq("is_main_branch", true).single();
+  // HQ distribution center ka stock -- same pattern jo agri-orders/new par hai.
+  const { data: hqBranch } = await supabase.from("branches").select("id").eq("is_distribution_center", true).maybeSingle();
   let stockMap: Record<string, number> = {};
-  if (mainBranch) {
-    // Karyana Ordering specifically pulls from the Main Branch's
-    // Karyana-shop warehouse - not just "any" warehouse under the
-    // branch, since Phase 3 split each branch into multiple shops
-    // (Karyana/Agri Inputs/Dairy) each with their own warehouse now.
-    const { data: karyanaShop } = await supabase
-      .from("shops")
-      .select("id")
-      .eq("branch_id", mainBranch.id)
-      .eq("business_type", "karyana")
-      .maybeSingle();
-    const { data: mainWarehouse } = karyanaShop
-      ? await supabase.from("warehouses").select("id").eq("shop_id", karyanaShop.id).maybeSingle()
-      : await supabase.from("warehouses").select("id").eq("branch_id", mainBranch.id).eq("code", "MAIN").maybeSingle();
+  if (hqBranch) {
+    const { data: mainWarehouse } = await supabase.from("warehouses").select("id").eq("branch_id", hqBranch.id).eq("is_active", true).order("created_at").limit(1).maybeSingle();
     if (mainWarehouse) {
       const { data: inventoryRows } = await supabase.from("inventory").select("product_id, quantity_on_hand").eq("warehouse_id", mainWarehouse.id);
       stockMap = Object.fromEntries((inventoryRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand)]));
