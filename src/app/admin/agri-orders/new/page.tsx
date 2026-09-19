@@ -70,13 +70,15 @@ export default async function NewAgriOrderPage() {
     .eq("is_verified", true)
     .order("name");
 
-  // Central Warehouse stock (Main Branch's warehouse) - shown on each
-  // product card so shop staff can see availability before ordering,
-  // Odoo-style.
-  const { data: mainBranch } = await supabase.from("branches").select("id").eq("is_main_branch", true).single();
+  // Central Warehouse (HQ distribution center) ka stock -- har product
+  // card par dikh kar staff order karne se pehle availability check karta
+  // hai. `is_distribution_center` wala branch HQ hai (same pattern jo
+  // stock-transfer-workflow.ts mein hai); `is_main_branch` wala selling
+  // branch hai -- us ka pehla warehouse shop-godam hai, HQ nahi.
+  const { data: hqBranch } = await supabase.from("branches").select("id").eq("is_distribution_center", true).maybeSingle();
   let stockMap: Record<string, number> = {};
-  if (mainBranch) {
-    const { data: mainWarehouse } = await supabase.from("warehouses").select("id").eq("branch_id", mainBranch.id).limit(1).maybeSingle();
+  if (hqBranch) {
+    const { data: mainWarehouse } = await supabase.from("warehouses").select("id").eq("branch_id", hqBranch.id).eq("is_active", true).order("created_at").limit(1).maybeSingle();
     if (mainWarehouse) {
       const { data: inventoryRows } = await supabase.from("inventory").select("product_id, quantity_on_hand").eq("warehouse_id", mainWarehouse.id);
       stockMap = Object.fromEntries((inventoryRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand)]));
