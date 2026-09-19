@@ -108,6 +108,13 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
     // jata -- warna rate counter wale ki marzi par aa jata.
     customer_type:
       formData.get("customer_type") === "wholesale_shop" ? "wholesale_shop" : "retail",
+    // Malik (19 September): "wholesale ke liye Shop ka naam bhi add ho,
+    // wahi POS mein aana chahiye." Retail customer ke liye maani nahi
+    // rakhta -- checkbox utarne par khali kar dete hain.
+    business_name:
+      formData.get("customer_type") === "wholesale_shop"
+        ? (formData.get("business_name") as string)?.trim() || null
+        : null,
   };
 
   const { data: created, error } = await supabase.from("customers").insert(payload).select("id").single();
@@ -157,6 +164,10 @@ export async function updateCustomer(_prev: ActionState, formData: FormData): Pr
     // jata -- warna rate counter wale ki marzi par aa jata.
     customer_type:
       formData.get("customer_type") === "wholesale_shop" ? "wholesale_shop" : "retail",
+    business_name:
+      formData.get("customer_type") === "wholesale_shop"
+        ? (formData.get("business_name") as string)?.trim() || null
+        : null,
   };
 
   const { error } = await supabase.from("customers").update(payload).eq("id", id);

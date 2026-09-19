@@ -60,6 +60,7 @@ interface Customer {
   balance?: number | null;
   creditLimit?: number | null;
   isWholesaleShop: boolean;
+  businessName?: string | null;
 }
 interface CartLine {
   product_id: string;
@@ -169,20 +170,20 @@ export function PosClient({
   const chosenCustomer = customers.find((c) => c.id === customerId) ?? null;
   const wholesaleOn = chosenCustomer?.isWholesaleShop === true;
 
-  function priceFor(item: InventoryItem, forWholesale: boolean): number {
+  // Malik (19 September): "Regular Customer + Khata par MRP rate lagni
+  // chahiye." MRP sirf display ke liye tha, kabhi charge nahi hoti thi
+  // -- ab Khata (credit) hi ek soorat hai jahan MRP asal rate ban jati
+  // hai (Wholesale ka apna hisaab alag hai, dono ek sath kabhi nahi hote
+  // kyunke ye do alag custMode hain).
+  function priceFor(item: InventoryItem, forWholesale: boolean, forKhataMrp: boolean): number {
+    const mrp = item.products?.mrp_price;
+    if (forKhataMrp && mrp != null && mrp > 0) return mrp;
     if (forWholesale && item.wholesale_price != null) return item.wholesale_price;
     return item.selling_price;
   }
 
   function applyCustomer(id: string) {
     setCustomerId(id);
-    const nowWholesale = customers.find((c) => c.id === id)?.isWholesaleShop === true;
-    setCart((prev) =>
-      prev.map((line) => {
-        const item = inventory.find((i) => i.product_id === line.product_id);
-        return item ? { ...line, unit_price: priceFor(item, nowWholesale) } : line;
-      })
-    );
   }
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
     { id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
@@ -197,6 +198,22 @@ export function PosClient({
   useEffect(() => {
     barcodeRef.current?.focus();
   }, []);
+
+  const regularKhataOn = custMode === "regular" && paymentLines.some((l) => l.method === "khata");
+
+  // Customer badalne (wholesale on/off) ya payment method Khata par
+  // jane/hatne par -- dono soorat mein cart ke rate khud-ba-khud
+  // update hote hain, taake counter wala khud har item dobara chunne
+  // par majboor na ho.
+  useEffect(() => {
+    setCart((prev) =>
+      prev.map((line) => {
+        const item = inventory.find((i) => i.product_id === line.product_id);
+        return item ? { ...line, unit_price: priceFor(item, wholesaleOn, regularKhataOn) } : line;
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wholesaleOn, regularKhataOn]);
 
   function switchCustomerMode(nextMode: CustomerMode) {
     setCustMode(nextMode);
@@ -255,6 +272,7 @@ export function PosClient({
         const cPhoneCore = (c.phone ?? "").replace(/\D/g, "").slice(-10);
         return (
           c.name.toLowerCase().includes(q) ||
+          (c.businessName ?? "").toLowerCase().includes(q) ||
           (qPhoneCore.length >= 3 && cPhoneCore.includes(qPhoneCore)) ||
           (c.cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits) ||
           c.id.toLowerCase().startsWith(q)
@@ -319,7 +337,7 @@ export function PosClient({
           product_id: item.product_id,
           name: item.products!.name,
           quantity: 1,
-          unit_price: priceFor(item, wholesaleOn),
+          unit_price: priceFor(item, wholesaleOn, regularKhataOn),
         },
       ];
     });
@@ -615,7 +633,7 @@ export function PosClient({
             return (
               <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
                 <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
               </button>
             );
@@ -632,7 +650,15 @@ export function PosClient({
           {custMode === "walkin" ? <p className="rounded-lg bg-surface-50 px-3 py-2 text-xs text-surface-600 dark:bg-surface-800 dark:text-surface-300">{t("pos_walkin_note", lang)}</p> : chosenCustomer ? (
             <div className="flex items-start gap-2 rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">{chosenCustomer.name}</p>
+                {/* Malik (19 September): wholesale shop ka apna naam
+                    (business_name) bold/upar, contact person chhota
+                    neeche -- dealer ki tarah. */}
+                <p className="truncate text-sm font-semibold text-surface-900 dark:text-white">
+                  {chosenCustomer.businessName || chosenCustomer.name}
+                </p>
+                {chosenCustomer.businessName && (
+                  <p className="truncate text-xs text-surface-500">{chosenCustomer.name}</p>
+                )}
                 {chosenCustomer.phone && <p className="text-xs text-surface-500">{chosenCustomer.phone}</p>}
                 <p className="mt-0.5 text-xs"><span className="text-surface-500">{t("pos_cust_balance", lang)}: </span>{chosenCustomer.balance == null ? <span className="text-surface-400">—</span> : <span className={chosenCustomer.balance > 0 ? "font-semibold text-red-600" : "font-semibold text-emerald-700"}>Rs {Math.round(chosenCustomer.balance).toLocaleString()}</span>}</p>
                 <p className="text-xs"><span className="text-surface-500">{t("pos_credit_limit", lang)}: </span>{chosenCustomer.creditLimit == null || chosenCustomer.creditLimit === 0 ? <span className="text-surface-400">—</span> : <span className="font-medium text-surface-700 dark:text-surface-200">Rs {Math.round(chosenCustomer.creditLimit).toLocaleString()}</span>}</p>
@@ -644,11 +670,12 @@ export function PosClient({
             <>
               <Input value={custQuery} onChange={(e) => setCustQuery(e.target.value)} placeholder={custMode === "wholesale" ? t("pos_shop_search", lang) : t("pos_cust_search", lang)} />
               <div className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
-                {custMatches.length === 0 ? <p className="px-3 py-2 text-xs text-surface-400">{custMode === "wholesale" ? t("pf_pos_no_shops", lang) : t("pos_cust_none", lang)}</p> : custMatches.map((c) => <button key={c.id} type="button" onClick={() => { applyCustomer(c.id); setCustQuery(""); }} className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.name}</p><p className="text-xs text-surface-500">{c.phone ?? "—"}{c.balance != null && c.balance > 0 ? ` · Rs ${Math.round(c.balance).toLocaleString()}` : ""}</p></button>)}
+                {custMatches.length === 0 ? <p className="px-3 py-2 text-xs text-surface-400">{custMode === "wholesale" ? t("pf_pos_no_shops", lang) : t("pos_cust_none", lang)}</p> : custMatches.map((c) => <button key={c.id} type="button" onClick={() => { applyCustomer(c.id); setCustQuery(""); }} className="block w-full border-b border-surface-100 px-3 py-2 text-left last:border-b-0 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><p className="text-sm font-medium text-surface-900 dark:text-surface-100">{c.businessName || c.name}</p><p className="text-xs text-surface-500">{c.businessName ? `${c.name} · ` : ""}{c.phone ?? "—"}{c.balance != null && c.balance > 0 ? ` · Rs ${Math.round(c.balance).toLocaleString()}` : ""}</p></button>)}
               </div>
             </>
           )}
           {wholesaleOn && <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">{t("pf_pos_wholesale_on", lang)}</p>}
+          {regularKhataOn && <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">Khata par MRP rate lag rahi hai.</p>}
           {custMode !== "walkin" && chosenCustomer && (
             <input
               value={receivedBy}

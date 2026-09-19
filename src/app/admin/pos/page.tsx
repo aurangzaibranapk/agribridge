@@ -229,6 +229,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         balance?: number | null;
         creditLimit?: number | null;
         isWholesaleShop: boolean;
+        businessName?: string | null;
       }[]
     | null = null;
   if (dealer) {
@@ -287,7 +288,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
-      .select("id, name, phone_number, cnic, customer_type, current_balance, credit_limit, farmer_id")
+      .select("id, name, phone_number, cnic, customer_type, business_name, current_balance, credit_limit, farmer_id")
       .order("name");
     rawCustomers = (cust ?? []).map((c: any) => ({
       id: c.id,
@@ -302,6 +303,10 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       // baghair banda naya udhaar de deta hai.
       balance: c.current_balance == null ? null : Number(c.current_balance),
       isWholesaleShop: c.customer_type === "wholesale_shop",
+      // Malik (19 September): "wholesale ke liye Shop ka naam bhi POS
+      // mein aana chahiye" -- dukaan ka naam, contact person ke naam se
+      // alag.
+      businessName: c.business_name ?? null,
     }));
 
     // Farmer khud POS mein customer ki tarah dhoonda ja sake (384) --

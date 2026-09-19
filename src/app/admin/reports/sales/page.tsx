@@ -36,12 +36,12 @@ function rs(n: number) {
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; shop?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const lang = getLanguageFromCookies("rm");
-  const { start, end } = getDateRange(range);
+  const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
 
   /**
@@ -409,7 +409,7 @@ export default async function SalesReportPage({
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <DateRangeFilter current={range} />
+        <DateRangeFilter current={range} from={params.from} to={params.to} />
         {!meriDukan && <BranchFilter branches={branches ?? []} current={branchId} />}
         {!meriDukan && branchId && shopsForBranch.length > 0 && (
           <ShopFilter shops={shopsForBranch.map((d) => ({ id: d.id, name: d.name }))} current={shopId} />

@@ -32,11 +32,11 @@ function rs(n: number): string {
 export default async function PosShiftReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "week";
-  const { start, end } = getDateRange(range);
+  const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
 
   const {
@@ -158,7 +158,7 @@ export default async function PosShiftReportPage({
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <DateRangeFilter current={range} />
+        <DateRangeFilter current={range} from={params.from} to={params.to} />
         {!meriBranch && <BranchFilter branches={branches ?? []} current={branchId} />}
       </div>
 

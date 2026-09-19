@@ -5,6 +5,28 @@ import Link from "next/link";
 import { CheckCircle2, Search, User } from "lucide-react";
 import { bandeKaKhulasaDekhein } from "@/actions/customer-udhaar";
 
+/**
+ * Malik (19 September): "mobile number ya CNIC se search nahi hote,
+ * customer nahi aata." Naam ke sath seedha string jorr kar match kiya
+ * jata tha -- number local format ("0345...") mein type ho aur
+ * database mein international ("9234...") para ho to kabhi match nahi
+ * hota (pos-client.tsx mein yehi masla pehle theek ho chuka hai, akhri
+ * 10 hindse hi asal pehchan hain). Ab dono jagah (naam ke sath ya
+ * akele) match hota hai.
+ */
+function matchesPerson(p: PersonOption, q: string): boolean {
+  const text = `${p.name} ${p.phone ?? ""} ${p.cnic ?? ""}`.toLowerCase();
+  if (text.includes(q)) return true;
+  const qDigits = q.replace(/\D/g, "");
+  if (qDigits.length < 3) return false;
+  const qCore = qDigits.slice(-10);
+  const pPhoneCore = (p.phone ?? "").replace(/\D/g, "").slice(-10);
+  if (pPhoneCore && pPhoneCore.includes(qCore)) return true;
+  const pCnicDigits = (p.cnic ?? "").replace(/\D/g, "");
+  if (pCnicDigits && pCnicDigits.includes(qDigits)) return true;
+  return false;
+}
+
 export interface PersonOption {
   type: "farmer" | "customer";
   id: string;
@@ -54,7 +76,7 @@ export function PersonPicker({
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return people.filter((p) => `${p.name} ${p.phone ?? ""} ${p.cnic ?? ""}`.toLowerCase().includes(q)).slice(0, 25);
+    return people.filter((p) => matchesPerson(p, q)).slice(0, 25);
   }, [people, query]);
 
   function pick(p: PersonOption | null) {
@@ -156,7 +178,7 @@ export function NameSuggest({
   const results = useMemo(() => {
     const q = value.trim().toLowerCase();
     if (!q) return [];
-    return people.filter((p) => `${p.name} ${p.phone ?? ""} ${p.cnic ?? ""}`.toLowerCase().includes(q)).slice(0, 10);
+    return people.filter((p) => matchesPerson(p, q)).slice(0, 10);
   }, [people, value]);
 
   return (

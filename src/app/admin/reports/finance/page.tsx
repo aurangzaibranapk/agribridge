@@ -14,11 +14,11 @@ export const dynamic = "force-dynamic";
 export default async function FinanceReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
-  const { start, end } = getDateRange(range);
+  const { start, end } = getDateRange(range, params.from, params.to);
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
@@ -87,7 +87,7 @@ export default async function FinanceReportPage({
       <PageHeader title={t("rf_title", lang)} description="Company-wide cash book — income, expenses, and account balances" />
 
       <div className="mt-4">
-        <DateRangeFilter current={range} />
+        <DateRangeFilter current={range} from={params.from} to={params.to} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">

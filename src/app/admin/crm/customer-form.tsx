@@ -19,6 +19,7 @@ interface ExistingCustomer {
   address: string | null;
   credit_limit: number;
   customer_type?: string;
+  business_name?: string | null;
   payment_due_days: number;
 }
 
@@ -55,6 +56,10 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
   const isEditMode = !!customer;
   const lang = useLang();
   const [state, formAction] = useFormState(isEditMode ? updateCustomer : saveCustomer, initialState);
+  // Malik (19 September): "wholesale ke liye Shop ka naam bhi add ho" --
+  // sirf thok wali dukan ke liye maani rakhta hai, is liye checkbox
+  // ke sath hi khulta/band hota hai.
+  const [isWholesale, setIsWholesale] = useState(customer?.customer_type === "wholesale_shop");
 
   if (state.success) {
     setTimeout(onClose, 800);
@@ -131,7 +136,8 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
                     type="checkbox"
                     name="customer_type"
                     value="wholesale_shop"
-                    defaultChecked={customer?.customer_type === "wholesale_shop"}
+                    checked={isWholesale}
+                    onChange={(e) => setIsWholesale(e.target.checked)}
                     className="mt-0.5"
                   />
                   <span>
@@ -143,6 +149,16 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
                   </span>
                 </label>
               </div>
+              {/* Malik (19 September): "wholesale ke liye Shop ka naam
+                  bhi add ho, wahi POS mein aana chahiye, jaisay dealer
+                  ke hota hai" -- customer.name sirf contact/person ka
+                  naam hai, dukaan ka apna naam alag khana hai. */}
+              {isWholesale && (
+                <div className="col-span-2">
+                  <Label className="mb-1 text-xs">Shop Name (jo POS par dikhega)</Label>
+                  <Input className="h-9" name="business_name" defaultValue={customer?.business_name ?? ""} placeholder="jaise Sultan Traders" />
+                </div>
+              )}
             </div>
 
             {/* Malik (18 September): purane DigiKhata se pehle ka baqaya

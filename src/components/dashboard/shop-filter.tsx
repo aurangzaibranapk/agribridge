@@ -16,7 +16,9 @@ export function ShopFilter({
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set("shop", value);
     else params.delete("shop");
+    // Wahi cache wala masla jo DateRangeFilter mein tha (19 September).
     router.push(`${pathname}?${params.toString()}`);
+    router.refresh();
   }
 
   return (

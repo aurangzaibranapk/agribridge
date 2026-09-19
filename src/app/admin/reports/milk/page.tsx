@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function MilkReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; farmer_id?: string }>;
+  searchParams: Promise<{ range?: string; farmer_id?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
-  const { start, end } = getDateRange(range);
+  const { start, end } = getDateRange(range, params.from, params.to);
   const farmerFilter = params.farmer_id ?? "";
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
@@ -73,7 +73,7 @@ export default async function MilkReportPage({
       <PageHeader title={t("mr_title", lang)} description="Milk collection, rates, and farmer balances" />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <DateRangeFilter current={range} />
+          <DateRangeFilter current={range} from={params.from} to={params.to} />
           <form className="flex items-center gap-2">
             <input type="hidden" name="range" value={range} />
             <select

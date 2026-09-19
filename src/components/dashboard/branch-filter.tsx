@@ -19,7 +19,9 @@ export function BranchFilter({
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set("branch", value);
     else params.delete("branch");
+    // Wahi cache wala masla jo DateRangeFilter mein tha (19 September).
     router.push(`${pathname}?${params.toString()}`);
+    router.refresh();
   }
 
   return (

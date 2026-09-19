@@ -10,6 +10,7 @@ import { DeleteButton } from "@/app/admin/products/delete-button";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { canDo } from "@/lib/access/guard";
+import { ProductSearchBox } from "@/app/admin/products/product-search-box";
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 type ProductRow = {
@@ -191,15 +192,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
           </Link>
         ))}
       </div>
-      <form className="mb-4">
-        {cat && <input type="hidden" name="cat" value={cat} />}
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder={t("pd_search", lang)}
-          className="h-10 w-full max-w-md rounded-lg border border-surface-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-      </form>
+      <div className="mb-4">
+        <ProductSearchBox initialQuery={q ?? ""} cat={cat} placeholder={t("pd_search", lang)} />
+      </div>
       <DataTable columns={cols} rows={(products ?? []) as unknown as ProductRow[]} keyFor={(p) => p.id} emptyTitle="No products yet" />
       <Pagination page={page} pageSize={PAGE_SIZE} totalCount={count ?? 0} basePath={`/admin/products?${cat ? `cat=${cat}&` : ""}${q ? `q=${q}&` : ""}`} />
     </div>

@@ -20,6 +20,8 @@ interface Customer {
   payment_due_days: number;
   current_balance: number;
   is_active: boolean;
+  customer_type?: string;
+  business_name?: string | null;
 }
 
 interface Supplier {
@@ -139,7 +141,14 @@ export function CrmClient({
             <tbody>
               {filteredCustomers.map((c) => (
                 <tr key={c.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                  <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{c.name}</td>
+                  <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">
+                    {c.name}
+                    {c.business_name && (
+                      <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-normal text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                        {c.business_name}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{c.phone_number}</td>
                   {/* Adad ab khud khate ka darwaza hai. Pehle sirf kul
                       raqam nazar aati thi aur ye sawal kahin se jawab

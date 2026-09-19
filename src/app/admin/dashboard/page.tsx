@@ -67,12 +67,12 @@ const WEBSITE_LINKS = [
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const lang = getLanguageFromCookies("rm");
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
-  const { start: rangeStart, end: rangeEnd } = getDateRange(range);
+  const { start: rangeStart, end: rangeEnd } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
   const [
     { count: newContactMessages },
@@ -361,7 +361,7 @@ export default async function AdminDashboardPage({
       )}
 
       <div className="mt-4">
-        <DateRangeFilter current={range} />
+        <DateRangeFilter current={range} from={params.from} to={params.to} />
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">

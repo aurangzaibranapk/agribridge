@@ -13,13 +13,13 @@ export const dynamic = "force-dynamic";
 export default async function PurchasesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
   const branchId = params.branch || "";
   const lang = getLanguageFromCookies("rm");
-  const { start, end } = getDateRange(range);
+  const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
@@ -66,7 +66,7 @@ export default async function PurchasesReportPage({
       <PageHeader title={t("rpu_title", lang)} description="Purchase orders across all branches" />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <DateRangeFilter current={range} />
+        <DateRangeFilter current={range} from={params.from} to={params.to} />
         <BranchFilter branches={branches ?? []} current={branchId} />
       </div>
 
