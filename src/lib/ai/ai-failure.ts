@@ -51,6 +51,12 @@ export function aiErrorMessage(error: unknown): string {
   if (lower.includes("quota") || lower.includes("resource_exhausted") || lower.includes("429")) {
     return "AI ka aaj ka kota khatam ho gaya. Thori der baad dobara koshish karein.";
   }
+  // 19 September, malik: Abram ne raw JSON dikhaya ("high demand...
+  // UNAVAILABLE") -- ye humari taraf ka masla nahi, Google ke model par
+  // us waqt bhirr thi. Chaabi theek hai, sawal dobara pooch lein kaafi hai.
+  if (lower.includes("unavailable") || lower.includes("503") || lower.includes("overloaded") || lower.includes("high demand")) {
+    return "Google ka AI is waqt bohot busy hai (Al Rana ka masla nahi). 1-2 minute mein wahi sawal dobara pooch lein.";
+  }
   if (lower.includes("not found") || lower.includes("404")) {
     return "AI ka model nahi mila — shayad us ka naam badal gaya hai. Ye developer wala masla hai, batayein.";
   }
