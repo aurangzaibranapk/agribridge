@@ -69,6 +69,8 @@ export default async function FinanceCenterPage() {
       items: [
         { href: "/admin/finance/journal-entry", label: t("fc_jv", lang), hint: t("fc_jv_hint", lang) },
         { href: "/admin/finance", label: t("fc_cashbook", lang) },
+        { href: "/admin/finance/ledger", label: "Account Ledger (Business Filter)", hint: "Karyana, Doodh, Machinery wagira ke hisaab se ledger filter karein — CSV download bhi" },
+        { href: "/admin/finance/payment-methods", label: "Payment Method Analysis", hint: "Cash, Card, Easypaisa — kis se ziyada lain dain hui" },
         { href: "/admin/bank-reconcile", label: t("fc_bank_recon", lang) },
         { href: "/admin/reconciliation", label: t("fc_daily_recon", lang) },
         { href: "/admin/finance/budget", label: t("bg_title", lang), hint: t("bg_desc", lang) },

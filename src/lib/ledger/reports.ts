@@ -43,17 +43,19 @@ interface RawLine {
 async function rawLines(
   from: string | null,
   to: string,
-  branchId?: string | null
+  branchId?: string | null,
+  sourceModules?: string[] | null
 ): Promise<{ rows: RawLine[]; error: null } | { rows: null; error: string }> {
   const service = createServiceClient();
   let q = service
     .from("journal_lines")
     .select(
-      "entry_id, account_code, debit, credit, memo, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number)"
+      "entry_id, account_code, debit, credit, memo, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number, source_module)"
     )
     .lte("journal_entries.entry_date", to);
   if (from) q = q.gte("journal_entries.entry_date", from);
   if (branchId) q = q.eq("journal_entries.branch_id", branchId);
+  if (sourceModules && sourceModules.length > 0) q = q.in("journal_entries.source_module", sourceModules);
 
   const { data, error } = await q;
   // Khali fehrist NAHI lautayi jati -- wo "kuch hua hi nahi" kehti hai.
@@ -585,7 +587,8 @@ export async function accountLedger(
   code: string,
   from: string,
   to: string,
-  branchId?: string | null
+  branchId?: string | null,
+  sourceModules?: string[] | null
 ): Promise<AccountLedger> {
   const service = createServiceClient();
   const khali: AccountLedger = {
@@ -611,10 +614,12 @@ export async function accountLedger(
   const side = acc.normal_side as "debit" | "credit";
 
   // Shuru ka baqi: is tareekh se PEHLE ka sab kuch.
+  // Business filter sirf "is period ki lines" par lagti hai; opening
+  // hamesha poore ledger ka hota hai warna opening galat ho jayega.
   const pehle = pehlaDinSePehle(from);
   const [{ rows: pichhli, error: e1 }, { rows: abKi, error: e2 }] = await Promise.all([
     rawLines(null, pehle, branchId),
-    rawLines(from, to, branchId),
+    rawLines(from, to, branchId, sourceModules),
   ]);
   if (e1 || e2 || !pichhli || !abKi) {
     return { ...khali, name: acc.name as string, error: e1 ?? e2 ?? "maloom nahi" };

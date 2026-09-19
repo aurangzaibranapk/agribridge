@@ -6,7 +6,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { accountLedger } from "@/lib/ledger/reports";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,20 +18,22 @@ function money(n: number) {
   return neg ? `(${s})` : s;
 }
 
-/**
- * Ek khate ka apna ledger.
- *
- * Trial Balance batata hai ke khate mein kitna para hai; ye batata hai
- * ke wo raqam BANI KAISE. Har qatar ke saamne chalta hua baqi hai, aur
- * har qatar se us entry tak ka raasta khulta hai jis se wo bani.
- *
- * Shuru ka baqi alag se dikhta hai. Us ke baghair pehli qatar ka baqi
- * jhoota hota -- us se pehle ki poori tareekh ginti hi nahi.
- */
+/** Business type → source_module mapping */
+const BUSINESS_GROUPS: { key: string; label: string; modules: string[] }[] = [
+  { key: "all",         label: "Sab (Poora Ledger)",          modules: [] },
+  { key: "karyana",     label: "Karyana / POS",               modules: ["pos", "pos_return", "pos_shift_close"] },
+  { key: "kisan_dukan", label: "Kisan Dukan / Load Bill",     modules: ["load_bill"] },
+  { key: "machinery",   label: "Machinery Kiraya",            modules: ["machinery_bill", "machinery_payment", "machinery_vendor_payout", "machinery_advance", "machinery_correction", "machinery_reset", "machinery_fuel", "machinery_fuel_fix"] },
+  { key: "kharid",      label: "Kharid / Suppliers",          modules: ["purchase", "supplier_payment", "supplier_payment_reversal", "purchase_correction"] },
+  { key: "doodh",       label: "Doodh / Milk",                modules: ["milk_collection", "milk_payment"] },
+  { key: "grain",       label: "Anaaj / Khaad / Pesticide",   modules: ["grain_procurement", "grain_payment", "grain_sale"] },
+  { key: "udhaar",      label: "Udhaar / Customer Credit",    modules: ["customer_udhaar", "customer_udhaar_wapsi", "customer_import"] },
+];
+
 export default async function AccountLedgerPage({
   searchParams,
 }: {
-  searchParams: { account?: string; from?: string; to?: string };
+  searchParams: { account?: string; from?: string; to?: string; business?: string };
 }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
@@ -58,8 +60,11 @@ export default async function AccountLedgerPage({
   const from = searchParams.from ?? saalShuru;
   const to = searchParams.to ?? aaj;
   const code = searchParams.account ?? "";
+  const bizKey = searchParams.business ?? "all";
+  const selectedGroup = BUSINESS_GROUPS.find((g) => g.key === bizKey) ?? BUSINESS_GROUPS[0];
+  const sourceModules = selectedGroup.modules.length > 0 ? selectedGroup.modules : null;
 
-  const led = code ? await accountLedger(code, from, to) : null;
+  const led = code ? await accountLedger(code, from, to, null, sourceModules) : null;
 
   return (
     <div className="space-y-4">
@@ -86,7 +91,7 @@ export default async function AccountLedgerPage({
               id="account"
               name="account"
               defaultValue={code}
-              className="w-72 rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+              className="w-64 rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
             >
               <option value="">—</option>
               {(accounts ?? []).map((a) => (
@@ -96,6 +101,23 @@ export default async function AccountLedgerPage({
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-xs text-surface-500" htmlFor="business">
+              Business / Shoba
+            </label>
+            <select
+              id="business"
+              name="business"
+              defaultValue={bizKey}
+              className="w-52 rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            >
+              {BUSINESS_GROUPS.map((g) => (
+                <option key={g.key} value={g.key}>{g.label}</option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs text-surface-500" htmlFor="from">
               {t("led_from", lang)}
@@ -123,6 +145,14 @@ export default async function AccountLedgerPage({
           <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             {t("led_show", lang)}
           </button>
+          {led && !led.error && (
+            <a
+              href={`/admin/finance/ledger/export?account=${code}&from=${from}&to=${to}&business=${bizKey}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+            >
+              <Download className="h-4 w-4" /> CSV
+            </a>
+          )}
         </form>
       </Card>
 
@@ -162,10 +192,21 @@ export default async function AccountLedgerPage({
             </Card>
           </div>
 
+          {bizKey !== "all" && (
+            <div className="rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              Filter: <strong>{selectedGroup.label}</strong> — Opening balance filtered period se pehle ka poora hisaab dikha raha hai (sab business mila kar).
+            </div>
+          )}
+
           <Card className="overflow-x-auto p-0">
             <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
               <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">
                 <span className="font-mono text-xs text-surface-400">{led.code}</span> {led.name}
+                {bizKey !== "all" && (
+                  <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                    {selectedGroup.label}
+                  </span>
+                )}
               </p>
             </div>
             <table className="w-full text-sm">
