@@ -79,9 +79,22 @@ export function CrmClient({
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.phone_number.toLowerCase().includes(q) ||
-        (c.cnic ?? "").toLowerCase().includes(q)
+        (c.cnic ?? "").toLowerCase().includes(q) ||
+        (c.business_name ?? "").toLowerCase().includes(q)
     );
   }, [customers, customerSearch]);
+
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const filteredSuppliers = useMemo(() => {
+    const q = supplierSearch.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.phone_number ?? "").toLowerCase().includes(q) ||
+        (s.contact_person ?? "").toLowerCase().includes(q)
+    );
+  }, [suppliers, supplierSearch]);
 
   function statusTone(status: string) {
     if (status === "verified") return "green" as const;
@@ -191,6 +204,16 @@ export function CrmClient({
       )}
 
       {activeTab === "suppliers" && (
+        <>
+        <div className="mb-3 relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          <Input
+            value={supplierSearch}
+            onChange={(e) => setSupplierSearch(e.target.value)}
+            placeholder="Naam, phone ya contact se dhoondein"
+            className="pl-9"
+          />
+        </div>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
@@ -202,7 +225,7 @@ export function CrmClient({
               </tr>
             </thead>
             <tbody>
-              {suppliers.map((s) => (
+              {filteredSuppliers.map((s) => (
                 <tr key={s.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{s.name}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{s.contact_person ?? "-"}</td>
@@ -212,14 +235,15 @@ export function CrmClient({
                   </td>
                 </tr>
               ))}
-              {suppliers.length === 0 && (
+              {filteredSuppliers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">{t("cr_no_suppliers", lang)}</td>
+                  <td colSpan={4} className="px-4 py-10 text-center text-surface-400">{supplierSearch ? "Is naam/number se koi supplier nahi mila." : t("cr_no_suppliers", lang)}</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {activeTab === "companies" && (
