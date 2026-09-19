@@ -373,6 +373,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       category: kind === "bill" ? "bill_payment" : "mobile_load",
       notes: `${number} — ${reference}`,
       createdBy: user.id,
+      entryId: posted.id,
     });
   }
   if (settled) {
@@ -385,6 +386,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
         category: kind === "bill" ? "bill_payment" : "mobile_load",
         notes: `${number} — ${reference} (float se gaya)`,
         createdBy: user.id,
+        entryId: posted.id,
       });
     }
   }
@@ -552,6 +554,7 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
       category: "load_float_recharge",
       notes: `Float recharge — ${account.title}`,
       createdBy: user.id,
+      entryId: posted.id,
     },
     ...(floatKhata
       ? [
@@ -562,6 +565,7 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
             category: "load_float_recharge",
             notes: `Float recharge — ${account.title}`,
             createdBy: user.id,
+            entryId: posted.id,
           },
         ]
       : []),
@@ -652,6 +656,7 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
         category: "bill_payment",
         notes: `${txn.txn_number} ada hua — ${txn.reference}`,
         createdBy: user.id,
+        entryId: posted.id,
       },
     ]);
     if (cb.error) {
@@ -888,6 +893,7 @@ export async function confirmLoadCommission(_prev: LoadState, formData: FormData
       category: "load_commission",
       notes: `${txn.txn_number} — company ki commission`,
       createdBy: user.id,
+      entryId: posted.id,
     },
   ]);
   if (cb.error) {

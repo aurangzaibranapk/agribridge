@@ -57,6 +57,14 @@ export interface CashBookQatar {
   notes: string;
   tareekh?: string;
   createdBy?: string | null;
+  /**
+   * Jis ledger entry ka ye Cash Book rukh hai, us ki id (19 September).
+   * Di jaye to `journal_entry_sources` mein jorr ban jata hai -- isi
+   * jorr se `v_ledger_unposted` jaanta hai ke ye qatar ledger tak
+   * pahunch chuki hai; warna wo hamesha ke liye surkh dikhati hai
+   * halanke paisa dono kitabon mein theek darj hai.
+   */
+  entryId?: string | null;
 }
 
 /**
@@ -92,6 +100,7 @@ export async function cashBookLikhein(
 ): Promise<{ likhi: number; error?: string }> {
   const service = createServiceClient();
   const rows: Database["public"]["Tables"]["finance_transactions"]["Insert"][] = [];
+  const entryIds: (string | null)[] = [];
 
   for (const q of qatarein) {
     if (!Number.isFinite(q.amount) || q.amount <= 0) continue;
@@ -109,12 +118,25 @@ export async function cashBookLikhein(
       notes: q.notes,
       created_by: q.createdBy ?? null,
     });
+    entryIds.push(q.entryId ?? null);
   }
 
   if (rows.length === 0) return { likhi: 0 };
 
-  const { error } = await service.from("finance_transactions").insert(rows);
+  const { data: inserted, error } = await service.from("finance_transactions").insert(rows).select("id");
   if (error) return { likhi: 0, error: error.message };
+
+  // Ledger ka jorr -- insert usi tarteeb mein wapas aata hai jis mein
+  // gaya tha, is liye i-wan qatar ka i-wan entryId.
+  const links = (inserted ?? [])
+    .map((r, i) => (entryIds[i] ? { entry_id: entryIds[i] as string, source_table: "finance_transactions", source_row_id: r.id as string } : null))
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  if (links.length > 0) {
+    // Jorr na ban sake to qatar phir bhi khari rehti hai -- paisa darj
+    // ho chuka; sirf v_ledger_unposted par surkh dikhega, jo jhoot
+    // nahi, ehtiyat hai.
+    await service.from("journal_entry_sources").insert(links);
+  }
   return { likhi: rows.length };
 }
 

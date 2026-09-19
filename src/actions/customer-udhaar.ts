@@ -283,6 +283,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       notes: tafseel,
       tareekh,
       createdBy: g.userId,
+      entryId: posted.id,
     },
   ]);
   if (cb.error) {
@@ -441,6 +442,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
       notes: tafseel,
       tareekh,
       createdBy: g.userId,
+      entryId: posted.id,
     },
   ]);
   if (cb.error) {

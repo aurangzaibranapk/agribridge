@@ -7,6 +7,7 @@ import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { computeShiftCash, type ShiftCashSummary } from "@/lib/pos/shift-cash";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
 
 export interface ActionState {
   error?: string;
@@ -345,6 +346,22 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
         recordLabel: shiftId,
         description: `Shift ${shift.shift_number}: custody entry nahi ban saki — ${posted.error}`,
       });
+    } else {
+      // Cash Book ka rukh bhi (19 September ka finance review): ledger
+      // mein 1000 se cash nikla to Cash Book se bhi nikle -- warna
+      // "Cash in Hand" har shift band hone par Rs itna aage nikal
+      // jata hai jitni ginti thi (16 Sep ka Rs 1,070 yehi tha).
+      await cashBookLikhein([
+        {
+          glCode: ACC.cash,
+          amount: countedCash,
+          rukh: "gaya",
+          category: "pos_shift_close",
+          notes: `Shift ${shift.shift_number} band — ginti hui cash ${who.naam} ki custody mein`,
+          createdBy: who.userId,
+          entryId: posted.id,
+        },
+      ]);
     }
   }
 

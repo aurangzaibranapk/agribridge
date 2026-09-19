@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database.types";
 import { postSupplierPayment, failed, type EventContext } from "@/lib/ledger/rules";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
 
 type Client = SupabaseClient<Database>;
 
@@ -89,6 +90,25 @@ export async function payAndPost(
     // jayega), magar bulane wale ko wajah milti hai.
     return { error: `Adaigi likh di gayi, magar ledger tak nahi pahunchi: ${posted.error}` };
   }
+
+  // Cash Book ka rukh bhi (19 September ka finance review): adaigi jis
+  // khate se gayi, Cash Book mein bhi likhi jaye -- 19 Sep ko sheet se
+  // Rs 69,827 ki adaigi sirf ledger tak gayi aur Finance ka "Cash in
+  // Hand" utna aage reh gaya tha. Khata ya wallet yahan aata hi nahi;
+  // accountId na ho to cash (1000).
+  await cashBookLikhein([
+    {
+      accountId: args.accountId ?? null,
+      glCode: args.accountId ? null : "1000",
+      amount: args.amount,
+      rukh: "gaya",
+      category: "supplier_payment",
+      notes: args.notes?.trim() || "Supplier ko adaigi",
+      tareekh: args.paymentDate,
+      createdBy: args.createdBy,
+      entryId: posted.id,
+    },
+  ]);
 
   return { paymentId: row.id };
 }

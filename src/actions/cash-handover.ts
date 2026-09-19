@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
 
@@ -274,6 +275,23 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
     lines,
   });
   if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+
+  // Cash Book ka rukh bhi (19 September ka finance review): ledger mein
+  // 1000 par cash wapas aaya to Cash Book mein bhi aaye -- shift close
+  // wala "gaya" aur ye "aaya" mil kar chakkar barabar rakhte hain.
+  if (received > 0) {
+    await cashBookLikhein([
+      {
+        glCode: ACC.cash,
+        amount: received,
+        rukh: "aaya",
+        category: "cash_handover",
+        notes: `Cash wusool — handover ${handoverId.slice(0, 8)}`,
+        createdBy: user.id,
+        entryId: posted.id,
+      },
+    ]);
+  }
 
   const { error } = await service
     .from("cash_handovers")

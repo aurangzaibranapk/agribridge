@@ -12,6 +12,7 @@ import { recordError } from "@/lib/errors/record";
 import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import { reverseJournal } from "@/lib/ledger/post";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import {
   postMachineryAdvance,
   postMachineryBill,
@@ -632,6 +633,26 @@ async function saveAdvance(args: {
     return `Ledger mein nahi gaya, is liye advance darj nahi kiya: ${posted.error}`;
   }
 
+  // Cash Book ka rukh (19 September ka finance review): custody mein
+  // gaya cash kisi finance khate ka nahi (wo 1030 hai), magar jo paisa
+  // Easypaisa/bank/cash khate mein aaya wo Cash Book mein bhi likha
+  // jaye -- warna Finance ka safha us khate par peeche reh jata hai.
+  if (!inCustody && !failed(posted)) {
+    await cashBookLikhein([
+      {
+        accountId: args.accountId ?? null,
+        glCode: args.accountId ? null : "1000",
+        amount: args.amount,
+        rukh: "aaya",
+        category: "machinery_advance",
+        notes: `Machinery booking ${args.bookingNumber} — advance`,
+        tareekh: args.paymentDate ?? undefined,
+        createdBy: args.actorId,
+        entryId: posted.id,
+      },
+    ]);
+  }
+
   // Booking par kisan ne kaha tha "advance nahi de raha", magar de
   // diya. Ab wo purana jawab ghalat ho chuka hai -- use hata dete
   // hain. Nishan aur raqam ek sath khare rahen to safha wo baat
@@ -892,6 +913,20 @@ export async function approveAdvanceClaim(_prev: ActionState, formData: FormData
       .eq("id", paymentId);
     return { error: `Ledger mein nahi gaya, is liye final manzoori nahi ki: ${posted.error}` };
   }
+
+  // Cash Book ka rukh bhi (19 September ka finance review).
+  await cashBookLikhein([
+    {
+      accountId,
+      amount: Number(payment.amount),
+      rukh: "aaya",
+      category: "machinery_advance",
+      notes: `Machinery booking ${booking.booking_number} — advance (kisan ka dawa, tasdeeq shuda)`,
+      tareekh: payment.payment_date ?? undefined,
+      createdBy: actorId,
+      entryId: posted.id,
+    },
+  ]);
 
   await logEvent({
     bookingId: payment.booking_id,
@@ -2666,6 +2701,26 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
       return { error: `Ledger mein nahi gaya, is liye payment darj nahi ki: ${posted.error}` };
     }
 
+    // Cash Book ka rukh bhi (19 September ka finance review): 17 Sep ko
+    // MB-2026-00002/00007 ki Rs 20,000+20,000 Easypaisa mein sirf ledger
+    // tak gayin -- Finance ka safha Rs 40,000 peeche reh gaya tha.
+    // Custody (cash kisi ke haath) aur wallet Cash Book ke khate nahi.
+    if (!inCustody && line.method !== "wallet") {
+      await cashBookLikhein([
+        {
+          accountId: line.accountId ?? null,
+          glCode: line.accountId ? null : "1000",
+          amount: line.amount,
+          rukh: "aaya",
+          category: "machinery_payment",
+          notes: `Machinery ${booking.booking_number} — payment (${line.method})`,
+          tareekh: paymentDate ?? undefined,
+          createdBy: actorId,
+          entryId: posted.id,
+        },
+      ]);
+    }
+
     await logEvent({
       bookingId,
       eventType: "payment_received",
@@ -3905,6 +3960,20 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
     ctx: { createdBy: actorId, entryDate: str(formData, "received_date") ?? undefined },
   });
   if (failed(posted)) return { error: `Ledger mein nahi gaya: ${posted.error}` };
+
+  // Cash Book ka rukh bhi (19 September ka finance review): vendor se
+  // aaya paisa jis khate mein utra, wahan Cash Book mein bhi likha jaye.
+  await cashBookLikhein([
+    {
+      accountId,
+      amount,
+      rukh: "aaya",
+      category: "machinery_vendor_handover",
+      notes: `${vendor.vendor_name} ne kisan se wasool shuda paisa hamein diya`,
+      createdBy: actorId,
+      entryId: posted.id,
+    },
+  ]);
 
   // Jo qatarein poori tarah aa gayin un par khata likh diya jata hai --
   // isi se wo "vendor ke paas para hua" ki fehrist se nikalti hain.
