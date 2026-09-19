@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { shopStockPosition, shopWhereIsMyMoney, shopTodayFlow } from "@/lib/pos/shop-360";
+import { shopStockPosition, shopWhereIsMyMoney, shopTodayFlow, shopDailySalesTrend, type ShopDailySalesPoint } from "@/lib/pos/shop-360";
 import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
 import { computeShiftCash } from "@/lib/pos/shift-cash";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { PaymentDonut } from "@/components/guided/payment-donut";
+import { ShopSalesChart } from "@/components/pos/shop-sales-chart";
 import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { LiveNotificationsPanel } from "@/components/guided/live-notifications-panel";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
@@ -197,6 +198,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     shopFlow,
     { data: udhaarDiyaRows },
     shiftCash,
+    salesTrend,
   ] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
     // Malik (16 September): "cash sale kitna, card se kitna, QR se
@@ -248,6 +250,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     // load/bill cash + recovery cash − udhaar diya cash) yahan bhi,
     // isi khuli shift se.
     myOpenShiftId ? computeShiftCash(myOpenShiftId, myOpenShiftOpeningCash) : Promise.resolve(null),
+    // 7-din ka sale trend -- chart ke liye (sirf POS wale staff ke liye).
+    myShopId && canRoute("/admin/pos") ? shopDailySalesTrend(myShopId, 7) : Promise.resolve(null as ShopDailySalesPoint[] | null),
   ]);
   const udhaarDiyaAajTotal = (udhaarDiyaRows ?? []).reduce((s, r) => s + Number(r.debit), 0);
 
@@ -483,6 +487,14 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
                     <p className="text-[10px] text-surface-500">Mobile Load</p>
                   </div>
                 )}
+              </div>
+            )}
+            {salesTrend && salesTrend.length > 0 && (
+              <div className="mt-3 border-t border-emerald-100 pt-3 dark:border-emerald-900/40">
+                <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                  Pichle 7 din ki sale
+                </p>
+                <ShopSalesChart data={salesTrend} />
               </div>
             )}
           </div>
