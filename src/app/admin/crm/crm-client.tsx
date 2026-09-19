@@ -8,6 +8,13 @@ import { AddCustomerButton, EditCustomerButton } from "@/app/admin/crm/customer-
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
+interface CustomerScore {
+  score: number | null;
+  band: string | null;
+  state: string;
+  coverage: number | null;
+}
+
 interface Customer {
   id: string;
   name: string;
@@ -22,6 +29,7 @@ interface Customer {
   is_active: boolean;
   customer_type?: string;
   business_name?: string | null;
+  score?: CustomerScore | null;
 }
 
 interface Supplier {
@@ -102,6 +110,25 @@ export function CrmClient({
     return "red" as const;
   }
 
+  function ScoreChip({ s }: { s: CustomerScore }) {
+    if (!s.band && s.state !== "score_building") return <span className="text-[11px] text-surface-400">—</span>;
+    if (s.state === "score_building" || !s.band)
+      return <span className="text-[10px] text-surface-400 italic">Ban raha hai</span>;
+    const BAND_STYLE: Record<string, string> = {
+      platinum: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+      gold:     "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200",
+      silver:   "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+      bronze:   "bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200",
+      low:      "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300",
+    };
+    const cls = BAND_STYLE[s.band] ?? "bg-surface-100 text-surface-600";
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
+        {s.score != null ? s.score : ""} {s.band.charAt(0).toUpperCase() + s.band.slice(1)}
+      </span>
+    );
+  }
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -147,6 +174,7 @@ export function CrmClient({
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
                 <th className="px-4 py-3 text-right font-medium text-surface-500">{t("cr_khata_balance", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">Score</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_edit", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_actions", lang)}</th>
               </tr>
@@ -176,6 +204,9 @@ export function CrmClient({
                     <Badge tone={c.is_active ? "green" : "gray"}>{c.is_active ? "Active" : "Inactive"}</Badge>
                   </td>
                   <td className="px-4 py-3">
+                    {c.score ? <ScoreChip s={c.score} /> : <span className="text-[11px] text-surface-400">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
                     <EditCustomerButton customer={c} />
                   </td>
                   <td className="px-4 py-3">
@@ -193,7 +224,7 @@ export function CrmClient({
               ))}
               {filteredCustomers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-surface-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-surface-400">
                     {customerSearch ? "Is naam/number/CNIC se koi customer nahi mila." : t("cr_no_customers", lang)}
                   </td>
                 </tr>
