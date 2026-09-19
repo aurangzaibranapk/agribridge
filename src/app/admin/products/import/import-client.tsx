@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertTriangle, CheckCircle2, FileUp, RotateCcw, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, FileUp, RotateCcw, Trash2, Upload } from "lucide-react";
 import { importProductsCsv, previewProductsCsv, type ImportRow, type ImportState } from "@/actions/products-import";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -104,6 +104,7 @@ export function ImportClient({
     setEdits({});
     setSkips([]);
     setTouched(false);
+    setSwapNote(false);
   };
 
   const editFields = JSON.stringify(edits);
@@ -148,6 +149,40 @@ export function ImportClient({
     .reduce((sum, r) => sum + (lineAmount(r) ?? 0), 0);
   const grandTotal = billTotal - (parseFloat(discount) || 0) + (parseFloat(tax) || 0);
   const money = (v: number) => `Rs ${(Math.round(v * 100) / 100).toLocaleString()}`;
+
+  // Supplier bill wali sheet mein "PRICE" kharid rate hota hai, magar
+  // header ke lafz "price" ko system dukan ki sheet samajh kar SALE
+  // mein daal deta hai (Boss, 19 September: "trade rate isko auto fill
+  // karna tha"). Ye button ek click mein har qatar ka SALE wala adad
+  // TRADE mein le jata hai (jahan TRADE khali ho) aur SALE saaf kar
+  // deta hai -- boxes foran naye adad dikhate hain (nonce se remount).
+  const [nonce, setNonce] = useState(0);
+  const [swapNote, setSwapNote] = useState(false);
+  const canSwap = rows.some((r) => {
+    if (r.status === "skipped" || skips.includes(r.line)) return false;
+    const e = edits[r.line] ?? {};
+    const trade = e.purchasePrice !== undefined ? e.purchasePrice : r.purchasePrice == null ? "" : String(r.purchasePrice);
+    const sale = e.sellingPrice !== undefined ? e.sellingPrice : r.sellingPrice == null ? "" : String(r.sellingPrice);
+    return !trade.trim() && sale.trim() !== "";
+  });
+  function swapSaleIntoTrade() {
+    setTouched(true);
+    setEdits((prev) => {
+      const next: Record<number, RowEdit> = { ...prev };
+      for (const r of rows) {
+        if (r.status === "skipped" || skips.includes(r.line)) continue;
+        const cur = next[r.line] ?? {};
+        const trade = cur.purchasePrice !== undefined ? cur.purchasePrice : r.purchasePrice == null ? "" : String(r.purchasePrice);
+        const sale = cur.sellingPrice !== undefined ? cur.sellingPrice : r.sellingPrice == null ? "" : String(r.sellingPrice);
+        if (!trade.trim() && sale.trim() !== "") {
+          next[r.line] = { ...cur, purchasePrice: sale, sellingPrice: "" };
+        }
+      }
+      return next;
+    });
+    setNonce((n) => n + 1);
+    setSwapNote(true);
+  }
 
   return (
     <div className="space-y-4">
@@ -268,6 +303,21 @@ export function ImportClient({
 
           <p className="mb-3 text-xs text-surface-500">{t("pf_edit_hint", lang)}</p>
 
+          {canSwap && (
+            <button
+              type="button"
+              onClick={swapSaleIntoTrade}
+              className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-200"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" /> {t("pf_swap_sale_trade", lang)}
+            </button>
+          )}
+          {swapNote && !canSwap && (
+            <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+              {t("pf_swap_done", lang)}
+            </p>
+          )}
+
           {previewState.notice && <p className="mb-3 text-sm text-surface-700">{previewState.notice}</p>}
 
           {/* Durusti likh dene se qatar khud nahi badalti -- jaanch
@@ -284,21 +334,26 @@ export function ImportClient({
                 hai, is liye sarkhi hamesha apne neeche wale box ke
                 THEEK UPAR rehti hai -- agay peechay nahi hoti (Boss,
                 19 September). */}
-            <table className="w-full min-w-[74rem] table-fixed text-xs">
+            {/* Har sarkhi apne column ke DARMIYAN hai (text-center) --
+                daayen kinare par ho to wo do boxes ke beech latakti
+                dikhti hai aur pata nahi chalta kis box ki hai (Boss,
+                19 September). table-fixed + TH ki chauRai = box aur
+                sarkhi hamesha ek hi jagah. */}
+            <table className="w-full min-w-[76rem] table-fixed text-xs">
               <thead>
-                <tr className="border-b border-surface-200 text-left uppercase text-surface-500">
-                  <th className="w-8 py-1.5 pr-1">#</th>
-                  <th className="py-1.5 pr-1">{t("pf_th_name", lang)}</th>
-                  <th className="w-16 py-1.5 pr-1">{t("pf_th_pack", lang)}</th>
-                  <th className="w-16 py-1.5 pr-1 text-right">{t("pf_th_botal", lang)}</th>
-                  <th className="w-16 py-1.5 pr-1 text-right">{t("pf_th_qty", lang)}</th>
-                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_trade", lang)}</th>
-                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_amount", lang)}</th>
-                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_sale", lang)}</th>
-                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_wholesale", lang)}</th>
-                  <th className="w-20 py-1.5 pr-1 text-right">{t("pf_th_mrp", lang)}</th>
-                  <th className="w-24 py-1.5 pr-1">{t("pf_th_expiry", lang)}</th>
-                  <th className="w-48 py-1.5">{t("pf_th_state", lang)}</th>
+                <tr className="border-b border-surface-200 uppercase text-surface-500">
+                  <th className="w-8 px-1 py-1.5 text-left">#</th>
+                  <th className="px-1 py-1.5 text-left">{t("pf_th_name", lang)}</th>
+                  <th className="w-16 px-1 py-1.5 text-center">{t("pf_th_pack", lang)}</th>
+                  <th className="w-16 px-1 py-1.5 text-center">{t("pf_th_botal", lang)}</th>
+                  <th className="w-16 px-1 py-1.5 text-center">{t("pf_th_qty", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_trade", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_amount", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_sale", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_wholesale", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_mrp", lang)}</th>
+                  <th className="w-24 px-1 py-1.5 text-center">{t("pf_th_expiry", lang)}</th>
+                  <th className="w-48 px-1 py-1.5 text-left">{t("pf_th_state", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,7 +365,11 @@ export function ImportClient({
                   // guzarta hai jis se baqi qatarein.
                   const cell = (key: keyof RowEdit, value: string, extra?: string) => (
                     <Input
-                      defaultValue={value}
+                      // nonce badalne par box dobara banta hai taake
+                      // "SALE -> TRADE" jaisi ek-click tabdeeli foran
+                      // boxes mein nazar aaye.
+                      key={`${r.line}:${key}:${nonce}`}
+                      defaultValue={edits[r.line]?.[key] ?? value}
                       disabled={off}
                       onChange={(e) => setCell(r.line, key, e.target.value)}
                       className={`h-7 px-1.5 py-0 text-xs ${extra ?? ""}`}
@@ -319,17 +378,17 @@ export function ImportClient({
 
                   return (
                     <tr key={r.line} className={`border-b border-surface-100 align-top ${off ? "opacity-45" : ""}`}>
-                      <td className="py-1.5 pr-1 text-surface-400">{r.line}</td>
-                      <td className="min-w-[9rem] py-1.5 pr-1 font-medium">
+                      <td className="px-1 py-1.5 text-surface-400">{r.line}</td>
+                      <td className="px-1 py-1.5 font-medium">
                         {cell("name", r.name, "font-medium")}
                       </td>
-                      <td className="w-16 py-1.5 pr-1">{cell("packSize", r.packSize ?? "")}</td>
+                      <td className="px-1 py-1.5">{cell("packSize", r.packSize ?? "")}</td>
                       {/* Pet mein kitni botal (438) -- likhi ho to trade/
                           wholesale PET ke maane jate hain. */}
-                      <td className="w-14 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("unitsPerPack", r.unitsPerPack === null ? "" : String(r.unitsPerPack), "text-right")}
                       </td>
-                      <td className="w-14 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("openingQty", r.openingQty === null ? "" : String(r.openingQty), "text-right")}
                         {/* Pet likhte hi botal khud (Boss, 19 September):
                             "10 pet hain... wo khud calculate kare ga". */}
@@ -346,49 +405,64 @@ export function ImportClient({
                       {/* Trade rate na ho to "0" nahi likha jata --
                           khana khali rehta hai aur us par nishan lagta
                           hai. */}
-                      <td className="w-20 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("purchasePrice", r.purchasePrice === null ? "" : String(r.purchasePrice), "text-right")}
                         {r.purchasePrice === null && !off && (
                           <span className="block text-[10px] text-amber-700">{t("pf_pending_word", lang)}</span>
                         )}
-                        {/* Pet ka rate likha, 1 botal ka khud nikal aaya. */}
+                        {/* Pet mode: neeche saaf likha rehta hai kya
+                            likhna hai aur 1 botal ka kya bana (Boss,
+                            19 September: "neeche line mein batate to
+                            asaan hota"). */}
                         {(() => {
                           const u = eff(r, "unitsPerPack");
                           const tr = eff(r, "purchasePrice");
-                          return !off && u != null && u > 1 && tr != null && tr > 0 ? (
+                          if (off || u == null || u <= 1) return null;
+                          return tr != null && tr > 0 ? (
                             <span className="block whitespace-nowrap text-[10px] font-medium text-brand-700">
                               1 botal: Rs {(Math.round((tr / u) * 100) / 100).toLocaleString()}
                             </span>
-                          ) : null;
+                          ) : (
+                            <span className="block whitespace-nowrap text-[10px] text-surface-400">pet ka rate likhein</span>
+                          );
                         })()}
                       </td>
                       {/* Bill jaisa Amount = tadaad x trade -- likhte hi badalta hai. */}
-                      <td className="w-20 py-1.5 pr-1 text-right font-medium tabular-nums text-surface-700">
+                      <td className="px-1 py-1.5 text-right font-medium tabular-nums text-surface-700">
                         {(() => { const a = lineAmount(r); return a == null || off ? "—" : (Math.round(a * 100) / 100).toLocaleString(); })()}
                       </td>
-                      <td className="w-20 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("sellingPrice", r.sellingPrice === null ? "" : String(r.sellingPrice), "text-right")}
+                        {!off && (eff(r, "unitsPerPack") ?? 0) > 1 && (
+                          <span className="block whitespace-nowrap text-[10px] text-surface-400">1 botal ka</span>
+                        )}
                       </td>
                       {/* Thok ka rate khali chhoRna theek hai. Sifar ka
                           matlab "thok par muft" hota. */}
-                      <td className="w-20 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("wholesalePrice", r.wholesalePrice === null ? "" : String(r.wholesalePrice), "text-right")}
                         {(() => {
                           const u = eff(r, "unitsPerPack");
                           const e = edits[r.line]?.wholesalePrice;
                           const w = e !== undefined ? parseFloat(e.replace(/,/g, "")) : r.wholesalePrice == null ? NaN : Number(r.wholesalePrice);
-                          return !off && u != null && u > 1 && Number.isFinite(w) && w > 0 ? (
+                          if (off || u == null || u <= 1) return null;
+                          return Number.isFinite(w) && w > 0 ? (
                             <span className="block whitespace-nowrap text-[10px] font-medium text-brand-700">
                               1 botal: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}
                             </span>
-                          ) : null;
+                          ) : (
+                            <span className="block whitespace-nowrap text-[10px] text-surface-400">pet ka rate likhein</span>
+                          );
                         })()}
                       </td>
-                      <td className="w-20 py-1.5 pr-1">
+                      <td className="px-1 py-1.5">
                         {cell("mrpPrice", r.mrpPrice === null ? "" : String(r.mrpPrice), "text-right")}
+                        {!off && (eff(r, "unitsPerPack") ?? 0) > 1 && (
+                          <span className="block whitespace-nowrap text-[10px] text-surface-400">1 botal ka</span>
+                        )}
                       </td>
-                      <td className="w-28 py-1.5 pr-1">{cell("expiryDate", r.expiryDate ?? "")}</td>
-                      <td className="py-1.5">
+                      <td className="px-1 py-1.5">{cell("expiryDate", r.expiryDate ?? "")}</td>
+                      <td className="px-1 py-1.5">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge tone={TONE[r.status]}>{t(LABEL_KEY[r.status], lang)}</Badge>
                           <button

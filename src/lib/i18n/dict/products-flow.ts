@@ -211,6 +211,16 @@ export const productsFlowDict = {
   pf_sum_discount: { en: "Discount (whole bill)", rm: "Discount (poore bill ka)", ur: "ڈسکاؤنٹ (پورے بل کا)" },
   pf_sum_tax: { en: "Tax (whole bill)", rm: "Tax (poore bill ka)", ur: "ٹیکس (پورے بل کا)" },
   pf_sum_grand: { en: "Grand Total", rm: "Grand Total", ur: "گرینڈ ٹوٹل" },
+  pf_swap_sale_trade: {
+    en: "This is a supplier bill — move SALE numbers into TRADE",
+    rm: "Ye supplier ka bill hai — SALE ke adad TRADE mein le jao",
+    ur: "یہ سپلائر کا بل ہے — سیل کے عدد ٹریڈ میں لے جاؤ",
+  },
+  pf_swap_done: {
+    en: "Moved. Now write your own per-bottle sale rate in SALE, then press Preview.",
+    rm: "Le gaye. Ab SALE mein apna 1-botal ka rate likhein, phir Preview dabayein.",
+    ur: "لے گئے۔ اب سیل میں اپنا فی بوتل ریٹ لکھیں، پھر پری ویو دبائیں۔",
+  },
   pf_sum_note: {
     en: "Amount = qty × trade rate. Discount/tax apply to the whole bill and are saved on the purchase.",
     rm: "Amount = tadaad × trade rate. Discount/tax poore bill ke hain aur purchase par mehfooz hote hain.",
