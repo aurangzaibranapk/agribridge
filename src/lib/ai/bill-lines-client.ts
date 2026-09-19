@@ -1,4 +1,5 @@
 import { geminiApiKey } from "@/lib/ai/gemini-key";
+import { recordError } from "@/lib/errors/record";
 /**
  * Supplier ke bill ki ek ek qatar parhne wala AI.
  *
@@ -161,14 +162,29 @@ export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesR
   // charhta hai, banda qatarein khud likh sakta hai.
   if (!apiKey) return null;
 
+  // 19 September, malik: "AI could not read this bill" -- safha hamesha
+  // yehi ek jhooti-lagne wali guess dikhata tha (key ya photo), asal
+  // wajah (Gemini ka status code, ya jawab hi khali) hamesha server ke
+  // log mein chup jati thi, jahan malik kabhi nahi jate. Ab har khamoshi
+  // se return hone wali jagah `recordError` se /admin/errors par darj
+  // hoti hai -- taake agli dafa asal wajah pata chale.
   try {
     const imageRes = await fetch(fileUrl);
-    if (!imageRes.ok) return null;
+    if (!imageRes.ok) {
+      await recordError({
+        module: "ai", route: "/admin/purchases", severity: "ghalti",
+        message: `Bill photo fetch nahi ho saki: HTTP ${imageRes.status}`,
+      });
+      return null;
+    }
 
     const rawType = (imageRes.headers.get("content-type") || "image/jpeg").split(";")[0].trim().toLowerCase();
     const contentType = ALLOWED_TYPES.includes(rawType) ? rawType : null;
     if (!contentType) {
-      console.error("Bill lines: is qism ki file nahi parhi jati:", rawType);
+      await recordError({
+        module: "ai", route: "/admin/purchases", severity: "ghalti",
+        message: `Bill lines: is qism ki file nahi parhi jati: ${rawType}`,
+      });
       return null;
     }
 
@@ -191,13 +207,25 @@ export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesR
     });
 
     if (!response.ok) {
-      console.error("Gemini bill lines error:", response.status, await response.text());
+      const detail = await response.text();
+      await recordError({
+        module: "ai", route: "/admin/purchases", severity: "ghalti",
+        message: `Gemini bill lines error: HTTP ${response.status}`,
+        detail,
+      });
       return null;
     }
 
     const data = await response.json();
     const textOutput = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!textOutput) return null;
+    if (!textOutput) {
+      await recordError({
+        module: "ai", route: "/admin/purchases", severity: "ghalti",
+        message: "Gemini ne bill ke liye khali jawab diya (koi text output nahi)",
+        detail: JSON.stringify(data).slice(0, 2000),
+      });
+      return null;
+    }
 
     const raw = JSON.parse(textOutput) as Record<string, unknown>;
     const rawLines = Array.isArray(raw.lines) ? raw.lines : [];
@@ -238,7 +266,10 @@ export async function readSupplierBillLines(fileUrl: string): Promise<BillLinesR
       summary: cleanText(raw.summary, 500) ?? "",
     };
   } catch (err) {
-    console.error("Gemini bill lines failed:", err);
+    await recordError({
+      module: "ai", route: "/admin/purchases", severity: "ghalti",
+      message: `Gemini bill lines failed: ${err instanceof Error ? err.message : String(err)}`,
+    });
     return null;
   }
 }
