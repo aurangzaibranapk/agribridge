@@ -3786,3 +3786,26 @@ Sale rate (products par lagte hain), payment slips (kai slips, har ek
 par raqam+tareekh, neeche Diya/Baqi dena ka hisaab), purchase order
 form page ke darmiyan, list mein har purchase ke neeche slips + baqi
 dena.
+
+## 19 September (sham) — Ordering simplification + CRM baqaya type
+
+**Testing par chal gaye (441, 442, 443). Live par baqi hain.**
+
+- Migration 440 (`v_ledger_unposted` reconcile rows fix) — sirf view/query, additive
+- Migration 441 (`products.units_per_carton`) — additive column, beverages seed
+- Migration 442 (`agri_orders.order_to_warehouse_id`) — additive column
+- Migration 443 (`supplier_product_aliases` table) — naya table, seed (Coca-Cola 10 rows)
+
+**Code changes (is build mein):**
+- Ordering simple form: Order Type dropdown hata diya (business_type se auto), header line (shop+godam), success screen with order number
+- ProductCardGrid: carton/PET stepper (units_per_carton se sync)
+- Branch staff ab agri-orders/new se auto redirect — simple form par
+- GRN: order_to_warehouse_id pehle, MAIN warehouse fallback
+- CRM customer form: Purana Baqaya ke sath type (Karyana/Kisan Dukan/Other) + short note
+
+**Live par dene ki tarteeb (Boss ke aane par):**
+1. Backup tasdeeq
+2. Pre-migration ginti: `select count(*) from products where units_per_carton is not null` → 0; `select count(*) from agri_orders where order_to_warehouse_id is not null` → 0; `select count(*) from supplier_product_aliases` → error (table nahi)
+3. Migration 440, 441, 442, 443 (is tarteeb mein)
+4. Post-migration verify: products.units_per_carton column maujood; agri_orders.order_to_warehouse_id maujood; supplier_product_aliases table maujood
+5. Naya build upload
