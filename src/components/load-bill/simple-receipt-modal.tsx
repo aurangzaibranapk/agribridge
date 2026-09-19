@@ -108,6 +108,15 @@ export function SimpleReceiptModal({
         @media print {
           @page { size: 80mm auto; margin: 3mm; }
           html, body { margin: 0; background: #fff; }
+          /* 19 September, malik: "udhaar ki slip nikalne laga to ye a
+             rahi hai" -- peeche wala Staff Sales Desk (Float Balance,
+             Cash in Hand waghera) bhi print ho raha tha, kyunke sirf
+             receipt ko isolate karne wala rule missing tha. POS ki
+             ReceiptModal mein 18 September ko yehi fix hua tha, wahi
+             yahan bhi. */
+          body * { visibility: hidden; }
+          #load-bill-receipt-print, #load-bill-receipt-print * { visibility: visible; }
+          #load-bill-receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
           #load-bill-receipt-print, #load-bill-receipt-print * { color: #000 !important; }
           #load-bill-receipt-print .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
         }
