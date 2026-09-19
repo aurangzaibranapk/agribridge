@@ -3731,3 +3731,26 @@ numbers se cross-check kiya — Rs 2,470 sahi nikla (Total Sale 8,935,
 Cash 3,890, Digital 445, Khata 4,600, Recovery +300, Udhaar Diya
 -2,300, Opening 630 — sab pos_sales/pos_sale_payment_details/
 journal_lines se seedha match), malik ne tasdeeq kar di.
+
+## 19 September — Purchases: rates + slips (Live par abhi kuch nahi gaya)
+
+**Migrations sirf Testing par lagi hain, Live par NAHI (P0 rule —
+pehle backup tasdeeq):**
+
+1. **Migration 435** (`customers.business_name` — wholesale customer ka
+   shop name, POS/CRM par dikhta hai) — Testing par lagi + code build
+   ho chuka; Live baqi.
+2. **Migration 436** (`purchase_payment_slips` table — purchase ki
+   adaigi ki slips: raqam + tareekh + tasveer, bucket `payment-slips`
+   dono DB par pehle se maujood) — Testing par lagi + verify; Live baqi.
+
+**Tarteeb jab Boss system par aayen:** backup tasdeeq → 435 → 436 →
+verify → naya build upload. Build in migrations se PEHLE Live par nahi
+jana chahiye (naya code in tables/columns ko parhta hai).
+
+**Is build mein kya hai (abhi commit hona baqi):** ProductPicker
+(purchase order par product search), purchase line par Wholesale/MRP/
+Sale rate (products par lagte hain), payment slips (kai slips, har ek
+par raqam+tareekh, neeche Diya/Baqi dena ka hisaab), purchase order
+form page ke darmiyan, list mein har purchase ke neeche slips + baqi
+dena.

@@ -52,14 +52,14 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending)), purchase_comments(id, kind, body, created_at, profiles(full_name))"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending)), purchase_comments(id, kind, body, created_at, profiles(full_name)), purchase_payment_slips(id, amount, paid_on, image_url)"
       )
       .order("created_at", { ascending: false })
       .limit(50),
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
     supabase
       .from("products")
-      .select("id, name, pack_size, purchase_price")
+      .select("id, name, pack_size, purchase_price, selling_price, mrp_price, wholesale_price")
       .eq("is_deleted", false)
       .order("name"),
     isAdminLevel
@@ -149,6 +149,15 @@ export default async function AdminPurchasesPage() {
     }),
     supplier_name: Array.isArray(p.suppliers) ? p.suppliers[0]?.name : p.suppliers?.name,
     branch_name: Array.isArray(p.branches) ? p.branches[0]?.name : p.branches?.name,
+    // Adaigi ki slips (436) -- tareekh ki tarteeb mein.
+    slips: (((p as any).purchase_payment_slips ?? []) as any[])
+      .map((s) => ({
+        id: s.id as string,
+        amount: Number(s.amount),
+        paid_on: s.paid_on as string,
+        image_url: s.image_url as string,
+      }))
+      .sort((a, b) => a.paid_on.localeCompare(b.paid_on)),
   }));
 
   function statusTone(status: string) {
@@ -170,8 +179,22 @@ export default async function AdminPurchasesPage() {
         + {t("np_title", lang)}
       </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      {/* Boss (19 September): "purchase order ko darmiyan mein le
+          aayein, khoobsurat lagegi" -- form ab page ke beech mein,
+          list us ke neeche poori chauRai par. */}
+      <div className="mx-auto mb-6 w-full max-w-2xl">
+        <PurchaseForm
+          suppliers={suppliers ?? []}
+          products={products ?? []}
+          isAdminLevel={isAdminLevel}
+          branches={branches ?? []}
+          staffBranchName={staffBranchName ?? null}
+          uiMode={await getUiMode()}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <div>
           {normalizedPurchases.length === 0 ? (
             <EmptyState title={t("pu_empty", lang)} />
           ) : (
@@ -215,6 +238,36 @@ export default async function AdminPurchasesPage() {
                         {p.tax_amount != null && (
                           <span className="block text-[11px] font-normal text-surface-500">
                             {p.tax_label || t("pu_tax", lang)}: Rs {Number(p.tax_amount).toLocaleString()}
+                          </span>
+                        )}
+                        {/* Adaigi ki slips (436): har slip tareekh + raqam
+                            ke sath, click par tasveer khulti hai. */}
+                        {p.slips.length > 0 && (
+                          <span className="mt-1 block space-y-0.5">
+                            {p.slips.map((s) => (
+                              <a
+                                key={s.id}
+                                href={s.image_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-[11px] font-normal text-brand-700 hover:underline dark:text-brand-300"
+                              >
+                                {t("pu_slip", lang)}: Rs {s.amount.toLocaleString()} · {s.paid_on}
+                              </a>
+                            ))}
+                            {(() => {
+                              const paid = p.slips.reduce((sum, s) => sum + s.amount, 0);
+                              const baqi = Number(p.total_amount) - paid;
+                              return baqi > 0 ? (
+                                <span className="block text-[11px] font-medium text-red-600 dark:text-red-400">
+                                  {t("pu_slips_outstanding", lang)}: Rs {baqi.toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                                  {t("pu_slips_fully_paid", lang)}
+                                </span>
+                              );
+                            })()}
                           </span>
                         )}
                       </td>
@@ -306,15 +359,6 @@ export default async function AdminPurchasesPage() {
             </div>
           )}
         </div>
-
-        <PurchaseForm
-          suppliers={suppliers ?? []}
-          products={products ?? []}
-          isAdminLevel={isAdminLevel}
-          branches={branches ?? []}
-          staffBranchName={staffBranchName ?? null}
-          uiMode={await getUiMode()}
-        />
       </div>
     </div>
   );

@@ -32,6 +32,9 @@ type PurchaseItemInput = {
   product_id: string;
   quantity: number;
   unit_cost: number;
+  wholesale_rate?: number;
+  mrp_rate?: number;
+  sale_rate?: number;
   batch_number?: string;
   manufacture_date?: string;
   expiry_date?: string;
@@ -129,6 +132,42 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     });
     if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }
+
+  // Adaigi ki slips (436): har slip raqam + tareekh + tasveer ke sath.
+  // Slip SABOOT hai, hisaab nahi -- supplier ka dena supplier_payments
+  // se hi chalta hai. Slip na charh sake to purchase nahi rukti, magar
+  // baat chhupti bhi nahi (warning ke sath wapas jati hai).
+  let slipWarning: string | null = null;
+  try {
+    const slips: { amount: number; paid_on: string; image_url: string }[] = JSON.parse(
+      String(formData.get("slips_json") ?? "[]")
+    );
+    const valid = (Array.isArray(slips) ? slips : []).filter(
+      (s) =>
+        s &&
+        Number.isFinite(Number(s.amount)) &&
+        Number(s.amount) > 0 &&
+        typeof s.paid_on === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(s.paid_on) &&
+        typeof s.image_url === "string" &&
+        s.image_url.length > 0
+    );
+    if (valid.length > 0) {
+      const { error: slipErr } = await supabase.from("purchase_payment_slips").insert(
+        valid.map((s) => ({
+          purchase_id: purchase.id,
+          amount: Number(s.amount),
+          paid_on: s.paid_on,
+          image_url: s.image_url,
+          created_by: user?.id ?? null,
+        }))
+      );
+      if (slipErr) slipWarning = `Purchase ban gayi, magar adaigi ki slip mehfooz nahi hui: ${slipErr.message}`;
+    }
+  } catch {
+    slipWarning = "Purchase ban gayi, magar slips ka data parha nahi ja saka.";
+  }
+
   for (const item of items) {
     const batchNumber = item.batch_number?.trim() || `${purchaseNumber}-${item.product_id.slice(0, 8)}`;
     const { data: batch, error: batchError } = await supabase
@@ -156,11 +195,30 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     if (itemError) {
       return { error: `Failed to save a purchase line: ${itemError.message}` };
     }
+
+    // Malik (19 September): "wholesale k rate, mrp k rate, sale k rate
+    // yahin daal dein to product par bhi lag jayen" -- order banate
+    // waqt hi cheez ke sale rate update ho jayein taake maal receive
+    // hone ke baad rate baqi/products mein alag se jana na paRe. Khali
+    // khana chhoRne ka matlab "abhi tabdeel nahi karna" -- 0 likhna
+    // qabool nahi (usool wahi jo Rate Baqi safhe par hai).
+    const rateUpdate: Record<string, number> = {};
+    if (item.wholesale_rate != null && item.wholesale_rate > 0) rateUpdate.wholesale_price = item.wholesale_rate;
+    if (item.mrp_rate != null && item.mrp_rate > 0) rateUpdate.mrp_price = item.mrp_rate;
+    if (item.sale_rate != null && item.sale_rate > 0) rateUpdate.selling_price = item.sale_rate;
+    if (Object.keys(rateUpdate).length > 0) {
+      const { error: rateErr } = await supabase.from("products").update(rateUpdate).eq("id", item.product_id);
+      // Purchase order ruk kar wapas nahi hoti agar sirf rate na charh
+      // saka -- order aur maal ki ginti apni jagah theek ban chuki hai.
+      if (rateErr) console.error(`purchase order se rate nahi charha (${item.product_id}):`, rateErr.message);
+    }
   }
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
-  return { success: true, purchaseId: purchase.id };
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/pos");
+  return { success: true, purchaseId: purchase.id, warning: slipWarning ?? undefined };
 }
 
 /**

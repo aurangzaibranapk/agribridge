@@ -12,7 +12,14 @@ import { useLang } from "@/lib/i18n/lang-context";
  * Sirf khane hain, koi hisaab nahi: faisla server par parsePaymentTerms
  * karta hai.
  */
-export function PaymentTermsFields({ defaultDays = 30 }: { defaultDays?: number }) {
+export function PaymentTermsFields({
+  defaultDays = 30,
+  onTermsChange,
+}: {
+  defaultDays?: number;
+  /** Parent ko batana ke kya chuna gaya -- purchase form is se slip wala hissa dikhata hai (436). */
+  onTermsChange?: (terms: "paid" | "partial" | "credit") => void;
+}) {
   const lang = useLang();
   const [terms, setTerms] = useState<"paid" | "partial" | "credit">("credit");
 
@@ -25,7 +32,11 @@ export function PaymentTermsFields({ defaultDays = 30 }: { defaultDays?: number 
             id="pt"
             name="payment_terms"
             value={terms}
-            onChange={(e) => setTerms(e.target.value as "paid" | "partial" | "credit")}
+            onChange={(e) => {
+              const v = e.target.value as "paid" | "partial" | "credit";
+              setTerms(v);
+              onTermsChange?.(v);
+            }}
             className="w-full"
           >
             <option value="credit">{t("pu_terms_credit", lang)}</option>

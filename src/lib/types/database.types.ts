@@ -21955,6 +21955,51 @@ export type Database = {
           },
         ]
       }
+      purchase_payment_slips: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string
+          paid_on: string
+          purchase_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url: string
+          paid_on: string
+          purchase_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          paid_on?: string
+          purchase_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_payment_slips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_payment_slips_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_items: {
         Row: {
           batch_id: string | null

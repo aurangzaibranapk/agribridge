@@ -59,6 +59,14 @@ export const purchasesDict = {
   pu_select_product: { en: "— select a product —", rm: "— cheez chunein —", ur: "— چیز منتخب کریں —" },
   pu_quantity: { en: "Quantity", rm: "Tadaad", ur: "تعداد" },
   pu_unit_cost: { en: "Unit cost (Rs.)", rm: "Ek ki lagat (Rs.)", ur: "ایک کی لاگت (روپے)" },
+  pu_rate_hint: {
+    en: "Optional — fill in to update this product's selling rates along with this purchase. Leave blank to keep the current rate.",
+    rm: "Marzi se — bharen to is cheez ke sale rate isi purchase ke sath update ho jayenge. Khali chhoRein to maujooda rate wahi rahega.",
+    ur: "مرضی سے — بھریں تو اس چیز کے سیل ریٹ اسی پرچیز کے ساتھ اپڈیٹ ہو جائیں گے۔ خالی چھوڑیں تو موجودہ ریٹ وہی رہے گا۔",
+  },
+  pu_wholesale_rate: { en: "Wholesale rate (Rs.)", rm: "Wholesale rate (Rs.)", ur: "ہول سیل ریٹ (روپے)" },
+  pu_mrp_rate: { en: "MRP rate (Rs.)", rm: "MRP rate (Rs.)", ur: "ایم آر پی ریٹ (روپے)" },
+  pu_sale_rate: { en: "Sale rate (Rs.)", rm: "Sale rate (Rs.)", ur: "سیل ریٹ (روپے)" },
   pu_batch_optional: { en: "Batch number (optional)", rm: "Batch number (marzi se)", ur: "بیچ نمبر (مرضی سے)" },
   pu_expiry: { en: "Expiry date", rm: "Miyaad ki tareekh", ur: "میعاد کی تاریخ" },
   pu_total: { en: "Total", rm: "Kul", ur: "کل" },
@@ -115,6 +123,33 @@ export const purchasesDict = {
     rm: "Jo abhi diya wo supplier ki adaigi mein likha jata hai — wahi jagah jahan har adaigi jati hai. Kuch do dafa nahi likha jata.",
     ur: "جو ابھی دیا وہ سپلائر کی ادائیگی میں لکھا جاتا ہے — وہی جگہ جہاں ہر ادائیگی جاتی ہے۔ کچھ دو دفعہ نہیں لکھا جاتا۔",
   },
+  // ---- Adaigi ki slips (436) ----
+  pu_slips_title: { en: "Payment slips", rm: "Adaigi ki slips", ur: "ادائیگی کی سلپس" },
+  pu_slips_hint: {
+    en: "Attach each payment's slip with its amount and date — e.g. one slip Rs 10,000, another Rs 20,000 on a different date. Proof stays with the purchase.",
+    rm: "Har adaigi ki slip us ki raqam aur tareekh ke sath lagayein — jaise ek slip Rs 10,000 ki, doosri Rs 20,000 ki kisi aur tareekh ki. Saboot purchase ke sath mehfooz rehta hai.",
+    ur: "ہر ادائیگی کی سلپ اس کی رقم اور تاریخ کے ساتھ لگائیں — جیسے ایک سلپ 10,000 کی، دوسری 20,000 کی کسی اور تاریخ کی۔ ثبوت پرچیز کے ساتھ محفوظ رہتا ہے۔",
+  },
+  pu_add_slip: { en: "Add a slip", rm: "Slip shamil karein", ur: "سلپ شامل کریں" },
+  pu_slip_amount: { en: "Amount (Rs)", rm: "Raqam (Rs)", ur: "رقم (روپے)" },
+  pu_slip_date: { en: "Payment date", rm: "Adaigi ki tareekh", ur: "ادائیگی کی تاریخ" },
+  pu_slip_photo: { en: "Slip photo", rm: "Slip ki tasveer", ur: "سلپ کی تصویر" },
+  pu_slip_uploading: { en: "Uploading...", rm: "Charh rahi hai...", ur: "چڑھ رہی ہے..." },
+  pu_slip_incomplete: {
+    en: "A slip is missing its amount, date or photo — complete or remove it.",
+    rm: "Kisi slip ki raqam, tareekh ya tasveer adhoori hai — poori karein ya hata dein.",
+    ur: "کسی سلپ کی رقم، تاریخ یا تصویر ادھوری ہے — پوری کریں یا ہٹا دیں۔",
+  },
+  pu_slip: { en: "Slip", rm: "Slip", ur: "سلپ" },
+  pu_slips_paid_total: { en: "Paid (from slips)", rm: "Diya (slips se)", ur: "دیا (سلپس سے)" },
+  pu_slips_outstanding: { en: "Still to pay", rm: "Baqi dena", ur: "باقی دینا" },
+  pu_slips_fully_paid: { en: "Nothing left to pay", rm: "Kuch dena baqi nahi", ur: "کچھ دینا باقی نہیں" },
+  pu_slips_overpaid: {
+    en: "Slips add up to more than this order's total — check the amounts.",
+    rm: "Slips ka jama is order ke kul se zyada hai — raqmein check karein.",
+    ur: "سلپس کا جمع اس آرڈر کے کل سے زیادہ ہے — رقمیں چیک کریں۔",
+  },
+
   pu_paid_more_than_total: {
     en: "Paid now cannot be more than the purchase total.",
     rm: "Abhi diye hue paise kharid ke kul se zyada nahi ho sakte.",

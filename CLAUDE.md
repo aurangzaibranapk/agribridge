@@ -96,6 +96,9 @@ liye hai, code us se build nahi hota.
 Roman Urdu mein. Command ek ek kar ke, files ya lambi guide bhej kar
 nahi.
 
+**19 September:** Unhen "malik" nahi, **"Boss"** (ya "Admin") keh kar
+mukhatib karna hai — unhi ka kehna hai.
+
 ## Do database
 
 - **Live**: `ktskwawkslaznkjjacni`
