@@ -30,7 +30,9 @@
 
 /** Har qism ki dukan ki JAR wali categories -- naam se. */
 const JAREIN: Record<string, string[]> = {
-  karyana: ["Grocery", "Cold/Soft Drink", "Dairy Products"],
+  // "Cold/Soft Drink" category "Beverages & Cold Drinks" (Grocery ki aulad)
+  // mein merge ho gayi -- Grocery se hi aa jati hai, alag naam ki zaroorat nahi.
+  karyana: ["Grocery", "Dairy Products"],
   agri_inputs: [
     "Fertilizer",
     "Pesticide",

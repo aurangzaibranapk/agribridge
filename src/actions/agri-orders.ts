@@ -15,6 +15,8 @@ const HQ_ROLES = ["super_admin", "admin", "owner"];
 export interface ActionState {
   error?: string;
   success?: boolean;
+  orderId?: string;
+  orderNumber?: string;
 }
 
 interface OrderItemInput {
@@ -238,6 +240,7 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
   const sourceBranchId = (formData.get("order_from_branch_id") as string) || null;
   const settlementMethod = (formData.get("settlement_method") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const orderToWarehouseId = (formData.get("order_to_warehouse_id") as string) || null;
   const itemsJson = String(formData.get("items_json") ?? "[]");
 
   if (!orderType) return { error: "Order Type zaroori hai." };
@@ -284,6 +287,7 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
       existing_outstanding: 0,
       available_credit: 0,
       projected_outstanding: grandTotal,
+      order_to_warehouse_id: orderToWarehouseId || null,
       status: "submitted",
       requested_by: seller.userId,
       notes,
@@ -322,7 +326,7 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
 
   revalidatePath("/admin/agri-orders");
   revalidatePath("/admin/pos/ordering");
-  redirect(`/admin/agri-orders/${order.id}`);
+  return { success: true, orderId: order.id, orderNumber };
 }
 
 export async function salesVerifyOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {

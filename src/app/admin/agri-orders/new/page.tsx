@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewOrderForm } from "./new-order-form";
@@ -42,13 +43,21 @@ export default async function NewAgriOrderPage() {
   if (user) {
     const { data: me } = await supabase
       .from("profiles")
-      .select("shop_id, role")
+      .select("shop_id, role, branch_id")
       .eq("id", user.id)
       .maybeSingle();
     const shopId = (me?.shop_id as string | null) ?? null;
     // Owner/Admin kisi ek dukan ke nahi hote -- un ko poora maal dikhna
     // chahiye, aur un par ye tanbeeh bemaani hai.
     const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
+    // Branch staff (kisi shop se linked, non-admin) → simple form par bhej do.
+    // Un ke liye yahan kuch kaam nahi: Order Type, Order To, credit fields --
+    // ye sab unhe confuse karte hain. Simple form sirf ek kaam karta hai:
+    // apni shop ke liye Central se maal mangwao.
+    const profileBranchId = (me?.branch_id as string | null) ?? null;
+    if (profileBranchId && !sabKuchWala) {
+      redirect("/admin/pos/ordering/new");
+    }
     if (shopId) {
       const { data: shop } = await supabase.from("shops").select("business_type").eq("id", shopId).maybeSingle();
       meraShopKind = (shop?.business_type as string | null) ?? null;
@@ -108,6 +117,11 @@ export default async function NewAgriOrderPage() {
   return (
     <div>
       <PageHeader title={t("ao_new_order", lang)} description="Product select karein, order details bharein" />
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+        <b>Shop staff ke liye:</b> Apni shop ka order Central se mangwane ke liye{" "}
+        <a href="/admin/pos/ordering/new" className="font-semibold underline">Simple Order Form</a>{" "}
+        istemal karein — ye form sirf HQ/Admin ke liye hai.
+      </div>
       {shopNahiChuna && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
           <b>Aap ki dukan set nahi hai</b>, is liye yahan <b>saara maal</b> nazar aa raha hai — karyana bhi

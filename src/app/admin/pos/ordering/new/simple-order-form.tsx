@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { CheckCircle } from "lucide-react";
 import { createBranchAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";
 import { PaymentModeSelect } from "@/app/admin/agri-orders/new/payment-mode-select";
@@ -9,8 +10,6 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
-
-const ORDER_TYPES = ["FMCG / Other", "Fertilizer", "Pesticide", "Seed", "Animal Feed", "Veterinary Products", "Agricultural Equipment"];
 
 interface Product {
   id: string;
@@ -23,6 +22,7 @@ interface Product {
   category: string | null;
   brand: string | null;
   warehouse_stock: number;
+  units_per_carton: number | null;
 }
 
 interface Category {
@@ -40,20 +40,33 @@ interface Branch {
   name: string;
 }
 
+function businessTypeToOrderType(businessType: string): string {
+  if (businessType === "agri_inputs") return "Fertilizer";
+  return "FMCG / Other";
+}
+
 export function SimpleOrderForm({
   products,
   categories,
   branches,
   ownBranchId,
+  shopName,
+  godamId,
+  godamName,
+  businessType,
 }: {
   products: Product[];
   categories: Category[];
   branches: Branch[];
   ownBranchId: string;
+  shopName: string;
+  godamId: string | null;
+  godamName: string;
+  businessType: string;
 }) {
   const [state, formAction] = useFormState(createBranchAgriOrder, initialState);
   const lang = useLang();
-  const [orderType, setOrderType] = useState("FMCG / Other");
+  const orderType = businessTypeToOrderType(businessType);
   const [rows, setRows] = useState<Record<string, RowState>>({});
 
   function updateRow(productId: string, field: keyof RowState, value: number, defaultPrice: number) {
@@ -86,39 +99,79 @@ export function SimpleOrderForm({
 
   const grandTotal = activeItems.reduce((sum, i) => sum + i.order_qty * i.unit_price, 0);
 
+  if (state.success && state.orderId) {
+    return (
+      <div className="mx-auto max-w-sm rounded-card border border-green-200 bg-green-50 p-8 text-center shadow-card dark:border-green-900/40 dark:bg-green-950/20">
+        <CheckCircle className="mx-auto h-12 w-12 text-green-600" />
+        <h2 className="mt-3 font-display text-xl font-semibold text-green-900 dark:text-green-200">Order Submit Ho Gaya!</h2>
+        <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+          Order Number: <strong>{state.orderNumber}</strong>
+        </p>
+        <a
+          href={`/admin/agri-orders/${state.orderId}`}
+          className="mt-5 inline-block rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          Order Dekhein →
+        </a>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="order_type" value={orderType} />
+      <input type="hidden" name="order_to_warehouse_id" value={godamId ?? ""} />
       <input type="hidden" name="items_json" value={JSON.stringify(activeItems)} />
 
-      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
+      {state.error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
+      )}
 
-      <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <label className="text-xs font-medium text-surface-600">{t("so_order_type", lang)}</label>
-        <select value={orderType} onChange={(e) => setOrderType(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-          {ORDER_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+      {/* Order kis ke liye hai */}
+      <div className="rounded-card border border-surface-200 bg-surface-50 p-4 shadow-card dark:border-surface-800 dark:bg-surface-900/60">
+        <p className="text-sm font-medium text-surface-700 dark:text-surface-300">
+          Order for:{" "}
+          <span className="font-semibold text-surface-900 dark:text-white">{shopName}</span>
+          {godamName && (
+            <>
+              {" "}—{" "}
+              <span className="text-surface-600 dark:text-surface-400">{godamName}</span>
+            </>
+          )}
+        </p>
       </div>
 
+      {/* Maal kahan se aayega */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("ao_where_from", lang)}</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+          {t("ao_where_from", lang)}
+        </h2>
         <SourcingSelect branches={branches} excludeBranchId={ownBranchId} />
       </div>
 
+      {/* Payment */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("c_payment_mode", lang)}</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+          {t("c_payment_mode", lang)}
+        </h2>
         <PaymentModeSelect />
       </div>
 
+      {/* Products */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("so_select_products", lang)}</h2>
-        <ProductCardGrid products={products} categories={categories} rows={rows} onUpdateRow={updateRow} />
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+          {t("so_select_products", lang)}
+        </h2>
+        <ProductCardGrid
+          products={products}
+          categories={categories}
+          rows={rows}
+          onUpdateRow={updateRow}
+          warehouseLabel="Central mein available:"
+        />
       </div>
 
+      {/* Total */}
       <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="flex items-center justify-between text-sm">
           <span className="text-surface-500">{t("so_total_items", lang)}</span>
@@ -130,7 +183,12 @@ export function SimpleOrderForm({
         </div>
       </div>
 
-      <textarea name="notes" rows={2} placeholder={t("ar_notes_if_any", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+      <textarea
+        name="notes"
+        rows={2}
+        placeholder={t("ar_notes_if_any", lang)}
+        className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+      />
 
       <SubmitButton />
     </form>
@@ -140,8 +198,13 @@ export function SimpleOrderForm({
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button data-guide="shop-order-submit" type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
-      {pending ? "Order Submit Ho Raha Hai..." : "Order Submit Karein"}
+    <button
+      data-guide="shop-order-submit"
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+    >
+      {pending ? "Order Submit Ho Raha Hai..." : "Order Bhejein"}
     </button>
   );
 }

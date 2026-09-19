@@ -15,6 +15,7 @@ interface Product {
   category: string | null;
   brand: string | null;
   warehouse_stock: number;
+  units_per_carton?: number | null;
 }
 interface Category {
   id: string;
@@ -32,11 +33,13 @@ export function ProductCardGrid({
   onUpdateRow,
   bulkFill,
   priceMode = "sale",
+  warehouseLabel,
 }: {
   products: Product[];
   categories: Category[];
   rows: Record<string, RowState>;
   onUpdateRow: (productId: string, field: keyof RowState, value: number, defaultPrice: number) => void;
+  warehouseLabel?: string;
   /**
    * Har qatar ka rate kahan se aaye.
    *
@@ -218,7 +221,7 @@ export function ProductCardGrid({
                 </p>
               </div>
               <div className="mt-1.5 flex items-center justify-between text-xs">
-                <span className="text-surface-400">{t("ao_warehouse_label", lang)}</span>
+                <span className="text-surface-400">{warehouseLabel ?? t("ao_warehouse_label", lang)}</span>
                 <span className={`font-medium ${stockStatus === "out" ? "text-red-600" : stockStatus === "low" ? "text-amber-600" : "text-green-600"}`}>
                   {p.warehouse_stock} {stockStatus === "out" ? "(Khatam)" : stockStatus === "low" ? "(Kam)" : ""}
                 </span>
@@ -251,6 +254,26 @@ export function ProductCardGrid({
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                  {p.units_per_carton != null && p.units_per_carton > 1 && (() => {
+                    const upc = p.units_per_carton as number;
+                    const cartons = qty > 0 ? Math.floor(qty / upc) : 0;
+                    return (
+                      <div className="mt-1.5 flex items-center justify-between rounded-lg bg-surface-50 px-2 py-1 dark:bg-surface-800">
+                        <span className="text-[11px] text-surface-400">Carton ({upc} pcs):</span>
+                        <div className="flex items-center gap-1">
+                          <button type="button"
+                            onClick={() => cartons > 0 && onUpdateRow(p.id, "qty", clampQty((cartons - 1) * upc, p.warehouse_stock), rateOf(p))}
+                            className="flex h-6 w-6 items-center justify-center rounded border border-surface-200 text-surface-600 hover:bg-surface-100 dark:border-surface-700"
+                          ><Minus className="h-3 w-3" /></button>
+                          <span className="w-8 text-center text-xs font-semibold">{cartons}</span>
+                          <button type="button"
+                            onClick={() => onUpdateRow(p.id, "qty", clampQty((cartons + 1) * upc, p.warehouse_stock), rateOf(p))}
+                            className="flex h-6 w-6 items-center justify-center rounded border border-surface-200 text-surface-600 hover:bg-surface-100 dark:border-surface-700"
+                          ><Plus className="h-3 w-3" /></button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {qty >= p.warehouse_stock && qty > 0 && (
                     <p className="mt-1 text-center text-[10px] text-amber-600">{t("ao_all_stock_selected", lang)}</p>
                   )}

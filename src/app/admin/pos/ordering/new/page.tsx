@@ -22,11 +22,51 @@ export default async function NewBranchOrderPage() {
     );
   }
   const supabase = createClient();
+
+  // Seller ki shop aur us ka godam -- header line aur order_to_warehouse_id
+  // ke liye chahiye. getCurrentSeller() sirf branch deta hai; shop alag hai.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let sellerShopName: string = seller.name;
+  let sellerGodamId: string | null = null;
+  let sellerGodamName: string = "";
+  let sellerBusinessType: string = "karyana";
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("shop_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const shopId = (profileData?.shop_id as string | null) ?? null;
+    if (shopId) {
+      const { data: shopRow } = await supabase
+        .from("shops")
+        .select("name, business_type")
+        .eq("id", shopId)
+        .maybeSingle();
+      if (shopRow) {
+        sellerShopName = (shopRow.name as string) ?? seller.name;
+        sellerBusinessType = (shopRow.business_type as string) ?? "karyana";
+      }
+      const { data: godamRow } = await supabase
+        .from("warehouses")
+        .select("id, name")
+        .eq("shop_id", shopId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (godamRow) {
+        sellerGodamId = godamRow.id as string;
+        sellerGodamName = godamRow.name as string;
+      }
+    }
+  }
+
   const { data: allCategories } = await supabase.from("categories").select("id, name, parent_category_id").order("name");
   const karyanaCategoryIds = categoriesForShop("karyana", (allCategories ?? []) as CatNode[]) ?? new Set<string>();
   const { data: products } = await supabase
     .from("products")
-    .select("id, name, pack_size, selling_price, purchase_price, image_url, category_id, categories(name), companies(name)")
+    .select("id, name, pack_size, selling_price, purchase_price, image_url, category_id, units_per_carton, categories(name), companies(name)")
     .eq("is_deleted", false)
     .eq("is_verified", true)
     .order("name");
@@ -53,6 +93,7 @@ export default async function NewBranchOrderPage() {
       category: Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name,
       brand: Array.isArray(p.companies) ? p.companies[0]?.name : p.companies?.name,
       warehouse_stock: stockMap[p.id] ?? 0,
+      units_per_carton: p.units_per_carton ? Number(p.units_per_carton) : null,
     }));
   // Jar wali qismein (Grocery waghera) khane mein nahi aatin -- wo itni
   // barhi hain ke un par daba kar kuch chhanta hi nahi.
@@ -74,6 +115,10 @@ export default async function NewBranchOrderPage() {
         categories={karyanaCategories}
         branches={branches ?? []}
         ownBranchId={seller.id}
+        shopName={sellerShopName}
+        godamId={sellerGodamId}
+        godamName={sellerGodamName}
+        businessType={sellerBusinessType}
       />
     </div>
   );
