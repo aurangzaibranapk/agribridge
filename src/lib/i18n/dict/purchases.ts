@@ -82,6 +82,20 @@ export const purchasesDict = {
     rm: "Bill par pet ka rate hota hai, shop par sale single botal ki. Yahan pet ke adad likhein — botal ka rate system khud nikaal kar mehfooz karta hai.",
     ur: "بل پر پیٹ کا ریٹ ہوتا ہے، شاپ پر سیل سنگل بوتل کی۔ یہاں پیٹ کے عدد لکھیں — بوتل کا ریٹ سسٹم خود نکال کر محفوظ کرتا ہے۔",
   },
+  // ---- CSV se purchase order (19 September) ----
+  pu_csv_btn: { en: "Fill from CSV", rm: "CSV se bharein", ur: "سی ایس وی سے بھریں" },
+  pu_csv_hint: {
+    en: "CSV columns: product, qty, rate, bottles (optional), batch, expiry. First row can be headings.",
+    rm: "CSV ke khane: product, tadaad, rate, botal (marzi se), batch, expiry. Pehli qatar sarkhiyan ho sakti hai.",
+    ur: "سی ایس وی کے خانے: پروڈکٹ، تعداد، ریٹ، بوتل (مرضی سے)، بیچ، ایکسپائری۔ پہلی قطار سرخیاں ہو سکتی ہے۔",
+  },
+  pu_csv_ok: { en: "{n} lines filled from the CSV.", rm: "CSV se {n} lines bhar gayin.", ur: "سی ایس وی سے {n} لائنیں بھر گئیں۔" },
+  pu_csv_unmatched: {
+    en: "Could not match these — pick the product on those lines yourself:",
+    rm: "In ka product nahi mila — in lines par product khud chunein:",
+    ur: "ان کا پروڈکٹ نہیں ملا — ان لائنوں پر پروڈکٹ خود منتخب کریں:",
+  },
+  pu_csv_empty: { en: "No usable rows found in this file.", rm: "Is file mein kaam ki koi qatar nahi mili.", ur: "اس فائل میں کام کی کوئی قطار نہیں ملی۔" },
   pu_batch_optional: { en: "Batch number (optional)", rm: "Batch number (marzi se)", ur: "بیچ نمبر (مرضی سے)" },
   pu_expiry: { en: "Expiry date", rm: "Miyaad ki tareekh", ur: "میعاد کی تاریخ" },
   pu_total: { en: "Total", rm: "Kul", ur: "کل" },

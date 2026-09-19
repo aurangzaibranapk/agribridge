@@ -4,7 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { Plus, Trash2, Search, FileUp, X } from "lucide-react";
+import { Plus, Trash2, Search, FileUp, X, FileSpreadsheet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -55,6 +55,82 @@ function lineUnits(line: Line): number {
   return Number.isFinite(u) && u > 0 ? u : 0;
 }
 const rupee2 = (v: number) => (Math.round(v * 100) / 100).toLocaleString();
+
+// ---------------------------------------------------------------------
+// CSV se purchase order (Boss, 19 September): AI bill parhne mein dhoka
+// de to ye seedha, pakka rasta hai -- CSV upload karo, lines bhar
+// jati hain. Aage wohi normal raasta chalta hai (manzoori -> Maal Aa
+// Gaya -> stock), koi shortcut nahi.
+// ---------------------------------------------------------------------
+
+/** Sada CSV parser: quotes aur "1,234" jaisi raqmein sambhalta hai. */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some((f) => f.trim() !== "")) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((f) => f.trim() !== "")) rows.push(row);
+  return rows;
+}
+
+const csvNum = (s: string | undefined): number => parseFloat(String(s ?? "").replace(/[",\s]/g, ""));
+
+/** dd/mm/yyyy ya dd-mm-yyyy ko date-input wali shakal (yyyy-mm-dd) mein. */
+function csvDate(s: string | undefined): string {
+  const t = String(s ?? "").trim();
+  if (!t) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const m = t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return "";
+}
+
+/**
+ * Naam se product dhoondna: pehle poora naam, phir substring (dono
+ * rukh), phir mushtarka lafz. Shak ho to KHALI chhoRta hai -- ghalat
+ * cheez chup chaap chun lena stock kharab kar deta hai; khali line par
+ * Boss khud product chun leta hai (tadaad/rate pehle se bhare hote hain).
+ */
+function matchProduct(products: Product[], raw: string): Product | null {
+  const q = raw.trim().toLowerCase();
+  if (!q) return null;
+  const exact = products.find((p) => p.name.trim().toLowerCase() === q);
+  if (exact) return exact;
+  const sub = products.filter((p) => {
+    const n = p.name.trim().toLowerCase();
+    return n.includes(q) || q.includes(n);
+  });
+  if (sub.length === 1) return sub[0];
+  const qTokens = q.split(/[^a-z0-9؀-ۿ.]+/).filter((w) => w.length >= 3);
+  if (qTokens.length === 0) return null;
+  let best: Product | null = null;
+  let bestScore = 0;
+  let tie = false;
+  for (const p of products) {
+    const n = p.name.toLowerCase();
+    const score = qTokens.filter((w) => n.includes(w)).length;
+    if (score > bestScore) { best = p; bestScore = score; tie = false; }
+    else if (score === bestScore && score > 0) tie = true;
+  }
+  return bestScore >= 2 && !tie ? best : null;
+}
 /** Adaigi ki slip: raqam + tareekh + tasveer (436). */
 interface Slip {
   amount: string;
@@ -91,6 +167,59 @@ export function PurchaseForm({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
   const [terms, setTerms] = useState<"paid" | "partial" | "credit">("credit");
+  const [csvNote, setCsvNote] = useState<{ ok: number; unmatched: string[] } | null>(null);
+  async function importCsv(file: File | undefined) {
+    if (!file) return;
+    const rows = parseCsv(await file.text());
+    if (rows.length === 0) { setCsvNote({ ok: 0, unmatched: [] }); return; }
+    const head = rows[0].map((h) => h.trim().toLowerCase());
+    const col = (...keys: string[]) => head.findIndex((h) => keys.some((k) => h.includes(k)));
+    let iName = col("product", "name", "item", "cheez", "naam");
+    let iQty = col("qty", "quan", "tadaad", "pet");
+    let iRate = col("rate", "price", "cost", "lagat");
+    // "unit cost" jaisi sarkhi rate wali hai -- botal ka khana wo NAHI.
+    let iUnits = head.findIndex((h, i) => i !== iRate && ["botal", "bottle", "units", "pack", "1x"].some((k) => h.includes(k)));
+    const iBatch = col("batch");
+    const iExp = col("expiry", "miaad", "miyaad");
+    let dataRows = rows.slice(1);
+    if (iName < 0 || iQty < 0 || iRate < 0) {
+      // Sarkhi nahi mili: tarteeb maan lete hain -- product, tadaad, rate, botal.
+      iName = 0; iQty = 1; iRate = 2; iUnits = 3;
+      dataRows = rows;
+    }
+    const imported: Line[] = [];
+    const unmatched: string[] = [];
+    for (const row of dataRows) {
+      const rawName = String(row[iName] ?? "").trim();
+      const qty = csvNum(row[iQty]);
+      const rate = csvNum(row[iRate]);
+      if (!rawName || !Number.isFinite(qty) || qty <= 0) continue;
+      const p = matchProduct(products, rawName);
+      const csvUnits = iUnits >= 0 ? csvNum(row[iUnits]) : NaN;
+      const units =
+        Number.isFinite(csvUnits) && csvUnits > 0
+          ? csvUnits
+          : p?.units_per_pack != null && p.units_per_pack > 1
+            ? p.units_per_pack
+            : 0;
+      const u = units > 1 ? units : 1;
+      imported.push({
+        ...emptyLine,
+        product_id: p?.id ?? "",
+        units_in_pack: units > 0 ? String(units) : "",
+        quantity: String(qty),
+        unit_cost: Number.isFinite(rate) && rate > 0 ? String(rate) : "",
+        wholesale_rate: p?.wholesale_price != null ? String(Math.round(p.wholesale_price * u * 100) / 100) : "",
+        mrp_rate: p?.mrp_price != null ? String(p.mrp_price) : "",
+        sale_rate: p?.selling_price != null ? String(p.selling_price) : "",
+        batch_number: iBatch >= 0 ? String(row[iBatch] ?? "").trim() : "",
+        expiry_date: iExp >= 0 ? csvDate(row[iExp]) : "",
+      });
+      if (!p) unmatched.push(rawName);
+    }
+    if (imported.length > 0) setLines(imported);
+    setCsvNote({ ok: imported.length, unmatched });
+  }
   const [slips, setSlips] = useState<Slip[]>([]);
   function updateSlip(idx: number, patch: Partial<Slip>) {
     setSlips((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
@@ -373,12 +502,38 @@ export function PurchaseForm({
         )}
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <Label>{t("pu_products", lang)}</Label>
-            <button type="button" onClick={addLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-              <Plus className="h-3.5 w-3.5" /> {t("pu_add_product", lang)}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* CSV se poora bill ek dafa mein (19 September) -- AI ka
+                  intezar nahi, seedha file se lines. */}
+              <label className="flex cursor-pointer items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                <FileSpreadsheet className="h-3.5 w-3.5" /> {t("pu_csv_btn", lang)}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => { importCsv(e.target.files?.[0]); e.target.value = ""; }}
+                />
+              </label>
+              <button type="button" onClick={addLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                <Plus className="h-3.5 w-3.5" /> {t("pu_add_product", lang)}
+              </button>
+            </div>
           </div>
+          <p className="mb-2 text-xs text-surface-400">{t("pu_csv_hint", lang)}</p>
+          {csvNote && (
+            <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${csvNote.ok > 0 ? "bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:text-brand-200" : "bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"}`}>
+              {csvNote.ok > 0
+                ? t("pu_csv_ok", lang).replace("{n}", String(csvNote.ok))
+                : t("pu_csv_empty", lang)}
+              {csvNote.unmatched.length > 0 && (
+                <span className="mt-1 block">
+                  {t("pu_csv_unmatched", lang)} {csvNote.unmatched.join(", ")}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="space-y-3">
             {lines.map((line, idx) => (
