@@ -1,3 +1,6 @@
+import { DeskWorkspace, DeskTabs } from "@/components/guided/desk-workspace";
+import { ShopOverview } from "@/components/desk/shop-overview";
+import { ShopNotifications } from "@/components/desk/shop-notifications";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
@@ -85,7 +88,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, role, training_mode, branch_id")
+    .select("full_name, role, training_mode, branch_id, shop_id")
     .eq("id", user.id)
     .maybeSingle();
   if (!me) redirect("/login");
@@ -192,6 +195,27 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
+
+  if (me.shop_id && canRoute("/admin/pos")) {
+    const deskLinks = [
+      { href: "/admin/pos", label: "POS Sale" },
+      { href: "/admin/agri-orders/new", label: "Create Order" },
+      { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
+      { href: "/admin/kharche", label: "Paisa & Khata" },
+      { href: "/admin/stock-count", label: "Stock Check" },
+      { href: "/admin/farmers", label: "Farmers" },
+      { href: "/admin/cash-handover", label: "Cash Handover" },
+    ].filter(link => canRoute(link.href));
+    return <DeskWorkspace>
+      <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
+      <DeskTabs items={[
+        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} links={deskLinks} attentionItems={attentionItems} /> },
+        { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
+        { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
+        { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },
+      ]} />
+    </DeskWorkspace>;
+  }
 
   return (
     <InPageWorkspace>

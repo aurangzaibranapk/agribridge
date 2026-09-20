@@ -1,3 +1,4 @@
+import { DeskWorkspace } from "@/components/guided/desk-workspace";
 import Link from "next/link";
 import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
@@ -111,7 +112,7 @@ export default async function LoadBillPage({
   const shuruKind = searchParams.kind === "bill" ? "bill" : "load";
 
   return (
-    <div>
+    <DeskWorkspace className="desk-load">
       <PageHeader
         title="Load & Bill"
         description="Mobile load aur customer ke bill — float ke hisaab ke sath"
@@ -207,6 +208,6 @@ export default async function LoadBillPage({
           canReverse={FLOAT_ROLES.includes(me.role)}
         />
       )}
-    </div>
+    </DeskWorkspace>
   );
 }

@@ -185,10 +185,11 @@ export interface ShopStockPosition {
  * hai (FIFO), is liye Shop 360 ka Stock Value aur P&L ka COGS ek hi
  * hisaab se aate hain, do alag nahi.
  */
-export async function shopStockPosition(shopId: string, fromDate: string, toDate: string): Promise<ShopStockPosition> {
+export async function shopStockPosition(shopId: string, fromDate: string, toDate: string, options: { strict?: boolean } = {}): Promise<ShopStockPosition> {
   const service = createServiceClient();
 
-  const { data: wh } = await service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle();
+  const { data: wh, error: warehouseError } = await service.from("warehouses").select("id").eq("shop_id", shopId).limit(1).maybeSingle();
+  if (options.strict && warehouseError) throw new Error("Shop warehouse could not be loaded.");
   const warehouseId = wh?.id as string | undefined;
   if (!warehouseId) {
     return {
@@ -202,10 +203,13 @@ export async function shopStockPosition(shopId: string, fromDate: string, toDate
     };
   }
 
-  const [{ data: batches }, { data: invRows }] = await Promise.all([
+  const [batchResult, inventoryResult] = await Promise.all([
     service.from("stock_batches").select("remaining_quantity, unit_cost").eq("warehouse_id", warehouseId),
     service.from("inventory").select("id, quantity_on_hand, products(min_stock_threshold)").eq("warehouse_id", warehouseId),
   ]);
+  if (options.strict && (batchResult.error || inventoryResult.error)) throw new Error("Shop inventory could not be loaded.");
+  const { data: batches } = batchResult;
+  const { data: invRows } = inventoryResult;
 
   const stockValueFifo = round2(
     (batches ?? []).reduce((s, b) => s + Number(b.remaining_quantity ?? 0) * Number(b.unit_cost ?? 0), 0)
@@ -228,12 +232,13 @@ export async function shopStockPosition(shopId: string, fromDate: string, toDate
   let receivedInPeriod = 0;
   let soldInPeriod = 0;
   if (inventoryIds.length > 0) {
-    const { data: movements } = await service
+    const { data: movements, error: movementError } = await service
       .from("stock_movements")
       .select("movement_type, quantity")
       .in("inventory_id", inventoryIds)
       .gte("created_at", `${fromDate}T00:00:00`)
       .lte("created_at", `${toDate}T23:59:59.999`);
+    if (options.strict && movementError) throw new Error("Shop stock movements could not be loaded.");
     for (const m of (movements ?? []) as { movement_type: string; quantity: number }[]) {
       const qty = Number(m.quantity ?? 0);
       if (m.movement_type === "purchase_in") receivedInPeriod += qty;
