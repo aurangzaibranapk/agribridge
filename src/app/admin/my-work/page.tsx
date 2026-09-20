@@ -211,7 +211,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Requiring /admin/pos here sent those users to the legacy dashboard and
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
-    return <DeskWorkspace>
+    return <DeskWorkspace className="desk-my-work">
       <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
       <DeskTabs items={[
         { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} links={deskLinks} attentionItems={attentionItems} /> },
