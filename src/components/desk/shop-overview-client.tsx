@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bell, CheckCircle2, CircleDollarSign, ClipboardList, ShoppingBag, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, ClipboardList, ShoppingBag, Users, Wallet } from "lucide-react";
 import { ShopNotifications } from "@/components/desk/shop-notifications";
 import type { ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
 
@@ -13,9 +13,7 @@ const PAYMENT_COLORS = ["#119b61", "#287ac0", "#e0a122", "#dc5547", "#8456c9", "
 type FarmerGlance = { id: string; full_name: string | null; farmer_code: string; phone_number: string | null; milk_liters_per_day: number | null };
 type Approval = { label: string; count: number | null; href: string };
 type TaskItem = { key: string; label: string; count: number | null; tone: "red" | "amber" | "blue" | "gray"; href: string };
-type QuickAction = { href: string; label: string };
-
-export function ShopOverviewClient({ methods, trend, stock, credit, cash, digital, received, links, branchAvailable, customerHealth, farmers, approvals, orders, tasks, userId }: {
+export function ShopOverviewClient({ methods, trend, stock, credit, cash, digital, received, branchAvailable, customerHealth, farmers, approvals, orders, tasks, userId }: {
   methods: ShopPaymentMethodRow[];
   trend: { day: string; sales: number }[];
   stock: number | null;
@@ -23,7 +21,6 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
   cash: number;
   digital: number;
   received: number;
-  links: QuickAction[];
   branchAvailable: boolean;
   customerHealth: { total: number | null; withBalance: number | null; newThisWeek: number | null };
   farmers: FarmerGlance[] | null;
@@ -87,10 +84,6 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
         <p className="staff-desk-note">Sirf aapki allowed approval queues.</p>
       </section>
 
-      <section className="desk-card staff-desk-quick">
-        <h2>Quick Actions</h2>
-        <div>{links.slice(0, 5).map((link, index) => <Link key={link.href} href={link.href}><span>{index === 0 ? <ShoppingBag /> : index === 1 ? <ClipboardList /> : <CircleDollarSign />}</span>{link.label}</Link>)}</div>
-      </section>
     </div>
 
     <section className="desk-card staff-desk-method-strip">
