@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Payment Mode — order banate waqt ye tay hota hai ke paisa kab aayega.
@@ -83,7 +84,7 @@ export interface BranchCreditCheck {
  * ek hi number nazar aaye.
  */
 export async function getBranchCreditCheck(branchId: string | null, orderAmount: number): Promise<BranchCreditCheck> {
-  const supabase = createClient();
+  const supabase = createServiceClient();
   const empty: BranchCreditCheck = {
     creditLimit: 0,
     outstanding: 0,
