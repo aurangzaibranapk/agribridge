@@ -15,6 +15,7 @@ const OPTIONS: { value: BusinessContext; label: string; icon: any }[] = [
 
 export function BusinessSelector({ current }: { current: BusinessContext }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const currentOption = OPTIONS.find((o) => o.value === current) ?? OPTIONS[0];
   const CurrentIcon = currentOption.icon;
@@ -28,7 +29,37 @@ export function BusinessSelector({ current }: { current: BusinessContext }) {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <>
+      {loading && (
+        <>
+          <style>{`
+            @keyframes topbar-slide {
+              0%   { transform: scaleX(0);    opacity: 1; }
+              70%  { transform: scaleX(0.88); opacity: 1; }
+              100% { transform: scaleX(0.96); opacity: 1; }
+            }
+            @keyframes topbar-pulse {
+              0%, 100% { opacity: 1; }
+              50%       { opacity: 0.65; }
+            }
+          `}</style>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "3px",
+              zIndex: 9999,
+              background: "#16a34a",
+              transformOrigin: "left center",
+              animation:
+                "topbar-slide 2.5s cubic-bezier(0.1,0.7,0.4,1) forwards, topbar-pulse 1s ease-in-out infinite",
+            }}
+          />
+        </>
+      )}
+      <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200"
@@ -47,7 +78,7 @@ export function BusinessSelector({ current }: { current: BusinessContext }) {
                 <input type="hidden" name="business" value={opt.value} />
                 <button
                   type="submit"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setOpen(false); setLoading(true); }}
                   className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-surface-50 dark:hover:bg-surface-800 ${
                     opt.value === current ? "bg-brand-50 font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-300" : "text-surface-700 dark:text-surface-300"
                   }`}
@@ -60,6 +91,7 @@ export function BusinessSelector({ current }: { current: BusinessContext }) {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

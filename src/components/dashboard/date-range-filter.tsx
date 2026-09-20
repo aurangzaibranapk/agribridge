@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DATE_RANGE_OPTIONS, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 
@@ -9,6 +9,12 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
   const searchParams = useSearchParams();
   const [customFrom, setCustomFrom] = useState(from ?? "");
   const [customTo, setCustomTo] = useState(to ?? "");
+  const [loading, setLoading] = useState(false);
+
+  // Jab URL badal jaye (navigation complete) to bar band karo
+  useEffect(() => {
+    setLoading(false);
+  }, [pathname, searchParams]);
 
   // 19 September, malik: "Today/Yesterday/Month koi bhi select karein
   // to select nahi hota, na hi data milta hai." `router.push` akele
@@ -16,6 +22,7 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
   // data hi dikhata reh jata tha -- `refresh()` server se taaza data
   // mangwata hai.
   function goto(params: URLSearchParams) {
+    setLoading(true);
     router.push(`${pathname}?${params.toString()}`);
     router.refresh();
   }
@@ -40,7 +47,37 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
+      {loading && (
+        <>
+          <style>{`
+            @keyframes topbar-slide {
+              0%   { transform: scaleX(0);    opacity: 1; }
+              70%  { transform: scaleX(0.88); opacity: 1; }
+              100% { transform: scaleX(0.96); opacity: 1; }
+            }
+            @keyframes topbar-pulse {
+              0%, 100% { opacity: 1; }
+              50%       { opacity: 0.65; }
+            }
+          `}</style>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "3px",
+              zIndex: 9999,
+              background: "#16a34a",
+              transformOrigin: "left center",
+              animation:
+                "topbar-slide 2.5s cubic-bezier(0.1,0.7,0.4,1) forwards, topbar-pulse 1s ease-in-out infinite",
+            }}
+          />
+        </>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
       {DATE_RANGE_OPTIONS.map((opt) => (
         <button
           key={opt.key}
@@ -81,5 +118,6 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
         </div>
       )}
     </div>
+    </>
   );
 }
