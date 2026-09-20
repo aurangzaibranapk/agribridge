@@ -196,16 +196,21 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
-  if (me.shop_id && canRoute("/admin/pos")) {
-    const deskLinks = [
-      { href: "/admin/pos", label: "POS Sale" },
-      { href: "/admin/agri-orders/new", label: "Create Order" },
-      { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
-      { href: "/admin/kharche", label: "Paisa & Khata" },
-      { href: "/admin/stock-count", label: "Stock Check" },
-      { href: "/admin/farmers", label: "Farmers" },
-      { href: "/admin/cash-handover", label: "Cash Handover" },
-    ].filter(link => canRoute(link.href));
+  const deskLinks = [
+    { href: "/admin/pos", label: "POS Sale" },
+    { href: "/admin/agri-orders/new", label: "Create Order" },
+    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
+    { href: "/admin/kharche", label: "Paisa & Khata" },
+    { href: "/admin/stock-count", label: "Stock Check" },
+    { href: "/admin/farmers", label: "Farmers" },
+    { href: "/admin/cash-handover", label: "Cash Handover" },
+  ].filter(link => canRoute(link.href));
+
+  // Shop staff can have a shop assignment and desk access without having
+  // the POS route itself (for example Load & Bill + Paisa & Khata).
+  // Requiring /admin/pos here sent those users to the legacy dashboard and
+  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
+  if (me.shop_id && deskLinks.length > 0) {
     return <DeskWorkspace>
       <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
       <DeskTabs items={[
