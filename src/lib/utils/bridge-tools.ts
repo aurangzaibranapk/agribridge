@@ -823,11 +823,35 @@ async function getFarmerOutstanding(
   };
 }
 
+// ===== Role-based gating =====
+// Company-wide financial aur operational data sirf broad roles ko —
+// sales/shop staff sirf apna kaam dekh sakta hai, business ka poora
+// khata unhe nahi dikhna chahiye.
+const BROAD_ROLES = new Set(["owner", "super_admin", "admin", "finance", "manager"]);
+
+const STAFF_ALLOWED_TOOLS = new Set([
+  "propose_action",
+  "draft_shop_order",
+  "get_reorder_suggestions",
+  "check_system_errors",
+  "get_farmer_outstanding",
+]);
+
+/** Staff ke liye sirf allowed tools ki declarations bhejta hai Gemini ko. */
+export function bridgeToolsForRole(role: string): FunctionDeclaration[] {
+  if (BROAD_ROLES.has(role)) return bridgeToolDeclarations;
+  return bridgeToolDeclarations.filter((t) => STAFF_ALLOWED_TOOLS.has(t.name!));
+}
+
 export async function executeBridgeTool(
   name: string,
   supabase: ReturnType<typeof createClient>,
-  args?: Record<string, any>
+  args?: Record<string, any>,
+  userRole?: string
 ) {
+  if (userRole && !BROAD_ROLES.has(userRole) && !STAFF_ALLOWED_TOOLS.has(name)) {
+    return { error: "Aap ke role ke liye ye maloomat nahi hai. Apne manager se poochein.", access_denied: true };
+  }
   switch (name) {
     case "get_financial_summary":
       return getFinancialSummary(supabase);

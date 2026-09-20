@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
-import { bridgeToolDeclarations, executeBridgeTool, classifyAgent, AGENT_SYSTEM_INSTRUCTIONS } from "@/lib/utils/bridge-tools";
+import { bridgeToolsForRole, executeBridgeTool, classifyAgent, AGENT_SYSTEM_INSTRUCTIONS } from "@/lib/utils/bridge-tools";
 import { requireStaff } from "@/lib/api-auth";
 import { buildCoachContext, coachInstruction } from "@/lib/ai/work-coach";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     // Kaun pooch raha hai, kya khulta hai, system ka naqsha, aaj kya
     // baqi -- sab AI ke saamne (Work Coach, C).
     const ctx = await buildCoachContext(auth.caller.userId, lang);
+    const callerRole = ctx?.role ?? auth.caller.role ?? "";
     const systemInstruction = AGENT_SYSTEM_INSTRUCTIONS[agent] + (ctx ? "\n" + coachInstruction(ctx) : "");
 
     // Pichhli baat (269): tajweez ka draft -> "haan" -> darj, is ke liye
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       model: "gemini-3.6-flash",
       history,
       config: {
-        tools: [{ functionDeclarations: [...bridgeToolDeclarations, ...COACH_TOOLS, SUGGESTION_TOOL, ACCESS_TOOL, CONFLICT_TOOL] }],
+        tools: [{ functionDeclarations: [...bridgeToolsForRole(callerRole), ...COACH_TOOLS, SUGGESTION_TOOL, ACCESS_TOOL, CONFLICT_TOOL] }],
         systemInstruction,
       },
     });
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
                 ? await executeConflictTool(call.args ?? {}, ctx)
               : COACH_TOOL_NAMES.has(call.name!)
                 ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
-                : await executeBridgeTool(call.name!, supabase, call.args);
+                : await executeBridgeTool(call.name!, supabase, call.args, callerRole);
           return {
             functionResponse: {
               name: call.name!,
