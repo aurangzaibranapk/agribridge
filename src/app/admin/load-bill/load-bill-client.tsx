@@ -168,10 +168,10 @@ function andazaNetwork(mobile: string): string | null {
   return NETWORK_PREFIX[prefix] ?? null;
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, compact = false }: { label: string; compact?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full">
+    <Button type="submit" disabled={pending} className={compact ? "load-form-submit" : "w-full"}>
       {pending ? "Darj ho raha hai…" : label}
     </Button>
   );
@@ -504,7 +504,7 @@ export function LoadBillClient({
               onAccountChange={(account) => { setLedgerAccount(account); setLastSavedTab(null); }}
             />
           ) : (
-          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className="load-form space-y-3">
+          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className="load-form load-form-entry space-y-3">
             <input type="hidden" name="kind" value={kind} />
 
             <div>
@@ -759,7 +759,7 @@ export function LoadBillClient({
               </label>
             )}
 
-            <div className="load-form-wide load-form-total rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
+            <div className="load-form-total rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
               <div className="flex justify-between">
                 <span className="text-surface-500">Customer dega</span>
                 <span className="font-semibold tabular-nums text-surface-900 dark:text-white">
@@ -772,7 +772,7 @@ export function LoadBillClient({
               </div>
             </div>
 
-            <Submit label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
+            <Submit compact label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
           </form>
           )}
         </Card>
