@@ -342,7 +342,7 @@ export default async function AgriOrderDetailPage({ params }: { params: Promise<
             {order.rejection_reason && <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">Reject Wajah: {order.rejection_reason}</p>}
           </div>
 
-          {permissions.canSeePayments && <PaymentSection orderId={order.id} payments={payments} permissions={permissions} />}
+          {permissions.canSeePayments && <PaymentSection orderId={order.id} payments={payments} permissions={permissions} isAdvance={advance.isAdvance} />}
           {permissions.canSeeDispatch && (
             <DispatchSection orderId={order.id} orderStatus={order.status} orderItems={orderItemsForDispatch} dispatch={dispatch} delivery={delivery} permissions={permissions} drivers={drivers} dispatchItems={(rawDispatchItems ?? []).map((di: any) => ({ id: di.id, product_name: di.product_name, dispatched_qty: Number(di.dispatched_qty) }))} currentUserIdentity={currentUserIdentity} advanceBlocked={!advance.isSatisfied} advanceRemaining={advance.remaining} />
           )}

@@ -32,18 +32,13 @@ function statusColor(status: string) {
 
 const METHODS_NEEDING_BANK = ["Bank Transfer", "Online Payment"];
 
-export function PaymentSection({ orderId, payments, permissions }: { orderId: string; payments: Payment[]; permissions: OrderPermissions }) {
+export function PaymentSection({ orderId, payments, permissions, isAdvance }: { orderId: string; payments: Payment[]; permissions: OrderPermissions; isAdvance: boolean }) {
   const [showSubmit, setShowSubmit] = useState(false);
   const lang = useLang();
 
-  // "Payment Submit Karein" should only be offered while there's no
-  // active/settled payment on this order yet - once a payment is
-  // verified (or is sitting pending_verification), the branch shouldn't
-  // be able to submit another one. It reappears correctly if the
-  // Finance Team rejects the payment (status becomes "rejected"), since
-  // that's the one case where a fresh submission is genuinely needed.
   const hasActivePayment = payments.some((p) => p.status === "pending_verification" || p.status === "verified" || p.status === "partially_verified");
-  const canShowSubmitButton = permissions.canSubmitPayment && !hasActivePayment;
+  // Khata/base orders mein payment slip nahi maangte — sirf advance orders mein
+  const canShowSubmitButton = isAdvance && permissions.canSubmitPayment && !hasActivePayment;
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -54,6 +49,9 @@ export function PaymentSection({ orderId, payments, permissions }: { orderId: st
           <button onClick={() => setShowSubmit(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("ao_submit_payment", lang)}</button>
         )}
       </div>
+      {!isAdvance && payments.length === 0 && (
+        <p className="text-xs text-surface-400">Ye khata order hai — payment slip ki zaroorat nahi. Maal deliver hone ke baad payment khate mein darj hogi.</p>
+      )}
 
       {payments.some((p) => p.status === "pending_verification") && permissions.canSubmitPayment && (
         <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">{t("at_payment_sent_finance", lang)}</p>
