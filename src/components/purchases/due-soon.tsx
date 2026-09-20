@@ -26,7 +26,11 @@ export async function DueSoon({ lang, compact = false }: { lang: Lang; compact?:
     .order("due_date")
     .limit(compact ? 6 : 60);
 
-  const rows = data ?? [];
+  // Sirf wahi purchases dikhayein jahan supplier ka actual outstanding > 0
+  // ho. Agar supplier_payable 0 ya usse kam hai to bill ki due date guzar
+  // jaane ke bawajood koi raqam waqi baqi nahi -- overdue count ghalat
+  // alarm deta hai.
+  const rows = (data ?? []).filter((r) => Number(r.supplier_payable ?? 0) > 0);
   const overdue = rows.filter((r) => Number(r.days_left ?? 0) < 0);
   const soonTotal = rows.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
 
