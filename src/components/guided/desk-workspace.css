@@ -116,6 +116,8 @@
   .desk-load .load-form > div { min-width:0; }
   .desk-load .load-form > .load-form-wide { grid-column:1 / -1; }
   .desk-load .load-form > button { align-self:end; min-height:36px; grid-column:1 / -1; background:#087a42; }
+  .desk-load .load-form-entry > .load-form-total { grid-column:span 2; }
+  .desk-load .load-form-entry > .load-form-submit { grid-column:3; align-self:stretch; width:100%; min-height:36px; padding:5px 8px; font-size:11px; line-height:1.2; white-space:normal; }
   .desk-load .load-form input,.desk-load .load-form select { min-height:31px; padding:5px 9px; font-size:12px; }
   .desk-load .load-form label { font-size:11px; }
   .desk-load .load-form p { font-size:10px; line-height:1.3; }
