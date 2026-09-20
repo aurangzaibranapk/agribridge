@@ -7,7 +7,7 @@ import { ShopOverviewClient } from "./shop-overview-client";
 type DeskTask = { key: string; label: string; count: number | null; href: string; tone: "red" | "amber" | "blue" | "gray"; area: string };
 
 /** Caller supplies only the authenticated profile's assigned shop. */
-export async function ShopOverview({ shopId, branchId, userId, links, attentionItems }: { shopId: string; branchId: string | null; userId: string; links: { href: string; label: string }[]; attentionItems: DeskTask[] }) {
+export async function ShopOverview({ shopId, branchId, userId, attentionItems }: { shopId: string; branchId: string | null; userId: string; attentionItems: DeskTask[] }) {
   const today = aajKaKhana();
   const todayDate = new Date(`${today}T12:00:00Z`);
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -68,7 +68,7 @@ export async function ShopOverview({ shopId, branchId, userId, links, attentionI
     // Do not silently fold other shops' activity into this shop dashboard.
     const orderApproval = attentionItems.find(item => item.key === "shop_orders_approval");
     const approvals = orderApproval ? [{ label: "Order approvals", count: orderApproval.count, href: orderApproval.href }] : [];
-    return <ShopOverviewClient methods={methods} trend={trend} stock={stock.stockValueFifo} credit={credit} cash={cash} digital={digital} received={nonCredit.reduce((s,r)=>s+r.sales,0)} links={links} branchAvailable={Boolean(branchId)} customerHealth={{ total: customers.error ? null : customers.count ?? 0, withBalance: null, newThisWeek: newCustomers.error ? null : newCustomers.count ?? 0 }} farmers={farmersResult.error ? null : farmersResult.data || []} approvals={approvals} orders={orderCounts} tasks={attentionItems.map(item => ({ key: item.key, label: item.label, count: item.count, tone: item.tone, href: item.href }))} userId={userId}/>;
+    return <ShopOverviewClient methods={methods} trend={trend} stock={stock.stockValueFifo} credit={credit} cash={cash} digital={digital} received={nonCredit.reduce((s,r)=>s+r.sales,0)} branchAvailable={Boolean(branchId)} customerHealth={{ total: customers.error ? null : customers.count ?? 0, withBalance: null, newThisWeek: newCustomers.error ? null : newCustomers.count ?? 0 }} farmers={farmersResult.error ? null : farmersResult.data || []} approvals={approvals} orders={orderCounts} tasks={attentionItems.map(item => ({ key: item.key, label: item.label, count: item.count, tone: item.tone, href: item.href }))} userId={userId}/>;
   } catch {
     return <div className="desk-card"><p>Shop ka financial data load nahi hua. Refresh karein; missing amounts ko zero nahi dikhaya gaya.</p><Link href="/admin/kharche" className="text-brand-700">Paisa & Khata kholein</Link></div>;
   }
