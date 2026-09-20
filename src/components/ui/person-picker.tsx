@@ -143,12 +143,14 @@ export function NameSuggest({
   people,
   placeholder,
   defaultValue = "",
+  onChange,
 }: {
   id?: string;
   name: string;
   people: PersonOption[];
   placeholder?: string;
   defaultValue?: string;
+  onChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -168,6 +170,7 @@ export function NameSuggest({
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
+          onChange?.(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
@@ -184,6 +187,7 @@ export function NameSuggest({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   setValue(p.name);
+                  onChange?.(p.name);
                   setOpen(false);
                 }}
                 className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left hover:bg-surface-50 dark:hover:bg-surface-800"
