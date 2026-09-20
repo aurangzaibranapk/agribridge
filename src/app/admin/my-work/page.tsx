@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
@@ -158,32 +158,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     ...(fourthKpi ? [fourthKpi] : []),
   ];
 
-  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
-  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
-  // chuna hua raasta.
+  // Desk shortcuts sirf maujooda access permissions se filter hote hain.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
-  type QuickAction = { href: string; label: string; icon: string };
-
-  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
-  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
-  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
-  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
-  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
-  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
-  const sidebarHrefs = nav.unrestricted
-    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
-    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
-
-  const quickActions: QuickAction[] = [
-    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
-    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
-    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
-    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
-    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
-  ]
-    .filter((x): x is QuickAction => x !== null)
-    .filter((qa) => !sidebarHrefs.has(qa.href));
-
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
     timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
@@ -356,28 +332,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
-            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
-              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
-            </h2>
-            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
-              {quickActions.map((qa) => {
-                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
-                return (
-                  <Link
-                    key={qa.href}
-                    href={qa.href}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                      <QaIcon className="h-[18px] w-[18px]" />
-                    </span>
-                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
