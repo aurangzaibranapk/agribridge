@@ -207,7 +207,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   ].filter(link => canRoute(link.href));
 
   // Shop staff can have a shop assignment and desk access without having
-  // the POS route itself (for example Load & Bill + Paisa & Khata).
+  // the POS route itself (for example Load & Bill + Paisa & Khata only).
   // Requiring /admin/pos here sent those users to the legacy dashboard and
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
