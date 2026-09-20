@@ -171,7 +171,7 @@ function andazaNetwork(mobile: string): string | null {
 function Submit({ label, compact = false }: { label: string; compact?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className={compact ? "load-form-submit" : "w-full"}>
+    <Button type="submit" disabled={pending} className={compact ? "w-full load-form-submit" : "w-full"}>
       {pending ? "Darj ho raha hai…" : label}
     </Button>
   );
@@ -504,7 +504,7 @@ export function LoadBillClient({
               onAccountChange={(account) => { setLedgerAccount(account); setLastSavedTab(null); }}
             />
           ) : (
-          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className="load-form load-form-entry space-y-3">
+          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className={`load-form load-form-entry ${kind === "bill" ? "load-form-bill" : ""} space-y-3`}>
             <input type="hidden" name="kind" value={kind} />
 
             <div>
@@ -743,22 +743,6 @@ export function LoadBillClient({
               </p>
             </div>
 
-            {kind === "bill" && (
-              <label className="flex items-start gap-2 rounded-lg border border-surface-200 p-3 dark:border-surface-800">
-                <input
-                  type="checkbox"
-                  name="float_settled"
-                  checked={settled}
-                  onChange={(e) => { setSettled(e.target.checked); setLastSavedTab(null); }}
-                  className="mt-0.5"
-                />
-                <span className="text-xs leading-relaxed text-surface-600 dark:text-surface-300">
-                  <b>Bill provider tak pahunch gaya.</b> Nishan hata dein agar paisa abhi hamare paas hai
-                  (provider band tha, raat ko jama hoga) — tab wo paisa hamara nahi, customer ka bojh hai.
-                </span>
-              </label>
-            )}
-
             <div className="load-form-total rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
               <div className="flex justify-between">
                 <span className="text-surface-500">Customer dega</span>
@@ -771,6 +755,20 @@ export function LoadBillClient({
                 <span className="tabular-nums text-surface-500">{charge ? rs(charge) : "—"}</span>
               </div>
             </div>
+
+            {kind === "bill" && (
+              <label className="load-form-bill-settled flex items-center gap-2 rounded-lg border border-surface-200 p-2 dark:border-surface-800">
+                <input
+                  type="checkbox"
+                  name="float_settled"
+                  checked={settled}
+                  onChange={(e) => { setSettled(e.target.checked); setLastSavedTab(null); }}
+                />
+                <span>
+                  <b>Bill provider ko jama ho gaya.</b> Agar payment abhi hamare paas hai, nishan hata dein — raqam customer ki zimmedari rahegi.
+                </span>
+              </label>
+            )}
 
             <Submit compact label={kind === "load" ? "Load ho gaya — darj karein" : "Bill jama hua — darj karein"} />
           </form>
