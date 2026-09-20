@@ -1,5 +1,6 @@
 "use client";
 
+import { Pager } from "@/components/guided/desk-workspace";
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
@@ -243,15 +244,20 @@ export function LoadBillClient({
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
 
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [transactionPage, setTransactionPage] = useState(0);
+  const visiblePage = Math.min(transactionPage, Math.max(0, Math.ceil(today.length / 6) - 1));
+
   const paighaam =
     state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
   const khushKhabri =
     state.notice ?? tidState.notice ?? settleState.notice ?? revState.notice ?? commState.notice ?? loanState.notice ?? wapsiState.notice;
 
   return (
-    <div className="space-y-4">
+    <div className="load-body">
+      <div className="flex shrink-0 items-center justify-between"><span className="text-xs text-surface-500">Load / Bill / Udhaar / Recovery</span><button type="button" onClick={() => setShowTransactions(!showTransactions)} className="rounded-lg border px-3 py-2 text-sm">{showTransactions ? "Wapas — New Entry" : `Today’s Transactions (${today.length})`}</button></div>
       {/* -------- Float ke khane -------- */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {accounts.map((a) => (
           <Card key={a.id} className="py-3">
             <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
@@ -287,9 +293,9 @@ export function LoadBillClient({
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div hidden={showTransactions} className={showTransactions ? "hidden" : "load-entry-grid grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]"}>
         {/* -------- Form -------- */}
-        <Card>
+        <Card className="load-entry-card">
           <div className="mb-4 grid gap-2 grid-cols-2 lg:grid-cols-4">
             {(
               [
@@ -327,7 +333,7 @@ export function LoadBillClient({
               wapsiAction={wapsiAction}
             />
           ) : (
-          <form action={action} className="space-y-3">
+          <form action={action} className="load-form space-y-3">
             <input type="hidden" name="kind" value={kind} />
 
             <div>
@@ -641,8 +647,8 @@ export function LoadBillClient({
         </div>
       </div>
 
-      {/* -------- Aaj ki qatarein -------- */}
-      <Card className="p-0">
+      {/* Transactions occupy the workspace, never push the entry screen down. */}
+      {showTransactions && <Card className="min-h-0 overflow-auto p-0">
         <p className="border-b border-surface-100 px-5 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
           Aaj ki qatarein
         </p>
@@ -665,7 +671,7 @@ export function LoadBillClient({
                 </tr>
               </thead>
               <tbody>
-                {today.map((t) => (
+                {today.slice(visiblePage * 6, (visiblePage + 1) * 6).map((t) => (
                   <tr key={t.id} className="border-t border-surface-100 dark:border-surface-800">
                     <td className="px-4 py-2 text-xs tabular-nums text-surface-500">
                       {new Date(t.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
@@ -788,7 +794,8 @@ export function LoadBillClient({
             </table>
           </div>
         )}
-      </Card>
+        <Pager page={visiblePage} count={today.length} size={6} onChange={setTransactionPage} />
+      </Card>}
     </div>
   );
 }
@@ -829,7 +836,7 @@ function UdhaarForm({
   const diya = kaam === "diya";
 
   return (
-    <form action={diya ? loanAction : wapsiAction} className="space-y-3">
+    <form action={diya ? loanAction : wapsiAction} className="load-form space-y-3">
       <div>
         <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
         <PersonPicker

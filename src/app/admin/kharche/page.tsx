@@ -1,3 +1,7 @@
+import { DeskWorkspace, DeskTabs } from "@/components/guided/desk-workspace";
+import { CustomerKhata } from "@/components/desk/customer-khata";
+import { loadCustomerKhata } from "@/lib/desk/customer-khata";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -205,8 +209,10 @@ export default async function KharchePage({
     : [null, null];
   const shopName = shopRow && "data" in shopRow ? (shopRow.data?.name as string | undefined) ?? null : null;
 
+  const customerKhata = await loadCustomerKhata();
+
   return (
-    <div>
+    <DeskWorkspace>
       <PageHeader
         title={t("kh_page_title", lang)}
         description={t("kh_page_desc", lang)}
@@ -226,7 +232,8 @@ export default async function KharchePage({
         />
       </div>
 
-      {shopScoped && (
+      <DeskTabs items={[
+        { id: "accounts", label: "Accounts", content: (<> {shopScoped ? (
         <Card className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
             <Wallet className="h-3.5 w-3.5" /> {shopName ?? t("kh_meri_dukan", lang)} {t("kh_shop_hisaab_suffix", lang)}
@@ -267,7 +274,7 @@ export default async function KharchePage({
                     <th className="pb-1.5 pr-4">{t("kh_payment_method_col", lang)}</th>
                     <th className="pb-1.5 pr-4 text-right">{t("kh_sale_col", lang)}</th>
                     <th className="pb-1.5 pr-4 text-right">{t("kh_kharcha_adaigi_col", lang)}</th>
-                    <th className="pb-1.5 text-right">{t("kh_bacha_col", lang)}</th>
+                    <th className="pb-1.5 text-right">Period movement / Khata due</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -282,7 +289,7 @@ export default async function KharchePage({
                         Rs {r.expenseNet.toLocaleString()}
                       </td>
                       <td className="py-1.5 text-right tabular-nums font-semibold text-surface-900 dark:text-surface-100">
-                        Rs {r.net.toLocaleString()}
+                        {r.method === "khata" ? "Receivable: " : ""}Rs {r.net.toLocaleString()}
                       </td>
                     </tr>
                   ))}
@@ -294,12 +301,12 @@ export default async function KharchePage({
           )}
 
           <p className="mt-2 text-[11px] leading-snug text-surface-400">
-            {t("kh_shop_footer_prefix", lang)} {shopName ?? t("kh_isi_dukan", lang)} {t("kh_shop_footer_suffix", lang)}
+            Period movement is not the current available account balance. Khata is customer receivable. {t("kh_shop_footer_prefix", lang)} {shopName ?? t("kh_isi_dukan", lang)} {t("kh_shop_footer_suffix", lang)}
           </p>
         </Card>
-      )}
-
-      <KharcheClient
+      ) : <Card><p className="text-sm">Account balances Expenses & Payments tab mein hain.</p></Card>} </>) },
+        { id: "customers", label: "Customer Khata", content: <CustomerKhata data={customerKhata} today={aajKaKhana()} /> },
+        { id: "entries", label: "Expenses & Payments", content: (<KharcheClient
         rows={rows}
         mazdooriRows={mazdooriRows}
         showCompanyBalances={!shopScoped}
@@ -330,7 +337,8 @@ export default async function KharchePage({
         darjKarSakta={darjKarSakta}
         manzoorKarSakta={manzoorKarSakta}
         taseeqKarSakta={taseeqKarSakta}
-      />
-    </div>
+      />) },
+      ]} />
+    </DeskWorkspace>
   );
 }

@@ -59,24 +59,26 @@ const METHOD_LABEL: Record<string, string> = Object.fromEntries(
 export async function shopPaymentMethodBreakdown(
   shopId: string,
   fromDate: string,
-  toDate: string
+  toDate: string,
+  options: { strict?: boolean } = {}
 ): Promise<ShopPaymentMethodRow[]> {
   const service = createServiceClient();
   const fromTs = `${fromDate}T00:00:00`;
   const toTs = `${toDate}T23:59:59.999`;
 
-  const { data: sales } = await service
+  const { data: sales, error: salesError } = await service
     .from("pos_sales")
     .select("id")
     .eq("shop_id", shopId)
     .gte("created_at", fromTs)
     .lte("created_at", toTs);
+  if (options.strict && salesError) throw new Error("Shop sales could not be loaded.");
   const saleIds = (sales ?? []).map((s) => s.id as string);
 
-  const [{ data: payments }, { data: expenses }, { data: mapRows }] = await Promise.all([
+  const [paymentResult, expenseResult, mapResult] = await Promise.all([
     saleIds.length > 0
       ? service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
-      : Promise.resolve({ data: [] as { payment_method: string; amount: number }[] }),
+      : Promise.resolve({ data: [] as { payment_method: string; amount: number }[], error: null }),
     service
       .from("company_expense_requests")
       .select("kind, amount, paid_from_account_id")
@@ -86,6 +88,12 @@ export async function shopPaymentMethodBreakdown(
       .lte("expense_date", toDate),
     service.from("payment_method_account_map").select("payment_method, finance_account_id"),
   ]);
+  if (options.strict && (paymentResult.error || expenseResult.error || mapResult.error)) {
+    throw new Error("Shop payment breakdown is incomplete.");
+  }
+  const { data: payments } = paymentResult;
+  const { data: expenses } = expenseResult;
+  const { data: mapRows } = mapResult;
 
   const accountToMethod = new Map<string, string>();
   for (const m of (mapRows ?? []) as { payment_method: string; finance_account_id: string | null }[]) {
