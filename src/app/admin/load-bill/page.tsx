@@ -62,8 +62,11 @@ export default async function LoadBillPage({
 
   const service = createServiceClient();
   const aaj = aajKaKhana();
+  const branchPromise = me.branch_id
+    ? service.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
+    : Promise.resolve({ data: null, error: null });
 
-  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }] =
+  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }, { data: branch }] =
     await Promise.all([
       service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
       service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true)
@@ -79,6 +82,7 @@ export default async function LoadBillPage({
       // hain taake picker un se bhi dhoond sake — sirf naam se dhoondna
       // sainkron kisanon mein kaam nahi karta.
       service.from("farmers").select("id, full_name, farmer_code, phone_number, cnic, credit_limit").eq("is_deleted", false).order("full_name"),
+      branchPromise,
     ]);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
@@ -100,7 +104,7 @@ export default async function LoadBillPage({
   const loadTransactionsQuery = service
     .from("load_transactions")
     .select(
-      "id, txn_number, kind, reference, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
+      "id, txn_number, kind, reference, bill_category, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
     )
     .gte("created_at", `${aaj}T00:00:00`)
     .order("created_at", { ascending: false })
@@ -135,13 +139,17 @@ export default async function LoadBillPage({
   const reversedLedgerIds = new Set(ledgerRows.map((row) => row.reversal_of as string | null).filter((id): id is string => Boolean(id)));
   const ledgerToday = ledgerRows
     .filter((row) => !row.is_reversal && !reversedLedgerIds.has(row.id as string))
-    .map((row) => ({
-      id: row.id as string,
-      description: row.description as string,
-      amount: debitByEntry.get(row.id as string) ?? 0,
-      createdAt: row.created_at as string,
-      kind: (String(row.description).startsWith("Udhaar ki wapsi") ? "recovery" : "udhaar") as "recovery" | "udhaar",
-    }));
+    .map((row) => {
+      const description = String(row.description ?? "");
+      const isRecovery = /^(Udhaar ki wapsi|Udhaar wapas aaya)/i.test(description);
+      return {
+        id: row.id as string,
+        description,
+        amount: debitByEntry.get(row.id as string) ?? 0,
+        createdAt: row.created_at as string,
+        kind: (isRecovery ? "recovery" : "udhaar") as "recovery" | "udhaar",
+      };
+    });
   const recoveryToday = ledgerResult.error || ledgerLines.error || !me.branch_id
     ? null
     : ledgerToday.filter((row) => row.kind === "recovery").reduce((sum, row) => sum + row.amount, 0);
@@ -155,8 +163,8 @@ export default async function LoadBillPage({
   return (
     <DeskWorkspace className="desk-load">
       <PageHeader
-        title="Load & Bill"
-        description="Mobile load aur customer ke bill — float ke hisaab ke sath"
+        title="Staff Sales Desk"
+        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -233,6 +241,7 @@ export default async function LoadBillPage({
             number: t.txn_number as string,
             kind: t.kind as string,
             reference: t.reference as string,
+            billCategory: (t.bill_category as string | null) ?? null,
             principal: Number(t.principal),
             serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
             commissionExpected: t.commission_expected === null ? null : Number(t.commission_expected),
