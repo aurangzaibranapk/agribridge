@@ -35,7 +35,13 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   const carrierId = (formData.get("carrier_profile_id") as string) || null;
   const toBranchId = (formData.get("to_branch_id") as string) || null;
   const amount = Number(formData.get("amount") ?? 0);
-  const note = (formData.get("sent_note") as string)?.trim() || null;
+  const rawNote = (formData.get("sent_note") as string)?.trim() || null;
+  const METHOD_LABEL: Record<string, string> = {
+    cash: "Cash (Haath se)", jazzcash: "JazzCash", easypaisa: "Easypaisa", bank_transfer: "Bank Transfer",
+  };
+  const transferMethod = (formData.get("transfer_method") as string) || "cash";
+  const methodLabel = METHOD_LABEL[transferMethod] ?? transferMethod;
+  const note = rawNote ? `${methodLabel} — ${rawNote}` : methodLabel;
 
   // Cash do jagah se ja sakta hai, aur wo do bilkul alag cheezein hain:
   //

@@ -152,6 +152,25 @@ export function ShiftCashHandoverForm({
                 </option>
               ))}
             </select>
+            <p className="text-xs font-medium text-surface-600 dark:text-surface-400">Kis tareeqe se bheja?</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { value: "cash", label: "Cash (Haath se)" },
+                { value: "jazzcash", label: "JazzCash" },
+                { value: "easypaisa", label: "Easypaisa" },
+                { value: "bank_transfer", label: "Bank Transfer" },
+              ].map((m) => (
+                <label key={m.value} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-200 px-2 py-1.5 text-xs has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:border-surface-700 dark:has-[:checked]:border-brand-600 dark:has-[:checked]:bg-brand-950/30">
+                  <input type="radio" name="transfer_method" value={m.value} defaultChecked={m.value === "cash"} className="accent-brand-600" />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+            <input
+              name="sent_note"
+              placeholder="Note (agar ho)"
+              className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+            />
             {handoverState.error && (
               <p className="flex items-start gap-1.5 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.error}
