@@ -259,7 +259,7 @@
     min-height:0;
     flex:1 1 0;
     display:grid;
-    grid-template-rows:minmax(170px,24vh) 48px minmax(0,1fr) 28px;
+    grid-template-rows:minmax(170px,24vh) 58px minmax(0,1fr) 28px;
     gap:8px;
     overflow:hidden;
   }
@@ -308,14 +308,14 @@
   .staff-desk-quick > div > a:hover { border-color:#96c9a5; background:#f0f8f2; }
   .staff-desk-quick > div > a > span { width:24px; height:24px; flex:0 0 24px; display:grid; place-items:center; border-radius:7px; background:#e5f3e9; }
   .staff-desk-quick svg { width:13px; height:13px; color:#147346; }
-  .staff-desk-method-strip { min-height:0; display:flex; align-items:center; gap:12px; overflow:hidden; padding:5px 10px; }
+  .staff-desk-method-strip { min-height:0; display:flex; align-items:center; gap:12px; overflow:hidden; padding:7px 10px; }
   .staff-desk-tabs { flex:0 0 auto; display:flex; align-items:center; gap:4px; }
-  .staff-desk-tabs button { min-height:31px; border:0; border-bottom:2px solid transparent; background:transparent; padding:4px 9px; color:#47584e; font-size:11px; white-space:nowrap; }
+  .staff-desk-tabs button { min-height:34px; border:0; border-bottom:2px solid transparent; background:transparent; padding:4px 9px; color:#47584e; font-size:11px; white-space:nowrap; }
   .staff-desk-tabs button[aria-selected="true"] { border-bottom-color:#13834e; color:#126239; font-weight:650; }
-  .staff-desk-donut { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; border-radius:50%; }
-  .staff-desk-donut span { width:15px; height:15px; border:2px solid white; border-radius:50%; background:#fff; }
+  .staff-desk-donut { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border-radius:50%; }
+  .staff-desk-donut span { width:17px; height:17px; border:2px solid white; border-radius:50%; background:#fff; }
   .staff-desk-methods { min-width:0; flex:1; display:grid; grid-template-columns:repeat(8,minmax(68px,1fr)); align-items:center; gap:8px; overflow-x:auto; }
-  .staff-desk-methods > div { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:5px; row-gap:3px; }
+  .staff-desk-methods > div { min-width:0; min-height:38px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:5px; row-gap:3px; }
   .staff-desk-method-name { min-width:0; display:flex; align-items:center; gap:4px; overflow:hidden; color:#405047; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
   .staff-desk-method-name i { width:7px; height:7px; flex:0 0 7px; border-radius:50%; }
   .staff-desk-method-track { height:5px; grid-column:1; overflow:hidden; border-radius:999px; background:#edf1ee; }
@@ -364,13 +364,13 @@
   .desk-workspace.desk-my-work { gap:5px; }
   .staff-desk-header { min-height:40px; flex-basis:40px; }
   .staff-desk-header h1 { font-size:19px; }
-  .staff-desk-screen { grid-template-rows:minmax(150px,22vh) 42px minmax(0,1fr) 24px; gap:6px; }
+  .staff-desk-screen { grid-template-rows:minmax(150px,22vh) 52px minmax(0,1fr) 24px; gap:6px; }
   .staff-desk-top-grid { gap:6px; }
   .staff-desk-top-grid > .desk-card { padding:8px 9px; }
   .staff-desk-top-grid h2 { margin-bottom:6px; font-size:12px; }
   .staff-desk-ledger-total strong { font-size:23px; }
-  .staff-desk-method-strip { gap:8px; padding:3px 8px; }
-  .staff-desk-tabs button { min-height:28px; padding:3px 7px; }
+  .staff-desk-method-strip { gap:8px; padding:5px 8px; }
+  .staff-desk-tabs button { min-height:31px; padding:3px 7px; }
   .staff-desk-bottom { gap:6px; }
   .staff-desk-bottom > .desk-card { padding:8px 9px; }
   .staff-desk-farmer { min-height:34px; }
