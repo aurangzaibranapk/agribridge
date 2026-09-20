@@ -15,6 +15,7 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
   const warehouseId = String(formData.get("warehouse_id") ?? "").trim();
   const direction = String(formData.get("direction") ?? "");
   const quantity = Number(formData.get("quantity") ?? 0);
+  const rate = Number(formData.get("rate") ?? 0) || null;
   const billNo = String(formData.get("bill_no") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
@@ -71,6 +72,22 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
   });
 
   if (error) return { error: error.message };
+
+  // Stock IN par batch bhi banta hai — is se Stock Value ka FIFO hisaab sahi hota hai
+  if (direction === "increase" && rate && rate > 0) {
+    const { data: invRow } = await supabase.from("inventory").select("product_id, warehouse_id").eq("id", inventoryId).single();
+    if (invRow?.product_id && invRow?.warehouse_id) {
+      const batchNum = `ADJ-${new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14)}`;
+      await supabase.from("stock_batches").insert({
+        product_id: invRow.product_id,
+        warehouse_id: invRow.warehouse_id,
+        unit_cost: rate,
+        initial_quantity: quantity,
+        remaining_quantity: quantity,
+        batch_number: batchNum,
+      });
+    }
+  }
 
   revalidatePath("/admin/inventory");
   if (productId) revalidatePath(`/admin/inventory/product/${productId}`);
