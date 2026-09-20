@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { Lightbulb, Users, ExternalLink, Save, MessageSquare } from "lucide-react";
+import { Lightbulb, Users, ExternalLink, Save, MessageSquare, ClipboardCopy, CheckCheck } from "lucide-react";
 import { submitSuggestionForm, updateSuggestionStatus, addSuggestionComment, type SuggestionState } from "@/actions/suggestions";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -80,6 +80,7 @@ export function CenterClient({
   const [stState, stAction] = useFormState(updateSuggestionStatus, initial);
   const [cmState, cmAction] = useFormState(addSuggestionComment, initial);
   const [status, setStatus] = useState("under_review");
+  const [devMsgCopied, setDevMsgCopied] = useState(false);
 
   const counts: Record<string, number> = {};
   for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
@@ -289,6 +290,36 @@ export function CenterClient({
                     <Submit label={t("sg_save_status", lang)} icon={<Save className="h-4 w-4" />} />
                   </div>
                 </form>
+
+                <div className="mt-3 border-t border-surface-100 pt-3">
+                  <p className="mb-1.5 text-xs text-surface-500">Developer ko update bhejna ho to ye message copy karein:</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const lastAdminNote = [...comments].reverse().find((c) => c.kind !== "comment")?.body ?? "";
+                      const lines = [
+                        `=== DEVELOPER UPDATE (AgriBridge Improvements) ===`,
+                        `Suggestion: ${sel.number} — ${sel.title}`,
+                        `Status: ${sel.status.toUpperCase()}`,
+                        `Submitter: ${sel.submittedBy}${sel.department ? ` (${sel.department})` : ""} — ${new Date(sel.createdAt).toLocaleDateString("en-GB")}`,
+                        sel.problem ? `Masla: ${sel.problem}` : "",
+                        lastAdminNote ? `Admin Note: ${lastAdminNote}` : "",
+                        sel.status === "implemented" && sel.implementedVersion ? `Version: ${sel.implementedVersion}` : "",
+                        ``,
+                        `Kya ye suggestion ab resolve ho gayi hai? Confirm karein.`,
+                        `=================================================`,
+                      ].filter(Boolean).join("\n");
+                      navigator.clipboard.writeText(lines).then(() => {
+                        setDevMsgCopied(true);
+                        setTimeout(() => setDevMsgCopied(false), 3000);
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
+                  >
+                    {devMsgCopied ? <CheckCheck className="h-3.5 w-3.5 text-emerald-600" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
+                    {devMsgCopied ? "Copy ho gayi — paste karein chat mein" : "Developer ko Batayein (Copy)"}
+                  </button>
+                </div>
               </Card>
             )}
 
