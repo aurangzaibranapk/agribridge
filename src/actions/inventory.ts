@@ -10,15 +10,38 @@ export interface ActionState {
 export async function adjustStock(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
 
-  const inventoryId = String(formData.get("inventory_id") ?? "");
+  let inventoryId = String(formData.get("inventory_id") ?? "").trim();
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const warehouseId = String(formData.get("warehouse_id") ?? "").trim();
   const direction = String(formData.get("direction") ?? "");
   const quantity = Number(formData.get("quantity") ?? 0);
-  const reason = String(formData.get("reason") ?? "").trim();
+  const billNo = String(formData.get("bill_no") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
 
-  if (!inventoryId) return { error: "Missing inventory row." };
-  if (!quantity || quantity <= 0) return { error: "Quantity must be greater than zero." };
-  if (direction !== "increase" && direction !== "decrease") return { error: "Invalid direction." };
-  if (!reason) return { error: "Please give a reason for this adjustment." };
+  if (!quantity || quantity <= 0) return { error: "Miqdar sifar se zyada honi chahiye." };
+  if (direction !== "increase" && direction !== "decrease") return { error: "Direction ghalat hai." };
+
+  // Agar inventory_id nahi, product+warehouse se dhoondhein ya banayein
+  if (!inventoryId) {
+    if (!productId || !warehouseId) return { error: "Product aur Godam zaroori hain." };
+    const { data: existing } = await supabase
+      .from("inventory")
+      .select("id")
+      .eq("product_id", productId)
+      .eq("warehouse_id", warehouseId)
+      .maybeSingle();
+    if (existing) {
+      inventoryId = existing.id;
+    } else {
+      const { data: newRow, error: createErr } = await supabase
+        .from("inventory")
+        .insert({ product_id: productId, warehouse_id: warehouseId })
+        .select("id")
+        .single();
+      if (createErr) return { error: createErr.message };
+      inventoryId = newRow.id;
+    }
+  }
 
   const { data: inv } = await supabase
     .from("inventory")
@@ -26,28 +49,31 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     .eq("id", inventoryId)
     .single();
 
-  if (!inv) return { error: "Inventory row not found." };
+  if (!inv) return { error: "Inventory row nahi mila." };
 
   if (direction === "decrease" && Number(inv.quantity_on_hand) < quantity) {
-    return { error: "Cannot decrease below zero stock." };
+    return { error: `Itna stock nahi — abhi sirf ${inv.quantity_on_hand} hai.` };
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const notesText = [billNo ? `Bill: ${billNo}` : null, notes].filter(Boolean).join(" | ") || null;
+
   const { error } = await supabase.from("stock_movements").insert({
     inventory_id: inventoryId,
     movement_type: direction === "increase" ? "adjustment_increase" : "adjustment_decrease",
     quantity,
     reference_type: "manual_adjustment",
-    notes: reason,
+    notes: notesText,
     created_by: user?.id ?? null,
   });
 
   if (error) return { error: error.message };
 
   revalidatePath("/admin/inventory");
+  if (productId) revalidatePath(`/admin/inventory/product/${productId}`);
   return { success: true };
 }
 
