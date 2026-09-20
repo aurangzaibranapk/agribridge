@@ -111,22 +111,37 @@
   .desk-load .load-mode { min-height:42px; padding:5px 9px; }
   .desk-load .load-mode[aria-selected="true"] { border-color:#087a42; background:#087a42; color:#fff; box-shadow:0 2px 5px #087a4230; }
   .desk-load .load-mode[aria-selected="true"] svg { color:#fff; }
-  .desk-load .load-form { display:grid; min-height:0; grid-template-columns:repeat(3,minmax(0,1fr)); align-content:start; gap:5px 10px; }
+  .desk-load .load-form { display:grid; min-height:0; flex:1 1 auto; grid-template-columns:repeat(3,minmax(0,1fr)); align-content:stretch; gap:5px 10px; }
   .desk-load .load-form > * { margin-top:0!important; min-width:0; }
   .desk-load .load-form > div { min-width:0; }
-  .desk-load .load-form > .load-form-wide { grid-column:1 / -1; }
-  .desk-load .load-form > button { align-self:end; min-height:36px; grid-column:1 / -1; background:#087a42; }
-  .desk-load .load-form-entry > .load-form-total { grid-column:span 2; }
-  .desk-load .load-form-bill > .load-form-total { grid-column:1; display:grid; align-content:center; gap:2px; }
-  .desk-load .load-form-bill > .load-form-bill-settled { grid-column:2; align-self:stretch; display:flex; align-items:center; gap:6px; min-width:0; padding:5px 8px; font-size:10px; line-height:1.2; }
+  .desk-load .load-form-entry { grid-template-areas:"account customer reference" "network amount payment" "charge customer-name customer-name" "evidence evidence evidence" "total total submit"; grid-template-rows:auto auto auto auto minmax(38px,1fr); }
+  .desk-load .load-form-bill { grid-template-areas:"account customer reference" "provider category amount" "payment charge customer-name" "evidence evidence evidence" "total settled submit"; }
+  .desk-load .load-form-party { grid-template-areas:"amount customer account" "date note note" "context context submit"; grid-template-rows:auto auto minmax(38px,1fr); }
+  .desk-load .load-field-account { grid-area:account; }
+  .desk-load .load-field-customer { grid-area:customer; }
+  .desk-load .load-field-reference { grid-area:reference; }
+  .desk-load .load-field-network { grid-area:network; }
+  .desk-load .load-field-provider { grid-area:provider; }
+  .desk-load .load-field-category { grid-area:category; }
+  .desk-load .load-field-amount { grid-area:amount; }
+  .desk-load .load-field-payment { grid-area:payment; }
+  .desk-load .load-field-charge { grid-area:charge; }
+  .desk-load .load-field-customer-name { grid-area:customer-name; }
+  .desk-load .load-field-date { grid-area:date; }
+  .desk-load .load-form-evidence { grid-area:evidence; }
+  .desk-load .load-form-note { grid-area:note; }
+  .desk-load .load-form-context { grid-area:context; align-self:end; }
+  .desk-load .load-form-entry > .load-form-total { grid-area:total; align-self:end; }
+  .desk-load .load-form-bill > .load-form-total { display:grid; align-content:center; gap:2px; }
+  .desk-load .load-form-bill > .load-form-bill-settled { grid-area:settled; align-self:stretch; display:flex; align-items:center; gap:6px; min-width:0; padding:5px 8px; font-size:10px; line-height:1.2; }
   .desk-load .load-form-bill-settled input { width:14px; min-width:14px; min-height:14px; flex:0 0 14px; margin:0; padding:0; }
   .desk-load .load-form-bill-settled span { min-width:0; font-size:10px; line-height:1.2; }
-  .desk-load .load-form-entry > .load-form-submit { grid-column:3; align-self:stretch; width:100%; min-height:36px; padding:5px 8px; font-size:11px; line-height:1.2; white-space:normal; }
+  .desk-load .load-form-entry > .load-form-submit,.desk-load .load-form-party > .load-form-submit { grid-area:submit; align-self:end; width:100%; min-height:36px; padding:5px 8px; font-size:11px; line-height:1.2; white-space:normal; }
   .desk-load .load-form input,.desk-load .load-form select { min-height:31px; padding:5px 9px; font-size:12px; }
   .desk-load .load-form label { font-size:11px; }
   .desk-load .load-form p { font-size:10px; line-height:1.3; }
   .desk-load .load-form > input[type=hidden] { display:none; }
-  .desk-load .load-form > label { grid-column:1 / -1; padding:6px 8px; }
+  .desk-load .load-form > label { padding:6px 8px; }
   .desk-load .load-form-evidence { display:grid; grid-template-columns:minmax(120px,.7fr) minmax(170px,1fr) minmax(0,2fr); align-items:center; gap:4px 10px; padding:6px 9px!important; }
   .desk-load .load-form-evidence label,.desk-load .load-form-evidence p { margin:0!important; }
   .desk-load .load-form-total { display:flex; align-items:center; gap:18px; padding:5px 10px!important; }

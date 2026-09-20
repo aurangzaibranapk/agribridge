@@ -171,7 +171,7 @@ function andazaNetwork(mobile: string): string | null {
 function Submit({ label, compact = false }: { label: string; compact?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className={compact ? "w-full load-form-submit" : "w-full"}>
+    <Button type="submit" disabled={pending} className={`w-full load-form-submit${compact ? " load-form-submit-compact" : ""}`}>
       {pending ? "Darj ho raha hai…" : label}
     </Button>
   );
@@ -504,10 +504,10 @@ export function LoadBillClient({
               onAccountChange={(account) => { setLedgerAccount(account); setLastSavedTab(null); }}
             />
           ) : (
-          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className={`load-form load-form-entry ${kind === "bill" ? "load-form-bill" : ""} space-y-3`}>
+          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className={`load-form load-form-entry ${kind === "bill" ? "load-form-bill" : "load-form-mobile"} space-y-3`}>
             <input type="hidden" name="kind" value={kind} />
 
-            <div>
+            <div className="load-field-account">
               <Label htmlFor="account_id">Paisa kis account se</Label>
               <Select
                 id="account_id"
@@ -530,7 +530,7 @@ export function LoadBillClient({
                 chunaHua yahin se mobile number aur naam auto-fill karta
                 hai (neeche), aur "khata" method par isi ka party_type/
                 party_id ledger mein jata hai. */}
-            <div>
+            <div className="load-field-customer">
               <Label htmlFor="main_party">Customer (marzi ka — Guest bhi chal jata hai)</Label>
               <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={(person) => { setMainParty(person); setTypedCustomerName(person?.name ?? ""); setLastSavedTab(null); }} />
               {mainParty && (
@@ -544,7 +544,7 @@ export function LoadBillClient({
               </p>
             </div>
 
-            <div>
+            <div className="load-field-reference">
               <Label htmlFor="reference">
                 {kind === "load" ? "Mobile number" : "Consumer / reference number"}
               </Label>
@@ -566,7 +566,7 @@ export function LoadBillClient({
             </div>
 
             {kind === "load" && (
-              <div>
+              <div className="load-field-network">
                 <Label htmlFor="provider_id">Network</Label>
                 <Select
                   id="provider_id"
@@ -590,7 +590,7 @@ export function LoadBillClient({
 
             {kind === "bill" && (
               <>
-                <div>
+                <div className="load-field-provider">
                   <Label htmlFor="provider_id">Kis cheez ka bill</Label>
                   <Select id="provider_id" name="provider_id" required defaultValue="" onChange={() => setLastSavedTab(null)}>
                     <option value="">— chunein —</option>
@@ -601,7 +601,7 @@ export function LoadBillClient({
                     ))}
                   </Select>
                 </div>
-                <div>
+                <div className="load-field-category">
                   <Label htmlFor="bill_category">Bill ki qism</Label>
                   <Select id="bill_category" name="bill_category" value={billCategory} onChange={(event) => { setBillCategory(event.target.value); setLastSavedTab(null); }}>
                     <option value="">— chunein —</option>
@@ -615,7 +615,7 @@ export function LoadBillClient({
               </>
             )}
 
-            <div>
+            <div className="load-field-amount">
               <Label htmlFor="principal">{kind === "load" ? "Load ki raqam" : "Bill ki raqam"}</Label>
               {kind === "load" && (
                 <div className="mb-2 flex flex-wrap gap-1.5">
@@ -652,7 +652,7 @@ export function LoadBillClient({
               )}
             </div>
 
-            <div>
+            <div className="load-field-payment">
               <Label htmlFor="paisa_kahan">Payment kahan aayi</Label>
               {/* EK FEHRIST, ASAL KHATON KE SATH.
                   Pehle yahan sirf qism likhi thi -- "Bank / Card",
@@ -695,7 +695,7 @@ export function LoadBillClient({
               <input type="hidden" name="finance_account_id" value={chunaHuaKhata} />
             </div>
 
-            <div>
+            <div className="load-field-charge">
               <Label htmlFor="service_charge">Customer se extra (service charge)</Label>
               <Input
                 id="service_charge"
@@ -719,7 +719,7 @@ export function LoadBillClient({
                 udhaar ke ledger mein jate hain -- cash par server
                 khud unhein nazarandaz kar deta hai. */}
 
-            <div>
+            <div className="load-field-customer-name">
               <Label htmlFor="customer_name">Customer ka naam (marzi ka)</Label>
               <NameSuggest
                 key={mainParty ? `${mainParty.type}:${mainParty.id}` : "guest"}
@@ -943,8 +943,8 @@ function UdhaarForm({
   const diya = kaam === "diya";
 
   return (
-    <form action={diya ? loanAction : wapsiAction} onSubmit={onSubmit} className="load-form space-y-3">
-      <div>
+    <form action={diya ? loanAction : wapsiAction} onSubmit={onSubmit} className="load-form load-form-party space-y-3">
+      <div className="load-field-customer">
         <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
         <PersonPicker
           people={people}
@@ -962,12 +962,12 @@ function UdhaarForm({
         </p>
       </div>
 
-      <div>
+      <div className="load-field-amount">
         <Label htmlFor="udhaar_rakam">Raqam</Label>
         <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" value={amount} onChange={(event) => onAmountChange(event.target.value)} />
       </div>
 
-      <div>
+      <div className="load-field-account">
         <Label htmlFor="udhaar_khata">{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
         <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(event) => onAccountChange(event.target.value)}>
           <option value="cash">Cash — golak</option>
@@ -979,12 +979,12 @@ function UdhaarForm({
         </Select>
       </div>
 
-      <div>
+      <div className="load-field-date">
         <Label htmlFor="udhaar_tareekh">Kis din</Label>
         <Input id="udhaar_tareekh" name="tareekh" type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
       </div>
 
-      <div className="load-form-wide">
+      <div className="load-form-wide load-form-note">
         <Label htmlFor="udhaar_wajah">Wajah / note (marzi ka)</Label>
         <Input
           id="udhaar_wajah"
@@ -995,7 +995,7 @@ function UdhaarForm({
         />
       </div>
 
-      <div className="load-form-wide rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
+      <div className="load-form-wide load-form-context rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
         {diya ? (
           <>
             Ye <b>bikri nahi</b> hai — koi maal nahi gaya, sirf paisa gaya. Is liye is se nafa nahi banta;
