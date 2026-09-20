@@ -1,38 +1,137 @@
 "use client";
+
 import Link from "next/link";
-import { useState } from "react";
-import { Pager } from "@/components/guided/desk-workspace";
+import { useMemo, useState } from "react";
+import { AlertTriangle, Bell, CheckCircle2, CircleDollarSign, ClipboardList, ShoppingBag, Users, Wallet } from "lucide-react";
+import { ShopNotifications } from "@/components/desk/shop-notifications";
 import type { ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
-const money = (n: number | null) => n == null ? "Unavailable" : `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits:2 })}`;
-type FarmerGlance = { id:string;full_name:string|null;farmer_code:string;phone_number:string|null;milk_liters_per_day:number|null };
-type Approval = {label:string;count:number|null;href:string};
-export function ShopOverviewClient({methods,trend,stock,credit,cash,digital,received,links,branchAvailable,customerHealth,farmers,approvals,orders}: { methods:ShopPaymentMethodRow[];trend:{day:string;sales:number}[];stock:number|null;credit:number;cash:number;digital:number;received:number;links:{href:string;label:string}[];branchAvailable:boolean;customerHealth:{total:number|null;withBalance:number|null;newThisWeek:number|null};farmers:FarmerGlance[]|null;approvals:Approval[];orders:{awaiting:number;processing:number;completed:number}|null }) {
-  const [page,setPage]=useState(0);
-  const maxTrend=Math.max(...trend.map(d=>d.sales),1);
-  const totalMethods=methods.reduce((sum,m)=>sum+m.sales,0);
-  const countText=(n:number|null)=>n===null?"—":n.toLocaleString("en-PK");
-  const dayLabel=(day:string)=>new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",timeZone:"UTC"}).format(new Date(`${day}T12:00:00Z`));
-  return <div className="desk-overview-screen flex min-h-0 flex-col gap-3">
-    <section className="desk-card"><h2 className="mb-2 font-semibold">Quick Actions</h2><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{links.map(l=><Link key={l.href} href={l.href} className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-3 text-center text-sm font-semibold text-brand-800 dark:bg-surface-900">{l.label} →</Link>)}</div></section>
-    <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">{[["Aaj ki POS sale",received+credit],["Cash sale",cash],["Digital sale",digital],["POS Khata sale",credit],["Stock value · FIFO cost",stock]].map(([label,value])=><div key={label} className="desk-card"><p className="text-xs text-surface-500">{label}</p><p className="desk-metric">{money(value as number|null)}</p></div>)}</div>
-    <div className="grid gap-3 lg:grid-cols-3">
-      <section className="desk-card"><h2 className="mb-3 font-semibold">Order Funnel</h2>{orders===null?<p className="text-sm text-surface-500">Order data unavailable</p>:<div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800"><p className="desk-metric">{orders.awaiting}</p><p className="text-xs text-surface-500">Naye / review</p></div><div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800"><p className="desk-metric">{orders.processing}</p><p className="text-xs text-surface-500">Processing</p></div><div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800"><p className="desk-metric">{orders.completed}</p><p className="text-xs text-surface-500">Delivered</p></div></div>}</section>
-      <section className="desk-card"><h2 className="mb-3 font-semibold">Customer Health</h2><div className="grid grid-cols-3 gap-2 text-center"><div><p className="desk-metric">{countText(customerHealth.total)}</p><p className="text-xs text-surface-500">Active</p></div><div><p className="desk-metric">{countText(customerHealth.withBalance)}</p><p className="text-xs text-surface-500">Khata due</p></div><div><p className="desk-metric">{countText(customerHealth.newThisWeek)}</p><p className="text-xs text-surface-500">Naye · 7 din</p></div></div><p className="mt-2 text-[11px] text-surface-500">Customer counts isi shop ke hain. Khata due/overdue ginti abhi shop-wise ledger se link nahi, is liye unavailable hai.</p></section>
-      <section className="desk-card"><h2 className="mb-2 font-semibold">Urgent Approvals</h2>{approvals.length?approvals.map(a=><Link key={a.label} href={a.href} className="flex items-center justify-between border-t py-2 text-sm"><span>{a.label}</span><strong className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">{countText(a.count)}</strong></Link>):<p className="py-2 text-sm text-surface-500">Koi pending approval nahi.</p>}<p className="text-[11px] text-surface-500">Sirf aapki allowed approval queues.</p></section>
+
+const money = (n: number | null) => n == null ? "Unavailable" : `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 0 })}`;
+const countText = (n: number | null) => n == null ? "—" : n.toLocaleString("en-PK");
+const PAYMENT_COLORS = ["#119b61", "#287ac0", "#e0a122", "#dc5547", "#8456c9", "#11a6ae", "#62a83d", "#e1792f", "#68778a"];
+
+type FarmerGlance = { id: string; full_name: string | null; farmer_code: string; phone_number: string | null; milk_liters_per_day: number | null };
+type Approval = { label: string; count: number | null; href: string };
+type TaskItem = { key: string; label: string; count: number | null; tone: "red" | "amber" | "blue" | "gray"; href: string };
+type QuickAction = { href: string; label: string };
+
+export function ShopOverviewClient({ methods, trend, stock, credit, cash, digital, received, links, branchAvailable, customerHealth, farmers, approvals, orders, tasks, userId }: {
+  methods: ShopPaymentMethodRow[];
+  trend: { day: string; sales: number }[];
+  stock: number | null;
+  credit: number;
+  cash: number;
+  digital: number;
+  received: number;
+  links: QuickAction[];
+  branchAvailable: boolean;
+  customerHealth: { total: number | null; withBalance: number | null; newThisWeek: number | null };
+  farmers: FarmerGlance[] | null;
+  approvals: Approval[];
+  orders: { awaiting: number; processing: number; completed: number } | null;
+  tasks: TaskItem[];
+  userId: string;
+}) {
+  const [activePanel, setActivePanel] = useState<"ledger" | "tasks" | "notifications">("ledger");
+  const total = received + credit;
+  const totalMethods = methods.reduce((sum, method) => sum + method.sales, 0);
+  const maxTrend = Math.max(...trend.map(day => day.sales), 1);
+  const dayLabel = (day: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+  const donut = useMemo(() => {
+    if (totalMethods <= 0) return "conic-gradient(#e8eee9 0deg 360deg)";
+    let current = 0;
+    const slices = methods.map((method, index) => {
+      const start = current;
+      current += Math.max(0, method.sales) / totalMethods * 360;
+      return `${PAYMENT_COLORS[index % PAYMENT_COLORS.length]} ${start}deg ${current}deg`;
+    });
+    return `conic-gradient(${slices.join(",")})`;
+  }, [methods, totalMethods]);
+
+  return <div className="staff-desk-screen">
+    <div className="staff-desk-top-grid">
+      <section className="desk-card staff-desk-ledger">
+        <div className="staff-desk-card-title"><span><Wallet /> Today&apos;s Ledger</span><span className="staff-desk-live">Live Ledger</span></div>
+        <div className="staff-desk-ledger-total"><strong>{money(total)}</strong><span>Aaj ki total POS sale</span></div>
+        <div className="staff-desk-ledger-split">
+          <div><span>Cash</span><strong>{money(cash)}</strong></div>
+          <div><span>Digital</span><strong>{money(digital)}</strong></div>
+        </div>
+        <div className="staff-desk-sparkline" aria-label="Pichle 7 din ki POS sale">
+          {trend.map(day => <div key={day.day} title={`${dayLabel(day.day)} · ${money(day.sales)}`}><i style={{ height: `${Math.max(day.sales / maxTrend * 100, 3)}%` }} /><span>{dayLabel(day.day).split(" ")[0]}</span></div>)}
+        </div>
+      </section>
+
+      <section className="desk-card staff-desk-summary">
+        <h2><ShoppingBag /> Order Funnel</h2>
+        {orders ? <div className="staff-desk-funnel">
+          <div><strong>{orders.awaiting}</strong><span>Naye / review</span></div>
+          <div><strong>{orders.processing}</strong><span>Processing</span></div>
+          <div><strong>{orders.completed}</strong><span>Delivered</span></div>
+        </div> : <p className="staff-desk-muted">Order data unavailable</p>}
+      </section>
+
+      <section className="desk-card staff-desk-summary">
+        <h2><Users /> Customer Health</h2>
+        <div className="staff-desk-health">
+          <div><strong>{countText(customerHealth.total)}</strong><span>Active</span></div>
+          <div><strong>{countText(customerHealth.withBalance)}</strong><span>Khata due</span></div>
+          <div><strong>{countText(customerHealth.newThisWeek)}</strong><span>Naye · 7 din</span></div>
+        </div>
+        <p className="staff-desk-note">Shop ke active customers. Khata due ka shop-wise verified total abhi available nahi.</p>
+      </section>
+
+      <section className="desk-card staff-desk-summary staff-desk-urgent">
+        <h2><AlertTriangle /> Urgent Approvals</h2>
+        {approvals.length ? approvals.slice(0, 3).map(item => <Link key={item.label} href={item.href} className="staff-desk-approval"><span>{item.label}</span><strong>{countText(item.count)}</strong></Link>) : <p className="staff-desk-muted">Koi pending approval nahi.</p>}
+        <p className="staff-desk-note">Sirf aapki allowed approval queues.</p>
+      </section>
+
+      <section className="desk-card staff-desk-quick">
+        <h2>Quick Actions</h2>
+        <div>{links.slice(0, 5).map((link, index) => <Link key={link.href} href={link.href}><span>{index === 0 ? <ShoppingBag /> : index === 1 ? <ClipboardList /> : <CircleDollarSign />}</span>{link.label}</Link>)}</div>
+      </section>
     </div>
-    <div className="grid min-h-0 gap-3 xl:grid-cols-2">
-      <div className="flex flex-col gap-3">
-      <div className="desk-card"><div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Pichle 7 din ki sale</h2><span className="text-xs text-surface-500">Isi shop ki POS sales</span></div>
-        <div className="flex h-28 items-end gap-2" role="img" aria-label="Pichle saat din ki shop POS sale ka bar chart">{trend.map(d=><div key={d.day} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"><span className="text-[10px] text-surface-500">{money(d.sales)}</span><div className="w-full max-w-12 rounded-t bg-emerald-500" style={{height:`${Math.max(d.sales/maxTrend*68,3)}%`}} title={`${dayLabel(d.day)}: ${money(d.sales)}`}/><span className="text-[10px] text-surface-500">{dayLabel(d.day)}</span></div>)}</div>
+
+    <section className="desk-card staff-desk-method-strip">
+      <div className="staff-desk-tabs" role="tablist" aria-label="My Work panels">
+        {(["ledger", "tasks", "notifications"] as const).map(panel => <button key={panel} type="button" role="tab" aria-selected={activePanel === panel} onClick={() => setActivePanel(panel)}>
+          {panel === "ledger" ? "Ledger" : panel === "tasks" ? `Tasks (${tasks.length})` : "Notifications"}
+        </button>)}
       </div>
-      <div className="desk-card"><div className="mb-2 flex items-center justify-between"><h2 className="font-semibold">Aaj ki sale · payment method</h2><span className="text-xs text-surface-500">{money(totalMethods)}</span></div><div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">{methods.map(m=><div key={m.method} className="min-w-0"><div className="flex justify-between gap-2 text-xs"><span className="truncate">{m.label}</span><span className="font-medium tabular-nums">{Math.round(totalMethods?m.sales/totalMethods*100:0)}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-700"><div className="h-full rounded-full bg-emerald-600" style={{width:`${totalMethods?m.sales/totalMethods*100:0}%`}}/></div><p className="mt-0.5 text-[11px] text-surface-500">{money(m.sales)}</p></div>)}</div></div>
-      <div className="desk-card"><h2 className="mb-2 font-semibold">POS — Payment Methods</h2><p className="mb-2 text-xs text-surface-500">Aaj ki sale / collections; closing account balance nahi.</p>
-        <table className="desk-table"><thead><tr><th>Method</th><th>Sale</th><th>Kharcha / wapsi*</th><th>Period net*</th></tr></thead><tbody>{methods.slice(page*8,page*8+8).map(m=><tr key={m.method}><td>{m.label}{["khata","credit","customer_credit","udhaar"].includes(m.method)&&<span className="ml-1 text-amber-700">· lena</span>}</td><td className="font-semibold">{money(m.sales)}</td><td>{money(m.expenseNet)}</td><td className="font-semibold">{money(m.net)}</td></tr>)}</tbody></table>
-        <p className="mt-2 text-[11px] text-surface-500">*Expense/wapsi sirf payment method se mapped approved entries hain; yeh closing cash balance nahi.</p>
-        {methods.length>8&&<Pager page={page} count={methods.length} size={8} onChange={setPage}/>}</div></div>
-      <div className="flex flex-col gap-3"><div className="desk-card"><div className="mb-2 flex items-center justify-between"><h2 className="font-semibold">Farmers at a Glance</h2><Link href="/admin/farmers" className="text-xs font-medium text-brand-700">All farmers →</Link></div>{farmers===null?<p className="text-sm text-surface-500">Farmer data unavailable</p>:farmers.length?<div className="desk-farmer-list">{farmers.map(f=><div key={f.id} className="flex items-center justify-between gap-2 border-t py-2"><div className="min-w-0"><p className="truncate text-sm font-medium">{f.full_name||f.farmer_code}</p><p className="text-xs text-surface-500">{f.farmer_code}{f.phone_number?` · ${f.phone_number}`:""}</p></div><span className="whitespace-nowrap text-xs text-surface-600">{f.milk_liters_per_day==null?"":`${f.milk_liters_per_day} L/day`}</span></div>)}</div>:<p className="text-sm text-surface-500">Is shop ke customer records se linked farmer nahi mila.</p>}</div><div className="desk-card"><h2 className="font-semibold">Load, Bill & Recovery</h2><p className="my-2 text-xs text-surface-500">{branchAvailable ? "Is branch mein entries shop-wise tagged nahi hain. Verified detail Load & Bill par dekhein." : "Branch assign nahi hai."}</p>{links.filter(l=>/load-bill|kharche/.test(l.href)).map(l=><Link key={l.href} href={l.href} className="mr-3 text-sm font-medium text-brand-700">{l.label} →</Link>)}</div>
+      <div className="staff-desk-donut" aria-label="Payment method breakdown" style={{ background: donut }}><span /></div>
+      <div className="staff-desk-methods">
+        {methods.map((method, index) => <div key={method.method}>
+          <span className="staff-desk-method-name"><i style={{ background: PAYMENT_COLORS[index % PAYMENT_COLORS.length] }} />{method.label}</span>
+          <span className="staff-desk-method-track"><i style={{ width: `${totalMethods ? Math.max(0, method.sales) / totalMethods * 100 : 0}%`, background: PAYMENT_COLORS[index % PAYMENT_COLORS.length] }} /></span>
+          <span className="staff-desk-method-percent">{totalMethods ? Math.round(method.sales / totalMethods * 100) : 0}%</span>
+        </div>)}
+      </div>
+    </section>
+
+    <div className={`staff-desk-bottom staff-desk-panel-${activePanel}`}>
+      {activePanel === "ledger" ? <>
+        <section className="desk-card staff-desk-lists">
+          <div className="staff-desk-card-title"><span><ClipboardList /> TODAY&apos;S TASKS</span><small>live counts</small></div>
+          <div className="staff-desk-task-columns">
+            <div><h3>My Tasks</h3>{tasks.filter(task => task.tone === "red" || task.tone === "amber").slice(0, 3).map(task => <Link key={task.key} href={task.href}><b>{countText(task.count)}</b><span>{task.label}</span></Link>)}</div>
+            <div><h3>Team Tasks</h3>{tasks.filter(task => task.tone !== "red" && task.tone !== "amber").slice(0, 3).map(task => <Link key={task.key} href={task.href}><b>{countText(task.count)}</b><span>{task.label}</span></Link>)}</div>
+          </div>
+          {!tasks.length && <p className="staff-desk-clear"><CheckCircle2 /> Nothing pending on your pages.</p>}
+        </section>
+        <ShopNotifications userId={userId} compact />
+        <section className="desk-card staff-desk-farmers">
+          <div className="staff-desk-card-title"><span><Users /> FARMERS AT A GLANCE</span><Link href="/admin/farmers">All farmers →</Link></div>
+          {farmers === null ? <p className="staff-desk-muted">Farmer data unavailable.</p> : farmers.length ? farmers.slice(0, 4).map(farmer => <div key={farmer.id} className="staff-desk-farmer"><span className="staff-desk-avatar">{(farmer.full_name || farmer.farmer_code).slice(0, 1).toUpperCase()}</span><span className="staff-desk-farmer-name"><strong>{farmer.full_name || farmer.farmer_code}</strong><small>{farmer.farmer_code}</small></span><strong>{farmer.milk_liters_per_day == null ? "" : `${farmer.milk_liters_per_day} L`}</strong></div>) : <p className="staff-desk-muted">Is shop se linked farmer record nahi mila.</p>}
+        </section>
+      </> : activePanel === "tasks" ? <section className="desk-card staff-desk-focus-panel">
+        <div className="staff-desk-card-title"><span><ClipboardList /> TODAY&apos;S TASKS</span><small>{tasks.length} items</small></div>
+        {tasks.length ? tasks.map(task => <Link key={task.key} href={task.href} className={`staff-desk-focus-row tone-${task.tone}`}><b>{countText(task.count)}</b><span>{task.label}</span><span>Open →</span></Link>) : <p className="staff-desk-clear"><CheckCircle2 /> Nothing pending on your pages.</p>}
+      </section> : <div className="staff-desk-focus-panel"><ShopNotifications userId={userId} /></div>}
     </div>
-    </div>
-    <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-xs text-brand-900"><strong>Available funds: reconciliation required.</strong> Stock aur customer khata cash balance mein shamil nahi. Is branch mein complete shop-level opening balances aur Load/Bill attribution verify hone tak combined balance nahi dikhaya jayega.</div>
+
+    <div className="staff-desk-reconcile"><strong>Available funds:</strong> shop opening balances aur Load/Bill attribution verify hone tak reconciliation required.</div>
+    {!branchAvailable && <span className="sr-only">Branch is not assigned.</span>}
+    <span className="sr-only">Stock value: {money(stock)}. POS khata sales: {money(credit)}.</span>
   </div>;
 }

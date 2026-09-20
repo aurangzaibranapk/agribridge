@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type Notice = { id: string; title: string; message: string; created_at: string };
 
-export function ShopNotifications({ userId }: { userId: string }) {
+export function ShopNotifications({ userId, compact = false }: { userId: string; compact?: boolean }) {
   const [notices, setNotices] = useState<Notice[] | null>(null);
   const [live, setLive] = useState(false);
 
@@ -25,13 +25,13 @@ export function ShopNotifications({ userId }: { userId: string }) {
     return () => { active = false; clearInterval(timer); db.removeChannel(channel); };
   }, [userId]);
 
-  return <section className="desk-card mx-auto w-full max-w-4xl">
+  return <section className={`desk-card staff-desk-notifications ${compact ? "is-compact" : ""}`}>
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="font-semibold">Live Notifications</h2>
+      <h2 className="font-semibold">{compact ? "LIVE NOTIFICATIONS" : "Live Notifications"}</h2>
       <span className="text-xs text-brand-700">{live ? "Live" : "Periodic refresh"}</span>
     </div>
     {notices === null ? <p className="text-sm text-surface-500">Notifications load ho rahi hain…</p>
-      : notices.length ? notices.map(n => <article key={n.id} className="border-t py-3">
+      : notices.length ? notices.slice(0, compact ? 4 : 20).map(n => <article key={n.id} className="staff-desk-notice border-t py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3 className="text-sm font-semibold">{n.title}</h3>
           <time className="text-xs text-surface-500" dateTime={n.created_at}>{new Intl.DateTimeFormat("en-PK", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Karachi" }).format(new Date(n.created_at))}</time>

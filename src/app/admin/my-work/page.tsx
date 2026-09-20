@@ -1,6 +1,5 @@
-import { DeskWorkspace, DeskTabs } from "@/components/guided/desk-workspace";
+import { DeskWorkspace } from "@/components/guided/desk-workspace";
 import { ShopOverview } from "@/components/desk/shop-overview";
-import { ShopNotifications } from "@/components/desk/shop-notifications";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
@@ -212,13 +211,14 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
     return <DeskWorkspace className="desk-my-work">
-      <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
-      <DeskTabs items={[
-        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} links={deskLinks} attentionItems={attentionItems} /> },
-        { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
-        { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
-        { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },
-      ]} />
+      <header className="staff-desk-header">
+        <div>
+          <h1>Welcome Back, {me.full_name?.split(" ")[0] || "Anwar"}.</h1>
+          <p>Have a productive day at {branchName || "your branch"}.</p>
+        </div>
+        <span>{nowDate} · {nowTime}</span>
+      </header>
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} links={deskLinks} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
     </DeskWorkspace>;
   }
 
