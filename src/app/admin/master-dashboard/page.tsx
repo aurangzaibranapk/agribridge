@@ -26,6 +26,7 @@ export default async function MasterDashboardPage({
   const year = now.getFullYear();
   const monthStart = new Date(year, month - 1, 1).toISOString().slice(0, 10);
   const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
+  const nextMonthStart = new Date(year, month, 1).toISOString().slice(0, 10);
 
   const showDairy = businessContext === "master" || businessContext === "dairy";
   const showAgri = businessContext === "master" || businessContext === "karyana" || businessContext === "agri_inputs";
@@ -206,8 +207,8 @@ export default async function MasterDashboardPage({
   let posQuery = serviceClient
     .from("pos_sales")
     .select("total_amount")
-    .gte("sale_date", monthStart)
-    .lte("sale_date", monthEnd);
+    .gte("created_at", monthStart)
+    .lt("created_at", nextMonthStart);
   if (shopId) posQuery = posQuery.eq("shop_id", shopId);
   const { data: posSalesRows } = await posQuery;
   const posRevenue = (posSalesRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
@@ -216,8 +217,8 @@ export default async function MasterDashboardPage({
   let saleIdsQuery = serviceClient
     .from("pos_sales")
     .select("id")
-    .gte("sale_date", monthStart)
-    .lte("sale_date", monthEnd);
+    .gte("created_at", monthStart)
+    .lt("created_at", nextMonthStart);
   if (shopId) saleIdsQuery = saleIdsQuery.eq("shop_id", shopId);
   const { data: saleIdRows } = await saleIdsQuery;
   const saleIds = (saleIdRows ?? []).map((r: any) => r.id);
@@ -241,6 +242,20 @@ export default async function MasterDashboardPage({
     }
     topSellingItems = [...productMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 10);
   }
+
+  // ===== Top Debtors (DigiKhata style — jin sy zyada paisa lena) =====
+  const { data: topDebtorRows } = await serviceClient
+    .from("customers")
+    .select("id, name, phone_number, current_balance")
+    .eq("is_deleted", false)
+    .gt("current_balance", 0)
+    .order("current_balance", { ascending: false })
+    .limit(8);
+  const topDebtors = (topDebtorRows ?? []).map((r: any) => ({
+    name: r.name ?? "—",
+    phone: r.phone_number ?? "",
+    balance: Number(r.current_balance ?? 0),
+  }));
 
   const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
@@ -394,6 +409,35 @@ export default async function MasterDashboardPage({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {topDebtors.length > 0 && (
+        <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+            Jin Sy Paisa Lena Hai — Top {topDebtors.length}
+          </h2>
+          <div className="space-y-2">
+            {topDebtors.map((d, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
+                  <div>
+                    <span className="text-surface-800 dark:text-surface-100">{d.name}</span>
+                    {d.phone && (
+                      <span className="ml-2 text-[10px] text-surface-400">{d.phone}</span>
+                    )}
+                  </div>
+                </div>
+                <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
+                  Rs {Math.round(d.balance).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[10px] text-surface-400">
+            Total outstanding: Rs {Math.round(topDebtors.reduce((s, d) => s + d.balance, 0)).toLocaleString()}
+          </p>
         </div>
       )}
 
