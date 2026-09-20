@@ -112,8 +112,7 @@ export async function saveStaffAccessSetup(_prev: ActionState, formData: FormDat
 
   const { data: knownFeatures } = await service.from("features").select("key").eq("is_active", true);
   const known = new Set((knownFeatures ?? []).map((f) => String(f.key)));
-  const invalid = requestedFeatures.filter((key) => !known.has(key));
-  if (invalid.length) return { error: `Ye access maujood nahi: ${invalid.join(", ")}` };
+  const validRequested = requestedFeatures.filter((key) => known.has(key));
 
   const { data: currentRows, error: currentError } = await service
     .from("user_feature_permissions")
@@ -121,9 +120,9 @@ export async function saveStaffAccessSetup(_prev: ActionState, formData: FormDat
     .eq("profile_id", profileId);
   if (currentError) return { error: currentError.message };
   const current = new Set((currentRows ?? []).map((r) => String(r.feature_key)));
-  const wanted = new Set(requestedFeatures);
+  const wanted = new Set(validRequested);
   const removed = [...current].filter((key) => !wanted.has(key));
-  const added = requestedFeatures.filter((key) => !current.has(key));
+  const added = validRequested.filter((key) => !current.has(key));
 
   if (removed.length) {
     const { error } = await service
