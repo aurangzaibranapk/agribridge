@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Pager } from "@/components/guided/desk-workspace";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
@@ -371,7 +370,6 @@ export function LoadBillClient({
   const quickPhone = whatsappPhone(activeParty?.phone || (tab === "load" ? reference : ""));
   const whatsAppHref = `https://wa.me/${quickPhone}?text=${encodeURIComponent(`${currentSlip.title}\nCustomer: ${currentSlip.customer}\nAmount: ${rs(currentSlip.amount)}${currentSlip.serviceCharge ? `\nService charge: ${rs(currentSlip.serviceCharge)}` : ""}\nTotal: ${rs(currentSlip.total)}\n${currentSlip.status}`)}`;
   const [transactionFilter, setTransactionFilter] = useState<"all" | "load" | "bill" | "udhaar" | "recovery" | "pending">("all");
-  const [transactionPage, setTransactionPage] = useState(0);
   const transactions: DeskTransaction[] = [
     ...today.map((t) => ({
       id: t.id,
@@ -405,9 +403,8 @@ export function LoadBillClient({
   });
   const currentTransactionKind = tab === "receive" ? "recovery" : tab;
   const currentTransactionCount = transactions.filter((transaction) => transaction.kind === currentTransactionKind).length;
-  const transactionPageSize = 3;
-  const visiblePage = Math.min(transactionPage, Math.max(0, Math.ceil(filteredTransactions.length / transactionPageSize) - 1));
-  const visibleTransactions = filteredTransactions.slice(visiblePage * transactionPageSize, (visiblePage + 1) * transactionPageSize);
+  // Keep the whole day's list in one bounded table; its inner viewport scrolls.
+  const visibleTransactions = filteredTransactions;
 
   const paighaam =
     state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
@@ -825,7 +822,7 @@ export function LoadBillClient({
           <div className="load-transaction-filters" role="tablist" aria-label="Filter transactions">
             {([
               ["all", "All"], ["load", "Load"], ["bill", "Bill"], ["udhaar", "Udhaar"], ["recovery", "Recovery"], ["pending", "Pending"],
-            ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={transactionFilter === key} onClick={() => { setTransactionFilter(key); setTransactionPage(0); }}>{label}</button>)}
+            ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={transactionFilter === key} onClick={() => setTransactionFilter(key)}>{label}</button>)}
           </div>
           <Link href="/admin/load-bill" className="load-view-all">View All →</Link>
         </div>
@@ -872,7 +869,6 @@ export function LoadBillClient({
             </tbody>
           </table>
         </div>
-        <Pager page={visiblePage} count={filteredTransactions.length} size={transactionPageSize} onChange={setTransactionPage} />
       </section>
 
       <button type="button" className="load-quick-view-trigger" aria-expanded={quickViewOpen} onClick={() => setQuickViewOpen((open) => !open)}>
