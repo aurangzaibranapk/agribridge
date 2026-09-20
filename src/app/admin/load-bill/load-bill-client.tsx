@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { Pager } from "@/components/guided/desk-workspace";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
-import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote } from "lucide-react";
+import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Printer, MessageCircle, X } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
 import { PersonPicker, PartyStrip, NameSuggest, type PersonOption } from "@/components/ui/person-picker";
@@ -47,6 +47,7 @@ interface Txn {
   number: string;
   kind: string;
   reference: string;
+  billCategory: string | null;
   principal: number;
   serviceCharge: number | null;
   commissionExpected: number | null;
@@ -77,14 +78,71 @@ type DeskTransaction = {
   serviceCharge: number;
   status: string;
   waqt: string;
+  note?: string;
   source?: Txn;
 };
 
 // Malik (7 September): "50 ka load kabhi nahi hota, minimum 100 rupay hai."
 const RAQAM = [100, 200, 500, 1000];
+const BILL_CATEGORY_LABELS: Record<string, string> = {
+  electricity: "Electricity",
+  gas: "Gas",
+  internet: "Internet / PTCL",
+  postpaid: "Mobile postpaid",
+  other: "Other",
+};
 
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
+}
+
+type DeskSlip = {
+  title: string;
+  date: string;
+  customer: string;
+  contact?: string;
+  provider?: string;
+  reference?: string;
+  amount: number;
+  serviceCharge?: number;
+  total: number;
+  account?: string;
+  floatAccount?: string;
+  paymentMethod?: string;
+  billCategory?: string;
+  status: string;
+  receiptNo?: string;
+  note?: string;
+};
+
+function printDeskSlip(slip: DeskSlip) {
+  const popup = window.open("", "_blank", "width=420,height=720");
+  if (!popup) {
+    window.alert("Receipt print nahi hui. Browser mein pop-ups allow karke dobara Print dabayein.");
+    return;
+  }
+  const entities: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
+  const safe = (value: string) => value.replace(/[&<>\"']/g, (char) => entities[char] ?? char);
+  const row = (label: string, value?: string) => value ? `<div class="row"><span>${safe(label)}</span><b>${safe(value)}</b></div>` : "";
+  const charge = slip.serviceCharge ? row("Service charge", rs(slip.serviceCharge)) : "";
+  popup.document.open();
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safe(slip.title)}</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#17251e;font:13px Arial,sans-serif}.paper{width:80mm;min-height:120mm;margin:12px auto;background:#fff;padding:6mm 5mm}.brand{text-align:center;border-bottom:1px dashed #9aa79f;padding-bottom:10px}.brand-mark{display:inline-grid;width:34px;height:34px;place-items:center;border-radius:50%;background:#eaf5ed;color:#087a42;font-weight:700;font-size:18px}.brand h1{font-size:17px;margin:7px 0 2px}.brand p{margin:0;color:#66736b;font-size:10px}.title{text-align:center;font-weight:700;font-size:15px;margin:12px 0 3px}.status{text-align:center;color:#087a42;font-size:10px;margin-bottom:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #edf1ee;font-size:11px}.row span{color:#627067}.row b{text-align:right;max-width:52%;overflow-wrap:anywhere}.total{margin-top:5px;padding:10px 0;border-top:1px solid #b7c7bd;border-bottom:1px dashed #9aa79f;font-size:14px}.total b{font-size:17px}.note{padding:8px 0;font-size:10px;color:#59675f;overflow-wrap:anywhere}.foot{text-align:center;margin-top:14px;padding-top:9px;border-top:1px dashed #9aa79f;color:#68756d;font-size:10px;line-height:1.5}.actions{display:flex;justify-content:center;margin:10px auto}.actions button{border:0;border-radius:7px;background:#087a42;color:white;padding:9px 18px;font-weight:700;cursor:pointer}@media print{@page{size:80mm auto;margin:3mm}body{background:#fff}.paper{width:74mm;min-height:0;margin:0 auto;padding:2mm 1mm}.actions{display:none}}
+  </style></head><body><article class="paper"><header class="brand"><span class="brand-mark">A</span><h1>AgriBridge</h1><p>Al Rana Traders · Staff Sales Desk</p></header><div class="title">${safe(slip.title)}</div><div class="status">${safe(slip.status)}</div>${row("Date & time", slip.date)}${row("Receipt no.", slip.receiptNo)}${row("Customer", slip.customer)}${row("Mobile", slip.contact)}${row("Provider / network", slip.provider)}${row("Bill type", slip.billCategory)}${row("Reference", slip.reference)}${row("Float account", slip.floatAccount)}${row("Payment received in", slip.paymentMethod || slip.account)}${row("Amount", rs(slip.amount))}${charge}<div class="row total"><span>${slip.title.includes("Udhaar") ? "Udhaar amount" : slip.title.includes("Recovery") ? "Received" : "Customer pays"}</span><b>${rs(slip.total)}</b></div>${slip.note ? `<div class="note"><b>Note:</b> ${safe(slip.note)}</div>` : ""}<footer class="foot">${slip.receiptNo || slip.status === "Transaction recorded" ? "Please keep this receipt for your record." : "Preview slip · transaction save hone ke baad final receipt print karein."}<br>Thank you · Shukriya</footer></article><div class="actions"><button onclick="window.print()">Print receipt</button></div></body></html>`);
+  popup.document.close();
+  window.setTimeout(() => { popup.focus(); popup.print(); }, 300);
+}
+
+function whatsappPhone(value?: string | null) {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("0") ? `92${digits.slice(1)}` : digits;
+}
+
+function ledgerCustomerName(description: string) {
+  const recovery = description.match(/^Udhaar wapas aaya:\s*Rs\s*[\d,.]+\s*[—-]\s*(.*?)(?:\s+\([^)]*\))*$/i);
+  if (recovery?.[1]) return recovery[1].trim();
+  return description.replace(/^Naqad udhaar\s*[—-]?\s*/, "").split(" (")[0].trim() || "Customer";
 }
 
 /**
@@ -169,6 +227,14 @@ export function LoadBillClient({
   const [commState, commAction] = useFormState(confirmLoadCommission, initial);
   const [loanState, loanAction] = useFormState(giveCustomerLoan, udhaarInitial);
   const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
+  const submittedTabRef = useRef<"load" | "bill" | "udhaar" | "receive" | null>(null);
+  const [lastSavedTab, setLastSavedTab] = useState<"load" | "bill" | "udhaar" | "receive" | null>(null);
+  useEffect(() => {
+    const submittedTab = submittedTabRef.current;
+    if ((submittedTab === "load" || submittedTab === "bill") && state.success) setLastSavedTab(submittedTab);
+    else if (submittedTab === "udhaar" && loanState.success) setLastSavedTab("udhaar");
+    else if (submittedTab === "receive" && wapsiState.success) setLastSavedTab("receive");
+  }, [state, loanState, wapsiState]);
 
   /**
    * Udhaar dukan ke customer ko bhi milta hai aur kisan ko bhi — is
@@ -191,8 +257,12 @@ export function LoadBillClient({
    */
   const [mainParty, setMainParty] = useState<PersonOption | null>(null);
   const [ledgerParty, setLedgerParty] = useState<PersonOption | null>(null);
+  const [typedCustomerName, setTypedCustomerName] = useState("");
   const [ledgerAmount, setLedgerAmount] = useState("");
   const [ledgerAccount, setLedgerAccount] = useState("cash");
+  const [ledgerNote, setLedgerNote] = useState("");
+  const [ledgerDate, setLedgerDate] = useState(aajKaKhana());
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -213,6 +283,7 @@ export function LoadBillClient({
   const [principal, setPrincipal] = useState("");
   const [serviceCharge, setServiceCharge] = useState("");
   const [reference, setReference] = useState("");
+  const [billCategory, setBillCategory] = useState("");
 
   // Customer chunte hi mobile number khud bhar jata hai -- magar sirf
   // Mobile Load ke liye (Bill Payment ka "reference" consumer number
@@ -270,6 +341,35 @@ export function LoadBillClient({
   const kamaya = aajKaKaam.reduce((s, t) => s + (t.serviceCharge ?? 0), 0);
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
+  const activeParty = tab === "udhaar" || tab === "receive" ? ledgerParty : mainParty;
+  const amountForSlip = tab === "load" || tab === "bill" ? raqam : Number(ledgerAmount.replace(/,/g, "")) || 0;
+  const chargeForSlip = tab === "load" || tab === "bill" ? charge : 0;
+  const currentActionSucceeded = lastSavedTab === tab;
+  const receivedIn = paisaKahan === "cash" ? "Cash" : paisaKahan === "wallet" ? "Customer wallet" : paisaKahan === "khata" ? "Customer khata" : financeAccounts.find((account) => account.id === paisaKahan.slice(5))?.name ?? "—";
+  const ledgerAccountName = ledgerAccount === "cash" ? "Cash" : financeAccounts.find((account) => account.id === ledgerAccount)?.name ?? "—";
+  const serviceTitle = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Recovery";
+  const currentSlip: DeskSlip = {
+    title: `${serviceTitle} Receipt`,
+    date: tab === "udhaar" || tab === "receive"
+      ? new Date(`${ledgerDate}T12:00:00`).toLocaleDateString("en-PK", { dateStyle: "medium" })
+      : new Date().toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" }),
+    customer: (tab === "load" || tab === "bill" ? typedCustomerName.trim() : "") || activeParty?.name || "Walk-in",
+    contact: activeParty?.phone || (tab === "load" ? reference : undefined) || undefined,
+    provider: tab === "load" ? kaamKeProviders.find((provider) => provider.id === providerId)?.name : tab === "bill" ? kaamKeProviders.find((provider) => provider.id === providerId)?.name : undefined,
+    reference: tab === "load" || tab === "bill" ? reference || undefined : undefined,
+    amount: amountForSlip,
+    serviceCharge: chargeForSlip,
+    total: amountForSlip + chargeForSlip,
+    account: tab === "load" || tab === "bill" ? receivedIn : ledgerAccountName,
+    floatAccount: tab === "load" || tab === "bill" ? chunaHua?.title : undefined,
+    paymentMethod: tab === "load" || tab === "bill" ? receivedIn : ledgerAccountName,
+    billCategory: tab === "bill" ? BILL_CATEGORY_LABELS[billCategory] : undefined,
+    status: currentActionSucceeded ? "Transaction recorded" : "Preview only · transaction not saved",
+    receiptNo: lastSavedTab === tab && (tab === "load" || tab === "bill") ? state.txnNumber : undefined,
+    note: tab === "udhaar" || tab === "receive" ? ledgerNote || undefined : undefined,
+  };
+  const quickPhone = whatsappPhone(activeParty?.phone || (tab === "load" ? reference : ""));
+  const whatsAppHref = `https://wa.me/${quickPhone}?text=${encodeURIComponent(`${currentSlip.title}\nCustomer: ${currentSlip.customer}\nAmount: ${rs(currentSlip.amount)}${currentSlip.serviceCharge ? `\nService charge: ${rs(currentSlip.serviceCharge)}` : ""}\nTotal: ${rs(currentSlip.total)}\n${currentSlip.status}`)}`;
   const [transactionFilter, setTransactionFilter] = useState<"all" | "load" | "bill" | "udhaar" | "recovery" | "pending">("all");
   const [transactionPage, setTransactionPage] = useState(0);
   const transactions: DeskTransaction[] = [
@@ -288,13 +388,14 @@ export function LoadBillClient({
     ...ledgerToday.map((t) => ({
       id: t.id,
       kind: t.kind,
-      customer: t.description.replace(/^Udhaar ki wapsi\s*[—-]?\s*|^Naqad udhaar\s*[—-]?\s*/, "").split(" (")[0] || "Customer",
+      customer: ledgerCustomerName(t.description),
       provider: "—",
       reference: "—",
       amount: t.amount,
       serviceCharge: 0,
       status: "complete",
       waqt: t.createdAt,
+      note: t.description,
     })),
   ].sort((a, b) => new Date(b.waqt).getTime() - new Date(a.waqt).getTime());
   const filteredTransactions = transactions.filter((t) => {
@@ -302,6 +403,8 @@ export function LoadBillClient({
     if (transactionFilter === "pending") return t.status === "pending";
     return t.kind === transactionFilter;
   });
+  const currentTransactionKind = tab === "receive" ? "recovery" : tab;
+  const currentTransactionCount = transactions.filter((transaction) => transaction.kind === currentTransactionKind).length;
   const transactionPageSize = 3;
   const visiblePage = Math.min(transactionPage, Math.max(0, Math.ceil(filteredTransactions.length / transactionPageSize) - 1));
   const visibleTransactions = filteredTransactions.slice(visiblePage * transactionPageSize, (visiblePage + 1) * transactionPageSize);
@@ -360,13 +463,13 @@ export function LoadBillClient({
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
                 { key: "bill", title: "Bill Payment", sub: "Bijli, gas, internet", Icon: FileText },
                 { key: "udhaar", title: "Udhaar", sub: "Dukan se naqad gaya", Icon: HandCoins },
-                { key: "receive", title: "Payment Receive", sub: "Wapas aaya / credit jama", Icon: Banknote },
+                { key: "receive", title: "Recovery", sub: "Payment receive / udhaar wapsi", Icon: Banknote },
               ] as const
             ).map(({ key, title, sub, Icon }) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => setTab(key)}
+                onClick={() => { setTab(key); setLastSavedTab(null); }}
                 role="tab"
                 aria-selected={tab === key}
                 className={`load-mode flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
@@ -392,14 +495,19 @@ export function LoadBillClient({
               loanAction={loanAction}
               wapsiAction={wapsiAction}
               selectedPerson={ledgerParty}
-              onPersonChange={setLedgerParty}
+              onPersonChange={(person) => { setLedgerParty(person); setLastSavedTab(null); }}
               amount={ledgerAmount}
-              onAmountChange={setLedgerAmount}
+              onAmountChange={(amount) => { setLedgerAmount(amount); setLastSavedTab(null); }}
+              note={ledgerNote}
+              onNoteChange={(note) => { setLedgerNote(note); setLastSavedTab(null); }}
+              onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }}
+              date={ledgerDate}
+              onDateChange={(date) => { setLedgerDate(date); setLastSavedTab(null); }}
               account={ledgerAccount}
-              onAccountChange={setLedgerAccount}
+              onAccountChange={(account) => { setLedgerAccount(account); setLastSavedTab(null); }}
             />
           ) : (
-          <form action={action} className="load-form space-y-3">
+          <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className="load-form space-y-3">
             <input type="hidden" name="kind" value={kind} />
 
             <div>
@@ -408,7 +516,7 @@ export function LoadBillClient({
                 id="account_id"
                 name="account_id"
                 value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
+                onChange={(e) => { setAccountId(e.target.value); setLastSavedTab(null); }}
                 required
               >
                 {kaamKeAccounts.map((a) => (
@@ -427,7 +535,7 @@ export function LoadBillClient({
                 party_id ledger mein jata hai. */}
             <div>
               <Label htmlFor="main_party">Customer (marzi ka — Guest bhi chal jata hai)</Label>
-              <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={setMainParty} />
+              <PersonPicker people={udhaarPeople} partyTypeName="party_type" partyIdName="party_id" onChange={(person) => { setMainParty(person); setTypedCustomerName(person?.name ?? ""); setLastSavedTab(null); }} />
               {mainParty && (
                 <div className="mt-2">
                   <PartyStrip person={mainParty} />
@@ -449,7 +557,7 @@ export function LoadBillClient({
                 required
                 inputMode="numeric"
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                onChange={(e) => { setReference(e.target.value); setLastSavedTab(null); }}
                 placeholder={kind === "load" ? "0301 2345678" : "118752345678"}
               />
               {kind === "load" && mainParty?.phone && reference && reference !== mainParty.phone && (
@@ -468,7 +576,7 @@ export function LoadBillClient({
                   name="provider_id"
                   required
                   value={providerId}
-                  onChange={(e) => setProviderId(e.target.value)}
+                  onChange={(e) => { setProviderId(e.target.value); setLastSavedTab(null); }}
                 >
                   <option value="">— chunein —</option>
                   {kaamKeProviders.map((p) => (
@@ -487,7 +595,7 @@ export function LoadBillClient({
               <>
                 <div>
                   <Label htmlFor="provider_id">Kis cheez ka bill</Label>
-                  <Select id="provider_id" name="provider_id" required defaultValue="">
+                  <Select id="provider_id" name="provider_id" required defaultValue="" onChange={() => setLastSavedTab(null)}>
                     <option value="">— chunein —</option>
                     {kaamKeProviders.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -498,7 +606,7 @@ export function LoadBillClient({
                 </div>
                 <div>
                   <Label htmlFor="bill_category">Bill ki qism</Label>
-                  <Select id="bill_category" name="bill_category" defaultValue="">
+                  <Select id="bill_category" name="bill_category" value={billCategory} onChange={(event) => { setBillCategory(event.target.value); setLastSavedTab(null); }}>
                     <option value="">— chunein —</option>
                     <option value="electricity">Bijli</option>
                     <option value="gas">Gas</option>
@@ -518,7 +626,7 @@ export function LoadBillClient({
                     <button
                       key={r}
                       type="button"
-                      onClick={() => setPrincipal(String(r))}
+                      onClick={() => { setPrincipal(String(r)); setLastSavedTab(null); }}
                       className={`rounded-lg border px-3 py-1.5 text-sm transition ${
                         principal === String(r)
                           ? "border-brand-500 bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/30 dark:text-brand-200"
@@ -536,7 +644,7 @@ export function LoadBillClient({
                 required
                 inputMode="decimal"
                 value={principal}
-                onChange={(e) => setPrincipal(e.target.value)}
+                onChange={(e) => { setPrincipal(e.target.value); setLastSavedTab(null); }}
                 placeholder="1000"
               />
               {kamPara && (
@@ -575,7 +683,7 @@ export function LoadBillClient({
               <Select
                 id="paisa_kahan"
                 value={paisaKahan}
-                onChange={(e) => setPaisaKahan(e.target.value)}
+                onChange={(e) => { setPaisaKahan(e.target.value); setLastSavedTab(null); }}
               >
                 <option value="cash">Cash — golak mein aaya</option>
                 {financeAccounts.map((f) => (
@@ -597,7 +705,7 @@ export function LoadBillClient({
                 name="service_charge"
                 inputMode="decimal"
                 value={serviceCharge}
-                onChange={(e) => setServiceCharge(e.target.value)}
+                onChange={(e) => { setServiceCharge(e.target.value); setLastSavedTab(null); }}
                 placeholder="khali chhor dein agar extra nahi liya"
               />
               <p className="mt-1 text-[11px] text-surface-500">
@@ -623,6 +731,7 @@ export function LoadBillClient({
                 people={udhaarPeople}
                 defaultValue={mainParty?.name ?? ""}
                 placeholder="Guest / Walk-in — chhora ja sakta hai"
+                onChange={(name) => { setTypedCustomerName(name); setLastSavedTab(null); }}
               />
             </div>
 
@@ -643,7 +752,7 @@ export function LoadBillClient({
                   type="checkbox"
                   name="float_settled"
                   checked={settled}
-                  onChange={(e) => setSettled(e.target.checked)}
+                  onChange={(e) => { setSettled(e.target.checked); setLastSavedTab(null); }}
                   className="mt-0.5"
                 />
                 <span className="text-xs leading-relaxed text-surface-600 dark:text-surface-300">
@@ -673,13 +782,16 @@ export function LoadBillClient({
 
         {/* -------- Aaj ka hisaab -------- */}
         <aside className="load-live-summary" aria-live="polite">
-          <div className="load-summary-title"><div><h2>Live Transaction Summary</h2><span><i /> Ready to process</span></div><CheckCircle2 aria-hidden="true" /></div>
+          <div className="load-summary-title"><div><h2>Live Transaction Summary</h2><span><i /> {currentActionSucceeded ? "Saved · receipt ready" : "Ready to process"}</span></div><CheckCircle2 aria-hidden="true" /></div>
           <dl>
-            <div><dt>Service</dt><dd>{tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive"}</dd></div>
+            <div><dt>Service</dt><dd>{serviceTitle}</dd></div>
             <div><dt>Customer</dt><dd>{(tab === "udhaar" || tab === "receive" ? ledgerParty?.name : mainParty?.name) || "Walk-in"}</dd></div>
             {tab === "load" || tab === "bill" ? <>
               <div><dt>{tab === "load" ? "Mobile / Account" : "Reference"}</dt><dd>{reference || "—"}</dd></div>
               <div><dt>{tab === "load" ? "Network" : "Provider"}</dt><dd>{kaamKeProviders.find((provider) => provider.id === providerId)?.name || "—"}</dd></div>
+              {tab === "bill" && <div><dt>Bill type</dt><dd>{BILL_CATEGORY_LABELS[billCategory] || "—"}</dd></div>}
+              <div><dt>Float account</dt><dd>{chunaHua?.title || "—"}</dd></div>
+              <div><dt>Payment received in</dt><dd>{receivedIn}</dd></div>
               <div><dt>Amount</dt><dd>{rs(raqam)}</dd></div>
               <div><dt>Service charge</dt><dd>{rs(charge)}</dd></div>
               <div className="load-summary-total"><dt>Customer pays</dt><dd>{rs(customerPays)}</dd></div>
@@ -691,10 +803,19 @@ export function LoadBillClient({
             </>}
           </dl>
           <div className="load-summary-footer">
-            <p>Today recorded <b>{aajKaKaam.length}</b> Load / Bill · service income <b>{rs(kamaya)}</b></p>
+            <p>Today&apos;s {serviceTitle} entries: <b>{currentTransactionCount}</b>{(tab === "load" || tab === "bill") ? <> · service income <b>{rs(kamaya)}</b></> : null}</p>
             {sabootBaqi > 0 && <p className="load-warning"><Clock aria-hidden="true" /> {sabootBaqi} proof pending</p>}
             {adaBaqi > 0 && <p className="load-warning">{adaBaqi} bill payment unsettled</p>}
           </div>
+          <div className="load-summary-actions">
+            <button type="button" onClick={() => printDeskSlip(currentSlip)} disabled={amountForSlip <= 0}>
+              <Printer aria-hidden="true" /> {currentActionSucceeded ? "Print Receipt" : "Print Slip Preview"}
+            </button>
+            <a href={whatsAppHref} target="_blank" rel="noreferrer" aria-disabled={!quickPhone} tabIndex={quickPhone ? 0 : -1} className={!quickPhone ? "is-disabled" : ""}>
+              <MessageCircle aria-hidden="true" /> WhatsApp
+            </a>
+          </div>
+          {!currentActionSucceeded && <p className="load-slip-hint">Preview slip hai; final receipt ke liye pehle transaction save karein.</p>}
         </aside>
       </div>
 
@@ -720,12 +841,31 @@ export function LoadBillClient({
                   <td><span className={`load-kind-badge load-kind-${transaction.kind}`}>{transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : "Recovery"}</span></td>
                   <td className="text-right tabular-nums">{rs(transaction.amount + transaction.serviceCharge)}</td>
                   <td>{transaction.status === "pending" ? <Badge tone="amber">Pending</Badge> : transaction.status === "wapas" ? <Badge tone="red">Reversed</Badge> : <Badge tone="green">Completed</Badge>}</td>
-                  <td>{t ? <details className="load-row-actions"><summary>Manage</summary><div>
+                  <td><div className="load-history-actions">
+                    <button type="button" title="Print receipt" aria-label={`Print ${transaction.kind} receipt`} onClick={() => printDeskSlip({
+                      title: `${transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : "Recovery"} Receipt`,
+                      date: new Date(transaction.waqt).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" }),
+                      customer: transaction.customer,
+                      contact: transaction.kind === "load" ? transaction.reference : undefined,
+                      provider: transaction.provider === "—" ? undefined : transaction.provider,
+                      billCategory: t?.billCategory ? BILL_CATEGORY_LABELS[t.billCategory] || t.billCategory : undefined,
+                      reference: transaction.reference === "—" ? undefined : transaction.reference,
+                      amount: transaction.amount,
+                      serviceCharge: transaction.serviceCharge,
+                      total: transaction.amount + transaction.serviceCharge,
+                      account: t?.method,
+                      paymentMethod: t?.method,
+                      status: transaction.status === "pending" ? "Proof pending" : transaction.status === "wapas" ? "Reversed" : "Completed",
+                      receiptNo: t?.number,
+                      note: transaction.note,
+                    })}><Printer aria-hidden="true" /></button>
+                    {t ? <details className="load-row-actions"><summary>Manage</summary><div>
                     {t.status === "saboot_baqi" && <form action={tidAction}><input type="hidden" name="id" value={t.id}/><Input name="provider_tid" placeholder="Provider TID" required/><Button type="submit" size="sm" variant="secondary">Save TID</Button></form>}
                     {t.kind === "bill" && !t.settled && t.status !== "wapas" && <form action={settleAction}><input type="hidden" name="id" value={t.id}/><Button type="submit" size="sm" variant="secondary">Mark paid</Button></form>}
                     {canReverse && t.status === "darj" && t.commissionStatus === "muntazir" && <form action={commAction}><input type="hidden" name="id" value={t.id}/><Input name="rakam" inputMode="decimal" placeholder="Commission" required/><Select name="kahan" defaultValue="float"><option value="float">Provider float</option>{financeAccounts.map((account)=><option key={account.id} value={account.id}>{account.name}</option>)}</Select><Button type="submit" size="sm" variant="secondary">Confirm</Button></form>}
                     {canReverse && t.status !== "wapas" && <form action={revAction}><input type="hidden" name="id" value={t.id}/><Input name="reason" placeholder="Reason for reversal" required/><Button type="submit" size="sm" variant="ghost">Reverse</Button></form>}
-                  </div></details> : <span className="text-surface-400">—</span>}</td>
+                    </div></details> : <span className="text-surface-400">—</span>}
+                  </div></td>
                 </tr>;
               })}
               {visibleTransactions.length === 0 && <tr><td colSpan={6} className="load-empty-row">No transactions in this filter today.</td></tr>}
@@ -734,6 +874,19 @@ export function LoadBillClient({
         </div>
         <Pager page={visiblePage} count={filteredTransactions.length} size={transactionPageSize} onChange={setTransactionPage} />
       </section>
+
+      <button type="button" className="load-quick-view-trigger" aria-expanded={quickViewOpen} onClick={() => setQuickViewOpen((open) => !open)}>
+        {quickViewOpen ? <X aria-hidden="true" /> : <span aria-hidden="true">‹</span>} Customer Quick View
+      </button>
+      {quickViewOpen && <aside className="load-quick-view" role="dialog" aria-label="Customer Quick View">
+        <div className="load-quick-view-heading"><h2>Customer Quick View</h2><button type="button" aria-label="Close" onClick={() => setQuickViewOpen(false)}><X aria-hidden="true" /></button></div>
+        {activeParty ? <>
+          <p className="load-quick-view-name">{activeParty.name}</p>
+          <p>{activeParty.type === "farmer" ? "Farmer" : "Customer"}{activeParty.phone ? ` · ${activeParty.phone}` : ""}</p>
+          <div className="load-quick-view-balance"><span>Known khata balance</span><b>{activeParty.balance == null ? "Not available" : rs(activeParty.balance)}</b></div>
+          <Link href={activeParty.type === "farmer" ? `/admin/farmers/${activeParty.id}` : `/admin/crm/${activeParty.id}`} onClick={() => setQuickViewOpen(false)}>Open profile →</Link>
+        </> : <p>Form mein customer ya farmer select karein; us ka quick detail yahan nazar aayega.</p>}
+      </aside>}
     </div>
   );
 }
@@ -767,6 +920,11 @@ function UdhaarForm({
   onPersonChange,
   amount,
   onAmountChange,
+  note,
+  onNoteChange,
+  onSubmit,
+  date,
+  onDateChange,
   account,
   onAccountChange,
 }: {
@@ -779,6 +937,11 @@ function UdhaarForm({
   onPersonChange: (person: PersonOption | null) => void;
   amount: string;
   onAmountChange: (amount: string) => void;
+  note: string;
+  onNoteChange: (note: string) => void;
+  onSubmit: () => void;
+  date: string;
+  onDateChange: (date: string) => void;
   account: string;
   onAccountChange: (account: string) => void;
 }) {
@@ -786,7 +949,7 @@ function UdhaarForm({
   const diya = kaam === "diya";
 
   return (
-    <form action={diya ? loanAction : wapsiAction} className="load-form space-y-3">
+    <form action={diya ? loanAction : wapsiAction} onSubmit={onSubmit} className="load-form space-y-3">
       <div>
         <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
         <PersonPicker
@@ -824,7 +987,7 @@ function UdhaarForm({
 
       <div>
         <Label htmlFor="udhaar_tareekh">Kis din</Label>
-        <Input id="udhaar_tareekh" name="tareekh" type="date" defaultValue={aajKaKhana()} />
+        <Input id="udhaar_tareekh" name="tareekh" type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
       </div>
 
       <div>
@@ -833,6 +996,8 @@ function UdhaarForm({
           id="udhaar_wajah"
           name="wajah"
           placeholder={diya ? "jaise: beej ke liye" : "jaise: fasal bikne par"}
+          value={note}
+          onChange={(event) => onNoteChange(event.target.value)}
         />
       </div>
 
