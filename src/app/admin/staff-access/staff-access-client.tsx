@@ -61,7 +61,7 @@ export function StaffAccessClient({ staff, features, templates, chunaHua, uskiIj
   const location = banda?.shop_id ? shops.find((s) => s.id === banda.shop_id)?.name : banda?.branch_id ? branches.find((b) => b.id === banda.branch_id)?.name : "tamam assigned locations";
   const visibleFeatures = useMemo(() => {
     const q = featureQuery.trim().toLowerCase();
-    return q ? features.filter((f) => `${f.label} ${f.route}`.toLowerCase().includes(q)) : features;
+    return q ? features.filter((f) => `${f.label} ${f.route} ${f.key}`.toLowerCase().includes(q)) : features;
   }, [featureQuery, features]);
 
   useEffect(() => {

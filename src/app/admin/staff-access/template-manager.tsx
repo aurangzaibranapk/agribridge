@@ -27,7 +27,7 @@ export function TemplateManager({ templates, features }: { templates: Template[]
   const [allState, allAction] = useFormState(fillRoleTemplate, EMPTY);
   const [aiState, aiAction] = useFormState(suggestRoleTemplate, EMPTY);
   const rowMap = useMemo(() => new Map(rows.map((r) => [r.feature_key, r])), [rows]);
-  const visible = useMemo(() => { const q = query.trim().toLowerCase(); return q ? features.filter((f) => `${f.label} ${f.route}`.toLowerCase().includes(q)) : features; }, [features, query]);
+  const visible = useMemo(() => { const q = query.trim().toLowerCase(); return q ? features.filter((f) => `${f.label} ${f.route} ${f.key}`.toLowerCase().includes(q)) : features; }, [features, query]);
 
   useEffect(() => { setRows(templates.find((t) => t.role === role)?.permissions ?? []); }, [role, templates]);
   useEffect(() => { if (aiState.suggestion) { setRows(aiState.suggestion); setOpen(true); } }, [aiState.suggestion]);
