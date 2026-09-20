@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Pager } from "@/components/guided/desk-workspace";
 import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -59,6 +60,25 @@ interface Txn {
   waqt: string;
   provider: string;
 }
+interface LedgerTxn {
+  id: string;
+  description: string;
+  amount: number;
+  createdAt: string;
+  kind: "udhaar" | "recovery";
+}
+type DeskTransaction = {
+  id: string;
+  kind: "load" | "bill" | "udhaar" | "recovery";
+  customer: string;
+  provider: string;
+  reference: string;
+  amount: number;
+  serviceCharge: number;
+  status: string;
+  waqt: string;
+  source?: Txn;
+};
 
 // Malik (7 September): "50 ka load kabhi nahi hota, minimum 100 rupay hai."
 const RAQAM = [100, 200, 500, 1000];
@@ -108,6 +128,8 @@ export function LoadBillClient({
   customers,
   farmers,
   today,
+  ledgerToday,
+  summary,
   canReverse,
 }: {
   /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
@@ -118,6 +140,8 @@ export function LoadBillClient({
   customers: { id: string; name: string; balance: number | null }[];
   farmers: { id: string; name: string; phone: string | null; cnic: string | null; farmerCode: string }[];
   today: Txn[];
+  ledgerToday: LedgerTxn[];
+  summary: { floatBalance: number | null; cashReceived: number | null; volume: number | null; recovery: number | null; pendingProof: number | null };
   canReverse: boolean;
 }) {
   /**
@@ -166,6 +190,9 @@ export function LoadBillClient({
    * kar deta hai — is liye hamesha bhejna mehfooz hai).
    */
   const [mainParty, setMainParty] = useState<PersonOption | null>(null);
+  const [ledgerParty, setLedgerParty] = useState<PersonOption | null>(null);
+  const [ledgerAmount, setLedgerAmount] = useState("");
+  const [ledgerAccount, setLedgerAccount] = useState("cash");
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -238,15 +265,46 @@ export function LoadBillClient({
   const kamPara =
     chunaHua?.float !== null && chunaHua !== null && raqam > 0 && chunaHua.float! < raqam;
 
+  const customerPays = raqam + charge;
   const aajKaKaam = today.filter((t) => t.status !== "wapas");
-  const handled = aajKaKaam.reduce((s, t) => s + t.principal, 0);
   const kamaya = aajKaKaam.reduce((s, t) => s + (t.serviceCharge ?? 0), 0);
   const sabootBaqi = aajKaKaam.filter((t) => t.status === "saboot_baqi").length;
   const adaBaqi = aajKaKaam.filter((t) => t.kind === "bill" && !t.settled).length;
-
-  const [showTransactions, setShowTransactions] = useState(false);
+  const [transactionFilter, setTransactionFilter] = useState<"all" | "load" | "bill" | "udhaar" | "recovery" | "pending">("all");
   const [transactionPage, setTransactionPage] = useState(0);
-  const visiblePage = Math.min(transactionPage, Math.max(0, Math.ceil(today.length / 6) - 1));
+  const transactions: DeskTransaction[] = [
+    ...today.map((t) => ({
+      id: t.id,
+      kind: (t.kind === "bill" ? "bill" : "load") as "load" | "bill",
+      customer: t.customer || t.reference || "Walk-in",
+      provider: t.provider,
+      reference: t.reference,
+      amount: t.principal,
+      serviceCharge: t.serviceCharge ?? 0,
+      status: t.status === "wapas" ? "wapas" : t.status === "saboot_baqi" ? "pending" : !t.settled ? "pending" : "complete",
+      waqt: t.waqt,
+      source: t,
+    })),
+    ...ledgerToday.map((t) => ({
+      id: t.id,
+      kind: t.kind,
+      customer: t.description.replace(/^Udhaar ki wapsi\s*[—-]?\s*|^Naqad udhaar\s*[—-]?\s*/, "").split(" (")[0] || "Customer",
+      provider: "—",
+      reference: "—",
+      amount: t.amount,
+      serviceCharge: 0,
+      status: "complete",
+      waqt: t.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.waqt).getTime() - new Date(a.waqt).getTime());
+  const filteredTransactions = transactions.filter((t) => {
+    if (transactionFilter === "all") return true;
+    if (transactionFilter === "pending") return t.status === "pending";
+    return t.kind === transactionFilter;
+  });
+  const transactionPageSize = 3;
+  const visiblePage = Math.min(transactionPage, Math.max(0, Math.ceil(filteredTransactions.length / transactionPageSize) - 1));
+  const visibleTransactions = filteredTransactions.slice(visiblePage * transactionPageSize, (visiblePage + 1) * transactionPageSize);
 
   const paighaam =
     state.error ?? tidState.error ?? settleState.error ?? revState.error ?? commState.error ?? loanState.error ?? wapsiState.error;
@@ -255,48 +313,48 @@ export function LoadBillClient({
 
   return (
     <div className="load-body">
-      <div className="flex shrink-0 items-center justify-between"><span className="text-xs text-surface-500">Load / Bill / Udhaar / Recovery</span><button type="button" onClick={() => setShowTransactions(!showTransactions)} className="rounded-lg border px-3 py-2 text-sm">{showTransactions ? "Wapas — New Entry" : `Today’s Transactions (${today.length})`}</button></div>
-      {/* -------- Float ke khane -------- */}
-      <div className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {accounts.map((a) => (
-          <Card key={a.id} className="py-3">
-            <p className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
-              <Wallet className="h-3.5 w-3.5" /> {a.title}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-surface-400">
-              {a.providerName === "—" ? "Har provider ke liye" : a.providerName}
-            </p>
-            <p className="mt-1 font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
-              {a.float === null ? "—" : rs(a.float)}
-            </p>
-            {a.float === null && (
-              <p className="mt-0.5 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
-                Is ke saath koi asal khata juRa nahi — "Float aur account" par ja kar chunein
-              </p>
-            )}
-          </Card>
+      <section className="load-kpis grid grid-cols-2 gap-2 xl:grid-cols-5" aria-label="Aaj ka counter summary">
+        {[
+          { label: "Float balance", value: summary.floatBalance === null ? "Unavailable" : rs(summary.floatBalance), tone: "green" },
+          { label: "Cash received today", value: summary.cashReceived === null ? "Unavailable" : rs(summary.cashReceived), tone: "blue" },
+          { label: "Load & Bill today", value: summary.volume === null ? "Unavailable" : rs(summary.volume), tone: "green" },
+          { label: "Recovery today", value: summary.recovery === null ? "Unavailable" : rs(summary.recovery), tone: "teal" },
+          { label: "Pending proof", value: summary.pendingProof === null ? "Unavailable" : String(summary.pendingProof), tone: summary.pendingProof ? "amber" : "green" },
+        ].map((metric) => (
+          <div key={metric.label} className={`load-kpi load-kpi-${metric.tone}`}>
+            <p>{metric.label}</p><strong>{metric.value}</strong>
+          </div>
         ))}
+      </section>
+      <div className="load-account-strip" aria-label="Provider account float detail">
+        <span>Accounts</span>
+        {accounts.map((account) => (
+          <span key={account.id} title={account.providerName === "—" ? "Har provider ke liye" : account.providerName}>
+            <Wallet aria-hidden="true" /> {account.title}: <b>{account.float === null ? "Unavailable" : rs(account.float)}</b>
+          </span>
+        ))}
+        {accounts.some((account) => account.float === null) && <span className="load-account-warning">Some account balances need reconciliation</span>}
       </div>
 
       {paighaam && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
+        <Card className="load-alert border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20">
           <p className="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {paighaam}
           </p>
         </Card>
       )}
       {khushKhabri && !paighaam && (
-        <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20">
+        <Card className="load-alert border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/20">
           <p className="flex items-start gap-2 text-sm text-brand-800 dark:text-brand-200">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> {khushKhabri}
           </p>
         </Card>
       )}
 
-      <div hidden={showTransactions} className={showTransactions ? "hidden" : "load-entry-grid grid gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]"}>
+      <div className="load-entry-grid grid gap-3 lg:grid-cols-[minmax(0,1fr)_19rem]">
         {/* -------- Form -------- */}
         <Card className="load-entry-card">
-          <div className="mb-4 grid gap-2 grid-cols-2 lg:grid-cols-4">
+          <div className="load-mode-tabs mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4" role="tablist" aria-label="Load Bill services">
             {(
               [
                 { key: "load", title: "Mobile Load", sub: "Customer ka mobile load", Icon: Smartphone },
@@ -309,7 +367,9 @@ export function LoadBillClient({
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left transition ${
+                role="tab"
+                aria-selected={tab === key}
+                className={`load-mode flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
                   tab === key
                     ? "border-brand-500 bg-brand-50 dark:border-brand-600 dark:bg-brand-950/30"
                     : "border-surface-200 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/50"
@@ -331,6 +391,12 @@ export function LoadBillClient({
               financeAccounts={financeAccounts}
               loanAction={loanAction}
               wapsiAction={wapsiAction}
+              selectedPerson={ledgerParty}
+              onPersonChange={setLedgerParty}
+              amount={ledgerAmount}
+              onAmountChange={setLedgerAmount}
+              account={ledgerAccount}
+              onAccountChange={setLedgerAccount}
             />
           ) : (
           <form action={action} className="load-form space-y-3">
@@ -606,196 +672,68 @@ export function LoadBillClient({
         </Card>
 
         {/* -------- Aaj ka hisaab -------- */}
-        <div className="space-y-3">
-          <Card className="py-3">
-            <p className="text-xs text-surface-500 dark:text-surface-400">Aaj handle hua</p>
-            <p className="font-display text-2xl font-semibold tabular-nums text-surface-900 dark:text-white">
-              {rs(handled)}
-            </p>
-            <p className="mt-0.5 text-[11px] text-surface-400">{aajKaKaam.length} qatarein</p>
-          </Card>
-          <Card className="py-3">
-            <p className="text-xs text-surface-500 dark:text-surface-400">Aaj ki apni aamdani</p>
-            <p className="font-display text-2xl font-semibold tabular-nums text-surface-900 dark:text-white">
-              {kamaya ? rs(kamaya) : "—"}
-            </p>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-surface-400">
-              Sirf service charge. Company ki commission is mein nahi — wo statement ki tasdeeq ke baad
-              aamdani banti hai.
-            </p>
-          </Card>
-          {sabootBaqi > 0 && (
-            <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-200">
-                <Clock className="h-4 w-4" /> {sabootBaqi} par saboot baqi
-              </p>
-              <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
-                Provider ki TID lagayein — neeche fehrist mein.
-              </p>
-            </Card>
-          )}
-          {adaBaqi > 0 && (
-            <Card className="border-amber-200 bg-amber-50 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                {adaBaqi} bill abhi provider tak nahi pahunche
-              </p>
-              <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
-                Ye paisa hamare paas hai magar hamara nahi.
-              </p>
-            </Card>
-          )}
-        </div>
+        <aside className="load-live-summary" aria-live="polite">
+          <div className="load-summary-title"><div><h2>Live Transaction Summary</h2><span><i /> Ready to process</span></div><CheckCircle2 aria-hidden="true" /></div>
+          <dl>
+            <div><dt>Service</dt><dd>{tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : "Payment Receive"}</dd></div>
+            <div><dt>Customer</dt><dd>{(tab === "udhaar" || tab === "receive" ? ledgerParty?.name : mainParty?.name) || "Walk-in"}</dd></div>
+            {tab === "load" || tab === "bill" ? <>
+              <div><dt>{tab === "load" ? "Mobile / Account" : "Reference"}</dt><dd>{reference || "—"}</dd></div>
+              <div><dt>{tab === "load" ? "Network" : "Provider"}</dt><dd>{kaamKeProviders.find((provider) => provider.id === providerId)?.name || "—"}</dd></div>
+              <div><dt>Amount</dt><dd>{rs(raqam)}</dd></div>
+              <div><dt>Service charge</dt><dd>{rs(charge)}</dd></div>
+              <div className="load-summary-total"><dt>Customer pays</dt><dd>{rs(customerPays)}</dd></div>
+              <div className="load-summary-income"><dt>Staff income</dt><dd>{charge ? rs(charge) : "—"}</dd></div>
+            </> : <>
+              <div><dt>Accounting</dt><dd>{tab === "udhaar" ? "Customer balance increases" : "Customer balance decreases"}</dd></div>
+              <div><dt>Amount</dt><dd>{rs(Number(ledgerAmount.replace(/,/g, "")) || 0)}</dd></div>
+              <div><dt>Payment account</dt><dd>{ledgerAccount === "cash" ? "Cash" : financeAccounts.find((account) => account.id === ledgerAccount)?.name || "—"}</dd></div>
+            </>}
+          </dl>
+          <div className="load-summary-footer">
+            <p>Today recorded <b>{aajKaKaam.length}</b> Load / Bill · service income <b>{rs(kamaya)}</b></p>
+            {sabootBaqi > 0 && <p className="load-warning"><Clock aria-hidden="true" /> {sabootBaqi} proof pending</p>}
+            {adaBaqi > 0 && <p className="load-warning">{adaBaqi} bill payment unsettled</p>}
+          </div>
+        </aside>
       </div>
 
-      {/* Transactions occupy the workspace, never push the entry screen down. */}
-      {showTransactions && <Card className="min-h-0 overflow-auto p-0">
-        <p className="border-b border-surface-100 px-5 py-3 text-sm font-semibold text-surface-900 dark:border-surface-800 dark:text-white">
-          Aaj ki qatarein
-        </p>
-        {today.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-surface-500 dark:text-surface-400">Aaj abhi koi qatar nahi.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-sm">
-              <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
-                <tr>
-                  <th className="px-4 py-2">Waqt</th>
-                  <th className="px-4 py-2">Number</th>
-                  <th className="px-4 py-2">Provider</th>
-                  <th className="px-4 py-2">Reference</th>
-                  <th className="px-4 py-2 text-right">Raqam</th>
-                  <th className="px-4 py-2 text-right">Service charge</th>
-                  <th className="px-4 py-2 text-right">Commission</th>
-                  <th className="px-4 py-2">Halat</th>
-                  <th className="px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {today.slice(visiblePage * 6, (visiblePage + 1) * 6).map((t) => (
-                  <tr key={t.id} className="border-t border-surface-100 dark:border-surface-800">
-                    <td className="px-4 py-2 text-xs tabular-nums text-surface-500">
-                      {new Date(t.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{t.number}</td>
-                    <td className="px-4 py-2">{t.provider}</td>
-                    <td className="px-4 py-2 tabular-nums">{t.reference}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{rs(t.principal)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {t.serviceCharge === null ? "—" : rs(t.serviceCharge)}
-                    </td>
-                    <td className="px-4 py-2 text-right text-xs">
-                      {/*
-                        Andaza aur asal raqam ek nazar mein alag nazar
-                        aate hain. "~" wala adad kabhi kitab mein nahi
-                        gaya -- wo sirf qaide se gina hua andaza hai.
-                        Qaida hi na ho to "qaida nahi" likha jata hai,
-                        "Rs 0" nahi: dekha hi nahi gaya aur sifar do alag
-                        baatein hain.
-                      */}
-                      {t.commissionStatus === "tasdeeq" ? (
-                        <span className="font-medium text-brand-700 tabular-nums">
-                          {t.commissionConfirmed === null ? "tasdeeq shuda" : rs(t.commissionConfirmed)}
-                        </span>
-                      ) : t.commissionStatus === "nahi_mili" ? (
-                        <span className="text-red-600">nahi mili</span>
-                      ) : (
-                        <span className="text-surface-400">
-                          {t.commissionExpected === null
-                            ? "qaida nahi"
-                            : `~${rs(t.commissionExpected)} muntazir`}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {t.status === "wapas" ? (
-                        <Badge tone="red">wapas</Badge>
-                      ) : t.status === "saboot_baqi" ? (
-                        <Badge tone="amber">saboot baqi</Badge>
-                      ) : !t.settled ? (
-                        <Badge tone="amber">ada baqi</Badge>
-                      ) : (
-                        <Badge tone="green">darj</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        {t.status === "saboot_baqi" && (
-                          <form action={tidAction} className="flex items-center gap-1">
-                            <input type="hidden" name="id" value={t.id} />
-                            <Input
-                              name="provider_tid"
-                              placeholder="TID"
-                              className="h-8 w-28 text-xs"
-                              required
-                            />
-                            <Button type="submit" size="sm" variant="secondary">
-                              Lagayein
-                            </Button>
-                          </form>
-                        )}
-                        {t.kind === "bill" && !t.settled && t.status !== "wapas" && (
-                          <form action={settleAction}>
-                            <input type="hidden" name="id" value={t.id} />
-                            <Button type="submit" size="sm" variant="secondary">
-                              Ada ho gaya
-                            </Button>
-                          </form>
-                        )}
-                        {/*
-                          Commission ka khana.
-
-                          Malik (6 September): *"service charges to nahi
-                          liye, lekin hamein 15 rupay ka commission mila
-                          hai -- wo kahan darj nahi hua?"*
-
-                          "Kahan aayi" poochha jata hai, maan nahi liya
-                          jata: aam taur par usi float mein aati hai
-                          jahan se load gaya, magar hamesha nahi.
-                        */}
-                        {canReverse &&
-                          t.status === "darj" &&
-                          t.commissionStatus === "muntazir" && (
-                            <form action={commAction} className="flex items-center gap-1">
-                              <input type="hidden" name="id" value={t.id} />
-                              <Input
-                                name="rakam"
-                                inputMode="decimal"
-                                placeholder="commission"
-                                className="h-8 w-24 text-xs"
-                                required
-                              />
-                              <Select name="kahan" className="h-8 w-28 text-xs" defaultValue="float">
-                                <option value="float">float mein</option>
-                                {financeAccounts.map((f) => (
-                                  <option key={f.id} value={f.id}>
-                                    {f.name}
-                                  </option>
-                                ))}
-                              </Select>
-                              <Button type="submit" size="sm" variant="secondary">
-                                Mil gayi
-                              </Button>
-                            </form>
-                          )}
-                        {canReverse && t.status !== "wapas" && (
-                          <form action={revAction} className="flex items-center gap-1">
-                            <input type="hidden" name="id" value={t.id} />
-                            <Input name="reason" placeholder="wapas ki wajah" className="h-8 w-32 text-xs" required />
-                            <Button type="submit" size="sm" variant="ghost">
-                              Wapas
-                            </Button>
-                          </form>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <section className="load-transactions desk-card" aria-label="Today's transactions">
+        <div className="load-transactions-heading">
+          <h2><FileText aria-hidden="true" /> Today&apos;s Transactions <span>({transactions.length})</span></h2>
+          <div className="load-transaction-filters" role="tablist" aria-label="Filter transactions">
+            {([
+              ["all", "All"], ["load", "Load"], ["bill", "Bill"], ["udhaar", "Udhaar"], ["recovery", "Recovery"], ["pending", "Pending"],
+            ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={transactionFilter === key} onClick={() => { setTransactionFilter(key); setTransactionPage(0); }}>{label}</button>)}
           </div>
-        )}
-        <Pager page={visiblePage} count={today.length} size={6} onChange={setTransactionPage} />
-      </Card>}
+          <Link href="/admin/load-bill" className="load-view-all">View All →</Link>
+        </div>
+        <div className="load-transactions-table-wrap">
+          <table className="load-transactions-table">
+            <thead><tr><th>Time</th><th>Customer / Reference</th><th>Type</th><th className="text-right">Amount</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+              {visibleTransactions.map((transaction) => {
+                const t = transaction.source;
+                return <tr key={transaction.id}>
+                  <td className="tabular-nums">{new Date(transaction.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</td>
+                  <td><span className="load-transaction-customer">{transaction.customer}</span>{transaction.kind === "load" && <small>{transaction.reference}</small>}</td>
+                  <td><span className={`load-kind-badge load-kind-${transaction.kind}`}>{transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : "Recovery"}</span></td>
+                  <td className="text-right tabular-nums">{rs(transaction.amount + transaction.serviceCharge)}</td>
+                  <td>{transaction.status === "pending" ? <Badge tone="amber">Pending</Badge> : transaction.status === "wapas" ? <Badge tone="red">Reversed</Badge> : <Badge tone="green">Completed</Badge>}</td>
+                  <td>{t ? <details className="load-row-actions"><summary>Manage</summary><div>
+                    {t.status === "saboot_baqi" && <form action={tidAction}><input type="hidden" name="id" value={t.id}/><Input name="provider_tid" placeholder="Provider TID" required/><Button type="submit" size="sm" variant="secondary">Save TID</Button></form>}
+                    {t.kind === "bill" && !t.settled && t.status !== "wapas" && <form action={settleAction}><input type="hidden" name="id" value={t.id}/><Button type="submit" size="sm" variant="secondary">Mark paid</Button></form>}
+                    {canReverse && t.status === "darj" && t.commissionStatus === "muntazir" && <form action={commAction}><input type="hidden" name="id" value={t.id}/><Input name="rakam" inputMode="decimal" placeholder="Commission" required/><Select name="kahan" defaultValue="float"><option value="float">Provider float</option>{financeAccounts.map((account)=><option key={account.id} value={account.id}>{account.name}</option>)}</Select><Button type="submit" size="sm" variant="secondary">Confirm</Button></form>}
+                    {canReverse && t.status !== "wapas" && <form action={revAction}><input type="hidden" name="id" value={t.id}/><Input name="reason" placeholder="Reason for reversal" required/><Button type="submit" size="sm" variant="ghost">Reverse</Button></form>}
+                  </div></details> : <span className="text-surface-400">—</span>}</td>
+                </tr>;
+              })}
+              {visibleTransactions.length === 0 && <tr><td colSpan={6} className="load-empty-row">No transactions in this filter today.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <Pager page={visiblePage} count={filteredTransactions.length} size={transactionPageSize} onChange={setTransactionPage} />
+      </section>
     </div>
   );
 }
@@ -825,14 +763,26 @@ function UdhaarForm({
   financeAccounts,
   loanAction,
   wapsiAction,
+  selectedPerson,
+  onPersonChange,
+  amount,
+  onAmountChange,
+  account,
+  onAccountChange,
 }: {
   kaam: "diya" | "wapsi";
   people: PersonOption[];
   financeAccounts: { id: string; name: string }[];
   loanAction: (fd: FormData) => void;
   wapsiAction: (fd: FormData) => void;
+  selectedPerson: PersonOption | null;
+  onPersonChange: (person: PersonOption | null) => void;
+  amount: string;
+  onAmountChange: (amount: string) => void;
+  account: string;
+  onAccountChange: (account: string) => void;
 }) {
-  const [chuna, setChuna] = useState<PersonOption | null>(null);
+  const chuna = selectedPerson;
   const diya = kaam === "diya";
 
   return (
@@ -843,7 +793,7 @@ function UdhaarForm({
           people={people}
           partyTypeName="party_type"
           partyIdName="party_id"
-          onChange={setChuna}
+          onChange={onPersonChange}
         />
         {chuna && (
           <div className="mt-2">
@@ -857,12 +807,12 @@ function UdhaarForm({
 
       <div>
         <Label htmlFor="udhaar_rakam">Raqam</Label>
-        <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" />
+        <Input id="udhaar_rakam" name="rakam" required inputMode="decimal" placeholder="5000" value={amount} onChange={(event) => onAmountChange(event.target.value)} />
       </div>
 
       <div>
         <Label htmlFor="udhaar_khata">{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
-        <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} defaultValue="cash">
+        <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} value={account} onChange={(event) => onAccountChange(event.target.value)}>
           <option value="cash">Cash — golak</option>
           {financeAccounts.map((f) => (
             <option key={f.id} value={f.id}>
