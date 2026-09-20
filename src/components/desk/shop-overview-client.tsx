@@ -12,7 +12,7 @@ export function ShopOverviewClient({methods,trend,stock,credit,cash,digital,rece
   const totalMethods=methods.reduce((sum,m)=>sum+m.sales,0);
   const countText=(n:number|null)=>n===null?"—":n.toLocaleString("en-PK");
   const dayLabel=(day:string)=>new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",timeZone:"UTC"}).format(new Date(`${day}T12:00:00Z`));
-  return <div className="flex min-h-0 flex-col gap-3">
+  return <div className="desk-overview-screen flex min-h-0 flex-col gap-3">
     <section className="desk-card"><h2 className="mb-2 font-semibold">Quick Actions</h2><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{links.map(l=><Link key={l.href} href={l.href} className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-3 text-center text-sm font-semibold text-brand-800 dark:bg-surface-900">{l.label} →</Link>)}</div></section>
     <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">{[["Aaj ki POS sale",received+credit],["Cash sale",cash],["Digital sale",digital],["POS Khata sale",credit],["Stock value · FIFO cost",stock]].map(([label,value])=><div key={label} className="desk-card"><p className="text-xs text-surface-500">{label}</p><p className="desk-metric">{money(value as number|null)}</p></div>)}</div>
     <div className="grid gap-3 lg:grid-cols-3">
