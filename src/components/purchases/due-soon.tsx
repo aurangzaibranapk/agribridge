@@ -32,7 +32,9 @@ export async function DueSoon({ lang, compact = false }: { lang: Lang; compact?:
   // alarm deta hai.
   const rows = (data ?? []).filter((r) => Number(r.supplier_payable ?? 0) > 0);
   const overdue = rows.filter((r) => Number(r.days_left ?? 0) < 0);
-  const soonTotal = rows.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+  // supplier_payable actual outstanding hai; total_amount poora bill amount
+  // hai — agar advance payment ho chuki ho to total misleading hota hai.
+  const soonTotal = rows.reduce((s, r) => s + Number(r.supplier_payable ?? 0), 0);
 
   return (
     <Card className={overdue.length > 0 ? "border-l-4 border-l-red-500" : ""}>

@@ -68,7 +68,10 @@ export default async function PurchaseTaxReportPage({
   // Totals
   const totalDiscount = purchases.reduce((s, r) => s + (Number(r.discount_amount) || 0), 0);
   const totalTax = purchases.reduce((s, r) => s + (Number(r.tax_amount) || 0), 0);
-  const totalPurchase = purchases.reduce((s, r) => s + (Number(r.total_amount) || 0), 0);
+  // invoice_total original bill value hai; total_amount GRN ke baad adjust
+  // hota hai. Tax/discount original invoice par hota hai, is liye yahan
+  // invoice_total prefer karein taake teen columns reconcile hon.
+  const totalPurchase = purchases.reduce((s, r) => s + (Number(r.invoice_total ?? r.total_amount) || 0), 0);
 
   // Tax grouped by label
   const taxByLabel = new Map<string, number>();

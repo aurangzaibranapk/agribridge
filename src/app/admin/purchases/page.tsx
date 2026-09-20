@@ -263,19 +263,6 @@ export default async function AdminPurchasesPage() {
                                 {t("pu_slip", lang)}: Rs {s.amount.toLocaleString()} · {s.paid_on}
                               </a>
                             ))}
-                            {(() => {
-                              const paid = p.slips.reduce((sum, s) => sum + s.amount, 0);
-                              const baqi = Number(p.total_amount) - paid;
-                              return baqi > 0 ? (
-                                <span className="block text-[11px] font-medium text-red-600 dark:text-red-400">
-                                  {t("pu_slips_outstanding", lang)}: Rs {baqi.toLocaleString()}
-                                </span>
-                              ) : (
-                                <span className="block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                                  {t("pu_slips_fully_paid", lang)}
-                                </span>
-                              );
-                            })()}
                           </span>
                         )}
                       </td>

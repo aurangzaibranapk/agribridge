@@ -14,18 +14,9 @@ const HQ_APPROVER_ROLES = ["super_admin", "admin", "owner"];
 
 async function generateRequestNumber(): Promise<string> {
   const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await serviceClient.from("supplier_payment_request_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("supplier_payment_request_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("supplier_payment_request_counters").insert({ year, last_number: nextNumber });
-  }
-
-  return `SPR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  const { data, error } = await serviceClient.rpc("fn_next_spr_number");
+  if (error || !data) throw new Error(error?.message ?? "SPR counter fail");
+  return data as string;
 }
 
 export async function requestSupplierPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
