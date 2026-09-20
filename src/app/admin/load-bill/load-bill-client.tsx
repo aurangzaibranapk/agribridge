@@ -733,7 +733,7 @@ export function LoadBillClient({
             </div>
 
             {/* Saboot -- is poore safhe ki sab se ahem cheez. */}
-            <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-900/40 dark:bg-brand-950/20">
+            <div className="load-form-wide rounded-lg border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-900/40 dark:bg-brand-950/20">
               <Label htmlFor="provider_tid">Provider ki TID / reference</Label>
               <Input id="provider_tid" name="provider_tid" placeholder="Jazz/Easypaisa app se copy karein" />
               <p className="mt-1 text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
@@ -759,7 +759,7 @@ export function LoadBillClient({
               </label>
             )}
 
-            <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
+            <div className="load-form-wide rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
               <div className="flex justify-between">
                 <span className="text-surface-500">Customer dega</span>
                 <span className="font-semibold tabular-nums text-surface-900 dark:text-white">
@@ -986,7 +986,7 @@ function UdhaarForm({
         <Input id="udhaar_tareekh" name="tareekh" type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
       </div>
 
-      <div>
+      <div className="load-form-wide">
         <Label htmlFor="udhaar_wajah">Wajah / note (marzi ka)</Label>
         <Input
           id="udhaar_wajah"
@@ -997,7 +997,7 @@ function UdhaarForm({
         />
       </div>
 
-      <div className="rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
+      <div className="load-form-wide rounded-lg bg-surface-50 p-3 text-xs leading-relaxed text-surface-600 dark:bg-surface-800/50 dark:text-surface-300">
         {diya ? (
           <>
             Ye <b>bikri nahi</b> hai — koi maal nahi gaya, sirf paisa gaya. Is liye is se nafa nahi banta;
