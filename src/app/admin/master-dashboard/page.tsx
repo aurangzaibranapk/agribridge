@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
@@ -10,8 +11,14 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
-export default async function MasterDashboardPage() {
+export default async function MasterDashboardPage({
+  searchParams,
+}: {
+  searchParams: { shop_id?: string };
+}) {
+  const shopId = searchParams.shop_id || null;
   const supabase = createClient();
+  const serviceClient = createServiceClient();
   const businessContext = await getBusinessContext();
   const lang = getLanguageFromCookies("rm");
   const now = new Date();
@@ -192,7 +199,50 @@ export default async function MasterDashboardPage() {
   };
   const capitalBreakdown = Object.entries(capitalBySource).map(([src, value]) => ({ name: SOURCE_LABELS[src] ?? src, value }));
 
-  const totalRevenue = (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
+  // ===== Shops list (filter ke liye) =====
+  const { data: shopsList } = await serviceClient.from("shops").select("id, name").order("name");
+
+  // ===== POS Sales revenue (is mahine, shop filter ke sath) =====
+  let posQuery = serviceClient
+    .from("pos_sales")
+    .select("total_amount")
+    .gte("sale_date", monthStart)
+    .lte("sale_date", monthEnd);
+  if (shopId) posQuery = posQuery.eq("shop_id", shopId);
+  const { data: posSalesRows } = await posQuery;
+  const posRevenue = (posSalesRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+
+  // ===== Top Selling Items (is mahine, shop filter ke sath) =====
+  let saleIdsQuery = serviceClient
+    .from("pos_sales")
+    .select("id")
+    .gte("sale_date", monthStart)
+    .lte("sale_date", monthEnd);
+  if (shopId) saleIdsQuery = saleIdsQuery.eq("shop_id", shopId);
+  const { data: saleIdRows } = await saleIdsQuery;
+  const saleIds = (saleIdRows ?? []).map((r: any) => r.id);
+
+  let topSellingItems: { name: string; unit: string; qty: number }[] = [];
+  if (saleIds.length > 0) {
+    const { data: itemRows } = await serviceClient
+      .from("pos_sale_items")
+      .select("product_id, quantity, products(name, unit)")
+      .in("sale_id", saleIds);
+    const productMap = new Map<string, { name: string; unit: string; qty: number }>();
+    for (const item of itemRows ?? []) {
+      const prod: any = Array.isArray(item.products) ? (item.products as any[])[0] : item.products;
+      if (!prod || !(item as any).product_id) continue;
+      const existing = productMap.get((item as any).product_id);
+      if (existing) {
+        existing.qty += Number((item as any).quantity ?? 0);
+      } else {
+        productMap.set((item as any).product_id, { name: prod.name ?? "—", unit: prod.unit ?? "", qty: Number((item as any).quantity ?? 0) });
+      }
+    }
+    topSellingItems = [...productMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 10);
+  }
+
+  const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
   const netProfit = totalRevenue - totalAllExpenses;
   // Position bhi ledger se. Jawab na mile to NULL -- sifar nahi.
@@ -216,6 +266,32 @@ export default async function MasterDashboardPage() {
           {BUSINESS_LABELS[businessContext]} ke liye dedicated P&L abhi nahi bana (roadmap ke Phase 13/14 mein banega). Neeche company-wide numbers dikh rahe hain.
         </div>
       )}
+
+      {/* Shop Filter */}
+      <form method="GET" className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-surface-700 dark:text-surface-300">Shop:</span>
+        <select
+          name="shop_id"
+          defaultValue={shopId ?? ""}
+          className="rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"
+        >
+          <option value="">Sab Shops</option>
+          {(shopsList ?? []).map((s: any) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          Filter
+        </button>
+        {shopId && (
+          <a href="/admin/master-dashboard" className="text-sm text-surface-500 underline">
+            Reset
+          </a>
+        )}
+      </form>
 
       <MasterDashboardActions />
 
@@ -262,37 +338,35 @@ export default async function MasterDashboardPage() {
         <p className="mb-4 text-xs text-surface-400">{t("at_note_split", lang)}</p>
       )}
 
-      {(showAgri || showDairy) && (
-        <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
-            Is Mahine Ka P&L {businessContext === "master" ? "(AgriBridge + Milk Collection)" : `(${BUSINESS_LABELS[businessContext]})`}
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">{t("md_total_revenue", lang)}</p>
-              <p className="font-display text-lg font-semibold text-green-600">Rs {totalRevenue.toLocaleString()}</p>
-              <p className="mt-1 text-[10px] text-surface-400">
-                {showAgri && `AgriBridge: Rs ${agriRevenue.toLocaleString()}`}
-                {showAgri && showDairy && " | "}
-                {showDairy && `Milk: Rs ${milkGrossIncome.toLocaleString()}`}
-              </p>
-            </div>
-            <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
-              <p className="text-xs text-surface-400">{t("md_total_expenses", lang)}</p>
-              <p className="font-display text-lg font-semibold text-red-600">Rs {totalAllExpenses.toLocaleString()}</p>
-              <p className="mt-1 text-[10px] text-surface-400">
-                {showAgri && `Company: Rs ${totalExpenses.toLocaleString()}`}
-                {showAgri && showDairy && " | "}
-                {showDairy && `Milk: Rs ${milkTotalDeductions.toLocaleString()}`}
-              </p>
-            </div>
-            <div className={`rounded-lg p-3 text-center ${netProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-              <p className="text-xs text-surface-400">{t("md_net_pl", lang)}</p>
-              <p className={`font-display text-lg font-bold ${netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>Rs {netProfit.toLocaleString()}</p>
-            </div>
+      <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+          Is Mahine Ka P&L {shopId ? `(Is Shop)` : businessContext === "master" ? "(Sab)" : `(${BUSINESS_LABELS[businessContext]})`}
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
+            <p className="text-xs text-surface-400">{t("md_total_revenue", lang)}</p>
+            <p className="font-display text-lg font-semibold text-green-600">Rs {totalRevenue.toLocaleString()}</p>
+            <p className="mt-1 text-[10px] text-surface-400">
+              {`POS: Rs ${posRevenue.toLocaleString()}`}
+              {showAgri && agriRevenue > 0 && ` | Orders: Rs ${agriRevenue.toLocaleString()}`}
+              {showDairy && milkGrossIncome > 0 && ` | Milk: Rs ${milkGrossIncome.toLocaleString()}`}
+            </p>
+          </div>
+          <div className="rounded-lg bg-surface-50 p-3 text-center dark:bg-surface-800">
+            <p className="text-xs text-surface-400">{t("md_total_expenses", lang)}</p>
+            <p className="font-display text-lg font-semibold text-red-600">Rs {totalAllExpenses.toLocaleString()}</p>
+            <p className="mt-1 text-[10px] text-surface-400">
+              {showAgri && `Company: Rs ${totalExpenses.toLocaleString()}`}
+              {showAgri && showDairy && " | "}
+              {showDairy && `Milk: Rs ${milkTotalDeductions.toLocaleString()}`}
+            </p>
+          </div>
+          <div className={`rounded-lg p-3 text-center ${netProfit >= 0 ? "bg-green-50 dark:bg-green-950/30" : "bg-red-50 dark:bg-red-950/30"}`}>
+            <p className="text-xs text-surface-400">{t("md_net_pl", lang)}</p>
+            <p className={`font-display text-lg font-bold ${netProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>Rs {netProfit.toLocaleString()}</p>
           </div>
         </div>
-      )}
+      </div>
 
       <ClickableCards
         variant="pl"
@@ -301,6 +375,27 @@ export default async function MasterDashboardPage() {
         totalExpenses={showAgri ? totalExpenses : 0}
         milkTotalDeductions={showDairy ? milkTotalDeductions : 0}
       />
+
+      {topSellingItems.length > 0 && (
+        <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
+            Top Selling Items — Is Mahine{shopId ? " (Is Shop)" : ""}
+          </h2>
+          <div className="space-y-2">
+            {topSellingItems.map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
+                  <span className="text-surface-800 dark:text-surface-100">{item.name}</span>
+                </div>
+                <span className="font-semibold tabular-nums text-brand-700 dark:text-brand-400">
+                  {item.qty.toLocaleString()} {item.unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showDairy && (
         <p className="text-xs text-surface-400">
