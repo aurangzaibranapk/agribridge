@@ -79,20 +79,10 @@ function round2(value: number): number {
 async function nextEntryNumber(): Promise<string> {
   const service = createServiceClient();
   const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await service
-    .from("journal_entry_counters")
-    .select("last_number")
-    .eq("year", year)
-    .maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await service.from("journal_entry_counters").update({ last_number: next }).eq("year", year);
-  } else {
-    await service.from("journal_entry_counters").insert({ year, last_number: next });
-  }
-
+  // Atomic increment: INSERT ... ON CONFLICT DO UPDATE ... RETURNING
+  // Race condition khatam — do concurrent sales ek hi number nahi le sakten.
+  const { data } = await service.rpc("next_txn_number", { p_year: year });
+  const next = (data as number) ?? 1;
   return `TXN-${year}-${String(next).padStart(6, "0")}`;
 }
 
