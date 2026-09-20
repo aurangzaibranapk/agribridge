@@ -3,27 +3,11 @@ import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
-import { shopStockPosition, shopWhereIsMyMoney, shopTodayFlow, shopDailySalesTrend, type ShopDailySalesPoint } from "@/lib/pos/shop-360";
-import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
-import { computeShiftCash } from "@/lib/pos/shift-cash";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import {
-  buildMyWork,
-  defaultDashboardForRole,
-  loadFourthKpi,
-  loadPaymentBreakdown,
-  loadOrderFunnel,
-  loadCustomerHealth,
-  loadFarmersToVerify,
-} from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
-import { PaymentDonut } from "@/components/guided/payment-donut";
-import { ShopSalesChart } from "@/components/pos/shop-sales-chart";
-import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
-import { LiveNotificationsPanel } from "@/components/guided/live-notifications-panel";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
@@ -101,27 +85,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, role, training_mode, branch_id, shop_id")
+    .select("full_name, role, training_mode, branch_id")
     .eq("id", user.id)
     .maybeSingle();
   if (!me) redirect("/login");
-
-  // Shop kahan se maloom hoti hai -- POS ki tarah: pehle khuli hui
-  // shift ka counter, warna profile ki apni shop (Load & Bill isi
-  // tarah karta hai, dekhein admin/load-bill/page.tsx).
-  let myShopId: string | null = me.shop_id ?? null;
-  const { data: khulaShift } = await supabase
-    .from("pos_shifts")
-    .select("id, opening_cash, pos_counters(shop_id)")
-    .eq("staff_id", user.id)
-    .eq("status", "open")
-    .limit(1)
-    .maybeSingle();
-  const shiftShop = khulaShift?.pos_counters as { shop_id?: string } | { shop_id?: string }[] | null;
-  const shiftShopId = Array.isArray(shiftShop) ? shiftShop[0]?.shop_id : shiftShop?.shop_id;
-  if (shiftShopId) myShopId = shiftShopId;
-  const myOpenShiftId = (khulaShift?.id as string | undefined) ?? null;
-  const myOpenShiftOpeningCash = Number(khulaShift?.opening_cash ?? 0);
 
   // Training Mode (D): apne department ka module -- pehle N kaam.
   const dept = departmentForRole(me.role);
@@ -174,86 +141,46 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     : { data: null };
   const branchName = branch?.name ?? null;
 
-  // Quick Actions aur Payment Breakdown dono ko chahiye -- yahan upar
-  // le aaya gaya taake neeche Promise.all mein bhi istemal ho sake.
-  const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
-
   // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
   // ginti nahi banti, sirf usi asal data ko chaar chhote number mein
   // dobara dikhaya ja raha hai.
-  const aaj = new Date().toISOString().slice(0, 10);
-  const service = createServiceClient();
-
-  const [
-    fourthKpi,
-    paymentBreakdown,
-    { data: initialNotifications },
-    orderFunnel,
-    customerHealth,
-    farmersToVerify,
-    shopStock,
-    shopSales,
-    shopMoney,
-    shopFlow,
-    { data: udhaarDiyaRows },
-    shiftCash,
-    salesTrend,
-  ] = await Promise.all([
+  const [fourthKpi, recentActivity] = await Promise.all([
     loadFourthKpi(me.branch_id, allowed, lang),
-    // Malik (16 September): "cash sale kitna, card se kitna, QR se
-    // kitna, bank se kitna, easypaisa se kitna, load se kitna, phir
-    // total balance bhi." Sirf jin ke paas POS khulta hai -- baqi ke
-    // liye ye sawal hi nahi banta.
-    canRoute("/admin/pos") ? loadPaymentBreakdown(user.id) : Promise.resolve(null),
-    // Live Notifications panel ka shuruati data -- baad mein ye khud
-    // Realtime se taaza hoti hai (LiveNotificationsPanel), safha dobara
-    // nahi parhta.
-    supabase
-      .from("notifications")
-      .select("id, title, message, link_url, is_read, created_at")
-      .eq("recipient_user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(8),
-    loadOrderFunnel(me.branch_id, allowed),
-    loadCustomerHealth(me.branch_id, allowed),
-    loadFarmersToVerify(me.branch_id, allowed),
-    // 18 September, malik: "jo uske paas stock hai, value aani chahiye" --
-    // is shop ka asal stock, FIFO cost se (Shop 360 jo hisaab pehle se
-    // istemal karta hai, koi naya nahi banaya).
-    myShopId && canRoute("/admin/pos") ? shopStockPosition(myShopId, aaj, aaj) : Promise.resolve(null),
-    // "kis kis method se kya sale hui" -- is shop ki aaj ki, poore
-    // 8 method (sale na ho to us method ka Rs 0, fake nahi -- sach mein
-    // aaj us se kuch nahi hua).
-    myShopId && canRoute("/admin/pos") ? shopPaymentMethodBreakdown(myShopId, aaj, aaj) : Promise.resolve(null),
-    // "pending payment kitni hai" -- receivable, branch tak (shop tak
-    // udhaar/wasooli darj nahi hoti, dekhein shopWhereIsMyMoney ka note).
-    myShopId ? shopWhereIsMyMoney(myShopId) : Promise.resolve(null),
-    // "aaj ki recovery kahan hai" -- isi shop ki aaj ki wasooli.
-    myShopId ? shopTodayFlow(myShopId, aaj) : Promise.resolve(null),
-    // "udhaar diya hai to kahan hai" -- ledger se, is branch ki aaj ki
-    // udhaar-dene wali (debit) qatarein. Shop_id ledger mein nahi hota
-    // (Load & Bill ke Cash-in-Hand comment mein bhi likha hai), is liye
-    // branch tak.
-    me.branch_id
-      ? service
-          .from("journal_lines")
-          .select("debit, journal_entries!inner(entry_date, source_module, branch_id)")
-          .in("account_code", ["1100", "1150"])
-          .eq("journal_entries.source_module", "customer_udhaar")
-          .eq("journal_entries.branch_id", me.branch_id)
-          .eq("journal_entries.entry_date", aaj)
-          .gt("debit", 0)
-      : Promise.resolve({ data: [] as { debit: number }[] }),
-    // Malik (18 September): "yahan par Expected Cash nahi aa raha" --
-    // Shift Band Karein wahi hisaab (opening + cash sale − returns +
-    // load/bill cash + recovery cash − udhaar diya cash) yahan bhi,
-    // isi khuli shift se.
-    myOpenShiftId ? computeShiftCash(myOpenShiftId, myOpenShiftOpeningCash) : Promise.resolve(null),
-    // 7-din ka sale trend -- chart ke liye (sirf POS wale staff ke liye).
-    myShopId && canRoute("/admin/pos") ? shopDailySalesTrend(myShopId, 7) : Promise.resolve(null as ShopDailySalesPoint[] | null),
+    loadRecentActivity(me.branch_id, allowed),
   ]);
-  const udhaarDiyaAajTotal = (udhaarDiyaRows ?? []).reduce((s, r) => s + Number(r.debit), 0);
+  const kpis: { key: string; label: string; value: number | null }[] = [
+    { key: "approvals", label: t("mw_kpi_pending_approvals", lang), value: attentionItems.filter((i) => i.tone === "amber").length },
+    { key: "open", label: t("mw_kpi_open_tasks", lang), value: attentionItems.length },
+    { key: "urgent", label: t("mw_kpi_urgent_today", lang), value: attentionItems.filter((i) => i.tone === "red").length },
+    ...(fourthKpi ? [fourthKpi] : []),
+  ];
+
+  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
+  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
+  // chuna hua raasta.
+  const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
+  type QuickAction = { href: string; label: string; icon: string };
+
+  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
+  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
+  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
+  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
+  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
+  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
+  const sidebarHrefs = nav.unrestricted
+    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
+    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
+
+  const quickActions: QuickAction[] = [
+    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
+    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
+    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
+    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
+    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
+  ]
+    .filter((x): x is QuickAction => x !== null)
+    .filter((qa) => !sidebarHrefs.has(qa.href));
 
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
@@ -342,228 +269,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       )}
 
-      {/* Chaar bade dabbe -- 18 September, mockup ka andaz liya gaya hai
-          (rangeen border, icon, bada adad), magar har adad wahi asal
-          hisaab hai jo pehle bhi is safhe par tha (KPI patti + Payment
-          Breakdown) -- koi nayi/jhooti ginti nahi bani, sirf dikhane ka
-          tareeqa upgrade hua. Jis card ka sawal is bande par laagu nahi
-          hota (jaise Order Funnel jis ke paas Ordering nahi khulta), wo
-          card sirey se nahi banta -- khali dabba nahi dikhaya jata. */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {(shopSales || paymentBreakdown) && (
-          <div className="rounded-card border-2 border-emerald-200 bg-white p-4 dark:border-emerald-900/40 dark:bg-surface-900 lg:col-span-2">
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                <Icons.Wallet className="h-3.5 w-3.5" /> Aaj ka Ledger
-              </p>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                Live Ledger
-              </span>
-            </div>
-            {(() => {
-              // Malik (18 September): "load jo cash par hua hai wo humein
-              // alag dikh raha ho... cash mein itni hai, bank mein itni
-              // hai" -- `shopPaymentMethodBreakdown` ab is shop ka Load +
-              // Bill bhi apne payment_method (cash/bank/wallet/khata) ke
-              // hisaab se cash/bank_transfer/khata/wallet buckets mein
-              // shamil karta hai (shop-payment-methods.ts dekhein) -- is
-              // liye `shopSales` maujood ho to load alag se jama nahi
-              // karna, warna do dafa gin liya jayega. Sirf jab shopSales
-              // na ho (koi shop hi nahi mila) tab `paymentBreakdown` ka
-              // apna flat loadAmount fallback ke tor par dikhaya jata hai.
-              const baseSlices = shopSales
-                ? shopSales.map((r) => ({ key: r.method, label: r.label, amount: r.sales }))
-                : (paymentBreakdown?.methods ?? []);
-              const slices = shopSales
-                ? baseSlices
-                : [
-                    ...baseSlices,
-                    ...(paymentBreakdown && paymentBreakdown.loadAmount > 0
-                      ? [{ key: "load", label: "Mobile Load", amount: paymentBreakdown.loadAmount }]
-                      : []),
-                  ];
-              const total = slices.reduce((s, r) => s + r.amount, 0);
-              // Malik (18 September, reference image): total ke neeche
-              // Cash vs Digital ka chhota split -- "Digital" yahan
-              // Khata (abhi paisa mila hi nahi) chhoR kar baqi saare
-              // tareeqon (Bank/Card/JazzCash/Easypaisa/QR/Waseela/Load)
-              // ka jama hai.
-              const cashAmt = slices.find((s) => s.key === "cash")?.amount ?? 0;
-              const khataAmt = slices.find((s) => s.key === "khata")?.amount ?? 0;
-              const digitalAmt = total - cashAmt - khataAmt;
-              return (
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="font-display text-2xl font-bold tabular-nums text-surface-900 dark:text-white">
-                      Rs {total.toLocaleString()}
-                    </p>
-                    {/* Malik (18 September): "kis kis method se kya sale ki hai
-                        ye pata chalna chahiye" -- is shop ke POS ke saare 8
-                        tareeqe, jis se aaj kuch hua hi nahi us ka Rs 0 (sach,
-                        fake nahi -- Shop 360 ka pehle se banaya hisaab). */}
-                    <p className="text-[11px] text-surface-500">Aaj kis tareeqe se kitna aaya</p>
-                    <div className="mt-1.5 flex gap-4 text-xs">
-                      <p className="text-surface-700 dark:text-surface-300">
-                        Cash <span className="font-semibold tabular-nums text-surface-900 dark:text-white">Rs {cashAmt.toLocaleString()}</span>
-                      </p>
-                      <p className="text-surface-700 dark:text-surface-300">
-                        Digital <span className="font-semibold tabular-nums text-surface-900 dark:text-white">Rs {digitalAmt.toLocaleString()}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <PaymentDonut slices={slices} />
-                </div>
-              );
-            })()}
-            {/* Malik (18 September): "stock ki value, pending payment,
-                aaj ki recovery, udhaar diya -- ye sab ana chahiye." Sab
-                Shop 360/ledger ke pehle se bane hisaab se -- koi naya
-                hisaab nahi bana. */}
-            {(shopStock || shopMoney || shopFlow || udhaarDiyaAajTotal > 0 || shiftCash) && (
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-emerald-100 pt-3 dark:border-emerald-900/40 sm:grid-cols-4">
-                <div>
-                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                    {shopStock?.stockValueFifo == null ? "—" : `Rs ${shopStock.stockValueFifo.toLocaleString()}`}
-                  </p>
-                  <p className="text-[10px] text-surface-500">Stock Value</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                    {shopMoney?.receivableBranchLevel == null ? "—" : `Rs ${shopMoney.receivableBranchLevel.toLocaleString()}`}
-                  </p>
-                  <p className="text-[10px] text-surface-500">Pending Payment</p>
-                </div>
-                {/* Malik (18 September): "aaj Rs 300 recovery aayi thi,
-                    wo nazar nahi aa rahi" -- `shopFlow.recovery` sirf
-                    Paisa & Khata module (company_expense_requests) ki
-                    recovery dekhta hai; Customer Udhaar module (journal
-                    se, jo Live Notifications mein "Recovery darj" dikhata
-                    hai) alag table mein hoti hai. Dono jama -- warna
-                    ek qism ki recovery hamesha chupi rehti. */}
-                <div>
-                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                    {shopFlow || shiftCash
-                      ? `Rs ${((shopFlow?.recovery.total ?? 0) + (shiftCash?.recoveryCashTotal ?? 0)).toLocaleString()}`
-                      : "—"}
-                  </p>
-                  <p className="text-[10px] text-surface-500">Aaj ki Recovery</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                    Rs {udhaarDiyaAajTotal.toLocaleString()}
-                  </p>
-                  <p className="text-[10px] text-surface-500">Udhaar Diya Aaj</p>
-                </div>
-                {/* Malik (18 September): "yahan par Expected Cash nahi a
-                    raha" -- Shift Band Karein jaisa hi hisaab, khuli
-                    shift ho tabhi (band shift ke liye ye sawal nahi
-                    banta). */}
-                {shiftCash && (
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                      Rs {shiftCash.expectedCash.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-surface-500">Expected Cash (golak)</p>
-                  </div>
-                )}
-                {/* Malik (18 September): "Load ya Bill ke tags nazar
-                    nahi aa rahe" -- ye ab payment donut ke Cash/Bank
-                    buckets mein chup jate hain (asal cash-in-hand ke
-                    liye zaroori tha), is liye yahan alag se dikha dete
-                    hain -- sirf isi khuli shift ki Bill/Load, jab hui ho. */}
-                {shiftCash && shiftCash.billTotal > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                      Rs {shiftCash.billTotal.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-surface-500">Bill Payment</p>
-                  </div>
-                )}
-                {shiftCash && shiftCash.loadTotal > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-surface-800 dark:text-surface-100">
-                      Rs {shiftCash.loadTotal.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-surface-500">Mobile Load</p>
-                  </div>
-                )}
-              </div>
-            )}
-            {salesTrend && salesTrend.length > 0 && (
-              <div className="mt-3 border-t border-emerald-100 pt-3 dark:border-emerald-900/40">
-                <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                  Pichle 7 din ki sale
-                </p>
-                <ShopSalesChart data={salesTrend} />
-              </div>
-            )}
+      {/* KPI patti -- teen fixed + ek role-specific. Ginti na mile to
+          "—", jhooti sifar nahi (project ka locked usool). */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.key} className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
+            <p className="text-2xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">{k.value ?? "—"}</p>
+            <p className="mt-0.5 text-[12px] text-surface-500">{k.label}</p>
           </div>
-        )}
-        {orderFunnel && (
-          <div className="rounded-card border-2 border-sky-200 bg-white p-4 dark:border-sky-900/40 dark:bg-surface-900">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
-              <Icons.PackageSearch className="h-3.5 w-3.5" /> Order Funnel
-            </p>
-            <div className="mt-2 space-y-1">
-              <p className="flex items-baseline justify-between">
-                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{orderFunnel.naye}</span>
-                <span className="text-[11px] text-surface-500">Naye</span>
-              </p>
-              <p className="flex items-baseline justify-between">
-                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{orderFunnel.processing}</span>
-                <span className="text-[11px] text-surface-500">Processing</span>
-              </p>
-              <p className="flex items-baseline justify-between">
-                <span className={`font-display text-xl font-bold tabular-nums ${orderFunnel.masla > 0 ? "text-red-600" : "text-surface-900 dark:text-white"}`}>
-                  {orderFunnel.masla}
-                </span>
-                <span className="text-[11px] text-surface-500">Masla</span>
-              </p>
-            </div>
-          </div>
-        )}
-        {customerHealth && (
-          <div className="rounded-card border-2 border-violet-200 bg-white p-4 dark:border-violet-900/40 dark:bg-surface-900">
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-400">
-              <Icons.Users className="h-3.5 w-3.5" /> Customer Health
-            </p>
-            <div className="mt-2 space-y-1">
-              <p className="flex items-baseline justify-between">
-                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{customerHealth.dueParties}</span>
-                <span className="text-[11px] text-surface-500">Due/Overdue Khate</span>
-              </p>
-              <p className="flex items-baseline justify-between">
-                <span className="font-display text-xl font-bold tabular-nums text-surface-900 dark:text-white">{customerHealth.newFarmersWeek}</span>
-                <span className="text-[11px] text-surface-500">Naye farmers (7 din)</span>
-              </p>
-              {fourthKpi && (
-                <p className="flex items-baseline justify-between border-t border-surface-100 pt-1 dark:border-surface-800">
-                  <span className="text-sm font-semibold tabular-nums text-surface-700 dark:text-surface-200">{fourthKpi.value ?? "—"}</span>
-                  <span className="text-[11px] text-surface-500">{fourthKpi.label}</span>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        <div className="rounded-card border-2 border-surface-300 bg-white p-4 dark:border-surface-600 dark:bg-surface-900">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-600 dark:text-surface-300">
-            <Icons.AlertTriangle className="h-3.5 w-3.5" /> Urgent Approvals
-          </p>
-          <div className="mt-2 space-y-1">
-            <p className="flex items-baseline justify-between">
-              <span className="font-display text-xl font-bold tabular-nums text-amber-600">
-                {attentionItems.filter((i) => i.tone === "amber").length}
-              </span>
-              <span className="text-[11px] text-surface-500">Pending</span>
-            </p>
-            <p className="flex items-baseline justify-between">
-              <span className="font-display text-xl font-bold tabular-nums text-red-600">
-                {attentionItems.filter((i) => i.tone === "red").length}
-              </span>
-              <span className="text-[11px] text-surface-500">Urgent</span>
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {model.totalCards === 0 ? (
@@ -599,7 +313,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       {/* Aaj ke kaam (poori fehrist) + Jaldi wale kaam, aur Haal ka
           len-den -- maujooda systems (Needs Attention, permitted routes,
           asal transactions) se, koi nayi table nahi. */}
-      <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
           <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
             <Icons.ClipboardList className="h-4 w-4" /> {t("mw_tasks_title", lang)}
@@ -607,49 +321,77 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           {/* Malik (8 September): "page kabhi scroll na karni paRe." Is
               fehrist ki lambai yahan tak seemit -- agar zyada items hon
               to sirf ISI dabbe ke andar scroll ho, poora safha nahi. */}
-          <div className="overflow-y-auto p-4" style={{ maxHeight: "min(30vh, 260px)" }}>
+          <div className="overflow-y-auto p-4" style={{ maxHeight: "min(50vh, 420px)" }}>
             <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact />
           </div>
         </div>
 
         <div className="flex flex-col gap-4">
-          <LiveNotificationsPanel
-            initial={(initialNotifications ?? []).map((n) => ({
-              id: n.id as string,
-              title: n.title as string,
-              message: n.message as string,
-              link_url: (n.link_url as string | null) ?? null,
-              is_read: Boolean(n.is_read),
-              created_at: String(n.created_at),
-            }))}
-          />
-
-          {/* Farmers at a Glance -- jin ki profile poori hai magar
-              tasdeeq baqi hai, is liye un ki udhaar hadd abhi nahi
-              barh sakti (341). Yehi fehrist ne 18 September ko
-              Aurangzaib ka masla pakra tha -- ab har roz yahan nazar
-              aayegi, kisi ko alag se khoj nahi karni paRegi. */}
-          {farmersToVerify.length > 0 && (
-            <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
-              <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
-                <Icons.Sprout className="h-4 w-4" /> Farmers at a Glance
-              </h2>
-              <div className="divide-y divide-surface-100 dark:divide-surface-800">
-                {farmersToVerify.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-[13.5px] font-medium text-surface-800 dark:text-surface-100">{f.name}</p>
-                      <p className="text-[12px] text-surface-500">{f.code ?? "profile poori, tasdeeq baqi"}</p>
-                    </div>
-                    <VerifyFarmerButton id={f.id} />
-                  </div>
-                ))}
-              </div>
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
+              {quickActions.map((qa) => {
+                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
+                return (
+                  <Link
+                    key={qa.href}
+                    href={qa.href}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <QaIcon className="h-[18px] w-[18px]" />
+                    </span>
+                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
+                  </Link>
+                );
+              })}
             </div>
-          )}
+          </div>
+
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}
+            </h2>
+            <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(35vh, 300px)" }}>
+              {recentActivity.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-surface-400">{t("mw_activity_empty", lang)}</p>
+              ) : (
+                recentActivity.map((a) => (
+                  <div key={a.key} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium text-surface-800 dark:text-surface-100">{t(a.labelKey, lang)}</p>
+                      <p className="truncate text-[12px] text-surface-500">
+                        {[a.subtitle, relativeTime(a.createdAt, lang)].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    {a.amount != null && (
+                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                        Rs {a.amount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
     </InPageWorkspace>
   );
+}
+
+/** "5 minute pehle" jaisa halka jumla -- koi library nahi, chhota hisaab. */
+function relativeTime(iso: string, lang: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.max(0, Math.round(diffMs / 60000));
+  const isUrdu = lang === "ur";
+  if (min < 1) return isUrdu ? "ابھی" : "abhi";
+  if (min < 60) return isUrdu ? `${min} منٹ پہلے` : `${min} minute pehle`;
+  const hrs = Math.round(min / 60);
+  if (hrs < 24) return isUrdu ? `${hrs} گھنٹے پہلے` : `${hrs} ghante pehle`;
+  const days = Math.round(hrs / 24);
+  return isUrdu ? `${days} دن پہلے` : `${days} din pehle`;
 }

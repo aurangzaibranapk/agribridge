@@ -52,26 +52,9 @@ const POS_METHODS: { method: string; label: string }[] = [
   { method: "waseela_card", label: "Waseela Card" },
 ];
 
-const METHOD_LABEL: Record<string, string> = {
-  ...Object.fromEntries(POS_METHODS.map((m) => [m.method, m.label])),
-  // Load & Bill ka "wallet" POS ke JazzCash/Easypaisa/QR jitna barik
-  // nahi -- alag naam taake ye un teenon mein se kisi ek jaisa na lage.
-  wallet: "Wallet (Load/Bill)",
-};
-
-// load_transactions.payment_method apna alag, chhota set istemal karta
-// hai (cash/bank/wallet/khata) -- POS ke 8 tareeqon jitna barik nahi
-// (jaise "wallet" JazzCash/Easypaisa/QR mein tafseel se nahi baTta).
-// Isi liye seedha POS method ke barabar nahi kiya ja sakta -- sirf
-// wahi teen jo barabar hain (cash, khata) map hote hain, "bank" ko
-// POS ke "bank_transfer" ke barabar rakha gaya hai, aur "wallet" apna
-// alag bucket hai (jhooti tafseel banane se behtar).
-const LOAD_METHOD_TO_POS: Record<string, string> = {
-  cash: "cash",
-  bank: "bank_transfer",
-  khata: "khata",
-  wallet: "wallet",
-};
+const METHOD_LABEL: Record<string, string> = Object.fromEntries(
+  POS_METHODS.map((m) => [m.method, m.label])
+);
 
 export async function shopPaymentMethodBreakdown(
   shopId: string,
@@ -90,7 +73,7 @@ export async function shopPaymentMethodBreakdown(
     .lte("created_at", toTs);
   const saleIds = (sales ?? []).map((s) => s.id as string);
 
-  const [{ data: payments }, { data: expenses }, { data: mapRows }, { data: loadBillRows }] = await Promise.all([
+  const [{ data: payments }, { data: expenses }, { data: mapRows }] = await Promise.all([
     saleIds.length > 0
       ? service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
       : Promise.resolve({ data: [] as { payment_method: string; amount: number }[] }),
@@ -102,21 +85,6 @@ export async function shopPaymentMethodBreakdown(
       .gte("expense_date", fromDate)
       .lte("expense_date", toDate),
     service.from("payment_method_account_map").select("payment_method, finance_account_id"),
-    // Malik (18 September): "load jo cash par hua hai wo humein alag
-    // dikh raha ho... cash mein itni hai, bank mein itni hai" -- Load &
-    // Bill ki raqam is se pehle "Mobile Load" ke naam se ek lump sum
-    // rehti thi, kabhi cash/bank mein ginti hi nahi hoti thi -- cash
-    // handover/reconciliation ke liye ye galat tha (asal cash drawer
-    // mein wo paisa maujood hota hai). Ab isi shop ke Load + Bill bhi
-    // apne payment_method ke hisaab se yahin jama hote hain.
-    service
-      .from("load_transactions")
-      .select("kind, payment_method, principal")
-      .eq("shop_id", shopId)
-      .in("kind", ["load", "bill"])
-      .neq("status", "wapas")
-      .gte("created_at", fromTs)
-      .lte("created_at", toTs),
   ]);
 
   const accountToMethod = new Map<string, string>();
@@ -138,11 +106,6 @@ export async function shopPaymentMethodBreakdown(
 
   for (const p of (payments ?? []) as { payment_method: string; amount: number }[]) {
     bucket(p.payment_method).sales += Number(p.amount ?? 0);
-  }
-
-  for (const l of (loadBillRows ?? []) as { kind: string; payment_method: string; principal: number }[]) {
-    const method = LOAD_METHOD_TO_POS[l.payment_method] ?? l.payment_method;
-    bucket(method).sales += Number(l.principal ?? 0);
   }
 
   // Jis account ka koi payment-method mapping nahi mila, wo is hisaab

@@ -340,7 +340,6 @@ export function MyWorkBody({
        * Ek hi department ho (chhota role) to rail bekar hai -- seedha
        * uske auzaar dikha dete hain.
        */}
-      {departments.length > 0 && (
       <section className="overflow-hidden rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
         <h2 className="border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
           {t("mw_depts", lang)}
@@ -400,7 +399,6 @@ export function MyWorkBody({
           </div>
         )}
       </section>
-      )}
     </div>
   );
 }
