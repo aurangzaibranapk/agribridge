@@ -218,7 +218,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
         <span>{nowDate} · {nowTime}</span>
       </header>
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} links={deskLinks} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
     </DeskWorkspace>;
   }
 
