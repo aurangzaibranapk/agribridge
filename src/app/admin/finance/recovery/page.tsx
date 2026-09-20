@@ -71,6 +71,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
       id: p.party_id,
       name: p.party_name,
       phone: p.phone,
+      cnic: p.cnic ?? null,
       email: p.email,
       outstanding: Number(p.outstanding || 0),
       lastActivity: p.last_activity,

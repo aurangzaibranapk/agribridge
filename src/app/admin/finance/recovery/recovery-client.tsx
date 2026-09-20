@@ -27,6 +27,7 @@ export type RecoveryParty = {
   id: string;
   name: string;
   phone: string | null;
+  cnic: string | null;
   email: string | null;
   outstanding: number;
   lastActivity: string | null;
@@ -139,7 +140,7 @@ export function RecoveryClient({
       // nahi ki jatin, warna "shuruat hi nahi hui" wale khate chhup jate.
       if (dueFrom && p.dueDate && p.dueDate < dueFrom) return false;
       if (dueTo && p.dueDate && p.dueDate > dueTo) return false;
-      if (q && !p.name.toLowerCase().includes(q) && !(p.phone ?? "").includes(q)) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !(p.phone ?? "").includes(q) && !(p.cnic ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
   }, [parties, search, statusFilter, typeFilter, dueFrom, dueTo]);
@@ -308,7 +309,7 @@ export function RecoveryClient({
                   setSearch(e.target.value);
                   setPage(0);
                 }}
-                placeholder="Search customer or account"
+                placeholder="Naam, mobile ya CNIC se dhoondein"
                 className="w-full rounded-lg border border-surface-200 bg-transparent py-2 pl-8 pr-3 text-sm dark:border-surface-700"
               />
             </div>
