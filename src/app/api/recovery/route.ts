@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { postJournal } from "@/lib/ledger/post";
 
 /**
  * Recovery dashboard se teen kaam: promise darj karna, reminder schedule
@@ -77,5 +78,57 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ success: true, count: rows.length });
   }
+  if (action === "receive_payment") {
+    const party = parties[0];
+    if (!party) return NextResponse.json({ error: "Party select nahi hui." }, { status: 400 });
+
+    const amount = Number(body.amount);
+    if (!(amount > 0)) return NextResponse.json({ error: "Raqam sahi likhein." }, { status: 400 });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const paymentDate = typeof body.paymentDate === "string" && body.paymentDate ? body.paymentDate : today;
+    const isBack = paymentDate < today;
+    const backdateReason = typeof body.backdateReason === "string" ? body.backdateReason.trim() : "";
+    if (isBack && !backdateReason) {
+      return NextResponse.json({ error: "Purani date ke liye wajah likhna zaroori hai." }, { status: 400 });
+    }
+
+    const PM_GL: Record<string, string> = {
+      cash: "1000", jazzcash: "1000", easypaisa: "1000", qr: "1000",
+      bank_transfer: "1010", cheque: "1010",
+    };
+    const PM_LABEL: Record<string, string> = {
+      cash: "Cash", jazzcash: "JazzCash", easypaisa: "Easypaisa", qr: "QR",
+      bank_transfer: "Bank Transfer", cheque: "Cheque",
+    };
+    const method = typeof body.paymentMethod === "string" ? body.paymentMethod : "cash";
+    const glAccount = PM_GL[method] ?? "1000";
+    const notes = typeof body.notes === "string" ? body.notes.trim() : "";
+    const description = `Recovery — ${PM_LABEL[method] ?? method} — ${party.name}${notes ? ` (${notes})` : ""}`;
+
+    // Har party type ka apna receivable khata
+    const AR_CODE: Record<string, string> = {
+      farmer: "1150", customer: "1100", dealer: "1160", supplier: "2000",
+    };
+    const arCode = AR_CODE[String(party.type)] ?? "1100";
+
+    const result = await postJournal({
+      description,
+      sourceModule: "recovery",
+      sourceId: String(party.id),
+      branchId: null,
+      entryDate: paymentDate,
+      backdateReason: isBack ? backdateReason : null,
+      createdBy: user.id,
+      lines: [
+        { account: glAccount, debit: Math.round(amount), memo: description },
+        { account: arCode, credit: Math.round(amount), partyType: String(party.type), partyId: String(party.id), memo: description },
+      ],
+    });
+
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ success: true, entryNumber: result.entryNumber, total: result.total });
+  }
+
   return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
 }

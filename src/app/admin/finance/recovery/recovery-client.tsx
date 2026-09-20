@@ -19,6 +19,7 @@ import {
   Smartphone,
   Users,
   Wallet,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/form";
 
@@ -123,8 +124,9 @@ export function RecoveryClient({
   const [dueFrom, setDueFrom] = useState("");
   const [dueTo, setDueTo] = useState("");
   const [page, setPage] = useState(0);
-  const [mode, setMode] = useState<"schedule" | "promise" | null>(null);
+  const [mode, setMode] = useState<"schedule" | "promise" | "payment" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [notice, setNotice] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
@@ -413,12 +415,16 @@ export function RecoveryClient({
             >
               <CalendarClock className="h-4 w-4" /> Schedule Reminder
             </button>
-            <Link
-              href={previewParty ? statementHref(previewParty) : "#"}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            <button
+              disabled={!previewParty}
+              onClick={() => {
+                setPayDate(new Date().toISOString().slice(0, 10));
+                setMode("payment");
+              }}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40"
             >
               <Banknote className="h-4 w-4" /> Receive Payment
-            </Link>
+            </button>
             <button
               disabled={!chosen.length}
               onClick={() => setMode("promise")}
@@ -616,7 +622,117 @@ export function RecoveryClient({
         </button>
       </div>
 
-      {mode && (
+      {mode === "payment" && previewParty && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              setBusy(true);
+              setNotice("");
+              const res = await fetch("/api/recovery", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "receive_payment",
+                  parties: [previewParty],
+                  amount: Number(f.get("amount")),
+                  paymentDate: f.get("paymentDate"),
+                  backdateReason: f.get("backdateReason") ?? "",
+                  paymentMethod: f.get("paymentMethod"),
+                  notes: f.get("notes") ?? "",
+                }),
+              });
+              const json = await res.json();
+              setBusy(false);
+              if (!res.ok) {
+                setNotice(json.error || "Payment darj nahi ho saki.");
+                return;
+              }
+              setNotice(`Payment darj ho gayi. Entry: ${json.entryNumber}`);
+              setMode(null);
+            }}
+            className="w-full max-w-md space-y-3 rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Payment Darj Karein</h2>
+              <button type="button" onClick={() => setMode(null)}>
+                <X className="h-5 w-5 text-surface-400 hover:text-surface-700" />
+              </button>
+            </div>
+            <div className="rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
+              <span className="font-semibold text-surface-900 dark:text-white">{previewParty.name}</span>
+              <span className="ml-2 text-surface-500">Outstanding: {rs(previewParty.outstanding)}</span>
+            </div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
+              Raqam (Rs)
+              <input
+                required name="amount" type="number" min="1" step="1"
+                defaultValue={Math.round(previewParty.outstanding)}
+                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
+              />
+            </label>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
+              Tarikh
+              <input
+                required name="paymentDate" type="date"
+                value={payDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setPayDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
+              />
+            </label>
+            {payDate < new Date().toISOString().slice(0, 10) && (
+              <label className="block text-sm font-medium text-amber-700 dark:text-amber-400">
+                Purani date — wajah likhein
+                <input
+                  required name="backdateReason" type="text"
+                  placeholder="Misaal: Kal ka paisa aaj darj kar raha hoon"
+                  className="mt-1 w-full rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm dark:border-amber-700 dark:bg-amber-950/20"
+                />
+              </label>
+            )}
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-surface-700 dark:text-surface-300">Payment Method</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { key: "cash", label: "Cash" },
+                  { key: "bank_transfer", label: "Bank" },
+                  { key: "jazzcash", label: "JazzCash" },
+                  { key: "easypaisa", label: "Easypaisa" },
+                  { key: "qr", label: "QR Code" },
+                  { key: "cheque", label: "Cheque" },
+                ].map((m) => (
+                  <label key={m.key} className="cursor-pointer">
+                    <input type="radio" name="paymentMethod" value={m.key} defaultChecked={m.key === "cash"} className="sr-only peer" />
+                    <span className="flex items-center justify-center rounded-lg border border-surface-200 py-2 text-xs font-medium text-surface-600 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-700 dark:border-surface-700 dark:text-surface-300 dark:peer-checked:border-brand-500 dark:peer-checked:bg-brand-950/30 dark:peer-checked:text-brand-300">
+                      {m.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
+              Notes (ikhtiyari)
+              <input
+                name="notes" type="text"
+                placeholder="Misaal: Pehli qist"
+                className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
+              />
+            </label>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setMode(null)} className="flex-1 rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
+                Wapas
+              </button>
+              <button disabled={busy} className="flex-1 rounded-lg bg-brand-600 p-2 text-sm font-medium text-white disabled:opacity-50">
+                {busy ? "Darj ho raha hai..." : "Payment Darj Karein"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {(mode === "schedule" || mode === "promise") && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <form
             onSubmit={(e) => {
