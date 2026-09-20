@@ -290,25 +290,6 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       .from("customers")
       .select("id, name, phone_number, cnic, customer_type, business_name, current_balance, credit_limit, farmer_id")
       .order("name");
-    rawCustomers = (cust ?? []).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      phone: c.phone_number,
-      cnic: c.cnic,
-      // Hadd darj hi na ho to NULL. Sifar likh dena "is ko udhaar bilkul
-      // nahi" kehna hai -- aur wo faisla kisi ne kiya hi nahi.
-      creditLimit: c.credit_limit == null ? null : Number(c.credit_limit),
-      // Gahak chunte hi us ka baqi saamne. Khata wale gahak par yehi
-      // wo adad hai jo counter par faisla badalta hai -- aur us ke
-      // baghair banda naya udhaar de deta hai.
-      balance: c.current_balance == null ? null : Number(c.current_balance),
-      isWholesaleShop: c.customer_type === "wholesale_shop",
-      // Malik (19 September): "wholesale ke liye Shop ka naam bhi POS
-      // mein aana chahiye" -- dukaan ka naam, contact person ke naam se
-      // alag.
-      businessName: c.business_name ?? null,
-    }));
-
     // Farmer khud POS mein customer ki tarah dhoonda ja sake (384) --
     // malik ka hukm (10 September). Jis farmer ka Customer record pehle
     // se bana hua hai (upar wali fehrist mein aa chuka), use yahan
@@ -321,6 +302,48 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       .select("id, full_name, phone_number, cnic")
       .eq("is_deleted", false)
       .order("full_name");
+
+    // 20 September: combined balance -- farmer ka customer-side khata
+    // (current_balance) aur farmer-side ledger (agri inputs, advances)
+    // dono milake asal baqi banti hai. v_farmer_combined_balance yehi
+    // karta hai. Agar sirf customer_balance dikhayein to counter par
+    // galat tasweer milti hai.
+    const allFarmerIds = [
+      ...(cust ?? []).map((c: any) => c.farmer_id).filter(Boolean),
+      ...(farmersRaw ?? []).filter((f: any) => !linkedFarmerIds.has(f.id)).map((f: any) => f.id),
+    ];
+    const farmerBalanceMap = new Map<string, number>();
+    if (allFarmerIds.length > 0) {
+      const { data: farmerBalances } = await (supabase as any)
+        .from("v_farmer_combined_balance")
+        .select("farmer_id, total_baqi")
+        .in("farmer_id", allFarmerIds);
+      for (const fb of farmerBalances ?? []) {
+        farmerBalanceMap.set(fb.farmer_id, Number(fb.total_baqi ?? 0));
+      }
+    }
+
+    rawCustomers = (cust ?? []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone_number,
+      cnic: c.cnic,
+      // Hadd darj hi na ho to NULL. Sifar likh dena "is ko udhaar bilkul
+      // nahi" kehna hai -- aur wo faisla kisi ne kiya hi nahi.
+      creditLimit: c.credit_limit == null ? null : Number(c.credit_limit),
+      // Gahak chunte hi us ka baqi saamne. Farmer-linked customer ke
+      // liye combined balance (farmer + customer ledger dono), warna
+      // sirf customer khata.
+      balance: c.farmer_id
+        ? (farmerBalanceMap.get(c.farmer_id) ?? (c.current_balance == null ? null : Number(c.current_balance)))
+        : (c.current_balance == null ? null : Number(c.current_balance)),
+      isWholesaleShop: c.customer_type === "wholesale_shop",
+      // Malik (19 September): "wholesale ke liye Shop ka naam bhi POS
+      // mein aana chahiye" -- dukaan ka naam, contact person ke naam se
+      // alag.
+      businessName: c.business_name ?? null,
+    }));
+
     for (const f of farmersRaw ?? []) {
       if (linkedFarmerIds.has(f.id)) continue;
       rawCustomers.push({
@@ -329,7 +352,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         phone: f.phone_number,
         cnic: f.cnic,
         creditLimit: null,
-        balance: null,
+        balance: farmerBalanceMap.has(f.id) ? farmerBalanceMap.get(f.id)! : null,
         isWholesaleShop: false,
       });
     }
