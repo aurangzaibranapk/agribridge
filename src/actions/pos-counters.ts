@@ -427,7 +427,7 @@ export async function shiftCashCarriers(): Promise<
     .select("id, full_name, role")
     .eq("is_active", true)
     .neq("id", who.userId)
-    .neq("role", "farmer")
+    .not("role", "in", `("farmer","machinery_vendor","ai_assistant","dealer")`)
     .order("full_name");
 
   return (data ?? []).map((r) => ({ id: r.id, name: r.full_name ?? "—", role: r.role }));
