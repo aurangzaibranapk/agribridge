@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -10,6 +11,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
+const SELL_WEEKS = 5;
 
 export default async function MasterDashboardPage({
   searchParams,
@@ -223,24 +225,52 @@ export default async function MasterDashboardPage({
   const { data: saleIdRows } = await saleIdsQuery;
   const saleIds = (saleIdRows ?? []).map((r: any) => r.id);
 
-  let topSellingItems: { name: string; unit: string; qty: number }[] = [];
-  if (saleIds.length > 0) {
+  // Last 5 weeks ka sale data -- month ke andar aur 4 weeks pehle ka bhi
+  const SELL_WEEKS = 5;
+  const sellTrendStart = new Date(now.getTime() - (SELL_WEEKS - 1) * 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  let trendSaleIdsQuery = serviceClient.from("pos_sales").select("id, created_at").gte("created_at", sellTrendStart);
+  if (shopId) trendSaleIdsQuery = trendSaleIdsQuery.eq("shop_id", shopId);
+  const { data: trendSaleRows } = await trendSaleIdsQuery;
+  const trendSaleIds = (trendSaleRows ?? []).map((r: any) => r.id as string);
+  const saleWeekMap = new Map<string, string>(); // sale_id → week-index
+  (trendSaleRows ?? []).forEach((r: any) => {
+    const msAgo = now.getTime() - new Date(r.created_at).getTime();
+    const wkAgo = Math.floor(msAgo / (7 * 24 * 60 * 60 * 1000));
+    const idx = String(Math.max(0, Math.min(SELL_WEEKS - 1, SELL_WEEKS - 1 - wkAgo)));
+    saleWeekMap.set(r.id, idx);
+  });
+
+  const productTrend: Record<string, number[]> = {};
+  let topSellingItems: { name: string; unit: string; qty: number; trend: number[] }[] = [];
+
+  if (saleIds.length > 0 || trendSaleIds.length > 0) {
+    const allSaleIds = Array.from(new Set([...saleIds, ...trendSaleIds]));
     const { data: itemRows } = await serviceClient
       .from("pos_sale_items")
-      .select("product_id, quantity, products(name, unit)")
-      .in("sale_id", saleIds);
+      .select("product_id, quantity, sale_id, products(name, unit)")
+      .in("sale_id", allSaleIds);
     const productMap = new Map<string, { name: string; unit: string; qty: number }>();
     for (const item of itemRows ?? []) {
       const prod: any = Array.isArray(item.products) ? (item.products as any[])[0] : item.products;
-      if (!prod || !(item as any).product_id) continue;
-      const existing = productMap.get((item as any).product_id);
-      if (existing) {
-        existing.qty += Number((item as any).quantity ?? 0);
-      } else {
-        productMap.set((item as any).product_id, { name: prod.name ?? "—", unit: prod.unit ?? "", qty: Number((item as any).quantity ?? 0) });
+      const pid = (item as any).product_id as string;
+      if (!prod || !pid) continue;
+      // Current month qty
+      if (saleIds.includes((item as any).sale_id)) {
+        const existing = productMap.get(pid);
+        if (existing) { existing.qty += Number((item as any).quantity ?? 0); }
+        else { productMap.set(pid, { name: prod.name ?? "—", unit: prod.unit ?? "", qty: Number((item as any).quantity ?? 0) }); }
+      }
+      // Weekly trend
+      const wkIdx = saleWeekMap.get((item as any).sale_id);
+      if (wkIdx !== undefined) {
+        if (!productTrend[pid]) productTrend[pid] = Array(SELL_WEEKS).fill(0);
+        productTrend[pid][Number(wkIdx)] += Number((item as any).quantity ?? 0);
       }
     }
-    topSellingItems = [...productMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 10);
+    topSellingItems = [...productMap.entries()]
+      .map(([pid, v]) => ({ ...v, trend: productTrend[pid] ?? Array(SELL_WEEKS).fill(0) }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
   }
 
   // ===== Top Debtors (DigiKhata style — jin sy zyada paisa lena) =====
@@ -251,10 +281,51 @@ export default async function MasterDashboardPage({
     .gt("current_balance", 0)
     .order("current_balance", { ascending: false })
     .limit(8);
+
+  // Har debtor ke liye last 6 weeks ka weekly net trend
+  const topDebtorIds = (topDebtorRows ?? []).map((r: any) => r.id as string);
+  const trendWeeks = 6;
+  const trendStart = new Date(now.getTime() - trendWeeks * 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const customerTrend: Record<string, number[]> = {};
+  topDebtorIds.forEach((id) => { customerTrend[id] = Array(trendWeeks).fill(0); });
+
+  if (topDebtorIds.length > 0) {
+    const { data: trendLines } = await serviceClient
+      .from("journal_lines")
+      .select("party_id, debit, credit, journal_entries!inner(entry_date)")
+      .eq("party_type", "customer")
+      .in("party_id", topDebtorIds)
+      .gte("journal_entries.entry_date", trendStart);
+    (trendLines ?? []).forEach((line: any) => {
+      const entry = Array.isArray(line.journal_entries) ? line.journal_entries[0] : line.journal_entries;
+      if (!entry?.entry_date) return;
+      const msAgo = now.getTime() - new Date(entry.entry_date).getTime();
+      const weeksAgo = Math.floor(msAgo / (7 * 24 * 60 * 60 * 1000));
+      const idx = Math.max(0, Math.min(trendWeeks - 1, trendWeeks - 1 - weeksAgo));
+      const pid = line.party_id as string;
+      if (customerTrend[pid]) {
+        customerTrend[pid][idx] += Number(line.debit ?? 0) - Number(line.credit ?? 0);
+      }
+    });
+  }
+
+  // Products with inventory but no batch cost records (stock mismatch ka sabab)
+  const { data: noBatchRows } = await serviceClient
+    .from("inventory")
+    .select("product_id, quantity_on_hand, products!inner(id, name)")
+    .gt("quantity_on_hand", 0)
+    .is("batch_id", null)
+    .limit(5);
+  const missingBatchProducts = (noBatchRows ?? []).map((r: any) => {
+    const p = Array.isArray(r.products) ? r.products[0] : r.products;
+    return { id: (p?.id ?? "") as string, name: (p?.name ?? "—") as string };
+  }).filter((r) => r.id);
+
   const topDebtors = (topDebtorRows ?? []).map((r: any) => ({
     name: r.name ?? "—",
     phone: r.phone_number ?? "",
     balance: Number(r.current_balance ?? 0),
+    trend: customerTrend[r.id] ?? Array(trendWeeks).fill(0),
   }));
 
   const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
@@ -321,7 +392,12 @@ export default async function MasterDashboardPage({
 
       {stockFarq !== null && Math.abs(stockFarq) > 1 && (
         <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-          <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
+            <Link href="/admin/inventory" className="shrink-0 rounded-lg bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-800">
+              Inventory Kholo →
+            </Link>
+          </div>
           <p className="mt-1 text-xs leading-relaxed">
             Godam ki ginti (batch ki asal khareed qeemat par): <strong>Rs {Math.round(totalInventoryValue).toLocaleString()}</strong> ·
             Ledger ka khata 1200: <strong>Rs {Math.round(stockLedger ?? 0).toLocaleString()}</strong> ·
@@ -329,9 +405,18 @@ export default async function MasterDashboardPage({
           </p>
           <p className="mt-1 text-xs leading-relaxed">
             Wajah: kisi product ka koi batch bina record hue reh gaya hai (quantity to inventory mein hai, magar
-            us ka batch/qeemat kahin darj nahi) — is liye us ka hissa upar wali ginti mein nahi aa raha. Inventory
-            &gt; wo product dekhein jahan Godam ki qatarein poori nahi lagtin.
+            us ka batch/qeemat kahin darj nahi) — is liye us ka hissa upar wali ginti mein nahi aa raha.
           </p>
+          {missingBatchProducts.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {missingBatchProducts.map((p) => (
+                <Link key={p.id} href={`/admin/inventory/product/${p.id}`}
+                  className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-surface-900 dark:text-amber-300">
+                  {p.name} →
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -398,17 +483,17 @@ export default async function MasterDashboardPage({
           </h2>
           <div className="space-y-2">
             {topSellingItems.map((item, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
-                  <span className="text-surface-800 dark:text-surface-100">{item.name}</span>
-                </div>
-                <span className="font-semibold tabular-nums text-brand-700 dark:text-brand-400">
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-surface-800 dark:text-surface-100">{item.name}</span>
+                <MiniSparkline data={item.trend} color="brand" />
+                <span className="w-24 shrink-0 text-right font-semibold tabular-nums text-brand-700 dark:text-brand-400">
                   {item.qty.toLocaleString()} {item.unit}
                 </span>
               </div>
             ))}
           </div>
+          <p className="mt-2 text-[10px] text-surface-400">Sparkline = last {SELL_WEEKS} weeks · Mota line = zyada sale</p>
         </div>
       )}
 
@@ -419,24 +504,24 @@ export default async function MasterDashboardPage({
           </h2>
           <div className="space-y-2">
             {topDebtors.map((d, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
-                  <div>
-                    <span className="text-surface-800 dark:text-surface-100">{d.name}</span>
-                    {d.phone && (
-                      <span className="ml-2 text-[10px] text-surface-400">{d.phone}</span>
-                    )}
-                  </div>
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-surface-800 dark:text-surface-100">{d.name}</span>
+                  {d.phone && (
+                    <span className="ml-2 text-[10px] text-surface-400">{d.phone}</span>
+                  )}
                 </div>
-                <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
+                <MiniSparkline data={d.trend} color="red" />
+                <span className="w-28 shrink-0 text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
                   Rs {Math.round(d.balance).toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[10px] text-surface-400">
-            Total outstanding: Rs {Math.round(topDebtors.reduce((s, d) => s + d.balance, 0)).toLocaleString()}
+          <p className="mt-3 flex items-center justify-between text-[10px] text-surface-400">
+            <span>↑ Line upar = zyada udhaar · ↓ Neeche = wapas diya</span>
+            <span>Total: Rs {Math.round(topDebtors.reduce((s, d) => s + d.balance, 0)).toLocaleString()}</span>
           </p>
         </div>
       )}
@@ -448,5 +533,35 @@ export default async function MasterDashboardPage({
         </p>
       )}
     </div>
+  );
+}
+
+function MiniSparkline({ data, color }: { data: number[]; color: "brand" | "red" }) {
+  const W = 64, H = 22;
+  const nonZero = data.some((v) => v > 0);
+  if (!nonZero) {
+    // Flat line — koi activity nahi
+    return (
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0 opacity-40">
+        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" />
+      </svg>
+    );
+  }
+  const max = Math.max(...data, 1);
+  const pts = data.map((v, i) => {
+    const x = data.length > 1 ? (i / (data.length - 1)) * W : W / 2;
+    const y = H - 3 - (v / max) * (H - 6);
+    return { x, y, v };
+  });
+  const polyPts = pts.map((p) => `${p.x},${p.y}`).join(" ");
+  const lineColor = color === "red" ? "#ef4444" : "#0e6b3f";
+  const fillColor = color === "red" ? "#fef2f2" : "#f0fdf4";
+  const areaClose = `${pts[pts.length - 1].x},${H} 0,${H}`;
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0">
+      <polygon points={`${polyPts} ${areaClose}`} fill={fillColor} opacity="0.6" />
+      <polyline points={polyPts} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" />
+      {pts.map((p, i) => p.v > 0 && <circle key={i} cx={p.x} cy={p.y} r="2" fill={lineColor} />)}
+    </svg>
   );
 }
