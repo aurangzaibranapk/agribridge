@@ -861,15 +861,24 @@ function UdhaarForm({
       </div>
 
       <div>
-        <Label htmlFor="udhaar_khata">{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
-        <Select id="udhaar_khata" name={diya ? "kahan_se" : "kahan_aaya"} defaultValue="cash">
-          <option value="cash">Cash — golak</option>
-          {financeAccounts.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </Select>
+        <Label>{diya ? "Paisa kahan se gaya" : "Paisa kahan aaya"}</Label>
+        {diya ? (
+          <>
+            <input type="hidden" name="kahan_se" value="cash" />
+            <p className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-surface-700 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300">
+              Cash — golak
+            </p>
+          </>
+        ) : (
+          <Select id="udhaar_khata" name="kahan_aaya" defaultValue="cash">
+            <option value="cash">Cash — golak</option>
+            {financeAccounts.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
 
       <div>
