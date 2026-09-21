@@ -62,7 +62,9 @@ export async function Topbar({
         <NotificationBell initialCount={unreadCount} href={notificationsHref} />
         <div className="hidden items-center gap-3 border-l border-surface-200 pl-4 sm:flex dark:border-surface-700">
           <div className="text-right">
-            <p className="text-sm font-medium text-surface-800 dark:text-surface-100">{fullName}</p>
+            <Link href="/admin/profile" className="text-sm font-medium text-surface-800 hover:text-brand-600 dark:text-surface-100 dark:hover:text-brand-400">
+              {fullName}
+            </Link>
           </div>
           <LogoutButton />
         </div>
