@@ -189,6 +189,15 @@ export function ShiftCashHandoverForm({
                 </select>
               </div>
             )}
+            {(method === "jazzcash" || method === "easypaisa" || method === "bank_transfer") && (
+              <div>
+                <input type="hidden" name="slip_url" value={slipUrl} />
+                <PaymentSlipUpload onUploaded={setSlipUrl} />
+                {!slipUrl && (
+                  <p className="mt-1 text-[11px] text-surface-400">Slip upload karna zaroori hai.</p>
+                )}
+              </div>
+            )}
             <input
               name="sent_note"
               placeholder="Note (agar ho)"

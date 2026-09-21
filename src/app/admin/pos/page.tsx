@@ -125,19 +125,47 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         const approvedIds = new Set(
           (alreadyDeposited ?? []).filter((d: any) => d.status === "approved").map((d: any) => d.shift_id as string)
         );
-        const pending = pendingClosedRows.filter((r) => !approvedIds.has(r.id));
-        if (pending.length > 0) {
-          const ref = pending[0];
-          const total = pending.reduce((s, r) => s + Number(r.counted_cash), 0);
+
+        // Agar kisi counter par abhi bhi open shift hai aur us ka
+        // opening_cash > 0 hai, to pichli shift ka utna cash us shift ka
+        // float ban gaya -- wo raqam "raaste mein" nahi, "is shift mein"
+        // hai. Us ko pending total se hatao warna double count hoga.
+        const openFloatByCounter = new Map<string, number>();
+        for (const s of openShifts) {
+          const prev = openFloatByCounter.get(s.counter_id) ?? 0;
+          openFloatByCounter.set(s.counter_id, prev + Number(s.opening_cash ?? 0));
+        }
+
+        const pendingShifts: { id: string; counter_id: string; net: number; date: string }[] = [];
+        for (const r of pendingClosedRows) {
+          if (approvedIds.has(r.id)) continue;
+          const counted = Number(r.counted_cash);
+          const usedAsFloat = openFloatByCounter.get(r.counter_id) ?? 0;
+          // Har counter ke liye sirf ek dafa float ghata'o (pehli pending
+          // shift par), phir counter ka float zero kar do.
+          const net = Math.max(0, counted - usedAsFloat);
+          openFloatByCounter.set(r.counter_id, Math.max(0, usedAsFloat - counted));
+          if (net > 0) {
+            pendingShifts.push({
+              id: r.id,
+              counter_id: r.counter_id,
+              net,
+              date: r.closed_at
+                ? new Date(r.closed_at).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+                : "—",
+            });
+          }
+        }
+
+        if (pendingShifts.length > 0) {
+          const ref = pendingShifts[0];
+          const total = pendingShifts.reduce((s, r) => s + r.net, 0);
           pendingHandover = {
             shiftId: ref.id,
             countedCash: total,
             branchId: myCounters.find((c) => c.id === ref.counter_id)?.branchId ?? null,
             shopId: myCounters.find((c) => c.id === ref.counter_id)?.shopId ?? null,
-            shifts: pending.map((r) => ({
-              date: r.closed_at ? new Date(r.closed_at).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—",
-              amount: Number(r.counted_cash),
-            })),
+            shifts: pendingShifts.map((r) => ({ date: r.date, amount: r.net })),
           };
         }
       }
