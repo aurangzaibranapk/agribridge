@@ -88,9 +88,21 @@ export function ShiftCashHandoverForm({
 
   if (handoverState.success) {
     return (
-      <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
-        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.message}
-      </p>
+      <div className="space-y-2">
+        <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.message}
+        </p>
+        {handoverState.handoverId && (
+          <a
+            href={`/admin/cash-handover/slip/${handoverState.handoverId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:bg-surface-900 dark:text-brand-300"
+          >
+            <Receipt className="h-3.5 w-3.5" /> Cash Handover Slip (Digital)
+          </a>
+        )}
+      </div>
     );
   }
   if (depositState.success) {

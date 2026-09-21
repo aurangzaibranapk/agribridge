@@ -12,6 +12,7 @@ export interface ActionState {
   error?: string;
   success?: boolean;
   message?: string;
+  handoverId?: string;
 }
 
 /**
@@ -171,6 +172,7 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   revalidatePath("/admin/pos");
   return {
     success: true,
+    handoverId: handoverRow.id,
     message: `Rs ${amount.toLocaleString()} bheja hua darj ho gaya. Ab lene wale ki tasdeeq ka intezar hai — tab tak ye raqam "raaste mein" nazar aayegi.`,
   };
 }

@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { sendCash, receiveCash, type ActionState } from "@/actions/cash-handover";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Receipt } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import Link from "next/link";
 
 const initialState: ActionState = {};
 
@@ -159,9 +160,20 @@ export function SendCashForm({
         </p>
       )}
       {state.success && (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950/30 dark:text-green-400">
-          {state.message}
-        </p>
+        <div className="space-y-2">
+          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950/30 dark:text-green-400">
+            {state.message}
+          </p>
+          {state.handoverId && (
+            <Link
+              href={`/admin/cash-handover/slip/${state.handoverId}`}
+              target="_blank"
+              className="flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300"
+            >
+              <Receipt className="h-4 w-4" /> Cash Handover Slip (Digital) — Print / Share
+            </Link>
+          )}
+        </div>
       )}
 
       <Submit label={t("ch_record_sent", lang)} />
