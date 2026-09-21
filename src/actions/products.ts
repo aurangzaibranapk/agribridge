@@ -131,6 +131,8 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 export async function quickCreateProduct(input: {
   name: string;
   packSize?: string | null;
+  categoryId?: string | null;
+  unit?: string | null;
   purchasePrice: number;
   sellingPrice?: number | null;
   wholesalePrice?: number | null;
@@ -152,6 +154,8 @@ export async function quickCreateProduct(input: {
     .insert({
       name,
       pack_size: input.packSize?.trim() || null,
+      category_id: input.categoryId || null,
+      ...(await unitFields(input.unit ?? null)),
       purchase_price: input.purchasePrice,
       // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
       // Baqi wala nishan isi se lagta hai (rates-baqi/page.tsx).
