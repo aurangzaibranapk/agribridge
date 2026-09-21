@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Send, Sparkles, Camera, X } from "lucide-react";
+import { Send, Sparkles, Camera, X, Database } from "lucide-react";
 import { CoachMessage } from "@/components/guided/coach-message";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
@@ -23,6 +23,7 @@ const EXAMPLE_QUESTIONS = [
 
 export default function BridgeAiPage() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [lastQueryAt, setLastQueryAt] = useState<Date | null>(null);
   const lang = useLang();
   // "?" panel se "AI se poochein" -> sawal pehle se likha hua aata hai (266).
   const searchParams = useSearchParams();
@@ -94,6 +95,7 @@ export default function BridgeAiPage() {
         }),
       });
       const data = await res.json();
+      setLastQueryAt(new Date());
       setMessages((m) => [
         ...m,
         { role: "assistant", text: data.answer ?? data.error ?? "Kuch masla ho gaya." },
@@ -130,6 +132,28 @@ export default function BridgeAiPage() {
             {actionsEnabled ? "ON" : "OFF"}
           </span>
         </div>
+      </div>
+
+      {/* Data freshness indicator */}
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
+        <Database className="h-3.5 w-3.5 text-brand-500" />
+        {lastQueryAt ? (
+          <span>
+            Abram ka data:{" "}
+            <span className="font-medium text-brand-600 dark:text-brand-400">
+              {lastQueryAt.toLocaleString("ur-PK", { dateStyle: "medium", timeStyle: "short" })}
+            </span>{" "}
+            tak (live database se)
+          </span>
+        ) : (
+          <span>
+            Abram ke paas{" "}
+            <span className="font-medium text-brand-600 dark:text-brand-400">
+              {new Date().toLocaleDateString("ur-PK", { dateStyle: "medium" })}
+            </span>{" "}
+            tak ki live database maloomat hai — sawal poochein
+          </span>
+        )}
       </div>
 
       <div className="mt-4 flex h-[65vh] flex-col rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
