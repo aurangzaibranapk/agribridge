@@ -37,7 +37,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   let activeCounterId: string | null = null;
   let activeCounterName: string | null = null;
   let openShiftInfo: { id: string; shiftNumber: string; openedAt: string; openingCash: number } | null = null;
-  let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null; shopId: string | null } | null = null;
+  let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null; shopId: string | null; shifts: { date: string; amount: number }[] } | null = null;
   let otherCounters: { id: string; name: string; shopName: string; hasOpenShift: boolean }[] = [];
 
   if (!dealer) {
@@ -110,34 +110,37 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       // se koi bhi ho to patti dobara nahi dikhti.
       const { data: pendingClosedRows } = await supabase
         .from("pos_shifts")
-        .select("id, counter_id, counted_cash")
+        .select("id, counter_id, counted_cash, closed_at")
         .eq("staff_id", user.id)
         .eq("status", "closed")
         .is("cash_handover_id", null)
         .gt("counted_cash", 0)
         .order("closed_at", { ascending: false })
-        .limit(5);
-      let pendingClosed: { id: string; counter_id: string; counted_cash: number } | null = null;
+        .limit(10);
       if (pendingClosedRows && pendingClosedRows.length > 0) {
         const { data: alreadyDeposited } = await supabase
           .from("pos_collection_deposits")
-          .select("shift_id")
-          .in(
-            "shift_id",
-            pendingClosedRows.map((r) => r.id)
-          );
-        const depositedShiftIds = new Set((alreadyDeposited ?? []).map((r: any) => r.shift_id as string));
-        const found = pendingClosedRows.find((r) => !depositedShiftIds.has(r.id));
-        pendingClosed = found ? { id: found.id, counter_id: found.counter_id, counted_cash: Number(found.counted_cash) } : null;
+          .select("shift_id, status")
+          .in("shift_id", pendingClosedRows.map((r) => r.id));
+        const approvedIds = new Set(
+          (alreadyDeposited ?? []).filter((d: any) => d.status === "approved").map((d: any) => d.shift_id as string)
+        );
+        const pending = pendingClosedRows.filter((r) => !approvedIds.has(r.id));
+        if (pending.length > 0) {
+          const ref = pending[0];
+          const total = pending.reduce((s, r) => s + Number(r.counted_cash), 0);
+          pendingHandover = {
+            shiftId: ref.id,
+            countedCash: total,
+            branchId: myCounters.find((c) => c.id === ref.counter_id)?.branchId ?? null,
+            shopId: myCounters.find((c) => c.id === ref.counter_id)?.shopId ?? null,
+            shifts: pending.map((r) => ({
+              date: r.closed_at ? new Date(r.closed_at).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—",
+              amount: Number(r.counted_cash),
+            })),
+          };
+        }
       }
-      pendingHandover = pendingClosed
-        ? {
-            shiftId: pendingClosed.id,
-            countedCash: Number(pendingClosed.counted_cash),
-            branchId: myCounters.find((c) => c.id === pendingClosed!.counter_id)?.branchId ?? null,
-            shopId: myCounters.find((c) => c.id === pendingClosed!.counter_id)?.shopId ?? null,
-          }
-        : null;
 
       // ?counter=<id> se banda khud chunta hai kaunsa counter dekhna
       // hai (switcher se aya link) -- warna jo pehla khula shift mile.

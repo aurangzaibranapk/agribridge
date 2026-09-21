@@ -337,7 +337,7 @@ export function ShiftBar({
   openedAt: string;
   branchId: string | null;
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
-  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null } | null;
+  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null; shifts?: { date: string; amount: number }[] } | null;
   /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
   otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
@@ -433,9 +433,30 @@ export function ShiftBar({
               </button>
             </div>
             <div className="px-5 py-5">
-              <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
-                Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
-              </p>
+              {pendingHandover.shifts && pendingHandover.shifts.length > 1 && (
+                <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-500">
+                    Pending Shifts — Date-wise
+                  </p>
+                  <div className="space-y-1">
+                    {pendingHandover.shifts.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-surface-600 dark:text-surface-400">{s.date}</span>
+                        <span className="font-semibold text-surface-900 dark:text-white">Rs {Math.round(s.amount).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="mt-1.5 flex items-center justify-between border-t border-amber-200 pt-1.5 text-xs dark:border-amber-800/50">
+                      <span className="font-semibold text-amber-800 dark:text-amber-400">Total</span>
+                      <span className="font-bold text-amber-800 dark:text-amber-400">Rs {Math.round(pendingHandover.countedCash).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(!pendingHandover.shifts || pendingHandover.shifts.length <= 1) && (
+                <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
+                  Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+                </p>
+              )}
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
                 branchId={pendingHandover.branchId}
