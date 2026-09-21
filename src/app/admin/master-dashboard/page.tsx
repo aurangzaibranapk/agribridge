@@ -356,6 +356,21 @@ export default async function MasterDashboardPage({
     });
   }
 
+  // ===== Notifications + Farmers at a Glance =====
+  const [
+    { data: recentNotices },
+    { count: totalFarmers },
+    { count: newFarmersMonth },
+    { data: recentFarmerRows },
+  ] = await Promise.all([
+    serviceClient.from("notifications").select("id, title, message, created_at")
+      .order("created_at", { ascending: false }).limit(8),
+    serviceClient.from("farmers").select("*", { count: "exact", head: true }).eq("is_active", true),
+    serviceClient.from("farmers").select("*", { count: "exact", head: true }).eq("is_active", true).gte("created_at", monthStart),
+    serviceClient.from("farmers").select("id, name, phone_number, created_at").eq("is_active", true)
+      .order("created_at", { ascending: false }).limit(4),
+  ]);
+
   const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
   const netProfit = totalRevenue - totalAllExpenses;
@@ -504,56 +519,6 @@ export default async function MasterDashboardPage({
         milkTotalDeductions={showDairy ? milkTotalDeductions : 0}
       />
 
-      {topSellingItems.length > 0 && (
-        <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
-            Top Selling Items — Is Mahine{shopId ? " (Is Shop)" : ""}
-          </h2>
-          <div className="space-y-2">
-            {topSellingItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-surface-800 dark:text-surface-100">{item.name}</span>
-                <MiniSparkline data={item.trend} color="brand" />
-                <span className="w-24 shrink-0 text-right font-semibold tabular-nums text-brand-700 dark:text-brand-400">
-                  {item.qty.toLocaleString()} {item.unit}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-[10px] text-surface-400">Sparkline = last {SELL_WEEKS} weeks · Mota line = zyada sale</p>
-        </div>
-      )}
-
-      {topDebtors.length > 0 && (
-        <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">
-            Jin Sy Paisa Lena Hai — Top {topDebtors.length}
-          </h2>
-          <div className="space-y-2">
-            {topDebtors.map((d, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-surface-400">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <span className="text-surface-800 dark:text-surface-100">{d.name}</span>
-                  {d.phone && (
-                    <span className="ml-2 text-[10px] text-surface-400">{d.phone}</span>
-                  )}
-                </div>
-                <MiniSparkline data={d.trend} color="red" />
-                <span className="w-28 shrink-0 text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
-                  Rs {Math.round(d.balance).toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 flex items-center justify-between text-[10px] text-surface-400">
-            <span>↑ Line upar = zyada udhaar · ↓ Neeche = wapas diya</span>
-            <span>Total: Rs {Math.round(topDebtors.reduce((s, d) => s + d.balance, 0)).toLocaleString()}</span>
-          </p>
-        </div>
-      )}
-
       {/* ===== Bottom 3 boxes: Top Sale Items | Top Buyers | Top Recovery ===== */}
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
         {/* --- Top Trading Sale Items --- */}
@@ -637,6 +602,64 @@ export default async function MasterDashboardPage({
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ===== Live Notifications | Farmers at a Glance ===== */}
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        {/* --- Live Notifications --- */}
+        <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Live Notifications</h2>
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-950/40 dark:text-green-400">Live</span>
+          </div>
+          <div className="divide-y divide-surface-50 dark:divide-surface-800">
+            {(recentNotices ?? []).length === 0 ? (
+              <p className="px-4 py-4 text-xs text-surface-400">Koi notification nahi.</p>
+            ) : (
+              (recentNotices ?? []).map((n: any) => (
+                <div key={n.id} className="flex items-start justify-between gap-2 px-4 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-surface-700 dark:text-surface-200">{n.title}</p>
+                    {n.message && <p className="truncate text-[11px] text-surface-500">{n.message}</p>}
+                  </div>
+                  <time className="shrink-0 text-[10px] text-surface-400">
+                    {new Intl.DateTimeFormat("en-PK", { timeStyle: "short", timeZone: "Asia/Karachi" }).format(new Date(n.created_at))}
+                  </time>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* --- Farmers at a Glance --- */}
+        <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Farmers at a Glance</h2>
+            <a href="/admin/farmers" className="text-[11px] text-brand-600 hover:underline">All farmers →</a>
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-surface-100 border-b border-surface-100 dark:divide-surface-800 dark:border-surface-800">
+            <div className="p-3 text-center">
+              <p className="text-xl font-semibold text-surface-900 dark:text-white">{(totalFarmers ?? 0).toLocaleString()}</p>
+              <p className="text-[11px] text-surface-400">Total Active</p>
+            </div>
+            <div className="p-3 text-center">
+              <p className="text-xl font-semibold text-green-600">+{(newFarmersMonth ?? 0).toLocaleString()}</p>
+              <p className="text-[11px] text-surface-400">Is Mahine Naye</p>
+            </div>
+          </div>
+          <div className="divide-y divide-surface-50 dark:divide-surface-800">
+            {(recentFarmerRows ?? []).length === 0 ? (
+              <p className="px-4 py-3 text-xs text-surface-400">Koi active farmer record nahi mila.</p>
+            ) : (
+              (recentFarmerRows ?? []).map((f: any) => (
+                <div key={f.id} className="flex items-center justify-between px-4 py-2">
+                  <span className="text-xs font-medium text-surface-700 dark:text-surface-200">{f.name}</span>
+                  {f.phone_number && <span className="text-[10px] text-surface-400">{f.phone_number}</span>}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
