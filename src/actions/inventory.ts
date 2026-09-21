@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ActionState {
   error?: string;
@@ -222,5 +223,57 @@ export async function saveWarehouse(_prev: ActionState, formData: FormData): Pro
   if (error) return { error: error.message };
 
   revalidatePath("/admin/inventory/warehouses");
+  return { success: true };
+}
+// =====================================================================
+// Unbatched inventory fix -- batch bina ki inventory ko batch de do
+// =====================================================================
+
+export async function fixUnbatchedInventory(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const unitCostRaw = Number(formData.get("unit_cost") ?? 0);
+  if (!productId) return { error: "Product ID gum hai." };
+  if (unitCostRaw <= 0) return { error: "Khareed qeemat sifar se zyada honi chahiye." };
+
+  const service = createServiceClient();
+
+  const { data: rows, error: fetchErr } = await service
+    .from("inventory")
+    .select("id, quantity_on_hand, warehouse_id")
+    .eq("product_id", productId)
+    .is("batch_id", null)
+    .gt("quantity_on_hand", 0);
+  if (fetchErr) return { error: fetchErr.message };
+  if (!rows || rows.length === 0) return { error: "Is product ki koi batch-less inventory nahi mili." };
+
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  let fixed = 0;
+  for (const row of rows) {
+    const batchNumber = `FIX-${today}-${row.id.slice(0, 6).toUpperCase()}`;
+    const { data: batch, error: batchErr } = await service
+      .from("stock_batches")
+      .insert({
+        product_id: productId,
+        batch_number: batchNumber,
+        initial_quantity: Number(row.quantity_on_hand),
+        remaining_quantity: Number(row.quantity_on_hand),
+        unit_cost: unitCostRaw,
+        warehouse_id: row.warehouse_id ?? null,
+      })
+      .select("id")
+      .single();
+    if (batchErr || !batch) continue;
+    await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
+    fixed++;
+  }
+
+  if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
+
+  revalidatePath(`/admin/inventory/product/${productId}`);
+  revalidatePath("/admin/master-dashboard");
   return { success: true };
 }

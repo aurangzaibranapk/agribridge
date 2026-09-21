@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
+import { UnbatchedFixer } from "./unbatched-fixer";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function ProductCardPage({ params }: { params: { productId:
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: product }, { data: cards }, { data: batches }, { data: invRows }] = await Promise.all([
+  const [{ data: product }, { data: cards }, { data: batches }, { data: invRows }, { data: unbatchedInv }] = await Promise.all([
     supabase
       .from("products")
       .select(
@@ -31,6 +32,12 @@ export default async function ProductCardPage({ params }: { params: { productId:
     supabase.from("v_warehouse_product_card").select("*").eq("product_id", params.productId).order("warehouse_name"),
     supabase.from("v_product_batches").select("*").eq("product_id", params.productId).order("expiry_date", { ascending: true, nullsFirst: false }),
     supabase.from("inventory").select("id, warehouse_id, warehouses(name)").eq("product_id", params.productId),
+    supabase
+      .from("inventory")
+      .select("id, quantity_on_hand, warehouses(name)")
+      .eq("product_id", params.productId)
+      .is("batch_id", null)
+      .gt("quantity_on_hand", 0),
   ]);
   if (!product) notFound();
 
@@ -198,6 +205,17 @@ export default async function ProductCardPage({ params }: { params: { productId:
             );
           })}
         </div>
+      )}
+
+      {(unbatchedInv ?? []).length > 0 && (
+        <UnbatchedFixer
+          productId={params.productId}
+          productName={product.name}
+          unbatchedRows={(unbatchedInv ?? []).map((r: any) => ({
+            warehouseName: (Array.isArray(r.warehouses) ? r.warehouses[0] : r.warehouses)?.name ?? "—",
+            quantityOnHand: Number(r.quantity_on_hand ?? 0),
+          }))}
+        />
       )}
 
       {(batches ?? []).length > 0 && (
