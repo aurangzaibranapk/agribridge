@@ -62,22 +62,27 @@ export default async function LoadBillPage({
 
   const service = createServiceClient();
   const aaj = aajKaKhana();
+  const branchPromise = me.branch_id
+    ? service.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
+    : Promise.resolve({ data: null, error: null });
 
-  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }] =
+  const [{ data: providers }, { data: accounts }, { data: financeAccounts }, { data: customers }, { data: farmers }, { data: branch }] =
     await Promise.all([
       service.from("load_providers").select("id, key, name, kind, bill_category").eq("is_active", true).order("sort_order"),
-      service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true).order("title"),
+      service.from("load_accounts").select("id, title, account_ref, provider_id, branch_id").eq("is_active", true)
+        .or(me.branch_id ? `branch_id.is.null,branch_id.eq.${me.branch_id}` : "branch_id.is.null").order("title"),
       service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
       // Khata (udhaar) ke liye. Pehle ye laaye hi nahi jate the, aur
       // form mein customer chunne ka khana tha hi nahi -- is liye
       // "Khata" chunne par server hamesha "customer chunna zaroori hai"
       // keh kar rok deta tha. Wo khana MARA HUA tha.
-      service.from("customers").select("id, name, phone_number, cnic, current_balance").order("name"),
+      service.from("customers").select("id, name, current_balance").order("name"),
       // Malik (7 September): udhaar kisan ko bhi milta hai, sirf dukan
       // ke customer ko nahi. Naam ke ilawa mobile aur CNIC bhi laate
       // hain taake picker un se bhi dhoond sake — sirf naam se dhoondna
       // sainkron kisanon mein kaam nahi karta.
       service.from("farmers").select("id, full_name, farmer_code, phone_number, cnic, credit_limit").eq("is_deleted", false).order("full_name"),
+      branchPromise,
     ]);
 
   // Har account ka float SEEDHA journal se. Koi alag rakha hua balance
@@ -96,14 +101,58 @@ export default async function LoadBillPage({
     floats.set(a.id as string, error ? null : Number(data ?? 0));
   }
 
-  const { data: aajKiQatarein } = await service
+  const loadTransactionsQuery = service
     .from("load_transactions")
     .select(
-      "id, txn_number, kind, reference, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
+      "id, txn_number, kind, reference, bill_category, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
     )
     .gte("created_at", `${aaj}T00:00:00`)
     .order("created_at", { ascending: false })
     .limit(60);
+  const loadTransactionsResult = me.branch_id
+    ? await loadTransactionsQuery.eq("branch_id", me.branch_id)
+    : { data: [], error: null };
+  const aajKiQatarein = loadTransactionsResult.data;
+
+  // Recovery and new udhaar are ledger events, not load_transactions.
+  // Keep this list scoped to the signed-in staff member's branch. If no
+  // branch is assigned, show the recovery figure as unavailable below.
+  const ledgerResult = me.branch_id
+    ? await service
+        .from("journal_entries")
+        .select("id, description, created_at, is_reversal, reversal_of")
+        .eq("branch_id", me.branch_id)
+        .eq("source_module", "customer_udhaar")
+        .eq("entry_date", aaj)
+        .order("created_at", { ascending: false })
+        .limit(60)
+    : { data: [], error: null };
+  const ledgerRows = ledgerResult.data ?? [];
+  const ledgerIds = ledgerRows.map((row) => row.id as string);
+  const ledgerLines = ledgerIds.length
+    ? await service.from("journal_lines").select("entry_id, debit").in("entry_id", ledgerIds)
+    : { data: [], error: null };
+  const debitByEntry = new Map<string, number>();
+  for (const line of ledgerLines.data ?? []) {
+    debitByEntry.set(line.entry_id as string, (debitByEntry.get(line.entry_id as string) ?? 0) + Number(line.debit ?? 0));
+  }
+  const reversedLedgerIds = new Set(ledgerRows.map((row) => row.reversal_of as string | null).filter((id): id is string => Boolean(id)));
+  const ledgerToday = ledgerRows
+    .filter((row) => !row.is_reversal && !reversedLedgerIds.has(row.id as string))
+    .map((row) => {
+      const description = String(row.description ?? "");
+      const isRecovery = /^(Udhaar ki wapsi|Udhaar wapas aaya)/i.test(description);
+      return {
+        id: row.id as string,
+        description,
+        amount: debitByEntry.get(row.id as string) ?? 0,
+        createdAt: row.created_at as string,
+        kind: (isRecovery ? "recovery" : "udhaar") as "recovery" | "udhaar",
+      };
+    });
+  const recoveryToday = ledgerResult.error || ledgerLines.error || !me.branch_id
+    ? null
+    : ledgerToday.filter((row) => row.kind === "recovery").reduce((sum, row) => sum + row.amount, 0);
 
   const providerName = new Map((providers ?? []).map((p) => [p.id as string, p.name as string]));
 
@@ -114,8 +163,8 @@ export default async function LoadBillPage({
   return (
     <DeskWorkspace className="desk-load">
       <PageHeader
-        title="Load & Bill"
-        description="Mobile load aur customer ke bill — float ke hisaab ke sath"
+        title="Staff Sales Desk"
+        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -171,8 +220,6 @@ export default async function LoadBillPage({
           customers={(customers ?? []).map((c) => ({
             id: c.id as string,
             name: (c.name as string | null) ?? "—",
-            phone: (c.phone_number as string | null) ?? undefined,
-            cnic: (c.cnic as string | null) ?? undefined,
             // NULL = is customer ka hisaab shuru hi nahi hua. Us ko
             // sifar likh dena "dekh liya, kuch nahi" kehna hai -- aur
             // wo baat yahan sach nahi.
@@ -194,6 +241,7 @@ export default async function LoadBillPage({
             number: t.txn_number as string,
             kind: t.kind as string,
             reference: t.reference as string,
+            billCategory: (t.bill_category as string | null) ?? null,
             principal: Number(t.principal),
             serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
             commissionExpected: t.commission_expected === null ? null : Number(t.commission_expected),
@@ -207,6 +255,18 @@ export default async function LoadBillPage({
             waqt: String(t.created_at),
             provider: providerName.get(t.provider_id as string) ?? "—",
           }))}
+          ledgerToday={ledgerToday}
+          summary={{
+            floatBalance: (accounts ?? []).length > 0 && (accounts ?? []).every((account) => floats.get(account.id as string) !== null && floats.has(account.id as string))
+              ? (accounts ?? []).reduce((sum, account) => sum + (floats.get(account.id as string) ?? 0), 0)
+              : null,
+            cashReceived: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.payment_method === "cash" && row.status !== "wapas")
+              .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
+            volume: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status !== "wapas")
+              .reduce((sum, row) => sum + Number(row.principal ?? 0), 0),
+            recovery: recoveryToday,
+            pendingProof: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status === "saboot_baqi").length,
+          }}
           canReverse={FLOAT_ROLES.includes(me.role)}
         />
       )}
