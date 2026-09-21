@@ -238,7 +238,7 @@ export default async function StockCountPage({
                       {current.startedByName && ` • ${current.startedByName}`}
                     </p>
                   </div>
-                  {current.allCounted && !reviewing && (
+                  {!reviewing && (current.allCounted || canApprove) && (
                     <a
                       href={`/admin/stock-count?w=${current.warehouseId}&step=review`}
                       className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
@@ -283,7 +283,7 @@ export default async function StockCountPage({
                   />
                 )}
 
-                {!reviewing && !current.allCounted && (
+                {!reviewing && !current.allCounted && !canApprove && (
                   <p className="mt-3 flex items-start gap-1.5 text-xs text-surface-500">
                     <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     {t("sc_hidden_until_all", lang)}

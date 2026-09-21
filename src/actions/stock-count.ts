@@ -571,7 +571,22 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   const rows = lines ?? [];
   const unfilled = rows.filter((r) => r.counted_qty === null);
   if (unfilled.length > 0) {
-    return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };
+    // Admin/Owner force-close: jo cheezein nahi gini unhen expected_qty par set karo
+    // (counted = expected, farq = 0, koi wajah ki zaroorat nahi)
+    await Promise.all(
+      unfilled.map((r) =>
+        service
+          .from("stock_count_lines")
+          .update({ counted_qty: r.expected_qty ?? 0, difference_qty: 0 })
+          .eq("id", r.id)
+      )
+    );
+    for (const r of rows) {
+      if (r.counted_qty === null) {
+        (r as typeof r & { counted_qty: number; difference_qty: number }).counted_qty = r.expected_qty ?? 0;
+        (r as typeof r & { counted_qty: number; difference_qty: number }).difference_qty = 0;
+      }
+    }
   }
 
   // Wajah har us qatar par jahan farq hai.
