@@ -22,7 +22,9 @@ export interface ShiftCashSummary {
   udhaarGivenCashTotal: number;
   /** Is shift mein CASH mein wasool hui Recovery (golak mein aaya). */
   recoveryCashTotal: number;
-  /** opening_cash + cashSalesTotal + loadBillCashTotal + recoveryCashTotal − cashReturnsTotal − udhaarGivenCashTotal. */
+  /** Is shift ki golak se supplier ko di gayi adaigiyaan (pos_cash_outs). */
+  supplierPaymentCashTotal: number;
+  /** opening_cash + cashSalesTotal + loadBillCashTotal + recoveryCashTotal − cashReturnsTotal − udhaarGivenCashTotal − supplierPaymentCashTotal. */
   expectedCash: number;
 }
 
@@ -35,6 +37,7 @@ function emptySummary(openingCash: number): ShiftCashSummary {
   return {
     saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
     billTotal: 0, loadTotal: 0, loadBillCashTotal: 0, udhaarGivenCashTotal: 0, recoveryCashTotal: 0,
+    supplierPaymentCashTotal: 0,
     expectedCash: openingCash,
   };
 }
@@ -76,7 +79,8 @@ export function aggregateShiftCash(
   payments: { payment_method: string | null; amount: number | string | null }[],
   returns: { total_amount: number | string | null }[],
   loadBillRows: LoadBillRow[] = [],
-  udhaarCashRows: UdhaarCashLegRow[] = []
+  udhaarCashRows: UdhaarCashLegRow[] = [],
+  cashOutRows: { amount: number | string | null }[] = []
 ): ShiftCashSummary {
   const totalSales = sales.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
   const khataTotal = sales.reduce((s, r) => s + Number(r.khata_amount ?? 0), 0);
@@ -123,6 +127,8 @@ export function aggregateShiftCash(
     recoveryCashTotal += Number(u.debit ?? 0);
   }
 
+  const supplierPaymentCashTotal = cashOutRows.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+
   return {
     saleCount: sales.length,
     totalSales,
@@ -135,8 +141,9 @@ export function aggregateShiftCash(
     loadBillCashTotal,
     udhaarGivenCashTotal,
     recoveryCashTotal,
+    supplierPaymentCashTotal,
     expectedCash:
-      Number(openingCash) + cashSalesTotal - cashReturnsTotal + loadBillCashTotal + recoveryCashTotal - udhaarGivenCashTotal,
+      Number(openingCash) + cashSalesTotal - cashReturnsTotal + loadBillCashTotal + recoveryCashTotal - udhaarGivenCashTotal - supplierPaymentCashTotal,
   };
 }
 
@@ -174,7 +181,7 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   // hai. `sale_id IN (isi shift ki sales)` wala purana tareeqa aisi
   // wapsiyan bilkul chhoR deta tha, aur shift "kam" nazar aati bina
   // wajah bataye.
-  const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }] = await Promise.all([
+  const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }, { data: cashOutRows }] = await Promise.all([
     service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
     service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId).eq("refund_method", "cash"),
     shopId && staffId && fromTs
@@ -199,12 +206,15 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
           .gte("journal_entries.created_at", fromTs)
           .lte("journal_entries.created_at", toTs)
       : Promise.resolve({ data: [] as UdhaarCashLegRow[] }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).from("pos_cash_outs").select("amount").eq("shift_id", shiftId),
   ]);
   const rows = shiftSales ?? [];
   const returnRows = returns ?? [];
   const loadBill = loadBillRows ?? [];
   const udhaarCash = udhaarCashRows ?? [];
-  if (rows.length === 0 && returnRows.length === 0 && loadBill.length === 0 && udhaarCash.length === 0) {
+  const cashOuts = (cashOutRows ?? []) as { amount: number | string | null }[];
+  if (rows.length === 0 && returnRows.length === 0 && loadBill.length === 0 && udhaarCash.length === 0 && cashOuts.length === 0) {
     return emptySummary(openingCash);
   }
 
@@ -214,5 +224,5 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
       ? await service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
       : { data: [] as { payment_method: string | null; amount: number | string | null }[] };
 
-  return aggregateShiftCash(openingCash, rows, payments ?? [], returnRows, loadBill, udhaarCash);
+  return aggregateShiftCash(openingCash, rows, payments ?? [], returnRows, loadBill, udhaarCash, cashOuts);
 }

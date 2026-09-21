@@ -16,6 +16,9 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
   const paymentDate = String(formData.get("payment_date") ?? aajKaKhana());
   const paymentMethod = (formData.get("payment_method") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const cashSource = (formData.get("cash_source") as string) || null;
+  const cashSourceNote = (formData.get("cash_source_note") as string) || null;
+  const posCounterId = (formData.get("pos_counter_id") as string) || null;
   if (!supplierId) return { error: "Missing supplier id." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
 
@@ -42,8 +45,32 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
     notes,
     slipUrl,
     createdBy: user?.id ?? null,
+    cashSource,
+    cashSourceNote,
+    posCounterId,
   });
   if ("error" in paid) return { error: paid.error };
+
+  // POS golak se payment gai to shift ka cash deduct karo
+  if (cashSource === "pos_golak" && posCounterId) {
+    const { data: openShift } = await serviceClient
+      .from("pos_shifts")
+      .select("id")
+      .eq("counter_id", posCounterId)
+      .eq("status", "open")
+      .maybeSingle();
+    if (openShift) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (serviceClient as any).from("pos_cash_outs").insert({
+        shift_id: openShift.id,
+        supplier_payment_id: (paid as any).paymentId ?? null,
+        amount,
+        reason: cashSourceNote || `Supplier payment`,
+        created_by: user?.id ?? null,
+      });
+    }
+  }
+
   // Payable yahan se NAHI ghataya jata. supplier_payments mein qatar
   // daalte hi trigger khud hisaab dobara laga deta hai (139). Pehle
   // yahan Math.max(0, ...) tha, jo ghalati ko theek nahi karta tha --

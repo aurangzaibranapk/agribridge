@@ -49,6 +49,10 @@ export async function payAndPost(
     createdBy: string | null;
     /** Purani tareekh ki adaigi ho to wajah — warna ledger post nahi hoti. */
     backdateReason?: string | null;
+    /** Kahan se aaya cash: pos_golak | office_cash | capital_investment | bank */
+    cashSource?: string | null;
+    cashSourceNote?: string | null;
+    posCounterId?: string | null;
   }
 ): Promise<{ paymentId: string } | { error: string }> {
   const { data: row, error } = await client
@@ -62,6 +66,12 @@ export async function payAndPost(
       notes: args.notes ?? null,
       slip_url: args.slipUrl ?? null,
       created_by: args.createdBy,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(args.cashSource ? { cash_source: args.cashSource } as any : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(args.cashSourceNote ? { cash_source_note: args.cashSourceNote } as any : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(args.posCounterId ? { pos_counter_id: args.posCounterId } as any : {}),
     })
     .select("id")
     .single();
