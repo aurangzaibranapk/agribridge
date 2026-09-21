@@ -72,7 +72,7 @@ export default async function LoadBillPage({
       // form mein customer chunne ka khana tha hi nahi -- is liye
       // "Khata" chunne par server hamesha "customer chunna zaroori hai"
       // keh kar rok deta tha. Wo khana MARA HUA tha.
-      service.from("customers").select("id, name, current_balance").order("name"),
+      service.from("customers").select("id, name, phone_number, cnic, current_balance").order("name"),
       // Malik (7 September): udhaar kisan ko bhi milta hai, sirf dukan
       // ke customer ko nahi. Naam ke ilawa mobile aur CNIC bhi laate
       // hain taake picker un se bhi dhoond sake — sirf naam se dhoondna
@@ -171,6 +171,8 @@ export default async function LoadBillPage({
           customers={(customers ?? []).map((c) => ({
             id: c.id as string,
             name: (c.name as string | null) ?? "—",
+            phone: (c.phone_number as string | null) ?? undefined,
+            cnic: (c.cnic as string | null) ?? undefined,
             // NULL = is customer ka hisaab shuru hi nahi hua. Us ko
             // sifar likh dena "dekh liya, kuch nahi" kehna hai -- aur
             // wo baat yahan sach nahi.

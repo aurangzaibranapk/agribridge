@@ -115,7 +115,7 @@ export function LoadBillClient({
   providers: Provider[];
   accounts: Account[];
   financeAccounts: { id: string; name: string }[];
-  customers: { id: string; name: string; balance: number | null }[];
+  customers: { id: string; name: string; phone?: string; cnic?: string; balance: number | null }[];
   farmers: { id: string; name: string; phone: string | null; cnic: string | null; farmerCode: string }[];
   today: Txn[];
   canReverse: boolean;
@@ -152,7 +152,7 @@ export function LoadBillClient({
    */
   const udhaarPeople: PersonOption[] = useMemo(
     () => [
-      ...customers.map((c): PersonOption => ({ type: "customer", id: c.id, name: c.name, balance: c.balance })),
+      ...customers.map((c): PersonOption => ({ type: "customer", id: c.id, name: c.name, phone: c.phone, cnic: c.cnic, balance: c.balance })),
       ...farmers.map((f): PersonOption => ({ type: "farmer", id: f.id, name: f.name, phone: f.phone, cnic: f.cnic, subtitle: f.farmerCode })),
     ],
     [customers, farmers]
