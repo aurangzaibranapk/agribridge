@@ -49,6 +49,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: "Purchases",
     items: [
+      { href: "/admin/purchases/supplier-bill", label: "Supplier Purchase Bill", icon: ReceiptText },
       { href: "/admin/purchases", label: "Kharid", icon: ClipboardList },
       { href: "/admin/grain-procurement/dashboard", label: "Anaj ka Dashboard", icon: LineChart },
       { href: "/admin/grain-procurement", label: "Anaj ki Kharid", icon: Wheat },

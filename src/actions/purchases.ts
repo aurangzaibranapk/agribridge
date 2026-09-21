@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { payAndPost } from "@/lib/ledger/supplier-money";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
@@ -44,6 +45,7 @@ type PurchaseItemInput = {
 
 export async function createPurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const supplierBillWorkspace = String(formData.get("supplier_bill_workspace") ?? "") === "on";
   const supplierId = String(formData.get("supplier_id") ?? "");
   if (!supplierId) return { error: "Supplier is required." };
   const purchaseDate = String(formData.get("purchase_date") ?? aajKaKhana());
@@ -53,15 +55,34 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, branch_id")
+    .select("role, branch_id, is_active")
     .eq("id", user?.id ?? "")
     .maybeSingle();
   const isAdminLevel = profile?.role === "super_admin" || profile?.role === "admin";
+  const isMasterRole = isAdminLevel || profile?.role === "owner";
+  if (supplierBillWorkspace && !profile?.is_active) {
+    return { error: "Aapka account active nahi. Admin se rabta karein." };
+  }
+  if (supplierBillWorkspace && !isMasterRole) {
+    return { error: "Supplier Purchase Bill sirf Admin Panel se Admin ya Owner save kar sakta hai." };
+  }
   // Manzoori (259): jo khud manzoor karne wala hai us ki purchase seedha
   // approved; baqi staff ki purchase manzoori ke liye jati hai.
   const approver = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
   let branchId: string | null;
-  if (isAdminLevel) {
+  let warehouseId: string | null = null;
+  if (supplierBillWorkspace) {
+    warehouseId = String(formData.get("warehouse_id") ?? "").trim() || null;
+    if (!warehouseId) return { error: "Bill ka receiving warehouse chunein." };
+    const { data: warehouse } = await supabase
+      .from("warehouses")
+      .select("id, branch_id")
+      .eq("id", warehouseId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!warehouse) return { error: "Selected warehouse active nahi ya available nahi." };
+    branchId = warehouse.branch_id;
+  } else if (isAdminLevel) {
     branchId = String(formData.get("branch_id") ?? "") || null;
     if (!branchId) return { error: "Branch is required." };
   } else {
@@ -74,16 +95,37 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   } catch {
     return { error: "Invalid items data." };
   }
-  if (!items || items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0) {
     return { error: "Add at least one product line." };
+  }
+  if (items.some((i) => !i || typeof i !== "object" || !i.product_id || !Number.isFinite(i.quantity) || i.quantity <= 0 || !Number.isFinite(i.unit_cost) || i.unit_cost < 0)) {
+    return { error: "Har bill line mein product, sahi quantity aur purchase rate zaroor bharein." };
   }
   const totalAmount = items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0);
 
+  const readMoney = (key: string) => {
+    const raw = String(formData.get(key) ?? "").replace(/,/g, "").trim();
+    if (!raw) return 0;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : NaN;
+  };
+  const discountAmount = supplierBillWorkspace ? readMoney("discount_amount") : 0;
+  const taxAmount = supplierBillWorkspace ? readMoney("tax_amount") : 0;
+  if (!Number.isFinite(discountAmount) || !Number.isFinite(taxAmount)) {
+    return { error: "Discount aur tax ki raqam durust likhein." };
+  }
+  if (discountAmount > totalAmount) return { error: "Discount bill ke subtotal se zyada nahi ho sakta." };
+  const invoiceTotal = Math.max(0, totalAmount - discountAmount + taxAmount);
+
   // Adaigi ki shartein (255): poora / kuch / udhaar, aur kab tak.
-  const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
+  const terms = parsePaymentTerms(formData, supplierBillWorkspace ? invoiceTotal : totalAmount, purchaseDate);
   if ("error" in terms) return { error: terms.error };
 
   const purchaseNumber = `PO-${Date.now()}`;
+  const supplierBillNo = supplierBillWorkspace ? String(formData.get("supplier_bill_no") ?? "").trim() || null : null;
+  if (supplierBillWorkspace && !supplierBillNo) {
+    return { error: "Supplier invoice ka bill number zaroor likhein taa-ke wohi bill dobara save na ho." };
+  }
   const { data: purchase, error: purchaseError } = await supabase
     .from("purchases")
     .insert({
@@ -91,9 +133,17 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       supplier_id: supplierId,
       branch_id: branchId,
       purchase_date: purchaseDate,
+      supplier_bill_no: supplierBillNo,
+      warehouse_id: warehouseId,
       status: "pending",
       review_status: approver ? "approved" : "submitted",
-      total_amount: totalAmount,
+      // New supplier-bill workspace records the bill's net payable here.
+      // Legacy purchases keep their original merchandise subtotal model.
+      total_amount: supplierBillWorkspace ? invoiceTotal : totalAmount,
+      invoice_total: supplierBillWorkspace ? invoiceTotal : null,
+      discount_amount: supplierBillWorkspace ? discountAmount : null,
+      tax_amount: supplierBillWorkspace ? taxAmount : null,
+      tax_label: supplierBillWorkspace && taxAmount > 0 ? String(formData.get("tax_label") ?? "").trim() || "Tax" : null,
       payment_terms: terms.terms,
       credit_days: terms.creditDays,
       due_date: terms.dueDate,
@@ -103,6 +153,9 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .select("id")
     .single();
   if (purchaseError || !purchase) {
+    if (supplierBillWorkspace && purchaseError?.code === "23505" && /ux_purchases_supplier_bill_no/i.test(`${purchaseError.message} ${purchaseError.details ?? ""}`) && supplierBillNo) {
+      return { error: `Supplier bill ${supplierBillNo} pehle se save hai. Duplicate bill dobara nahi banaya.` };
+    }
     return { error: purchaseError?.message ?? "Failed to create purchase." };
   }
   if (!approver && user) {
@@ -219,9 +272,19 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   }
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
+  revalidatePath("/admin/purchases/supplier-bill");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/products");
   revalidatePath("/admin/pos");
+  await logAudit({
+    actionType: "create",
+    module: "purchases",
+    recordId: purchase.id,
+    recordLabel: supplierBillNo || purchaseNumber,
+    description: supplierBillWorkspace
+      ? `Supplier Purchase Bill save hua. Supplier bill ${supplierBillNo || "number nahi diya"}; amount Rs ${invoiceTotal.toLocaleString()}. Stock GRN receive par update hoga.`
+      : `Purchase ${purchaseNumber} create hui.`,
+  });
   return { success: true, purchaseId: purchase.id, warning: slipWarning ?? undefined };
 }
 
@@ -239,9 +302,10 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
  * purchase_items.damaged_qty mein rehta hai, v_purchase_discrepancies
  * se nazar aata hai.
  *
- * Dena (139) purchases.total_amount se banta hai, is liye receive par
- * total_amount = aaya x cost; invoice ka asal kul invoice_total mein
- * mehfooz. Farq chhupta nahi.
+ * Dena (139) purchases.total_amount se banta hai. Purane purchase forms
+ * mein receive par ye aaya x cost hota hai. Supplier Bill workspace mein
+ * yahi raqam GRN ke baad qabool-shuda maal - us ka discount + tax hoti hai;
+ * invoice ka asal kul invoice_total mein mehfooz rehta hai.
  */
 export async function receivePurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -249,7 +313,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   if (!purchaseId) return { error: "Missing purchase id." };
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, branch_id, total_amount, invoice_total, review_status, supplier_id, discount_amount, tax_amount, tax_label")
+    .select("id, purchase_number, status, branch_id, warehouse_id, total_amount, invoice_total, review_status, supplier_id, discount_amount, tax_amount, tax_label")
     .eq("id", purchaseId)
     .single();
   if (!purchase) return { error: "Purchase not found." };
@@ -364,8 +428,8 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     // Central Warehouse ke liye banayi purchase bhi product ke purane
     // (Main Branch) mein chali jati thi -- maal "gum" nahi hota tha,
     // bas ghalat jagah dikhta tha (10 September).
-    let warehouseId: string | null = null;
-    if (product?.shop_id) {
+    let warehouseId: string | null = purchase.warehouse_id ?? null;
+    if (!warehouseId && product?.shop_id) {
       const { data: shopWarehouse } = await supabase.from("warehouses").select("id").eq("shop_id", product.shop_id).maybeSingle();
       warehouseId = shopWarehouse?.id ?? null;
     }
@@ -455,12 +519,19 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   // Dena utne ka jitna theek aaya. Invoice ka asal kul ek dafa mehfooz
   // hota hai (agar bill se pehle hi likha ho to wohi rehta hai).
   const acceptedTotal = rows.reduce((s, r) => s + r.received * r.unit_cost, 0);
+  const originalGoodsTotal = rows.reduce((s, r) => s + r.quantity * r.unit_cost, 0);
+  const receivedRatio = originalGoodsTotal > 0 ? Math.min(1, acceptedTotal / originalGoodsTotal) : 1;
+  const acceptedDiscount = purchase.discount_amount != null
+    ? Math.min(acceptedTotal, Number(purchase.discount_amount) * receivedRatio)
+    : 0;
+  const acceptedTax = purchase.tax_amount != null ? Number(purchase.tax_amount) * receivedRatio : 0;
+  const acceptedPayable = Math.round((acceptedTotal - acceptedDiscount + acceptedTax) * 100) / 100;
   const { error: statusError } = await supabase
     .from("purchases")
     .update({
       status: "received",
       invoice_total: purchase.invoice_total ?? Number(purchase.total_amount ?? 0),
-      total_amount: acceptedTotal,
+      total_amount: purchase.warehouse_id ? acceptedPayable : acceptedTotal,
       grn_photo_url: grnPhotoUrl,
       grn_note: grnNote,
       received_at: new Date().toISOString(),
@@ -532,8 +603,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     // Bill ka discount/tax poore invoice par likha hota hai; agar kuch
     // kam/toota nikla to yahan sirf USI hisse ka discount/tax (388) --
     // poora laga dena galat rehta agar aadha maal wapas ho gaya.
-    const originalTotal = Number(purchase.total_amount ?? 0);
-    const ratio = originalTotal > 0 ? Math.min(1, acceptedTotal / originalTotal) : 1;
+    const ratio = receivedRatio;
     const posted = await postGoodsReceived({
       purchaseId,
       purchaseNumber: purchase.purchase_number ?? null,
@@ -994,4 +1064,29 @@ export async function commentPurchase(_prev: ActionState, formData: FormData): P
 
   revalidatePath("/admin/purchases");
   return { success: true };
+}
+
+export async function getNextSupplierBillNo(): Promise<{ billNo: string } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const year = new Date().getFullYear();
+  const prefix = `SB-${year}-`;
+
+  const { data } = await service
+    .from("purchases")
+    .select("supplier_bill_no")
+    .like("supplier_bill_no", `${prefix}%`)
+    .order("supplier_bill_no", { ascending: false })
+    .limit(1);
+
+  let next = 1;
+  if (data?.[0]?.supplier_bill_no) {
+    const num = parseInt(String(data[0].supplier_bill_no).replace(prefix, ""), 10);
+    if (!isNaN(num)) next = num + 1;
+  }
+
+  return { billNo: `${prefix}${String(next).padStart(3, "0")}` };
 }

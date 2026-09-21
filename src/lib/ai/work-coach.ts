@@ -34,6 +34,7 @@ export interface CoachContext {
 
 /** Purchase se POS tak ka raasta -- AI ko ye yaad nahi rakhna, yahan likha hai. */
 export const SYSTEM_MAP = [
+  "Supplier Purchase Bill workspace: Admin/Owner product master se Karyana/Khaad/Wanda/Pesticide item chunta ya naya product category ke sath save karta hai -> supplier invoice, warehouse, quantities, rate aur payment save karta hai (/admin/purchases/supplier-bill) -> approval ke baad warehouse GRN par asal ginti karta hai -> tabhi stock barhta hai.",
   "Supplier bill (photo/PDF/sheet) -> /admin/products/bill-rates (AI qatarein parhta hai, product milata hai, rate charhta hai)",
   "-> Purchase draft banta hai (/admin/purchases, review_status = submitted)",
   "-> Owner/Admin manzoor / wapas / radd (/admin/purchases, Jaanch)",

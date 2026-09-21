@@ -415,3 +415,21 @@ export async function shiftCashRecipients(
   }));
 }
 
+export async function shiftCashCarriers(): Promise<
+  { id: string; name: string; role: string }[] | { error: string }
+> {
+  const who = await main();
+  if ("error" in who) return { error: who.error ?? "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const { data } = await service
+    .from("profiles")
+    .select("id, full_name, role")
+    .eq("is_active", true)
+    .neq("id", who.userId)
+    .not("role", "in", `("farmer","machinery_vendor","ai_assistant","dealer")`)
+    .order("full_name");
+
+  return (data ?? []).map((r) => ({ id: r.id, name: r.full_name ?? "—", role: r.role }));
+}
+

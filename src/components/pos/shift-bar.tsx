@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown, Landmark, User } from "lucide-react";
-import { closeShift, getShiftSummary, shiftCashRecipients, type ActionState } from "@/actions/pos-counters";
+import { closeShift, getShiftSummary, shiftCashRecipients, shiftCashCarriers, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import { bankAccountsForCollectionDeposit, submitCollectionDeposit, type ActionState as DepositState } from "@/actions/pos-collection";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
@@ -61,25 +61,35 @@ function DepositButton() {
  */
 export function ShiftCashHandoverForm({
   shiftId,
+  shiftIds,
   branchId,
   shopId,
   countedCash,
 }: {
   shiftId: string;
+  shiftIds?: string[];
   branchId: string | null;
-  shopId: string | null;
+  shopId?: string | null;
   countedCash: number;
 }) {
   const [mode, setMode] = useState<"person" | "bank">("person");
   const [recipients, setRecipients] = useState<{ id: string; name: string; role: string }[] | null>(null);
+  const [carriers, setCarriers] = useState<{ id: string; name: string; role: string }[]>([]);
   const [banks, setBanks] = useState<{ id: string; name: string }[] | null>(null);
+  const [method, setMethod] = useState("cash");
   const [handoverState, handoverAction] = useFormState(sendCash, HANDOVER_KHALI);
   const [depositState, depositAction] = useFormState(submitCollectionDeposit, DEPOSIT_KHALI);
   const [slipUrl, setSlipUrl] = useState("");
+  const [enteredAmount, setEnteredAmount] = useState(countedCash);
+  const remaining = Math.max(0, countedCash - enteredAmount);
+  const allIds = shiftIds ?? [shiftId];
 
   useEffect(() => {
     shiftCashRecipients(branchId).then((r) => {
       if (!("error" in r)) setRecipients(r);
+    });
+    shiftCashCarriers().then((r) => {
+      if (!("error" in r)) setCarriers(r);
     });
     bankAccountsForCollectionDeposit().then((r) => {
       if (!("error" in r)) setBanks(r);
@@ -148,10 +158,30 @@ export function ShiftCashHandoverForm({
         ) : (
           <form action={handoverAction} className="space-y-2 rounded-xl border border-surface-200 p-3 dark:border-surface-700">
             <input type="hidden" name="from_source" value="my_custody" />
-            <input type="hidden" name="amount" value={countedCash} />
-            <input type="hidden" name="shift_id" value={shiftId} />
+            <input type="hidden" name="amount" value={enteredAmount} />
+            {/* Partial payment: sirf tab sab shifts settle karo jab poora bheja */}
+            <input type="hidden" name="shift_ids" value={enteredAmount >= countedCash ? allIds.join(",") : ""} />
+            <div>
+              <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-400">
+                Kitni raqam bhej rahe hain? <span className="text-surface-400">(max Rs {Math.round(countedCash).toLocaleString()})</span>
+              </p>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
+                <input
+                  type="number" min="1" max={countedCash} step="1"
+                  value={enteredAmount}
+                  onChange={(e) => setEnteredAmount(Math.min(countedCash, Math.max(0, Number(e.target.value))))}
+                  className="w-full rounded-lg border border-surface-200 py-1.5 pl-8 pr-2 text-xs dark:border-surface-700 dark:bg-surface-900"
+                />
+              </div>
+              {remaining > 0 && (
+                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  Baqi Rs {Math.round(remaining).toLocaleString()} outstanding rahega
+                </p>
+              )}
+            </div>
             <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
-              Yehi Rs {Math.round(countedCash).toLocaleString()} kis ko bhejein?
+              Kis ko bhejein?
             </p>
             <select
               name="to_profile_id"
@@ -173,11 +203,38 @@ export function ShiftCashHandoverForm({
                 { value: "bank_transfer", label: "Bank Transfer" },
               ].map((m) => (
                 <label key={m.value} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-200 px-2 py-1.5 text-xs has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:border-surface-700 dark:has-[:checked]:border-brand-600 dark:has-[:checked]:bg-brand-950/30">
-                  <input type="radio" name="transfer_method" value={m.value} defaultChecked={m.value === "cash"} className="accent-brand-600" />
+                  <input type="radio" name="transfer_method" value={m.value} checked={method === m.value} onChange={() => setMethod(m.value)} className="accent-brand-600" />
                   {m.label}
                 </label>
               ))}
             </div>
+            {method === "cash" && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-400">
+                  Carrier — kaun le ja raha hai? <span className="text-surface-400">(optional)</span>
+                </p>
+                <select
+                  name="carrier_profile_id"
+                  className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+                >
+                  <option value="">— khud de raha hoon —</option>
+                  {carriers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {(method === "jazzcash" || method === "easypaisa" || method === "bank_transfer") && (
+              <div>
+                <input type="hidden" name="slip_url" value={slipUrl} />
+                <PaymentSlipUpload onUploaded={setSlipUrl} />
+                {!slipUrl && (
+                  <p className="mt-1 text-[11px] text-surface-400">Slip upload karna zaroori hai.</p>
+                )}
+              </div>
+            )}
             <input
               name="sent_note"
               placeholder="Note (agar ho)"
@@ -325,8 +382,8 @@ export function ShiftBar({
   openingCash: number;
   openedAt: string;
   branchId: string | null;
-  /** Saari band shifts ka total cash jo abhi Manager/Finance ko bheja nahi gaya. */
-  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null; pendingDepositAmount?: number | null; hasUnsubmittedShifts?: boolean } | null;
+  /** Band shifts ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
+  pendingHandover?: { shiftId: string; shiftIds?: string[]; countedCash: number; branchId: string | null; shopId?: string | null; pendingDepositAmount?: number | null; hasUnsubmittedShifts?: boolean; shifts?: { date: string; amount: number }[] } | null;
   /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
   otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
@@ -425,9 +482,30 @@ export function ShiftBar({
               </button>
             </div>
             <div className="px-5 py-5">
-              <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
-                Total Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi bhejna baqi hai (saari band shifts ka).
-              </p>
+              {pendingHandover.shifts && pendingHandover.shifts.length > 1 && (
+                <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-500">
+                    Pending Shifts — Date-wise
+                  </p>
+                  <div className="space-y-1">
+                    {pendingHandover.shifts.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-surface-600 dark:text-surface-400">{s.date}</span>
+                        <span className="font-semibold text-surface-900 dark:text-white">Rs {Math.round(s.amount).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="mt-1.5 flex items-center justify-between border-t border-amber-200 pt-1.5 text-xs dark:border-amber-800/50">
+                      <span className="font-semibold text-amber-800 dark:text-amber-400">Total</span>
+                      <span className="font-bold text-amber-800 dark:text-amber-400">Rs {Math.round(pendingHandover.countedCash).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(!pendingHandover.shifts || pendingHandover.shifts.length <= 1) && (
+                <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
+                  Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+                </p>
+              )}
               {pendingHandover.pendingDepositAmount && (
                 <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
                   <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -436,6 +514,7 @@ export function ShiftBar({
               )}
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
+                shiftIds={pendingHandover.shiftIds}
                 branchId={pendingHandover.branchId}
                 shopId={pendingHandover.shopId ?? null}
                 countedCash={pendingHandover.countedCash}

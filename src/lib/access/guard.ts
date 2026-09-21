@@ -66,10 +66,10 @@ export async function requireAction(featureKey: string, action: Action): Promise
   }
 
   const service = createServiceClient();
-  const { data: rows } = await service
-    .from("v_user_feature_access")
-    .select("feature_key, actions, data_scope")
-    .eq("profile_id", user.id);
+  const [{ data: rows }, { data: roleRows }] = await Promise.all([
+    service.from("v_user_feature_access").select("feature_key, actions, data_scope").eq("profile_id", user.id),
+    service.from("role_feature_permissions").select("feature_key, actions, data_scope").eq("role", profile.role as string),
+  ]);
 
   const base = {
     userId: user.id,
@@ -79,14 +79,16 @@ export async function requireAction(featureKey: string, action: Action): Promise
     unrestricted: false,
   };
 
-  if (!rows || rows.length === 0) {
+  const allRows = [...(rows ?? []), ...(roleRows ?? [])];
+
+  if (allRows.length === 0) {
     // Purane raaste par hai -- faisla wahin hoga.
     return { caller: { ...base, legacy: true, scope: "own_branch" } };
   }
 
   // Ek hi feature par do jagah se ijazat aa sakti hai (role ki aur apni).
   // Dono jama karte hain, kyunke dono jaan boojh kar di gayi thin.
-  const mine = rows.filter((r) => r.feature_key === featureKey);
+  const mine = allRows.filter((r) => r.feature_key === featureKey);
   const actions = new Set<string>();
   let scope: DataScope = "own_records";
   const RANK: Record<DataScope, number> = { all: 4, own_branch: 3, own_shop: 2, own_records: 1 };

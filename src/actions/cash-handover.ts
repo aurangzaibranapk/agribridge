@@ -156,13 +156,25 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
     .single();
   if (error) return { error: error.message };
 
-  // POS Shift se seedha bheja gaya ho to us shift par nishan laga do --
-  // warna wo shift har baar dobara "cash bhejna baqi hai" dikhata rahega.
-  if (shiftId) {
+  // POS Shift se seedha bheja gaya ho to un shifts par nishan laga do.
+  // shift_ids (comma-sep) agar poori raqam bheji to; partial mein khali
+  // rehti hai -- shifts pending rahengi tab tak ke full settle na ho.
+  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").filter(Boolean) : [];
+  // Backward compat: purani calls sirf shift_id bhejti thi
+  const legacyShiftId = ((formData.get("shift_id") as string) || "").trim();
+  if (shiftIdsList.length > 0) {
     await service
       .from("pos_shifts")
       .update({ cash_handover_id: handoverRow.id })
-      .eq("id", shiftId)
+      .in("id", shiftIdsList)
+      .eq("staff_id", user.id)
+      .is("cash_handover_id", null);
+  } else if (legacyShiftId) {
+    await service
+      .from("pos_shifts")
+      .update({ cash_handover_id: handoverRow.id })
+      .eq("id", legacyShiftId)
       .eq("staff_id", user.id)
       .is("cash_handover_id", null);
   }

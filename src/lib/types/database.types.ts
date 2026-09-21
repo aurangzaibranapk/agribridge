@@ -22287,6 +22287,7 @@ export type Database = {
           total_amount: number
           verified_at: string | null
           verified_by: string | null
+          warehouse_id: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -22318,6 +22319,7 @@ export type Database = {
           total_amount?: number
           verified_at?: string | null
           verified_by?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           branch_id?: string | null
@@ -22349,6 +22351,7 @@ export type Database = {
           total_amount?: number
           verified_at?: string | null
           verified_by?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -22434,6 +22437,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_supplier_payable_vs_ledger"
             referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "purchases_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "purchases_verified_by_fkey"
