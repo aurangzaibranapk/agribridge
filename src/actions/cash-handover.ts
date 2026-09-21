@@ -54,10 +54,15 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   // khate se nikalta hai -- jahan wo kabhi tha hi nahi. Us se branch
   // ka cash kam dikhta hai aur bhejne wale ke naam par wo raqam
   // hamesha ke liye khari reh jati hai.
-  const fromSource = String(formData.get("from_source") ?? "branch_cash");
+  let fromSource = String(formData.get("from_source") ?? "branch_cash");
   if (fromSource !== "branch_cash" && fromSource !== "my_custody") {
     return { error: "Cash kahan se ja raha hai, wo theek se batayein." };
   }
+
+  // Shift handover hai to shift IDs pehle hi padh lo -- custody bypass ke liye
+  const earlyShiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+  const earlyShiftId = ((formData.get("shift_id") as string) || "").trim();
+  const isShiftHandover = !!(earlyShiftIdsRaw || earlyShiftId);
 
   if (!toProfileId) return { error: "Kis ko bhej rahe hain, wo select karein." };
   if (!amount || amount <= 0) return { error: "Raqam sahi likhein." };
@@ -75,7 +80,9 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   // ya unrestricted bhej sakte hain. Sales staff (jaise Shift Close se
   // seedha bhejne wala) sirf apni custody se bhej sakta hai -- wo cash
   // jo waqai us ke haath mein hai, kisi company khate se nahi.
-  if (fromSource === "branch_cash" && !caller.unrestricted && caller.role !== "manager" && caller.role !== "finance") {
+  // Shift handover mein branch_cash fallback allow hai -- cash shift close
+  // par verify ho chuka hota hai, chahe custody entry fail bhi ho jaye.
+  if (fromSource === "branch_cash" && !isShiftHandover && !caller.unrestricted && caller.role !== "manager" && caller.role !== "finance") {
     return { error: "Branch ke khate se cash sirf Manager ya Finance bhej sakte hain — aap sirf apni custody se bhej sakte hain." };
   }
 
@@ -103,9 +110,16 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
       .maybeSingle();
     const paas = Number(mine?.cash_paas_hai ?? 0);
     if (amount > paas + 0.01) {
-      return {
-        error: `Aap ke paas Rs ${paas.toLocaleString()} hai, magar Rs ${amount.toLocaleString()} bheja ja raha hai.`,
-      };
+      if (isShiftHandover) {
+        // Shift close par custody entry silently fail ho sakti hai -- tab
+        // golak mein cash abhi bhi hota hai (wahan se credit nahi hua).
+        // Branch cash se bhejo taake ledger sahi rahe.
+        fromSource = "branch_cash";
+      } else {
+        return {
+          error: `Aap ke paas Rs ${paas.toLocaleString()} hai, magar Rs ${amount.toLocaleString()} bheja ja raha hai.`,
+        };
+      }
     }
   }
 

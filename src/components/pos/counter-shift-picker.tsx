@@ -144,18 +144,36 @@ export function CounterShiftPicker({
             <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-surface-600 dark:text-surface-400">
               <Wallet className="h-3.5 w-3.5" /> Opening Cash — golak mein abhi kitna paisa hai
             </label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-surface-400">Rs</span>
-              <input
-                name="opening_cash"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                defaultValue={0}
-                className="w-full rounded-xl border border-surface-200 py-2.5 pl-9 pr-3 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-900 dark:focus:ring-brand-900/30"
-              />
-            </div>
+            {pendingHandover ? (
+              <>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-surface-400">Rs</span>
+                  <input
+                    name="opening_cash"
+                    type="number"
+                    readOnly
+                    value={Math.round(pendingHandover.countedCash)}
+                    className="w-full cursor-not-allowed rounded-xl border border-amber-300 bg-amber-50 py-2.5 pl-9 pr-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                  Pichli shift ka carry-over — ye raqam golak mein maujood hai (edit nahi hogi)
+                </p>
+              </>
+            ) : (
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-surface-400">Rs</span>
+                <input
+                  name="opening_cash"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  defaultValue={0}
+                  className="w-full rounded-xl border border-surface-200 py-2.5 pl-9 pr-3 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-900 dark:focus:ring-brand-900/30"
+                />
+              </div>
+            )}
           </div>
           {state.error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">{state.error}</p>
