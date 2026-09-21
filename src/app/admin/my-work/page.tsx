@@ -138,10 +138,16 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     href: it.href,
   }));
 
-  const { data: branch } = me.branch_id
-    ? await supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
-    : { data: null };
+  const [{ data: branch }, { data: shop }] = await Promise.all([
+    me.branch_id
+      ? supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    me.shop_id
+      ? supabase.from("shops").select("name").eq("id", me.shop_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   const branchName = branch?.name ?? null;
+  const shopName = shop?.name ?? null;
 
   // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
@@ -188,11 +194,36 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   if (me.shop_id && deskLinks.length > 0) {
     return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
-        <div>
-          <h1>Welcome Back, {me.full_name?.split(" ")[0] || "Anwar"}.</h1>
-          <p>Have a productive day at {branchName || "your branch"}.</p>
-        </div>
-        <span>{nowDate} · {nowTime}</span>
+        <section className="staff-desk-identity" aria-label="Logged-in staff member">
+          <span className="staff-desk-eyebrow">Welcome Back</span>
+          <h1>{me.full_name || "Staff Member"}</h1>
+          <p>{roleLabel || "Staff"} · {nowDate} · {nowTime}</p>
+        </section>
+
+        <section className="staff-desk-performance" aria-label="Staff performance score">
+          <div className="staff-desk-performance-heading">
+            <div>
+              <span className="staff-desk-eyebrow">Staff Performance</span>
+              <strong>{scoreRow?.score == null ? "Score is building" : `${Math.round(scoreRow.score)}/100`}</strong>
+            </div>
+            {scoreRow?.band && <span className="staff-desk-performance-band">{scoreRow.band}</span>}
+          </div>
+          <div className="staff-desk-performance-track" aria-hidden="true">
+            <i style={{ width: `${scoreRow?.score == null ? 0 : Math.min(100, Math.max(0, scoreRow.score))}%` }} />
+          </div>
+          <div className="staff-desk-performance-scale" aria-hidden="true">
+            <span>Needs Focus</span><span>Improving</span><span>Good</span><span>Excellent</span>
+          </div>
+        </section>
+
+        <section className="staff-desk-location" aria-label="Active shop and branch">
+          <span className="staff-desk-shop-icon"><Icons.Store aria-hidden="true" /></span>
+          <div>
+            <span className="staff-desk-eyebrow">Active POS</span>
+            <strong>{shopName || "Assigned Shop"}</strong>
+            <p>{branchName || "Assigned Branch"}</p>
+          </div>
+        </section>
       </header>
       <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
     </DeskWorkspace>;
