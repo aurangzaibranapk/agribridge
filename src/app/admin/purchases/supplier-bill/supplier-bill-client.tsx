@@ -129,6 +129,11 @@ export function SupplierBillClient({
   }, [categories]);
 
   const subtotal = useMemo(() => lines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_cost) || 0), 0), [lines]);
+  const existingMatches = useMemo(() => {
+    const q = newProductName.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return products.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [newProductName, products]);
   const [discount, setDiscount] = useState("");
   const [tax, setTax] = useState("");
   const grandTotal = Math.max(0, subtotal - (Number(discount) || 0) + (Number(tax) || 0));
@@ -199,6 +204,26 @@ export function SupplierBillClient({
     setProductModal(false);
     setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductCompany("");
     setNewProductPurchase(""); setNewProductSale(""); setNewProductMrp(""); setNewProductWholesale("");
+  }
+
+  function addExistingToLine(product: Product) {
+    setLines((previous) => {
+      const index = previous.findIndex((line) => !line.product_id);
+      const entry = {
+        ...emptyLine(),
+        product_id: product.id,
+        query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
+        unit_cost: String(product.purchase_price),
+        sale_rate: product.selling_price > 0 ? String(product.selling_price) : "",
+        mrp_rate: product.mrp_price ? String(product.mrp_price) : "",
+        wholesale_rate: product.wholesale_price ? String(product.wholesale_price) : "",
+        pickerOpen: false,
+      };
+      if (index < 0) return [...previous, entry];
+      return previous.map((line, i) => (i === index ? entry : line));
+    });
+    setProductModal(false);
+    setNewProductName("");
   }
 
   async function loadBillCsv(file: File | null) {
@@ -406,7 +431,26 @@ export function SupplierBillClient({
         {newProductError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{newProductError}</p>}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><label className={labelClass}>Quick Stock Group</label><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{GROUPS.map((group) => <button key={group.id} type="button" onClick={() => { setNewProductGroup(group.id); const root = rootForGroup(group.id); setNewProductCategory(root?.id ?? ""); }} className={`rounded-lg border px-3 py-2 text-sm font-medium ${newProductGroup === group.id ? "border-brand-600 bg-brand-50 text-brand-800" : "border-surface-200 text-surface-600 hover:border-brand-300"}`}>{group.label}</button>)}</div></div>
-          <div className="sm:col-span-2"><label className={labelClass}>Product Name</label><input required maxLength={120} autoFocus value={newProductName} onChange={(event) => setNewProductName(event.target.value)} className={inputClass} placeholder="e.g. Urea 46% 50 kg" /></div>
+          <div className="sm:col-span-2">
+              <label className={labelClass}>Product Name</label>
+              <input required maxLength={120} autoFocus value={newProductName} onChange={(event) => setNewProductName(event.target.value)} className={inputClass} placeholder="e.g. Urea 46% 50 kg" />
+              {existingMatches.length > 0 && (
+                <div className="mt-1.5 rounded-lg border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Ye system mein pehle se hain — seedha bill mein add kar lein:</p>
+                  <div className="space-y-1">
+                    {existingMatches.map((product) => (
+                      <button key={product.id} type="button" onClick={() => addExistingToLine(product)} className="flex w-full items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-left hover:bg-emerald-50 dark:bg-surface-900 dark:hover:bg-emerald-950/30">
+                        <span>
+                          <span className="text-sm font-medium text-surface-900 dark:text-white">{product.name}</span>
+                          {product.pack_size && <span className="ml-1.5 text-xs text-surface-500">{product.pack_size}</span>}
+                        </span>
+                        <span className="shrink-0 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Rs {product.purchase_price} → Add</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           <div><label className={labelClass}>Product Category ({categories.length} available)</label><select required value={newProductCategory} onChange={(event) => setNewProductCategory(event.target.value)} className={inputClass}><option value="">Category chunein</option>{newProductCategories.map((category) => { const parent = category.parent_category_id ? categories.find((item) => item.id === category.parent_category_id)?.name : null; return <option key={category.id} value={category.id}>{parent ? `${parent} → ${category.name}` : category.name}</option>; })}</select></div>
           <div><label className={labelClass}>Company Name ({companies.length} available)</label><select value={newProductCompany} onChange={(event) => setNewProductCompany(event.target.value)} className={inputClass}><option value="">Company chunein (optional)</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></div>
           <div><label className={labelClass}>Pack / Unit</label><input value={newProductPack} onChange={(event) => setNewProductPack(event.target.value)} className={inputClass} placeholder="Bag (50 kg)" /></div>
