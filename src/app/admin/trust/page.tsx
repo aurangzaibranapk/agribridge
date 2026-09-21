@@ -49,8 +49,8 @@ const BANDS = [
 ];
 
 const STATE_LABEL: Record<string, string> = {
-  score_building: "Hisaab ban raha hai",
-  insufficient_data: "Tasweer adhoori",
+  score_building: "Score Pending",
+  insufficient_data: "Data Incomplete",
 };
 
 type Row = {
@@ -107,11 +107,11 @@ export default async function TrustPage({
 
   const count = (f: (r: Row) => boolean) => rows.filter(f).length;
   const tiles = [
-    { label: "Hisaab ban raha hai", n: count((r) => r.state === "score_building"), tone: "neutral" },
-    { label: "Tasweer adhoori", n: count((r) => r.state === "insufficient_data"), tone: "neutral" },
+    { label: "Score Pending", n: count((r) => r.state === "score_building"), tone: "neutral" },
+    { label: "Data Incomplete", n: count((r) => r.state === "insufficient_data"), tone: "neutral" },
     ...BANDS.map((b) => ({ label: b.label, n: count((r) => r.band === b.key), tone: "band" })),
     {
-      label: "Khatre ka nishan",
+      label: "Risk Flags",
       n: count((r) => (r.risk_flags ?? []).length > 0),
       tone: "risk",
     },
@@ -184,8 +184,8 @@ export default async function TrustPage({
                   }
                 >
                   {health.is_stale
-                    ? "Ye adad purane ho sakte hain"
-                    : "Adad taaza hain"}
+                    ? "Scores outdated ho sakte hain"
+                    : "Scores up to date hain"}
                 </p>
                 <p
                   className={
@@ -202,27 +202,27 @@ export default async function TrustPage({
 
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-surface-500">
               <span>
-                Aakhri kaamyab hisaab:{" "}
+                Last Run:{" "}
                 <b className="font-mono text-surface-900 dark:text-surface-100">
                   {health.last_ok_run
                     ? new Date(health.last_ok_run).toLocaleString()
-                    : /* Kabhi chala hi nahi -- ye sifar nahi hai. */ "kabhi nahi"}
+                    : "Never"}
                 </b>
               </span>
               <span>
-                Muntazir parchiyan:{" "}
+                Queue:{" "}
                 <b className="font-mono tabular-nums text-surface-900 dark:text-surface-100">
                   {health.queue_pending}
                 </b>
               </span>
               <span>
-                Qatar ka aakhri chakkar:{" "}
+                Last Drain:{" "}
                 <b className="font-mono text-surface-900 dark:text-surface-100">
-                  {health.last_drain ? new Date(health.last_drain).toLocaleTimeString() : "kabhi nahi"}
+                  {health.last_drain ? new Date(health.last_drain).toLocaleTimeString() : "Never"}
                 </b>
               </span>
               <span>
-                Nakaam:{" "}
+                Failed:{" "}
                 <b
                   className={
                     "font-mono tabular-nums " +
@@ -235,9 +235,7 @@ export default async function TrustPage({
                 </b>
               </span>
               <span>
-                {/* 'dead' alag se -- ye wo parchiyan hain jo khud theek
-                    nahi hongi. Inhen insaan ka dekhna zaroori hai. */}
-                Insaan ke intezar mein:{" "}
+                Manual Review:{" "}
                 <b
                   className={
                     "font-mono tabular-nums " +
@@ -287,7 +285,7 @@ export default async function TrustPage({
       <Card className="flex items-center gap-3 p-3 text-sm">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <span className="text-surface-600 dark:text-surface-300">
-          Khuli zimmedariyan:{" "}
+          Open Obligations:{" "}
           <b className="font-mono tabular-nums text-surface-900 dark:text-surface-100">
             {openObligations ?? 0}
           </b>
@@ -350,10 +348,10 @@ export default async function TrustPage({
                       </td>
                       <td className="px-4 py-3 text-surface-600 dark:text-surface-300">
                         {r.credit_history_state === "established"
-                          ? "Maujood"
+                          ? "Established"
                           : r.credit_history_state === "insufficient"
-                            ? "Adhoora"
-                            : "Koi nahi"}
+                            ? "Insufficient"
+                            : "None"}
                       </td>
                       <td className="px-4 py-3">
                         {(r.risk_flags ?? []).length === 0 ? (
