@@ -43,7 +43,8 @@ function Submit({ label, variant = "brand" }: { label: string; variant?: "brand"
   );
 }
 
-function Feedback({ state }: { state: ActionState }) {
+function Feedback({ state }: { state: ActionState | undefined }) {
+  if (!state) return null;
   if (state.error) {
     return (
       <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400">
@@ -1009,8 +1010,8 @@ export function ReviewSheet({
               </button>
             )}
           </div>
-          {staffState.error && <p className="text-xs text-red-600">{staffState.error}</p>}
-          {staffState.success && <p className="text-xs text-green-700 dark:text-green-400">{staffState.message}</p>}
+          {staffState?.error && <p className="text-xs text-red-600">{staffState.error}</p>}
+          {staffState?.success && <p className="text-xs text-green-700 dark:text-green-400">{staffState.message}</p>}
         </>
       ) : (
         <p className="rounded-lg bg-surface-100 px-3 py-2 text-sm text-surface-600 dark:bg-surface-800 dark:text-surface-400">

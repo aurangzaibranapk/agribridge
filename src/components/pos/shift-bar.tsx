@@ -96,7 +96,7 @@ export function ShiftCashHandoverForm({
     });
   }, [branchId]);
 
-  if (handoverState.success) {
+  if (handoverState?.success) {
     return (
       <div className="space-y-2">
         <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
@@ -115,7 +115,7 @@ export function ShiftCashHandoverForm({
       </div>
     );
   }
-  if (depositState.success) {
+  if (depositState?.success) {
     return (
       <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
         <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {depositState.message}
@@ -543,7 +543,7 @@ export function ShiftBar({
               </button>
             </div>
 
-            {state.success ? (
+            {state?.success ? (
               <div className="px-5 py-6">
                 <div className="text-center">
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
