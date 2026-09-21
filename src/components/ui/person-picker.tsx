@@ -139,6 +139,7 @@ export function PersonPicker({
                         {p.type === "farmer" ? "Kisan" : "Customer"}
                       </span>
                       {p.phone && <span className="text-xs text-surface-500">{p.phone}</span>}
+                      {p.cnic && <span className="text-[10px] text-surface-400">CNIC: {p.cnic}</span>}
                       {p.subtitle && <span className="ml-auto text-xs text-surface-400">{p.subtitle}</span>}
                     </button>
                   </li>
