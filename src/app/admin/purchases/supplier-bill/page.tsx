@@ -14,10 +14,11 @@ export default async function SupplierPurchaseBillPage() {
   if (!profile?.is_active) redirect("/login");
   if (!["owner", "admin", "super_admin"].includes(profile.role)) redirect("/admin/purchases");
 
-  const [suppliersResult, productsResult, categoriesResult, warehousesResult, accountsResult, units] = await Promise.all([
+  const [suppliersResult, productsResult, categoriesResult, companiesResult, warehousesResult, accountsResult, units] = await Promise.all([
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name").limit(1000),
-    supabase.from("products").select("id, name, category_id, pack_size, unit, purchase_price, selling_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
+    supabase.from("products").select("id, name, company_id, category_id, pack_size, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
     supabase.from("categories").select("id, name, parent_category_id, category_kind").order("name"),
+    supabase.from("companies").select("id, name").order("name"),
     supabase.from("warehouses").select("id, name, branch_id, shop_id, branches(name), shops(name)").eq("is_active", true).order("name"),
     supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type").order("name"),
     loadUnits(true),
@@ -33,8 +34,15 @@ export default async function SupplierPurchaseBillPage() {
 
   return <SupplierBillClient
     suppliers={suppliersResult.data ?? []}
-    products={(productsResult.data ?? []).map((product) => ({ ...product, purchase_price: Number(product.purchase_price), selling_price: Number(product.selling_price) }))}
+    products={(productsResult.data ?? []).map((product) => ({
+      ...product,
+      purchase_price: Number(product.purchase_price),
+      selling_price: Number(product.selling_price),
+      wholesale_price: product.wholesale_price == null ? null : Number(product.wholesale_price),
+      mrp_price: product.mrp_price == null ? null : Number(product.mrp_price),
+    }))}
     categories={categoriesResult.data ?? []}
+    companies={companiesResult.data ?? []}
     warehouses={warehouses}
     accounts={(accountsResult.data ?? []).map((account) => ({ ...account, account_type: String(account.account_type) }))}
     units={units.map((unit) => ({ code: unit.code, label: unit.label }))}

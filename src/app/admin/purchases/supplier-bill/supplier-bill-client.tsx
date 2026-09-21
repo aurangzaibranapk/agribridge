@@ -1,23 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
-  ArrowLeft, Check, ChevronDown, FileText, PackagePlus, Plus, Search,
+  ArrowLeft, Check, ChevronDown, FileText, FileUp, PackagePlus, Plus, Search,
   ShoppingCart, Trash2, X,
 } from "lucide-react";
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { quickCreateProduct } from "@/actions/products";
 import { aajKaKhana } from "@/lib/utils/format";
+import { looksBinary, parseDelimited } from "@/lib/csv";
 
 type Category = { id: string; name: string; parent_category_id: string | null; category_kind: string };
 type Product = {
-  id: string; name: string; category_id: string | null; pack_size: string | null; unit: string | null;
-  purchase_price: number; selling_price: number; trade_rate_pending: boolean;
+  id: string; name: string; company_id: string | null; category_id: string | null; pack_size: string | null; unit: string | null;
+  purchase_price: number; selling_price: number; wholesale_price: number | null; mrp_price: number | null; trade_rate_pending: boolean;
 };
 type Line = {
   product_id: string; query: string; quantity: string; unit_cost: string;
+  sale_rate: string; mrp_rate: string; wholesale_rate: string;
   batch_number: string; manufacture_date: string; expiry_date: string; pickerOpen: boolean;
 };
 type StockGroup = "karyana" | "khaad" | "wanda" | "pesticide";
@@ -27,7 +29,7 @@ const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
   { id: "wanda", label: "Wanda", roots: ["wanda", "animal feed", "animal feed (wanda)"] },
   { id: "pesticide", label: "Pesticide", roots: ["pesticide", "pesticides"] },
 ];
-const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false });
+const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false });
 const initialState: ActionState = {};
 const inputClass = "h-10 w-full rounded-lg border border-surface-200 bg-white px-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100 dark:focus:ring-brand-900/30";
 const labelClass = "mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300";
@@ -48,12 +50,29 @@ function groupForCategory(categoryId: string | null, categories: Category[]): St
   return null;
 }
 
+const normalizeCsvHeader = (value: string) => value.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+const normalizeProductName = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").replace(/\s+/g, " ");
+const csvNumber = (value: string | undefined) => {
+  const cleaned = String(value ?? "").replace(/[^0-9.]/g, "");
+  return cleaned && Number.isFinite(Number(cleaned)) ? String(Number(cleaned)) : "";
+};
+const CSV_ALIASES = {
+  product: ["product", "product name", "item", "item name", "name", "naam", "cheez"],
+  pack: ["pack", "pack size", "unit", "size"],
+  qty: ["qty", "quantity", "tadad", "stock"],
+  purchase: ["purchase rate", "purchase price", "trade rate", "trade", "cost", "lagat"],
+  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate"],
+  mrp: ["mrp", "mrp rate", "mrp price", "printed price"],
+  wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate"],
+} as const;
+
 export function SupplierBillClient({
-  suppliers, products: initialProducts, categories, warehouses, accounts, units,
+  suppliers, products: initialProducts, categories, companies, warehouses, accounts, units,
 }: {
   suppliers: { id: string; name: string }[];
   products: Product[];
   categories: Category[];
+  companies: { id: string; name: string }[];
   warehouses: { id: string; name: string; branchId: string; shopName: string | null; branchName: string | null }[];
   accounts: { id: string; name: string; account_type: string }[];
   units: { code: string; label: string }[];
@@ -72,29 +91,27 @@ export function SupplierBillClient({
   const [newProductBusy, setNewProductBusy] = useState(false);
   const [newProductGroup, setNewProductGroup] = useState<StockGroup>("khaad");
   const [newProductCategory, setNewProductCategory] = useState("");
+  const [newProductCompany, setNewProductCompany] = useState("");
   const [newProductName, setNewProductName] = useState("");
   const [newProductPack, setNewProductPack] = useState("");
   const [newProductUnit, setNewProductUnit] = useState("");
   const [newProductPurchase, setNewProductPurchase] = useState("");
   const [newProductSale, setNewProductSale] = useState("");
+  const [newProductMrp, setNewProductMrp] = useState("");
+  const [newProductWholesale, setNewProductWholesale] = useState("");
+  const [csvNotice, setCsvNotice] = useState("");
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const roots = useMemo(() => categories.filter((category) => !category.parent_category_id && GROUPS.some((group) => group.roots.includes(category.name.trim().toLowerCase()))), [categories]);
   const rootForGroup = (group: StockGroup) => roots.find((category) => GROUPS.find((item) => item.id === group)?.roots.includes(category.name.trim().toLowerCase()));
   const newProductCategories = useMemo(() => {
-    const root = rootForGroup(newProductGroup);
-    if (!root) return [];
-    const result: Category[] = [root];
-    let parentIds = new Set([root.id]);
-    const visited = new Set(parentIds);
-    while (parentIds.size) {
-      const children = categories.filter((category) => category.parent_category_id && parentIds.has(category.parent_category_id) && !visited.has(category.id));
-      if (!children.length) break;
-      result.push(...children);
-      parentIds = new Set(children.map((category) => category.id));
-      for (const id of parentIds) visited.add(id);
-    }
-    return result;
-  }, [categories, newProductGroup, roots]);
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    return [...categories].sort((a, b) => {
+      const aParent = a.parent_category_id ? byId.get(a.parent_category_id)?.name ?? "" : a.name;
+      const bParent = b.parent_category_id ? byId.get(b.parent_category_id)?.name ?? "" : b.name;
+      return `${a.category_kind} ${aParent} ${a.parent_category_id ? "1" : "0"} ${a.name}`.localeCompare(`${b.category_kind} ${bParent} ${b.parent_category_id ? "1" : "0"} ${b.name}`);
+    });
+  }, [categories]);
 
   const subtotal = useMemo(() => lines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_cost) || 0), 0), [lines]);
   const [discount, setDiscount] = useState("");
@@ -104,6 +121,9 @@ export function SupplierBillClient({
   const amountDue = Math.max(0, grandTotal - paidAmount);
   const itemPayload = JSON.stringify(lines.filter((line) => line.product_id && Number(line.quantity) > 0 && line.unit_cost.trim() !== "" && Number(line.unit_cost) >= 0).map((line) => ({
     product_id: line.product_id, quantity: Number(line.quantity), unit_cost: Number(line.unit_cost),
+    sale_rate: Number(line.sale_rate) > 0 ? Number(line.sale_rate) : undefined,
+    mrp_rate: Number(line.mrp_rate) > 0 ? Number(line.mrp_rate) : undefined,
+    wholesale_rate: Number(line.wholesale_rate) > 0 ? Number(line.wholesale_rate) : undefined,
     batch_number: line.batch_number || undefined, manufacture_date: line.manufacture_date || undefined, expiry_date: line.expiry_date || undefined,
   })));
 
@@ -111,7 +131,15 @@ export function SupplierBillClient({
     setLines((previous) => previous.map((line, i) => i === index ? { ...line, ...patch } : line));
   }
   function selectProduct(index: number, product: Product) {
-    updateLine(index, { product_id: product.id, query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`, unit_cost: product.trade_rate_pending ? "" : String(product.purchase_price), pickerOpen: false });
+    updateLine(index, {
+      product_id: product.id,
+      query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
+      unit_cost: product.trade_rate_pending ? "" : String(product.purchase_price),
+      sale_rate: product.selling_price > 0 ? String(product.selling_price) : "",
+      mrp_rate: product.mrp_price != null && product.mrp_price > 0 ? String(product.mrp_price) : "",
+      wholesale_rate: product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
+      pickerOpen: false,
+    });
   }
   function openNewProduct() {
     const group = activeGroup === "all" ? "khaad" : activeGroup;
@@ -128,23 +156,95 @@ export function SupplierBillClient({
     const purchaseRate = Number(newProductPurchase);
     const result = await quickCreateProduct({
       name: newProductName, packSize: newProductPack, categoryId: newProductCategory || null,
-      unit: newProductUnit || null, purchasePrice: purchaseRate, sellingPrice: Number(newProductSale) || 0,
+      companyId: newProductCompany || null, unit: newProductUnit || null, purchasePrice: purchaseRate,
+      sellingPrice: Number(newProductSale) || 0,
+      mrpPrice: Number(newProductMrp) || null,
+      wholesalePrice: Number(newProductWholesale) || null,
     });
     setNewProductBusy(false);
     if ("error" in result) { setNewProductError(result.error); return; }
     const created: Product = {
-      id: result.id, name: newProductName.trim(), category_id: newProductCategory || null,
+      id: result.id, name: newProductName.trim(), company_id: newProductCompany || null, category_id: newProductCategory || null,
       pack_size: newProductPack.trim() || null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
-      purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0, trade_rate_pending: false,
+      purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0,
+      mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
+      trade_rate_pending: false,
     };
     setProducts((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
     setLines((previous) => {
       const index = previous.findIndex((line) => !line.product_id);
-      if (index < 0) return [...previous, { ...emptyLine(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), pickerOpen: false }];
-      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), pickerOpen: false } : line);
+      const selectedRates = {
+        sale_rate: created.selling_price > 0 ? String(created.selling_price) : "",
+        mrp_rate: created.mrp_price ? String(created.mrp_price) : "",
+        wholesale_rate: created.wholesale_price ? String(created.wholesale_price) : "",
+      };
+      if (index < 0) return [...previous, { ...emptyLine(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false }];
+      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false } : line);
     });
     setProductModal(false);
-    setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductPurchase(""); setNewProductSale("");
+    setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductCompany("");
+    setNewProductPurchase(""); setNewProductSale(""); setNewProductMrp(""); setNewProductWholesale("");
+  }
+
+  async function loadBillCsv(file: File | null) {
+    if (!file) return;
+    setCsvNotice("");
+    const text = await file.text();
+    if (looksBinary(text)) {
+      setCsvNotice("Excel .xlsx file nahi chalegi. Excel se File → Save As → CSV bana kar upload karein.");
+      return;
+    }
+    const rows = parseDelimited(text);
+    if (rows.length < 2) {
+      setCsvNotice("CSV mein heading aur kam az kam ek product line honi chahiye.");
+      return;
+    }
+    const headers = rows[0].map(normalizeCsvHeader);
+    const column = (aliases: readonly string[]) => headers.findIndex((header) => aliases.includes(header));
+    const productColumn = column(CSV_ALIASES.product);
+    if (productColumn < 0) {
+      setCsvNotice("CSV mein Product ya Product Name ka column nahi mila.");
+      return;
+    }
+    const packColumn = column(CSV_ALIASES.pack);
+    const qtyColumn = column(CSV_ALIASES.qty);
+    const purchaseColumn = column(CSV_ALIASES.purchase);
+    const saleColumn = column(CSV_ALIASES.sale);
+    const mrpColumn = column(CSV_ALIASES.mrp);
+    const wholesaleColumn = column(CSV_ALIASES.wholesale);
+    const imported: Line[] = [];
+    const missing: string[] = [];
+
+    for (const row of rows.slice(1)) {
+      const rawName = String(row[productColumn] ?? "").trim();
+      if (!rawName) continue;
+      const wantedName = normalizeProductName(rawName);
+      const wantedPack = packColumn >= 0 ? normalizeProductName(row[packColumn] ?? "") : "";
+      const candidates = products.filter((product) => normalizeProductName(product.name) === wantedName);
+      const product = (wantedPack
+        ? candidates.find((candidate) => normalizeProductName(candidate.pack_size ?? candidate.unit ?? "") === wantedPack)
+        : null) ?? candidates[0];
+      if (!product) {
+        missing.push(rawName);
+        continue;
+      }
+      imported.push({
+        ...emptyLine(),
+        product_id: product.id,
+        query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
+        quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
+        unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : (product.trade_rate_pending ? "" : String(product.purchase_price)),
+        sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : (product.selling_price > 0 ? String(product.selling_price) : ""),
+        mrp_rate: mrpColumn >= 0 ? csvNumber(row[mrpColumn]) : (product.mrp_price ? String(product.mrp_price) : ""),
+        wholesale_rate: wholesaleColumn >= 0 ? csvNumber(row[wholesaleColumn]) : (product.wholesale_price ? String(product.wholesale_price) : ""),
+      });
+    }
+
+    if (imported.length) setLines(imported);
+    const parts = [`${imported.length} product lines CSV se bill mein aa gayin.`];
+    if (missing.length) parts.push(`${missing.length} naam Product Master mein nahi mile: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""}`);
+    setCsvNotice(parts.join(" "));
+    if (csvInputRef.current) csvInputRef.current.value = "";
   }
 
   return (
@@ -198,8 +298,13 @@ export function SupplierBillClient({
           <section className="overflow-visible rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div><h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Bill ke Products</h2><p className="mt-0.5 text-xs text-surface-500">Product name ek martaba master mein save karein; agli dafa search se chunein.</p></div>
-              <button type="button" onClick={openNewProduct} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-200"><PackagePlus className="h-4 w-4" /> New Product</button>
+              <div className="flex flex-wrap items-center gap-2">
+                <input ref={csvInputRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={(event) => void loadBillCsv(event.target.files?.[0] ?? null)} />
+                <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:border-brand-300 hover:text-brand-800 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"><FileUp className="h-4 w-4" /> CSV Bill Upload</button>
+                <button type="button" onClick={openNewProduct} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-200"><PackagePlus className="h-4 w-4" /> New Product</button>
+              </div>
             </div>
+            {csvNotice && <p className={`mb-3 rounded-lg px-3 py-2 text-xs ${csvNotice.includes("nahi") || csvNotice.includes("mila") ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200" : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"}`}>{csvNotice}</p>}
             <div className="mb-4 flex flex-wrap gap-2">
               <CategoryChip active={activeGroup === "all"} onClick={() => setActiveGroup("all")}>All Products</CategoryChip>
               {GROUPS.map((group) => <CategoryChip key={group.id} active={activeGroup === group.id} onClick={() => setActiveGroup(group.id)}>{group.label}</CategoryChip>)}
@@ -235,6 +340,7 @@ export function SupplierBillClient({
                           </>}
                         </div>
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
+                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" /><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" /><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" /></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
                       <td className="px-3 py-2.5"><span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">{selected?.pack_size || selected?.unit || "—"}</span></td>
@@ -268,7 +374,18 @@ export function SupplierBillClient({
 
       {productModal && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-surface-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="new-product-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setProductModal(false); }}><form onSubmit={saveNewProduct} className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-surface-900"><div className="mb-4 flex items-start justify-between"><div><h2 id="new-product-title" className="font-display text-lg font-semibold text-surface-900 dark:text-white">Product Master mein add karein</h2><p className="mt-1 text-xs text-surface-500">Naam aur category save rahegi; agli purchase mein search se mil jayegi.</p></div><button type="button" onClick={() => setProductModal(false)} className="rounded-lg p-2 text-surface-400 hover:bg-surface-100"><X className="h-5 w-5" /></button></div>
         {newProductError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{newProductError}</p>}
-        <div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><label className={labelClass}>Stock Category</label><div className="grid grid-cols-2 gap-2">{GROUPS.map((group) => <button key={group.id} type="button" onClick={() => { setNewProductGroup(group.id); const root = rootForGroup(group.id); setNewProductCategory(root?.id ?? ""); }} className={`rounded-lg border px-3 py-2 text-sm font-medium ${newProductGroup === group.id ? "border-brand-600 bg-brand-50 text-brand-800" : "border-surface-200 text-surface-600 hover:border-brand-300"}`}>{group.label}</button>)}</div></div><div className="sm:col-span-2"><label className={labelClass}>Product Name</label><input required maxLength={120} autoFocus value={newProductName} onChange={(event) => setNewProductName(event.target.value)} className={inputClass} placeholder="e.g. Urea 46% 50 kg" /></div><div><label className={labelClass}>Product Category</label><select required value={newProductCategory} onChange={(event) => setNewProductCategory(event.target.value)} className={inputClass}><option value="">Category chunein</option>{newProductCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div><label className={labelClass}>Pack / Unit</label><input value={newProductPack} onChange={(event) => setNewProductPack(event.target.value)} className={inputClass} placeholder="Bag (50 kg)" /></div><div><label className={labelClass}>Unit (optional)</label><select value={newProductUnit} onChange={(event) => setNewProductUnit(event.target.value)} className={inputClass}><option value="">Pack size se liya jayega</option>{units.map((unit) => <option key={unit.code} value={unit.code}>{unit.label}</option>)}</select></div><div><label className={labelClass}>Purchase Rate</label><input required type="number" min="0" step="0.01" value={newProductPurchase} onChange={(event) => setNewProductPurchase(event.target.value)} className={inputClass} placeholder="0" /></div><div><label className={labelClass}>Sale Rate (optional)</label><input type="number" min="0" step="0.01" value={newProductSale} onChange={(event) => setNewProductSale(event.target.value)} className={inputClass} placeholder="0" /></div></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><label className={labelClass}>Quick Stock Group</label><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{GROUPS.map((group) => <button key={group.id} type="button" onClick={() => { setNewProductGroup(group.id); const root = rootForGroup(group.id); setNewProductCategory(root?.id ?? ""); }} className={`rounded-lg border px-3 py-2 text-sm font-medium ${newProductGroup === group.id ? "border-brand-600 bg-brand-50 text-brand-800" : "border-surface-200 text-surface-600 hover:border-brand-300"}`}>{group.label}</button>)}</div></div>
+          <div className="sm:col-span-2"><label className={labelClass}>Product Name</label><input required maxLength={120} autoFocus value={newProductName} onChange={(event) => setNewProductName(event.target.value)} className={inputClass} placeholder="e.g. Urea 46% 50 kg" /></div>
+          <div><label className={labelClass}>Product Category ({categories.length} available)</label><select required value={newProductCategory} onChange={(event) => setNewProductCategory(event.target.value)} className={inputClass}><option value="">Category chunein</option>{newProductCategories.map((category) => { const parent = category.parent_category_id ? categories.find((item) => item.id === category.parent_category_id)?.name : null; return <option key={category.id} value={category.id}>{parent ? `${parent} → ${category.name}` : category.name}</option>; })}</select></div>
+          <div><label className={labelClass}>Company Name ({companies.length} available)</label><select value={newProductCompany} onChange={(event) => setNewProductCompany(event.target.value)} className={inputClass}><option value="">Company chunein (optional)</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></div>
+          <div><label className={labelClass}>Pack / Unit</label><input value={newProductPack} onChange={(event) => setNewProductPack(event.target.value)} className={inputClass} placeholder="Bag (50 kg)" /></div>
+          <div><label className={labelClass}>Unit (optional)</label><select value={newProductUnit} onChange={(event) => setNewProductUnit(event.target.value)} className={inputClass}><option value="">Pack size se liya jayega</option>{units.map((unit) => <option key={unit.code} value={unit.code}>{unit.label}</option>)}</select></div>
+          <div><label className={labelClass}>Purchase Rate</label><input required type="number" min="0" step="0.01" value={newProductPurchase} onChange={(event) => setNewProductPurchase(event.target.value)} className={inputClass} placeholder="0" /></div>
+          <div><label className={labelClass}>Sale Rate</label><input type="number" min="0" step="0.01" value={newProductSale} onChange={(event) => setNewProductSale(event.target.value)} className={inputClass} placeholder="0" /></div>
+          <div><label className={labelClass}>MRP Rate</label><input type="number" min="0" step="0.01" value={newProductMrp} onChange={(event) => setNewProductMrp(event.target.value)} className={inputClass} placeholder="0" /></div>
+          <div><label className={labelClass}>Wholesale Rate</label><input type="number" min="0" step="0.01" value={newProductWholesale} onChange={(event) => setNewProductWholesale(event.target.value)} className={inputClass} placeholder="0" /></div>
+        </div>
         <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setProductModal(false)} className="rounded-lg border border-surface-200 px-4 py-2 text-sm text-surface-600">Cancel</button><button type="submit" disabled={newProductBusy || !newProductCategories.length} className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50">{newProductBusy ? "Saving..." : <><Check className="h-4 w-4" /> Save to Product Master</>}</button></div>
       </form></div>}
     </div>

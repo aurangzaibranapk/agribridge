@@ -132,6 +132,7 @@ export async function quickCreateProduct(input: {
   name: string;
   packSize?: string | null;
   categoryId?: string | null;
+  companyId?: string | null;
   unit?: string | null;
   purchasePrice: number;
   sellingPrice?: number | null;
@@ -155,6 +156,7 @@ export async function quickCreateProduct(input: {
       name,
       pack_size: input.packSize?.trim() || null,
       category_id: input.categoryId || null,
+      company_id: input.companyId || null,
       ...(await unitFields(input.unit ?? null)),
       purchase_price: input.purchasePrice,
       // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
