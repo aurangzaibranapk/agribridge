@@ -53,6 +53,7 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
         <div className="staff-desk-ledger-split">
           <div><span>Cash</span><strong>{money(cash)}</strong></div>
           <div><span>Digital</span><strong>{money(digital)}</strong></div>
+          <div title="FIFO purchase cost ke mutabiq current stock value"><span>Stock Value</span><strong>{money(stock)}</strong></div>
         </div>
         <div className="staff-desk-sparkline" aria-label="Pichle 7 din ki POS sale">
           {trend.map(day => <div key={day.day} title={`${dayLabel(day.day)} · ${money(day.sales)}`}><i style={{ height: `${Math.max(day.sales / maxTrend * 100, 3)}%` }} /><span>{dayLabel(day.day).split(" ")[0]}</span></div>)}
@@ -125,6 +126,6 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
 
     <div className="staff-desk-reconcile"><strong>Available funds:</strong> shop opening balances aur Load/Bill attribution verify hone tak reconciliation required.</div>
     {!branchAvailable && <span className="sr-only">Branch is not assigned.</span>}
-    <span className="sr-only">Stock value: {money(stock)}. POS khata sales: {money(credit)}.</span>
+    <span className="sr-only">POS khata sales: {money(credit)}.</span>
   </div>;
 }
