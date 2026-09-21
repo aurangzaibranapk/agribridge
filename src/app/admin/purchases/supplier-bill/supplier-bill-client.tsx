@@ -69,7 +69,7 @@ const CSV_ALIASES = {
 export function SupplierBillClient({
   suppliers, products: initialProducts, categories, companies, warehouses, accounts, units,
 }: {
-  suppliers: { id: string; name: string }[];
+  suppliers: { id: string; name: string; companyName: string | null; phone: string | null }[];
   products: Product[];
   categories: Category[];
   companies: { id: string; name: string }[];
@@ -100,7 +100,22 @@ export function SupplierBillClient({
   const [newProductMrp, setNewProductMrp] = useState("");
   const [newProductWholesale, setNewProductWholesale] = useState("");
   const [csvNotice, setCsvNotice] = useState("");
+  const [billNo, setBillNo] = useState("");
+  const [billNoGenerating, setBillNoGenerating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId) ?? null;
+
+  async function autoGenerateBillNo() {
+    setBillNoGenerating(true);
+    try {
+      const { getNextSupplierBillNo } = await import("@/actions/purchases");
+      const result = await getNextSupplierBillNo();
+      if ("billNo" in result) setBillNo(result.billNo);
+    } finally {
+      setBillNoGenerating(false);
+    }
+  }
 
   const roots = useMemo(() => categories.filter((category) => !category.parent_category_id && GROUPS.some((group) => group.roots.includes(category.name.trim().toLowerCase()))), [categories]);
   const rootForGroup = (group: StockGroup) => roots.find((category) => GROUPS.find((item) => item.id === group)?.roots.includes(category.name.trim().toLowerCase()));
@@ -288,8 +303,21 @@ export function SupplierBillClient({
                   </select>
                   <Link href="/admin/suppliers" title="Supplier fehrist" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg border border-brand-200 px-2.5 text-xs font-semibold text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" /> Add</Link>
                 </div>
+                {selectedSupplier && (selectedSupplier.companyName || selectedSupplier.phone) && (
+                  <p className="mt-1 text-[11px] text-surface-500 dark:text-surface-400">
+                    {selectedSupplier.companyName ?? ""}{selectedSupplier.companyName && selectedSupplier.phone ? " · " : ""}{selectedSupplier.phone ?? ""}
+                  </p>
+                )}
               </div>
-              <div><label className={labelClass}>Invoice No.</label><input name="supplier_bill_no" className={inputClass} placeholder="e.g. GF-2026-0912" required maxLength={120} /></div>
+              <div>
+                <label className={labelClass}>Invoice No.</label>
+                <div className="flex gap-1.5">
+                  <input name="supplier_bill_no" value={billNo} onChange={(e) => setBillNo(e.target.value)} className={inputClass} placeholder="e.g. GF-2026-0912" required maxLength={120} autoComplete="off" />
+                  <button type="button" onClick={autoGenerateBillNo} disabled={billNoGenerating} title="System se auto number" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg border border-surface-200 px-2.5 text-xs font-semibold text-surface-600 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">
+                    {billNoGenerating ? "…" : "Auto"}
+                  </button>
+                </div>
+              </div>
               <div><label className={labelClass}>Bill Date</label><input type="date" value={billDate} onChange={(event) => setBillDate(event.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Shop / Warehouse</label><select className={inputClass} value={warehouseId} onChange={(event) => setWarehouseId(event.target.value)} required><option value="">Warehouse chunein</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}{warehouse.shopName ? ` · ${warehouse.shopName}` : warehouse.branchName ? ` · ${warehouse.branchName}` : ""}</option>)}</select></div>
             </div>
@@ -320,10 +348,12 @@ export function SupplierBillClient({
                     const normalizedQuery = line.query.trim().toLowerCase();
                     const matches = products.filter((product) => {
                       const group = groupForCategory(product.category_id, categories);
-                      const categoryOk = activeGroup === "all" || group === activeGroup;
+                      // Text search ho to category filter hatao — "egg" karyana
+                      // mein na ho to bhi milna chahiye.
+                      const categoryOk = normalizedQuery ? true : (activeGroup === "all" || group === activeGroup);
                       const textOk = !normalizedQuery || `${product.name} ${product.pack_size ?? ""} ${product.unit ?? ""}`.toLowerCase().includes(normalizedQuery);
                       return categoryOk && textOk;
-                    }).slice(0, 8);
+                    }).slice(0, 12);
                     return <tr key={index} className="border-t border-surface-100 align-top dark:border-surface-800">
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
                       <td className="relative px-3 py-2.5">

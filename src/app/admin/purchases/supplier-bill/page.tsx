@@ -18,7 +18,7 @@ export default async function SupplierPurchaseBillPage() {
   const service = createServiceClient();
 
   const [suppliersResult, productsResult, categoriesResult, companiesResult, warehousesResult, accountsResult, units] = await Promise.all([
-    service.from("suppliers").select("id, name").eq("is_active", true).order("name").limit(1000),
+    service.from("suppliers").select("id, name, company_name, phone_number").eq("is_active", true).order("name").limit(1000),
     service.from("products").select("id, name, company_id, category_id, pack_size, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
     service.from("categories").select("id, name, parent_category_id, category_kind").order("name"),
     service.from("companies").select("id, name").order("name"),
@@ -36,7 +36,12 @@ export default async function SupplierPurchaseBillPage() {
   }));
 
   return <SupplierBillClient
-    suppliers={suppliersResult.data ?? []}
+    suppliers={(suppliersResult.data ?? []).map((s) => ({
+      id: s.id as string,
+      name: s.name as string,
+      companyName: (s.company_name as string | null) ?? null,
+      phone: (s.phone_number as string | null) ?? null,
+    }))}
     products={(productsResult.data ?? []).map((product) => ({
       ...product,
       purchase_price: Number(product.purchase_price),

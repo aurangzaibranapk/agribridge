@@ -37,7 +37,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   let activeCounterId: string | null = null;
   let activeCounterName: string | null = null;
   let openShiftInfo: { id: string; shiftNumber: string; openedAt: string; openingCash: number } | null = null;
-  let pendingHandover: { shiftId: string; countedCash: number; branchId: string | null; shopId: string | null; shifts: { date: string; amount: number }[] } | null = null;
+  let pendingHandover: { shiftId: string; shiftIds: string[]; countedCash: number; branchId: string | null; shopId: string | null; shifts: { date: string; amount: number }[] } | null = null;
   let otherCounters: { id: string; name: string; shopName: string; hasOpenShift: boolean }[] = [];
 
   if (!dealer) {
@@ -162,6 +162,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
           const total = pendingShifts.reduce((s, r) => s + r.net, 0);
           pendingHandover = {
             shiftId: ref.id,
+            shiftIds: pendingShifts.map((r) => r.id),
             countedCash: total,
             branchId: myCounters.find((c) => c.id === ref.counter_id)?.branchId ?? null,
             shopId: myCounters.find((c) => c.id === ref.counter_id)?.shopId ?? null,

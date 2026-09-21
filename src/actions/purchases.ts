@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { payAndPost } from "@/lib/ledger/supplier-money";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
@@ -1063,4 +1064,29 @@ export async function commentPurchase(_prev: ActionState, formData: FormData): P
 
   revalidatePath("/admin/purchases");
   return { success: true };
+}
+
+export async function getNextSupplierBillNo(): Promise<{ billNo: string } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+
+  const service = createServiceClient();
+  const year = new Date().getFullYear();
+  const prefix = `SB-${year}-`;
+
+  const { data } = await service
+    .from("purchases")
+    .select("supplier_bill_no")
+    .like("supplier_bill_no", `${prefix}%`)
+    .order("supplier_bill_no", { ascending: false })
+    .limit(1);
+
+  let next = 1;
+  if (data?.[0]?.supplier_bill_no) {
+    const num = parseInt(String(data[0].supplier_bill_no).replace(prefix, ""), 10);
+    if (!isNaN(num)) next = num + 1;
+  }
+
+  return { billNo: `${prefix}${String(next).padStart(3, "0")}` };
 }

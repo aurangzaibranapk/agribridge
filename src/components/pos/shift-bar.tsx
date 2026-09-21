@@ -61,13 +61,15 @@ function DepositButton() {
  */
 export function ShiftCashHandoverForm({
   shiftId,
+  shiftIds,
   branchId,
   shopId,
   countedCash,
 }: {
   shiftId: string;
+  shiftIds?: string[];
   branchId: string | null;
-  shopId: string | null;
+  shopId?: string | null;
   countedCash: number;
 }) {
   const [mode, setMode] = useState<"person" | "bank">("person");
@@ -78,6 +80,9 @@ export function ShiftCashHandoverForm({
   const [handoverState, handoverAction] = useFormState(sendCash, HANDOVER_KHALI);
   const [depositState, depositAction] = useFormState(submitCollectionDeposit, DEPOSIT_KHALI);
   const [slipUrl, setSlipUrl] = useState("");
+  const [enteredAmount, setEnteredAmount] = useState(countedCash);
+  const remaining = Math.max(0, countedCash - enteredAmount);
+  const allIds = shiftIds ?? [shiftId];
 
   useEffect(() => {
     shiftCashRecipients(branchId).then((r) => {
@@ -141,10 +146,30 @@ export function ShiftCashHandoverForm({
         ) : (
           <form action={handoverAction} className="space-y-2 rounded-xl border border-surface-200 p-3 dark:border-surface-700">
             <input type="hidden" name="from_source" value="my_custody" />
-            <input type="hidden" name="amount" value={countedCash} />
-            <input type="hidden" name="shift_id" value={shiftId} />
+            <input type="hidden" name="amount" value={enteredAmount} />
+            {/* Partial payment: sirf tab sab shifts settle karo jab poora bheja */}
+            <input type="hidden" name="shift_ids" value={enteredAmount >= countedCash ? allIds.join(",") : ""} />
+            <div>
+              <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-400">
+                Kitni raqam bhej rahe hain? <span className="text-surface-400">(max Rs {Math.round(countedCash).toLocaleString()})</span>
+              </p>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
+                <input
+                  type="number" min="1" max={countedCash} step="1"
+                  value={enteredAmount}
+                  onChange={(e) => setEnteredAmount(Math.min(countedCash, Math.max(0, Number(e.target.value))))}
+                  className="w-full rounded-lg border border-surface-200 py-1.5 pl-8 pr-2 text-xs dark:border-surface-700 dark:bg-surface-900"
+                />
+              </div>
+              {remaining > 0 && (
+                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  Baqi Rs {Math.round(remaining).toLocaleString()} outstanding rahega
+                </p>
+              )}
+            </div>
             <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
-              Yehi Rs {Math.round(countedCash).toLocaleString()} kis ko bhejein?
+              Kis ko bhejein?
             </p>
             <select
               name="to_profile_id"
@@ -346,7 +371,7 @@ export function ShiftBar({
   openedAt: string;
   branchId: string | null;
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
-  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null; shifts?: { date: string; amount: number }[] } | null;
+  pendingHandover?: { shiftId: string; shiftIds?: string[]; countedCash: number; branchId: string | null; shopId?: string | null; shifts?: { date: string; amount: number }[] } | null;
   /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
   otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
@@ -468,6 +493,7 @@ export function ShiftBar({
               )}
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
+                shiftIds={pendingHandover.shiftIds}
                 branchId={pendingHandover.branchId}
                 shopId={pendingHandover.shopId ?? null}
                 countedCash={pendingHandover.countedCash}

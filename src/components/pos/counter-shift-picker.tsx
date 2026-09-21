@@ -44,7 +44,7 @@ export function CounterShiftPicker({
 }: {
   counters: Counter[];
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
-  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null } | null;
+  pendingHandover?: { shiftId: string; shiftIds?: string[]; countedCash: number; branchId: string | null } | null;
   /** Kahan wapas jayen -- agar kahin aur pehle se shift khula hai to usi POS par, warna Dashboard (423). */
   backHref?: string;
 }) {
@@ -68,6 +68,7 @@ export function CounterShiftPicker({
               </p>
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
+                shiftIds={pendingHandover.shiftIds}
                 branchId={pendingHandover.branchId}
                 countedCash={pendingHandover.countedCash}
               />
@@ -120,6 +121,7 @@ export function CounterShiftPicker({
           </p>
           <ShiftCashHandoverForm
             shiftId={pendingHandover.shiftId}
+            shiftIds={pendingHandover.shiftIds}
             branchId={pendingHandover.branchId}
             countedCash={pendingHandover.countedCash}
           />
