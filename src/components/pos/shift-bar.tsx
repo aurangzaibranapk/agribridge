@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown, Landmark, User } from "lucide-react";
-import { closeShift, getShiftSummary, shiftCashRecipients, type ActionState } from "@/actions/pos-counters";
+import { closeShift, getShiftSummary, shiftCashRecipients, shiftCashCarriers, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import { bankAccountsForCollectionDeposit, submitCollectionDeposit, type ActionState as DepositState } from "@/actions/pos-collection";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
@@ -72,7 +72,9 @@ export function ShiftCashHandoverForm({
 }) {
   const [mode, setMode] = useState<"person" | "bank">("person");
   const [recipients, setRecipients] = useState<{ id: string; name: string; role: string }[] | null>(null);
+  const [carriers, setCarriers] = useState<{ id: string; name: string; role: string }[]>([]);
   const [banks, setBanks] = useState<{ id: string; name: string }[] | null>(null);
+  const [method, setMethod] = useState("cash");
   const [handoverState, handoverAction] = useFormState(sendCash, HANDOVER_KHALI);
   const [depositState, depositAction] = useFormState(submitCollectionDeposit, DEPOSIT_KHALI);
   const [slipUrl, setSlipUrl] = useState("");
@@ -80,6 +82,9 @@ export function ShiftCashHandoverForm({
   useEffect(() => {
     shiftCashRecipients(branchId).then((r) => {
       if (!("error" in r)) setRecipients(r);
+    });
+    shiftCashCarriers().then((r) => {
+      if (!("error" in r)) setCarriers(r);
     });
     bankAccountsForCollectionDeposit().then((r) => {
       if (!("error" in r)) setBanks(r);
@@ -161,11 +166,29 @@ export function ShiftCashHandoverForm({
                 { value: "bank_transfer", label: "Bank Transfer" },
               ].map((m) => (
                 <label key={m.value} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-200 px-2 py-1.5 text-xs has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 dark:border-surface-700 dark:has-[:checked]:border-brand-600 dark:has-[:checked]:bg-brand-950/30">
-                  <input type="radio" name="transfer_method" value={m.value} defaultChecked={m.value === "cash"} className="accent-brand-600" />
+                  <input type="radio" name="transfer_method" value={m.value} checked={method === m.value} onChange={() => setMethod(m.value)} className="accent-brand-600" />
                   {m.label}
                 </label>
               ))}
             </div>
+            {method === "cash" && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-400">
+                  Carrier — kaun le ja raha hai? <span className="text-surface-400">(optional)</span>
+                </p>
+                <select
+                  name="carrier_profile_id"
+                  className="w-full rounded-lg border border-surface-200 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
+                >
+                  <option value="">— khud de raha hoon —</option>
+                  {carriers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <input
               name="sent_note"
               placeholder="Note (agar ho)"
