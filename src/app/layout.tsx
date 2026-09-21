@@ -92,7 +92,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "AgriBridge" },
+  appleWebApp: { statusBarStyle: "default", title: "AgriBridge" },
 };
 export const viewport: Viewport = {
   themeColor: "#3f7d43",
