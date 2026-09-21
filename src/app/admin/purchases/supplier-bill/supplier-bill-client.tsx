@@ -248,7 +248,7 @@ export function SupplierBillClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-4 pb-8">
+    <div className="mx-auto w-full max-w-[1500px] space-y-4 pb-8 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:space-y-3 xl:overflow-hidden xl:pb-0">
       <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 text-sm text-surface-500 hover:text-brand-700">
         <ArrowLeft className="h-4 w-4" /> Purchase
       </Link>
@@ -266,7 +266,7 @@ export function SupplierBillClient({
       {state.success && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
       {state.error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{state.error}</p>}
 
-      <form action={formAction} className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+      <form action={formAction} className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_330px] xl:overflow-hidden">
         <input type="hidden" name="supplier_bill_workspace" value="on" />
         <input type="hidden" name="items_json" value={itemPayload} />
         <input type="hidden" name="purchase_date" value={billDate} />
@@ -276,7 +276,7 @@ export function SupplierBillClient({
         <input type="hidden" name="tax_amount" value={tax} />
         <input type="hidden" name="invoice_total" value={grandTotal} />
 
-        <div className="space-y-4">
+        <div className="space-y-4 xl:flex xl:min-h-0 xl:flex-col xl:space-y-3 xl:overflow-hidden">
           <section className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="sm:col-span-2 xl:col-span-1">
@@ -295,7 +295,7 @@ export function SupplierBillClient({
             </div>
           </section>
 
-          <section className="overflow-visible rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+          <section className="overflow-visible rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div><h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Bill ke Products</h2><p className="mt-0.5 text-xs text-surface-500">Product name ek martaba master mein save karein; agli dafa search se chunein.</p></div>
               <div className="flex flex-wrap items-center gap-2">
@@ -310,7 +310,7 @@ export function SupplierBillClient({
               {GROUPS.map((group) => <CategoryChip key={group.id} active={activeGroup === group.id} onClick={() => setActiveGroup(group.id)}>{group.label}</CategoryChip>)}
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800">
+            <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800 xl:min-h-0 xl:flex-1 xl:overflow-auto">
               <table className="w-full min-w-[780px] border-collapse text-sm">
                 <thead><tr className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800"><th className="w-10 px-3 py-2.5">#</th><th className="px-3 py-2.5">Product</th><th className="w-28 px-3 py-2.5">Pack / Unit</th><th className="w-24 px-3 py-2.5">Qty</th><th className="w-32 px-3 py-2.5">Purchase Rate</th><th className="w-28 px-3 py-2.5 text-right">Line Total</th><th className="w-12 px-3 py-2.5"></th></tr></thead>
                 <tbody>
@@ -358,8 +358,8 @@ export function SupplierBillClient({
           <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-xs leading-relaxed text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-200">Bill save hone ke baad maal approved purchase mein rahega. Asal stock sirf <strong>GRN / Maal Receive</strong> par ginti ke baad warehouse mein charhega.</p>
         </div>
 
-        <aside className="xl:sticky xl:top-4">
-          <section className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+        <aside className="xl:h-full xl:min-h-0 xl:overflow-hidden">
+          <section className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900 xl:h-full xl:overflow-y-auto xl:overscroll-contain">
             <div className="mb-4 flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"><FileText className="h-5 w-5" /></span><div><h2 className="font-display font-semibold text-surface-900 dark:text-white">Bill Summary</h2><p className="text-[11px] text-surface-400">Supplier invoice ka hisaab</p></div></div>
             <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><SummaryLine label="Subtotal" value={subtotal} /><div className="grid grid-cols-[1fr_112px] items-center gap-3"><label htmlFor="discount" className="text-sm text-surface-500">Discount</label><input id="discount" type="number" min="0" max={subtotal} step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className={`${inputClass} text-right`} placeholder="0" /></div><div className="grid grid-cols-[1fr_112px] items-center gap-3"><label htmlFor="tax" className="text-sm text-surface-500">Tax</label><input id="tax" type="number" min="0" step="0.01" value={tax} onChange={(event) => setTax(event.target.value)} className={`${inputClass} text-right`} placeholder="0" /></div></div>
             <div className="my-4 rounded-xl bg-brand-50 px-3.5 py-3 dark:bg-brand-950/30"><SummaryLine label="Total Amount" value={grandTotal} strong /></div>
