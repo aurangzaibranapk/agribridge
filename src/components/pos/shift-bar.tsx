@@ -313,8 +313,8 @@ export function ShiftBar({
   openingCash: number;
   openedAt: string;
   branchId: string | null;
-  /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
-  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null } | null;
+  /** Saari band shifts ka total cash jo abhi Manager/Finance ko bheja nahi gaya. */
+  pendingHandover?: { shiftId: string; countedCash: number; branchId: string | null; shopId?: string | null; pendingDepositAmount?: number | null; hasUnsubmittedShifts?: boolean } | null;
   /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
   otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
@@ -382,9 +382,12 @@ export function ShiftBar({
             <button
               onClick={() => setHandoverOpen(true)}
               className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-sm transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
-              title="Pichli shift ka cash abhi bhejna baqi hai"
+              title="Band shifts ka cash abhi bhejna baqi hai"
             >
-              <AlertTriangle className="h-3 w-3" /> Purani Rs {Math.round(pendingHandover.countedCash).toLocaleString()} bhejna baqi
+              <AlertTriangle className="h-3 w-3" />
+              {pendingHandover.pendingDepositAmount && !pendingHandover.hasUnsubmittedShifts
+                ? `Rs ${Math.round(pendingHandover.countedCash).toLocaleString()} — deposit pending`
+                : `Rs ${Math.round(pendingHandover.countedCash).toLocaleString()} bhejna baqi`}
             </button>
           )}
           <button
@@ -411,8 +414,14 @@ export function ShiftBar({
             </div>
             <div className="px-5 py-5">
               <p className="mb-3 text-xs font-medium text-amber-800 dark:text-amber-400">
-                Pichli shift ka Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi Manager/Finance ko bhejna baqi hai.
+                Total Rs {Math.round(pendingHandover.countedCash).toLocaleString()} abhi bhejna baqi hai (saari band shifts ka).
               </p>
+              {pendingHandover.pendingDepositAmount && (
+                <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  Rs {Math.round(pendingHandover.pendingDepositAmount).toLocaleString()} ka deposit submit ho chuka hai — Finance ki tasdeeq ka intezar hai.
+                </p>
+              )}
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
                 branchId={pendingHandover.branchId}
