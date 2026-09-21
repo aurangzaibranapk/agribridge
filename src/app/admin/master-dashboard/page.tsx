@@ -328,25 +328,33 @@ export default async function MasterDashboardPage({
     trend: customerTrend[r.id] ?? Array(trendWeeks).fill(0),
   }));
 
-  // ===== Bottom 3 boxes: Tasks, Live Notifications, Farmers at a Glance =====
-  const [
-    { data: recentNotices },
-    { count: totalFarmers },
-    { count: newFarmersMonth },
-    { data: pendingExpRows },
-    { data: openCountRows },
-    { data: recentFarmerRows },
-  ] = await Promise.all([
-    serviceClient.from("notifications").select("id, title, message, created_at")
-      .order("created_at", { ascending: false }).limit(8),
-    serviceClient.from("farmers").select("*", { count: "exact", head: true }).eq("is_active", true),
-    serviceClient.from("farmers").select("*", { count: "exact", head: true }).eq("is_active", true).gte("created_at", monthStart),
-    serviceClient.from("company_expense_requests").select("id, category, amount, profiles!company_expense_requests_requested_by_fkey(full_name)")
-      .eq("status", "pending").order("created_at", { ascending: false }).limit(5),
-    serviceClient.from("stock_counts").select("id, warehouses(name)").eq("status", "counting"),
-    serviceClient.from("farmers").select("id, name, phone_number, created_at").eq("is_active", true)
-      .order("created_at", { ascending: false }).limit(4),
-  ]);
+  // ===== Top Buyers (is mahine sabse zyada khareedne wale customers) =====
+  const { data: buyerRows } = await serviceClient
+    .from("pos_sales")
+    .select("customer_id, total_amount")
+    .not("customer_id", "is", null)
+    .gte("created_at", monthStart)
+    .lt("created_at", nextMonthStart);
+
+  const buyerTotals = new Map<string, number>();
+  for (const row of buyerRows ?? []) {
+    const cid = (row as any).customer_id as string;
+    if (!cid) continue;
+    buyerTotals.set(cid, (buyerTotals.get(cid) ?? 0) + Number((row as any).total_amount ?? 0));
+  }
+  const topBuyerIds = [...buyerTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id);
+
+  let topBuyers: { name: string; phone: string; total: number }[] = [];
+  if (topBuyerIds.length > 0) {
+    const { data: buyerDetails } = await serviceClient
+      .from("customers")
+      .select("id, name, phone_number")
+      .in("id", topBuyerIds);
+    topBuyers = topBuyerIds.map((id) => {
+      const d = (buyerDetails ?? []).find((c: any) => c.id === id);
+      return { name: d?.name ?? "—", phone: d?.phone_number ?? "", total: buyerTotals.get(id) ?? 0 };
+    });
+  }
 
   const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
@@ -546,110 +554,89 @@ export default async function MasterDashboardPage({
         </div>
       )}
 
-      {/* ===== Bottom 3 boxes: Aaj ke Kaam | Live Notifications | Farmers at a Glance ===== */}
+      {/* ===== Bottom 3 boxes: Top Sale Items | Top Buyers | Top Recovery ===== */}
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
-        {/* --- Today's Tasks --- */}
+        {/* --- Top Trading Sale Items --- */}
         <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Today&apos;s Tasks</h2>
+          <div className="border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">
+              Top Trading Sale Items{shopId ? " (Is Shop)" : ""}
+            </h2>
           </div>
-          <div className="grid grid-cols-2 divide-x divide-surface-100 dark:divide-surface-800">
-            <div className="p-3">
-              <p className="mb-2 text-[11px] font-semibold text-surface-400">My Tasks</p>
-              {(pendingExpRows ?? []).length === 0 ? (
-                <p className="text-xs text-surface-400">Koi pending task nahi.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {(pendingExpRows ?? []).slice(0, 3).map((e: any) => {
-                    const prof = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
-                    return (
-                      <li key={e.id} className="text-xs">
-                        <span className="font-medium text-surface-700 dark:text-surface-200">{e.category}</span>
-                        <span className="ml-1 text-surface-500">Rs {Number(e.amount).toLocaleString()}</span>
-                        {prof?.full_name && <span className="ml-1 text-surface-400">· {prof.full_name}</span>}
-                      </li>
-                    );
-                  })}
-                  {(pendingExpRows ?? []).length > 3 && (
-                    <li className="text-[11px] text-brand-600">+{(pendingExpRows ?? []).length - 3} aur →</li>
-                  )}
-                </ul>
-              )}
-            </div>
-            <div className="p-3">
-              <p className="mb-2 text-[11px] font-semibold text-surface-400">Team Tasks</p>
-              {(openCountRows ?? []).length === 0 ? (
-                <p className="text-xs text-surface-400">Koi kaam jari nahi.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {(openCountRows ?? []).map((c: any) => {
-                    const wh = Array.isArray(c.warehouses) ? c.warehouses[0] : c.warehouses;
-                    return (
-                      <li key={c.id} className="text-xs text-surface-700 dark:text-surface-200">
-                        Stock count in progress
-                        {wh?.name && <span className="ml-1 text-surface-400">· {wh.name}</span>}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+          <div className="divide-y divide-surface-50 dark:divide-surface-800">
+            {topSellingItems.length === 0 ? (
+              <p className="px-4 py-4 text-xs text-surface-400">Is mahine koi sale record nahi.</p>
+            ) : (
+              topSellingItems.slice(0, 8).map((item, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2">
+                  <span className="w-4 shrink-0 text-center text-[10px] font-bold text-surface-400">{i + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-surface-800 dark:text-surface-100">{item.name}</span>
+                  <MiniSparkline data={item.trend} color="brand" />
+                  <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-brand-700 dark:text-brand-400">
+                    {item.qty.toLocaleString()} {item.unit}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* --- Live Notifications --- */}
+        {/* --- Top Buyers --- */}
         <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Live Notifications</h2>
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-950/40 dark:text-green-400">Live</span>
+          <div className="border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Top Buyers — Is Mahine</h2>
           </div>
           <div className="divide-y divide-surface-50 dark:divide-surface-800">
-            {(recentNotices ?? []).length === 0 ? (
-              <p className="px-4 py-4 text-xs text-surface-400">Koi notification nahi.</p>
+            {topBuyers.length === 0 ? (
+              <p className="px-4 py-4 text-xs text-surface-400">Is mahine koi customer-linked sale nahi.</p>
             ) : (
-              (recentNotices ?? []).map((n: any) => (
-                <div key={n.id} className="flex items-start justify-between gap-2 px-4 py-2.5">
+              topBuyers.map((b, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2">
+                  <span className="w-4 shrink-0 text-center text-[10px] font-bold text-surface-400">{i + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-surface-700 dark:text-surface-200">{n.title}</p>
-                    {n.message && <p className="truncate text-[11px] text-surface-500">{n.message}</p>}
+                    <p className="truncate text-xs font-medium text-surface-800 dark:text-surface-100">{b.name}</p>
+                    {b.phone && <p className="text-[10px] text-surface-400">{b.phone}</p>}
                   </div>
-                  <time className="shrink-0 text-[10px] text-surface-400">
-                    {new Intl.DateTimeFormat("en-PK", { timeStyle: "short", timeZone: "Asia/Karachi" }).format(new Date(n.created_at))}
-                  </time>
+                  <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-green-600 dark:text-green-400">
+                    Rs {Math.round(b.total).toLocaleString()}
+                  </span>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* --- Farmers at a Glance --- */}
+        {/* --- Top Recovery --- */}
         <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Farmers at a Glance</h2>
-            <a href="/admin/farmers" className="text-[11px] text-brand-600 hover:underline">All farmers →</a>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-surface-100 border-b border-surface-100 dark:divide-surface-800 dark:border-surface-800">
-            <div className="p-3 text-center">
-              <p className="text-xl font-semibold text-surface-900 dark:text-white">{(totalFarmers ?? 0).toLocaleString()}</p>
-              <p className="text-[11px] text-surface-400">Total Active</p>
-            </div>
-            <div className="p-3 text-center">
-              <p className="text-xl font-semibold text-green-600">+{(newFarmersMonth ?? 0).toLocaleString()}</p>
-              <p className="text-[11px] text-surface-400">Is Mahine Naye</p>
-            </div>
+          <div className="border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-500">Top Recovery — Jin Sy Lena</h2>
           </div>
           <div className="divide-y divide-surface-50 dark:divide-surface-800">
-            {(recentFarmerRows ?? []).length === 0 ? (
-              <p className="px-4 py-3 text-xs text-surface-400">Is shop se linked farmer record nahi mila.</p>
+            {topDebtors.length === 0 ? (
+              <p className="px-4 py-4 text-xs text-surface-400">Koi outstanding recovery nahi.</p>
             ) : (
-              (recentFarmerRows ?? []).map((f: any) => (
-                <div key={f.id} className="flex items-center justify-between px-4 py-2">
-                  <span className="text-xs font-medium text-surface-700 dark:text-surface-200">{f.name}</span>
-                  {f.phone_number && <span className="text-[10px] text-surface-400">{f.phone_number}</span>}
+              topDebtors.slice(0, 8).map((d, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2">
+                  <span className="w-4 shrink-0 text-center text-[10px] font-bold text-surface-400">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-surface-800 dark:text-surface-100">{d.name}</p>
+                    {d.phone && <p className="text-[10px] text-surface-400">{d.phone}</p>}
+                  </div>
+                  <MiniSparkline data={d.trend} color="red" />
+                  <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-red-600 dark:text-red-400">
+                    Rs {Math.round(d.balance).toLocaleString()}
+                  </span>
                 </div>
               ))
             )}
           </div>
+          {topDebtors.length > 0 && (
+            <div className="border-t border-surface-100 px-4 py-2 dark:border-surface-800">
+              <p className="text-[10px] text-surface-400">
+                Total: Rs {Math.round(topDebtors.reduce((s, d) => s + d.balance, 0)).toLocaleString()}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
