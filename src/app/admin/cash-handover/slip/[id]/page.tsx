@@ -16,7 +16,7 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
 
   const { data: h } = await service
     .from("cash_handovers")
-    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, to_profile_id, received_by")
+    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -33,22 +33,20 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
   const isAdmin = ["owner", "super_admin", "admin", "manager", "finance"].includes(me?.role ?? "");
   const isSender = h.from_profile_id === user.id;
   const isRecipient = h.to_profile_id === user.id;
+  const isCarrier = h.carrier_profile_id === user.id;
 
-  if (!isAdmin && !isSender && !isRecipient) {
+  if (!isAdmin && !isSender && !isRecipient && !isCarrier) {
     return <div className="p-8 text-center text-surface-400">Aap ko ye slip dekhne ki ijazat nahi.</div>;
   }
 
-  // Sender, recipient, receiver profiles
-  const profileIds = [h.from_profile_id, h.to_profile_id, h.received_by].filter(Boolean) as string[];
+  const profileIds = [h.from_profile_id, h.to_profile_id, h.received_by, h.carrier_profile_id, h.carrier_confirmed_by]
+    .filter(Boolean) as string[];
   const { data: profileRows } = await service
     .from("profiles")
     .select("id, full_name, role")
     .in("id", profileIds);
 
   const byId = new Map((profileRows ?? []).map((p) => [p.id, p]));
-  const sender = byId.get(h.from_profile_id);
-  const recipient = byId.get(h.to_profile_id);
-  const receivedByProfile = h.received_by ? byId.get(h.received_by) : null;
 
   return (
     <SlipClient
@@ -62,13 +60,17 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
         sentNote: h.sent_note ?? null,
         sentAt: h.sent_at ?? null,
         receivedAt: h.received_at ?? null,
-        senderName: sender?.full_name ?? "—",
-        senderRole: sender?.role ?? "",
-        recipientName: recipient?.full_name ?? "—",
-        recipientRole: recipient?.role ?? "",
-        receivedByName: receivedByProfile?.full_name ?? null,
+        senderName: byId.get(h.from_profile_id)?.full_name ?? "—",
+        senderRole: byId.get(h.from_profile_id)?.role ?? "",
+        recipientName: byId.get(h.to_profile_id)?.full_name ?? "—",
+        recipientRole: byId.get(h.to_profile_id)?.role ?? "",
+        receivedByName: h.received_by ? (byId.get(h.received_by)?.full_name ?? null) : null,
+        carrierName: h.carrier_profile_id ? (byId.get(h.carrier_profile_id)?.full_name ?? null) : null,
+        carrierConfirmedAt: h.carrier_confirmed_at ?? null,
+        carrierConfirmedByName: h.carrier_confirmed_by ? (byId.get(h.carrier_confirmed_by)?.full_name ?? null) : null,
       }}
       isRecipient={isRecipient}
+      isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}
     />
   );

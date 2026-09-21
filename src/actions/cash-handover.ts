@@ -178,6 +178,46 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
 }
 
 /**
+ * Carrier ki tasdeeq — darmiyan wala shakhs jo cash le kar Finance ke
+ * paas pohonchata hai. Ye sirf WOHI kar sakta hai jis ka naam
+ * carrier_profile_id mein hai.
+ */
+export async function carrierConfirm(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const handoverId = String(formData.get("handover_id") ?? "");
+  if (!handoverId) return { error: "Handover select karein." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: h } = await service
+    .from("cash_handovers")
+    .select("id, status, carrier_profile_id, carrier_confirmed_at")
+    .eq("id", handoverId)
+    .maybeSingle();
+
+  if (!h) return { error: "Handover nahi mila." };
+  if (h.status !== "sent") return { error: "Ye handover pehle hi mukammal ho chuka hai." };
+  if (h.carrier_profile_id !== user.id) {
+    return { error: "Ye tasdeeq sirf carrier (le jane wala) kar sakta hai." };
+  }
+  if (h.carrier_confirmed_at) return { error: "Aap pehle hi tasdeeq kar chuke hain." };
+
+  const { error } = await service
+    .from("cash_handovers")
+    .update({ carrier_confirmed_at: new Date().toISOString(), carrier_confirmed_by: user.id })
+    .eq("id", handoverId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/cash-handover");
+  return { success: true, message: "Tasdeeq darj ho gayi — ab Finance ke paas pohonchayein." };
+}
+
+/**
  * Cash wusool karna.
  *
  * Sirf WOHI shakhs kar sakta hai jis ke naam bheja gaya. Bhejne wale ko
