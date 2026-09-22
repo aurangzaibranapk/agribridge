@@ -177,7 +177,10 @@
   .desk-load .load-slip-hint { margin:5px 0 0; color:#718078; font-size:9px; line-height:1.35; }
   .desk-load .load-warning { display:flex; align-items:center; gap:5px; color:#9a6700; }
   .desk-load .load-warning svg { width:12px; height:12px; }
-  /* Keep the action row of every service form above the history panel.\n     The table has its own scroll viewport, so it does not need to reserve\n     enough height to show several rows at once. */\n  .desk-load .load-transactions { display:flex; flex:0 0 116px; min-height:0; flex-direction:column; overflow:hidden; padding:0; }
+  /* Keep the action row of every service form above the history panel.
+     The table has its own scroll viewport, so it does not need to reserve
+     enough height to show several rows at once. */
+  .desk-load .load-transactions { display:flex; flex:0 0 116px; min-height:0; flex-direction:column; overflow:hidden; padding:0; }
   .desk-load .load-transactions-heading { display:flex; min-height:34px; align-items:center; gap:12px; border-bottom:1px solid #e8eee9; padding:4px 10px; }
   .desk-load .load-transactions-heading h2 { display:flex; align-items:center; gap:7px; margin:0 auto 0 0; font-size:14px; font-weight:700; white-space:nowrap; }
   .desk-load .load-transactions-heading h2 svg { width:15px; height:15px; color:#128049; }
