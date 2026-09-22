@@ -394,7 +394,7 @@ export default async function MasterDashboardPage({
         <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
           <div className="flex items-start justify-between gap-3">
             <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
-            <Link href="/admin/inventory" className="shrink-0 rounded-lg bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-800">
+            <Link href="/admin/inventory#missing-batches" className="shrink-0 rounded-lg bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-800">
               Inventory Kholo →
             </Link>
           </div>
@@ -410,7 +410,7 @@ export default async function MasterDashboardPage({
           {missingBatchProducts.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {missingBatchProducts.map((p) => (
-                <Link key={p.id} href={`/admin/inventory/product/${p.id}`}
+                <Link key={p.id} href={`/admin/inventory?focus=${p.id}#missing-batch-${p.id}`}
                   className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-surface-900 dark:text-amber-300">
                   {p.name} →
                 </Link>

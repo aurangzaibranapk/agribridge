@@ -3,10 +3,11 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { InventoryClient } from "@/app/admin/inventory/inventory-client";
+import { UnbatchedBulkFixer, type MissingBatchProduct } from "@/app/admin/inventory/unbatched-bulk-fixer";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminInventoryPage() {
+export default async function AdminInventoryPage({ searchParams }: { searchParams?: { focus?: string } }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
@@ -64,9 +65,28 @@ export default async function AdminInventoryPage() {
     };
   });
 
+  const missingByProduct = new Map<string, MissingBatchProduct>();
+  for (const row of rows) {
+    if (row.batch_id != null || row.quantity_on_hand <= 0) continue;
+    const current: MissingBatchProduct = missingByProduct.get(row.product_id) ?? {
+      productId: row.product_id,
+      productName: row.product_name,
+      packSize: row.pack_size,
+      totalQuantity: 0,
+      purchaseRate: row.purchase_price > 0 ? row.purchase_price : null,
+      saleRate: row.selling_price,
+      warehouses: [],
+    };
+    current.totalQuantity += row.quantity_on_hand;
+    current.warehouses.push({ name: row.warehouse_name, quantity: row.quantity_on_hand });
+    missingByProduct.set(row.product_id, current);
+  }
+  const missingBatchProducts = [...missingByProduct.values()].sort((a, b) => a.productName.localeCompare(b.productName));
+
   return (
     <div>
       <PageHeader title={t("inv_title", lang)} description={t("inv_subtitle", lang)} />
+      <UnbatchedBulkFixer products={missingBatchProducts} focusProductId={searchParams?.focus} />
       <InventoryClient rows={rows} warehouses={warehouses ?? []} />
     </div>
   );

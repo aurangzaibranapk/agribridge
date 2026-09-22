@@ -6,6 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 export interface ActionState {
   error?: string;
   success?: boolean;
+  fixed?: number;
 }
 
 export async function adjustStock(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -234,6 +235,16 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Login zaroori hai." };
 
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  const allowed = ["owner", "super_admin", "admin", "warehouse"];
+  if (!me?.is_active || !allowed.includes(me.role)) {
+    return { error: "Batch approve karna sirf Owner, Admin ya Warehouse wale kar sakte hain." };
+  }
+
   const productId = String(formData.get("product_id") ?? "").trim();
   const unitCostRaw = Number(formData.get("unit_cost") ?? 0);
   if (!productId) return { error: "Product ID gum hai." };
@@ -267,13 +278,22 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
       .select("id")
       .single();
     if (batchErr || !batch) continue;
-    await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
+    const { error: updateErr } = await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
+    if (updateErr) {
+      // Adhoora/orphan batch na chhorein: inventory link na ho to naya
+      // batch bhi wapas hata dein aur baqi rows ki koshish jaari rakhein.
+      await service.from("stock_batches").delete().eq("id", batch.id);
+      continue;
+    }
     fixed++;
   }
 
-  if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
-
   revalidatePath(`/admin/inventory/product/${productId}`);
+  revalidatePath("/admin/inventory");
   revalidatePath("/admin/master-dashboard");
-  return { success: true };
+  if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
+  if (fixed < rows.length) {
+    return { error: `${fixed} batch theek hue, lekin ${rows.length - fixed} abhi baqi hain — dobara approve karein.`, fixed };
+  }
+  return { success: true, fixed };
 }
