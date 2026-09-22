@@ -17,7 +17,7 @@ export function PortalMobileSidebar({ lang }: { lang: Lang }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open menu"
+        aria-label={t("at_open_menu", lang)}
         className="rounded-lg p-2 text-surface-600 hover:bg-surface-100 sm:hidden dark:text-surface-300 dark:hover:bg-surface-800"
       >
         <Menu className="h-5 w-5" />
@@ -31,7 +31,7 @@ export function PortalMobileSidebar({ lang }: { lang: Lang }) {
                 <p className="font-display text-lg font-semibold text-white">{t("app_name", lang)}</p>
                 <p className="text-xs text-slate-400">{t("farmer_portal", lang)}</p>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10">
+              <button onClick={() => setOpen(false)} aria-label={t("at_close_menu", lang)} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
             </div>

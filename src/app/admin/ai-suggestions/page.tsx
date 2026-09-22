@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { AiSuggestionsClient } from "./ai-suggestions-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
 export default async function AiSuggestionsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const {
@@ -48,11 +51,11 @@ export default async function AiSuggestionsPage() {
 
   return (
     <div>
-      <PageHeader title="AI Purchase Suggestions" description="AI ne kya suggest kiya hai - review karein" />
+      <PageHeader title={t("at_ai_purchase", lang)} description="AI ne kya suggest kiya hai - review karein" />
 
       <div className="mb-6">
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-600">Pending Suggestions</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-600">{t("at_pending_suggestions", lang)}</p>
           <p className="mt-1 font-display text-2xl font-bold text-brand-800 dark:text-brand-200">{pendingCount}</p>
         </Card>
       </div>

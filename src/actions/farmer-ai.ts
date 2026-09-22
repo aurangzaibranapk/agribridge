@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -46,7 +47,7 @@ export async function approveFarmerAiRequest(_prev: ActionState, formData: FormD
       expense_category: details.category ?? "other",
       description: details.description ?? "AI se add hua expense",
       amount: details.amount,
-      expense_date: details.date ?? new Date().toISOString().slice(0, 10),
+      expense_date: details.date ?? aajKaKhana(),
       source: "voice_ai",
     });
   } else if (request.intent_type === "request_machinery") {

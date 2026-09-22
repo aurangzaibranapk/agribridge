@@ -1,4 +1,6 @@
 import { Type, type FunctionDeclaration } from "@google/genai";
+import { aajKaKhana } from "@/lib/utils/format";
+import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
 
@@ -279,17 +281,14 @@ async function broadcastToFarmers(
   }
 
   if (args.target === "specific" && args.farmer_phone) {
-    const { data: farmer } = await supabase
-      .from("farmers")
-      .select("whatsapp_number, phone_number")
-      .or(`whatsapp_number.eq.${args.farmer_phone},phone_number.eq.${args.farmer_phone}`)
-      .maybeSingle();
-    if (!farmer) return { sent: false, message: "Ye Farmer number database mein nahi mila." };
-
-    const { sendWhatsAppMessage } = await import("@/lib/whatsapp-client");
-    const targetNumber = farmer.whatsapp_number ?? farmer.phone_number;
-    await sendWhatsAppMessage(targetNumber, `${args.title}\n\n${args.message}`);
-    return { sent: true, message: `WhatsApp message ${targetNumber} ko bhej diya gaya.` };
+    // Malik (16 September): WhatsApp sirf OTP, Khata Recovery, aur
+    // bill/statement ke liye -- ye AI se mansooba (ad-hoc) WhatsApp
+    // bhi usi kharche mein shamil hota tha. AI ko sach batana zaroori
+    // hai, warna wo "bhej diya" keh kar jhoot bolega.
+    return {
+      sent: false,
+      message: "Ad-hoc WhatsApp message ab band hai (kharcha bachane ke liye) — sirf Announcement (in-app) bheji ja sakti hai.",
+    };
   }
 
   const { error } = await supabase.from("announcements").insert({
@@ -301,6 +300,285 @@ async function broadcastToFarmers(
   if (error) return { sent: false, message: "Announcement banane mein masla hua: " + error.message };
 
   return { sent: true, message: "Announcement ban gayi hai - sab Farmers ko unke agle Portal Login pe dikhegi." };
+}
+
+// ===== Tool 10: Shop order ka DRAFT (260) =====
+// "Mahabali ke liye DAP 20, Urea 30" -> agri_orders mein draft. Shop aur
+// product database se milte hain; jo na mile ya do mil jayen, wahan
+// order NAHI banta -- wapas poochha jata hai. Draft ordering ki chain
+// mein tab jata hai jab koi banda action-requests par manzoor kare. AI
+// khud kabhi 'submitted' nahi karta, rate khud nahi banata (thok rate
+// product par jo hai wohi; na ho to wo line nahi charhti).
+async function draftShopOrder(
+  supabase: ReturnType<typeof createClient>,
+  args: {
+    shop_name?: string;
+    items?: { product_name?: string; qty?: number }[];
+    payment_terms?: string;
+    notes?: string;
+  }
+) {
+  const { data: settings } = await supabase
+    .from("bridge_ai_settings")
+    .select("actions_enabled")
+    .eq("id", true)
+    .single();
+  if (!settings?.actions_enabled) {
+    return { created: false, message: "Action proposals abhi band hain - admin ne ye feature disable kar rakha hai." };
+  }
+  const shopName = (args.shop_name ?? "").trim();
+  const items = (args.items ?? []).filter((i) => i && i.product_name && Number(i.qty) > 0);
+  if (!shopName) return { created: false, message: "Kis shop/branch ke liye order hai, wo naam chahiye." };
+  if (items.length === 0) return { created: false, message: "Kam az kam ek product aur us ki tadad chahiye." };
+
+  // Shop: naam se milan. Main branch ko order nahi hota -- wo bhejne wala hai.
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name, is_main_branch")
+    .eq("is_active", true)
+    .ilike("name", `%${shopName}%`);
+  const shops = (branches ?? []).filter((b) => !b.is_main_branch);
+  if (shops.length === 0) {
+    const { data: all } = await supabase.from("branches").select("name").eq("is_active", true).eq("is_main_branch", false).order("name").limit(20);
+    return {
+      created: false,
+      message: `"${shopName}" naam ki koi shop/branch nahi mili.`,
+      available_shops: (all ?? []).map((b) => b.name),
+    };
+  }
+  if (shops.length > 1) {
+    return { created: false, message: `"${shopName}" se ek se zyada shops milti hain -- kaun si?`, candidates: shops.map((b) => b.name) };
+  }
+  const shop = shops[0];
+
+  // Products: ek ek naam. Do milen to poochho; rate na ho to line nahi.
+  const { data: catalogueRows } = await supabase
+    .from("products")
+    .select("id, name, pack_size, selling_price, wholesale_price, sale_rate_pending")
+    .eq("is_deleted", false)
+    .limit(5000);
+  const catalogue = catalogueRows ?? [];
+  const matched: { product_id: string; product_name: string; pack_size: string | null; unit_price: number; order_qty: number }[] = [];
+  const problems: { product_name: string; problem: string; candidates?: string[] }[] = [];
+  for (const it of items) {
+    const name = String(it.product_name).trim();
+    // Score ke sath milaan (H): bilkul wohi ya saaf aage wala lagta
+    // hai; do barabar hon ya score kam ho to poochha jata hai.
+    const d = decideMatch(name, null, catalogue);
+    if (d.kind === "none") {
+      if (d.candidates.length === 0) problems.push({ product_name: name, problem: "nahi mila" });
+      else
+        problems.push({
+          product_name: name,
+          problem: "saaf nahi kaun sa -- in mein se kaun sa?",
+          candidates: d.candidates.map((c) => `${c.item.name}${c.item.pack_size ? ` (${c.item.pack_size})` : ""} ~${Math.round(c.score * 100)}%`),
+        });
+      continue;
+    }
+    const pick = d.item;
+    // Thok rate branch ka rate hai; na ho to sale rate. Sale rate bhi
+    // baqi ho to is line ka koi rate nahi -- 0 likhna jhoot hota.
+    const unit = pick.wholesale_price != null ? Number(pick.wholesale_price) : pick.sale_rate_pending ? null : Number(pick.selling_price);
+    if (unit == null || unit <= 0) {
+      problems.push({ product_name: pick.name, problem: "rate baqi hai -- pehle Adhoore Products par rate bharein" });
+      continue;
+    }
+    matched.push({ product_id: pick.id, product_name: pick.name, pack_size: pick.pack_size, unit_price: unit, order_qty: Number(it.qty) });
+  }
+  if (problems.length > 0) {
+    return { created: false, message: "Kuch products par order nahi ban sakta -- pehle ye saaf karein.", problems, matched: matched.map((m) => `${m.product_name} x ${m.order_qty}`) };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Order number: wohi ginti jo haath se banaye order par chalti hai.
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  const svc = createServiceClient();
+  const year = new Date().getFullYear() % 100;
+  const { data: counter } = await svc.from("agri_order_counters").select("last_number").eq("year", year).maybeSingle();
+  const next = (counter?.last_number ?? 0) + 1;
+  if (counter) await svc.from("agri_order_counters").update({ last_number: next }).eq("year", year);
+  else await svc.from("agri_order_counters").insert({ year, last_number: next });
+  const orderNumber = `AGR-${year}-${String(next).padStart(5, "0")}`;
+
+  const subtotal = matched.reduce((s, m) => s + m.order_qty * m.unit_price, 0);
+  const paymentTerms = args.payment_terms === "Advance Payment" ? "Advance Payment" : "Credit";
+
+  const { data: order, error } = await supabase
+    .from("agri_orders")
+    .insert({
+      order_number: orderNumber,
+      order_type: "FMCG / Other",
+      order_from: "AgriBridge Company",
+      order_to_type: "Branch",
+      order_to_branch_id: shop.id,
+      shop_dealer_name: shop.name,
+      subtotal,
+      discount: 0,
+      tax: 0,
+      freight_charges: 0,
+      other_charges: 0,
+      grand_total: subtotal,
+      payment_terms: paymentTerms,
+      credit_limit: 0,
+      existing_outstanding: 0,
+      available_credit: 0,
+      projected_outstanding: subtotal,
+      // DRAFT: chain mein nahi. Manzoori par submitted hota hai.
+      status: "draft",
+      requested_by: user?.id ?? null,
+      notes: `Bridge AI ka draft${args.notes ? `: ${args.notes}` : ""}`,
+    })
+    .select("id")
+    .single();
+  if (error || !order) return { created: false, message: `Draft nahi ban saka: ${error?.message ?? "wajah maloom nahi"}` };
+
+  const { error: itemsErr } = await supabase.from("agri_order_items").insert(
+    matched.map((m) => ({
+      order_id: order.id,
+      product_id: m.product_id,
+      product_name: m.product_name,
+      pack_size: m.pack_size,
+      order_qty: m.order_qty,
+      unit_price: m.unit_price,
+      discount: 0,
+      tax: 0,
+      net_price: m.unit_price,
+      line_total: m.order_qty * m.unit_price,
+    }))
+  );
+  if (itemsErr) return { created: false, message: `Draft bana magar lines nahi charhin: ${itemsErr.message}` };
+
+  await supabase.from("agri_order_timeline").insert({ order_id: order.id, status: "draft", note: `Bridge AI ne draft banaya - ${orderNumber}`, created_by: user?.id ?? null });
+
+  const lines = matched.map((m) => `${m.product_name} x ${m.order_qty} @ Rs ${m.unit_price}`).join(", ");
+  await supabase.from("bridge_ai_action_requests").insert({
+    action_type: "order_draft",
+    description: `${shop.name} ke liye order draft ${orderNumber}: ${lines}`,
+    details: args.notes ?? null,
+    status: "pending",
+    created_order_id: order.id,
+  });
+
+  return {
+    created: true,
+    order_number: orderNumber,
+    shop: shop.name,
+    lines: matched.map((m) => ({ product: m.product_name, qty: m.order_qty, unit_price: m.unit_price })),
+    total: subtotal,
+    currency: "PKR",
+    message: `Draft ${orderNumber} ban gaya (Rs ${subtotal.toLocaleString()}). Ye abhi order NAHI hai -- /admin/bridge-ai/action-requests par manzoor hone ke baad Sales ke paas jayega.`,
+  };
+}
+
+// ===== Tool 11: Category/keyword se LIVE per-product stock =====
+// get_inventory_summary sirf total value deta hai; ye per-product actual
+// quantity deta hai -- inventory table se seedha, koi calculation nahi.
+async function getProductStock(
+  supabase: ReturnType<typeof createClient>,
+  args: Record<string, any>
+) {
+  const category = typeof args.category === "string" ? args.category.trim() : "";
+  const keyword = typeof args.keyword === "string" ? args.keyword.trim() : "";
+
+  if (!category && !keyword) {
+    const { data: cats } = await supabase
+      .from("products")
+      .select("category")
+      .eq("is_deleted", false);
+    const uniqueCats = [...new Set((cats ?? []).map((p: any) => p.category).filter(Boolean))].sort();
+    return {
+      found: false,
+      note: "Category ya product naam dein. Maujood categories:",
+      categories: uniqueCats,
+    };
+  }
+
+  let q = supabase
+    .from("products")
+    .select("id, name, pack_size, category, min_stock_threshold")
+    .eq("is_deleted", false);
+
+  if (category) q = q.ilike("category", `%${category}%`);
+  if (keyword) q = q.ilike("name", `%${keyword}%`);
+
+  const { data: products, error } = await (q as any).order("name").limit(200);
+  if (error) return { error: "Products nahi mile: " + error.message, found: false };
+  if (!products || products.length === 0) {
+    return {
+      found: false,
+      searched_for: category || keyword,
+      note: `"${category || keyword}" se koi product nahi mila. Naam ya category check karein.`,
+    };
+  }
+
+  const productIds = (products as any[]).map((p: any) => p.id);
+  const { data: inventory } = await supabase
+    .from("inventory")
+    .select("product_id, quantity_on_hand")
+    .in("product_id", productIds);
+
+  const stockMap = new Map<string, number>();
+  (inventory ?? []).forEach((row: any) => {
+    const cur = stockMap.get(row.product_id) ?? 0;
+    stockMap.set(row.product_id, cur + Number(row.quantity_on_hand ?? 0));
+  });
+
+  const items = (products as any[])
+    .map((p: any) => ({
+      product: `${p.name}${p.pack_size ? ` (${p.pack_size})` : ""}`,
+      category: p.category,
+      in_stock: Math.round((stockMap.get(p.id) ?? 0) * 100) / 100,
+      min_threshold: p.min_stock_threshold ? Number(p.min_stock_threshold) : null,
+      is_low_stock: p.min_stock_threshold
+        ? (stockMap.get(p.id) ?? 0) <= Number(p.min_stock_threshold)
+        : false,
+    }))
+    .sort((a: any, b: any) => b.in_stock - a.in_stock);
+
+  return {
+    found: true,
+    searched_for: category || keyword,
+    total_products: items.length,
+    in_stock_count: items.filter((i: any) => i.in_stock > 0).length,
+    out_of_stock_count: items.filter((i: any) => i.in_stock <= 0).length,
+    low_stock_count: items.filter((i: any) => i.is_low_stock && i.in_stock > 0).length,
+    data_as_of: new Date().toISOString(),
+    items,
+    note: "Live inventory se aaj ka data hai -- inventory table se seedha.",
+  };
+}
+
+// ===== Tool 12: Kya mangwana hai (262) =====
+// Bikri ki raftaar se: kitne din ka stock, kitna mangwayein. Sirf
+// parhta hai -- purchase banana safhe se ya draft_shop_order/propose se.
+async function getReorderSuggestions(supabase: ReturnType<typeof createClient>) {
+  const { data } = await supabase
+    .from("v_reorder_suggestions")
+    .select("name, pack_size, sold_30, on_hand, daily_rate, days_cover, suggested_qty, urgency, last_supplier_name, last_unit_cost")
+    .order("urgency")
+    .order("days_cover", { ascending: true, nullsFirst: false })
+    .limit(20);
+  const rows = (data ?? []).map((r) => ({
+    product: `${r.name}${r.pack_size ? ` (${r.pack_size})` : ""}`,
+    sold_last_30_days: Number(r.sold_30 ?? 0),
+    in_stock: Number(r.on_hand ?? 0),
+    // Bikri sifar ho to din ka hisaab NULL -- "hisaab nahi banta", sifar nahi.
+    days_of_stock_left: r.days_cover == null ? null : Number(r.days_cover),
+    suggested_order_qty: Number(r.suggested_qty ?? 0),
+    urgency: r.urgency,
+    last_supplier: r.last_supplier_name,
+    last_unit_cost: r.last_unit_cost == null ? null : Number(r.last_unit_cost),
+  }));
+  return {
+    rule: "roz ki bikri = 30 din ki bikri / 30; mangwana = roz ki bikri x (7 din raasta + 14 din stock) - jo para hai",
+    count: rows.length,
+    items: rows,
+    page: "/admin/products/reorder",
+    currency: "PKR",
+  };
 }
 
 // ===== Gemini ko batata hai har tool kya karta hai =====
@@ -348,6 +626,64 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
     parameters: { type: Type.OBJECT, properties: {} },
   },
   {
+    name: "get_product_stock",
+    description:
+      "Kisi category ya product ke naam se LIVE per-product stock dikhata hai -- kitna on-hand hai, kaun available hai kaun nahi. Jab user pooche 'coldrinks mein kya kya stock hai', 'cold drinks list', 'fertilizer ka stock', 'DAP kitna hai', 'kya available hai kya nahi', 'poori stock list' -- ye tool use karein. get_inventory_summary se ALAG hai: wo sirf aggregate total value deta hai -- ye per-product real quantity deta hai inventory table se seedha. Category dein (jaise 'cold drinks') ya product ka naam dein (jaise 'SPRITE').",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.STRING,
+          description:
+            "Product ki category jaise 'cold drinks', 'beverages', 'fertilizer', 'pesticide', 'seeds'. Database mein jo name hai -- keyword bhi chalega.",
+        },
+        keyword: {
+          type: Type.STRING,
+          description:
+            "Product ka naam ya hissa, jaise 'SPRITE', 'DAP', 'Urea'. Category ke sath ya bina bhi de sakte hain.",
+        },
+      },
+    },
+  },
+  {
+    name: "get_reorder_suggestions",
+    description:
+      "Kya mangwana chahiye: pichhle 30 din ki bikri ki raftaar se har product ka kitne din ka stock baqi hai aur kitna mangwana chahiye (7 din raasta + 14 din ka stock). Jab user pooche 'kya mangwana hai', 'kaun si cheez khatam ho rahi hai', 'stock kitne din chalega'.",
+  },
+  {
+    name: "get_supplier_dues",
+    description:
+      "Supplier ko kitna dena hai: har supplier ka baqi, jin ki tareekh guzar chuki (overdue) aur jo agle N din mein deni hain. Naam diya jaye to sirf usi supplier ka. Jab user pooche 'ABC ko kitne dene hain', 'kis supplier ki adaigi baqi hai', 'agle 7 din mein kitni adaigi hai', 'kaun si payment overdue hai'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        supplier_name: {
+          type: Type.STRING,
+          description: "Supplier ka naam ya us ka hissa. Khali chhoR dein to sab suppliers.",
+        },
+        days: {
+          type: Type.NUMBER,
+          description: "Agle kitne din ki adaigi dekhni hai (default 7).",
+        },
+      },
+    },
+  },
+  {
+    name: "get_farmer_outstanding",
+    description:
+      "Ek farmer ka POORA baqaya deta hai -- machine, doodh, khad/input credit, aur POS chaaron jama kar ke (Khata Recovery dashboard jaisa). Jab user pooche 'falan farmer ka kitna baqaya hai', 'is kisan ka total kitna lena hai' -- sirf ek hissa (jaise sirf machine ya sirf khad) nahi, poora jama shuda adad. Alag alag tool (get_farmer_credit_summary, get_machinery_summary) khud jama kar ke total mat banayein -- wo sirf apna apna hissa dete hain, is se dobara-ginti ya adhoora adad ban sakta hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        farmer_name: {
+          type: Type.STRING,
+          description: "Farmer ka naam ya farmer code (jaise ka hissa bhi chalega).",
+        },
+      },
+      required: ["farmer_name"],
+    },
+  },
+  {
     name: "propose_action",
     description:
       "Jab user AI se koi kaam karne ko kahe jo database change kare (jaise purchase order banana, task banana, ya kisi cheez ki sifarish), to ye tool use karein. Ye seedha koi change nahi karta - sirf ek proposal banata hai jo admin ko review/approve karna hoga. Agar ye ek purchase/stock-order type ki sifarish hai, to product_name aur suggested_quantity bhi zaroor bhrein taake admin approve karte waqt seedha purchase order bana sake.",
@@ -379,6 +715,32 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "draft_shop_order",
+    description:
+      "Kisi shop/branch ke liye stock order ka DRAFT banata hai (jaise 'Mahabali ke liye DAP 20 aur Urea 30'). Sirf draft -- asal order tab banta hai jab admin action-requests par manzoor kare. Shop aur product ka naam database se milaya jata hai; na mile ya kai milen to draft nahi banta aur wapas poochna hota hai. Rate khud mat likhein, system product ka thok rate lagata hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        shop_name: { type: Type.STRING, description: "Shop/branch ka naam jis ke liye maal chahiye (jaise 'Mahabali')" },
+        items: {
+          type: Type.ARRAY,
+          description: "Products aur tadad",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              product_name: { type: Type.STRING, description: "Product ka naam jaisa user ne kaha (jaise 'DAP')" },
+              qty: { type: Type.NUMBER, description: "Tadad (sirf number)" },
+            },
+            required: ["product_name", "qty"],
+          },
+        },
+        payment_terms: { type: Type.STRING, description: "'Credit' (khata, default) ya 'Advance Payment'" },
+        notes: { type: Type.STRING, description: "Koi note (Roman Urdu), optional" },
+      },
+      required: ["shop_name", "items"],
+    },
+  },
+  {
     name: "broadcast_to_farmers",
     description:
       "Jab user chahe ke saare Farmers ko ek Announcement/Message bheja jaye (jaise Naya Feature ka Elaan), ya kisi ek specific Farmer ko Reward/Individual Message bheji jaye, to ye tool use karein. 'target' ko 'all' rakhein sab Farmers ke liye (Announcement banega, unke Portal Login pe dikhega), ya 'specific' rakhein aur 'farmer_phone' dein ek Farmer ko seedha WhatsApp bhejne ke liye.",
@@ -393,14 +755,202 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
       required: ["title", "message", "target"],
     },
   },
+  {
+    name: "check_system_errors",
+    description:
+      "Malik (18 September): 'koi ghalti ho, kuch ho, mujhe pata chalna chahiye.' Poore system ki ghaltiyon ka ASAL khata (`/admin/errors` jo dikhata hai wahi) -- code, POS, inventory, purchase, machinery, finance, load-bill, kahin bhi. Jab user pooche 'koi masla/ghalti hui hai?', 'aaj system theek chal raha hai?', 'koi bug aaya?' -- ye tool use karein. Sirf abhi tak HAL NA hui (khuli) ghaltiyan wapas aati hain, purani hal-shuda nahi.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        severity: {
+          type: Type.STRING,
+          description: "'rukawat' (kaam ruk gaya), 'ghalti' (ghalat hua magar kaam chalta raha), ya 'khabar'. Khali chhoR dein to sab.",
+        },
+      },
+    },
+  },
 ];
 
 // ===== API route isi ek function ko call karega =====
+
+/**
+ * Supplier ko kitna dena hai.
+ *
+ * Ye adad kisi jagah haath se nahi likha jata: `v_supplier_due_calendar`
+ * received purchases mein se adaigiyan minus kar ke banata hai -- wohi
+ * hisaab jo /admin/purchases/bills par nazar aata hai. AI apna alag
+ * hisaab nahi lagata, warna do jagah do adad ho jate.
+ *
+ * Ginti na mile to `null` -- sifar NAHI. Sifar kehta hai "dena kuch
+ * nahi"; ye us se bilkul alag baat hai.
+ */
+async function getSupplierDues(
+  supabase: ReturnType<typeof createClient>,
+  args: Record<string, any>
+) {
+  const days = Number(args.days ?? 7);
+  const name = typeof args.supplier_name === "string" ? args.supplier_name.trim() : "";
+  const today = aajKaKhana();
+
+  let q = supabase
+    .from("v_supplier_due_calendar")
+    .select("supplier_id, supplier_name, purchase_number, due_date, days_left, supplier_payable")
+    .gt("supplier_payable", 0)
+    .order("due_date", { ascending: true })
+    .limit(500);
+  if (name) q = q.ilike("supplier_name", `%${name}%`);
+
+  const { data, error } = await q;
+  if (error) {
+    // Ghalti ko "kuch dena nahi" mat banao -- saaf batao ke hisaab nahi mila.
+    return { error: "Supplier ke dene ka hisaab nahi mil saka.", total_due: null };
+  }
+
+  const rows = (data ?? []) as any[];
+  if (name && rows.length === 0) {
+    return { supplier: name, found: false, note: `"${name}" naam ka koi supplier nahi mila jis ka dena baqi ho.` };
+  }
+
+  const bySupplier = new Map<string, { name: string; due: number; overdue: number; soon: number }>();
+  for (const r of rows) {
+    const key = String(r.supplier_id ?? r.supplier_name ?? "?");
+    const cur = bySupplier.get(key) ?? { name: r.supplier_name ?? "—", due: 0, overdue: 0, soon: 0 };
+    const amt = Number(r.supplier_payable ?? 0);
+    cur.due += amt;
+    if (r.due_date && String(r.due_date) < today) cur.overdue += amt;
+    else if (Number(r.days_left ?? 999) <= days) cur.soon += amt;
+    bySupplier.set(key, cur);
+  }
+
+  const list = [...bySupplier.values()].sort((a, b) => b.due - a.due);
+  return {
+    total_due: list.reduce((n, s) => n + s.due, 0),
+    total_overdue: list.reduce((n, s) => n + s.overdue, 0),
+    due_in_days: days,
+    total_due_soon: list.reduce((n, s) => n + s.soon, 0),
+    suppliers: list.slice(0, 15).map((s) => ({
+      name: s.name,
+      baqi: Math.round(s.due),
+      overdue: Math.round(s.overdue),
+      agle_dinon_mein: Math.round(s.soon),
+    })),
+  };
+}
+
+/**
+ * `/admin/errors` jo dikhata hai wahi -- `v_error_summary` (error_log ka
+ * fingerprint se jama shuda view). Malik (18 September): "koi ghalti ho,
+ * mujhe pata chalna chahiye" -- Abram ko wahi khata dete hain jo insaan
+ * ko dikhta hai, koi alag/naya hisaab nahi banaya.
+ */
+async function checkSystemErrors(supabase: ReturnType<typeof createClient>, args: Record<string, any>) {
+  const severity = typeof args.severity === "string" ? args.severity.trim() : "";
+
+  let q = supabase
+    .from("v_error_summary")
+    .select("module, message, severity, kitni_dafa, aakhri_dafa, khuli")
+    .gt("khuli", 0)
+    .order("aakhri_dafa", { ascending: false })
+    .limit(20);
+  if (severity) q = q.eq("severity", severity);
+
+  const { data, error } = await q;
+  if (error) {
+    return { error: "Ghaltiyon ka khata is waqt parha nahi ja saka.", checked: false };
+  }
+
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) {
+    return { koi_khuli_ghalti_nahi: true, note: "Abhi tak koi khuli (hal na hui) ghalti darj nahi -- ye khata /admin/errors se hai." };
+  }
+
+  return {
+    khuli_ghaltiyon_ki_tadad: rows.length,
+    ghaltiyan: rows.map((r) => ({
+      module: r.module,
+      paighaam: r.message,
+      severity: r.severity,
+      kitni_dafa: Number(r.kitni_dafa ?? 0),
+      aakhri_dafa: r.aakhri_dafa,
+    })),
+  };
+}
+
+/**
+ * Ek farmer ka POORA baqaya -- machine + doodh + khad/input + POS, ek
+ * jagah se (`v_farmer_combined_balance`, migration 411). Ye AI ko wahi
+ * ek jagah se hisaab lagane par majboor karta hai jo Khata Recovery
+ * dashboard khud dikhata hai -- alag alag tool (get_farmer_credit_summary
+ * sirf khad, get_machinery_summary sirf machine) jama kar ke khud se
+ * "total" banana yahan jaan boojh kar mana hai, warna wahi ghalti dobara
+ * ho sakti hai jo kabhi `harvest_area_acres` ke saath hui thi (adhoora
+ * adad poora bata dena).
+ */
+async function getFarmerOutstanding(
+  supabase: ReturnType<typeof createClient>,
+  args: Record<string, any>
+) {
+  const name = typeof args.farmer_name === "string" ? args.farmer_name.trim() : "";
+  if (!name) return { error: "Farmer ka naam chahiye.", found: false };
+
+  const { data, error } = await supabase
+    .from("v_farmer_combined_balance")
+    .select("full_name, farmer_code, phone, machine_aur_gl_baqi, doodh_baqi, khad_baqi, pos_baqi, total_baqi, last_activity")
+    .or(`full_name.ilike.%${name}%,farmer_code.ilike.%${name}%`)
+    .order("total_baqi", { ascending: false })
+    .limit(5);
+
+  if (error) return { error: "Farmer ka baqaya nikalte waqt masla hua.", found: false };
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) return { farmer_name: name, found: false, note: `"${name}" naam ka koi farmer nahi mila.` };
+
+  return {
+    found: true,
+    matches: rows.map((r) => ({
+      farmer_name: r.full_name,
+      farmer_code: r.farmer_code,
+      phone: r.phone,
+      machine_aur_ledger_baqi: Number(r.machine_aur_gl_baqi ?? 0),
+      doodh_baqi: Number(r.doodh_baqi ?? 0),
+      khad_baqi: Number(r.khad_baqi ?? 0),
+      pos_baqi: Number(r.pos_baqi ?? 0),
+      total_baqi: Number(r.total_baqi ?? 0),
+      last_activity: r.last_activity,
+    })),
+    currency: "PKR",
+  };
+}
+
+// ===== Role-based gating =====
+// Company-wide financial aur operational data sirf broad roles ko —
+// sales/shop staff sirf apna kaam dekh sakta hai, business ka poora
+// khata unhe nahi dikhna chahiye.
+const BROAD_ROLES = new Set(["owner", "super_admin", "admin", "finance", "manager"]);
+
+const STAFF_ALLOWED_TOOLS = new Set([
+  "propose_action",
+  "draft_shop_order",
+  "get_reorder_suggestions",
+  "get_product_stock",
+  "check_system_errors",
+  "get_farmer_outstanding",
+]);
+
+/** Staff ke liye sirf allowed tools ki declarations bhejta hai Gemini ko. */
+export function bridgeToolsForRole(role: string): FunctionDeclaration[] {
+  if (BROAD_ROLES.has(role)) return bridgeToolDeclarations;
+  return bridgeToolDeclarations.filter((t) => STAFF_ALLOWED_TOOLS.has(t.name!));
+}
+
 export async function executeBridgeTool(
   name: string,
   supabase: ReturnType<typeof createClient>,
-  args?: Record<string, any>
+  args?: Record<string, any>,
+  userRole?: string
 ) {
+  if (userRole && !BROAD_ROLES.has(userRole) && !STAFF_ALLOWED_TOOLS.has(name)) {
+    return { error: "Aap ke role ke liye ye maloomat nahi hai. Apne manager se poochein.", access_denied: true };
+  }
   switch (name) {
     case "get_financial_summary":
       return getFinancialSummary(supabase);
@@ -420,6 +970,18 @@ export async function executeBridgeTool(
       return proposeAction(supabase, args ?? {});
     case "broadcast_to_farmers":
       return broadcastToFarmers(supabase, args ?? {});
+    case "draft_shop_order":
+      return draftShopOrder(supabase, args ?? {});
+    case "get_product_stock":
+      return getProductStock(supabase, args ?? {});
+    case "get_reorder_suggestions":
+      return getReorderSuggestions(supabase);
+    case "get_supplier_dues":
+      return getSupplierDues(supabase, args ?? {});
+    case "get_farmer_outstanding":
+      return getFarmerOutstanding(supabase, args ?? {});
+    case "check_system_errors":
+      return checkSystemErrors(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -428,13 +990,13 @@ export async function executeBridgeTool(
 // ===== Specialized Agent System Instructions =====
 export const AGENT_SYSTEM_INSTRUCTIONS: Record<string, string> = {
   crop:
-    "Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein -- khud se koi adad mat banayein, tool ki maloomat seedha dikhayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Kisi bhi product ya category ka LIVE stock poochein (\"fertilizer stock\", \"DAP kitna hai\", \"kya available hai\") to get_product_stock tool use karein -- ye inventory table se seedha real quantity deta hai, sirf andaza nahi. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   livestock:
-    "Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein -- khud se koi adad mat banayein, tool ki maloomat seedha dikhayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Kisi bhi product ya category ka LIVE stock poochein to get_product_stock tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   finance:
-    "Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein -- khud se koi adad mat banayein, tool ki maloomat seedha dikhayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Kisi bhi product ya category ka LIVE stock poochein to get_product_stock tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   general:
-    "Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein.",
+    "Aap ka naam Abram hai. Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein -- khud se koi adad mat banayein, tool ki maloomat seedha dikhayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Kisi bhi product ya category ka LIVE stock poochein (\"coldrinks mein kya kya hai\", \"stock list\", \"kia available hai\", \"DAP kitna para hai\") to get_product_stock tool use karein -- ye inventory table se seedha per-product real quantity deta hai, khud se andaza BILKUL MAT LAGAYEIN. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
 };
 
 // Simple keyword-based router - koi extra AI call nahi lagti, turant

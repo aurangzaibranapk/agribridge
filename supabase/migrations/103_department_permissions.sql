@@ -1,0 +1,31 @@
+-- =====================================================================
+-- Migration 103: Department (role) ki ijazat ek hi jagah
+-- =====================================================================
+-- Ab tak ijazat sirf shakhs ke naam par thi: har naye staff ke liye
+-- 150 safhe haath se tick karne parte the. Nateeja wahi nikalta jo aisi
+-- soorat mein hamesha nikalta hai -- kaam ki jaldi mein logon ko poori
+-- ijazat de di jati hai, aur rok kaghaz par reh jati hai.
+--
+-- Ab ijazat department par lagti hai. Ek dafa tay karein, us department
+-- ke har shakhs par lag jata hai. Kisi ek shakhs ko alag ijazat deni ho
+-- to us ka apna set us se bhaari rehta hai.
+--
+-- Machinery ka apna role bhi banaya -- pehle machinery rental ke liye
+-- koi role tha hi nahi, is liye us kaam wala shakhs majboori mein
+-- sales ya admin ban jata tha, aur us ke sath poori sales ki ijazat bhi
+-- le jata tha.
+
+alter type user_role add value if not exists 'machinery';
+
+-- =====================================================================
+-- YAHIN RUKEIN. Agli file (103b) alag chalayein.
+-- =====================================================================
+-- Postgres nayi enum value ko USI transaction mein istemal nahi karne
+-- deta jis mein wo shamil ki gayi ho. Neeche 'machinery' ko ijazat deni
+-- hai, is liye wo hissa alag file mein hai.
+--
+-- Ye taqseem live par to ki gayi thi, magar file mein mahfooz nahi hui.
+-- Nateeja ye ke ye file kabhi bhi sifar se nahi chal sakti thi -- aur ye
+-- baat tabhi maloom hui jab testing database banaya gaya. Yehi wajah hai
+-- ke "code se poora database dobara ban sakta hai" ko maan lena kaafi
+-- nahi, use kar ke dekhna parta hai.

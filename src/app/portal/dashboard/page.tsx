@@ -112,6 +112,37 @@ export default async function FarmerDashboardPage() {
   const totalCreditIssued = (creditLedgerRows ?? []).filter((r) => r.ledger_type === "debit").reduce((sum, r) => sum + Number(r.amount), 0);
   const totalCreditRepaid = (creditLedgerRows ?? []).filter((r) => r.ledger_type === "credit").reduce((sum, r) => sum + Number(r.amount), 0);
 
+  // Saboot ki ginti -- score dikhane se pehle.
+  //
+  // Ye wo kaam hain jo kisan ke naam par WAQAI hue aur jin par kisi na
+  // kisi taur par tasdeeq ka nishan hai: tasdeeq shuda doodh, wo booking
+  // jis ka rate kisan ne khud maan liya, aur udhaar ke khate ki har
+  // qatar (wo bina kisi ke darj kiye banti hi nahi).
+  //
+  // Fasal aur kattai ka record yahan jaan boojh kar nahi gina gaya: wo
+  // kisan apne liye khud likhta hai, aur us par kisi doosre ki tasdeeq
+  // nahi hoti. Us se score ka saboot banana bande ko apna hi darja
+  // barhane ka raasta de deta.
+  const [{ count: verifiedMilkCount }, { count: confirmedBookingCount }] = await Promise.all([
+    supabase
+      .from("milk_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("farmer_id", farmer.id)
+      .not("verified_at", "is", null),
+    supabase
+      .from("machinery_bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("farmer_id", farmer.id)
+      .not("farmer_confirmed_at", "is", null),
+  ]);
+
+  const meaningfulEventCount =
+    (verifiedMilkCount ?? 0) + (confirmedBookingCount ?? 0) + (creditLedgerRows?.length ?? 0);
+
+  const relationshipDays = farmer.created_at
+    ? Math.floor((Date.now() - new Date(farmer.created_at).getTime()) / 86_400_000)
+    : 0;
+
   const creditScore = computeFarmerCreditScore({
     profileComplete: completion.isComplete,
     hasVerifiedFarm: !!verifiedFarm,
@@ -119,6 +150,8 @@ export default async function FarmerDashboardPage() {
     totalCreditRepaid,
     harvestRecordCount: harvestCount,
     cropCount: cropsCount,
+    relationshipDays,
+    meaningfulEventCount,
   });
 
   const { data: wallet } = await supabase

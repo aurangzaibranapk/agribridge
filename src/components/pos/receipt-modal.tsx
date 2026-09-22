@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui/form";
 import { X, MessageCircle, Mail, Printer } from "lucide-react";
@@ -20,6 +21,7 @@ interface ReceiptData {
   khata_amount: number;
   outstanding_balance: number;
   seller_name: string;
+  shop_name: string | null;
   seller_phone: string | null;
   cashier_name: string;
   customer_name: string;
@@ -27,7 +29,16 @@ interface ReceiptData {
   items: ReceiptItem[];
 }
 
-export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () => void }) {
+export function ReceiptModal({
+  saleId,
+  onClose,
+  lang,
+}: {
+  saleId: string;
+  onClose: () => void;
+  /** Zaban server se aati hai -- dekhein pos-client.tsx ka note. */
+  lang: Lang;
+}) {
   const supabase = createClient();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +67,8 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
 
   function buildReceiptText(r: ReceiptData) {
     const lines = [
-      `${r.seller_name}`,
+      r.shop_name ? `${r.shop_name}` : `${r.seller_name}`,
+      r.shop_name ? `${r.seller_name}` : "",
       r.seller_phone ? `Ph: ${r.seller_phone}` : "",
       formatDate(r.created_at),
       r.customer_name ? `Customer: ${r.customer_name}` : "",
@@ -65,11 +77,11 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
         (item) => `${item.name} x${item.quantity} @ Rs ${item.unit_price.toLocaleString()} = Rs ${item.subtotal.toLocaleString()}`
       ),
       "",
-      `Grand Total: Rs ${r.total_amount.toLocaleString()}`,
+      `${t("pos_grand_total", lang)}: Rs ${r.total_amount.toLocaleString()}`,
     ];
     if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
     if (r.khata_amount > 0) lines.push(`Khata (Credit): Rs ${r.khata_amount.toLocaleString()}`);
-    if (r.outstanding_balance > 0) lines.push(`Total Outstanding Balance: Rs ${r.outstanding_balance.toLocaleString()}`);
+    if (r.outstanding_balance > 0) lines.push(`${t("pos_outstanding", lang)}: Rs ${r.outstanding_balance.toLocaleString()}`);
     lines.push("", "Thank You for Shopping!", "POS Solution by ZR Technologies", "📞 0312-6513294");
     return lines.filter(Boolean).join("\n");
   }
@@ -111,123 +123,128 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:bg-transparent">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:h-auto print:min-h-0 print:bg-transparent print:p-0">
+      {/*
+        Thermal printer ka apna "kaghaz ka size" hota hai -- bina bataye
+        browser use A4/Letter maan leta hai, aur receipt us bade safhe
+        ke ek kone mein chhoti si print hoti hai (ya kaT kar kai safhon
+        mein bikhar jati hai). Ye rule SIRF is Modal ke khule hone tak
+        maujood hai, is liye Export Catalogue jaisi Letter-size print par
+        koi asar nahi (15 September).
+
+        16 September: is se bhi bara masla -- ye wrapper `fixed inset-0
+        flex items-center justify-center` hai (screen par modal ko
+        center karne ke liye), aur ye print mein bhi laagu rehta tha.
+        Chrome ka print engine chhoti receipt ko poore viewport-height
+        box ke beech mein center karta, aur upar-neeche khali kaghaz bach
+        jata. `print:static print:block` se print ke waqt ye centering
+        hatt jati hai, receipt seedha kaghaz ke upar se shuru hoti hai.
+      */}
+      <style>{`
+        @media print {
+          @page { size: 80mm auto; margin: 3mm; }
+          html, body { margin: 0; background: #fff; }
+          /* 18 September, malik: print par receipt ke upar/neeche
+             peeche wale safhe ka content (jaise Khata ki table, Sold/
+             Can Return button) bhi chhap raha tha -- receipt ka koi
+             fixed height/isolation nahi tha, is liye poora page print
+             ho raha tha, sirf receipt nahi. Ab sab kuch chhupa dete
+             hain, sirf #receipt-print-area (aur us ke andar jo
+             print:hidden nahi hai) dikhta hai. */
+          body * { visibility: hidden; }
+          #receipt-print-area, #receipt-print-area * { visibility: visible; }
+          #receipt-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          /* Halka grey thermal printer par mit jata hai -- print ke
+             liye sab kuch pakka siyah, aur dashed lines mota. */
+          #receipt-print-area, #receipt-print-area * { color: #000 !important; }
+          #receipt-print-area .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
+        }
+      `}</style>
       <div
         id="receipt-print-area"
-        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900 print:max-h-none print:shadow-none"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-full print:p-0 print:text-[13px] print:shadow-none"
       >
         <div className="mb-3 flex items-center justify-between print:hidden">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Receipt</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_receipt", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {loading || !receipt ? (
-          <p className="py-10 text-center text-sm text-surface-400">Loading receipt...</p>
+          <p className="py-10 text-center text-sm text-surface-400">{t("pos_receipt_loading", lang)}</p>
         ) : (
           <>
             <div className="text-center">
-              <p className="font-display text-base font-semibold text-surface-900 dark:text-white">{receipt.seller_name}</p>
-              {receipt.seller_phone && <p className="text-xs text-surface-400">Ph: {receipt.seller_phone}</p>}
-              <p className="mt-1 text-xs text-surface-400">{formatDate(receipt.created_at)}</p>
+              <p className="font-display text-lg font-bold uppercase tracking-wide text-surface-900 dark:text-white">
+                {receipt.shop_name ?? receipt.seller_name}
+              </p>
+              {receipt.shop_name && (
+                <p className="text-[11px] uppercase tracking-wide text-surface-500">{receipt.seller_name}</p>
+              )}
+              {receipt.seller_phone && <p className="mt-0.5 text-xs text-surface-500">Ph: {receipt.seller_phone}</p>}
+              <p className="mt-1 text-xs text-surface-500">{formatDate(receipt.created_at)}</p>
             </div>
 
-            <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="py-0.5 text-surface-500">Cashier</td>
-                  <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">{receipt.cashier_name}</td>
-                </tr>
-                {receipt.customer_name && (
-                  <tr>
-                    <td className="py-0.5 text-surface-500">Customer</td>
-                    <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">{receipt.customer_name}</td>
-                  </tr>
-                )}
-                <tr>
-                  <td className="py-0.5 text-surface-500">Payment Mode</td>
-                  <td className="py-0.5 text-right capitalize text-surface-900 dark:text-surface-100">{receipt.payment_mode}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="space-y-1 text-xs">
+              <ReceiptRow label={t("pos_cashier", lang)} value={receipt.cashier_name} />
+              {receipt.customer_name && <ReceiptRow label={t("pos_customer", lang)} value={receipt.customer_name} />}
+              <ReceiptRow label={t("pos_payment_mode", lang)} value={receipt.payment_mode} capitalize />
+            </div>
 
-            <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-surface-500">
-                  <td className="pb-1.5">Item</td>
-                  <td className="pb-1.5 text-center">Qty</td>
-                  <td className="pb-1.5 text-right">Rate</td>
-                  <td className="pb-1.5 text-right">Total</td>
+                <tr className="border-b border-surface-300 text-surface-500 dark:border-surface-700">
+                  <td className="pb-1.5 font-semibold uppercase tracking-wide">{t("pos_item", lang)}</td>
+                  <td className="pb-1.5 text-center font-semibold uppercase tracking-wide">{t("pos_qty", lang)}</td>
+                  <td className="pb-1.5 text-right font-semibold uppercase tracking-wide">{t("pos_rate", lang)}</td>
+                  <td className="pb-1.5 text-right font-semibold uppercase tracking-wide">{t("pos_total", lang)}</td>
                 </tr>
               </thead>
               <tbody>
                 {receipt.items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-1">{item.name}</td>
-                    <td className="py-1 text-center">{item.quantity}</td>
-                    <td className="py-1 text-right">{item.unit_price.toLocaleString()}</td>
-                    <td className="py-1 text-right">{item.subtotal.toLocaleString()}</td>
+                  <tr key={idx} className="align-top">
+                    <td className="py-1 pr-1">{item.name}</td>
+                    <td className="py-1 text-center tabular-nums">{item.quantity}</td>
+                    <td className="py-1 text-right tabular-nums">{item.unit_price.toLocaleString()}</td>
+                    <td className="py-1 text-right font-medium tabular-nums">{item.subtotal.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="py-0.5 text-surface-500">Grand Total</td>
-                  <td className="py-0.5 text-right font-semibold text-surface-900 dark:text-surface-100">
-                    Rs {receipt.total_amount.toLocaleString()}
-                  </td>
-                </tr>
-                {receipt.cash_paid > 0 && (
-                  <tr>
-                    <td className="py-0.5 text-surface-500">Cash Paid</td>
-                    <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">
-                      Rs {receipt.cash_paid.toLocaleString()}
-                    </td>
-                  </tr>
-                )}
-                {receipt.khata_amount > 0 && (
-                  <tr>
-                    <td className="py-0.5 font-medium text-red-600">Khata (Credit)</td>
-                    <td className="py-0.5 text-right font-medium text-red-600">
-                      Rs {receipt.khata_amount.toLocaleString()}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <div className="space-y-1 text-xs">
+              <ReceiptRow label={t("pos_grand_total", lang)} value={`Rs ${receipt.total_amount.toLocaleString()}`} strong />
+              {receipt.cash_paid > 0 && (
+                <ReceiptRow label={t("pos_cash_paid", lang)} value={`Rs ${receipt.cash_paid.toLocaleString()}`} />
+              )}
+              {receipt.khata_amount > 0 && (
+                <ReceiptRow label={t("pos_khata_credit", lang)} value={`Rs ${receipt.khata_amount.toLocaleString()}`} tone="red" />
+              )}
+            </div>
 
             {receipt.outstanding_balance > 0 && (
               <>
-                <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-0.5 font-semibold text-amber-700 dark:text-amber-400">
-                        Total Outstanding Balance
-                      </td>
-                      <td className="py-0.5 text-right font-semibold text-amber-700 dark:text-amber-400">
-                        Rs {receipt.outstanding_balance.toLocaleString()}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
+                <ReceiptRow
+                  label={t("pos_outstanding", lang)}
+                  value={`Rs ${receipt.outstanding_balance.toLocaleString()}`}
+                  tone="amber"
+                  strong
+                />
               </>
             )}
 
-            <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
-            <p className="text-center text-xs text-surface-400">Thank You for Shopping!</p>
-            <p className="text-center text-xs text-surface-400">POS Solution by ZR Technologies</p>
-            <p className="text-center text-xs text-surface-400">📞 0312-6513294</p>
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
+            <p className="text-center text-xs font-medium text-surface-600 dark:text-surface-400">{t("pos_thank_you", lang)}</p>
+            <p className="text-center text-[11px] text-surface-500">{t("at_pos_by", lang)}</p>
+            <p className="text-center text-[11px] text-surface-500">📞 0312-6513294</p>
 
             <div className="mt-4 flex gap-2 print:hidden">
               <Button variant="secondary" className="flex-1" onClick={handlePrint}>
@@ -245,7 +262,7 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
               <div className="mt-3 space-y-2 print:hidden">
                 <Input
                   type="email"
-                  placeholder="Email address"
+                  placeholder={t("pos_email_address", lang)}
                   value={emailAddress}
                   onChange={(e) => setEmailAddress(e.target.value)}
                 />
@@ -261,11 +278,51 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             )}
 
             <Button className="mt-3 w-full print:hidden" onClick={onClose}>
-              Close
+              {t("pos_close", lang)}
             </Button>
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ek qatar -- label aur qeemat. Flex se, table se nahi -- taake lamba
+ * label (jaise "Total Outstanding Balance") apni jagah neeche wrap ho
+ * jaye, magar qeemat kabhi apni jagah se na hate. Table cells mein
+ * yehi cheez pehle ek doosre se alag ho kar bikhar jati thi (thermal
+ * ki tang chaudai par, 15 September).
+ */
+function ReceiptRow({
+  label,
+  value,
+  strong,
+  capitalize,
+  tone,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  capitalize?: boolean;
+  tone?: "red" | "amber";
+}) {
+  const toneClass =
+    tone === "red"
+      ? "text-red-600"
+      : tone === "amber"
+        ? "text-amber-700 dark:text-amber-400"
+        : "text-surface-900 dark:text-surface-100";
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className={tone ? `font-medium ${toneClass}` : "text-surface-500"}>{label}</span>
+      <span
+        className={`shrink-0 whitespace-nowrap text-right tabular-nums ${strong ? "font-semibold" : ""} ${
+          capitalize ? "capitalize" : ""
+        } ${toneClass}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

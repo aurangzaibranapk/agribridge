@@ -1,53 +1,23 @@
-"use client";
-import { useFormState, useFormStatus } from "react-dom";
-import Link from "next/link";
-import { requestPasswordReset, type ActionState } from "@/actions/password-reset";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LangProvider } from "@/lib/i18n/lang-context";
+import { ForgotPasswordForm } from "./forgot-password-form";
 
-const initialState: ActionState = {};
-
+/**
+ * Darwaze ke safhon ke liye zaban ka bandobast.
+ *
+ * Form khud client par chalta hai (useFormState), aur client component
+ * cookie nahi parh sakta. Pehle poora safha client tha, is liye us tak
+ * zaban pahunchne ka koi raasta hi nahi tha.
+ *
+ * LangProvider yahan lagaya ja raha hai, root layout par nahi: root
+ * layout poori website ka hai aur wahan cookies() parhne se har safha
+ * dynamic ho jata -- public website ka static rendering khatam.
+ */
 export default function ForgotPasswordPage() {
-  const [state, formAction] = useFormState(requestPasswordReset, initialState);
-
+  const lang = getLanguageFromCookies("ur");
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-900 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <Link href="/" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-lg font-bold text-brand-700">AR</Link>
-          <h1 className="font-display text-xl font-semibold text-white">Password Reset Karein</h1>
-        </div>
-
-        <div className="rounded-card bg-white p-6 shadow-card">
-          {state.success ? (
-            <div className="text-center">
-              <p className="mb-3 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700">
-                Agar aapki email hamare system mein hai, to reset link bhej diya gaya hai. Apni inbox check karein.
-              </p>
-              <Link href="/login" className="text-sm font-medium text-brand-700 hover:underline">Wapis Login Karein</Link>
-            </div>
-          ) : (
-            <form action={formAction} className="space-y-4">
-              {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-              <div>
-                <label className="text-sm font-medium text-surface-700">Email</label>
-                <input type="email" name="email" required placeholder="aapki@email.com" className="mt-1 w-full rounded-lg border border-surface-200 p-2.5 text-sm" />
-              </div>
-              <SubmitButton />
-              <p className="text-center text-sm text-surface-500">
-                <Link href="/login" className="font-medium text-brand-700 hover:underline">Wapis Login Karein</Link>
-              </p>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
-      {pending ? "Bheja ja raha hai..." : "Reset Link Bhejein"}
-    </button>
+    <LangProvider lang={lang}>
+      <ForgotPasswordForm />
+    </LangProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { Wallet as WalletIcon, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { t, type Lang } from "@/lib/i18n/translations";
 
 interface Transaction {
   id: string;
@@ -10,14 +11,24 @@ interface Transaction {
   created_at: string;
 }
 
+/**
+ * Zaban PROP se aati hai, yahan cookie se nahi.
+ *
+ * Ye component do jagah se bulaya jata hai: admin ka my-wallet (jahan
+ * default Roman hai) aur kisan ka portal wallet (jahan default Urdu
+ * hai). Andar khud cookie parhne par dono jagah ek hi fallback lagta,
+ * aur ek jagah ka jawab ghalat hota.
+ */
 export function WalletView({
   balance,
   heldBalance,
   transactions,
+  lang,
 }: {
   balance: number;
   heldBalance: number;
   transactions: Transaction[];
+  lang: Lang;
 }) {
   function typeLabel(type: string) {
     const map: Record<string, string> = {
@@ -44,27 +55,27 @@ export function WalletView({
         <div className="rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 p-6 text-white shadow-lg">
           <div className="flex items-center gap-2 text-white/80">
             <WalletIcon className="h-5 w-5" />
-            <span className="text-xs font-medium uppercase tracking-wide">Available Balance</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("sh_available_balance", lang)}</span>
           </div>
           <p className="mt-2 font-display text-3xl font-bold">Rs {balance.toLocaleString()}</p>
         </div>
         {heldBalance > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-            <span className="text-xs font-medium uppercase tracking-wide text-amber-700">Held (Pending)</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-amber-700">{t("sh_held_pending", lang)}</span>
             <p className="mt-2 font-display text-2xl font-bold text-amber-800">Rs {heldBalance.toLocaleString()}</p>
           </div>
         )}
       </div>
 
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900">Transaction History</h2>
+      <h2 className="mb-3 font-display text-base font-semibold text-surface-900">{t("sh_txn_history", lang)}</h2>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left">
-              <th className="px-4 py-3 font-medium text-surface-500">Date</th>
-              <th className="px-4 py-3 font-medium text-surface-500">Description</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Amount</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Balance</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("c_description", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -90,9 +101,7 @@ export function WalletView({
             ))}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-surface-400">
-                  No transactions yet.
-                </td>
+                <td colSpan={4} className="px-4 py-10 text-center text-surface-400">{t("sh_no_transactions", lang)}</td>
               </tr>
             )}
           </tbody>

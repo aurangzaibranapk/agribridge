@@ -1,0 +1,36 @@
+.desk-workspace { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.desk-tabs { display:flex; flex:1; flex-direction:column; gap:10px; min-height:0; }
+.desk-tab-panel[hidden] { display:none; }
+.desk-tab-panel { min-height:0; }
+.desk-card { border:1px solid #dbe6df; border-radius:12px; background:white; padding:14px; min-width:0; }
+.dark .desk-card { background:#111827; border-color:#334155; }
+.desk-table { width:100%; font-size:12px; border-collapse:collapse; }
+.desk-table th { text-align:left; color:#64748b; background:#f4f7f5; padding:8px; }
+.desk-table td { padding:8px; border-bottom:1px solid #eef2f0; }
+.desk-metric { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+@media (min-width:1024px) {
+  main.desk-main { overflow:hidden; padding:12px 18px; }
+  main.desk-main > p:last-child { display:none; }
+  .desk-workspace { height:100%; min-height:0; overflow:hidden; }
+  .desk-tab-panel { flex:1; overflow:auto; overscroll-behavior:contain; }
+  .desk-load > div:first-child { margin-bottom:0; }
+  .desk-load .load-body { min-height:0; flex:1; display:flex; flex-direction:column; gap:8px; }
+  .desk-load .load-entry-grid { min-height:0; flex:1; }
+  .desk-load .load-entry-card { min-height:0; overflow:auto; padding:12px; }
+  .desk-load .load-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 16px; }
+  .desk-load .load-form > * { margin-top:0!important; }
+  .desk-load .load-form > button { align-self:end; }
+  .desk-load .load-form input,.desk-load .load-form select { min-height:34px; padding-top:6px; padding-bottom:6px; }
+  .desk-load .load-form label { font-size:12px; }
+  .desk-load .load-form p { font-size:11px; }
+  .desk-load .load-form > input[type=hidden] { display:none; }
+}
+@media (max-height:800px) and (min-width:1024px) {
+  .desk-workspace { gap:8px; }
+  .desk-card { padding:10px; }
+  .desk-metric { font-size:19px; }
+  .desk-table td,.desk-table th { padding:5px 8px; }
+}
+@media print {
+  main.desk-main,.desk-workspace,.desk-tab-panel { height:auto!important; overflow:visible!important; }
+}

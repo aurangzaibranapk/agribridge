@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { BillingClient } from "./billing-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export default async function CompanyBillingPage({
   const month = params.month ? Number(params.month) : now.getMonth() + 1;
   const year = params.year ? Number(params.year) : now.getFullYear();
   const branchFilter = params.branch_id ?? "";
+  const lang = getLanguageFromCookies("rm");
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDateObj = new Date(year, month, 0);
@@ -83,7 +86,7 @@ export default async function CompanyBillingPage({
 
   return (
     <div>
-      <PageHeader title="Company Billing & P&L" description="Auto-generated monthly invoice and live profit/loss breakdown" />
+      <PageHeader title={t("mc_billing_title", lang)} description="Auto-generated monthly invoice and live profit/loss breakdown" />
       <BillingClient
         month={month}
         year={year}

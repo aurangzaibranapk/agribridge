@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { UrduAgreementTemplate } from "@/components/agreement/urdu-agreement-template";
 import { AgreementAdminActions } from "./agreement-admin-actions";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAgreementPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
@@ -13,7 +16,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
   const { data: settings } = await supabase.from("company_billing_settings").select("company_stamp_url").limit(1).single();
 
   if (!agreement) {
-    return <div className="p-8 text-center text-surface-400">Agreement nahi mila.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("at_agreement_not_found", lang)}</div>;
   }
 
   const branch = Array.isArray(agreement.branches) ? agreement.branches[0] : agreement.branches;
@@ -50,7 +53,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
 
   return (
     <div>
-      <PageHeader title="Rent Agreement" description={`${branch?.name ?? "Shop"} - ${agreement.landlord_name}`} />
+      <PageHeader title={t("at_rent_agreement", lang)} description={`${branch?.name ?? "Shop"} - ${agreement.landlord_name}`} />
       <AgreementAdminActions
         agreementId={agreement.id}
         signingToken={agreement.signing_token}

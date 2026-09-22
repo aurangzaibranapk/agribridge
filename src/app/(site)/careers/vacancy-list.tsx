@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { Briefcase, MapPin } from "lucide-react";
 import { ApplyForm } from "./apply-form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface Vacancy {
   id: string;
@@ -13,11 +15,12 @@ interface Vacancy {
 }
 
 export function VacancyList({ vacancies }: { vacancies: Vacancy[] }) {
+  const lang = useLang();
   const [openId, setOpenId] = useState<string | null>(null);
   const [applyId, setApplyId] = useState<string | null>(null);
 
   if (vacancies.length === 0) {
-    return <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-surface-400">Abhi koi vacancy khali nahi hai.</p>;
+    return <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-surface-400">{t("sp_no_vacancy", lang)}</p>;
   }
 
   return (
@@ -44,9 +47,7 @@ export function VacancyList({ vacancies }: { vacancies: Vacancy[] }) {
             <button
               onClick={() => setApplyId(v.id)}
               className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              Apply Karein
-            </button>
+            >{t("sp_apply", lang)}</button>
           )}
         </div>
       ))}

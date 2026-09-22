@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { VacancyList } from "./vacancy-list";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function CareersPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: rawVacancies } = await supabase
     .from("job_vacancies")
@@ -22,8 +25,8 @@ export default async function CareersPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="font-display text-3xl font-semibold text-surface-900">Careers at Al Rana Traders</h1>
-      <p className="mt-2 text-surface-500">Humari team ka hissa banein - neeche khali positions dekhein.</p>
+      <h1 className="font-display text-3xl font-semibold text-surface-900">{t("sp_careers_title", lang)}</h1>
+      <p className="mt-2 text-surface-500">{t("sp_careers_lead", lang)}</p>
       <div className="mt-8">
         <VacancyList vacancies={vacancies} />
       </div>

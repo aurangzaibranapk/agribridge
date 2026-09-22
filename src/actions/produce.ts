@@ -7,6 +7,27 @@ export interface ActionState {
   success?: boolean;
 }
 
+/**
+ * Staff-only kaam (verify/deliver). Farmer/buyer wale raaste RLS se
+ * mehfooz hain (`farmer_update_own_produce_orders` waghera) -- yahan
+ * koi naya check nahi. Ye do kaam ab tak koi bhi login-shuda staff kar
+ * sakta tha (RLS `staff_all_access` naun departments tak khula hai) --
+ * HR, warehouse, milk_collection, procurement ka is marketplace se koi
+ * taalluq nahi.
+ */
+const MARKETPLACE_STAFF = ["owner", "super_admin", "admin", "manager", "finance", "sales_staff"];
+
+async function marketplaceStaff(supabase: ReturnType<typeof createClient>) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!profile?.is_active) return { error: "Ye account fa'aal nahi hai." };
+  if (!MARKETPLACE_STAFF.includes(profile.role)) return { error: "Aapko is kaam ki ijazat nahi hai." };
+  return { userId: user.id };
+}
+
 // ---------------------------------------------------------------------
 // FARMER: create/manage listings
 // ---------------------------------------------------------------------
@@ -135,6 +156,9 @@ export async function farmerRespondToProduceOrder(_prev: ActionState, formData: 
 // ---------------------------------------------------------------------
 export async function adminVerifyProduceOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const who = await marketplaceStaff(supabase);
+  if ("error" in who) return { error: who.error };
+
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -147,6 +171,9 @@ export async function adminVerifyProduceOrder(_prev: ActionState, formData: Form
 
 export async function adminMarkProduceDelivered(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const who = await marketplaceStaff(supabase);
+  if ("error" in who) return { error: who.error };
+
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 

@@ -1,5 +1,7 @@
 "use client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface ShopChartData {
   name: string;
@@ -16,13 +18,14 @@ interface ExpenseSlice {
 const PIE_COLORS = ["#16a34a", "#2563eb", "#f59e0b", "#dc2626", "#8b5cf6", "#0891b2", "#64748b"];
 
 export function PnlCharts({ shops, expenseBreakdown }: { shops: ShopChartData[]; expenseBreakdown: ExpenseSlice[] }) {
+  const lang = useLang();
   if (shops.length === 0 && expenseBreakdown.length === 0) return null;
 
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
       {shops.length > 0 && (
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Har Shop Ka Comparison</h3>
+          <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("rr_shop_comparison", lang)}</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={shops}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -39,7 +42,7 @@ export function PnlCharts({ shops, expenseBreakdown }: { shops: ShopChartData[];
       )}
       {expenseBreakdown.length > 0 && (
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Kharcha Kis Cheez Par Hua</h3>
+          <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("rr_where_spent", lang)}</h3>
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie data={expenseBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={(entry) => entry.name}>

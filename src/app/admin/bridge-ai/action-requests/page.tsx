@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, XCircle, MessageSquareWarning, PackageCheck } from "lucide-react";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface ActionRequest {
   id: string;
@@ -17,6 +19,9 @@ interface ActionRequest {
   product_purchase_price: number | null;
   suggested_quantity: number | null;
   created_purchase_id: string | null;
+  created_order_id: string | null;
+  order_number: string | null;
+  order_status: string | null;
 }
 
 interface Option {
@@ -26,6 +31,7 @@ interface Option {
 
 export default function ActionRequestsPage() {
   const [requests, setRequests] = useState<ActionRequest[]>([]);
+  const lang = useLang();
   const [suppliers, setSuppliers] = useState<Option[]>([]);
   const [branches, setBranches] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +95,7 @@ export default function ActionRequestsPage() {
   return (
     <div>
       <PageHeader
-        title="Bridge AI - Action Requests"
+        title={t("ba_action_requests", lang)}
         description="AI ne jo bhi actions propose kiye hain - unhe yahan approve, reject, ya 'changes chahiye' mark karein. Jab tak approve na ho, koi database change nahi hota."
       />
 
@@ -98,9 +104,9 @@ export default function ActionRequestsPage() {
           Pending ({pending.length})
         </h2>
         {loading ? (
-          <p className="text-sm text-surface-400">Load ho raha hai...</p>
+          <p className="text-sm text-surface-400">{t("ba_loading", lang)}</p>
         ) : pending.length === 0 ? (
-          <p className="text-sm text-surface-400">Koi pending request nahi hai.</p>
+          <p className="text-sm text-surface-400">{t("ba_no_pending", lang)}</p>
         ) : (
           <div className="space-y-4">
             {pending.map((r) => (
@@ -117,6 +123,11 @@ export default function ActionRequestsPage() {
                         Product identified: {r.product_name}
                       </p>
                     )}
+                    {r.created_order_id && (
+                      <Link href={`/admin/agri-orders/${r.created_order_id}`} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                        <PackageCheck className="h-3.5 w-3.5" /> Draft {r.order_number} dekhein
+                      </Link>
+                    )}
                   </div>
                   <span className="shrink-0 text-xs text-surface-400">{new Date(r.created_at).toLocaleString()}</span>
                 </div>
@@ -124,33 +135,33 @@ export default function ActionRequestsPage() {
                 {r.product_id && (
                   <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-surface-200 bg-white p-3 dark:border-surface-700 dark:bg-surface-900 sm:grid-cols-4">
                     <div className="col-span-2 sm:col-span-1">
-                      <label className="text-xs text-surface-500">Supplier</label>
+                      <label className="text-xs text-surface-500">{t("c_supplier", lang)}</label>
                       <select
                         value={supplierDrafts[r.id] ?? ""}
                         onChange={(e) => setSupplierDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
                         className="mt-1 w-full rounded-lg border border-surface-200 bg-white px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-800"
                       >
-                        <option value="">Select</option>
+                        <option value="">{t("ba_select", lang)}</option>
                         {suppliers.map((s) => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="col-span-2 sm:col-span-1">
-                      <label className="text-xs text-surface-500">Branch</label>
+                      <label className="text-xs text-surface-500">{t("c_branch", lang)}</label>
                       <select
                         value={branchDrafts[r.id] ?? ""}
                         onChange={(e) => setBranchDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
                         className="mt-1 w-full rounded-lg border border-surface-200 bg-white px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-800"
                       >
-                        <option value="">Select</option>
+                        <option value="">{t("ba_select", lang)}</option>
                         {branches.map((b) => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-surface-500">Quantity</label>
+                      <label className="text-xs text-surface-500">{t("c_quantity", lang)}</label>
                       <input
                         type="number"
                         value={quantityDrafts[r.id] ?? ""}
@@ -159,7 +170,7 @@ export default function ActionRequestsPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-surface-500">Unit Cost (Rs.)</label>
+                      <label className="text-xs text-surface-500">{t("ba_unit_cost", lang)}</label>
                       <input
                         type="number"
                         step="0.01"
@@ -172,7 +183,7 @@ export default function ActionRequestsPage() {
                 )}
 
                 <textarea
-                  placeholder="Optional note (jaise reject/changes ki wajah)..."
+                  placeholder={t("ba_note_optional", lang)}
                   value={noteDrafts[r.id] ?? ""}
                   onChange={(e) => setNoteDrafts((d) => ({ ...d, [r.id]: e.target.value }))}
                   rows={2}
@@ -186,22 +197,20 @@ export default function ActionRequestsPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    {r.product_id ? "Approve & Create Purchase Order" : "Approve"}
+                    {r.created_order_id ? "Manzoor - order Sales ko bhejein" : r.product_id ? "Approve & Create Purchase Order" : "Approve"}
                   </button>
                   <button
                     onClick={() => decide(r.id, "needs_changes")}
                     disabled={busyId === r.id}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50"
                   >
-                    <MessageSquareWarning className="h-3.5 w-3.5" /> Changes Chahiye
-                  </button>
+                    <MessageSquareWarning className="h-3.5 w-3.5" />{t("at_changes_needed", lang)}</button>
                   <button
                     onClick={() => decide(r.id, "rejected")}
                     disabled={busyId === r.id}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
                   >
-                    <XCircle className="h-3.5 w-3.5" /> Reject
-                  </button>
+                    <XCircle className="h-3.5 w-3.5" />{t("at_reject", lang)}</button>
                 </div>
               </div>
             ))}
@@ -214,7 +223,7 @@ export default function ActionRequestsPage() {
           Pehle Decide Hui Requests ({decided.length})
         </h2>
         {decided.length === 0 ? (
-          <p className="text-sm text-surface-400">Abhi tak koi decision nahi hua.</p>
+          <p className="text-sm text-surface-400">{t("ba_no_decision_yet", lang)}</p>
         ) : (
           <div className="space-y-3">
             {decided.map((r) => (
@@ -234,14 +243,20 @@ export default function ActionRequestsPage() {
                   </span>
                 </div>
                 {r.review_notes && <p className="mt-1 text-xs text-surface-500">{r.review_notes}</p>}
+                {r.created_order_id && (
+                  <Link
+                    href={`/admin/agri-orders/${r.created_order_id}`}
+                    className="mt-2 mr-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    <PackageCheck className="h-3.5 w-3.5" /> {r.order_number} ({r.order_status})
+                  </Link>
+                )}
                 {r.created_purchase_id && (
                   <Link
                     href="/admin/purchases"
                     className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
                   >
-                    <PackageCheck className="h-3.5 w-3.5" />
-                    Purchase Order ban gaya - Purchases page par dekhein
-                  </Link>
+                    <PackageCheck className="h-3.5 w-3.5" />{t("at_po_created", lang)}</Link>
                 )}
               </div>
             ))}
