@@ -265,11 +265,12 @@ export interface BranchZeroLeakageRow {
 export async function branchZeroLeakageSummary(branchId: string, fromDate: string, toDate: string) {
   const service = createServiceClient();
   const { data: shops } = await service.from("shops").select("id,name").eq("branch_id", branchId).eq("is_active", true).order("name");
-  const rows: BranchZeroLeakageRow[] = [];
+  const shopList = shops ?? [];
+  const snapshots = await Promise.all(shopList.map((s) => shopZeroLeakageSnapshot(s.id, fromDate, toDate)));
 
-  for (const shop of shops ?? []) {
-    const snap = await shopZeroLeakageSnapshot(shop.id, fromDate, toDate);
-    rows.push({
+  const rows: BranchZeroLeakageRow[] = shopList.map((shop, i) => {
+    const snap = snapshots[i];
+    return {
       shopId: shop.id,
       shopName: shop.name,
       sales: snap.flow.sales.total,
@@ -279,8 +280,8 @@ export async function branchZeroLeakageSummary(branchId: string, fromDate: strin
       verifiedDeposit: snap.deposits.approvedDeposits,
       cashDifference: snap.cash.fullDifference,
       status: snap.status,
-    });
-  }
+    };
+  });
 
   const anyIncomplete = rows.some((r) => r.status === "incomplete");
   const anyDifference = rows.some((r) => r.status === "difference" || Math.abs(r.cashDifference) >= 1);
@@ -356,9 +357,13 @@ export async function organizationZeroLeakageSummary(fromDate: string, toDate: s
   const { data: branches } = await service.from("branches").select("id,name").order("name");
   const rows: OrganizationZeroLeakageRow[] = [];
 
+  const branchList = branches ?? [];
+  const summaries = await Promise.all(branchList.map((b) => branchZeroLeakageSummary(b.id, fromDate, toDate)));
+
   const blockers: string[] = [];
-  for (const branch of branches ?? []) {
-    const summary = await branchZeroLeakageSummary(branch.id, fromDate, toDate);
+  for (let i = 0; i < branchList.length; i++) {
+    const branch = branchList[i];
+    const summary = summaries[i];
     rows.push({
       branchId: branch.id,
       branchName: branch.name,

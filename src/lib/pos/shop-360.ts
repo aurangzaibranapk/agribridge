@@ -447,11 +447,10 @@ export async function shopCashControl(shopId: string, fromDate: string, toDate: 
   const differenceClosed = round2(closed.reduce((s, r) => s + Number(r.difference ?? 0), 0));
 
   let openShiftsLiveExpected = 0;
-  for (const s of open) {
-    const live = await computeShiftCash(s.id, Number(s.opening_cash ?? 0));
-    openShiftsLiveExpected += live.expectedCash;
+  if (open.length > 0) {
+    const lives = await Promise.all(open.map((s) => computeShiftCash(s.id, Number(s.opening_cash ?? 0))));
+    openShiftsLiveExpected = round2(lives.reduce((s, l) => s + l.expectedCash, 0));
   }
-  openShiftsLiveExpected = round2(openShiftsLiveExpected);
 
   const [salesByMethod, mapRows] = await Promise.all([
     shopPaymentMethodBreakdown(shopId, fromDate, toDate),
