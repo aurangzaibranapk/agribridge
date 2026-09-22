@@ -63,8 +63,10 @@ export async function shopPaymentMethodBreakdown(
   options: { strict?: boolean } = {}
 ): Promise<ShopPaymentMethodRow[]> {
   const service = createServiceClient();
-  const fromTs = `${fromDate}T00:00:00`;
-  const toTs = `${toDate}T23:59:59.999`;
+  // Pakistan time (UTC+5) ki midnight -- baghair offset ke UTC midnight
+  // lete hai (= 5 AM PKT), jo subah ki sale miss karta hai.
+  const fromTs = `${fromDate}T00:00:00+05:00`;
+  const toTs = `${toDate}T23:59:59.999+05:00`;
 
   const { data: sales, error: salesError } = await service
     .from("pos_sales")

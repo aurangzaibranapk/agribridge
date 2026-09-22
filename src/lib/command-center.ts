@@ -134,22 +134,26 @@ function today(): string {
 export async function loadMoneyToday(): Promise<MoneyToday> {
   const service = createServiceClient();
   const t = today();
+  // Pakistan time (UTC+5) ki midnight se midnight tak -- baghair offset ke
+  // Supabase UTC midnight lete hai (= 5 AM PKT), jo subah ki sale miss karta hai.
+  const fromTs = `${t}T00:00:00+05:00`;
+  const toTs = `${t}T23:59:59.999+05:00`;
 
   const [{ data: sales }, { data: posRet }, { data: posRetItems }, { data: grainSales }, { data: expenses }, ledgerTb, { data: credit }] =
     await Promise.all([
-      service.from("pos_sales").select("total_amount, profit").gte("created_at", t),
+      service.from("pos_sales").select("total_amount, profit").gte("created_at", fromTs).lte("created_at", toTs),
       // Aaj ki wapsiyaan. Bikri se ghatani parti hain -- warna wapas hui
       // cheez bhi aamdani mein ginti rehti hai.
-      service.from("pos_returns").select("total_amount").gte("created_at", t),
+      service.from("pos_returns").select("total_amount").gte("created_at", fromTs).lte("created_at", toTs),
       // Wapas aaye maal ki lagat -- nafa theek karne ke liye. Sirf raqam
       // ghatane se nafa ghalat rehta: cheez ke sath us ki lagat bhi wapas
       // aati hai.
       service
         .from("pos_return_items")
         .select("line_cogs, pos_returns!inner(created_at)")
-        .gte("pos_returns.created_at", t),
+        .gte("pos_returns.created_at", fromTs).lte("pos_returns.created_at", toTs),
       service.from("grain_sales").select("total_amount, profit").eq("sale_date", t),
-      service.from("company_expense_requests").select("amount").eq("status", "approved").gte("created_at", t),
+      service.from("company_expense_requests").select("amount").eq("status", "approved").gte("created_at", fromTs).lte("created_at", toTs),
       // `finance_accounts.current_balance` istemal nahi karte -- wo
       // sirf purani cash book se hilta hai, aur Load/Bill, machinery,
       // POS jaisi adhiktar raqamein seedha ledger mein jati hain, is
