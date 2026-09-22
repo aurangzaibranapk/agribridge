@@ -117,6 +117,7 @@
   .desk-load .load-form-entry { grid-template-areas:"account customer reference" "network amount payment" "charge customer-name customer-name" "evidence evidence evidence" "total total submit"; grid-template-rows:auto auto auto auto minmax(38px,1fr); }
   .desk-load .load-form-bill { grid-template-areas:"account customer reference" "provider category amount" "payment charge customer-name" "evidence evidence evidence" "total settled submit"; }
   .desk-load .load-form-party { grid-template-areas:"amount customer account" "date note note" "context context submit"; grid-template-rows:auto auto minmax(38px,1fr); }
+  .desk-load .load-form-bank-transfer { grid-template-areas:"account customer destination" "beneficiary-title beneficiary-account amount" "payment charge customer-name" "customer-phone evidence evidence" "total total submit"; grid-template-rows:auto auto auto auto minmax(38px,1fr); }
   .desk-load .load-field-account { grid-area:account; }
   .desk-load .load-field-customer { grid-area:customer; }
   .desk-load .load-field-reference { grid-area:reference; }
@@ -128,15 +129,19 @@
   .desk-load .load-field-charge { grid-area:charge; }
   .desk-load .load-field-customer-name { grid-area:customer-name; }
   .desk-load .load-field-date { grid-area:date; }
+  .desk-load .load-field-destination { grid-area:destination; }
+  .desk-load .load-field-beneficiary-title { grid-area:beneficiary-title; }
+  .desk-load .load-field-beneficiary-account { grid-area:beneficiary-account; }
+  .desk-load .load-field-customer-phone { grid-area:customer-phone; }
   .desk-load .load-form-evidence { grid-area:evidence; }
   .desk-load .load-form-note { grid-area:note; }
   .desk-load .load-form-context { grid-area:context; align-self:end; }
-  .desk-load .load-form-entry > .load-form-total { grid-area:total; align-self:end; }
+  .desk-load .load-form-entry > .load-form-total,.desk-load .load-form-bank-transfer > .load-form-total { grid-area:total; align-self:end; }
   .desk-load .load-form-bill > .load-form-total { display:grid; align-content:center; gap:2px; }
   .desk-load .load-form-bill > .load-form-bill-settled { grid-area:settled; align-self:stretch; display:flex; align-items:center; gap:6px; min-width:0; padding:5px 8px; font-size:10px; line-height:1.2; }
   .desk-load .load-form-bill-settled input { width:14px; min-width:14px; min-height:14px; flex:0 0 14px; margin:0; padding:0; }
   .desk-load .load-form-bill-settled span { min-width:0; font-size:10px; line-height:1.2; }
-  .desk-load .load-form-entry > .load-form-submit,.desk-load .load-form-party > .load-form-submit { grid-area:submit; align-self:end; width:100%; min-height:36px; padding:5px 8px; font-size:11px; line-height:1.2; white-space:normal; }
+  .desk-load .load-form-entry > .load-form-submit,.desk-load .load-form-party > .load-form-submit,.desk-load .load-form-bank-transfer > .load-form-submit { grid-area:submit; align-self:end; width:100%; min-height:36px; padding:5px 8px; font-size:11px; line-height:1.2; white-space:normal; }
   .desk-load .load-form input,.desk-load .load-form select { min-height:31px; padding:5px 9px; font-size:12px; }
   .desk-load .load-form label { font-size:11px; }
   .desk-load .load-form p { font-size:10px; line-height:1.3; }
@@ -191,6 +196,7 @@
   .desk-load .load-kind-bill { background:#eef4ff; color:#315b9c; }
   .desk-load .load-kind-udhaar { background:#fff5de; color:#8c6412; }
   .desk-load .load-kind-recovery { background:#e8f7f3; color:#087b69; }
+  .desk-load .load-kind-bank_transfer { background:#f1edff; color:#6042a6; }
   .desk-load .load-empty-row { padding:12px!important; color:#78867d!important; text-align:center; }
   .desk-load .load-row-actions summary { cursor:pointer; color:#087a42; font-size:10px; }
   .desk-load .load-row-actions > div { display:grid; gap:5px; border:1px solid #dce7df; border-radius:8px; background:#fff; padding:7px; box-shadow:0 4px 14px #12251b20; }

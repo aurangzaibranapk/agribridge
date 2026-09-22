@@ -151,7 +151,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("branch_id, is_active")
+    .select("branch_id, shop_id, is_active")
     .eq("id", user.id)
     .maybeSingle();
   if (!me?.is_active) return { error: "Aap ka khata band hai." };
@@ -423,6 +423,258 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       ? `${number} darj ho gaya.`
       : `${number} darj ho gaya — magar provider ki TID abhi nahi lagi. Jab tak wo na lage, is qatar par "saboot baqi" likha rahega.`,
   };
+}
+
+/**
+ * Customer cash/account se paisa deta hai aur hum apne bank/wallet se
+ * us ke beneficiary ko transfer karte hain. Principal sirf asset-to-asset
+ * movement hai; aamdani sirf service charge hai.
+ */
+export async function createBankTransfer(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("branch_id, shop_id, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!me?.is_active) return { error: "Aap ka khata band hai." };
+
+  const sourceId = String(formData.get("source_finance_account_id") ?? "").trim();
+  const receivedIn = String(formData.get("received_in") ?? "cash").trim();
+  const destinationChannel = String(formData.get("destination_channel") ?? "").trim();
+  const beneficiaryTitle = String(formData.get("beneficiary_title") ?? "").trim();
+  const beneficiaryAccount = String(formData.get("beneficiary_account") ?? "").replace(/\s+/g, "").trim();
+  const principal = paisa(formData.get("principal"));
+  const serviceCharge = paisa(formData.get("service_charge"));
+  const providerTid = String(formData.get("provider_tid") ?? "").trim() || null;
+  const customerName = String(formData.get("customer_name") ?? "").trim() || null;
+  const customerPhone = String(formData.get("customer_phone") ?? "").trim() || null;
+  const rawPartyType = String(formData.get("party_type") ?? "").trim();
+  const partyId = String(formData.get("party_id") ?? "").trim() || null;
+
+  if (!me.shop_id) return { error: "Aap ke profile ke saath koi shop assigned nahi. Pehle Admin se shop assign karwayein." };
+  if (!sourceId) return { error: "Hamara source bank/wallet account chunein." };
+  if (!['bank', 'jazzcash', 'easypaisa', 'other_wallet'].includes(destinationChannel)) {
+    return { error: "Customer ka receiving bank ya wallet chunein." };
+  }
+  if (beneficiaryTitle.length < 2) return { error: "Receiving account ka title likhein." };
+  if (beneficiaryAccount.length < 5) return { error: "Receiving account/IBAN/mobile number sahi likhein." };
+  if (principal === null || principal <= 0) return { error: "Transfer ki raqam likhein." };
+  if (serviceCharge !== null && serviceCharge <= 0) {
+    return { error: "Service charge sifar nahi hota; extra nahi liya to khana khali chhor dein." };
+  }
+
+  const receivingMethod = receivedIn === "cash" ? "cash" : "bank";
+  const receivingAccountId = receivedIn.startsWith("acct:") ? receivedIn.slice(5) : null;
+  if (receivingMethod === "bank" && !receivingAccountId) {
+    return { error: "Customer ki payment kis account mein aayi, wo chunein." };
+  }
+
+  const service = createServiceClient();
+  // Migration 20260922092251 adds this table/function. Generated types
+  // are refreshed after the migration reaches the shared database.
+  const bankDb = service as any;
+  const { data: source } = await service
+    .from("finance_accounts")
+    .select("id, name, account_type, current_balance, is_active")
+    .eq("id", sourceId)
+    .maybeSingle();
+  if (!source?.is_active) return { error: "Source account active nahi hai." };
+  if (source.account_type === "cash") return { error: "Bank Transfer ke liye source bank ya mobile wallet hona chahiye, cash nahi." };
+  if (Number(source.current_balance ?? 0) < principal) {
+    return { error: `${source.name} mein sirf Rs ${Number(source.current_balance ?? 0).toLocaleString()} balance hai.` };
+  }
+
+  if (receivingAccountId) {
+    const { data: receivingAccount } = await service
+      .from("finance_accounts")
+      .select("id, is_active")
+      .eq("id", receivingAccountId)
+      .maybeSingle();
+    if (!receivingAccount?.is_active) return { error: "Payment receive karne wala account active nahi hai." };
+  }
+
+  const sourceGl = await glForFinanceAccount(sourceId);
+  const receivedGl = receivingAccountId ? await glForFinanceAccount(receivingAccountId) : ACC.cash;
+  if (sourceGl === ACC.suspense || receivedGl === ACC.suspense) {
+    return { error: "Selected finance account ka GL mapping nahi mila. Pehle Finance mein account mapping theek karein." };
+  }
+
+  const numberResult = await bankDb.rpc("fn_next_bank_transfer_number");
+  const number = String(numberResult.data ?? "");
+  if (!number) return { error: "Bank Transfer ka receipt number nahi ban saka." };
+
+  const total = Math.round((principal + (serviceCharge ?? 0)) * 100) / 100;
+  const { data: row, error: insertError } = await bankDb
+    .from("bank_transfer_transactions")
+    .insert({
+      txn_number: number,
+      source_finance_account_id: sourceId,
+      receiving_method: receivingMethod,
+      receiving_finance_account_id: receivingAccountId,
+      destination_channel: destinationChannel,
+      beneficiary_title: beneficiaryTitle,
+      beneficiary_account: beneficiaryAccount,
+      customer_id: rawPartyType === "customer" ? partyId : null,
+      farmer_id: rawPartyType === "farmer" ? partyId : null,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      principal,
+      service_charge: serviceCharge,
+      provider_tid: providerTid,
+      status: providerTid ? "darj" : "saboot_baqi",
+      branch_id: me.branch_id ?? null,
+      shop_id: me.shop_id,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !row) {
+    return { error: `Bank Transfer darj nahi hua: ${insertError?.message ?? "wajah maloom nahi"}` };
+  }
+
+  const lines: JournalLine[] = [
+    { account: receivedGl, debit: total, memo: `${number} — customer se received` },
+    { account: sourceGl, credit: principal, memo: `${number} — ${beneficiaryTitle}` },
+  ];
+  if (serviceCharge) {
+    lines.push({ account: ACC.bankTransferServiceCharge, credit: serviceCharge, memo: `${number} service charge` });
+  }
+
+  const posted = await postJournal({
+    description: `Bank Transfer ${number} — ${beneficiaryTitle} (${beneficiaryAccount})`,
+    sourceModule: "bank_transfer",
+    sourceId: row.id,
+    branchId: me.branch_id ?? null,
+    createdBy: user.id,
+    lines,
+    claims: [{ table: "bank_transfer_transactions", rowId: row.id }],
+  });
+  if ("error" in posted) {
+    await bankDb.from("bank_transfer_transactions").delete().eq("id", row.id);
+    return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+  }
+
+  await bankDb.from("bank_transfer_transactions").update({ journal_entry_id: posted.id }).eq("id", row.id);
+
+  const receivedCashBook = receivingCashBook(receivingMethod, receivingAccountId);
+  const cashBook: CashBookQatar[] = [
+    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_service", notes: `${number} — customer se received`, createdBy: user.id, entryId: posted.id }] : []),
+    { accountId: sourceId, amount: principal, rukh: "gaya", category: "bank_transfer_service", notes: `${number} — ${beneficiaryTitle}`, createdBy: user.id, entryId: posted.id },
+  ];
+  const cashBookResult = await cashBookLikhein(cashBook);
+  if (cashBookResult.error) {
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill",
+      message: `${number}: ledger mein darj hua magar Cash Book mein nahi — ${cashBookResult.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
+  await notifyUser(
+    user.id,
+    "Bank Transfer darj",
+    `${number} — ${beneficiaryTitle} — Rs ${principal.toLocaleString()}`,
+    "/admin/load-bill"
+  );
+  revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
+  return {
+    success: true,
+    txnNumber: number,
+    notice: providerTid ? `${number} darj ho gaya.` : `${number} darj ho gaya — transaction ID/proof abhi baqi hai.`,
+  };
+}
+
+export async function attachBankTransferTid(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const id = String(formData.get("id") ?? "").trim();
+  const tid = String(formData.get("provider_tid") ?? "").trim();
+  if (!id) return { error: "Bank Transfer qatar nahi mili." };
+  if (tid.length < 3) return { error: "Bank/wallet transaction ID likhein." };
+
+  const service = createServiceClient();
+  const bankDb = service as any;
+  const { error } = await bankDb
+    .from("bank_transfer_transactions")
+    .update({ provider_tid: tid, status: "darj" })
+    .eq("id", id)
+    .eq("status", "saboot_baqi");
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/load-bill");
+  return { success: true, notice: "Bank Transfer ka proof save ho gaya." };
+}
+
+export async function reverseBankTransfer(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Pehle login karein." };
+
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !FLOAT_ROLES.includes(me.role)) {
+    return { error: "Bank Transfer wapas karna sirf Manager, Finance ya Admin ka kaam hai." };
+  }
+
+  const id = String(formData.get("id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!id) return { error: "Bank Transfer qatar nahi mili." };
+  if (reason.length < 5) return { error: "Wapas karne ki wajah likhein." };
+
+  const service = createServiceClient();
+  const bankDb = service as any;
+  const { data: txn } = await bankDb
+    .from("bank_transfer_transactions")
+    .select("id, txn_number, journal_entry_id, status, source_finance_account_id, receiving_method, receiving_finance_account_id, principal, service_charge")
+    .eq("id", id)
+    .maybeSingle();
+  if (!txn) return { error: "Bank Transfer qatar nahi mili." };
+  if (txn.status === "wapas") return { error: "Ye Bank Transfer pehle hi wapas ho chuka hai." };
+  if (!txn.journal_entry_id) return { error: "Is Bank Transfer ki ledger entry nahi mili." };
+
+  const reversed = await reverseJournal(txn.journal_entry_id as string, reason, user.id);
+  if ("error" in reversed) return { error: reversed.error };
+
+  const principal = Number(txn.principal);
+  const total = Math.round((principal + Number(txn.service_charge ?? 0)) * 100) / 100;
+  const receivedCashBook = receivingCashBook(
+    String(txn.receiving_method),
+    (txn.receiving_finance_account_id as string | null) ?? null
+  );
+  const originalRows: CashBookQatar[] = [
+    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_wapas", notes: `${txn.txn_number} wapas — ${reason}`, createdBy: user.id, entryId: reversed.id }] : []),
+    { accountId: txn.source_finance_account_id as string, amount: principal, rukh: "gaya", category: "bank_transfer_wapas", notes: `${txn.txn_number} wapas — ${reason}`, createdBy: user.id, entryId: reversed.id },
+  ];
+  const cb = await cashBookUlti(originalRows);
+  if (cb.error) {
+    await recordError({
+      module: "load-bill",
+      route: "/admin/load-bill",
+      message: `${txn.txn_number} wapas hua magar Cash Book ulta nahi ho saka — ${cb.error}`,
+      severity: "rukawat",
+      actorId: user.id,
+    });
+  }
+
+  await bankDb.from("bank_transfer_transactions").update({ status: "wapas" }).eq("id", id);
+  revalidatePath("/admin/load-bill");
+  revalidatePath("/admin/finance");
+  return { success: true, notice: `${txn.txn_number} wapas ho gaya (${reversed.entryNumber}).` };
 }
 
 /**

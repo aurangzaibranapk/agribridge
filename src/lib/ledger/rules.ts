@@ -135,6 +135,7 @@ export const ACC = {
   // aur us ki tasdeeq statement se hoti hai.
   loadServiceCharge: "4050",
   loadCommission: "4055",
+  bankTransferServiceCharge: "4060",
   otherIncome: "4090",
   // Contra-income: aamdani ka khata hai magar ULTA chalta hai. Bikri
   // poori raqam par likhi jati hai aur jo chhoRa gaya wo yahan -- warna

@@ -55,12 +55,15 @@ export default async function LoadBillPage({
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("role, branch_id, is_active")
+    .select("role, branch_id, shop_id, is_active")
     .eq("id", user.id)
     .maybeSingle();
   if (!me?.is_active) redirect("/login");
 
   const service = createServiceClient();
+  // Migration 20260922092251 owns this table; generated database types
+  // are refreshed after the migration is applied to the shared database.
+  const bankDb = service as any;
   const aaj = aajKaKhana();
   const branchPromise = me.branch_id
     ? service.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
@@ -114,6 +117,19 @@ export default async function LoadBillPage({
     : { data: [], error: null };
   const aajKiQatarein = loadTransactionsResult.data;
 
+  const bankTransfersQuery = bankDb
+    .from("bank_transfer_transactions")
+    .select(
+      "id, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at"
+    )
+    .gte("created_at", `${aaj}T00:00:00`)
+    .order("created_at", { ascending: false })
+    .limit(60);
+  const bankTransfersResult = me.branch_id
+    ? await bankTransfersQuery.eq("branch_id", me.branch_id)
+    : { data: [], error: null };
+  const aajKeBankTransfers = bankTransfersResult.data;
+
   // Recovery and new udhaar are ledger events, not load_transactions.
   // Keep this list scoped to the signed-in staff member's branch. If no
   // branch is assigned, show the recovery figure as unavailable below.
@@ -164,7 +180,7 @@ export default async function LoadBillPage({
     <DeskWorkspace className="desk-load">
       <PageHeader
         title="Staff Sales Desk"
-        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery`}
+        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery · Bank Transfer`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -203,6 +219,7 @@ export default async function LoadBillPage({
       ) : (
         <LoadBillClient
           shuruKind={shuruKind}
+          shopId={(me.shop_id as string | null) ?? null}
           providers={(providers ?? []).map((p) => ({
             id: p.id as string,
             name: p.name as string,
@@ -235,6 +252,7 @@ export default async function LoadBillPage({
           financeAccounts={(financeAccounts ?? []).map((f) => ({
             id: f.id as string,
             name: f.name as string,
+            accountType: f.account_type as string,
           }))}
           today={(aajKiQatarein ?? []).map((t) => ({
             id: t.id as string,
@@ -256,16 +274,38 @@ export default async function LoadBillPage({
             provider: providerName.get(t.provider_id as string) ?? "—",
           }))}
           ledgerToday={ledgerToday}
+          bankTransfers={(aajKeBankTransfers ?? []).map((t) => ({
+            id: t.id as string,
+            number: t.txn_number as string,
+            sourceAccountId: t.source_finance_account_id as string,
+            receivingMethod: t.receiving_method as string,
+            receivingAccountId: (t.receiving_finance_account_id as string | null) ?? null,
+            destinationChannel: t.destination_channel as string,
+            beneficiaryTitle: t.beneficiary_title as string,
+            beneficiaryAccount: t.beneficiary_account as string,
+            customer: (t.customer_name as string | null) ?? null,
+            customerPhone: (t.customer_phone as string | null) ?? null,
+            principal: Number(t.principal),
+            serviceCharge: t.service_charge === null ? null : Number(t.service_charge),
+            tid: (t.provider_tid as string | null) ?? null,
+            status: t.status as string,
+            waqt: String(t.created_at),
+          }))}
           summary={{
             floatBalance: (accounts ?? []).length > 0 && (accounts ?? []).every((account) => floats.get(account.id as string) !== null && floats.has(account.id as string))
               ? (accounts ?? []).reduce((sum, account) => sum + (floats.get(account.id as string) ?? 0), 0)
               : null,
-            cashReceived: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.payment_method === "cash" && row.status !== "wapas")
-              .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
+            cashReceived: !me.branch_id || loadTransactionsResult.error || bankTransfersResult.error ? null :
+              (aajKiQatarein ?? []).filter((row) => row.payment_method === "cash" && row.status !== "wapas")
+                .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0)
+              + (aajKeBankTransfers ?? []).filter((row) => row.receiving_method === "cash" && row.status !== "wapas")
+                .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
             volume: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status !== "wapas")
               .reduce((sum, row) => sum + Number(row.principal ?? 0), 0),
             recovery: recoveryToday,
-            pendingProof: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status === "saboot_baqi").length,
+            pendingProof: !me.branch_id || loadTransactionsResult.error || bankTransfersResult.error ? null :
+              (aajKiQatarein ?? []).filter((row) => row.status === "saboot_baqi").length
+              + (aajKeBankTransfers ?? []).filter((row) => row.status === "saboot_baqi").length,
           }}
           canReverse={FLOAT_ROLES.includes(me.role)}
         />
