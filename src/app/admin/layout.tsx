@@ -255,7 +255,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {showSidebar ? (
                 <Topbar
                   subtitle={t("at_website_admin", lang)}
-                  searchAction="/admin/dashboard"
+                  searchAction="/admin/search"
                   searchPlaceholder="Search..."
                   notificationsHref="/admin/contact-messages"
                   navGroups={navGroups}
