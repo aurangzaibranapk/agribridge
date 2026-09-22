@@ -84,7 +84,12 @@
   .desk-my-work .desk-overview-screen > div:nth-child(4) .rounded-t.bg-emerald-500 { background:linear-gradient(180deg,#34b779,#087a42); box-shadow:0 2px 4px #087a4230; }
   .desk-my-work .desk-overview-screen > div:nth-child(5) { min-height:30px; padding:6px 10px; }
   .desk-my-work .desk-overview-screen > div:nth-child(5) { border-color:#9fd2ad; background:linear-gradient(90deg,#eaf7ed,#f7fbf8); color:#14532d; }
-  .desk-load { gap:7px; }
+  /* The desk lives beside a sidebar, so viewport width alone is a poor
+     measure of the room actually available to it. Make the desk a size
+     container and keep its own vertical fallback scroll. This guarantees
+     that actions remain reachable at browser zoom/display scaling values
+     that leave less height than the monitor resolution suggests. */
+  .desk-load { container-type:inline-size; gap:7px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
   .desk-load > div:first-child { margin:0; align-items:center; }
   .desk-load > div:first-child h1 { font-size:20px; line-height:1.15; }
   .desk-load > div:first-child p { margin-top:2px; font-size:11px; }
@@ -269,23 +274,38 @@
   .desk-load .load-form { min-height:0; flex:none; }
   .desk-load .load-transactions { min-height:150px; flex:0 0 150px; }
 }
-/* On small laptops the sidebar leaves less room than the viewport media
-   query suggests. Stack the summary below the form instead of squeezing or
-   cutting either panel, while preserving the desktop controls. */
-@media (min-width:1024px) and (max-width:1279px) {
-  main.desk-main:has(.desk-load) { overflow-y:auto; overscroll-behavior:contain; padding:10px 12px; }
-  .desk-workspace.desk-load { height:auto; min-height:100%; overflow:visible; }
-  .desk-load .load-body { min-height:0; flex:none; }
-  .desk-load .load-entry-grid { min-height:0; flex:none; grid-template-columns:minmax(0,1fr); }
-  .desk-load .load-entry-card,.desk-load .load-live-summary { overflow:visible; }
-  .desk-load .load-form { min-height:0; flex:none; }
-  .desk-load .load-live-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:14px; }
-  .desk-load .load-summary-footer { margin-top:8px; }
-  .desk-load .load-summary-actions { grid-template-columns:repeat(2,minmax(0,220px)); }
-  .desk-load .load-transactions { min-height:170px; flex:0 0 170px; }
-  .desk-load .load-transactions-heading { flex-wrap:wrap; }
-  .desk-load .load-transaction-filters { order:3; width:100%; overflow-x:auto; padding-bottom:2px; }
-  .desk-load .load-transactions-table { min-width:720px; }
+/* React to the REAL content width after the sidebar and display scaling
+   have taken their share. On the staff machine a 1600px monitor leaves only
+   about 1300px for this desk, so the old viewport breakpoint never fired.
+   At this width the summary moves below the form and nothing is squeezed or
+   clipped. Wide desktops keep the one-screen, side-by-side layout. */
+@media (min-width:1024px) {
+  @container (max-width:1400px) {
+    .desk-load .load-body { min-height:0; flex:none; }
+    .desk-load .load-entry-grid { min-height:0; flex:none; grid-template-columns:minmax(0,1fr); }
+    .desk-load .load-entry-card,.desk-load .load-live-summary { overflow:visible; }
+    .desk-load .load-form { min-height:0; flex:none; }
+    .desk-load .load-live-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:14px; }
+    .desk-load .load-summary-footer { margin-top:8px; }
+    .desk-load .load-summary-actions { grid-template-columns:repeat(2,minmax(0,220px)); }
+    .desk-load .load-transactions { min-height:170px; flex:0 0 170px; }
+    .desk-load .load-transactions-heading { flex-wrap:wrap; }
+    .desk-load .load-transaction-filters { order:3; width:100%; overflow-x:auto; padding-bottom:2px; }
+    .desk-load .load-transactions-table { min-width:720px; }
+  }
+
+  /* When the remaining desk width is genuinely narrow, use two readable
+     form columns. This applies consistently to Load, Bill, Udhaar,
+     Recovery and Bank Transfer. */
+  @container (max-width:1050px) {
+    .desk-load .load-form { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .desk-load .load-form-entry { grid-template-areas:"account customer" "reference network" "amount payment" "charge customer-name" "evidence evidence" "total submit"; grid-template-rows:none; }
+    .desk-load .load-form-bill { grid-template-areas:"account customer" "reference provider" "category amount" "payment charge" "customer-name customer-name" "evidence evidence" "total settled" "submit submit"; }
+    .desk-load .load-form-party { grid-template-areas:"customer amount" "account date" "note note" "context context" "submit submit"; grid-template-rows:none; }
+    .desk-load .load-form-bank-transfer { grid-template-areas:"account customer" "destination beneficiary-title" "beneficiary-account amount" "payment charge" "customer-name customer-phone" "evidence evidence" "total submit"; grid-template-rows:none; }
+    .desk-load .load-form-evidence { grid-template-columns:minmax(120px,.7fr) minmax(170px,1fr); }
+    .desk-load .load-form-evidence p { grid-column:1 / -1; }
+  }
 }
 @media (min-width:1024px) {
   main:has(.desk-my-work) {
