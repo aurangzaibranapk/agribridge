@@ -32,14 +32,21 @@ interface InventoryRow {
 interface Warehouse {
   id: string;
   name: string;
+  shop_id: string | null;
+}
+
+interface Shop {
+  id: string;
+  name: string;
 }
 
 const initialState: ActionState = {};
 
-export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; warehouses: Warehouse[] }) {
+export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRow[]; warehouses: Warehouse[]; shops: Shop[] }) {
   const lang = useLang();
   const [adjustTarget, setAdjustTarget] = useState<{ row: InventoryRow; direction: "increase" | "decrease" } | null>(null);
   const [transferTarget, setTransferTarget] = useState<InventoryRow | null>(null);
+  const [shopFilter, setShopFilter] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("");
   // "62 items ka rate missing" sirf ginti dikhata tha -- malik (13
   // September): "iske niche link hona chahiye, hum us par click karein
@@ -48,10 +55,24 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
   // aage Edit ka raasta hai.
   const [missingFilter, setMissingFilter] = useState<null | "trade" | "sale" | "wholesale" | "credit">(null);
 
-  const warehouseFiltered = useMemo(
-    () => (warehouseFilter ? rows.filter((r) => r.warehouse_id === warehouseFilter) : rows),
-    [rows, warehouseFilter]
+  // Shop select hone par us shop ke sare warehouses ki IDs nikalo
+  const shopWarehouseIds = useMemo(
+    () => shopFilter ? new Set(warehouses.filter((w) => w.shop_id === shopFilter).map((w) => w.id)) : null,
+    [shopFilter, warehouses]
   );
+
+  // Warehouse dropdown mein sirf selected shop ke warehouses dikhao
+  const visibleWarehouses = useMemo(
+    () => shopFilter ? warehouses.filter((w) => w.shop_id === shopFilter) : warehouses,
+    [shopFilter, warehouses]
+  );
+
+  const warehouseFiltered = useMemo(() => {
+    let result = rows;
+    if (shopWarehouseIds) result = result.filter((r) => shopWarehouseIds.has(r.warehouse_id));
+    if (warehouseFilter) result = result.filter((r) => r.warehouse_id === warehouseFilter);
+    return result;
+  }, [rows, shopWarehouseIds, warehouseFilter]);
 
   const MISSING_RATE_KEY: Record<"trade" | "sale" | "wholesale" | "credit", (r: InventoryRow) => number | null> = {
     trade: (r) => r.purchase_price,
@@ -105,16 +126,36 @@ export function InventoryClient({ rows, warehouses }: { rows: InventoryRow[]; wa
 
   return (
     <div>
-      <div className="mb-4 max-w-xs">
-        <Label htmlFor="warehouse-filter">{t("inv_filter_warehouse", lang)}</Label>
-        <Select id="warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}>
-          <option value="">{t("inv_all_warehouses", lang)}</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-4 flex flex-wrap gap-3">
+        {shops.length > 0 && (
+          <div className="min-w-[180px]">
+            <Label htmlFor="shop-filter">Shop / Dukan</Label>
+            <Select
+              id="shop-filter"
+              value={shopFilter}
+              onChange={(e) => {
+                setShopFilter(e.target.value);
+                setWarehouseFilter("");
+              }}
+            >
+              <option value="">Sab Shops</option>
+              {shops.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <div className="min-w-[180px]">
+          <Label htmlFor="warehouse-filter">{t("inv_filter_warehouse", lang)}</Label>
+          <Select id="warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}>
+            <option value="">{shopFilter ? "Sab Godaam (Is Shop Ke)" : t("inv_all_warehouses", lang)}</option>
+            {visibleWarehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">

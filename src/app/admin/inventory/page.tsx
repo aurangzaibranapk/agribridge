@@ -11,20 +11,21 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: rawInventory }, { data: warehouses }, { data: liveBatches }] = await Promise.all([
+  const [{ data: rawInventory }, { data: warehouses }, { data: liveBatches }, { data: shops }] = await Promise.all([
     supabase
       .from("inventory")
       .select(
         "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold)"
       )
       .order("quantity_on_hand", { ascending: true }),
-    supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
     // Miyaad batch ki hoti hai (257): har product/godam ka sab se
     // qareeb wala maal wala batch, aur kitne batch hain.
     supabase
       .from("v_product_batches")
       .select("product_id, warehouse_id, batch_number, expiry_date, days_left")
       .order("expiry_date", { ascending: true, nullsFirst: false }),
+    supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
   ]);
 
   const nearest = new Map<string, { batch_number: string | null; expiry_date: string | null; days_left: number | null; count: number }>();
@@ -87,7 +88,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     <div>
       <PageHeader title={t("inv_title", lang)} description={t("inv_subtitle", lang)} />
       <UnbatchedBulkFixer products={missingBatchProducts} focusProductId={searchParams?.focus} />
-      <InventoryClient rows={rows} warehouses={warehouses ?? []} />
+      <InventoryClient rows={rows} warehouses={warehouses ?? []} shops={shops ?? []} />
     </div>
   );
 }
