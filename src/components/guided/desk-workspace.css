@@ -255,6 +255,38 @@
   .desk-load .load-transactions { flex-basis:104px; }
   .desk-load .load-transactions-table td { height:24px; padding:2px 7px; }
 }
+/* A browser's usable height can be much smaller than the monitor height
+   (taskbar, bookmarks and display scaling all take space). In that case the
+   fixed one-screen desk used to clip the form actions. Keep the compact
+   desktop layout, but let the page itself scroll so every field and button
+   remains reachable. */
+@media (max-height:720px) and (min-width:1024px) {
+  main.desk-main:has(.desk-load) { overflow-y:auto; overscroll-behavior:contain; }
+  .desk-workspace.desk-load { height:auto; min-height:100%; overflow:visible; }
+  .desk-load .load-body { min-height:0; flex:none; }
+  .desk-load .load-entry-grid { min-height:0; flex:none; }
+  .desk-load .load-entry-card,.desk-load .load-live-summary { overflow:visible; }
+  .desk-load .load-form { min-height:0; flex:none; }
+  .desk-load .load-transactions { min-height:150px; flex:0 0 150px; }
+}
+/* On small laptops the sidebar leaves less room than the viewport media
+   query suggests. Stack the summary below the form instead of squeezing or
+   cutting either panel, while preserving the desktop controls. */
+@media (min-width:1024px) and (max-width:1279px) {
+  main.desk-main:has(.desk-load) { overflow-y:auto; overscroll-behavior:contain; padding:10px 12px; }
+  .desk-workspace.desk-load { height:auto; min-height:100%; overflow:visible; }
+  .desk-load .load-body { min-height:0; flex:none; }
+  .desk-load .load-entry-grid { min-height:0; flex:none; grid-template-columns:minmax(0,1fr); }
+  .desk-load .load-entry-card,.desk-load .load-live-summary { overflow:visible; }
+  .desk-load .load-form { min-height:0; flex:none; }
+  .desk-load .load-live-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:14px; }
+  .desk-load .load-summary-footer { margin-top:8px; }
+  .desk-load .load-summary-actions { grid-template-columns:repeat(2,minmax(0,220px)); }
+  .desk-load .load-transactions { min-height:170px; flex:0 0 170px; }
+  .desk-load .load-transactions-heading { flex-wrap:wrap; }
+  .desk-load .load-transaction-filters { order:3; width:100%; overflow-x:auto; padding-bottom:2px; }
+  .desk-load .load-transactions-table { min-width:720px; }
+}
 @media (min-width:1024px) {
   main:has(.desk-my-work) {
     display:flex;
