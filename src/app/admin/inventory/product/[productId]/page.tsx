@@ -215,6 +215,8 @@ export default async function ProductCardPage({ params }: { params: { productId:
             warehouseName: (Array.isArray(r.warehouses) ? r.warehouses[0] : r.warehouses)?.name ?? "—",
             quantityOnHand: Number(r.quantity_on_hand ?? 0),
           }))}
+          saleRate={product.selling_price != null ? Number(product.selling_price) : null}
+          purchaseRate={product.purchase_price != null ? Number(product.purchase_price) : null}
         />
       )}
 

@@ -26,9 +26,11 @@ interface Props {
   productId: string;
   productName: string;
   unbatchedRows: UnbatchedRow[];
+  saleRate: number | null;
+  purchaseRate: number | null;
 }
 
-export function UnbatchedFixer({ productId, productName, unbatchedRows }: Props) {
+export function UnbatchedFixer({ productId, productName, unbatchedRows, saleRate, purchaseRate }: Props) {
   const [state, action] = useFormState(fixUnbatchedInventory, {});
 
   if (unbatchedRows.length === 0) return null;
@@ -67,6 +69,12 @@ export function UnbatchedFixer({ productId, productName, unbatchedRows }: Props)
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="product_id" value={productId} />
           <div className="min-w-[180px]">
+            {(purchaseRate != null || saleRate != null) && (
+              <div className="mb-2 flex flex-wrap gap-3 text-xs text-amber-700 dark:text-amber-400">
+                {purchaseRate != null && <span>Khareed rate: <b>Rs {purchaseRate.toLocaleString()}</b></span>}
+                {saleRate != null && <span>Sale rate: <b>Rs {saleRate.toLocaleString()}</b></span>}
+              </div>
+            )}
             <label className="mb-1 block text-xs font-medium text-amber-900 dark:text-amber-200">
               Khareed qeemat per unit (Rs)
             </label>
@@ -76,7 +84,8 @@ export function UnbatchedFixer({ productId, productName, unbatchedRows }: Props)
               required
               min="0.01"
               step="0.01"
-              placeholder="jaise: 45.50"
+              defaultValue={purchaseRate ?? saleRate ?? undefined}
+              placeholder={purchaseRate ? String(purchaseRate) : saleRate ? String(saleRate) : "jaise: 45.50"}
               className="w-full rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-amber-600 dark:bg-surface-900 dark:text-white"
             />
           </div>
