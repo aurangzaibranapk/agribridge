@@ -447,8 +447,8 @@ export default async function MasterDashboardPage({
             Farq: <strong>Rs {Math.round(stockFarq).toLocaleString()}</strong>
           </p>
           <p className="mt-1 text-xs leading-relaxed">
-            Wajah: kisi product ka koi batch bina record hue reh gaya hai (quantity to inventory mein hai, magar
-            us ka batch/qeemat kahin darj nahi) — is liye us ka hissa upar wali ginti mein nahi aa raha.
+            Wajah: kharid mein discount tha magar batch ki qeemat gross (bina discount ke) darj hui — ya koi batch
+            bina journal entry ke ban gaya. Agle purchases theek ho jayenge; purani batches ke liye migration zaroori hai.
           </p>
           {missingBatchProducts.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">

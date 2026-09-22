@@ -391,7 +391,25 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     return { error: "Kuch toota ya kam hai -- note likhein: kya aur kyun. Baad mein supplier se yehi baat hogi." };
   }
 
+  // Agar purchase par discount hai, to batch ka unit_cost net qeemat par
+  // ho (gross - discount ka hissa). Journal bhi yahi karta hai
+  // (postGoodsReceived mein discountAmount ghata ke debit hota hai), is
+  // liye dono barabar rahenge.
+  const grossReceived = rows.reduce((s, r) => s + r.received * r.unit_cost, 0);
+  const grossOrdered  = rows.reduce((s, r) => s + r.quantity  * r.unit_cost, 0);
+  const batchRatio    = grossOrdered > 0 ? Math.min(1, grossReceived / grossOrdered) : 1;
+  const batchDiscountApplied = purchase.discount_amount != null
+    ? Number(purchase.discount_amount) * batchRatio
+    : 0;
+  const batchDiscountRate = grossReceived > 0 && batchDiscountApplied > 0
+    ? batchDiscountApplied / grossReceived
+    : 0;
+
   for (const row of rows) {
+    // Net unit_cost: gross rate par proportional discount ghata ke.
+    // Agar discount nahi (batchDiscountRate === 0) to yahi gross rate rahega.
+    const netUnitCost = Math.round(row.unit_cost * (1 - batchDiscountRate) * 10000) / 10000;
+
     // Ginti ke adad pehle likhe jate hain, stock baad mein. Agar rok
     // (received + damaged + short = quantity) yahan tooti to stock
     // chhua hi nahi gaya.
@@ -410,7 +428,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (row.received <= 0) {
       // Kuch aaya hi nahi: batch khali, stock mein koi harkat nahi.
       if (row.batch_id) {
-        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: row.unit_cost }).eq("id", row.batch_id);
+        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: netUnitCost }).eq("id", row.batch_id);
       }
       continue;
     }
@@ -452,7 +470,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (batchId) {
       await supabase
         .from("stock_batches")
-        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: row.unit_cost })
+        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: netUnitCost })
         .eq("id", batchId);
     } else {
       const { data: newBatch, error: batchErr } = await supabase
@@ -463,7 +481,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
           batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
           initial_quantity: row.received,
           remaining_quantity: row.received,
-          unit_cost: row.unit_cost,
+          unit_cost: netUnitCost,
         })
         .select("id")
         .single();
