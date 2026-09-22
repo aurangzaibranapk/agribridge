@@ -60,6 +60,22 @@ export default async function LoadBillPage({
     .maybeSingle();
   if (!me?.is_active) redirect("/login");
 
+  // Profile mein shop_id na ho to active POS shift se lete hain.
+  let effectiveShopId: string | null = (me.shop_id as string | null) ?? null;
+  if (!effectiveShopId) {
+    const { data: openShift } = await supabase
+      .from("pos_shifts")
+      .select("counter_id, pos_counters!inner(shop_id)")
+      .eq("staff_id", user.id)
+      .eq("status", "open")
+      .limit(1)
+      .maybeSingle();
+    if (openShift) {
+      const counters = Array.isArray((openShift as any).pos_counters) ? (openShift as any).pos_counters[0] : (openShift as any).pos_counters;
+      effectiveShopId = counters?.shop_id ?? null;
+    }
+  }
+
   const service = createServiceClient();
   // Migration 20260922092251 owns this table; generated database types
   // are refreshed after the migration is applied to the shared database.
@@ -219,7 +235,7 @@ export default async function LoadBillPage({
       ) : (
         <LoadBillClient
           shuruKind={shuruKind}
-          shopId={(me.shop_id as string | null) ?? null}
+          shopId={effectiveShopId}
           providers={(providers ?? []).map((p) => ({
             id: p.id as string,
             name: p.name as string,
