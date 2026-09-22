@@ -152,9 +152,9 @@ export function PosReturn({
     let q = supabase
       .from("pos_sales")
       .select("id, created_at, total_amount, status, payment_mode, customer_id, crm_customer_id")
-      .in("status", ["completed", "partially_returned"])
-      .gte("created_at", `${from}T00:00:00`)
-      .lte("created_at", `${to}T23:59:59`)
+      .in("status", ["completed", "partially_returned", "returned"])
+      .gte("created_at", `${from}T00:00:00+05:00`)
+      .lte("created_at", `${to}T23:59:59.999+05:00`)
       .order("created_at", { ascending: false })
       .limit(200);
     if (branchId) q = q.eq("branch_id", branchId);
@@ -240,8 +240,8 @@ export function PosReturn({
     });
   }, [sales, query]);
 
-  /** Is arse ki kul bikri -- jo qatarein saamne hain, unhi ka jama. */
-  const kulBikri = matches.reduce((s, r) => s + r.total_amount, 0);
+  /** Is arse ki kul bikri -- gross (wapas hui bikriyaan minus kar ke net). */
+  const kulBikri = matches.reduce((s, r) => s + (r.status === "returned" ? -r.total_amount : r.total_amount), 0);
 
   /**
    * Miyaad guzar to nahi gayi.
@@ -498,22 +498,30 @@ export function PosReturn({
           ) : (
             matches.map((s) => {
               const guzri = miyaadGuzri(s);
+              const wapas = s.status === "returned";
               return (
                 <button
                   key={s.id}
                   type="button"
-                  disabled={guzri}
-                  onClick={() => openSale(s)}
+                  disabled={guzri || wapas}
+                  onClick={() => !wapas && openSale(s)}
                   className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left ${
-                    guzri
-                      ? "cursor-not-allowed opacity-50"
-                      : "hover:bg-surface-50 dark:hover:bg-surface-800"
+                    wapas
+                      ? "cursor-default bg-red-50 dark:bg-red-950/20"
+                      : guzri
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:bg-surface-50 dark:hover:bg-surface-800"
                   }`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
                       {s.customer_name ?? t("ret_walkin", lang)}
                       {s.customer_phone && <span className="ml-1 font-normal text-surface-400">· {s.customer_phone}</span>}
+                      {wapas && (
+                        <span className="ml-2 inline-block rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                          WAPAS HUI
+                        </span>
+                      )}
                     </span>
                     <span className="block text-xs text-surface-500">
                       {waqtAmPm(s.created_at)} ·{" "}
@@ -522,11 +530,11 @@ export function PosReturn({
                       {/* Miyaad guzar chuki ho to wajah wahin likhi jati
                           hai. Bina wajah ke band qatar bande ko safhe ki
                           kharabi lagti hai. */}
-                      {guzri && <span className="ml-1 text-amber-700">· {t("ret_too_old", lang)}</span>}
+                      {!wapas && guzri && <span className="ml-1 text-amber-700">· {t("ret_too_old", lang)}</span>}
                     </span>
                   </span>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
-                    Rs {Number(s.total_amount).toLocaleString()}
+                  <span className={`shrink-0 text-sm font-semibold tabular-nums ${wapas ? "text-red-600 line-through dark:text-red-400" : "text-surface-900 dark:text-surface-100"}`}>
+                    {wapas ? "-" : ""}Rs {Number(s.total_amount).toLocaleString()}
                   </span>
                 </button>
               );

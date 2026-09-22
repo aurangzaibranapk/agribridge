@@ -77,10 +77,10 @@ export async function shopPaymentMethodBreakdown(
   if (options.strict && salesError) throw new Error("Shop sales could not be loaded.");
   const saleIds = (sales ?? []).map((s) => s.id as string);
 
-  const [paymentResult, expenseResult, mapResult] = await Promise.all([
+  const [paymentResult, expenseResult, mapResult, returnResult] = await Promise.all([
     saleIds.length > 0
-      ? service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
-      : Promise.resolve({ data: [] as { payment_method: string; amount: number }[], error: null }),
+      ? service.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
+      : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[], error: null }),
     service
       .from("company_expense_requests")
       .select("kind, amount, paid_from_account_id")
@@ -89,6 +89,12 @@ export async function shopPaymentMethodBreakdown(
       .gte("expense_date", fromDate)
       .lte("expense_date", toDate),
     service.from("payment_method_account_map").select("payment_method, finance_account_id"),
+    // Wapas hui bikriyaan -- golak mein ye paisa wapas gaya, is liye
+    // net ko reduce karta hai. sale_id se original payment method pata
+    // chalta hai (refund_method="original" ke liye).
+    saleIds.length > 0
+      ? service.from("pos_returns").select("sale_id, total_amount, refund_method").in("sale_id", saleIds)
+      : Promise.resolve({ data: [] as { sale_id: string; total_amount: number; refund_method: string }[], error: null }),
   ]);
   if (options.strict && (paymentResult.error || expenseResult.error || mapResult.error)) {
     throw new Error("Shop payment breakdown is incomplete.");
@@ -96,6 +102,7 @@ export async function shopPaymentMethodBreakdown(
   const { data: payments } = paymentResult;
   const { data: expenses } = expenseResult;
   const { data: mapRows } = mapResult;
+  const { data: returns } = returnResult;
 
   const accountToMethod = new Map<string, string>();
   for (const m of (mapRows ?? []) as { payment_method: string; finance_account_id: string | null }[]) {
@@ -114,8 +121,38 @@ export async function shopPaymentMethodBreakdown(
     return cur;
   };
 
-  for (const p of (payments ?? []) as { payment_method: string; amount: number }[]) {
+  for (const p of (payments ?? []) as { sale_id: string; payment_method: string; amount: number }[]) {
     bucket(p.payment_method).sales += Number(p.amount ?? 0);
+  }
+
+  // Sale ID -> [{method, amount}] naqsha -- wapas hui bikriyaan ke liye
+  // original payment method proportionally subtract karne ke liye.
+  const salePayMap = new Map<string, { method: string; amount: number }[]>();
+  for (const p of (payments ?? []) as { sale_id: string; payment_method: string; amount: number }[]) {
+    const cur = salePayMap.get(p.sale_id) ?? [];
+    cur.push({ method: p.payment_method, amount: Number(p.amount ?? 0) });
+    salePayMap.set(p.sale_id, cur);
+  }
+
+  // Wapas hui bikriyaan: har method se uski proportional hissa wapas ho.
+  // refund_method="cash" → cash bucket se; "original" → original sale ki
+  // payment split ke mutabiq proportionally; koi mapped method nahi to
+  // khamoshi se chhoRa jata hai (hisaab galat karne se behtar).
+  for (const r of (returns ?? []) as { sale_id: string; total_amount: number; refund_method: string }[]) {
+    const amt = Number(r.total_amount ?? 0);
+    if (amt <= 0) continue;
+    if (r.refund_method === "cash") {
+      bucket("cash").sales -= amt;
+    } else {
+      // "original" ya koi aur: original sale ki payment split se
+      const origPays = salePayMap.get(r.sale_id) ?? [];
+      const origTotal = origPays.reduce((s, p) => s + p.amount, 0);
+      if (origTotal > 0) {
+        for (const p of origPays) {
+          bucket(p.method).sales -= amt * (p.amount / origTotal);
+        }
+      }
+    }
   }
 
   // Jis account ka koi payment-method mapping nahi mila, wo is hisaab
