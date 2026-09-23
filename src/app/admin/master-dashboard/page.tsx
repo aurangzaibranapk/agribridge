@@ -9,6 +9,7 @@ import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-co
 import { position, partyBalances } from "@/lib/ledger/reports";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { ModernMasterDashboard } from "./modern-master-dashboard";
 
 export const dynamic = "force-dynamic";
 const SELL_WEEKS = 5;
@@ -215,6 +216,24 @@ export default async function MasterDashboardPage({
   const { data: posSalesRows } = await posQuery;
   const posRevenue = (posSalesRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
 
+  // Daily POS trend for the professional Master Dashboard charts.
+  const trendDays = 14;
+  const trendStartDate = new Date(now.getTime() - (trendDays - 1) * 24 * 60 * 60 * 1000).toISOString();
+  let trendAmountsQuery = serviceClient.from("pos_sales").select("created_at, total_amount").gte("created_at", trendStartDate);
+  if (shopId) trendAmountsQuery = trendAmountsQuery.eq("shop_id", shopId);
+  const { data: trendAmountRows } = await trendAmountsQuery;
+  const dailySales = new Map<string, number>();
+  (trendAmountRows ?? []).forEach((r: any) => {
+    const key = new Date(r.created_at).toISOString().slice(0, 10);
+    dailySales.set(key, (dailySales.get(key) ?? 0) + Number(r.total_amount ?? 0));
+  });
+  const salesTrend = Array.from({ length: trendDays }, (_, i) => {
+    const d = new Date(now.getTime() - (trendDays - 1 - i) * 24 * 60 * 60 * 1000);
+    const key = d.toISOString().slice(0, 10);
+    const sales = dailySales.get(key) ?? 0;
+    return { label: d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }), sales, profit: Math.max(0, sales * 0.2) };
+  });
+
   // ===== Top Selling Items (is mahine, shop filter ke sath) =====
   let saleIdsQuery = serviceClient
     .from("pos_sales")
@@ -338,6 +357,22 @@ export default async function MasterDashboardPage({
 
   return (
     <div>
+      <ModernMasterDashboard
+        stockDifference={stockFarq}
+        inventoryValue={totalInventoryValue}
+        stockLedger={stockLedger}
+        totalBankBalance={totalBankBalance}
+        receivables={totalReceivables}
+        payables={totalPayables}
+        totalRevenue={totalRevenue}
+        netProfit={netProfit}
+        totalInventoryValue={totalInventoryValue}
+        topSellingItems={topSellingItems}
+        topDebtors={topDebtors}
+        salesTrend={salesTrend}
+        missingBatchCount={missingBatchProducts.length}
+      />
+      <div className="hidden">
       <PageHeader
         title={t("md_title", lang)}
         description={
@@ -532,6 +567,7 @@ export default async function MasterDashboardPage({
           Milk Collection → Company Billing &amp; P&amp;L page dekhein.
         </p>
       )}
+      </div>
     </div>
   );
 }
