@@ -25,7 +25,7 @@ export default async function CatalogExportPage() {
   const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, category_id, pack_size, purchase_price, selling_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
+      .select("id, name, category_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("categories").select("id, name, parent_category_id"),
@@ -56,12 +56,16 @@ export default async function CatalogExportPage() {
       pack_size: p.pack_size,
       purchase_price: p.purchase_price ? Number(p.purchase_price) : null,
       selling_price: p.selling_price ? Number(p.selling_price) : null,
+      wholesale_price: p.wholesale_price ? Number(p.wholesale_price) : null,
       mrp_price: p.mrp_price ? Number(p.mrp_price) : null,
       unit: p.unit,
       barcode: p.barcode,
       manufacture_date: p.manufacture_date,
       expiry_date: p.expiry_date,
       stock_qty: stockByProduct.get(p.id) ?? 0,
+      stock_value_purchase: p.purchase_price != null ? Number(p.purchase_price) * (stockByProduct.get(p.id) ?? 0) : null,
+      stock_value_selling: p.selling_price != null ? Number(p.selling_price) * (stockByProduct.get(p.id) ?? 0) : null,
+      stock_value_wholesale: p.wholesale_price != null ? Number(p.wholesale_price) * (stockByProduct.get(p.id) ?? 0) : null,
     };
   });
 

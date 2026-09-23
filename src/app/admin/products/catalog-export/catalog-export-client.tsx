@@ -12,12 +12,16 @@ interface Product {
   pack_size: string | null;
   purchase_price: number | null;
   selling_price: number | null;
+  wholesale_price: number | null;
   mrp_price: number | null;
   unit: string | null;
   barcode: string | null;
   manufacture_date: string | null;
   expiry_date: string | null;
   stock_qty: number | null;
+  stock_value_purchase: number | null;
+  stock_value_selling: number | null;
+  stock_value_wholesale: number | null;
   /** Kis kis dukan-qism (Karyana/Agri Inputs/Dairy) ka maal hai -- ek se zyada bhi ho sakta hai. */
   shopGroups: string[];
 }
@@ -37,7 +41,11 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "brand", label: "Brand" },
   { key: "pack_size", label: "Pack Size" },
   { key: "purchase_price", label: "Purchase Rate" },
+  { key: "stock_value_purchase", label: "Stock Value (Trade)" },
   { key: "selling_price", label: "Selling Rate" },
+  { key: "stock_value_selling", label: "Stock Value (Sale)" },
+  { key: "wholesale_price", label: "Wholesale Rate" },
+  { key: "stock_value_wholesale", label: "Stock Value (Wholesale)" },
   { key: "mrp_price", label: "MRP" },
   { key: "stock_qty", label: "Available Stock" },
   { key: "unit", label: "Unit" },
@@ -82,6 +90,12 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
     return list;
   }, [products, shopGroupFilter, categoryFilter, search]);
 
+  const stockValueTotals = useMemo(() => ({
+    purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
+    selling: filtered.reduce((s, p) => s + (p.stock_value_selling ?? 0), 0),
+    wholesale: filtered.reduce((s, p) => s + (p.stock_value_wholesale ?? 0), 0),
+  }), [filtered]);
+
   function toggleField(key: string) {
     setSelectedFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   }
@@ -89,7 +103,8 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
   function formatValue(p: Product, key: keyof Product): string {
     const value = p[key];
     if (value === null || value === undefined) return "-";
-    if (key === "purchase_price" || key === "selling_price" || key === "mrp_price") return `Rs ${Number(value).toLocaleString()}`;
+    if (key === "purchase_price" || key === "selling_price" || key === "wholesale_price" || key === "mrp_price") return `Rs ${Number(value).toLocaleString()}`;
+    if (key === "stock_value_purchase" || key === "stock_value_selling" || key === "stock_value_wholesale") return `Rs ${Number(value).toLocaleString()}`;
     if (key === "stock_qty") return Number(value).toLocaleString();
     if (key === "manufacture_date" || key === "expiry_date") return new Date(value as string).toLocaleDateString();
     return String(value);
@@ -303,6 +318,29 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
           {t("cx_count_columns", lang)}
         </label>
       </div>
+
+      {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("stock_value_selling") || selectedFields.includes("stock_value_wholesale")) && (
+        <div className="mb-4 flex flex-wrap gap-3">
+          {selectedFields.includes("stock_value_purchase") && (
+            <div className="rounded-card border border-amber-200 bg-amber-50 p-3 shadow-card dark:border-amber-800 dark:bg-amber-950/30">
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Total Stock Value (Trade Rate)</p>
+              <p className="mt-0.5 font-display text-xl font-bold text-amber-800 tabular-nums dark:text-amber-300">Rs {stockValueTotals.purchase.toLocaleString()}</p>
+            </div>
+          )}
+          {selectedFields.includes("stock_value_selling") && (
+            <div className="rounded-card border border-brand-200 bg-brand-50 p-3 shadow-card dark:border-brand-800 dark:bg-brand-950/30">
+              <p className="text-xs font-medium text-brand-600 dark:text-brand-400">Total Stock Value (Sale Rate)</p>
+              <p className="mt-0.5 font-display text-xl font-bold text-brand-800 tabular-nums dark:text-brand-300">Rs {stockValueTotals.selling.toLocaleString()}</p>
+            </div>
+          )}
+          {selectedFields.includes("stock_value_wholesale") && (
+            <div className="rounded-card border border-indigo-200 bg-indigo-50 p-3 shadow-card dark:border-indigo-800 dark:bg-indigo-950/30">
+              <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Total Stock Value (Wholesale Rate)</p>
+              <p className="mt-0.5 font-display text-xl font-bold text-indigo-800 tabular-nums dark:text-indigo-300">Rs {stockValueTotals.wholesale.toLocaleString()}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <div className="border-b border-surface-100 p-4 dark:border-surface-800">
