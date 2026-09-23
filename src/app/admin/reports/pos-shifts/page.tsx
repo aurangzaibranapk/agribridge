@@ -85,8 +85,8 @@ export default async function PosShiftReportPage({
     saleIds.length
       ? service.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
       : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[] }),
-    shiftIds.length
-      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds).eq("refund_method", "cash")
+      shiftIds.length
+      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds)
       : Promise.resolve({ data: [] as { shift_id: string | null; total_amount: number; refund_method: string }[] }),
   ]);
 
@@ -103,7 +103,7 @@ export default async function PosShiftReportPage({
     arr.push(p);
     paymentsBySale.set(p.sale_id, arr);
   });
-  const returnsByShift = new Map<string, { total_amount: number }[]>();
+  const returnsByShift = new Map<string, { total_amount: number; refund_method: string | null }[]>();
   (allReturns ?? []).forEach((r) => {
     if (!r.shift_id) return;
     const arr = returnsByShift.get(r.shift_id) ?? [];

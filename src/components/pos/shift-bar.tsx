@@ -440,7 +440,7 @@ export function ShiftBar({
             <>
               <span className="text-brand-300">·</span>
               <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-brand-700 shadow-sm dark:bg-surface-900 dark:text-brand-300">
-                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · {rs(summary.totalSales)}
+                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · net {rs(summary.totalSales - summary.returnsTotal)}
               </span>
             </>
           )}
@@ -565,8 +565,18 @@ export function ShiftBar({
                 {/* System khud bataye -- staff se pehle sawal nahi. */}
                 <div className="space-y-1.5 rounded-xl bg-surface-50 px-4 py-3 text-xs dark:bg-surface-800">
                   <div className="flex items-center justify-between text-surface-700 dark:text-surface-300">
-                    <span className="font-medium">Total Sale ({summary?.saleCount ?? "…"})</span>
+                    <span className="font-medium">Gross Sale ({summary?.saleCount ?? "…"})</span>
                     <span className="tabular-nums font-medium">{summary ? rs(summary.totalSales) : "…"}</span>
+                  </div>
+                  {(summary?.returnsTotal ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
+                      <span>Returns (all methods)</span>
+                      <span className="tabular-nums">− {rs(summary!.returnsTotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-b border-surface-200 pb-1.5 font-semibold text-surface-900 dark:border-surface-700 dark:text-white">
+                    <span>Net Sale</span>
+                    <span className="tabular-nums">{summary ? rs(summary.totalSales - summary.returnsTotal) : "…"}</span>
                   </div>
                   <div className="ml-2 flex items-center justify-between text-surface-500">
                     <span>— Cash</span>
@@ -586,7 +596,7 @@ export function ShiftBar({
                   )}
                   {(summary?.cashReturnsTotal ?? 0) > 0 && (
                     <div className="flex items-center justify-between text-surface-500">
-                      <span>Cash Returns</span>
+                      <span>Cash Returns (Expected Cash)</span>
                       <span className="tabular-nums">− {rs(summary!.cashReturnsTotal)}</span>
                     </div>
                   )}

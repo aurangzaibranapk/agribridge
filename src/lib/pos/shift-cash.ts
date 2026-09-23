@@ -9,6 +9,8 @@ export interface ShiftCashSummary {
   cashSalesTotal: number;
   /** Udhaar (Khata) par gaya hissa. */
   khataTotal: number;
+  /** Har qisam ki wapsi, gross aur net sale ko saaf dikhane ke liye. */
+  returnsTotal: number;
   /** Bank/card/Easypaisa/JazzCash/QR -- na cash na khata. */
   digitalTotal: number;
   cashReturnsTotal: number;
@@ -33,7 +35,7 @@ export interface ShiftCashSummary {
  */
 function emptySummary(openingCash: number): ShiftCashSummary {
   return {
-    saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
+    saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, returnsTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
     billTotal: 0, loadTotal: 0, loadBillCashTotal: 0, udhaarGivenCashTotal: 0, recoveryCashTotal: 0,
     expectedCash: openingCash,
   };
@@ -74,7 +76,7 @@ export function aggregateShiftCash(
   openingCash: number,
   sales: { total_amount: number | string | null; khata_amount: number | string | null }[],
   payments: { payment_method: string | null; amount: number | string | null }[],
-  returns: { total_amount: number | string | null }[],
+  returns: { total_amount: number | string | null; refund_method?: string | null }[],
   loadBillRows: LoadBillRow[] = [],
   udhaarCashRows: UdhaarCashLegRow[] = []
 ): ShiftCashSummary {
@@ -98,7 +100,14 @@ export function aggregateShiftCash(
     else digitalTotal += amt;
   }
 
-  const cashReturnsTotal = returns.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+  const returnsTotal = returns.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+  // Report ki purani cash-only qatarein mein method nahi hota, is liye missing
+  // method ko cash samjhein; live shift mein original refund expected cash ko
+  // kam nahi karta.
+  const cashReturnsTotal = returns.reduce(
+    (s, r) => s + (r.refund_method == null || r.refund_method === "cash" ? Number(r.total_amount ?? 0) : 0),
+    0
+  );
 
   let billTotal = 0;
   let loadTotal = 0;
@@ -128,6 +137,7 @@ export function aggregateShiftCash(
     totalSales,
     cashSalesTotal,
     khataTotal,
+    returnsTotal,
     digitalTotal,
     cashReturnsTotal,
     billTotal,
@@ -176,7 +186,7 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   // wajah bataye.
   const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }] = await Promise.all([
     service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
-    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId).eq("refund_method", "cash"),
+    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId),
     shopId && staffId && fromTs
       ? service
           .from("load_transactions")

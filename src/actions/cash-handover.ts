@@ -101,7 +101,64 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
       .select("cash_paas_hai")
       .eq("profile_id", user.id)
       .maybeSingle();
-    const paas = Number(mine?.cash_paas_hai ?? 0);
+    let paas = Number(mine?.cash_paas_hai ?? 0);
+
+    // Purani shifts mein close ke waqt custody journal entry fail ho gayi
+    // ho sakti hai. Staff ke paas counted cash phir bhi hota hai, lekin
+    // v_cash_custody Rs 0 dikhata hai. Agar ye request isi staff ki
+    // un-settled closed shifts se match karti ho to missing custody ko
+    // pehle repair kar dein; phir normal handover ledger mein jayega.
+    if (amount > paas + 0.01) {
+      const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+      const shiftIds = (shiftIdsRaw || String(formData.get("shift_id") || ""))
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (shiftIds.length > 0) {
+        const { data: shifts } = await service
+          .from("pos_shifts")
+          .select("id, shift_number, counted_cash, status, staff_id, cash_handover_id")
+          .in("id", shiftIds)
+          .eq("staff_id", user.id)
+          .eq("status", "closed")
+          .is("cash_handover_id", null);
+        const counted = (shifts ?? []).reduce((sum, s) => sum + Number(s.counted_cash ?? 0), 0);
+        const missing = Math.round((amount - paas) * 100) / 100;
+        if (missing > 0 && counted + 0.01 >= missing) {
+          const repaired = await postJournal({
+            description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
+            sourceModule: "pos_shift_close_repair",
+            sourceId: shiftIds[0],
+            branchId: me?.branch_id ?? null,
+            createdBy: user.id,
+            lines: [
+              { account: ACC.cashWithPerson, debit: missing, partyType: "staff", partyId: user.id, memo: "Purani shift ki counted cash" },
+              { account: ACC.cash, credit: missing, memo: "Purani shift ki counted cash custody mein" },
+            ],
+          });
+          if ("error" in repaired) return { error: `Purani shift ki cash custody repair nahi ho saki: ${repaired.error}` };
+          await cashBookLikhein([
+            {
+              glCode: ACC.cash,
+              amount: missing,
+              rukh: "gaya",
+              category: "pos_shift_close_repair",
+              notes: "Purani shift ki counted cash staff custody mein darj hui",
+              createdBy: user.id,
+              entryId: repaired.id,
+            },
+          ]);
+          paas += missing;
+          await logAudit({
+            actionType: "update",
+            module: "pos-shifts",
+            recordId: shiftIds[0],
+            recordLabel: "custody-repair",
+            description: `Rs ${missing.toLocaleString()} purani shift ki missing staff custody entry repair ki gayi.`,
+          });
+        }
+      }
+    }
     if (amount > paas + 0.01) {
       return {
         error: `Aap ke paas Rs ${paas.toLocaleString()} hai, magar Rs ${amount.toLocaleString()} bheja ja raha hai.`,
