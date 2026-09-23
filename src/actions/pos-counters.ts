@@ -373,6 +373,19 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
     description: `Shift band — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, farq Rs ${difference.toLocaleString()}.`,
   });
 
+  // Cash ki kami staff ke khate mein — aaj ka farq, kal ki salary se katega.
+  if (difference < 0 && shift.staff_id) {
+    const shortage = Math.round(Math.abs(difference) * 100) / 100;
+    await service.from("staff_credit_ledger").insert({
+      profile_id: shift.staff_id,
+      ledger_type: "debit",
+      source_type: "shift_shortage",
+      amount: shortage,
+      notes: `Shift ${shift.shift_number} — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, kami Rs ${shortage.toLocaleString()}`,
+      created_by: who.userId,
+    });
+  }
+
   revalidatePath("/admin/pos");
   return {
     success: true,
@@ -380,7 +393,9 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
     message:
       difference === 0
         ? "Shift band — cash poora milta hai."
-        : `Shift band — farq Rs ${difference.toLocaleString()} (${difference > 0 ? "zyada" : "kam"}).`,
+        : difference > 0
+          ? `Shift band — Rs ${difference.toLocaleString()} zyada mila.`
+          : `Shift band — Rs ${Math.abs(difference).toLocaleString()} ki kami — staff ke khate mein darj ho gai.`,
   };
 }
 
