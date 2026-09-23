@@ -40,7 +40,7 @@ export default async function ProductsImportPage() {
     );
   }
 
-  const [{ data: categories }, { data: brands }, { data: companies }, { count: pendingCount }, { data: warehouses }, { data: suppliers }] = await Promise.all([
+  const [{ data: categories }, { data: brands }, { data: companies }, { count: pendingCount }, { data: warehouses }, { data: suppliers }, { data: existingProducts }] = await Promise.all([
     supabase.from("categories").select("name").order("name"),
     supabase.from("brands").select("name").order("name"),
     supabase.from("companies").select("name").order("name"),
@@ -51,6 +51,7 @@ export default async function ProductsImportPage() {
       .eq("is_deleted", false),
     supabase.from("warehouses").select("id, name, code").order("name"),
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("products").select("id, name").eq("is_deleted", false).order("name").limit(2000),
   ]);
 
   return (
@@ -67,6 +68,7 @@ export default async function ProductsImportPage() {
         tradeRatePending={pendingCount ?? null}
         warehouses={(warehouses ?? []).map((w) => ({ id: w.id, name: w.name, code: w.code }))}
         suppliers={(suppliers ?? []).map((sp) => ({ id: sp.id, name: sp.name }))}
+        existingProducts={(existingProducts ?? []).map((p) => ({ id: p.id, name: p.name }))}
       />
     </div>
   );
