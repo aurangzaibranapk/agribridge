@@ -433,6 +433,66 @@ export async function approveOrder(_prev: ActionState, formData: FormData): Prom
   return { success: true };
 }
 
+export async function adminApproveAllStages(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) return { error: "Missing order id." };
+
+  const branchId = await getOrderBranchId(orderId);
+  const permissions = await getOrderPermissions(branchId);
+  if (!permissions.canSalesVerify || !permissions.canFinanceVerify || !permissions.canApprove) {
+    return { error: "Sirf Admin / Owner ye kaam kar sakte hain." };
+  }
+
+  const { data: order } = await supabase
+    .from("agri_orders")
+    .select("status, order_number, grand_total")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return { error: "Order nahi mila." };
+  if (!["submitted", "sales_verified", "finance_verified"].includes(order.status)) {
+    return { error: "Order already approve ho chuka hai ya is stage par nahi hai." };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const now = new Date().toISOString();
+  const comment = String(formData.get("comment") ?? "").trim() || "Admin ne saary stages ek sath approve kiye.";
+
+  const updateData: Record<string, string | null> = {
+    status: "approved",
+    approved_by: user?.id ?? null,
+    approved_at: now,
+  };
+  const stagesToLog: string[] = [];
+
+  if (order.status === "submitted") {
+    updateData.sales_verified_by = user?.id ?? null;
+    updateData.sales_verified_at = now;
+    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_at = now;
+    stagesToLog.push("sales_verified", "finance_verified", "approved");
+  } else if (order.status === "sales_verified") {
+    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_at = now;
+    stagesToLog.push("finance_verified", "approved");
+  } else {
+    stagesToLog.push("approved");
+  }
+
+  const { error } = await supabase.from("agri_orders").update(updateData).eq("id", orderId);
+  if (error) return { error: error.message };
+
+  for (const stage of stagesToLog) {
+    await logTimeline(orderId, stage, `Admin bypass: ${comment}`);
+  }
+  await logAudit({ actionType: "approve", module: "agri_orders", recordId: orderId, recordLabel: order.order_number, description: `Admin ne saary stages bypass kar ke approve kiya - Rs ${Number(order.grand_total ?? 0).toLocaleString()}` });
+  await notifyRoles(["warehouse", ...HQ_ROLES], "Order Admin Ne Approve Kiya", `${order.order_number} - ab dispatch banayein.`, `/admin/agri-orders/${orderId}`);
+
+  revalidatePath(`/admin/agri-orders/${orderId}`);
+  revalidatePath("/admin/agri-orders");
+  return { success: true };
+}
+
 export async function rejectOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");

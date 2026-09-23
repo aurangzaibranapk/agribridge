@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
-import { salesVerifyOrder, financeVerifyOrder, approveOrder, rejectOrder, type ActionState } from "@/actions/agri-orders";
-import { CheckSquare, DollarSign, CheckCircle2, XCircle, X } from "lucide-react";
+import { salesVerifyOrder, financeVerifyOrder, approveOrder, rejectOrder, adminApproveAllStages, type ActionState } from "@/actions/agri-orders";
+import { CheckSquare, DollarSign, CheckCircle2, XCircle, X, Zap } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -25,8 +25,20 @@ export function OrderDetailActions({ orderId, status, permissions }: { orderId: 
     (status === "sales_verified" && permissions.canFinanceVerify) ||
     (status === "finance_verified" && permissions.canApprove);
 
+  const isAdminAllApprove =
+    permissions.canSalesVerify && permissions.canFinanceVerify && permissions.canApprove &&
+    ["submitted", "sales_verified", "finance_verified"].includes(status);
+
   return (
     <div className="flex flex-wrap gap-2">
+      {isAdminAllApprove && (
+        <button
+          onClick={() => setShowAction({ action: adminApproveAllStages, label: "Saary Stages Approve (Admin)", icon: <Zap className="h-3.5 w-3.5" /> })}
+          className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-medium text-white hover:bg-amber-600"
+        >
+          <Zap className="h-3.5 w-3.5" /> Saary Stages Approve
+        </button>
+      )}
       {status === "submitted" && permissions.canSalesVerify && (
         <button
           onClick={() => setShowAction({ action: salesVerifyOrder, label: "Sales Verify Karein", icon: <CheckSquare className="h-3.5 w-3.5" /> })}
