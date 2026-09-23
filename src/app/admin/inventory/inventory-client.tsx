@@ -5,7 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { adjustStock, transferStock, type ActionState } from "@/actions/inventory";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
-import { AlertTriangle, Package, DollarSign, Settings2, ArrowLeftRight, Pencil, X } from "lucide-react";
+import { AlertTriangle, Package, DollarSign, Settings2, ArrowLeftRight, Pencil, X, Printer } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -126,7 +126,12 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-3">
+      {/* Print-only header — sirf print par dikhe */}
+      <div className="hidden print:block mb-4">
+        <h1 className="text-xl font-bold">Maal / Stock — {new Date().toLocaleDateString("en-PK")}</h1>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-end gap-3 print:hidden">
         {shops.length > 0 && (
           <div className="min-w-[180px]">
             <Label htmlFor="shop-filter">Shop / Dukan</Label>
@@ -155,6 +160,17 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
               </option>
             ))}
           </Select>
+        </div>
+        {/* Print button */}
+        <div className="ml-auto self-end">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            <Printer className="h-4 w-4" />
+            Print / PDF
+          </button>
         </div>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
