@@ -38,15 +38,22 @@ function statusTone(status: string) {
   return "blue" as const;
 }
 
-export default async function AgriOrdersPage() {
+const ACTIVE_STATUSES = ["draft", "submitted", "sales_verified", "finance_verified", "approved", "processing", "dispatched", "in_transit", "delivered", "grn_submitted"];
+const INACTIVE_STATUSES = ["completed", "cancelled", "rejected"];
+
+export default async function AgriOrdersPage({ searchParams }: { searchParams: { show?: string } }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+  const showAll = searchParams?.show === "all";
 
-  const { data: orders } = await supabase
+  let q = supabase
     .from("agri_orders")
     .select("id, order_number, order_type, shop_dealer_name, order_to_type, grand_total, status, created_at")
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .order("created_at", { ascending: false });
+
+  if (!showAll) q = q.in("status", ACTIVE_STATUSES);
+
+  const { data: orders } = await q.limit(200);
 
   const counts: Record<string, number> = {};
   let totalValue = 0;
@@ -108,6 +115,22 @@ export default async function AgriOrdersPage() {
             </Card>
           );
         })}
+      </div>
+
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm text-surface-500">
+          {showAll ? `Sab orders (${orders?.length ?? 0})` : `Active orders (${orders?.length ?? 0}) — completed chhuppe hain`}
+        </p>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/agri-orders"
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${!showAll ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"}`}
+          >Active</Link>
+          <Link
+            href="/admin/agri-orders?show=all"
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${showAll ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"}`}
+          >Sab Dekhen</Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
