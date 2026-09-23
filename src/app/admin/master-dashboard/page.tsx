@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MasterDashboardActions } from "./master-dashboard-actions";
 import { ClickableCards } from "./clickable-cards";
+import { ModernMasterDashboard } from "./modern-master-dashboard";
 import { getBusinessContext, BUSINESS_LABELS } from "@/lib/utils/get-business-context";
 
 export const dynamic = "force-dynamic";
@@ -144,12 +145,29 @@ export default async function MasterDashboardPage() {
   const totalRevenue = (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
   const netProfit = totalRevenue - totalAllExpenses;
+  const salesTrend = [{ label: "This month", sales: totalRevenue, profit: Math.max(0, netProfit) }];
   const currentPosition = totalBankBalance + totalInventoryValue + totalReceivables - totalPayables;
 
   const noDataYetBusinesses = ["grain_procurement", "machinery_fleet"];
 
   return (
     <div>
+      <ModernMasterDashboard
+        stockDifference={null}
+        inventoryValue={totalInventoryValue}
+        stockLedger={null}
+        totalBankBalance={totalBankBalance}
+        receivables={totalReceivables}
+        payables={totalPayables}
+        totalRevenue={totalRevenue}
+        netProfit={netProfit}
+        totalInventoryValue={totalInventoryValue}
+        topSellingItems={[]}
+        topDebtors={[]}
+        salesTrend={salesTrend}
+        missingBatchCount={0}
+      />
+
       <PageHeader
         title="Master Dashboard"
         description={
