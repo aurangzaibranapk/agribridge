@@ -8,6 +8,7 @@ import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
 import { logAudit } from "@/lib/audit";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
 
 export interface ActionState {
   error?: string;
@@ -240,6 +241,17 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   revalidatePath("/admin/cash-handover");
   revalidatePath("/admin/money-trail");
   revalidatePath("/admin/pos");
+
+  // In-system notification: Finance, Admin, Manager, Owner ko batao
+  const senderName = me?.full_name ?? "Koi";
+  const { data: toProfile } = await service.from("profiles").select("full_name").eq("id", toProfileId).maybeSingle();
+  const receiverName = (toProfile?.full_name as string | null) ?? "Koi";
+  const notifTitle = `Cash Handover — Rs ${amount.toLocaleString()}`;
+  const notifMsg = `${senderName} ne Rs ${amount.toLocaleString()} bheja ${receiverName} ko. Status: raaste mein. Tasdeeq ka intezar.`;
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, "/admin/cash-handover");
+  // Lene wale ko seedha bhi batao
+  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover par tasdeeq karein.`, "/admin/cash-handover");
+
   return {
     success: true,
     handoverId: handoverRow.id,
@@ -315,7 +327,7 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
 
   const { data: h } = await service
     .from("cash_handovers")
-    .select("id, amount_sent, to_profile_id, to_branch_id, status")
+    .select("id, amount_sent, to_profile_id, to_branch_id, from_profile_id, status")
     .eq("id", handoverId)
     .maybeSingle();
 
@@ -428,6 +440,20 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
 
   revalidatePath("/admin/cash-handover");
   revalidatePath("/admin/money-trail");
+
+  // Bhejne wale ko tasdeeq ki khabar do
+  const { data: receiverProfile } = await service.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const receiverName2 = (receiverProfile?.full_name as string | null) ?? "Koi";
+  const fromProfileId = (h as any).from_profile_id as string | null;
+  const rcvTitle = difference === 0
+    ? `Cash Mila — Rs ${received.toLocaleString()} (Poora)`
+    : `Cash Mila — Rs ${received.toLocaleString()} (${difference < 0 ? "Kam" : "Zyada"})`;
+  const rcvMsg = difference === 0
+    ? `${receiverName2} ne Rs ${received.toLocaleString()} poore tasdeeq kar diye — hisaab barabar.`
+    : `${receiverName2} ne Rs ${received.toLocaleString()} tasdeeq kiye. Bheja tha Rs ${sent.toLocaleString()} — farq Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"}.`;
+  await notifyUser(fromProfileId, rcvTitle, rcvMsg, "/admin/cash-handover");
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], rcvTitle, rcvMsg, "/admin/cash-handover");
+
   return {
     success: true,
     message:
