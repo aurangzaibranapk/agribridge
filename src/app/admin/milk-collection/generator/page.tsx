@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { GeneratorClient } from "./generator-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function GeneratorTrackerPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: branches } = await supabase.from("branches").select("id, name").order("is_main_branch", { ascending: false }).order("name");
   const { data: rawLogs } = await supabase
@@ -28,7 +31,7 @@ export default async function GeneratorTrackerPage() {
 
   return (
     <div>
-      <PageHeader title="Generator Diesel Tracker" description="Runtime hours vs diesel consumption, cost per hour" />
+      <PageHeader title={t("mc_generator_title", lang)} description="Runtime hours vs diesel consumption, cost per hour" />
       <GeneratorClient logs={logs} branches={branches ?? []} />
     </div>
   );

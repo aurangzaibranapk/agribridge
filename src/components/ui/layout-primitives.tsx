@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils/format";
+import { BackButton } from "@/components/ui/back-button";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -8,10 +9,21 @@ export function Card({ className, children }: { className?: string; children: Re
   );
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: React.ReactNode }) {
+export function PageHeader({
+  title, description, actions, showBack = true,
+}: {
+  title: string; description?: string; actions?: React.ReactNode;
+  /**
+   * Boss (19 September): "har page par back ka option chahiye" -- ab ye
+   * DEFAULT hai, har PageHeader wale safhe par khud aata hai. Kisi
+   * khaas safhe par chhupana ho to showBack={false} dein.
+   */
+  showBack?: boolean;
+}) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
+        {showBack && <BackButton />}
         <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{title}</h1>
         {description && <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">{description}</p>}
       </div>

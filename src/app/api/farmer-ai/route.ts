@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
+import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function POST(request: NextRequest) {
     if (!message && !audioBase64) {
       return NextResponse.json({ error: "Message ya audio zaroori hai" }, { status: 400 });
     }
+    if (!aiKeyOrNull()) return NextResponse.json({ error: AI_KEY_MISSING }, { status: 503 });
 
     const supabase = createClient();
     const {
@@ -26,6 +28,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error("Farmer AI error:", error);
-    return NextResponse.json({ error: "Kuch masla ho gaya, dobara koshish karein." }, { status: 500 });
+    return NextResponse.json({ error: aiErrorMessage(error) }, { status: 500 });
   }
 }

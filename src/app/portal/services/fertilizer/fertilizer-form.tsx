@@ -5,6 +5,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import { CheckCircle2, AlertTriangle, MapPin, Loader2, Plus, Trash2, ArrowRight } from "lucide-react";
 import { submitFertilizerRequest, type ServiceRequestState } from "@/actions/service-requests";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const UNITS = ["bags", "kg", "litres"];
 
@@ -22,6 +24,7 @@ function newRow(): ProductRow {
 const initialState: ServiceRequestState = {};
 
 export function FertilizerForm() {
+  const lang = useLang();
   const [state, formAction] = useFormState(submitFertilizerRequest, initialState);
   const [rows, setRows] = useState<ProductRow[]>([newRow()]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -68,18 +71,13 @@ export function FertilizerForm() {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Your fertilizer request has been submitted. We'll be in touch soon.
-        </div>
+          <CheckCircle2 className="h-4 w-4 shrink-0" />{t("pm_fert_submitted", lang)}</div>
         <Link
           href="/portal/services/livestock"
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          Continue to Livestock Loan <ArrowRight className="h-4 w-4" />
+        >{t("pm_continue_livestock", lang)}<ArrowRight className="h-4 w-4" />
         </Link>
-        <Link href="/portal/dashboard" className="block text-center text-sm text-surface-500 hover:text-brand-700">
-          Back to Dashboard
-        </Link>
+        <Link href="/portal/dashboard" className="block text-center text-sm text-surface-500 hover:text-brand-700">{t("back_to_dashboard", lang)}</Link>
       </div>
     );
   }
@@ -94,18 +92,18 @@ export function FertilizerForm() {
       )}
 
       <div>
-        <label className="block text-sm font-medium text-surface-700">Crop Type</label>
+        <label className="block text-sm font-medium text-surface-700">{t("pm_crop_type", lang)}</label>
         <input
           type="text"
           name="crop_type"
           className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          placeholder="e.g. Wheat, Sugarcane, Cotton"
+          placeholder={t("pm_eg_crop_type", lang)}
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-surface-700">Cultivation Date</label>
+        <label className="block text-sm font-medium text-surface-700">{t("pm_cultivation_date", lang)}</label>
         <input
           type="date"
           name="cultivation_date"
@@ -116,7 +114,7 @@ export function FertilizerForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-surface-700">Location</label>
+        <label className="block text-sm font-medium text-surface-700">{t("c_location", lang)}</label>
         <button
           type="button"
           onClick={handleUseMyLocation}
@@ -133,20 +131,19 @@ export function FertilizerForm() {
           type="text"
           name="location_address"
           className="mt-2 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          placeholder="Village / area name"
+          placeholder={t("pm_village_name", lang)}
         />
       </div>
 
       <div>
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-surface-700">Products Needed</label>
+          <label className="block text-sm font-medium text-surface-700">{t("pm_products_needed", lang)}</label>
           <button
             type="button"
             onClick={addRow}
             className="flex items-center gap-1 rounded-lg border border-brand-200 px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
           >
-            <Plus className="h-3.5 w-3.5" /> Add Product
-          </button>
+            <Plus className="h-3.5 w-3.5" />{t("pm_add_product", lang)}</button>
         </div>
 
         <div className="mt-2 space-y-2">
@@ -157,7 +154,7 @@ export function FertilizerForm() {
                 name="product_name[]"
                 value={row.name}
                 onChange={(e) => updateRow(row.id, "name", e.target.value)}
-                placeholder="e.g. Urea, DAP, Nitrophos"
+                placeholder={t("pm_eg_fertilizer", lang)}
                 className="flex-1 min-w-0 rounded-md border border-surface-200 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
               />
               <input
@@ -167,7 +164,7 @@ export function FertilizerForm() {
                 onChange={(e) => updateRow(row.id, "quantity", e.target.value)}
                 min="0"
                 step="0.1"
-                placeholder="Qty"
+                placeholder={t("c_qty", lang)}
                 className="w-20 rounded-md border border-surface-200 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
               />
               <select
@@ -196,12 +193,12 @@ export function FertilizerForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-surface-700">Additional Notes (optional)</label>
+        <label className="block text-sm font-medium text-surface-700">{t("pm_extra_notes", lang)}</label>
         <textarea
           name="notes"
           rows={3}
           className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          placeholder="Anything else we should know?"
+          placeholder={t("pm_anything_else", lang)}
         />
       </div>
 

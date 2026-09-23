@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface CategoryStatusChartProps {
   data: { status: string; count: number }[];
@@ -8,15 +10,14 @@ interface CategoryStatusChartProps {
 }
 
 export function CategoryStatusChart({ data, color }: CategoryStatusChartProps) {
+  const lang = useLang();
   const shades = [`${color}`, `${color}b3`, `${color}59`];
 
   const hasData = data.some((d) => d.count > 0);
 
   if (!hasData) {
     return (
-      <div className="flex h-48 w-full items-center justify-center text-sm text-surface-400">
-        No requests yet
-      </div>
+      <div className="flex h-48 w-full items-center justify-center text-sm text-surface-400">{t("sh_no_requests", lang)}</div>
     );
   }
 

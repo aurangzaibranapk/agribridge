@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminStaticPagesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: pages } = await supabase.from("static_pages").select("*").order("title");
 
   return (
     <div>
-      <PageHeader title="Static Pages" description="Privacy Policy, Terms, Cookie Policy, Refund Policy, Disclaimer" />
+      <PageHeader title={t("at_static_pages", lang)} description="Privacy Policy, Terms, Cookie Policy, Refund Policy, Disclaimer" />
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>

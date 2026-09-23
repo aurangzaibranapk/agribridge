@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { BranchCreditClient } from "./branch-credit-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function BranchCreditPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
@@ -43,7 +46,7 @@ export default async function BranchCreditPage() {
 
   return (
     <div>
-      <PageHeader title="Store Credit & Advance Wallet" description="Har shop ka credit limit set karein, advance payment record karein" />
+      <PageHeader title={t("bc_title", lang)} description="Har shop ka credit limit set karein, advance payment record karein" />
       <BranchCreditClient branches={branchesWithCredit} />
     </div>
   );

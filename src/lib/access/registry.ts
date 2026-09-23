@@ -1,0 +1,160 @@
+import { createServiceClient } from "@/lib/supabase/service";
+import type { Lang } from "@/lib/i18n/translations";
+
+/**
+ * Dashboards aur features ki fehrist -- database se.
+ *
+ * Pehle ye fehrist code mein thi (nav-items.ts). Do kharabiyan is se
+ * paida hoti thin: ek hi cheez kai jagah likhi jati thi ("AgriBridge
+ * Ordering" chaar jagah), aur kuch bhi badalne ke liye poora build aur
+ * deploy ka chakkar chalta tha.
+ *
+ * Ab har feature ek hi jagah hai. Ek feature kai dashboard par nazar aa
+ * sakta hai, magar rehta ek hi jagah: na naql banti hai, na do jagah ka
+ * data alag hota hai.
+ */
+
+export interface FeatureRow {
+  key: string;
+  label: string;
+  route: string;
+  icon: string | null;
+  isSensitive: boolean;
+  /**
+   * Card ka doosra jumla -- "Bikri aur bill" (250).
+   *
+   * Khali ho sakta hai. Us soorat mein card par sirf naam aata hai --
+   * aur wo us se behtar hai ke khali jagah bharne ke liye kuch bana
+   * kar likh diya jaye, kyunke ghalat jumla bande ko ghalat safhe par
+   * bhejta hai.
+   */
+  description: string | null;
+}
+
+export interface DashboardRow {
+  key: string;
+  label: string;
+  icon: string | null;
+  summary: string | null;
+  /** Card ka doosra jumla -- "Booking se kattai tak" (131). */
+  description: string | null;
+  sortOrder: number;
+}
+
+export interface Registry {
+  dashboards: DashboardRow[];
+  features: Map<string, FeatureRow>;
+  /** dashboard key → feature keys, tarteeb ke sath. */
+  byDashboard: Map<string, string[]>;
+  /** feature key → un dashboards ki fehrist jin par wo laga hua hai. */
+  dashboardsOf: Map<string, string[]>;
+  /** route → feature key (rok lagane ke liye ulta raasta). */
+  byRoute: Map<string, string>;
+  /**
+   * Group ke andar chhoti sarkhi -- key `dashboard::feature` (174).
+   *
+   * Machinery ke atharah safhe ek hi lambi fehrist mein dhoondhe nahi
+   * jate the. Sarkhi database mein rehti hai, code mein nahi: nayi
+   * tarteeb ke liye deploy ka chakkar nahi chalta.
+   */
+  sectionByLink: Map<string, { section: string | null; order: number }>;
+}
+
+/**
+ * Menu ka naam chuni hui zaban mein.
+ *
+ * `label` hamesha Roman Urdu hai aur hamesha bhara hua hota hai. English
+ * aur Urdu ke khane khali ho sakte hain (tarjuma abhi jari hai) -- us
+ * soorat mein Roman hi dikhta hai. Yani adhoora tarjuma menu ko khali
+ * nahi karta, sirf us ek lafz ko purani zaban mein chhoR deta hai.
+ */
+function pickLabel(row: { label: string; label_en: string | null; label_ur: string | null }, lang: Lang): string {
+  if (lang === "en") return row.label_en || row.label;
+  if (lang === "ur") return row.label_ur || row.label;
+  return row.label;
+}
+
+/** Wohi usool jo naam ka hai -- Roman hamesha bhara, baqi do khali ho sakte hain. */
+function pickText(
+  row: { description: string | null; description_en: string | null; description_ur: string | null },
+  lang: Lang
+): string | null {
+  if (lang === "en") return row.description_en || row.description;
+  if (lang === "ur") return row.description_ur || row.description;
+  return row.description;
+}
+
+export async function loadRegistry(lang: Lang = "rm"): Promise<Registry> {
+  const service = createServiceClient();
+
+  const [{ data: dashboards }, { data: features }, { data: links }] = await Promise.all([
+    service.from("dashboards").select("key, label, label_en, label_ur, icon, summary, description, description_en, description_ur, sort_order").eq("is_active", true).order("sort_order"),
+    service.from("features").select("key, label, label_en, label_ur, route, icon, is_sensitive, description, description_en, description_ur").eq("is_active", true).order("label"),
+    service.from("dashboard_features").select("dashboard_key, feature_key, sort_order, section, section_order").order("sort_order"),
+  ]);
+
+  const featureMap = new Map<string, FeatureRow>();
+  const byRoute = new Map<string, string>();
+  for (const f of features ?? []) {
+    featureMap.set(f.key, {
+      key: f.key,
+      label: pickLabel(f, lang),
+      route: f.route,
+      icon: f.icon,
+      isSensitive: f.is_sensitive,
+      description: pickText(f, lang),
+    });
+    byRoute.set(f.route, f.key);
+  }
+
+  const byDashboard = new Map<string, string[]>();
+  const dashboardsOf = new Map<string, string[]>();
+  const sectionByLink = new Map<string, { section: string | null; order: number }>();
+  for (const link of links ?? []) {
+    // Band ya mita hua feature raasta na rok de.
+    if (!featureMap.has(link.feature_key)) continue;
+    byDashboard.set(link.dashboard_key, [...(byDashboard.get(link.dashboard_key) ?? []), link.feature_key]);
+    dashboardsOf.set(link.feature_key, [...(dashboardsOf.get(link.feature_key) ?? []), link.dashboard_key]);
+    sectionByLink.set(`${link.dashboard_key}::${link.feature_key}`, {
+      section: (link as { section?: string | null }).section ?? null,
+      order: Number((link as { section_order?: number | null }).section_order ?? 0),
+    });
+  }
+
+  return {
+    dashboards: (dashboards ?? []).map((d) => ({
+      key: d.key,
+      label: pickLabel(d, lang),
+      icon: d.icon,
+      summary: d.summary,
+      description: pickText(d, lang),
+      sortOrder: d.sort_order,
+    })),
+    features: featureMap,
+    byDashboard,
+    dashboardsOf,
+    byRoute,
+    sectionByLink,
+  };
+}
+
+/**
+ * Raaste se feature dhoondna.
+ *
+ * Sab se lamba milta hua raasta jeetta hai: /admin/milk-collection/chiller
+ * ko /admin/milk-collection samajh lena us shakhs ko chiller khol deta
+ * jise sirf collection ki ijazat thi.
+ */
+export function featureForPath(registry: Registry, pathname: string): string | null {
+  let best: string | null = null;
+  let bestLength = -1;
+  for (const [route, key] of registry.byRoute) {
+    if (pathname === route || pathname.startsWith(route + "/")) {
+      if (route.length > bestLength) {
+        best = key;
+        bestLength = route.length;
+      }
+    }
+  }
+  return best;
+}

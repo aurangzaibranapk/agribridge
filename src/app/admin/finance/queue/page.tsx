@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import Link from "next/link";
 import { CreditCard, ReceiptText, Home } from "lucide-react";
@@ -10,6 +12,7 @@ const HQ_APPROVER_ROLES = ["super_admin", "admin", "owner"];
 
 export default async function FinanceQueuePage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
 
   const {
     data: { user },
@@ -90,11 +93,11 @@ export default async function FinanceQueuePage() {
 
   return (
     <div>
-      <PageHeader title="Finance Queue" description="Jahan bhi paisa involve hai - sab ek jagah, verify/approve ke liye" />
+      <PageHeader title={t("fq_title", lang)} description={t("fq_subtitle", lang)} />
 
       <div className="mb-6">
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand-600">Total Pending Action</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-600">{t("fq_total_pending", lang)}</p>
           <p className="mt-1 font-display text-2xl font-bold text-brand-800 dark:text-brand-200">{totalPendingCount}</p>
         </Card>
       </div>
@@ -102,11 +105,11 @@ export default async function FinanceQueuePage() {
       {/* AgriBridge Order Payments */}
       <div className="mb-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <CreditCard className="h-4 w-4" /> AgriBridge Order Payments ({payments.length})
+          <CreditCard className="h-4 w-4" /> {t("fq_order_payments", lang)} ({payments.length})
         </h2>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           {payments.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-surface-400">Koi payment pending nahi hai.</p>
+            <p className="px-4 py-6 text-center text-sm text-surface-400">{t("fq_no_payment_pending", lang)}</p>
           ) : (
             payments.map((p) => (
               <Link
@@ -128,11 +131,11 @@ export default async function FinanceQueuePage() {
       {/* Company Expenses */}
       <div className="mb-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <ReceiptText className="h-4 w-4" /> Company Expense Approvals ({expenses.length})
+          <ReceiptText className="h-4 w-4" /> {t("fq_expense_approvals", lang)} ({expenses.length})
         </h2>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           {expenses.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-surface-400">Koi expense pending nahi hai.</p>
+            <p className="px-4 py-6 text-center text-sm text-surface-400">{t("fq_no_expense_pending", lang)}</p>
           ) : (
             expenses.map((e) => (
               <Link
@@ -154,11 +157,11 @@ export default async function FinanceQueuePage() {
       {/* Shop Bills */}
       <div className="mb-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-          <Home className="h-4 w-4" /> Shop Bills Pending ({bills.length})
+          <Home className="h-4 w-4" /> {t("fq_shop_bills", lang)} ({bills.length})
         </h2>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           {bills.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-surface-400">Koi bill pending nahi hai.</p>
+            <p className="px-4 py-6 text-center text-sm text-surface-400">{t("fq_no_bill_pending", lang)}</p>
           ) : (
             bills.map((b) => (
               <Link
