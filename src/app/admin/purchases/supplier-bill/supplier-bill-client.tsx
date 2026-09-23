@@ -288,7 +288,7 @@ export function SupplierBillClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-4 pb-8 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:space-y-3 xl:overflow-hidden xl:pb-0">
+    <div className="mx-auto w-full max-w-[1500px] space-y-4 pb-8">
       <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 text-sm text-surface-500 hover:text-brand-700">
         <ArrowLeft className="h-4 w-4" /> Purchase
       </Link>
