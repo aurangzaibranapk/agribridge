@@ -44,6 +44,11 @@ const JAREIN: Record<string, string[]> = {
     "Agricultural Products",
   ],
   dairy: ["Dairy Products"],
+  // Catalog Export ke liye alag alag tabs -- agri_inputs ko tora gaya.
+  fertilizer: ["Fertilizer"],
+  pesticide: ["Pesticide", "Pesticides"],
+  seeds: ["Seeds"],
+  animal_feed: ["Animal Feed", "Animal Feed (Wanda)", "Veterinary Medicines", "Agricultural Products"],
 };
 
 export interface CatNode {

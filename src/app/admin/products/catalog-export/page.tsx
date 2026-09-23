@@ -14,8 +14,10 @@ export const dynamic = "force-dynamic";
  * -- yahan dobara likhne ki zaroorat nahi. */
 const SHOP_GROUPS: { key: string; label: string }[] = [
   { key: "karyana", label: "Karyana" },
-  { key: "agri_inputs", label: "Agri Inputs" },
-  { key: "dairy", label: "Dairy" },
+  { key: "fertilizer", label: "Fertilizer" },
+  { key: "pesticide", label: "Pesticide" },
+  { key: "seeds", label: "Seeds" },
+  { key: "animal_feed", label: "Animal Feed" },
 ];
 
 export default async function CatalogExportPage() {

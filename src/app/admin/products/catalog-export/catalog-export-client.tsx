@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo, useTransition } from "react";
-import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X } from "lucide-react";
+import { useState, useMemo, useTransition, useRef, useEffect } from "react";
+import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X, ChevronDown } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { updateProductNamePackSize } from "@/actions/products";
@@ -74,7 +74,16 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
   const [editPackSize, setEditPackSize] = useState("");
   const [editError, setEditError] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [catDropOpen, setCatDropOpen] = useState(false);
+  const catDropRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (catDropRef.current && !catDropRef.current.contains(e.target as Node)) setCatDropOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
   // Karyana chunte hi uski saari categories (Grocery, Cold/Soft Drink,
   // Dairy Products aur unki har aulaad) ek sath aati hain -- ek-ek
   // category alag se chunne ki zaroorat nahi, aur pesticide/khad wali
@@ -115,7 +124,7 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
   const filtered = useMemo(() => {
     let list = products;
     if (shopGroupFilter) list = list.filter((p) => p.shopGroups.includes(shopGroupFilter));
-    if (categoryFilter) list = list.filter((p) => p.category === categoryFilter);
+    if (categoryFilters.length > 0) list = list.filter((p) => p.category != null && categoryFilters.includes(p.category));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q));
@@ -135,7 +144,7 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
       });
     }
     return list;
-  }, [products, shopGroupFilter, categoryFilter, search, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
+  }, [products, shopGroupFilter, categoryFilters, search, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
 
   const stockValueTotals = useMemo(() => ({
     purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
@@ -205,7 +214,7 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
   }
 
   const groupLabel = shopGroupFilter ? shopGroups.find((g) => g.key === shopGroupFilter)?.label ?? "" : "";
-  const titleSuffix = [groupLabel, categoryFilter].filter(Boolean).join(" - ");
+  const titleSuffix = [groupLabel, ...categoryFilters].filter(Boolean).join(" - ");
 
   function buildText(): string {
     const lines = [
@@ -363,10 +372,40 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm">
-          <option value="">{t("cx_all_categories", lang)}</option>
-          {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-        </select>
+        <div ref={catDropRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setCatDropOpen((v) => !v)}
+            className="flex items-center gap-1.5 rounded-lg border border-surface-200 p-2 text-sm text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+          >
+            {categoryFilters.length === 0 ? t("cx_all_categories", lang) : `${categoryFilters.length} Categories`}
+            <ChevronDown className="h-3.5 w-3.5 text-surface-400" />
+          </button>
+          {catDropOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-surface-200 bg-white py-1 shadow-lg dark:border-surface-700 dark:bg-surface-900">
+              <button
+                type="button"
+                onClick={() => setCategoryFilters([])}
+                className="w-full px-3 py-1.5 text-left text-xs font-medium text-brand-600 hover:bg-surface-50 dark:hover:bg-surface-800"
+              >
+                Sab clear karein
+              </button>
+              {categories.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-surface-50 dark:hover:bg-surface-800">
+                  <input
+                    type="checkbox"
+                    checked={categoryFilters.includes(c.name)}
+                    onChange={() => setCategoryFilters((prev) =>
+                      prev.includes(c.name) ? prev.filter((n) => n !== c.name) : [...prev, c.name]
+                    )}
+                    className="rounded"
+                  />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
         <select
           value={shopFilter}
           onChange={(e) => { setShopFilter(e.target.value); setWarehouseFilter(""); }}
