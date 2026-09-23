@@ -7,6 +7,7 @@ import { ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
+import { logAudit } from "@/lib/audit";
 
 export interface ActionState {
   error?: string;
