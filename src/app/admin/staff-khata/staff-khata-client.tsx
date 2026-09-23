@@ -81,7 +81,14 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
             {ledger.map((l) => (
               <div key={l.id} className="flex items-center justify-between rounded-lg bg-surface-50 px-2.5 py-1.5 text-xs dark:bg-surface-800">
                 <div>
-                  <p className="text-surface-600 dark:text-surface-300">{l.source_type.replace(/_/g, " ")}</p>
+                  <p className="text-surface-600 dark:text-surface-300">
+                    {l.source_type === "shift_shortage" ? "Shift kami (salary se katega)" :
+                     l.source_type === "grocery" ? "Grocery" :
+                     l.source_type === "advance" ? "Advance" :
+                     l.source_type === "wage_credit" ? "Taziyatna (daily wage)" :
+                     l.source_type === "month_end_salary" ? "Maheene ka hisaab" :
+                     l.source_type.replace(/_/g, " ")}
+                  </p>
                   <p className="text-surface-400">{new Date(l.created_at).toLocaleDateString()}</p>
                 </div>
                 <span className={l.ledger_type === "credit" ? "font-medium text-green-600" : "font-medium text-red-600"}>
