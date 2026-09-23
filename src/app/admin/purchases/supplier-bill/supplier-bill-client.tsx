@@ -266,6 +266,16 @@ export function SupplierBillClient({
         : null) ?? candidates[0];
       if (!product) {
         missing.push(rawName);
+        // Line add karo — data saved rahega, user search se link kar sakta hai
+        imported.push({
+          ...emptyLine(),
+          query: rawName,
+          quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
+          unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : "",
+          sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : "",
+          mrp_rate: mrpColumn >= 0 ? csvNumber(row[mrpColumn]) : "",
+          wholesale_rate: wholesaleColumn >= 0 ? csvNumber(row[wholesaleColumn]) : "",
+        });
         continue;
       }
       imported.push({
@@ -282,7 +292,7 @@ export function SupplierBillClient({
 
     if (imported.length) setLines(imported);
     const parts = [`${imported.length} product lines CSV se bill mein aa gayin.`];
-    if (missing.length) parts.push(`${missing.length} naam Product Master mein nahi mile: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""}`);
+    if (missing.length) parts.push(`${missing.length} naam Product Master mein nahi mile: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""} — amber lines mein search kar ke link karein.`);
     setCsvNotice(parts.join(" "));
     if (csvInputRef.current) csvInputRef.current.value = "";
   }
@@ -379,7 +389,8 @@ export function SupplierBillClient({
                       const textOk = !normalizedQuery || `${product.name} ${product.pack_size ?? ""} ${product.unit ?? ""}`.toLowerCase().includes(normalizedQuery);
                       return categoryOk && textOk;
                     }).slice(0, 12);
-                    return <tr key={index} className="border-t border-surface-100 align-top dark:border-surface-800">
+                    const csvUnmatched = !line.product_id && line.query.trim().length > 0;
+                    return <tr key={index} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
                       <td className="relative px-3 py-2.5">
                         <div className="relative">
@@ -394,6 +405,7 @@ export function SupplierBillClient({
                             </div>
                           </>}
                         </div>
+                        {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" /><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" /><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" /></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
