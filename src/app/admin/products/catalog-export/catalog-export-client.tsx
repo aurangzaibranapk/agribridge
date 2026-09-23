@@ -458,21 +458,23 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
         </label>
       </div>
 
-      {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("stock_value_selling") || selectedFields.includes("stock_value_wholesale")) && (
+      {((selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) ||
+        (selectedFields.includes("stock_value_selling") || selectedFields.includes("selling_price")) ||
+        (selectedFields.includes("stock_value_wholesale") || selectedFields.includes("wholesale_price"))) && (
         <div className="mb-4 flex flex-wrap gap-3">
-          {selectedFields.includes("stock_value_purchase") && (
+          {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) && (
             <div className="rounded-card border border-amber-200 bg-amber-50 p-3 shadow-card dark:border-amber-800 dark:bg-amber-950/30">
               <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Total Stock Value (Trade Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-amber-800 tabular-nums dark:text-amber-300">Rs {stockValueTotals.purchase.toLocaleString()}</p>
             </div>
           )}
-          {selectedFields.includes("stock_value_selling") && (
+          {(selectedFields.includes("stock_value_selling") || selectedFields.includes("selling_price")) && (
             <div className="rounded-card border border-brand-200 bg-brand-50 p-3 shadow-card dark:border-brand-800 dark:bg-brand-950/30">
               <p className="text-xs font-medium text-brand-600 dark:text-brand-400">Total Stock Value (Sale Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-brand-800 tabular-nums dark:text-brand-300">Rs {stockValueTotals.selling.toLocaleString()}</p>
             </div>
           )}
-          {selectedFields.includes("stock_value_wholesale") && (
+          {(selectedFields.includes("stock_value_wholesale") || selectedFields.includes("wholesale_price")) && (
             <div className="rounded-card border border-indigo-200 bg-indigo-50 p-3 shadow-card dark:border-indigo-800 dark:bg-indigo-950/30">
               <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Total Stock Value (Wholesale Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-indigo-800 tabular-nums dark:text-indigo-300">Rs {stockValueTotals.wholesale.toLocaleString()}</p>
