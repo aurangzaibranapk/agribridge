@@ -127,37 +127,50 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
         const counted = (shifts ?? []).reduce((sum, s) => sum + Number(s.counted_cash ?? 0), 0);
         const missing = Math.round((amount - paas) * 100) / 100;
         if (missing > 0 && counted + 0.01 >= missing) {
-          const repaired = await postJournal({
-            description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
-            sourceModule: "pos_shift_close_repair",
-            sourceId: shiftIds[0],
-            branchId: me?.branch_id ?? null,
-            createdBy: user.id,
-            lines: [
-              { account: ACC.cashWithPerson, debit: missing, partyType: "staff", partyId: user.id, memo: "Purani shift ki counted cash" },
-              { account: ACC.cash, credit: missing, memo: "Purani shift ki counted cash custody mein" },
-            ],
-          });
-          if ("error" in repaired) return { error: `Purani shift ki cash custody repair nahi ho saki: ${repaired.error}` };
-          await cashBookLikhein([
-            {
-              glCode: ACC.cash,
-              amount: missing,
-              rukh: "gaya",
-              category: "pos_shift_close_repair",
-              notes: "Purani shift ki counted cash staff custody mein darj hui",
+          // Idempotency: agar ye shift pehle hi repair ho chuki ho to journal
+          // dobara nahi banegi — warna ek hi submit par N baar repair ban
+          // sakti hai (race condition jo 7 duplicate entries de chuki hai Live par).
+          const { data: existingRepair } = await service
+            .from("journal_entries")
+            .select("id")
+            .eq("source_module", "pos_shift_close_repair")
+            .eq("source_id", shiftIds[0])
+            .maybeSingle();
+          if (existingRepair) {
+            paas += missing;
+          } else {
+            const repaired = await postJournal({
+              description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
+              sourceModule: "pos_shift_close_repair",
+              sourceId: shiftIds[0],
+              branchId: me?.branch_id ?? null,
               createdBy: user.id,
-              entryId: repaired.id,
-            },
-          ]);
-          paas += missing;
-          await logAudit({
-            actionType: "update",
-            module: "pos-shifts",
-            recordId: shiftIds[0],
-            recordLabel: "custody-repair",
-            description: `Rs ${missing.toLocaleString()} purani shift ki missing staff custody entry repair ki gayi.`,
-          });
+              lines: [
+                { account: ACC.cashWithPerson, debit: missing, partyType: "staff", partyId: user.id, memo: "Purani shift ki counted cash" },
+                { account: ACC.cash, credit: missing, memo: "Purani shift ki counted cash custody mein" },
+              ],
+            });
+            if ("error" in repaired) return { error: `Purani shift ki cash custody repair nahi ho saki: ${repaired.error}` };
+            await cashBookLikhein([
+              {
+                glCode: ACC.cash,
+                amount: missing,
+                rukh: "gaya",
+                category: "pos_shift_close_repair",
+                notes: "Purani shift ki counted cash staff custody mein darj hui",
+                createdBy: user.id,
+                entryId: repaired.id,
+              },
+            ]);
+            paas += missing;
+            await logAudit({
+              actionType: "update",
+              module: "pos-shifts",
+              recordId: shiftIds[0],
+              recordLabel: "custody-repair",
+              description: `Rs ${missing.toLocaleString()} purani shift ki missing staff custody entry repair ki gayi.`,
+            });
+          }
         }
       }
     }
