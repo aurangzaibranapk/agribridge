@@ -158,6 +158,7 @@ function CreateDispatchModal({
     Object.fromEntries(orderItems.map((i) => [i.id, { dispatched_qty: i.order_qty, short_qty: 0, damaged_qty: 0 }]))
   );
   const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [selfPickup, setSelfPickup] = useState(false);
   if (state.success) setTimeout(onClose, 800);
 
   function updateRow(itemId: string, field: "dispatched_qty" | "short_qty" | "damaged_qty", value: number) {
@@ -201,22 +202,48 @@ function CreateDispatchModal({
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="order_id" value={orderId} />
           <input type="hidden" name="items_json" value={itemsJson} />
-
-          {drivers.length > 0 && (
-            <div>
-              <label className="text-xs text-surface-500">{t("ao_select_driver", lang)}</label>
-              <select value={selectedDriverId} onChange={(e) => handleDriverSelect(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
-                <option value="">- Manually likhein -</option>
-                {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>{d.full_name} {d.vehicle_number ? `(${d.vehicle_number})` : ""}</option>
-                ))}
-              </select>
-            </div>
+          {selfPickup && (
+            <>
+              <input type="hidden" name="vehicle_no" value="Self Pickup" />
+              <input type="hidden" name="driver_name" value="Self Pickup" />
+            </>
           )}
-          <input name="vehicle_no" placeholder={t("ao_vehicle_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="driver_name" placeholder={t("ao_driver_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="driver_mobile" placeholder={t("ao_driver_mobile", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="transporter" placeholder={t("ao_transporter", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+
+          {/* Self Pickup toggle */}
+          <button
+            type="button"
+            onClick={() => { setSelfPickup(!selfPickup); setSelectedDriverId(""); }}
+            className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+              selfPickup
+                ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-300"
+                : "border-surface-200 bg-surface-50 text-surface-600 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300"
+            }`}
+          >
+            <span>🛍 Khud Uthaya (Self Pickup)</span>
+            <span className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${selfPickup ? "border-brand-600 bg-brand-600 text-white" : "border-surface-300"}`}>
+              {selfPickup ? "✓" : ""}
+            </span>
+          </button>
+
+          {!selfPickup && (
+            <>
+              {drivers.length > 0 && (
+                <div>
+                  <label className="text-xs text-surface-500">{t("ao_select_driver", lang)}</label>
+                  <select value={selectedDriverId} onChange={(e) => handleDriverSelect(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+                    <option value="">- Manually likhein -</option>
+                    {drivers.map((d) => (
+                      <option key={d.id} value={d.id}>{d.full_name} {d.vehicle_number ? `(${d.vehicle_number})` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <input name="vehicle_no" placeholder={t("ao_vehicle_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input name="driver_name" placeholder={t("ao_driver_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input name="driver_mobile" placeholder={t("ao_driver_mobile", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input name="transporter" placeholder={t("ao_transporter", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <input type="date" name="dispatch_date" defaultValue={aajKaKhana()} className="rounded-lg border border-surface-200 p-2 text-sm" />
             <input type="date" name="expected_delivery_date" className="rounded-lg border border-surface-200 p-2 text-sm" />
