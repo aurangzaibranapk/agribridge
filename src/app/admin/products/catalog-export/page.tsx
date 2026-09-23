@@ -22,14 +22,16 @@ export default async function CatalogExportPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }] = await Promise.all([
+  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, category_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("categories").select("id, name, parent_category_id"),
-    supabase.from("inventory").select("product_id, quantity_on_hand"),
+    supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id"),
+    supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
+    supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
   ]);
 
   const categories = (allCategories ?? []).map((c) => ({ id: c.id, name: c.name }));
@@ -39,9 +41,16 @@ export default async function CatalogExportPage() {
   const groupCategoryIds = new Map(SHOP_GROUPS.map((g) => [g.key, categoriesForShop(g.key, catNodes)]));
 
   const stockByProduct = new Map<string, number>();
+  const warehousesByProduct = new Map<string, string[]>();
   for (const row of inventoryRows ?? []) {
     const pid = row.product_id as string;
+    const wid = (row as any).warehouse_id as string | null;
     stockByProduct.set(pid, (stockByProduct.get(pid) ?? 0) + Number(row.quantity_on_hand ?? 0));
+    if (wid && Number(row.quantity_on_hand) > 0) {
+      const arr = warehousesByProduct.get(pid) ?? [];
+      if (!arr.includes(wid)) arr.push(wid);
+      warehousesByProduct.set(pid, arr);
+    }
   }
 
   const products = (rawProducts ?? []).map((p: any) => {
@@ -66,14 +75,18 @@ export default async function CatalogExportPage() {
       stock_value_purchase: p.purchase_price != null ? Number(p.purchase_price) * (stockByProduct.get(p.id) ?? 0) : null,
       stock_value_selling: p.selling_price != null ? Number(p.selling_price) * (stockByProduct.get(p.id) ?? 0) : null,
       stock_value_wholesale: p.wholesale_price != null ? Number(p.wholesale_price) * (stockByProduct.get(p.id) ?? 0) : null,
+      warehouse_ids: warehousesByProduct.get(p.id) ?? [],
     };
   });
+
+  const warehouseList = (warehouses ?? []).map((w: any) => ({ id: w.id, name: w.name, shop_id: w.shop_id as string | null }));
+  const shopList = (shops ?? []).map((s: any) => ({ id: s.id, name: s.name }));
 
   return (
     <div>
       <PageHeader title={t("pd_catalog_export", lang)} description="Category select karein, fields choose karein, Print/Download/WhatsApp/Email karein" />
       <ProductSetupTabs current="export" lang={lang} />
-      <CatalogExportClient products={products} categories={categories} shopGroups={SHOP_GROUPS} />
+      <CatalogExportClient products={products} categories={categories} shopGroups={SHOP_GROUPS} warehouses={warehouseList} shops={shopList} />
     </div>
   );
 }

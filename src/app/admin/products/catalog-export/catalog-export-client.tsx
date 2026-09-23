@@ -22,6 +22,7 @@ interface Product {
   stock_value_purchase: number | null;
   stock_value_selling: number | null;
   stock_value_wholesale: number | null;
+  warehouse_ids: string[];
   /** Kis kis dukan-qism (Karyana/Agri Inputs/Dairy) ka maal hai -- ek se zyada bhi ho sakta hai. */
   shopGroups: string[];
 }
@@ -34,6 +35,17 @@ interface Category {
 interface ShopGroup {
   key: string;
   label: string;
+}
+
+interface Warehouse {
+  id: string;
+  name: string;
+  shop_id: string | null;
+}
+
+interface Shop {
+  id: string;
+  name: string;
 }
 
 const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
@@ -54,13 +66,18 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "expiry_date", label: "Expiry Date" },
 ];
 
-export function CatalogExportClient({ products, categories, shopGroups }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[] }) {
+export function CatalogExportClient({ products, categories, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
   const [categoryFilter, setCategoryFilter] = useState("");
   // Karyana chunte hi uski saari categories (Grocery, Cold/Soft Drink,
   // Dairy Products aur unki har aulaad) ek sath aati hain -- ek-ek
   // category alag se chunne ki zaroorat nahi, aur pesticide/khad wali
   // categories khud-ba-khud bahar rehti hain.
   const [shopGroupFilter, setShopGroupFilter] = useState("");
+  const [shopFilter, setShopFilter] = useState("");
+  const [warehouseFilter, setWarehouseFilter] = useState("");
+  const [dateField, setDateField] = useState<"manufacture_date" | "expiry_date">("expiry_date");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const lang = useLang();
   const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
   const [search, setSearch] = useState("");
@@ -70,6 +87,15 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
   // Malik (11 September): "next bhi yahan stock likhna hai, farq wahan
   // box hona chahiye."
   const [actualStock, setActualStock] = useState<Record<string, string>>({});
+
+  const shopWarehouseIds = useMemo(
+    () => shopFilter ? new Set(warehouses.filter((w) => w.shop_id === shopFilter).map((w) => w.id)) : null,
+    [shopFilter, warehouses]
+  );
+  const visibleWarehouses = useMemo(
+    () => shopFilter ? warehouses.filter((w) => w.shop_id === shopFilter) : warehouses,
+    [shopFilter, warehouses]
+  );
 
   function diffFor(p: Product): number | null {
     const raw = actualStock[p.id];
@@ -87,8 +113,22 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
       const q = search.toLowerCase();
       list = list.filter((p) => p.name.toLowerCase().includes(q));
     }
+    if (warehouseFilter) {
+      list = list.filter((p) => p.warehouse_ids.includes(warehouseFilter));
+    } else if (shopWarehouseIds) {
+      list = list.filter((p) => p.warehouse_ids.some((wid) => shopWarehouseIds.has(wid)));
+    }
+    if (dateFrom || dateTo) {
+      list = list.filter((p) => {
+        const val = p[dateField];
+        if (!val) return false;
+        if (dateFrom && val < dateFrom) return false;
+        if (dateTo && val > dateTo) return false;
+        return true;
+      });
+    }
     return list;
-  }, [products, shopGroupFilter, categoryFilter, search]);
+  }, [products, shopGroupFilter, categoryFilter, search, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
 
   const stockValueTotals = useMemo(() => ({
     purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
@@ -175,8 +215,9 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
       ...visibleFields.map((f) => ({ label: f.label, width: 70 })),
       ...(includeCountColumns ? [{ label: "Actual Stock", width: 60 }, { label: "Farq", width: 50 }] : []),
     ];
-    const pageWidth = Math.max(595, 40 + cols.reduce((s, c) => s + c.width, 0));
-    const pageHeight = 842;
+    // A4 landscape: 842 × 595. Cols ki total width zyada ho to A4 landscape mein fit karna.
+    const pageHeight = 595;
+    const pageWidth = Math.max(842, 40 + cols.reduce((s, c) => s + c.width, 0));
     const marginX = 20;
     let page = doc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - 30;
@@ -259,9 +300,11 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
           size Letter, malik ka apna printer/kaghaz isi par set hai. */}
       <style>{`
         @media print {
-          @page { size: letter landscape; margin: 8mm; }
-          .catalog-print-table { font-size: 9px; }
-          .catalog-print-table th, .catalog-print-table td { padding: 2px 4px !important; }
+          @page { size: A4 landscape; margin: 8mm; }
+          body { font-size: 10px !important; }
+          .catalog-print-table { font-size: 8px; width: 100%; table-layout: auto; }
+          .catalog-print-table th, .catalog-print-table td { padding: 2px 3px !important; word-break: break-word; }
+          .catalog-print-table td:nth-child(2) { max-width: 140px; }
         }
       `}</style>
       <div className="mb-2 flex flex-wrap items-center gap-1.5 print:hidden">
@@ -289,6 +332,28 @@ export function CatalogExportClient({ products, categories, shopGroups }: { prod
           <option value="">{t("cx_all_categories", lang)}</option>
           {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
+        <select
+          value={shopFilter}
+          onChange={(e) => { setShopFilter(e.target.value); setWarehouseFilter(""); }}
+          className="rounded-lg border border-surface-200 p-2 text-sm"
+        >
+          <option value="">Sab Shops</option>
+          {shops.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select
+          value={warehouseFilter}
+          onChange={(e) => setWarehouseFilter(e.target.value)}
+          className="rounded-lg border border-surface-200 p-2 text-sm"
+        >
+          <option value="">Sab Godaam</option>
+          {visibleWarehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+        </select>
+        <select value={dateField} onChange={(e) => setDateField(e.target.value as "manufacture_date" | "expiry_date")} className="rounded-lg border border-surface-200 p-2 text-sm">
+          <option value="expiry_date">Expiry Date</option>
+          <option value="manufacture_date">Manufacture Date</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date se" />
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date tak" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="ml-auto flex gap-2">
           <button onClick={handlePrint} title="Print" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
