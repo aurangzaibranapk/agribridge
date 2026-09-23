@@ -69,6 +69,7 @@ export function ImportClient({
   tradeRatePending,
   warehouses,
   suppliers,
+  existingProducts,
 }: {
   categories: string[];
   brands: string[];
@@ -76,11 +77,16 @@ export function ImportClient({
   tradeRatePending: number | null;
   warehouses: { id: string; name: string; code: string | null }[];
   suppliers: { id: string; name: string }[];
+  existingProducts: { id: string; name: string }[];
 }) {
   const lang: Lang = useLang();
   const [csv, setCsv] = useState("");
   const [edits, setEdits] = useState<Record<number, RowEdit>>({});
   const [skips, setSkips] = useState<number[]>([]);
+  // Bande ne khud jo maujood product chunna (merge) -- lineNo → {id, name}
+  const [mergeWith, setMergeWith] = useState<Record<number, { id: string; name: string }>>({});
+  // Search ki current typing -- lineNo → query string
+  const [mergeSearch, setMergeSearch] = useState<Record<number, string>>({});
   const [touched, setTouched] = useState(false);
   // Maal supplier se aaya ya pehle se dukan mein para tha -- is se tay
   // hota hai ke kisi ka dena banta hai ya nahi (253).
@@ -103,12 +109,17 @@ export function ImportClient({
     setCsv(text);
     setEdits({});
     setSkips([]);
+    setMergeWith({});
+    setMergeSearch({});
     setTouched(false);
     setSwapNote(false);
   };
 
   const editFields = JSON.stringify(edits);
   const skipFields = JSON.stringify(skips);
+  const mergeFields = JSON.stringify(
+    Object.fromEntries(Object.entries(mergeWith).filter(([, v]) => v.id).map(([k, v]) => [k, v.id]))
+  );
   const [previewState, previewAction] = useFormState(previewProductsCsv, initial);
   const [importState, importAction] = useFormState(importProductsCsv, initial);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -222,6 +233,7 @@ export function ImportClient({
         <form action={previewAction} className="mt-3 space-y-2">
           <input type="hidden" name="edits" value={editFields} />
           <input type="hidden" name="skip" value={skipFields} />
+          <input type="hidden" name="mergeWith" value={mergeFields} />
           <Label htmlFor="csv">CSV</Label>
           <Textarea
             id="csv"
@@ -490,6 +502,67 @@ export function ImportClient({
                             {n}
                           </p>
                         ))}
+                        {/* "Will be created" ya "duplicate" par: banda
+                            khud maujood product search kar ke merge kar
+                            sakta hai -- us waqt naya nahi banega. */}
+                        {!off && (r.status === "new" || r.status === "duplicate") && (() => {
+                          const merged = mergeWith[r.line];
+                          const query = mergeSearch[r.line] ?? "";
+                          const matches = query.length >= 1
+                            ? existingProducts.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+                            : [];
+                          return (
+                            <div className="mt-1.5 border-t border-surface-100 pt-1">
+                              {merged?.id ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] font-medium text-brand-700">→ {merged.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMergeWith((p) => { const n = { ...p }; delete n[r.line]; return n; });
+                                      setMergeSearch((p) => { const n = { ...p }; delete n[r.line]; return n; });
+                                      setTouched(true);
+                                    }}
+                                    className="text-[10px] text-red-500 underline"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    placeholder="existing product search…"
+                                    value={query}
+                                    onChange={(e) => {
+                                      setMergeSearch((p) => ({ ...p, [r.line]: e.target.value }));
+                                      setTouched(true);
+                                    }}
+                                    className="h-6 w-full rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-800 placeholder:text-surface-400 dark:bg-surface-900 dark:text-surface-100"
+                                  />
+                                  {matches.length > 0 && (
+                                    <div className="absolute left-0 top-6 z-20 w-56 rounded border border-surface-200 bg-white py-0.5 shadow-lg dark:bg-surface-800">
+                                      {matches.map((p) => (
+                                        <button
+                                          key={p.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setMergeWith((prev) => ({ ...prev, [r.line]: { id: p.id, name: p.name } }));
+                                            setMergeSearch((prev) => ({ ...prev, [r.line]: "" }));
+                                            setTouched(true);
+                                          }}
+                                          className="block w-full px-2 py-1 text-left text-[11px] text-surface-700 hover:bg-brand-50 dark:text-surface-200 dark:hover:bg-brand-900/30"
+                                        >
+                                          {p.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -657,6 +730,7 @@ export function ImportClient({
                   wo do alag cheezein ban jatin. */}
               <input type="hidden" name="edits" value={editFields} />
               <input type="hidden" name="skip" value={skipFields} />
+              <input type="hidden" name="mergeWith" value={mergeFields} />
               <Submit
                 label={
                   s.updates > 0

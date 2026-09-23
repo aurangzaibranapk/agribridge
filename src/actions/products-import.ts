@@ -265,6 +265,20 @@ function parseSkips(raw: FormDataEntryValue | null): Set<number> {
   return out;
 }
 
+/** Bande ne khud jo product chunna — lineNo → productId. */
+function parseMergeWith(raw: FormDataEntryValue | null): Map<number, string> {
+  const out = new Map<number, string>();
+  if (typeof raw !== "string" || !raw.trim()) return out;
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    for (const [line, id] of Object.entries(obj ?? {})) {
+      const n = Number(line);
+      if (Number.isInteger(n) && typeof id === "string" && id.length > 0) out.set(n, id);
+    }
+  } catch { /* ignore */ }
+  return out;
+}
+
 // ---------------------------------------------------------------------
 // Qadam 1: preview
 // ---------------------------------------------------------------------
@@ -302,6 +316,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
 
   const edits = parseEdits(formData.get("edits"));
   const skips = parseSkips(formData.get("skip"));
+  const mergeWith = parseMergeWith(formData.get("mergeWith"));
 
   // Naam se pehchan -- ek dafa, har qatar par alag sawal nahi.
   const [{ data: categories }, { data: brands }, { data: companies }, { data: existing }] = await Promise.all([
@@ -335,6 +350,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
   };
   const byNameMap = new Map<string, Existing | null>();
   const byBarcodeMap = new Map<string, Existing>();
+  const byIdMap = new Map<string, Existing>();
   for (const p of existing ?? []) {
     const rec: Existing = {
       id: p.id,
@@ -343,6 +359,7 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       trade_rate_pending: Boolean(p.trade_rate_pending),
       sale_rate_pending: Boolean(p.sale_rate_pending),
     };
+    byIdMap.set(p.id, rec);
     const k = norm(p.name);
     byNameMap.set(k, byNameMap.has(k) ? null : rec);
     const bc = (p.barcode ?? "").trim();
@@ -477,6 +494,37 @@ export async function previewProductsCsv(_prev: ImportState, formData: FormData)
       row.problem = "Expiry manufacturing se pehle hai.";
       rows.push(row);
       continue;
+    }
+
+    // Bande ne khud koi maujood product chunna -- wo zabar-dast hai,
+    // naam/barcode milaan ki zaroorat nahi.
+    const forcedId = mergeWith.get(lineNo);
+    if (forcedId) {
+      const hit = byIdMap.get(forcedId);
+      if (hit) {
+        row.status = "update";
+        row.existingId = hit.id;
+        if (purchasePrice !== null) {
+          notes.push(
+            hit.trade_rate_pending
+              ? `Trade rate charhega: pehle maloom nahi tha → ${purchasePrice}`
+              : hit.purchase_price === purchasePrice / petU(row)
+                ? "Trade rate wohi hai — koi tabdeeli nahi."
+                : `Trade rate badlega: ${hit.purchase_price} → ${purchasePrice}`
+          );
+        }
+        if (sellingPrice !== null) {
+          notes.push(
+            hit.sale_rate_pending
+              ? `Sale rate charhega: pehle maloom nahi tha → ${sellingPrice}`
+              : hit.selling_price === sellingPrice
+                ? "Sale rate wohi hai — koi tabdeeli nahi."
+                : `Sale rate badlega: ${hit.selling_price} → ${sellingPrice}`
+          );
+        }
+        rows.push(row);
+        continue;
+      }
     }
 
     const key = norm(name);
