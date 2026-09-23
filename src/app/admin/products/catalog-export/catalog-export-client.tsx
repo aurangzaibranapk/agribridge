@@ -24,6 +24,8 @@ interface Product {
   stock_value_selling: number | null;
   stock_value_wholesale: number | null;
   warehouse_ids: string[];
+  qty_sold: number;
+  sales_amount: number;
   /** Kis kis dukan-qism (Karyana/Agri Inputs/Dairy) ka maal hai -- ek se zyada bhi ho sakta hai. */
   shopGroups: string[];
 }
@@ -65,6 +67,8 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "barcode", label: "Barcode" },
   { key: "manufacture_date", label: "Manufacturing Date" },
   { key: "expiry_date", label: "Expiry Date" },
+  { key: "qty_sold", label: "Qty Sold" },
+  { key: "sales_amount", label: "Sales Amount (Rs)" },
 ];
 
 export function CatalogExportClient({ products: initialProducts, categories, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
@@ -150,6 +154,8 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
     purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
     selling: filtered.reduce((s, p) => s + (p.stock_value_selling ?? 0), 0),
     wholesale: filtered.reduce((s, p) => s + (p.stock_value_wholesale ?? 0), 0),
+    qty_sold: filtered.reduce((s, p) => s + (p.qty_sold ?? 0), 0),
+    sales_amount: filtered.reduce((s, p) => s + (p.sales_amount ?? 0), 0),
   }), [filtered]);
 
   function startEdit(p: Product) {
@@ -189,7 +195,8 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
     if (value === null || value === undefined) return "-";
     if (key === "purchase_price" || key === "selling_price" || key === "wholesale_price" || key === "mrp_price") return `Rs ${Number(value).toLocaleString()}`;
     if (key === "stock_value_purchase" || key === "stock_value_selling" || key === "stock_value_wholesale") return `Rs ${Number(value).toLocaleString()}`;
-    if (key === "stock_qty") return Number(value).toLocaleString();
+    if (key === "stock_qty" || key === "qty_sold") return Number(value).toLocaleString();
+    if (key === "sales_amount") return `Rs ${Number(value).toLocaleString()}`;
     if (key === "manufacture_date" || key === "expiry_date") return new Date(value as string).toLocaleDateString();
     return String(value);
   }
@@ -478,6 +485,22 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
             <div className="rounded-card border border-indigo-200 bg-indigo-50 p-3 shadow-card dark:border-indigo-800 dark:bg-indigo-950/30">
               <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Total Stock Value (Wholesale Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-indigo-800 tabular-nums dark:text-indigo-300">Rs {stockValueTotals.wholesale.toLocaleString()}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {(selectedFields.includes("qty_sold") || selectedFields.includes("sales_amount")) && (
+        <div className="mb-4 flex flex-wrap gap-3">
+          {selectedFields.includes("qty_sold") && (
+            <div className="rounded-card border border-sky-200 bg-sky-50 p-3 shadow-card dark:border-sky-800 dark:bg-sky-950/30">
+              <p className="text-xs font-medium text-sky-600 dark:text-sky-400">Total Qty Sold</p>
+              <p className="mt-0.5 font-display text-xl font-bold text-sky-800 tabular-nums dark:text-sky-300">{stockValueTotals.qty_sold.toLocaleString()}</p>
+            </div>
+          )}
+          {selectedFields.includes("sales_amount") && (
+            <div className="rounded-card border border-violet-200 bg-violet-50 p-3 shadow-card dark:border-violet-800 dark:bg-violet-950/30">
+              <p className="text-xs font-medium text-violet-600 dark:text-violet-400">Total Sales Amount</p>
+              <p className="mt-0.5 font-display text-xl font-bold text-violet-800 tabular-nums dark:text-violet-300">Rs {stockValueTotals.sales_amount.toLocaleString()}</p>
             </div>
           )}
         </div>

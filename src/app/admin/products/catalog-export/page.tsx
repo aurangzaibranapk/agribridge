@@ -24,7 +24,7 @@ export default async function CatalogExportPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }] = await Promise.all([
+  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }, { data: saleItems }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, category_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
@@ -34,6 +34,7 @@ export default async function CatalogExportPage() {
     supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id"),
     supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
     supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("pos_sale_items").select("product_id, quantity, subtotal").limit(100000),
   ]);
 
   const categories = (allCategories ?? []).map((c) => ({ id: c.id, name: c.name }));
@@ -41,6 +42,13 @@ export default async function CatalogExportPage() {
 
   // Karyana/Agri Inputs/Dairy = category ID ka set (jaR + saari aulaad).
   const groupCategoryIds = new Map(SHOP_GROUPS.map((g) => [g.key, categoriesForShop(g.key, catNodes)]));
+
+  const salesByProduct = new Map<string, { qty: number; amount: number }>();
+  for (const item of (saleItems ?? [])) {
+    const pid = item.product_id as string;
+    const cur = salesByProduct.get(pid) ?? { qty: 0, amount: 0 };
+    salesByProduct.set(pid, { qty: cur.qty + Number(item.quantity ?? 0), amount: cur.amount + Number(item.subtotal ?? 0) });
+  }
 
   const stockByProduct = new Map<string, number>();
   const warehousesByProduct = new Map<string, string[]>();
@@ -78,6 +86,8 @@ export default async function CatalogExportPage() {
       stock_value_selling: p.selling_price != null ? Number(p.selling_price) * (stockByProduct.get(p.id) ?? 0) : null,
       stock_value_wholesale: p.wholesale_price != null ? Number(p.wholesale_price) * (stockByProduct.get(p.id) ?? 0) : null,
       warehouse_ids: warehousesByProduct.get(p.id) ?? [],
+      qty_sold: salesByProduct.get(p.id)?.qty ?? 0,
+      sales_amount: salesByProduct.get(p.id)?.amount ?? 0,
     };
   });
 
