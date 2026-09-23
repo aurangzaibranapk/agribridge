@@ -246,6 +246,43 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   redirect("/admin/products");
 }
 
+export async function updateProductNamePackSize(id: string, name: string, pack_size: string | null): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
+
+  if (!isUnrestricted && !permission?.can_edit) {
+    return { error: "Aapke paas Product Edit karne ki ijazat nahi hai." };
+  }
+
+  name = name.trim();
+  if (!name) return { error: "Product name khaali nahi ho sakta." };
+
+  if (!isUnrestricted && permission?.edit_needs_approval) {
+    const { error } = await supabase.from("product_edit_requests").insert({
+      product_id: id,
+      proposed_by: userId,
+      changes: { name, pack_size: pack_size || null },
+      status: "pending",
+    });
+    if (error) return { error: error.message };
+    revalidatePath("/admin/products/pending-edits");
+    return {};
+  }
+
+  const { error } = await supabase
+    .from("products")
+    .update({ name, pack_size: pack_size || null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  await supabase.from("activity_logs").insert({ user_id: userId, action: "update", entity_name: "Product", entity_id: id });
+
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/catalog-export");
+  revalidatePath("/admin/pos");
+  return {};
+}
+
 export async function deleteProduct(_prev: FormState, formData: FormData): Promise<FormState> {
   const supabase = createClient();
   const id = String(formData.get("id") ?? "");

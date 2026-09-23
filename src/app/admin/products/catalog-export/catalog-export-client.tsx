@@ -1,8 +1,9 @@
 "use client";
-import { useState, useMemo } from "react";
-import { Printer, Download, Mail, MessageCircle, FileText } from "lucide-react";
+import { useState, useMemo, useTransition } from "react";
+import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { updateProductNamePackSize } from "@/actions/products";
 
 interface Product {
   id: string;
@@ -66,7 +67,13 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "expiry_date", label: "Expiry Date" },
 ];
 
-export function CatalogExportClient({ products, categories, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
+export function CatalogExportClient({ products: initialProducts, categories, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPackSize, setEditPackSize] = useState("");
+  const [editError, setEditError] = useState("");
+  const [isPending, startTransition] = useTransition();
   const [categoryFilter, setCategoryFilter] = useState("");
   // Karyana chunte hi uski saari categories (Grocery, Cold/Soft Drink,
   // Dairy Products aur unki har aulaad) ek sath aati hain -- ek-ek
@@ -135,6 +142,34 @@ export function CatalogExportClient({ products, categories, shopGroups, warehous
     selling: filtered.reduce((s, p) => s + (p.stock_value_selling ?? 0), 0),
     wholesale: filtered.reduce((s, p) => s + (p.stock_value_wholesale ?? 0), 0),
   }), [filtered]);
+
+  function startEdit(p: Product) {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditPackSize(p.pack_size ?? "");
+    setEditError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError("");
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    setEditError("");
+    startTransition(async () => {
+      const res = await updateProductNamePackSize(editingId, editName, editPackSize || null);
+      if (res.error) {
+        setEditError(res.error);
+        return;
+      }
+      setProducts((prev) =>
+        prev.map((p) => p.id === editingId ? { ...p, name: editName.trim(), pack_size: editPackSize || null } : p)
+      );
+      setEditingId(null);
+    });
+  }
 
   function toggleField(key: string) {
     setSelectedFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -427,6 +462,7 @@ export function CatalogExportClient({ products, categories, shopGroups, warehous
                   <th className="px-3 py-2 font-medium text-surface-500">{t("cx_diff", lang)}</th>
                 </>
               )}
+              <th className="px-3 py-2 font-medium text-surface-500 print:hidden"></th>
             </tr>
           </thead>
           <tbody>
@@ -443,9 +479,29 @@ export function CatalogExportClient({ products, categories, shopGroups, warehous
                 >
 
                   <td className="px-3 py-2 text-surface-500">{i + 1}</td>
-                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{p.name}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                    {editingId === p.id ? (
+                      <input
+                        autoFocus
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                        className="w-full min-w-[140px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                      />
+                    ) : p.name}
+                  </td>
                   {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
-                    <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">{formatValue(p, f.key)}</td>
+                    <td key={f.key} className="px-3 py-2 text-surface-600 dark:text-surface-400">
+                      {editingId === p.id && f.key === "pack_size" ? (
+                        <input
+                          value={editPackSize}
+                          onChange={(e) => setEditPackSize(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="e.g. 1kg"
+                          className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : formatValue(p, f.key)}
+                    </td>
                   ))}
                   {includeCountColumns && (
                     <>
@@ -473,11 +529,36 @@ export function CatalogExportClient({ products, categories, shopGroups, warehous
                       </td>
                     </>
                   )}
+                  <td className="px-3 py-2 print:hidden">
+                    {editingId === p.id ? (
+                      <span className="flex items-center gap-1">
+                        <button
+                          onClick={saveEdit}
+                          disabled={isPending}
+                          title="Save"
+                          className="rounded p-1 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/30"
+                        ><Check className="h-4 w-4" /></button>
+                        <button
+                          onClick={cancelEdit}
+                          disabled={isPending}
+                          title="Cancel"
+                          className="rounded p-1 text-rose-500 hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"
+                        ><X className="h-4 w-4" /></button>
+                        {editError && <span className="ml-1 text-xs text-rose-600">{editError}</span>}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(p)}
+                        title="Edit name / pack size"
+                        className="rounded p-1 text-surface-400 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-800"
+                      ><Pencil className="h-3.5 w-3.5" /></button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={selectedFields.length + 2 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
+              <tr><td colSpan={selectedFields.length + 3 + (includeCountColumns ? 2 : 0)} className="px-3 py-8 text-center text-surface-400">{t("c_no_products", lang)}</td></tr>
             )}
           </tbody>
         </table>
