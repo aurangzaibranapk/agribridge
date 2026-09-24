@@ -10,6 +10,7 @@ import { QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { NavProgress } from "@/components/layout/nav-progress";
 import { OnlineStatusBar } from "@/components/layout/online-status-bar";
+import { PwaInstallPrompt } from "@/components/layout/pwa-install-prompt";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { sidebarModeFor, type SidebarKind } from "@/lib/access/sidebar-free";
@@ -281,6 +282,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <GuideOverlay />
         </Suspense>
       )}
+      <PwaInstallPrompt />
     </div>
     </LangProvider>
   );
