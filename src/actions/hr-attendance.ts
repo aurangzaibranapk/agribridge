@@ -352,6 +352,23 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
   const today = new Date().toISOString().split("T")[0];
   if (date > today) return { error: "Aane wale din ki hazri theek nahi karwai ja sakti." };
 
+  // Mahine mein sirf 5 darkhwastain. Ye rok is liye hai: correction ek
+  // aazmaishi cheez hai, routine cheez nahi. Zyada corrections ka matlab
+  // ya to nizam mein kharabi hai, ya koi galat faida utha raha hai.
+  const monthStart = today.slice(0, 7) + "-01";
+  const monthEnd = today.slice(0, 7) + "-31";
+  const { count: monthCount } = await supabase
+    .from("attendance_corrections")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", user.id)
+    .gte("created_at", monthStart)
+    .lte("created_at", monthEnd + "T23:59:59Z");
+  if ((monthCount ?? 0) >= 5) {
+    return {
+      error: "Is mahine aap 5 darkhwastain de chuke hain — ye had hai. Zyada zaroorat ho to HR se seedha raabta karein.",
+    };
+  }
+
   if (await monthLocked(supabase, user.id, date)) {
     return {
       error:
