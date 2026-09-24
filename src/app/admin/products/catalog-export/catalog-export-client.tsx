@@ -8,6 +8,7 @@ import { updateProductNamePackSize } from "@/actions/products";
 interface Product {
   id: string;
   name: string;
+  category_id: string | null;
   category: string | null;
   brand: string | null;
   pack_size: string | null;
@@ -76,6 +77,8 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPackSize, setEditPackSize] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState<string>("");
+  const [editSellingPrice, setEditSellingPrice] = useState<string>("");
   const [editError, setEditError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
@@ -162,6 +165,8 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
     setEditingId(p.id);
     setEditName(p.name);
     setEditPackSize(p.pack_size ?? "");
+    setEditCategoryId(p.category_id ?? "");
+    setEditSellingPrice(p.selling_price != null ? String(p.selling_price) : "");
     setEditError("");
   }
 
@@ -173,14 +178,29 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
   function saveEdit() {
     if (!editingId) return;
     setEditError("");
+    const newCategoryId = editCategoryId || null;
+    const newSellingPrice = editSellingPrice !== "" && !isNaN(Number(editSellingPrice)) ? Number(editSellingPrice) : null;
     startTransition(async () => {
-      const res = await updateProductNamePackSize(editingId, editName, editPackSize || null);
+      const res = await updateProductNamePackSize(editingId, editName, editPackSize || null, newCategoryId, newSellingPrice ?? undefined);
       if (res.error) {
         setEditError(res.error);
         return;
       }
+      const newCategoryName = newCategoryId ? categories.find((c) => c.id === newCategoryId)?.name ?? null : null;
       setProducts((prev) =>
-        prev.map((p) => p.id === editingId ? { ...p, name: editName.trim(), pack_size: editPackSize || null } : p)
+        prev.map((p) => {
+          if (p.id !== editingId) return p;
+          const sp = newSellingPrice ?? p.selling_price;
+          return {
+            ...p,
+            name: editName.trim(),
+            pack_size: editPackSize || null,
+            category_id: newCategoryId,
+            category: newCategoryName,
+            selling_price: sp,
+            stock_value_selling: sp != null ? sp * (p.stock_qty ?? 0) : null,
+          };
+        })
       );
       setEditingId(null);
     });
@@ -562,6 +582,27 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
                           onChange={(e) => setEditPackSize(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
                           placeholder="e.g. 1kg"
+                          className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "category" ? (
+                        <select
+                          value={editCategoryId}
+                          onChange={(e) => setEditCategoryId(e.target.value)}
+                          className="w-full min-w-[120px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        >
+                          <option value="">— Category nahi —</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      ) : editingId === p.id && f.key === "selling_price" ? (
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={editSellingPrice}
+                          onChange={(e) => setEditSellingPrice(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="Rate"
                           className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
                         />
                       ) : formatValue(p, f.key)}
