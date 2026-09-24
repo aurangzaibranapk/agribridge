@@ -5,10 +5,16 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { updateProductNamePackSize } from "@/actions/products";
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 interface Product {
   id: string;
   name: string;
   category_id: string | null;
+  company_id: string | null;
   category: string | null;
   brand: string | null;
   pack_size: string | null;
@@ -72,13 +78,20 @@ const FIELD_OPTIONS: { key: keyof Product; label: string }[] = [
   { key: "sales_amount", label: "Sales Amount (Rs)" },
 ];
 
-export function CatalogExportClient({ products: initialProducts, categories, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
+export function CatalogExportClient({ products: initialProducts, categories, companies, shopGroups, warehouses, shops }: { products: Product[]; categories: Category[]; companies: Company[]; shopGroups: ShopGroup[]; warehouses: Warehouse[]; shops: Shop[] }) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPackSize, setEditPackSize] = useState("");
   const [editCategoryId, setEditCategoryId] = useState<string>("");
+  const [editCompanyId, setEditCompanyId] = useState<string>("");
   const [editSellingPrice, setEditSellingPrice] = useState<string>("");
+  const [editWholesalePrice, setEditWholesalePrice] = useState<string>("");
+  const [editMrpPrice, setEditMrpPrice] = useState<string>("");
+  const [editUnit, setEditUnit] = useState<string>("");
+  const [editManufactureDate, setEditManufactureDate] = useState<string>("");
+  const [editExpiryDate, setEditExpiryDate] = useState<string>("");
+  const [editBarcode, setEditBarcode] = useState<string>("");
   const [editError, setEditError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
@@ -166,7 +179,14 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
     setEditName(p.name);
     setEditPackSize(p.pack_size ?? "");
     setEditCategoryId(p.category_id ?? "");
+    setEditCompanyId(p.company_id ?? "");
     setEditSellingPrice(p.selling_price != null ? String(p.selling_price) : "");
+    setEditWholesalePrice(p.wholesale_price != null ? String(p.wholesale_price) : "");
+    setEditMrpPrice(p.mrp_price != null ? String(p.mrp_price) : "");
+    setEditUnit(p.unit ?? "");
+    setEditManufactureDate(p.manufacture_date ?? "");
+    setEditExpiryDate(p.expiry_date ?? "");
+    setEditBarcode(p.barcode ?? "");
     setEditError("");
   }
 
@@ -179,26 +199,55 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
     if (!editingId) return;
     setEditError("");
     const newCategoryId = editCategoryId || null;
+    const newCompanyId = editCompanyId || null;
     const newSellingPrice = editSellingPrice !== "" && !isNaN(Number(editSellingPrice)) ? Number(editSellingPrice) : null;
+    const newWholesalePrice = editWholesalePrice !== "" && !isNaN(Number(editWholesalePrice)) ? Number(editWholesalePrice) : null;
+    const newMrpPrice = editMrpPrice !== "" && !isNaN(Number(editMrpPrice)) ? Number(editMrpPrice) : null;
     startTransition(async () => {
-      const res = await updateProductNamePackSize(editingId, editName, editPackSize || null, newCategoryId, newSellingPrice ?? undefined);
+      const res = await updateProductNamePackSize(
+        editingId,
+        editName,
+        editPackSize || null,
+        newCategoryId,
+        newSellingPrice ?? undefined,
+        {
+          wholesale_price: newWholesalePrice,
+          mrp_price: newMrpPrice,
+          unit: editUnit || null,
+          manufacture_date: editManufactureDate || null,
+          expiry_date: editExpiryDate || null,
+          barcode: editBarcode || null,
+          company_id: newCompanyId,
+        },
+      );
       if (res.error) {
         setEditError(res.error);
         return;
       }
       const newCategoryName = newCategoryId ? categories.find((c) => c.id === newCategoryId)?.name ?? null : null;
+      const newCompanyName = newCompanyId ? companies.find((c) => c.id === newCompanyId)?.name ?? null : null;
       setProducts((prev) =>
         prev.map((p) => {
           if (p.id !== editingId) return p;
           const sp = newSellingPrice ?? p.selling_price;
+          const wp = newWholesalePrice ?? p.wholesale_price;
           return {
             ...p,
             name: editName.trim(),
             pack_size: editPackSize || null,
             category_id: newCategoryId,
             category: newCategoryName,
+            company_id: newCompanyId,
+            brand: newCompanyName,
             selling_price: sp,
+            wholesale_price: wp,
+            mrp_price: newMrpPrice ?? p.mrp_price,
+            unit: editUnit || null,
+            manufacture_date: editManufactureDate || null,
+            expiry_date: editExpiryDate || null,
+            barcode: editBarcode || null,
             stock_value_selling: sp != null ? sp * (p.stock_qty ?? 0) : null,
+            stock_value_wholesale: wp != null ? wp * (p.stock_qty ?? 0) : null,
           };
         })
       );
@@ -534,7 +583,7 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
         </div>
         <table className="catalog-print-table w-full text-sm">
           <thead>
-            <tr className="text-left [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
+            <tr className="text-left [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-white dark:[&>th]:bg-surface-900 [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
               <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
@@ -595,6 +644,17 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
+                      ) : editingId === p.id && f.key === "brand" ? (
+                        <select
+                          value={editCompanyId}
+                          onChange={(e) => setEditCompanyId(e.target.value)}
+                          className="w-full min-w-[120px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        >
+                          <option value="">— Company nahi —</option>
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
                       ) : editingId === p.id && f.key === "selling_price" ? (
                         <input
                           type="number"
@@ -604,6 +664,56 @@ export function CatalogExportClient({ products: initialProducts, categories, sho
                           onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
                           placeholder="Rate"
                           className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "wholesale_price" ? (
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={editWholesalePrice}
+                          onChange={(e) => setEditWholesalePrice(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="Rate"
+                          className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "mrp_price" ? (
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={editMrpPrice}
+                          onChange={(e) => setEditMrpPrice(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="MRP"
+                          className="w-full min-w-[80px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "unit" ? (
+                        <input
+                          value={editUnit}
+                          onChange={(e) => setEditUnit(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="e.g. kg"
+                          className="w-full min-w-[60px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "manufacture_date" ? (
+                        <input
+                          type="date"
+                          value={editManufactureDate}
+                          onChange={(e) => setEditManufactureDate(e.target.value)}
+                          className="w-full rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "expiry_date" ? (
+                        <input
+                          type="date"
+                          value={editExpiryDate}
+                          onChange={(e) => setEditExpiryDate(e.target.value)}
+                          className="w-full rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
+                        />
+                      ) : editingId === p.id && f.key === "barcode" ? (
+                        <input
+                          value={editBarcode}
+                          onChange={(e) => setEditBarcode(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                          placeholder="Barcode"
+                          className="w-full min-w-[100px] rounded border border-brand-400 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-brand-600 dark:bg-surface-800"
                         />
                       ) : formatValue(p, f.key)}
                     </td>
