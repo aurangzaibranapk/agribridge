@@ -480,10 +480,14 @@ export function SupplierBillClient({
                               <input
                                 aria-label="Pack / Unit"
                                 className={`${inputClass} text-xs`}
+                                list={`units-list-${index}`}
                                 value={line.pack_override}
                                 onChange={(e) => updateLine(index, { pack_override: e.target.value })}
-                                placeholder="e.g. 1kg, 500ml"
+                                placeholder="350ml, 1kg, 50kg…"
                               />
+                              <datalist id={`units-list-${index}`}>
+                                {units.map((u) => <option key={u.code} value={u.label} />)}
+                              </datalist>
                               <span className="flex items-center gap-1">
                                 <span className="text-[10px] text-surface-400">×</span>
                                 <input
