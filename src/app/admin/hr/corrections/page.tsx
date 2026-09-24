@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
+import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/server";
@@ -8,12 +8,9 @@ import { CorrectionsClient } from "./corrections-client";
 export const dynamic = "force-dynamic";
 
 /**
- * Afsar ka safha: hazri ki darkhwastein.
- *
- * Yahan sirf wo darkhwastein aati hain jin ka faisla ye banda kar sakta
- * hai. Wo faisla code se nahi, database ke fn_hr_can_decide_for se hota
- * hai -- kyunke reporting ki poori zanjeer wahan hai. Aur usi function
- * mein ye rok bhi hai ke apni darkhwast koi khud manzoor na kar sake.
+ * Hazri theek karwayein — do hisse:
+ * 1. Staff apni correction darkhwast bhejta hai (upar form).
+ * 2. Manager/Admin/HR doosron ki darkhwastein manzoor ya radd karta hai.
  */
 export default async function CorrectionsPage() {
   const supabase = createClient();
@@ -24,6 +21,15 @@ export default async function CorrectionsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Apni darkhwastein (saari, har halat mein)
+  const { data: apniRows } = await supabase
+    .from("attendance_corrections")
+    .select("id, attendance_date, requested_status, requested_check_in, requested_check_out, reason, status, manager_comment, created_at")
+    .eq("profile_id", user.id)
+    .order("attendance_date", { ascending: false })
+    .limit(20);
+
+  // Team ki darkhwastein (pending/sent_back, doosron ki)
   const { data: open } = await supabase
     .from("attendance_corrections")
     .select(
@@ -33,9 +39,6 @@ export default async function CorrectionsPage() {
     .neq("profile_id", user.id)
     .order("attendance_date", { ascending: true });
 
-  // Har qatar par alag se poochha jata hai ke is ka faisla mera haq hai
-  // ya nahi. RLS pehle hi chhaant chuki hoti hai; ye doosra taala hai --
-  // agar kal RLS badal gayi to safha khud ba khud khul na jaye.
   const rows = open ?? [];
   const allowed: typeof rows = [];
   for (const r of rows) {
@@ -45,32 +48,35 @@ export default async function CorrectionsPage() {
 
   return (
     <div>
-      <PageHeader title={t("hrb_pending_corrections", lang)} description={t("hra_subtitle", lang)} />
-
-      {allowed.length === 0 ? (
-        <Card>
-          <EmptyState title={t("hrb_nobody", lang)} description={t("hra_history_empty", lang)} />
-        </Card>
-      ) : (
-        <CorrectionsClient
-          lang={lang}
-          rows={allowed.map((r) => {
-            const snap = (r.original_snapshot ?? null) as { status?: string; check_in?: string | null } | null;
-            return {
-              id: r.id,
-              who: (r as unknown as { profiles?: { full_name?: string } }).profiles?.full_name ?? "—",
-              date: r.attendance_date,
-              requestedStatus: r.requested_status,
-              requestedIn: r.requested_check_in,
-              requestedOut: r.requested_check_out,
-              reason: r.reason,
-              status: r.status,
-              wasStatus: snap?.status ?? null,
-              wasIn: snap?.check_in ?? null,
-            };
-          })}
-        />
-      )}
+      <PageHeader title="Hazri theek karwayein" description="Apni ghalat hazri ki darkhwast dein — manager ya admin manzoor karega" />
+      <CorrectionsClient
+        lang={lang}
+        myRows={(apniRows ?? []).map((r) => ({
+          id: r.id,
+          date: r.attendance_date as string,
+          requestedStatus: r.requested_status as string,
+          requestedIn: r.requested_check_in as string | null,
+          requestedOut: r.requested_check_out as string | null,
+          reason: r.reason as string,
+          status: r.status as string,
+          managerComment: r.manager_comment as string | null,
+        }))}
+        teamRows={allowed.map((r) => {
+          const snap = (r.original_snapshot ?? null) as { status?: string; check_in?: string | null } | null;
+          return {
+            id: r.id,
+            who: (r as unknown as { profiles?: { full_name?: string } }).profiles?.full_name ?? "—",
+            date: r.attendance_date as string,
+            requestedStatus: r.requested_status as string,
+            requestedIn: r.requested_check_in as string | null,
+            requestedOut: r.requested_check_out as string | null,
+            reason: r.reason as string,
+            status: r.status as string,
+            wasStatus: snap?.status ?? null,
+            wasIn: snap?.check_in ?? null,
+          };
+        })}
+      />
     </div>
   );
 }

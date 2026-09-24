@@ -135,10 +135,11 @@ export default async function MyHrPage() {
   // tasveer laga hi nahi chuka.
   const { data: meraHr } = await supabase
     .from("staff_details")
-    .select("photo_url")
+    .select("photo_url, hire_date")
     .eq("profile_id", user.id)
     .maybeSingle();
   const meriTasveer = (meraHr?.photo_url as string | null) ?? null;
+  const joiningDate = (meraHr?.hire_date as string | null) ?? null;
 
   return (
     <div>
@@ -197,6 +198,7 @@ export default async function MyHrPage() {
               date: String(r.attendance_date),
               status: String(r.status),
             }))}
+            joiningDate={joiningDate}
           />
 
           {/* Tankhwah ki parchi */}

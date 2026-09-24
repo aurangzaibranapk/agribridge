@@ -18,13 +18,20 @@ const TONE: Record<string, { dot: string; cell: string; label: string }> = {
   half_day: { dot: "bg-amber-300", cell: "bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300", label: "Aadha din" },
   leave: { dot: "bg-blue-300", cell: "bg-blue-50 text-blue-900 dark:bg-blue-950/30 dark:text-blue-300", label: "Chhutti" },
   absent: { dot: "bg-red-300", cell: "bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-300", label: "Ghair-hazir" },
+  joining: { dot: "bg-violet-400", cell: "bg-violet-50 text-violet-900 dark:bg-violet-950/30 dark:text-violet-300", label: "Shuroaat (Joining)" },
 };
 
 const DIN = ["Itwar", "Peer", "Mangal", "Budh", "Jumerat", "Juma", "Hafta"];
 
-export function AttendanceCalendar({ rows }: { rows: { date: string; status: string }[] }) {
+export function AttendanceCalendar({ rows, joiningDate }: { rows: { date: string; status: string }[]; joiningDate?: string | null }) {
   const aaj = new Date();
-  const [mahina, setMahina] = useState(() => new Date(aaj.getFullYear(), aaj.getMonth(), 1));
+  const [mahina, setMahina] = useState(() => {
+    if (joiningDate) {
+      const j = new Date(joiningDate);
+      if (!isNaN(j.getTime())) return new Date(j.getFullYear(), j.getMonth(), 1);
+    }
+    return new Date(aaj.getFullYear(), aaj.getMonth(), 1);
+  });
 
   const byDate = new Map(rows.map((r) => [r.date, r.status]));
 
@@ -81,28 +88,37 @@ export function AttendanceCalendar({ rows }: { rows: { date: string; status: str
           if (d == null) return <div key={`x${i}`} />;
           const key = `${saal}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const st = byDate.get(key);
-          const tone = st ? TONE[st] : null;
+          const isJoining = joiningDate === key;
+          const tone = st ? TONE[st] : isJoining ? TONE.joining : null;
+          const titleParts = [tone?.label ?? "koi indraj nahi", isJoining && !st ? "Shuroaat ka din" : null].filter(Boolean).join(" — ");
           return (
             <div
               key={key}
-              title={tone?.label ?? "koi indraj nahi"}
-              className={`rounded-md py-1.5 text-xs ${
-                tone?.cell ?? "text-surface-400 dark:text-surface-600"
-              }`}
+              title={titleParts}
+              className={`relative rounded-md py-1.5 text-xs ${tone?.cell ?? "text-surface-400 dark:text-surface-600"}`}
             >
               {d}
+              {isJoining && (
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-violet-500 ring-1 ring-white dark:ring-surface-900" title="Joining" />
+              )}
             </div>
           );
         })}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-surface-100 pt-2 dark:border-surface-800">
-        {Object.entries(TONE).map(([k, v]) => (
+        {Object.entries(TONE).filter(([k]) => k !== "joining").map(([k, v]) => (
           <span key={k} className="flex items-center gap-1.5 text-[11px] text-surface-600 dark:text-surface-400">
             <span className={`h-2 w-2 rounded-full ${v.dot}`} />
             {v.label} ({ginti[k]})
           </span>
         ))}
+        {joiningDate && (
+          <span className="flex items-center gap-1.5 text-[11px] text-surface-600 dark:text-surface-400">
+            <span className="h-2 w-2 rounded-full bg-violet-400" />
+            Shuroaat (Joining)
+          </span>
+        )}
         <span className="flex items-center gap-1.5 text-[11px] text-surface-400">
           <span className="h-2 w-2 rounded-full border border-surface-300" />
           Khali din = koi indraj nahi
