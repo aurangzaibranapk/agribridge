@@ -22,9 +22,11 @@ async function statusBreakdown(
   table: string,
   namedStatuses: string[]
 ): Promise<{ status: string; count: number }[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
   const [{ count: total }, ...namedCounts] = await Promise.all([
-    supabase.from(table).select("id", { count: "exact", head: true }),
-    ...namedStatuses.map((status) => supabase.from(table).select("id", { count: "exact", head: true }).eq("status", status)),
+    sb.from(table).select("id", { count: "exact", head: true }),
+    ...namedStatuses.map((status: string) => sb.from(table).select("id", { count: "exact", head: true }).eq("status", status)),
   ]);
   const namedTotal = namedCounts.reduce((sum, r) => sum + (r.count ?? 0), 0);
   const other = Math.max((total ?? 0) - namedTotal, 0);
@@ -285,21 +287,16 @@ export default async function AdminDashboardPage({
     .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime())
     .slice(0, 8);
 
-  const [{ data: ledgerRows }, { count: pendingCreditRequests }, { data: categoryLimits }] = await Promise.all([
-    supabase.from("farmer_credit_ledger").select("farmer_id, ledger_type, amount"),
+  const [{ data: creditSummary }, { count: pendingCreditRequests }, { data: categoryLimits }] = await Promise.all([
+    supabase.rpc("get_credit_summary" as Parameters<typeof supabase.rpc>[0]),
     supabase.from("credit_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("credit_category_limits").select("category, max_amount").order("category"),
   ]);
 
-  let totalCreditGiven = 0;
-  let totalRepaid = 0;
-  const farmersWithCreditSet = new Set<string>();
-  (ledgerRows ?? []).forEach((row) => {
-    const amt = Number(row.amount ?? 0);
-    if (row.ledger_type === "debit") totalCreditGiven += amt;
-    else totalRepaid += amt;
-    farmersWithCreditSet.add(row.farmer_id);
-  });
+  const cs = creditSummary as { total_given: number; total_repaid: number; farmer_count: number } | null;
+  const totalCreditGiven = Number(cs?.total_given ?? 0);
+  const totalRepaid = Number(cs?.total_repaid ?? 0);
+  const farmersWithCreditSet = { size: Number(cs?.farmer_count ?? 0) };
   const totalOutstanding = totalCreditGiven - totalRepaid;
 
   const { data: periodLedgerRows } = await supabase

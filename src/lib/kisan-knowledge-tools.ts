@@ -7,7 +7,7 @@ import { notifyRole } from "@/lib/notifications";
 export async function getCompanyProducts(supabase: ReturnType<typeof createClient>, searchTerm: string) {
   const { data: products } = await supabase
     .from("products")
-    .select("name, category, selling_price, unit, pack_size")
+    .select("name, categories(name), selling_price, unit, pack_size")
     .eq("is_deleted", false)
     .eq("is_available", true)
     .ilike("name", `%${searchTerm}%`)
@@ -16,7 +16,7 @@ export async function getCompanyProducts(supabase: ReturnType<typeof createClien
   return {
     products: (products ?? []).map((p) => ({
       name: p.name,
-      category: p.category,
+      category: (p.categories as { name: string } | null)?.name ?? "",
       price: Number(p.selling_price),
       unit: p.unit,
       packSize: p.pack_size,
@@ -52,7 +52,7 @@ export async function getFarmerContext(supabase: ReturnType<typeof createClient>
 
   const today = new Date();
   const cropsWithAge = (crops ?? []).map((c) => {
-    const sowDate = new Date(c.sowing_date);
+    const sowDate = new Date(c.sowing_date ?? "");
     const daysOld = Math.floor((today.getTime() - sowDate.getTime()) / (1000 * 60 * 60 * 24));
     return { ...c, daysOld };
   });

@@ -10,6 +10,7 @@ const ALWAYS_OPEN = [
   "/admin/my-attendance",
   "/admin/my-work",
   "/admin/my-wallet",
+  "/admin/my-hr",
   "/admin/hr/leave",
   "/admin/hr/corrections",
   "/admin/company-expenses",

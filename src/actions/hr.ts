@@ -266,6 +266,7 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   );
 
   revalidatePath("/admin/my-attendance");
+  revalidatePath("/admin/my-hr");
   return { success: true };
 }
 
@@ -345,6 +346,7 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   );
 
   revalidatePath("/admin/my-attendance");
+  revalidatePath("/admin/my-hr");
   revalidatePath("/admin/staff-khata");
   return { success: true };
 }
