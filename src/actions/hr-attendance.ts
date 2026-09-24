@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
 
 export interface AttState {
   error?: string;
@@ -391,6 +392,22 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
     return { error: error.message };
   }
 
+  const { supabase: supabase2 } = await whoAmI();
+  const { data: myPr } = await supabase2.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const staffName = myPr?.full_name ?? "Staff";
+  await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
+    `Hazri Theek Karne ki Darkhwast — ${staffName}`,
+    `${staffName} ne ${date} ki hazri theek karne ki darkhwast di hai (${status}). Manzoor ya na-manzoor karein.`,
+    "/admin/hr/corrections"
+  );
+  if (sd?.reports_to) {
+    await notifyUser(sd.reports_to,
+      `Hazri Darkhwast — ${staffName}`,
+      `${staffName} ne ${date} ki hazri theek karne ki darkhwast di hai. Apna faisla dein.`,
+      "/admin/hr/corrections"
+    );
+  }
+
   paths();
   return {
     success: true,
@@ -479,6 +496,12 @@ export async function decideAttendanceCorrection(_prev: AttState, formData: Form
       changes: { faisla: { pehle: row.status, ab: decision }, comment: { pehle: null, ab: comment } },
     });
 
+    const decLabel = decision === "rejected" ? "Na-manzoor" : "Wapas bheji gayi";
+    await notifyUser(row.profile_id,
+      `Hazri Darkhwast — ${decLabel}`,
+      `${row.attendance_date} ki hazri darkhwast ${decLabel} ho gayi.${decision === "sent_back" ? " Theek kar ke dobara bhejein." : ""}`,
+      "/admin/hr/corrections"
+    );
     paths();
     return {
       success: true,
@@ -533,6 +556,11 @@ export async function decideAttendanceCorrection(_prev: AttState, formData: Form
     },
   });
 
+  await notifyUser(row.profile_id,
+    "Hazri Darkhwast — Manzoor",
+    `${row.attendance_date} ki hazri darkhwast manzoor ho gayi — hazri badal di gayi hai.`,
+    "/admin/my-attendance"
+  );
   paths();
   return { success: true, notice: "Manzoor — us din ki hazri badal di gayi, aur purani qeemat record par mehfooz hai." };
 }
