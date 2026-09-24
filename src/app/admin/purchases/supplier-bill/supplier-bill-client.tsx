@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
-  ArrowLeft, Check, FileText, FileUp, PackagePlus, Plus, Search,
-  ShoppingCart, Trash2, X,
+  AlertCircle, ArrowLeft, Check, CheckCircle2, FileText, FileUp,
+  PackagePlus, Plus, Search, ShoppingCart, Trash2, X,
 } from "lucide-react";
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { quickCreateProduct } from "@/actions/products";
@@ -113,6 +114,10 @@ export function SupplierBillClient({
   const [syncStatus, setSyncStatus] = useState<"idle" | "queued" | "syncing" | "synced" | "sync_error">("idle");
   const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [paymentProofUploading, setPaymentProofUploading] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [goToGrn, setGoToGrn] = useState(false);
+  const reviewApprovedRef = useRef(false);
+  const router = useRouter();
 
   // Online/offline detect + auto-sync when internet returns
   useEffect(() => {
@@ -143,9 +148,23 @@ export function SupplierBillClient({
     return () => { window.removeEventListener("offline", off); window.removeEventListener("online", on); };
   }, []);
 
-  // Intercept form submit when offline — save FormData to localStorage
+  // Redirect to purchases list after save+GRN
+  useEffect(() => {
+    if (state.success && goToGrn && state.purchaseId) {
+      router.push("/admin/purchases");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success]);
+
+  // Intercept form submit — show review modal first (online), or queue offline
   function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
-    if (isOnline) return; // online: let server action handle normally
+    if (isOnline && !reviewApprovedRef.current) {
+      e.preventDefault();
+      setReviewOpen(true);
+      return;
+    }
+    reviewApprovedRef.current = false; // reset after approved submit passes through
+    if (isOnline) return; // approved online submit: let server action handle normally
     e.preventDefault();
     if (!formRef.current) return;
     try {
@@ -268,14 +287,22 @@ export function SupplierBillClient({
   const grandTotal = Math.max(0, subtotal - (Number(discount) || 0) + (Number(tax) || 0));
   const paidAmount = terms === "paid" ? grandTotal : terms === "partial" ? Number(paidNow) || 0 : 0;
   const amountDue = Math.max(0, grandTotal - paidAmount);
-  const itemPayload = JSON.stringify(lines.filter((line) => line.product_id && Number(line.quantity) > 0 && line.unit_cost.trim() !== "" && Number(line.unit_cost) >= 0).map((line) => ({
-    product_id: line.product_id, quantity: Number(line.quantity), unit_cost: Number(line.unit_cost),
-    sale_rate: Number(line.sale_rate) > 0 ? Number(line.sale_rate) : undefined,
-    mrp_rate: Number(line.mrp_rate) > 0 ? Number(line.mrp_rate) : undefined,
-    wholesale_rate: Number(line.wholesale_rate) > 0 ? Number(line.wholesale_rate) : undefined,
-    batch_number: line.batch_number || undefined, manufacture_date: line.manufacture_date || undefined, expiry_date: line.expiry_date || undefined,
-    pack_size_override: line.pack_override.trim() || undefined,
-  })));
+  const discountRatio = subtotal > 0 && Number(discount) > 0 ? Number(discount) / subtotal : 0;
+  const itemPayload = JSON.stringify(lines.filter((line) => line.product_id && Number(line.quantity) > 0 && line.unit_cost.trim() !== "" && Number(line.unit_cost) >= 0).map((line) => {
+    const rawCost = Number(line.unit_cost);
+    const effectiveCost = discountRatio > 0 ? Math.round(rawCost * (1 - discountRatio) * 10000) / 10000 : rawCost;
+    return {
+      product_id: line.product_id, quantity: Number(line.quantity), unit_cost: effectiveCost,
+      sale_rate: Number(line.sale_rate) > 0 ? Number(line.sale_rate) : undefined,
+      mrp_rate: Number(line.mrp_rate) > 0 ? Number(line.mrp_rate) : undefined,
+      wholesale_rate: Number(line.wholesale_rate) > 0 ? Number(line.wholesale_rate) : undefined,
+      batch_number: line.batch_number || undefined, manufacture_date: line.manufacture_date || undefined, expiry_date: line.expiry_date || undefined,
+      pack_size_override: line.pack_override.trim() || undefined,
+      units_per_pack: Number(line.units_per_pack_override) > 1 ? Number(line.units_per_pack_override) : undefined,
+    };
+  }));
+  // Discount already baked into item unit_costs above; pass 0 so backend doesn't subtract again.
+  const backendDiscount = discountRatio > 0 ? 0 : Number(discount) || 0;
 
   function updateLine(index: number, patch: Partial<Line>) {
     setLines((previous) => previous.map((line, i) => i === index ? { ...line, ...patch } : line));
@@ -461,7 +488,8 @@ export function SupplierBillClient({
         <input type="hidden" name="purchase_date" value={billDate} />
         <input type="hidden" name="branch_id" value={warehouses.find((item) => item.id === warehouseId)?.branchId ?? ""} />
         <input type="hidden" name="warehouse_id" value={warehouseId} />
-        <input type="hidden" name="discount_amount" value={discount} />
+        <input type="hidden" name="discount_amount" value={backendDiscount} />
+        <input type="hidden" name="go_to_grn" value={goToGrn ? "1" : ""} />
         <input type="hidden" name="tax_amount" value={tax} />
         <input type="hidden" name="invoice_total" value={grandTotal} />
 
@@ -714,12 +742,112 @@ export function SupplierBillClient({
                   {paymentProofUrl && <input type="hidden" name="payment_proof_url" value={paymentProofUrl} />}
                 </div>
               )}
-              <SaveBillButton disabled={!isOnline} />
+              <ReviewSaveButton disabled={!isOnline} />
               <p className="text-center text-[11px] leading-relaxed text-surface-400">Payment ledger mein record hogi. Stock GRN ke baad update hoga.</p>
             </div>
           </section>
         </aside>
       </form>
+
+      {reviewOpen && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center bg-surface-950/60 p-4" role="dialog" aria-modal="true">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-surface-900">
+            {/* Header */}
+            <div className="flex shrink-0 items-start justify-between border-b border-surface-100 px-6 py-4 dark:border-surface-800">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-surface-900 dark:text-white">Bill Review — Save karne se pehle dekhein</h2>
+                <p className="mt-0.5 text-xs text-surface-500">{lines.filter((l) => l.product_id && Number(l.quantity) > 0).length} products · Confirm karo phir Purchase ya GRN mein bhejen</p>
+              </div>
+              <button type="button" onClick={() => setReviewOpen(false)} className="ml-4 shrink-0 rounded-lg p-2 text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
+            </div>
+            {/* Products table */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+              <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                <table className="w-full min-w-[580px] border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-surface-50 text-left text-xs font-semibold uppercase tracking-wider text-surface-500 dark:bg-surface-800">
+                      <th className="px-4 py-3">#</th>
+                      <th className="px-4 py-3">Product</th>
+                      <th className="px-4 py-3 text-right">Qty</th>
+                      <th className="px-4 py-3 text-right">Trade Rate</th>
+                      {discountRatio > 0 && <th className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">Effective Rate</th>}
+                      <th className="px-4 py-3 text-right">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.filter((l) => l.product_id && Number(l.quantity) > 0).map((line, i) => {
+                      const prod = products.find((p) => p.id === line.product_id);
+                      const qty = Number(line.quantity);
+                      const cost = Number(line.unit_cost);
+                      const effCost = discountRatio > 0 ? Math.round(cost * (1 - discountRatio) * 100) / 100 : cost;
+                      const lineTotal = qty * (discountRatio > 0 ? effCost : cost);
+                      return (
+                        <tr key={i} className="border-t border-surface-100 dark:border-surface-800">
+                          <td className="px-4 py-3 text-xs text-surface-400">{i + 1}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-surface-800 dark:text-surface-100">{prod?.name ?? line.query}</div>
+                            {prod?.pack_size && <div className="text-[11px] text-surface-400">{prod.pack_size}</div>}
+                            {(Number(line.sale_rate) > 0 || Number(line.wholesale_rate) > 0) && (
+                              <div className="mt-0.5 flex gap-2 text-[10px] text-surface-400">
+                                {Number(line.sale_rate) > 0 && <span>Sale: Rs {Number(line.sale_rate).toLocaleString()}</span>}
+                                {Number(line.wholesale_rate) > 0 && <span>Wholesale: Rs {Number(line.wholesale_rate).toLocaleString()}</span>}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">{qty.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">Rs {cost.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
+                          {discountRatio > 0 && <td className="px-4 py-3 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">Rs {effCost.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>}
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {/* Totals */}
+              <div className="ml-auto mt-4 max-w-xs space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-surface-500">Subtotal</span><span className="tabular-nums">Rs {subtotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>
+                {Number(discount) > 0 && <div className="flex justify-between font-medium text-emerald-700 dark:text-emerald-400"><span>Bach (Discount)</span><span className="tabular-nums">− Rs {Number(discount).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>}
+                {Number(tax) > 0 && <div className="flex justify-between"><span className="text-surface-500">Tax</span><span className="tabular-nums">+ Rs {Number(tax).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>}
+                <div className="flex justify-between rounded-xl bg-brand-50 px-4 py-2.5 text-base font-bold dark:bg-brand-950/30"><span className="text-brand-800 dark:text-brand-200">Total</span><span className="tabular-nums text-brand-900 dark:text-brand-100">Rs {grandTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>
+              </div>
+              {discountRatio > 0 && (
+                <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span><strong>Bach apply hogi:</strong> Rs {Number(discount).toLocaleString("en-PK", { maximumFractionDigits: 2 })} ki bach proportion ke hisab se har product ke unit cost mein distribute ho chuki hai — "Effective Rate" column mein hasil rate dikh rahi hai.</span>
+                </div>
+              )}
+              {state.error && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                  <AlertCircle className="h-4 w-4 shrink-0" />{state.error}
+                </div>
+              )}
+            </div>
+            {/* Footer buttons */}
+            <div className="shrink-0 border-t border-surface-100 bg-surface-50 px-6 py-4 dark:border-surface-800 dark:bg-surface-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <button type="button" onClick={() => setReviewOpen(false)} className="rounded-lg border border-surface-200 px-4 py-2.5 text-sm font-medium text-surface-600 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">Wapas — Bill edit karein</button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setGoToGrn(false); reviewApprovedRef.current = true; setReviewOpen(false); setTimeout(() => formRef.current?.requestSubmit(), 10); }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-brand-700 bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:bg-surface-900 dark:hover:bg-brand-950/20"
+                  >
+                    <FileText className="h-4 w-4" /> Purchase Order Save Karein
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setGoToGrn(true); reviewApprovedRef.current = true; setReviewOpen(false); setTimeout(() => formRef.current?.requestSubmit(), 10); }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
+                  >
+                    <PackagePlus className="h-4 w-4" /> Save & GRN Mein Bhejen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {productModal && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-surface-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="new-product-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setProductModal(false); }}><form onSubmit={saveNewProduct} className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-surface-900"><div className="mb-4 flex items-start justify-between"><div><h2 id="new-product-title" className="font-display text-lg font-semibold text-surface-900 dark:text-white">Product Master mein add karein</h2><p className="mt-1 text-xs text-surface-500">Naam aur category save rahegi; agli purchase mein search se mil jayegi.</p></div><button type="button" onClick={() => setProductModal(false)} className="rounded-lg p-2 text-surface-400 hover:bg-surface-100"><X className="h-5 w-5" /></button></div>
         {newProductError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{newProductError}</p>}
@@ -768,13 +896,13 @@ function SummaryLine({ label, value, strong = false }: { label: string; value: n
   return <div className={`flex items-center justify-between gap-3 ${strong ? "text-base font-semibold text-surface-900 dark:text-white" : "text-sm text-surface-500"}`}><span>{label}</span><span className="tabular-nums">Rs {value.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>;
 }
 
-function SaveBillButton({ disabled: extraDisabled }: { disabled?: boolean }) {
+function ReviewSaveButton({ disabled: extraDisabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
   const isDisabled = pending || extraDisabled;
   return (
-    <button type="submit" disabled={isDisabled} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60">
+    <button type="submit" disabled={isDisabled} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
       <FileText className="h-4 w-4" />
-      {pending ? "Bill save ho raha hai..." : extraDisabled ? "Offline — internet ka intezaar karein" : "Save & Post Bill"}
+      {pending ? "Bill save ho raha hai..." : extraDisabled ? "Offline — internet ka intezaar karein" : "Review & Save Bill"}
     </button>
   );
 }
