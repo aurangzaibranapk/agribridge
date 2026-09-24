@@ -407,7 +407,7 @@ export function SupplierBillClient({
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" /><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" /><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" /></div></details>}
+                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><div><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{selected.units_per_pack && selected.units_per_pack > 1 && <span className="mt-0.5 block text-[10px] text-surface-400">1 botal ka</span>}</div><div><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{selected.units_per_pack && selected.units_per_pack > 1 && <span className="mt-0.5 block text-[10px] text-surface-400">1 botal ka</span>}</div><div><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale (PET)" />{(() => { const u = selected.units_per_pack; const w = Number(line.wholesale_rate); return u && u > 1 ? (w > 0 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-surface-400">PET ka rate likhein</span>) : null; })()}</div></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
                       <td className="px-3 py-2.5">
@@ -424,8 +424,30 @@ export function SupplierBillClient({
                           ) : "—"}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5"><input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
-                      <td className="px-3 py-2.5"><div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div></td>
+                      <td className="px-3 py-2.5">
+                        <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
+                        {(() => {
+                          const u = selected?.units_per_pack;
+                          const q = Number(line.quantity);
+                          return u && u > 1 && q > 0 ? (
+                            <span className="mt-1 block text-[10px] font-medium text-brand-700">
+                              = {Math.round(q * u * 100) / 100} botal
+                            </span>
+                          ) : null;
+                        })()}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div>
+                        {(() => {
+                          const u = selected?.units_per_pack;
+                          const r = Number(line.unit_cost);
+                          return u && u > 1 && r > 0 ? (
+                            <span className="mt-1 block text-[10px] font-medium text-brand-700">
+                              1 botal: Rs {(Math.round((r / u) * 100) / 100).toLocaleString()}
+                            </span>
+                          ) : null;
+                        })()}
+                      </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
                       <td className="px-3 py-2.5"><button type="button" disabled={lines.length === 1} onClick={() => setLines((previous) => previous.filter((_, i) => i !== index))} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
                     </tr>;
