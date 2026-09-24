@@ -14,7 +14,7 @@ import { looksBinary, parseDelimited } from "@/lib/csv";
 
 type Category = { id: string; name: string; parent_category_id: string | null; category_kind: string };
 type Product = {
-  id: string; name: string; company_id: string | null; category_id: string | null; pack_size: string | null; unit: string | null;
+  id: string; name: string; company_id: string | null; category_id: string | null; pack_size: string | null; units_per_pack: number | null; unit: string | null;
   purchase_price: number; selling_price: number; wholesale_price: number | null; mrp_price: number | null; trade_rate_pending: boolean;
 };
 type Line = {
@@ -185,7 +185,7 @@ export function SupplierBillClient({
     if ("error" in result) { setNewProductError(result.error); return; }
     const created: Product = {
       id: result.id, name: newProductName.trim(), company_id: newProductCompany || null, category_id: newProductCategory || null,
-      pack_size: newProductPack.trim() || null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
+      pack_size: newProductPack.trim() || null, units_per_pack: null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
       purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0,
       mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
       trade_rate_pending: false,
@@ -410,7 +410,20 @@ export function SupplierBillClient({
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" /><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" /><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" /></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
-                      <td className="px-3 py-2.5"><span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">{selected?.pack_size || selected?.unit || "—"}</span></td>
+                      <td className="px-3 py-2.5">
+                        <span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">
+                          {selected ? (
+                            <>
+                              {selected.pack_size || selected.unit || "—"}
+                              {selected.units_per_pack && selected.units_per_pack > 1 && (
+                                <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
+                                  ×{selected.units_per_pack}
+                                </span>
+                              )}
+                            </>
+                          ) : "—"}
+                        </span>
+                      </td>
                       <td className="px-3 py-2.5"><input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} /></td>
                       <td className="px-3 py-2.5"><div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div></td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
