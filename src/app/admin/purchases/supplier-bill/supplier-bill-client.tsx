@@ -107,8 +107,12 @@ export function SupplierBillClient({
   const [billNoGenerating, setBillNoGenerating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const prevBillNoRef = useRef("");
+  const paymentProofInputRef = useRef<HTMLInputElement>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState<"idle" | "queued" | "syncing" | "synced" | "sync_error">("idle");
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
+  const [paymentProofUploading, setPaymentProofUploading] = useState(false);
 
   // Online/offline detect + auto-sync when internet returns
   useEffect(() => {
@@ -193,9 +197,52 @@ export function SupplierBillClient({
     try {
       const { getNextSupplierBillNo } = await import("@/actions/purchases");
       const result = await getNextSupplierBillNo();
-      if ("billNo" in result) setBillNo(result.billNo);
+      if ("billNo" in result) handleBillNoChange(result.billNo);
     } finally {
       setBillNoGenerating(false);
+    }
+  }
+
+  function handleBillNoChange(newNo: string) {
+    const prev = prevBillNoRef.current;
+    setBillNo(newNo);
+    prevBillNoRef.current = newNo;
+    setLines((prevLines) =>
+      prevLines.map((line) =>
+        line.batch_number === "" || line.batch_number === prev
+          ? { ...line, batch_number: newNo }
+          : line
+      )
+    );
+  }
+
+  function handleBillDateChange(newDate: string) {
+    setBillDate(newDate);
+    setLines((prevLines) =>
+      prevLines.map((line) =>
+        line.manufacture_date === "" ? { ...line, manufacture_date: newDate } : line
+      )
+    );
+  }
+
+  function newLineWithDefaults(): Line {
+    return { ...emptyLine(), batch_number: billNo, manufacture_date: billDate };
+  }
+
+  async function handlePaymentProofChange(file: File | null) {
+    if (!file) { setPaymentProofUrl(""); return; }
+    setPaymentProofUploading(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `payment-proofs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("payment-proofs").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) { console.error("Screenshot upload error:", error); return; }
+      const { data: { publicUrl } } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      setPaymentProofUrl(publicUrl);
+    } finally {
+      setPaymentProofUploading(false);
     }
   }
 
@@ -283,7 +330,7 @@ export function SupplierBillClient({
         mrp_rate: created.mrp_price ? String(created.mrp_price) : "",
         wholesale_rate: created.wholesale_price ? String(created.wholesale_price) : "",
       };
-      if (index < 0) return [...previous, { ...emptyLine(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" }];
+      if (index < 0) return [...previous, { ...newLineWithDefaults(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" }];
       return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" } : line);
     });
     setProductModal(false);
@@ -295,7 +342,7 @@ export function SupplierBillClient({
     setLines((previous) => {
       const index = previous.findIndex((line) => !line.product_id);
       const entry = {
-        ...emptyLine(),
+        ...newLineWithDefaults(),
         product_id: product.id,
         query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
         unit_cost: String(product.purchase_price),
@@ -354,7 +401,7 @@ export function SupplierBillClient({
         missing.push(rawName);
         // Line add karo — data saved rahega, user search se link kar sakta hai
         imported.push({
-          ...emptyLine(),
+          ...newLineWithDefaults(),
           query: rawName,
           quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
           unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : "",
@@ -365,7 +412,7 @@ export function SupplierBillClient({
         continue;
       }
       imported.push({
-        ...emptyLine(),
+        ...newLineWithDefaults(),
         product_id: product.id,
         query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
         quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
@@ -439,13 +486,13 @@ export function SupplierBillClient({
               <div>
                 <label className={labelClass}>Invoice No.</label>
                 <div className="flex gap-1.5">
-                  <input name="supplier_bill_no" value={billNo} onChange={(e) => setBillNo(e.target.value)} className={inputClass} placeholder="e.g. GF-2026-0912" required maxLength={120} autoComplete="off" />
+                  <input name="supplier_bill_no" value={billNo} onChange={(e) => handleBillNoChange(e.target.value)} className={inputClass} placeholder="e.g. GF-2026-0912" required maxLength={120} autoComplete="off" />
                   <button type="button" onClick={autoGenerateBillNo} disabled={billNoGenerating} title="System se auto number" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg border border-surface-200 px-2.5 text-xs font-semibold text-surface-600 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">
                     {billNoGenerating ? "…" : "Auto"}
                   </button>
                 </div>
               </div>
-              <div><label className={labelClass}>Bill Date</label><input type="date" value={billDate} onChange={(event) => setBillDate(event.target.value)} className={inputClass} required /></div>
+              <div><label className={labelClass}>Bill Date</label><input type="date" value={billDate} onChange={(event) => handleBillDateChange(event.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Shop / Warehouse</label><select className={inputClass} value={warehouseId} onChange={(event) => setWarehouseId(event.target.value)} required><option value="">Warehouse chunein</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}{warehouse.shopName ? ` · ${warehouse.shopName}` : warehouse.branchName ? ` · ${warehouse.branchName}` : ""}</option>)}</select></div>
             </div>
           </section>
@@ -637,7 +684,7 @@ export function SupplierBillClient({
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><button type="button" onClick={() => setLines((previous) => [...previous, emptyLine()])} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"><Plus className="h-4 w-4" /> Add bill line</button><span className="text-xs text-surface-400">{lines.filter((line) => line.product_id).length} product lines</span></div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><button type="button" onClick={() => setLines((previous) => [...previous, newLineWithDefaults()])} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"><Plus className="h-4 w-4" /> Add bill line</button><span className="text-xs text-surface-400">{lines.filter((line) => line.product_id).length} product lines</span></div>
           </section>
           <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-xs leading-relaxed text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-200">Bill save hone ke baad maal approved purchase mein rahega. Asal stock sirf <strong>GRN / Maal Receive</strong> par ginti ke baad warehouse mein charhega.</p>
         </div>
@@ -649,6 +696,24 @@ export function SupplierBillClient({
             <div className="my-4 rounded-xl bg-brand-50 px-3.5 py-3 dark:bg-brand-950/30"><SummaryLine label="Total Amount" value={grandTotal} strong /></div>
             <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><div><label className={labelClass}>Payment Status</label><select name="payment_terms" value={terms} onChange={(event) => { setTerms(event.target.value as typeof terms); setPaidNow(""); }} className={inputClass}><option value="credit">Credit / Udhaar</option><option value="partial">Partial Payment</option><option value="paid">Fully Paid</option></select></div>{terms === "partial" && <div><label className={labelClass}>Paid Now</label><input name="paid_now" type="number" min="0.01" max={Math.max(0, grandTotal - 0.01)} step="0.01" value={paidNow} onChange={(event) => setPaidNow(event.target.value)} className={inputClass} placeholder="Paid amount" required /></div>}{terms !== "paid" && <div className="grid grid-cols-2 gap-2"><div><label className={labelClass}>Credit Days</label><input name="credit_days" type="number" min="0" step="1" defaultValue="30" className={inputClass} /></div><div><label className={labelClass}>Due Date</label><input name="due_date" type="date" className={inputClass} /></div></div>}<div className="flex items-center justify-between text-sm"><span className="text-surface-500">Paid</span><span className="font-semibold text-surface-800 dark:text-surface-100">Rs {Math.min(grandTotal, Math.max(0, paidAmount)).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div><div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30"><span className="font-medium text-emerald-800 dark:text-emerald-200">Due</span><span className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200">Rs {amountDue.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div></div>
             <div className="mt-4 space-y-3"><div><label className={labelClass}>Payment Method</label><select name="payment_method" className={inputClass}><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option></select></div><div><label className={labelClass}>Paid From Account</label><select name="finance_account_id" defaultValue={accounts.find((account) => account.account_type === "cash")?.id ?? ""} className={inputClass}><option value="">Default cash account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div><label className={labelClass}>Reference / Note</label><textarea name="notes" rows={3} className="w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" placeholder="Payment ref, bill remarks..." /></div>
+              {terms !== "credit" && (
+                <div>
+                  <label className={labelClass}>Payment Screenshot <span className="font-normal text-surface-400">(optional)</span></label>
+                  <input ref={paymentProofInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handlePaymentProofChange(e.target.files?.[0] ?? null)} />
+                  {paymentProofUrl ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      <span className="flex-1 truncate text-xs text-emerald-800 dark:text-emerald-200">Screenshot upload ho gaya</span>
+                      <button type="button" onClick={() => { setPaymentProofUrl(""); if (paymentProofInputRef.current) paymentProofInputRef.current.value = ""; }} className="shrink-0 text-xs text-red-600 hover:underline">Hatao</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => paymentProofInputRef.current?.click()} disabled={paymentProofUploading} className={`${inputClass} flex cursor-pointer items-center gap-2 text-left text-surface-500 hover:border-brand-400 disabled:opacity-50`}>
+                      {paymentProofUploading ? "Upload ho raha hai..." : "Screenshot chunein…"}
+                    </button>
+                  )}
+                  {paymentProofUrl && <input type="hidden" name="payment_proof_url" value={paymentProofUrl} />}
+                </div>
+              )}
               <SaveBillButton disabled={!isOnline} />
               <p className="text-center text-[11px] leading-relaxed text-surface-400">Payment ledger mein record hogi. Stock GRN ke baad update hoga.</p>
             </div>

@@ -120,7 +120,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
     case "product": {
       const [active, pending, edits, reorder] = await Promise.all([
         count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_active", true)),
-        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_verified", false).eq("is_deleted", false)),
         count(() => s.from("product_edit_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("inventory").select("id", { count: "exact", head: true }).lte("quantity", 0)),
       ]);
@@ -252,7 +252,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
       const [toDispatch, returns, pendingProducts] = await Promise.all([
         count(() => s.from("agri_orders").select("id", { count: "exact", head: true }).eq("status", "approved")),
         count(() => s.from("agri_order_returns").select("id", { count: "exact", head: true }).eq("status", "pending")),
-        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_verified", false).eq("is_deleted", false)),
       ]);
       return [
         { label: "Dispatch ke intezar mein", value: n(toDispatch), href: "/admin/agri-orders", tone: toDispatch ? "alert" : "normal" },

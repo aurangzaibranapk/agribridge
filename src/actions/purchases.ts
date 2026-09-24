@@ -150,6 +150,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       credit_days: terms.creditDays,
       due_date: terms.dueDate,
       notes,
+      payment_proof_url: supplierBillWorkspace ? (String(formData.get("payment_proof_url") ?? "").trim() || null) : null,
       created_by: user?.id ?? null,
     })
     .select("id")
