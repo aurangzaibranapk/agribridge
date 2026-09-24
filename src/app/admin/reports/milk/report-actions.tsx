@@ -1,5 +1,7 @@
 "use client";
 import { Printer, Download, MessageCircle, Mail } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface ReportSummary {
   farmerName: string;
@@ -10,6 +12,7 @@ interface ReportSummary {
 }
 
 export function ReportActions({ summary }: { summary: ReportSummary }) {
+  const lang = useLang();
   function handlePrint() {
     window.print();
   }
@@ -45,17 +48,13 @@ export function ReportActions({ summary }: { summary: ReportSummary }) {
   return (
     <div className="flex flex-wrap gap-2 print:hidden">
       <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
-        <Printer className="h-3.5 w-3.5" /> Print
-      </button>
+        <Printer className="h-3.5 w-3.5" />{t("at_print", lang)}</button>
       <button onClick={handleDownloadCsv} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
-        <Download className="h-3.5 w-3.5" /> Download CSV
-      </button>
+        <Download className="h-3.5 w-3.5" />{t("at_download_csv", lang)}</button>
       <button onClick={handleWhatsApp} className="flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100">
-        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-      </button>
+        <MessageCircle className="h-3.5 w-3.5" />{t("at_whatsapp", lang)}</button>
       <button onClick={handleEmail} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 hover:bg-surface-50">
-        <Mail className="h-3.5 w-3.5" /> Email
-      </button>
+        <Mail className="h-3.5 w-3.5" />{t("at_email", lang)}</button>
     </div>
   );
 }

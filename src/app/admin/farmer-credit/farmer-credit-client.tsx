@@ -11,6 +11,8 @@ import {
 } from "@/actions/farmer-credit";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Plus, X, FileText, Settings } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -54,6 +56,7 @@ export function FarmerCreditClient({
   financeAccounts: FinanceAccount[];
 }) {
   const [showIssue, setShowIssue] = useState(false);
+  const lang = useLang();
   const [showRepay, setShowRepay] = useState(false);
   const [showMigrate, setShowMigrate] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
@@ -62,29 +65,24 @@ export function FarmerCreditClient({
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
         <button onClick={() => setShowIssue(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" /> Credit Issue Karein
-        </button>
+          <Plus className="h-4 w-4" />{t("fc_issue_credit", lang)}</button>
         <button onClick={() => setShowRepay(true)} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
-          <Plus className="h-4 w-4" /> Repayment Record Karein
-        </button>
-        <button onClick={() => setShowMigrate(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">
-          DigiKhata Se Migrate Karein
-        </button>
+          <Plus className="h-4 w-4" />{t("fc_record_repayment", lang)}</button>
+        <button onClick={() => setShowMigrate(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">{t("fc_migrate", lang)}</button>
         <button onClick={() => setShowLimit(true)} className="flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300">
-          <Settings className="h-4 w-4" /> Credit Limit Set Karein
-        </button>
+          <Settings className="h-4 w-4" />{t("fc_set_limit", lang)}</button>
       </div>
 
-      <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Farmer-wise Balances (Kis Ka Khata)</h3>
+      <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("fc_farmer_balances", lang)}</h3>
       <div className="mb-6 overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-4 py-3 font-medium text-surface-500">Farmer</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Total Issued</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Total Paid</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Baaqi</th>
-              <th className="px-4 py-3 text-right font-medium text-surface-500">Credit Limit</th>
+              <th className="px-4 py-3 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_total_issued", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_total_paid", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_baqi", lang)}</th>
+              <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_credit_limit", lang)}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -102,29 +100,28 @@ export function FarmerCreditClient({
                   <td className="px-4 py-3 text-right text-xs text-surface-500">{b.credit_limit ? `Rs ${b.credit_limit.toLocaleString()}` : "-"}{overLimit && <span className="ml-1 text-red-600">(Over)</span>}</td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/farmer-credit/statement?farmer_id=${b.farmer_id}`} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
-                      <FileText className="h-3 w-3" /> Statement
-                    </Link>
+                      <FileText className="h-3 w-3" />{t("c_statement", lang)}</Link>
                   </td>
                 </tr>
               );
             })}
             {balances.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-surface-400">Koi outstanding credit nahi hai.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-surface-400">{t("fc_no_outstanding", lang)}</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">Poori Recent History</h3>
+      <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("fc_full_history", lang)}</h3>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-              <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Farmer</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Type</th>
-              <th className="px-3 py-2 font-medium text-surface-500">Le Ke Jaane Wala</th>
-              <th className="px-3 py-2 text-right font-medium text-surface-500">Amount</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_farmer", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("c_type", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">{t("fc_taken_by", lang)}</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -143,7 +140,7 @@ export function FarmerCreditClient({
               </tr>
             ))}
             {ledger.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">Koi record nahi hai.</td></tr>
+              <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">{t("c_no_records", lang)}</td></tr>
             )}
           </tbody>
         </table>
@@ -159,6 +156,7 @@ export function FarmerCreditClient({
 
 function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => void }) {
   const [state, formAction] = useFormState(issueFarmerCredit, initialState);
+  const lang = useLang();
   const [confirmOverride, setConfirmOverride] = useState(false);
   const isLimitError = state.error?.startsWith("LIMIT_EXCEEDED:");
   if (state.success) setTimeout(onClose, 900);
@@ -167,7 +165,7 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Credit Issue Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("fc_issue_credit", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && !isLimitError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
@@ -175,16 +173,14 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
           <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
             <p>{state.error?.replace("LIMIT_EXCEEDED:", "")}</p>
             <label className="mt-2 flex items-center gap-2 text-xs">
-              <input type="checkbox" checked={confirmOverride} onChange={(e) => setConfirmOverride(e.target.checked)} />
-              Phir bhi issue karna hai (Limit se zyada)
-            </label>
+              <input type="checkbox" checked={confirmOverride} onChange={(e) => setConfirmOverride(e.target.checked)} />{t("fc_issue_anyway", lang)}</label>
           </div>
         )}
-        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Credit issue ho gayi.</p>}
+        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_credit_issued", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="override_limit" value={confirmOverride ? "true" : "false"} />
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -193,28 +189,28 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
             </Select>
           </div>
           <div>
-            <Label>Credit Type *</Label>
+            <Label>{t("fc_credit_type", lang)}</Label>
             <Select name="source_type" required>
-              <option value="seed">Seed</option>
-              <option value="fertilizer">Fertilizer</option>
-              <option value="pesticide">Pesticide</option>
-              <option value="machinery">Machinery</option>
-              <option value="wanda">Wanda</option>
-              <option value="milk">Milk (Weekly Auto-Deduct)</option>
-              <option value="other">Other</option>
+              <option value="seed">{t("c_seed", lang)}</option>
+              <option value="fertilizer">{t("c_fertilizer", lang)}</option>
+              <option value="pesticide">{t("c_pesticide", lang)}</option>
+              <option value="machinery">{t("c_machinery", lang)}</option>
+              <option value="wanda">{t("fc_wanda", lang)}</option>
+              <option value="milk">{t("fc_milk_auto", lang)}</option>
+              <option value="other">{t("c_other", lang)}</option>
             </Select>
           </div>
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gd_amount_req", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required />
           </div>
           <div>
-            <Label>Le Ke Jaane Wala Kaun Hai? (agar Farmer khud nahi)</Label>
-            <Input name="collected_by" placeholder="Naam likhein" />
+            <Label>{t("fc_who_took", lang)}</Label>
+            <Input name="collected_by" placeholder={t("c_enter_name", lang)} />
           </div>
           <div>
-            <Label>Notes</Label>
-            <Textarea name="notes" rows={2} placeholder="e.g. DAP 2 bags, 5 acres" />
+            <Label>{t("c_notes", lang)}</Label>
+            <Textarea name="notes" rows={2} placeholder={t("fc_notes_example", lang)} />
           </div>
           <SubmitButton label={isLimitError && !confirmOverride ? "Confirm Karein Upar" : "Credit Issue Karein"} disabled={isLimitError && !confirmOverride} />
         </form>
@@ -225,20 +221,21 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
 
 function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer[]; financeAccounts: FinanceAccount[]; onClose: () => void }) {
   const [state, formAction] = useFormState(recordFarmerCreditRepayment, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 900);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Repayment Record Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("fc_record_repayment", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Repayment record ho gayi.</p>}
+        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_repayment_done", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -247,11 +244,11 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
             </Select>
           </div>
           <div>
-            <Label>Amount (Rs.) *</Label>
+            <Label>{t("gd_amount_req", lang)}</Label>
             <Input name="amount" type="number" step="0.01" required />
           </div>
           <div>
-            <Label>Konsa Account Mein Paisa Aya *</Label>
+            <Label>{t("fc_which_account_in", lang)}</Label>
             <Select name="account_id" required>
               <option value="">- select -</option>
               {financeAccounts.map((a) => (
@@ -260,10 +257,10 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
             </Select>
           </div>
           <div>
-            <Label>Notes</Label>
+            <Label>{t("c_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
           </div>
-          <SubmitButton label="Repayment Record Karein" />
+          <SubmitButton label={t("fc_record_repayment", lang)} />
         </form>
       </div>
     </div>
@@ -272,21 +269,22 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
 
 function MigrateModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => void }) {
   const [state, formAction] = useFormState(migrateOpeningBalance, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 900);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">DigiKhata Se Migrate Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("fc_migrate", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        <p className="mb-2 text-xs text-surface-400">Purane DigiKhata ka total balance ek dafa yahan enter karein - "DigiKhata se migrate hui" note ke sath save hoga. Har Farmer ke liye sirf ek dafa ho sakta hai.</p>
+        <p className="mb-2 text-xs text-surface-400">{t("fc_migrate_note", lang)}</p>
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Migrate ho gaya.</p>}
+        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_migrated", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -295,14 +293,14 @@ function MigrateModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => 
             </Select>
           </div>
           <div>
-            <Label>Total Balance (Rs.) - Farmer ka Company pe udhaar to positive, Company Farmer ka de to negative *</Label>
-            <Input name="amount" type="number" step="0.01" required placeholder="e.g. 50000 ya -20000" />
+            <Label>{t("fc_total_balance_note", lang)}</Label>
+            <Input name="amount" type="number" step="0.01" required placeholder={t("fc_migrate_amount_eg", lang)} />
           </div>
           <div>
-            <Label>Notes</Label>
-            <Textarea name="notes" rows={2} placeholder="Optional extra detail" />
+            <Label>{t("c_notes", lang)}</Label>
+            <Textarea name="notes" rows={2} placeholder={t("fc_optional_detail", lang)} />
           </div>
-          <SubmitButton label="Migrate Karein" />
+          <SubmitButton label={t("fc_migrate", lang)} />
         </form>
       </div>
     </div>
@@ -311,6 +309,7 @@ function MigrateModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => 
 
 function LimitModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => void }) {
   const [state, formAction] = useFormState(setFarmerCreditLimit, initialState);
+  const lang = useLang();
   const [selectedFarmer, setSelectedFarmer] = useState("");
   const currentLimit = farmers.find((f) => f.id === selectedFarmer)?.credit_limit;
   if (state.success) setTimeout(() => window.location.reload(), 900);
@@ -319,14 +318,14 @@ function LimitModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => vo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Credit Limit Set Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("fc_set_limit", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">Limit set ho gaya.</p>}
+        {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_limit_set", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <Label>Farmer *</Label>
+            <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" value={selectedFarmer} onChange={(e) => setSelectedFarmer(e.target.value)} required>
               <option value="">- select -</option>
               {farmers.map((f) => (
@@ -335,10 +334,10 @@ function LimitModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => vo
             </Select>
           </div>
           <div>
-            <Label>Credit Limit (Rs.) - khaali chhodein to limit hatana hai</Label>
-            <Input name="credit_limit" type="number" step="0.01" defaultValue={currentLimit ?? ""} placeholder="e.g. 100000" />
+            <Label>{t("fc_limit_field", lang)}</Label>
+            <Input name="credit_limit" type="number" step="0.01" defaultValue={currentLimit ?? ""} placeholder={t("fc_limit_amount_eg", lang)} />
           </div>
-          <SubmitButton label="Limit Set Karein" />
+          <SubmitButton label={t("fc_set_limit", lang)} />
         </form>
       </div>
     </div>

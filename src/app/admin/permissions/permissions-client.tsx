@@ -4,6 +4,8 @@ import { useFormState, useFormStatus } from "react-dom";
 import { saveStaffPermissions, type ActionState } from "@/actions/permissions";
 import { ADMIN_NAV_GROUPS, DASHBOARD_ITEM } from "@/components/layout/nav-items";
 import { Plus, Minus } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
@@ -26,16 +28,18 @@ const ROLE_HOME_GROUP: Record<string, string | null> = {
   admin_assistant: "Administration",
   procurement: "Purchases",
   milk_collection: "Dairy",
+  machinery: "Agriculture",
   manager: null, // Manager sees everything open — broad oversight role.
 };
 
 export function PermissionsClient({ staff }: { staff: Staff[] }) {
+  const lang = useLang();
   const [selectedId, setSelectedId] = useState(staff[0]?.id ?? "");
   const selected = staff.find((s) => s.id === selectedId);
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Staff Select Karein</h2>
+        <h2 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("at_select_staff", lang)}</h2>
         <div className="space-y-1">
           {staff.map((s) => (
             <button
@@ -48,7 +52,7 @@ export function PermissionsClient({ staff }: { staff: Staff[] }) {
               {s.full_name} <span className="text-xs opacity-70">({s.role})</span>
             </button>
           ))}
-          {staff.length === 0 && <p className="text-sm text-surface-400">Koi staff nahi mila.</p>}
+          {staff.length === 0 && <p className="text-sm text-surface-400">{t("at_no_staff", lang)}</p>}
         </div>
       </div>
       <div className="lg:col-span-2">
@@ -59,6 +63,7 @@ export function PermissionsClient({ staff }: { staff: Staff[] }) {
 }
 
 function PermissionForm({ staff }: { staff: Staff }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(saveStaffPermissions, initialState);
   const allowed = new Set(staff.allowed_pages ?? []);
   const homeGroupLabel = ROLE_HOME_GROUP[staff.role] ?? null;
@@ -72,7 +77,7 @@ function PermissionForm({ staff }: { staff: Staff }) {
       <input type="hidden" name="profile_id" value={staff.id} />
       <h2 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{staff.full_name} - Jo Pages Ye Dekh Sake</h2>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Permissions save ho gayin.</p>}
+      {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("at_permissions_saved", lang)}</p>}
       <label className="mb-3 flex items-center gap-2 rounded-lg bg-surface-50 p-2 text-sm dark:bg-surface-800">
         <input type="checkbox" name="allowed_pages" value={DASHBOARD_ITEM.href} defaultChecked={allowed.has(DASHBOARD_ITEM.href)} />
         {DASHBOARD_ITEM.label}
@@ -98,8 +103,7 @@ function PermissionForm({ staff }: { staff: Staff }) {
             onClick={() => setShowAll(true)}
             className="flex items-center gap-1.5 rounded-lg border border-dashed border-surface-300 px-3 py-2 text-xs font-medium text-surface-500 hover:border-brand-400 hover:text-brand-600"
           >
-            <Plus className="h-3.5 w-3.5" /> Aur Groups Add Karein (agar koi aur department ka module chahiye)
-          </button>
+            <Plus className="h-3.5 w-3.5" />{t("at_add_more_groups", lang)}</button>
         )}
 
         {showAll && otherGroups.length > 0 && (
@@ -110,8 +114,7 @@ function PermissionForm({ staff }: { staff: Staff }) {
                 onClick={() => setShowAll(false)}
                 className="flex items-center gap-1.5 text-xs font-medium text-surface-400 hover:text-surface-600"
               >
-                <Minus className="h-3.5 w-3.5" /> Chhupayein
-              </button>
+                <Minus className="h-3.5 w-3.5" />{t("at_hide", lang)}</button>
             )}
             {otherGroups.map((group) => (
               <div key={group.label}>

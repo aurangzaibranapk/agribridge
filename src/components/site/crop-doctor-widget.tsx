@@ -1,6 +1,8 @@
 ﻿"use client";
 import { useState } from "react";
 import { Camera, Loader2, Sprout, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 type CropDiagnosis = {
   cropGuess?: string;
@@ -12,6 +14,7 @@ type CropDiagnosis = {
 };
 
 export function CropDoctorWidget({ mode }: { mode?: string }) {
+  const lang = useLang();
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -75,12 +78,12 @@ export function CropDoctorWidget({ mode }: { mode?: string }) {
       <div className="rounded-card border-2 border-dashed border-surface-300 bg-surface-50 p-10 text-center">
         <label htmlFor="crop-photo-upload" className="cursor-pointer">
           {preview ? (
-            <img src={preview} alt="Uploaded crop" className="mx-auto max-h-64 rounded-lg" />
+            <img src={preview} alt={t("sp_uploaded_crop", lang)} className="mx-auto max-h-64 rounded-lg" />
           ) : (
             <>
               <Camera className="mx-auto mb-3 h-10 w-10 text-surface-400" />
-              <p className="text-surface-500">Tap to upload a photo of the affected crop</p>
-              <p className="mt-1 text-xs text-surface-400">JPG or PNG, a clear close-up works best</p>
+              <p className="text-surface-500">{t("sp_tap_upload", lang)}</p>
+              <p className="mt-1 text-xs text-surface-400">{t("sp_photo_hint", lang)}</p>
             </>
           )}
         </label>
@@ -101,12 +104,10 @@ export function CropDoctorWidget({ mode }: { mode?: string }) {
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Diagnose ho raha hai...
-            </>
+              <Loader2 className="h-4 w-4 animate-spin" />{t("sp_diagnosing", lang)}</>
           ) : (
             <>
-              <Sprout className="h-4 w-4" /> Diagnose Karein
-            </>
+              <Sprout className="h-4 w-4" />{t("sp_diagnose", lang)}</>
           )}
         </button>
       )}
@@ -118,9 +119,7 @@ export function CropDoctorWidget({ mode }: { mode?: string }) {
       )}
 
       {notConfigured && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          AI Crop Doctor abhi connect nahi hui - system administrator se rabta karein.
-        </p>
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{t("sp_doctor_offline", lang)}</p>
       )}
 
       {error && (
@@ -147,15 +146,13 @@ export function CropDoctorWidget({ mode }: { mode?: string }) {
 
           <div className="mt-4 rounded-lg bg-green-50 p-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-green-700">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Treatment
-            </p>
+              <CheckCircle2 className="h-3.5 w-3.5" />{t("sp_treatment", lang)}</p>
             <p className="mt-1 text-sm text-green-800">{diagnosis.treatment}</p>
           </div>
 
           <div className="mt-3 rounded-lg bg-blue-50 p-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-blue-700">
-              <AlertTriangle className="h-3.5 w-3.5" /> Spray Schedule
-            </p>
+              <AlertTriangle className="h-3.5 w-3.5" />{t("sp_spray_schedule", lang)}</p>
             <p className="mt-1 text-sm text-blue-800">{diagnosis.sprayScheduleAdvice}</p>
           </div>
         </div>

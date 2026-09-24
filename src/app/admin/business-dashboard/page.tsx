@@ -5,6 +5,8 @@ import { TrendingUp, ShoppingCart, Wallet, CreditCard, Droplet, Boxes, DollarSig
 import { SalesTrendChart } from "@/app/admin/business-dashboard/business-charts";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ export default async function BusinessDashboardPage({
   searchParams: Promise<{ branch?: string }>;
 }) {
   const params = await searchParams;
+  const lang = getLanguageFromCookies("rm");
   const branchId = params.branch || "";
   const supabase = createClient();
 
@@ -124,7 +127,7 @@ export default async function BusinessDashboardPage({
   return (
     <div>
       <PageHeader
-        title="Business Dashboard"
+        title={t("bd_title", lang)}
         description="Overall business snapshot - Sales, Purchases, Cash, Khata, Milk, Stock, and Profit"
       />
 
@@ -133,21 +136,21 @@ export default async function BusinessDashboardPage({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={TrendingUp} label="Sales (This Month)" value={`Rs ${totalSales.toLocaleString()}`} tone="brand" />
-        <StatCard icon={ShoppingCart} label="Purchases (This Month)" value={`Rs ${totalPurchases.toLocaleString()}`} tone="orange" />
-        <StatCard icon={Wallet} label="Cash Received (This Month)" value={`Rs ${totalCashReceived.toLocaleString()}`} tone="green" />
-        <StatCard icon={CreditCard} label="Khata Outstanding" value={`Rs ${totalKhataOutstanding.toLocaleString()}`} tone="red" />
+        <StatCard icon={TrendingUp} label={t("bd_sales_month", lang)} value={`Rs ${totalSales.toLocaleString()}`} tone="brand" />
+        <StatCard icon={ShoppingCart} label={t("bd_purchases_month", lang)} value={`Rs ${totalPurchases.toLocaleString()}`} tone="orange" />
+        <StatCard icon={Wallet} label={t("bd_cash_month", lang)} value={`Rs ${totalCashReceived.toLocaleString()}`} tone="green" />
+        <StatCard icon={CreditCard} label={t("bd_khata_outstanding", lang)} value={`Rs ${totalKhataOutstanding.toLocaleString()}`} tone="red" />
         <StatCard
           icon={Droplet}
-          label="Milk Collection (This Month)"
+          label={t("bd_milk_month", lang)}
           value={`${milkLitersThisMonth.toFixed(0)} L / Rs ${milkAmountThisMonth.toLocaleString()}`}
           tone="blue"
         />
-        <StatCard icon={Wallet} label="Owed to Milk Farmers" value={`Rs ${totalMilkOwed.toLocaleString()}`} tone="red" />
-        <StatCard icon={Boxes} label="Total Stock Value" value={`Rs ${stockValue.toLocaleString()}`} tone="purple" />
+        <StatCard icon={Wallet} label={t("bd_owed_milk_farmers", lang)} value={`Rs ${totalMilkOwed.toLocaleString()}`} tone="red" />
+        <StatCard icon={Boxes} label={t("c_total_stock_value", lang)} value={`Rs ${stockValue.toLocaleString()}`} tone="purple" />
         <StatCard
           icon={DollarSign}
-          label="Profit (This Month, Est.)"
+          label={t("bd_profit_month", lang)}
           value={`Rs ${totalProfit.toLocaleString()}`}
           tone={totalProfit >= 0 ? "green" : "red"}
         />
@@ -155,9 +158,7 @@ export default async function BusinessDashboardPage({
 
       <div className="mt-6">
         <Card>
-          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Sales Trend (Last 7 Days)
-          </h2>
+          <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("bd_sales_trend", lang)}</h2>
           <SalesTrendChart data={trendData} />
         </Card>
       </div>

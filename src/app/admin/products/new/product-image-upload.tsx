@@ -4,9 +4,12 @@ import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Label } from "@/components/ui/form";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 export function ProductImageUpload({ defaultUrl, onUploaded }: { defaultUrl?: string; onUploaded?: (url: string) => void }) {
   const [imageUrl, setImageUrl] = useState(defaultUrl ?? "");
+  const lang = useLang();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,17 +37,17 @@ export function ProductImageUpload({ defaultUrl, onUploaded }: { defaultUrl?: st
 
   return (
     <div>
-      <Label>Product Image</Label>
+      <Label>{t("pd_image", lang)}</Label>
       <input type="hidden" name="image_url" value={imageUrl} />
 
       {imageUrl ? (
         <div className="relative inline-block">
-          <img src={imageUrl} alt="Product preview" className="h-28 w-28 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
+          <img src={imageUrl} alt={t("at_product_preview", lang)} className="h-28 w-28 rounded-lg border border-surface-200 object-cover dark:border-surface-700" />
           <button
             type="button"
             onClick={() => setImageUrl("")}
             className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow"
-            aria-label="Remove image"
+            aria-label={t("pd_remove_image", lang)}
           >
             <X className="h-3.5 w-3.5" />
           </button>

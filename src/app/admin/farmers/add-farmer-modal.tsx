@@ -3,16 +3,18 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { adminAddFarmer, type ActionState } from "@/actions/admin-farmers";
 import { Plus, X } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function AddFarmerButton() {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-        <Plus className="h-4 w-4" /> Add Farmer
-      </button>
+        <Plus className="h-4 w-4" />{t("at_add_farmer", lang)}</button>
       {open && <AddFarmerModal onClose={() => setOpen(false)} />}
     </>
   );
@@ -20,23 +22,24 @@ export function AddFarmerButton() {
 
 function AddFarmerModal({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useFormState(adminAddFarmer, initialState);
+  const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">Farmer Add Karein</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900">{t("fp_add_farmer", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">Farmer add ho gaya.</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("fp_farmer_added", lang)}</p>}
         <form action={formAction} className="space-y-2">
-          <input name="full_name" required placeholder="Poora Naam" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="mobile" placeholder="Mobile Number" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="cnic" placeholder="CNIC (optional)" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="village" placeholder="Village" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input name="district" placeholder="District" className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="full_name" required placeholder={t("af_full_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="mobile" placeholder={t("c_mobile_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="cnic" placeholder={t("c_cnic_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="village" placeholder={t("c_village", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="district" placeholder={t("c_district", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton />
         </form>
       </div>

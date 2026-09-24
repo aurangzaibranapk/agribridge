@@ -4,7 +4,10 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { Button } from "@/components/ui/form";
 import { Package, DollarSign, AlertTriangle, ShoppingCart, Plus } from "lucide-react";
 import { formatDate } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 export async function CategoryDashboard({ categoryName, title }: { categoryName: string; title: string }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: category } = await supabase
     .from("categories")
@@ -72,7 +75,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
         description={`Products, stock, and sales for ${categoryName}`}
         actions={
           <Link href="/admin/products/new">
-            <Button><Plus className="h-4 w-4" /> Add Product</Button>
+            <Button><Plus className="h-4 w-4" />{t("c_add_product", lang)}</Button>
           </Link>
         }
       />
@@ -80,7 +83,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
         <Card>
           <div className="flex items-center gap-2 text-surface-500">
             <Package className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Products</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("c_products", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">
             {products?.length ?? 0}
@@ -89,7 +92,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
           <div className="flex items-center gap-2 text-brand-600">
             <DollarSign className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Stock Value</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("cd_stock_value", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-brand-700 dark:text-brand-300">
             Rs {totalStockValue.toLocaleString()}
@@ -98,7 +101,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
         <Card className="border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/30">
           <div className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Low Stock</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("cd_low_stock", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-red-700 dark:text-red-300">
             {lowStockProducts.length}
@@ -107,7 +110,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
           <div className="flex items-center gap-2 text-amber-600">
             <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">Expiring (60 days)</span>
+            <span className="text-xs font-medium uppercase tracking-wide">{t("cd_expiring_60", lang)}</span>
           </div>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700 dark:text-amber-300">
             {expiringBatches.length}
@@ -116,16 +119,14 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Products in Stock
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("cd_products_in_stock", lang)}</h2>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Product</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Stock</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Price</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_stock", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_price", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,9 +150,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
                 })}
                 {(!products || products.length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-3 py-8 text-center text-surface-400">
-                      No products in this category yet.
-                    </td>
+                    <td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("cd_no_products_cat", lang)}</td>
                   </tr>
                 )}
               </tbody>
@@ -159,16 +158,14 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
           </div>
         </div>
         <div>
-          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            Recent Purchases
-          </h2>
+          <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("cd_recent_purchases", lang)}</h2>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">Supplier</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">Date</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">Amount</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_supplier", lang)}</th>
+                  <th className="px-3 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
+                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("c_amount", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,9 +184,7 @@ export async function CategoryDashboard({ categoryName, title }: { categoryName:
                 })}
                 {(!recentPurchases || recentPurchases.length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-3 py-8 text-center text-surface-400">
-                      No purchases yet.
-                    </td>
+                    <td colSpan={3} className="px-3 py-8 text-center text-surface-400">{t("cd_no_purchases", lang)}</td>
                   </tr>
                 )}
               </tbody>

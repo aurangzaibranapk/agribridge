@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
-  Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2,
+  Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -15,7 +15,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export const DASHBOARD_ITEM: NavItem = { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale };
+export const DASHBOARD_ITEM: NavItem = { href: "/admin/command-center", label: "Owner Command Center", icon: Scale };
 
 export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
@@ -28,9 +28,11 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/suppliers/all-statement", label: "Sab Suppliers Statement", icon: FileBarChart },
       { href: "/admin/investors", label: "Investors", icon: PiggyBank },
       { href: "/admin/branches", label: "Branches", icon: Store },
+      { href: "/admin/branches/locations", label: "Branch Locations", icon: MapPin },
       { href: "/admin/shops", label: "Shops", icon: Store },
       { href: "/admin/shop-rent", label: "Shop Rent & Bills", icon: Home },
       { href: "/admin/drivers", label: "Drivers & Vehicles", icon: IdCard },
+      { href: "/admin/vehicles", label: "Gaariyan (Rozana)", icon: Bike },
       { href: "/admin/crm", label: "CRM", icon: Contact },
     ],
   },
@@ -65,6 +67,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products/catalog-export", label: "Product Catalog Export", icon: FileSpreadsheet },
       { href: "/admin/inventory", label: "Stock", icon: Boxes },
       { href: "/admin/agri-orders", label: "AgriBridge Ordering", icon: ClipboardType },
+      { href: "/admin/agri-returns", label: "Returns (Shop se HQ)", icon: Undo2 },
       { href: "/admin/stock-transfers", label: "Stock Transfers", icon: ArrowLeftRight },
       { href: "/admin/stock-ledger", label: "Stock Ledger", icon: List },
       { href: "/admin/categories", label: "Categories", icon: Layers },
@@ -88,17 +91,34 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: "Dairy",
     items: [
+      { href: "/admin/milk-collection/collect", label: "Doodh Jama Karein", icon: Droplet },
+      { href: "/admin/milk-collection/walk-in", label: "Walk-in / Self Delivery", icon: Store },
+      { href: "/admin/milk-collection/chiller", label: "Chiller — FAT", icon: Droplet },
+      { href: "/admin/milk-collection/verify", label: "Milk Manager Verify", icon: ClipboardCheck },
       { href: "/admin/milk-collection", label: "Milk Collection", icon: Droplet },
       { href: "/admin/milk-collection/routes", label: "Route & Shortage", icon: AlertTriangle },
       { href: "/admin/milk-collection/fuel", label: "Fuel Tracker", icon: Bike },
       { href: "/admin/milk-collection/generator", label: "Generator Tracker", icon: Zap },
       { href: "/admin/milk-collection/maintenance", label: "Fleet & Maintenance", icon: Wrench },
+      { href: "/admin/milk-collection/cost-per-liter", label: "Fi Litre Kharcha", icon: Calculator },
       { href: "/admin/milk-collection/billing", label: "Company Billing & P&L", icon: Receipt },
     ],
   },
   {
     label: "Finance",
     items: [
+      { href: "/admin/command-center", label: "Owner Command Center", icon: Scale },
+      { href: "/admin/money-trail", label: "Paisa Kahan Hai (Money Trail)", icon: Scale },
+      { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Calculator },
+      { href: "/admin/cash-handover", label: "Cash Haath Badalna", icon: ArrowLeftRight },
+      { href: "/admin/bank-reconcile", label: "Bank se Milaan", icon: Landmark },
+      { href: "/admin/stock-count", label: "Maal ki Ginti", icon: PackageSearch },
+      { href: "/admin/quantity-money", label: "Miqdar aur Paisa", icon: Scale },
+      { href: "/admin/reconciliation", label: "Roz ka Milaan", icon: ClipboardCheck },
+      { href: "/admin/leakage", label: "Paisa Kahan Se Nikal Raha Hai", icon: AlertTriangle },
+      { href: "/admin/audit-trail", label: "Kis Ne Kya Kiya", icon: History },
+      { href: "/admin/anomalies", label: "Ghair-maamooli Tarteeb", icon: Bell },
+      { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Landmark },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Profit & Loss (Shop-wise)", icon: LineChart },
       { href: "/admin/finance/queue", label: "Finance Queue", icon: CreditCard },
@@ -168,7 +188,14 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/email-templates", label: "Email Templates", icon: MailPlus },
       { href: "/admin/my-attendance", label: "My Attendance", icon: MapPin },
       { href: "/admin/hr", label: "HR - Staff", icon: UserCog },
-      { href: "/admin/permissions", label: "Staff Permissions", icon: ShieldCheck },
+      { href: "/admin/hr/whatsapp", label: "Staff WhatsApp", icon: MessageCircle },
+      { href: "/admin/hr/attendance-log", label: "Hazri Record", icon: ClipboardCheck },
+      { href: "/admin/submissions", label: "Approval Inbox", icon: Inbox },
+      { href: "/admin/field-watch", label: "Maidan ki Nigrani", icon: AlertTriangle },
+      { href: "/admin/dashboard-manager", label: "Dashboard & Feature Manager", icon: LayoutGrid },
+      { href: "/admin/departments", label: "Department aur Ijazat", icon: ShieldCheck },
+      { href: "/admin/my-department", label: "Meri Team (Head)", icon: Users },
+      { href: "/admin/permissions", label: "Ek Banday ki Ijazat", icon: UserCog },
       { href: "/admin/product-permissions", label: "Product Permissions", icon: ShieldCheck },
       { href: "/admin/users", label: "Users & Roles", icon: UserCog },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },

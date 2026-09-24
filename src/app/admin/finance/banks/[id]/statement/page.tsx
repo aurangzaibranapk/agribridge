@@ -25,27 +25,46 @@ export default async function BankStatementPage({
     .eq("id", bankId)
     .single();
 
+  // Teen naam ghalat the: description/type/created_at. Table mein wo
+  // notes/transaction_type/transaction_date hain -- is liye ye poora
+  // select fail hota tha aur statement hamesha khali aata tha.
+  //
+  // Tareekh ab transaction_date se chhanti hai, created_at se nahi:
+  // raat ko 11 baje darj ki gayi kal ki entry kal hi ki hai, aaj ki
+  // nahi. Bank statement mein ye farq maini rakhta hai.
   const { data: rawTxns } = await supabase
     .from("finance_transactions")
-    .select("id, created_at, description, amount, type")
+    .select("id, transaction_date, notes, category, amount, transaction_type")
     .eq("account_id", bankId)
-    .gte("created_at", startDate)
-    .lte("created_at", `${endDate}T23:59:59`)
+    .gte("transaction_date", startDate)
+    .lte("transaction_date", endDate)
+    .order("transaction_date", { ascending: true })
     .order("created_at", { ascending: true });
 
   let runningBalance = Number(bank?.opening_balance ?? 0);
   let totalCredit = 0;
   let totalDebit = 0;
-  const transactions = (rawTxns ?? []).map((t) => {
-    const amount = Number(t.amount);
-    if (t.type === "income") {
+  // transfer_in bhi aamad hai. Pehle sirf "income" ko aamad mana jata
+  // tha, is liye ek khate se doosre mein aayi hui raqam statement par
+  // kharch bun kar dikhti -- aur closing balance ghalat aata.
+  const transactions = (rawTxns ?? []).map((row) => {
+    const amount = Number(row.amount);
+    const isCredit = row.transaction_type === "income" || row.transaction_type === "transfer_in";
+    if (isCredit) {
       totalCredit += amount;
       runningBalance += amount;
     } else {
       totalDebit += amount;
       runningBalance -= amount;
     }
-    return { ...t, amount, runningBalance };
+    return {
+      id: row.id,
+      date: row.transaction_date,
+      description: row.notes ?? row.category ?? row.transaction_type,
+      amount,
+      isCredit,
+      runningBalance,
+    };
   });
 
   return (

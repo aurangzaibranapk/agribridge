@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SubscriptionAdminClient } from "./subscription-admin-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSubscriptionsPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [{ data: settings }, { data: subscriptions }, { data: farmers }, { data: announcements }, { count: totalFarmers }] = await Promise.all([
@@ -51,7 +54,7 @@ export default async function AdminSubscriptionsPage() {
 
   return (
     <div>
-      <PageHeader title="Subscriptions & Announcements" description="Farmer Portal Subscription enforce karein aur Announcements bhejein" />
+      <PageHeader title={t("at_subscriptions", lang)} description="Farmer Portal Subscription enforce karein aur Announcements bhejein" />
       <SubscriptionAdminClient
         settings={settings ?? { is_enforced: false, minimum_amount: 500 }}
         subscriptions={normalizedSubs}

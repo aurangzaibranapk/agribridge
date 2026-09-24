@@ -2,10 +2,13 @@ import Link from "next/link";
 import { Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils/format";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicProductsPage({ searchParams }: { searchParams: { category?: string; company?: string; q?: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   let query = supabase
@@ -37,20 +40,20 @@ export default async function PublicProductsPage({ searchParams }: { searchParam
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">Products</h1>
-      <p className="mt-2 text-surface-500 dark:text-surface-400">Seed, fertilizer, and crop protection — updated directly from our inventory.</p>
+      <h1 className="font-display text-3xl font-semibold text-surface-900 dark:text-white">{t("sp_products", lang)}</h1>
+      <p className="mt-2 text-surface-500 dark:text-surface-400">{t("sp_products_lead", lang)}</p>
 
       <form className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <input name="q" defaultValue={searchParams.q} placeholder="Search products..." className="h-10 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white" />
+        <input name="q" defaultValue={searchParams.q} placeholder={t("sp_search_products", lang)} className="h-10 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white" />
         <select name="category" defaultValue={searchParams.category ?? ""} className="h-10 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white">
-          <option value="">All Categories</option>
+          <option value="">{t("sp_all_categories", lang)}</option>
           {(categories ?? []).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
         <select name="company" defaultValue={searchParams.company ?? ""} className="h-10 rounded-lg border border-surface-200 bg-white px-3 text-sm dark:border-surface-700 dark:bg-surface-800 dark:text-white">
-          <option value="">All Companies</option>
+          <option value="">{t("sp_all_companies", lang)}</option>
           {(companies ?? []).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
-        <button type="submit" className="h-10 rounded-lg bg-brand-600 px-5 text-sm font-medium text-white hover:bg-brand-700">Filter</button>
+        <button type="submit" className="h-10 rounded-lg bg-brand-600 px-5 text-sm font-medium text-white hover:bg-brand-700">{t("sp_filter", lang)}</button>
       </form>
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -73,7 +76,7 @@ export default async function PublicProductsPage({ searchParams }: { searchParam
             </Link>
           );
         })}
-        {filtered.length === 0 && <p className="text-surface-400 dark:text-surface-500">No products match your filters.</p>}
+        {filtered.length === 0 && <p className="text-surface-400 dark:text-surface-500">{t("sp_no_products", lang)}</p>}
       </div>
     </div>
   );

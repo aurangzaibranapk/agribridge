@@ -203,10 +203,10 @@ export async function recordOrderAdvancePayment(_prev: ActionState, formData: Fo
     notes: `Order ${order.order_number} - Advance payment (${paymentMethod})`,
     created_by: user?.id ?? null,
   });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);
-  }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
 
   revalidatePath("/admin/bridge-orders");
   revalidatePath("/admin/finance");

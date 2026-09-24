@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { NewOrderForm } from "./new-order-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewAgriOrderPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
@@ -46,7 +49,7 @@ export default async function NewAgriOrderPage() {
 
   return (
     <div>
-      <PageHeader title="Naya Agri Order" description="Product select karein, order details bharein" />
+      <PageHeader title={t("ao_new_order", lang)} description="Product select karein, order details bharein" />
       <NewOrderForm branches={branches ?? []} products={productsFormatted} categories={categories ?? []} />
     </div>
   );

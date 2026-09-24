@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -108,12 +109,13 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
   if (error) return { error: error.message };
 
   if (inv) {
-    await supabase.from("inventory").update({ quantity_on_hand: available - quantity, updated_at: new Date().toISOString() }).eq("id", inv.id);
+    // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
+    // "grain_sale_out" bhi enum mein nahi tha, yani ye qatar hamesha
+    // nakaam hoti thi aur anaj ka nikalna kahin darj hi nahi hota tha.
     await supabase.from("stock_movements").insert({
       inventory_id: inv.id,
-      movement_type: "grain_sale_out",
+      movement_type: "sale_out",
       quantity,
-      balance_after: available - quantity,
       reference_type: "grain_sale",
       reference_id: sale.id,
       created_by: user?.id ?? null,
@@ -122,19 +124,38 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
 
   if ((bardanaCost > 0 || mazdooriCost > 0) && costAccountId) {
     const combinedCost = bardanaCost + mazdooriCost;
-    const { data: costAccount } = await supabase.from("finance_accounts").select("current_balance").eq("id", costAccountId).single();
-    await supabase.from("finance_transactions").insert({
-      account_id: costAccountId,
-      transaction_type: "expense",
-      category: "Grain Sale - Bardana/Mazdoori",
-      amount: combinedCost,
-      transaction_date: saleDate,
-      notes: `Sale ${saleNumber} - Bardana Rs ${bardanaCost} + Mazdoori Rs ${mazdooriCost}`,
-      created_by: user?.id ?? null,
-    });
-    if (costAccount) {
-      await supabase.from("finance_accounts").update({ current_balance: Number(costAccount.current_balance) - combinedCost }).eq("id", costAccountId);
+    const { data: costRow } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: costAccountId,
+        transaction_type: "expense",
+        category: "Grain Sale - Bardana/Mazdoori",
+        amount: combinedCost,
+        transaction_date: saleDate,
+        notes: `Sale ${saleNumber} - Bardana Rs ${bardanaCost} + Mazdoori Rs ${mazdooriCost}`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (costRow?.id) {
+      await postCashOut({
+        accountId: costAccountId,
+        amount: combinedCost,
+        description: `Sale ${saleNumber} — Bardana + Mazdoori`,
+        againstAccount: ACC.grainPurchase,
+        ctx: {
+          createdBy: user?.id ?? null,
+          entryDate: saleDate,
+          claims: [{ table: "finance_transactions", rowId: costRow.id }],
+        },
+      });
     }
+    // Balance yahan se NAHI hilaya jata -- trigger khud hilata hai (023,
+    // 127). Ye jagah baqi das se alag tarah kharab thi: balance INSERT SE
+    // PEHLE parha jata tha aur baad mein likha jata tha. Jawab ittefaqan
+    // theek aata tha, magar us darmiyan agar kisi aur ne usi khate par
+    // kuch darj kar diya ho to us ka asar chup chaap mit jata.
   }
 
   revalidatePath("/admin/grain-procurement");
@@ -176,19 +197,37 @@ export async function recordGrainSalePayment(_prev: ActionState, formData: FormD
 
   await supabase.from("grain_sales").update({ amount_received: Number(sale.amount_received) + amount }).eq("id", saleId);
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "income",
-    category: "Grain Sale",
-    amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    notes: `Grain sale payment - ${sale.sale_number}`,
-    created_by: user?.id ?? null,
-  });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);
+  const { data: saleCashRow } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "income",
+      category: "Grain Sale",
+      amount,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Grain sale payment - ${sale.sale_number}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (saleCashRow?.id) {
+    const posted = await postCashIn({
+      accountId,
+      amount,
+      description: `Grain bikri ki adaigi — ${sale.sale_number}`,
+      againstAccount: ACC.salesGrain,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "finance_transactions", rowId: saleCashRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Adaigi darj hui magar ledger mein nahi gayi: ${posted.error}` };
   }
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
 
   revalidatePath("/admin/grain-procurement/sell");
   revalidatePath("/admin/finance");

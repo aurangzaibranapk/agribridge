@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
@@ -15,12 +17,13 @@ function statusTone(status: string) {
 }
 
 export default async function OrderingDashboardPage() {
+  const lang = getLanguageFromCookies("rm");
   const seller = await getCurrentSeller();
 
   if (!seller) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="text-surface-600">Ye account kisi branch ya dealer se linked nahi hai. Admin se rabta karein.</p>
+        <p className="text-surface-600">{t("at_no_branch_dealer_link", lang)}</p>
       </div>
     );
   }
@@ -69,24 +72,24 @@ export default async function OrderingDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Karyana Ordering" description={seller.name} />
+      <PageHeader title={t("pos_karyana_ordering", lang)} description={seller.name} />
 
       <div className="mb-6 rounded-card bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-card">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg bg-white/10 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">Total Orders</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">{t("pos_total_orders", lang)}</p>
             <p className="mt-1 font-display text-xl font-semibold">{totalOrders}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">Total Order Value</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">{t("pos_total_order_value", lang)}</p>
             <p className="mt-1 font-display text-xl font-semibold">Rs {totalValue.toLocaleString()}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">Orders in Transit</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">{t("pos_orders_in_transit", lang)}</p>
             <p className="mt-1 font-display text-xl font-semibold">{inTransit}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">Orders Delivered</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-100">{t("pos_orders_delivered", lang)}</p>
             <p className="mt-1 font-display text-xl font-semibold">{delivered}</p>
           </div>
         </div>
@@ -95,10 +98,10 @@ export default async function OrderingDashboardPage() {
       {advanceBalance > 0 && (
         <div className="mb-6 flex items-center justify-between rounded-card border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900/40 dark:bg-green-950/30">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-green-600">Aapka Advance Balance</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("pos_advance_balance", lang)}</p>
             <p className="font-display text-lg font-semibold text-green-700 dark:text-green-300">Rs {advanceBalance.toLocaleString()}</p>
           </div>
-          <p className="max-w-xs text-right text-xs text-green-600">Agli order mein ye balance use ho sakta hai.</p>
+          <p className="max-w-xs text-right text-xs text-green-600">{t("pos_advance_hint", lang)}</p>
         </div>
       )}
 
@@ -110,20 +113,20 @@ export default async function OrderingDashboardPage() {
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/30">
             <ShoppingCart className="h-5 w-5" />
           </span>
-          <span className="text-sm font-medium text-surface-900 dark:text-white">New Order</span>
+          <span className="text-sm font-medium text-surface-900 dark:text-white">{t("pos_new_order", lang)}</span>
         </Link>
       </div>
 
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Recent Orders</h2>
+        <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_recent_orders", lang)}</h2>
         <Link href="/admin/pos/ordering/history" className="text-xs font-medium text-brand-600 hover:underline">
-          View All
+          {t("pos_view_all", lang)}
         </Link>
       </div>
 
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         {(orders ?? []).length === 0 ? (
-          <div className="px-3 py-10 text-center text-surface-400">Abhi tak koi order nahi hai.</div>
+          <div className="px-3 py-10 text-center text-surface-400">{t("pos_no_orders", lang)}</div>
         ) : (
           (orders ?? []).map((o) => {
             const requesterName = o.requested_by ? requesterNames[o.requested_by] ?? "User" : "User";

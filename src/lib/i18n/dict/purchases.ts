@@ -1,0 +1,102 @@
+/**
+ * Kharidari aur supplier ke alfaz.
+ *
+ * Istilahat glossary.ts se: supplier, kharidari, cheez, tadaad, lagat,
+ * raqam, kul, baqi, shakh, tareekh, wajah, bill, adaigi, godam.
+ *
+ * Do lafz yahan tay ho rahe hain:
+ *
+ *   Purchase Order   Kharidari ka Order    خریداری کا آرڈر
+ *   Payable          Dena hai              دینا ہے
+ *
+ * "Payable" ke liye "baqi" nahi liya gaya. Baqi dono taraf chalta hai --
+ * gahak se lena bhi baqi, supplier ko dena bhi baqi. Supplier ke safhe
+ * par "dena hai" likha ho to ek nazar mein pata chalta hai ke paisa
+ * hamare zimme hai.
+ *
+ * "Filer" / "Non-Filer" ka tarjuma NAHI kiya: ye FBR ke apne lafz hain
+ * aur har kaghaz par isi tarah likhe milte hain.
+ */
+export const purchasesDict = {
+  pu_title: { en: "Purchases", rm: "Kharidari", ur: "خریداری" },
+  pu_subtitle: {
+    en: "Purchase orders to suppliers, and receiving the stock",
+    rm: "Supplier ko kharidari ke order, aur maal wusool karna",
+    ur: "سپلائر کو خریداری کے آرڈر، اور مال وصول کرنا",
+  },
+  pu_empty: { en: "No purchase order yet", rm: "Abhi koi kharidari ka order nahi", ur: "ابھی کوئی خریداری کا آرڈر نہیں" },
+  pu_po_no: { en: "PO #", rm: "Order #", ur: "آرڈر #" },
+  pu_supplier: { en: "Supplier", rm: "Supplier", ur: "سپلائر" },
+  pu_branch: { en: "Branch", rm: "Shakh", ur: "شاخ" },
+  pu_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
+  pu_amount: { en: "Amount", rm: "Raqam", ur: "رقم" },
+  pu_status: { en: "Status", rm: "Halat", ur: "حالت" },
+  pu_action: { en: "Action", rm: "Kaam", ur: "کام" },
+  pu_delete: { en: "Delete", rm: "Mitayein", ur: "مٹائیں" },
+
+  // --- Halatein ---
+  pu_s_pending: { en: "Not received yet", rm: "Maal aana baqi", ur: "مال آنا باقی" },
+  pu_s_received: { en: "Received", rm: "Maal aa gaya", ur: "مال آ گیا" },
+  pu_s_cancelled: { en: "Cancelled", rm: "Mansookh", ur: "منسوخ" },
+
+  // --- Naya order ---
+  pu_new_order: { en: "New Purchase Order", rm: "Nayi Kharidari ka Order", ur: "نئی خریداری کا آرڈر" },
+  pu_created: {
+    en: 'The purchase order is made. Mark it "Received" from the list once the stock arrives.',
+    rm: 'Kharidari ka order ban gaya. Maal aa jaye to fehrist se "Maal aa gaya" laga dein.',
+    ur: 'خریداری کا آرڈر بن گیا۔ مال آ جائے تو فہرست سے "مال آ گیا" لگا دیں۔',
+  },
+  pu_supplier_req: { en: "Supplier *", rm: "Supplier *", ur: "سپلائر *" },
+  pu_select: { en: "— select —", rm: "— chunein —", ur: "— منتخب کریں —" },
+  pu_purchase_date: { en: "Purchase Date", rm: "Kharidari ki Tareekh", ur: "خریداری کی تاریخ" },
+  pu_branch_req: { en: "Branch *", rm: "Shakh *", ur: "شاخ *" },
+  pu_notes: { en: "Notes", rm: "Notes", ur: "نوٹس" },
+  pu_products: { en: "Products", rm: "Cheezein", ur: "چیزیں" },
+  pu_add_product: { en: "Add a product", rm: "Cheez shamil karein", ur: "چیز شامل کریں" },
+  pu_line: { en: "Line", rm: "Line", ur: "لائن" },
+  pu_select_product: { en: "— select a product —", rm: "— cheez chunein —", ur: "— چیز منتخب کریں —" },
+  pu_quantity: { en: "Quantity", rm: "Tadaad", ur: "تعداد" },
+  pu_unit_cost: { en: "Unit cost (Rs.)", rm: "Ek ki lagat (Rs.)", ur: "ایک کی لاگت (روپے)" },
+  pu_batch_optional: { en: "Batch number (optional)", rm: "Batch number (marzi se)", ur: "بیچ نمبر (مرضی سے)" },
+  pu_expiry: { en: "Expiry date", rm: "Miyaad ki tareekh", ur: "میعاد کی تاریخ" },
+  pu_total: { en: "Total", rm: "Kul", ur: "کل" },
+  pu_create: { en: "Create the Purchase Order", rm: "Kharidari ka Order Banayein", ur: "خریداری کا آرڈر بنائیں" },
+  pu_creating: { en: "Creating...", rm: "Ban raha hai...", ur: "بن رہا ہے..." },
+
+  // --- Maal wusool karna ---
+  pu_mark_received: { en: "Mark Received", rm: "Maal Aa Gaya", ur: "مال آ گیا" },
+  pu_receiving: { en: "Receiving...", rm: "Wusool ho raha hai...", ur: "وصول ہو رہا ہے..." },
+
+  // --- Mitana ---
+  pu_delete_title_1: { en: "Delete purchase", rm: "Kharidari", ur: "خریداری" },
+  pu_delete_title_2: { en: "?", rm: "mitayein?", ur: "مٹائیں؟" },
+  pu_delete_warn: {
+    en: "This cannot be undone — the stock will come back down too. A reason must be written.",
+    rm: "Ye wapas nahi hota — stock bhi wapis kam ho jayega. Wajah likhna zaroori hai.",
+    ur: "یہ واپس نہیں ہوتا — اسٹاک بھی واپس کم ہو جائے گا۔ وجہ لکھنا ضروری ہے۔",
+  },
+  pu_delete_reason_ph: {
+    en: "Write the reason for deleting (required)...",
+    rm: "Mitane ki wajah likhein (zaroori hai)...",
+    ur: "مٹانے کی وجہ لکھیں (ضروری ہے)...",
+  },
+  pu_confirm_delete: { en: "Confirm Delete", rm: "Mitana Pakka Karein", ur: "مٹانا پکا کریں" },
+  pu_deleting: { en: "Deleting...", rm: "Mit raha hai...", ur: "مٹ رہا ہے..." },
+
+  // --- Supplier ---
+  su_title: { en: "Suppliers", rm: "Suppliers", ur: "سپلائرز" },
+  su_subtitle: {
+    en: "The companies and vendors you buy stock from",
+    rm: "Jin companies aur vendors se maal kharida jata hai",
+    ur: "جن کمپنیوں اور وینڈرز سے مال خریدا جاتا ہے",
+  },
+  su_none: { en: "There is no supplier.", rm: "Koi supplier nahi hai.", ur: "کوئی سپلائر نہیں ہے۔" },
+  su_payable: { en: "We owe", rm: "Dena hai", ur: "دینا ہے" },
+  su_view_cnic: { en: "View CNIC", rm: "CNIC Dekhein", ur: "شناختی کارڈ دیکھیں" },
+  su_view_ntn: { en: "View NTN", rm: "NTN Dekhein", ur: "این ٹی این دیکھیں" },
+  su_edit: { en: "Edit", rm: "Badlein", ur: "بدلیں" },
+  su_statement: { en: "Statement", rm: "Hisaab", ur: "حساب" },
+  su_active: { en: "Active", rm: "Chalu", ur: "چالو" },
+  su_inactive: { en: "Inactive", rm: "Band", ur: "بند" },
+  su_suspended: { en: "Suspended", rm: "Roka hua", ur: "روکا ہوا" },
+} as const;

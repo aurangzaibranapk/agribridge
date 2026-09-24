@@ -156,24 +156,18 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       .eq("warehouse_id", warehouseId)
       .maybeSingle();
 
+    // Ginti yahan se NAHI badalti -- wo neeche wali harkat par trigger
+    // karta hai (129). Nayi qatar bhi sifar se banti hai; maal us mein
+    // usi harkat se aata hai.
     let inventoryId: string;
-    let balanceAfter: number;
     if (existingInventory) {
       inventoryId = existingInventory.id;
-      balanceAfter = Number(existingInventory.quantity_on_hand) + Number(item.quantity);
-      const { error: updateError } = await supabase
-        .from("inventory")
-        .update({ quantity_on_hand: balanceAfter, updated_at: new Date().toISOString() })
-        .eq("id", inventoryId);
-      if (updateError) return { error: `Failed to update stock: ${updateError.message}` };
     } else {
-      balanceAfter = Number(item.quantity);
       const { data: newInventory, error: invError } = await supabase
         .from("inventory")
         .insert({
           product_id: item.product_id,
           warehouse_id: warehouseId,
-          quantity_on_hand: balanceAfter,
         })
         .select("id")
         .single();
@@ -187,7 +181,6 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       inventory_id: inventoryId,
       movement_type: "purchase_in",
       quantity: item.quantity,
-      balance_after: balanceAfter,
       reference_type: "purchase",
       reference_id: purchaseId,
       created_by: user?.id ?? null,
@@ -245,12 +238,11 @@ export async function deletePurchase(_prev: ActionState, formData: FormData): Pr
           .eq("product_id", item.product_id)
           .eq("warehouse_id", batch.warehouse_id)
           .maybeSingle();
-        if (inv) {
-          await supabase
-            .from("inventory")
-            .update({ quantity_on_hand: Math.max(0, Number(inv.quantity_on_hand) - Number(item.quantity)) })
-            .eq("id", inv.id);
-        }
+        // Ginti yahan se hath se ghatana ab ghalat hoga: neeche jab is
+        // kharidari ki harkatein mitai jati hain, trigger khud ginti
+        // wapas apni jagah le aata hai (129). Dono karne se maal dugna
+        // kam ho jata.
+        void inv;
       }
     }
     await supabase.from("stock_movements").delete().eq("reference_type", "purchase").eq("reference_id", purchaseId);

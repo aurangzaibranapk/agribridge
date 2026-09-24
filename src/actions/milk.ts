@@ -1,8 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { calculateMilkValue, buildMilkReceiptSms } from "@/lib/utils/milk-formula";
-import { sendMilkSms } from "@/lib/sms";
+import { recordCollection, applyFat } from "@/lib/milk-collection";
+import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
 
 export interface ActionState {
   error?: string;
@@ -11,6 +11,19 @@ export interface ActionState {
   smsSent?: boolean;
 }
 
+/**
+ * Website ka purana form.
+ *
+ * Ab ye khud hisaab nahi karta -- wahi engine bulata hai jo WhatsApp,
+ * offline aur aage chal kar app istemal karengi. Pehle yahan ledger aur
+ * wallet ka apna code tha jo balance_after bhejna bhool gaya tha; wo
+ * entry hamesha nakaam hoti thi, aur pakri is liye nahi gayi ke ab tak
+ * ek bhi milk entry bani hi nahi thi.
+ *
+ * Is form mein FAT abhi bhi maanga jata hai, is liye entry banate hi
+ * rate lag jata hai. Naya collection screen (jahan FAT chiller par
+ * lagega) alag banega.
+ */
 export async function createMilkEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
@@ -29,70 +42,30 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
   if (!fat || fat <= 0) return { error: "Fat % zaroori hai." };
   if (!lr || lr <= 0) return { error: "LR zaroori hai." };
 
-  const { data: farmer } = await supabase.from("farmers").select("full_name, phone_number, milk_collection_type").eq("id", farmerId).single();
-  if (!farmer) return { error: "Farmer nahi mila." };
-
-  const { data: settings } = await supabase.from("milk_rate_settings").select("standard_rate, self_dropoff_incentive, snf_constant, reference_ts").limit(1).single();
-  const standardRate = Number(settings?.standard_rate ?? 145);
-  const incentive = Number(settings?.self_dropoff_incentive ?? 10);
-  const snfConstant = Number(settings?.snf_constant ?? 0.805);
-  const referenceTs = Number(settings?.reference_ts ?? 13);
-
-  const effectiveRate = farmer.milk_collection_type === "self_dropoff" ? standardRate + incentive : standardRate;
-
-  const result = calculateMilkValue(quantity, fat, lr, effectiveRate, snfConstant, referenceTs);
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
 
-  const { error } = await supabase.from("milk_entries").insert({
-    farmer_id: farmerId,
-    branch_id: branchId,
-    entry_date: entryDate,
-    shift,
-    quantity_liters: quantity,
-    fat_percentage: fat,
-    snf_percentage: result.snf,
+  const saved = await recordCollection({
+    farmerId,
+    liters: quantity,
     lr,
-    rate_per_liter: effectiveRate,
-    adjusted_volume: result.adjustedVolume,
-    total_amount: result.amount,
+    shift,
+    entryDate,
+    channel: "website",
+    mcaProfileId: user.id,
+    branchId,
     notes,
-    created_by: user?.id ?? null,
   });
-  if (error) return { error: error.message };
+  if ("error" in saved) return { error: saved.error };
 
-  await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: farmerId,
-    source_type: "milk_collection",
-    ledger_type: "credit",
-    amount: result.amount,
-    notes: `Milk: ${quantity}L, Fat ${fat}%, ${entryDate} (${shift})`,
-    created_by: user?.id ?? null,
-  });
-
-  const { data: milkWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
-  if (milkWallet) {
-    await supabase.from("wallet_transactions").insert({
-      wallet_id: milkWallet.id,
-      type: "milk_income",
-      direction: "credit",
-      amount: result.amount,
-      balance_after: 0,
-      reference_type: "milk_entry",
-      notes: `Milk: ${quantity}L, Fat ${fat}%, ${entryDate} (${shift})`,
-      created_by: user?.id ?? null,
-    });
-  }
-
-  const smsText = buildMilkReceiptSms(farmer.full_name, new Date(), quantity, fat, lr, result);
-  const phone = farmer.phone_number;
-  const smsResult = phone ? await sendMilkSms(phone, smsText) : { sent: false };
+  const priced = await applyFat(saved.id, fat, user.id);
+  if ("error" in priced) return { error: priced.error };
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");
-  return { success: true, smsText, smsSent: smsResult.sent };
+  return { success: true };
 }
 
 export async function recordMilkPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -115,28 +88,28 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   });
   if (error) return { error: error.message };
 
-  await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: farmerId,
-    source_type: "milk_collection",
-    ledger_type: "debit",
+  const label = `Cash payment (${paymentMethod ?? "cash"})${notes ? ` - ${notes}` : ""}`;
+
+  // Doodh ki adaigi kisan ka bojh BARHATI hai (debit) -- jo raqam us ka
+  // haq thi wo ab us ke haath mein hai.
+  await postFarmerLedger({
+    farmerId,
+    sourceType: "milk",
+    ledgerType: "debit",
     amount,
-    notes: `Cash payment (${paymentMethod ?? "cash"})${notes ? ` - ${notes}` : ""}`,
-    created_by: user?.id ?? null,
+    notes: label,
+    createdBy: user?.id ?? null,
   });
 
-  const { data: paymentWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
-  if (paymentWallet) {
-    await supabase.from("wallet_transactions").insert({
-      wallet_id: paymentWallet.id,
-      type: "milk_cash_payment",
-      direction: "debit",
-      amount,
-      balance_after: 0,
-      reference_type: "milk_payment",
-      notes: `Cash payment (${paymentMethod ?? "cash"})${notes ? ` - ${notes}` : ""}`,
-      created_by: user?.id ?? null,
-    });
-  }
+  await postFarmerWallet({
+    farmerId,
+    type: "milk_payment",
+    direction: "debit",
+    amount,
+    notes: label,
+    referenceType: "milk_payment",
+    createdBy: user?.id ?? null,
+  });
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");

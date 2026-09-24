@@ -4,10 +4,16 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { AdminFarmerForm } from "@/app/admin/farmers/[id]/admin-farmer-form";
 import { FarmVerifyActions } from "@/app/admin/farmers/[id]/farm-verify-actions";
 import { ExpenseStatement } from "@/components/portal/expense-statement";
+import { FarmerChangeHistory } from "@/app/admin/farmers/[id]/change-history";
+import { FarmerMachineryHistory } from "@/app/admin/farmers/[id]/machinery-history";
+import { BackButton } from "@/components/ui/back-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminFarmerDetailPage({ params }: { params: { id: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: farmer } = await supabase.from("farmers").select("*").eq("id", params.id).single();
 
@@ -44,6 +50,7 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
 
   return (
     <div>
+      <BackButton fallback="/admin/farmers" label={t("fp_back", lang)} />
       <PageHeader title={`Farmer: ${farmer.full_name}`} description={farmer.farmer_code} />
 
       <div className="mb-6">
@@ -51,9 +58,9 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
       </div>
 
       <div className="mb-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Farms</h2>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("c_farms", lang)}</h2>
         {!farms || farms.length === 0 ? (
-          <p className="text-sm text-surface-400">Is farmer ne abhi koi farm add nahi ki.</p>
+          <p className="text-sm text-surface-400">{t("fp_no_farm", lang)}</p>
         ) : (
           <div className="space-y-2">
             {farms.map((f) => (
@@ -71,7 +78,16 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
         )}
       </div>
 
+      <FarmerMachineryHistory farmerId={farmer.id} />
+
       <AdminFarmerForm farmer={farmer} />
+
+      {/* Edit ka haq hai, magar us ke sath uska record bhi. Ijazat
+          bina nishaan ke dena wo cheez hai jis ka jawab baad mein koi
+          nahi de pata. */}
+      <div className="mt-6">
+        <FarmerChangeHistory farmerId={farmer.id} />
+      </div>
     </div>
   );
 }

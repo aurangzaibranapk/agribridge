@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postCashIn, postCashOut, postTransferIn, postTransferOut, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -46,19 +47,40 @@ export async function recordFinanceTransaction(_prev: ActionState, formData: For
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: type,
-    category,
-    amount,
-    transaction_date: transactionDate,
-    notes,
-    created_by: user?.id ?? null,
-  });
+  const { data: row, error } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: type as "income" | "expense",
+      category,
+      amount,
+      transaction_date: transactionDate,
+      notes,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
 
+  // Cash row ban gayi -- ab us ka doosra rukh. Ye qadam chhoot jaye to
+  // raqam Money Trail par "abhi ledger tak nahi pahunchi" mein nazar
+  // aayegi, chup chaap gum nahi hogi.
+  const description = notes?.trim() || `${category ?? "Cash"} — Rs ${amount.toLocaleString()}`;
+  const ctx = {
+    createdBy: user?.id ?? null,
+    entryDate: transactionDate,
+    claims: [{ table: "finance_transactions", rowId: row.id }],
+  };
+  const posted =
+    type === "income"
+      ? await postCashIn({ accountId, amount, category, description, ctx })
+      : await postCashOut({ accountId, amount, category, description, ctx });
+
+  if (failed(posted)) return { error: `Entry to ban gayi magar ledger mein nahi ja saki: ${posted.error}` };
+
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 
@@ -81,30 +103,62 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
 
   const transferId = crypto.randomUUID();
 
-  const { error: outError } = await supabase.from("finance_transactions").insert({
-    account_id: fromAccountId,
-    transaction_type: "transfer_out",
-    category: "Transfer",
-    amount,
-    transaction_date: transactionDate,
-    notes,
-    related_transfer_id: transferId,
-    created_by: user?.id ?? null,
-  });
+  const { data: outRow, error: outError } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: fromAccountId,
+      transaction_type: "transfer_out",
+      category: "Transfer",
+      amount,
+      transaction_date: transactionDate,
+      notes,
+      related_transfer_id: transferId,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
   if (outError) return { error: outError.message };
 
-  const { error: inError } = await supabase.from("finance_transactions").insert({
-    account_id: toAccountId,
-    transaction_type: "transfer_in",
-    category: "Transfer",
-    amount,
-    transaction_date: transactionDate,
-    notes,
-    related_transfer_id: transferId,
-    created_by: user?.id ?? null,
-  });
+  const { data: inRow, error: inError } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: toAccountId,
+      transaction_type: "transfer_in",
+      category: "Transfer",
+      amount,
+      transaction_date: transactionDate,
+      notes,
+      related_transfer_id: transferId,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
   if (inError) return { error: inError.message };
 
+  // Transfer ke DO qadam hain, is liye DO entries -- ek nikalne ki, ek
+  // pahunchne ki, aur beech mein "Cash in Transit". Ek hi entry banayein
+  // to wo raqam kabhi nazar nahi aayegi jo nikli to thi magar pahunchi
+  // nahi.
+  const label = notes?.trim() || `Transfer — Rs ${amount.toLocaleString()}`;
+  const base = { createdBy: user?.id ?? null, entryDate: transactionDate };
+
+  const out = await postTransferOut({
+    fromAccountId,
+    amount,
+    description: `${label} (nikla)`,
+    ctx: { ...base, claims: [{ table: "finance_transactions", rowId: outRow.id }] },
+  });
+  if (failed(out)) return { error: `Transfer hua magar ledger mein nahi gaya: ${out.error}` };
+
+  const inn = await postTransferIn({
+    toAccountId,
+    amount,
+    description: `${label} (pahuncha)`,
+    ctx: { ...base, claims: [{ table: "finance_transactions", rowId: inRow.id }] },
+  });
+  if (failed(inn)) return { error: `Transfer hua magar ledger mein adhoora raha: ${inn.error}` };
+
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }

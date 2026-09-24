@@ -1,22 +1,23 @@
 import { Target, Eye, Gem } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export default function AboutPage() {
+  const lang = getLanguageFromCookies("rm");
   return (
     <div>
       <section className="border-b border-surface-200 bg-gradient-to-b from-brand-50 to-white px-4 py-16">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="font-display text-3xl font-semibold text-surface-900 sm:text-4xl">About Al Rana Traders</h1>
-          <p className="mx-auto mt-3 max-w-xl text-surface-500">
-            A Pakistan agriculture platform dedicated to quality products, expert guidance, and connecting every farmer, dealer, company, and investor on one transparent, reliable bridge.
-          </p>
+          <h1 className="font-display text-3xl font-semibold text-surface-900 sm:text-4xl">{t("sp_about_title", lang)}</h1>
+          <p className="mx-auto mt-3 max-w-xl text-surface-500">{t("sp_about_lead", lang)}</p>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <ValueCard icon={Target} title="Our Mission" description="Empower farmers, dealers, and investors with quality agricultural inputs, transparent routing, and reliable service — with AgriBridge standing between every transaction." />
-          <ValueCard icon={Eye} title="Our Vision" description="Become Pakistan's most trusted agriculture platform — recognized for quality, innovation, and the trust built by never letting any two parties transact unverified." />
-          <ValueCard icon={Gem} title="Our Values" description="Integrity, quality, farmers-first, innovation, teamwork, and sustainability — the same principles behind every order AgriBridge routes." />
+          <ValueCard icon={Target} title={t("sp_our_mission", lang)} description="Empower farmers, dealers, and investors with quality agricultural inputs, transparent routing, and reliable service — with AgriBridge standing between every transaction." />
+          <ValueCard icon={Eye} title={t("sp_our_vision", lang)} description="Become Pakistan's most trusted agriculture platform — recognized for quality, innovation, and the trust built by never letting any two parties transact unverified." />
+          <ValueCard icon={Gem} title={t("sp_our_values", lang)} description="Integrity, quality, farmers-first, innovation, teamwork, and sustainability — the same principles behind every order AgriBridge routes." />
         </div>
       </section>
 
@@ -26,7 +27,7 @@ export default function AboutPage() {
             &ldquo;Hamaara maqsad sirf business nahi — Pakistan ki kheti aur kisaano ki tarakki hai.&rdquo;
           </p>
           <p className="mt-3 text-sm font-semibold text-surface-900">Ch. Mahabal Ali</p>
-          <p className="mt-3 text-sm font-semibold text-surface-900">Founder &amp; CEO — Founded 2010</p>
+          <p className="mt-3 text-sm font-semibold text-surface-900">{t("sp_founder_since", lang)}</p>
         </div>
       </section>
     </div>

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff } from "@/lib/api-auth";
 
 export async function GET() {
+  // AI ke action requests staff ka andaruni kaam hai. Middleware /api ko nahi bachata,
+  // is liye rok yahan lagani parti hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const supabase = createClient();
 
   const [{ data: requests, error }, { data: suppliers }, { data: branches }] = await Promise.all([

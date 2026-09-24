@@ -1,6 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/types/database.types";
+import { postFarmerLedger } from "@/lib/farmer-ledger";
+import { postFarmerCreditGiven, postFarmerCreditRepaid, glForFinanceAccount, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -15,7 +18,9 @@ async function getBalanceDue(supabase: ReturnType<typeof createClient>, farmerId
 export async function issueFarmerCredit(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
-  const sourceType = String(formData.get("source_type") ?? "");
+  const sourceType = String(
+    formData.get("source_type") ?? ""
+  ) as Database["public"]["Enums"]["credit_source_type"];
   const amount = Number(formData.get("amount") ?? 0);
   const collectedBy = (formData.get("collected_by") as string) || null;
   const notes = (formData.get("notes") as string) || null;
@@ -38,17 +43,34 @@ export async function issueFarmerCredit(_prev: ActionState, formData: FormData):
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: farmerId,
-    source_type: sourceType,
-    ledger_type: "debit",
+  // balance_after database mein lazmi hai magar us ka koi default nahi.
+  // Seedha insert karne par entry chup chaap nakaam ho jati thi -- is
+  // liye ab har raasta postFarmerLedger se guzarta hai.
+  const ledger = await postFarmerLedger({
+    farmerId,
+    sourceType,
+    ledgerType: "debit",
     amount,
-    collected_by: collectedBy,
-    notes,
-    created_by: user?.id ?? null,
+    notes: notes ?? "Udhaar diya gaya",
+    collectedBy,
+    createdBy: user?.id ?? null,
   });
-  if (error) return { error: error.message };
+  if (ledger.error) return { error: ledger.error };
+
+  const posted = await postFarmerCreditGiven({
+    farmerId,
+    amount,
+    sourceType,
+    description: notes?.trim() || `Kisan ko ${sourceType} udhaar — Rs ${amount.toLocaleString()}`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: ledger.id ? [{ table: "farmer_credit_ledger", rowId: ledger.id }] : [],
+    },
+  });
+  if (failed(posted)) return { error: `Udhaar darj hua magar ledger mein nahi gaya: ${posted.error}` };
+
   revalidatePath("/admin/farmer-credit");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 
@@ -67,32 +89,56 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: farmerId,
-    source_type: "other",
-    ledger_type: "credit",
+  const ledger = await postFarmerLedger({
+    farmerId,
+    sourceType: "other",
+    ledgerType: "credit",
     amount,
     notes: notes ? `Manual Repayment: ${notes}` : "Manual Repayment",
-    created_by: user?.id ?? null,
+    createdBy: user?.id ?? null,
   });
-  if (error) return { error: error.message };
+  if (ledger.error) return { error: ledger.error };
 
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "income",
-    category: "Farmer Credit Repayment",
+  const { data: cashRow } = await supabase
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: "income",
+      category: "Farmer Credit Repayment",
+      amount,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      notes: `Farmer credit repayment${notes ? ` - ${notes}` : ""}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
+  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
+  // 1,000 ka asar Rs 2,000 hota tha.
+
+  // Kisan ne paisa wapas kiya -- ye EK waqia hai jo DO tables mein likha
+  // gaya: us ka bojh ghata, aur cash aaya. Is liye entry bhi EK hai jo
+  // dono rows ka daawa karti hai. Do alag entries banayein to wahi
+  // Rs 5,000 do dafa gin liye jayenge, aur kitab phir bhi barabar
+  // rahegi -- yani ghalti khud nahi pakri jayegi.
+  const claims = [] as Array<{ table: string; rowId: string }>;
+  if (ledger.id) claims.push({ table: "farmer_credit_ledger", rowId: ledger.id });
+  if (cashRow?.id) claims.push({ table: "finance_transactions", rowId: cashRow.id });
+
+  const posted = await postFarmerCreditRepaid({
+    farmerId,
     amount,
-    transaction_date: new Date().toISOString().slice(0, 10),
-    notes: `Farmer credit repayment${notes ? ` - ${notes}` : ""}`,
-    created_by: user?.id ?? null,
+    settledBy: await glForFinanceAccount(accountId),
+    description: `Kisan se wapsi — Rs ${amount.toLocaleString()}${notes ? ` (${notes})` : ""}`,
+    ctx: { createdBy: user?.id ?? null, claims },
   });
-  const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", accountId).single();
-  if (account) {
-    await supabase.from("finance_accounts").update({ current_balance: Number(account.current_balance) + amount }).eq("id", accountId);
-  }
+  if (failed(posted)) return { error: `Wapsi darj hui magar ledger mein nahi gayi: ${posted.error}` };
 
   revalidatePath("/admin/farmer-credit");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 
@@ -112,16 +158,40 @@ export async function migrateOpeningBalance(_prev: ActionState, formData: FormDa
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: farmerId,
-    source_type: "opening_balance",
-    ledger_type: amount > 0 ? "debit" : "credit",
+  const ledger = await postFarmerLedger({
+    farmerId,
+    sourceType: "opening_balance",
+    ledgerType: amount > 0 ? "debit" : "credit",
     amount: Math.abs(amount),
     notes: `DigiKhata se migrate hui (Opening Balance)${notes ? ` - ${notes}` : ""}`,
-    created_by: user?.id ?? null,
+    createdBy: user?.id ?? null,
   });
-  if (error) return { error: error.message };
+  if (ledger.error) return { error: ledger.error };
+
+  // Purana balance aaj ki kamai nahi hai -- wo pehle se maujood tha. Is
+  // liye doosri taraf equity hai, aamdani nahi. Aamdani mein daal dein to
+  // migration wale mahine ka nafa asal se kahin zyada dikhega.
+  const claims = ledger.id ? [{ table: "farmer_credit_ledger", rowId: ledger.id }] : [];
+  const posted =
+    amount > 0
+      ? await postFarmerCreditGiven({
+          farmerId,
+          amount: Math.abs(amount),
+          sourceType: "opening_balance",
+          description: `Opening balance — kisan se lena Rs ${Math.abs(amount).toLocaleString()}`,
+          ctx: { createdBy: user?.id ?? null, claims },
+        })
+      : await postFarmerCreditRepaid({
+          farmerId,
+          amount: Math.abs(amount),
+          settledBy: "3200",
+          description: `Opening balance — kisan ko dena Rs ${Math.abs(amount).toLocaleString()}`,
+          ctx: { createdBy: user?.id ?? null, claims },
+        });
+  if (failed(posted)) return { error: `Opening balance darj hua magar ledger mein nahi gaya: ${posted.error}` };
+
   revalidatePath("/admin/farmer-credit");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 

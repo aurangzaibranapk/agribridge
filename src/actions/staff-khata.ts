@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postStaffLedger, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -22,17 +23,35 @@ export async function recordStaffKhataDebit(_prev: ActionState, formData: FormDa
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error } = await supabase.from("staff_credit_ledger").insert({
-    profile_id: profileId,
-    ledger_type: "debit",
-    source_type: sourceType,
-    amount,
-    notes,
-    created_by: user?.id ?? null,
-  });
+  const { data: row, error } = await supabase
+    .from("staff_credit_ledger")
+    .insert({
+      profile_id: profileId,
+      ledger_type: "debit",
+      source_type: sourceType,
+      amount,
+      notes,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
 
+  const posted = await postStaffLedger({
+    profileId,
+    amount,
+    ledgerType: "debit",
+    sourceType,
+    description: notes?.trim() || `Staff khata — ${sourceType} Rs ${amount.toLocaleString()}`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: [{ table: "staff_credit_ledger", rowId: row.id }],
+    },
+  });
+  if (failed(posted)) return { error: `Khata mein darj hua magar ledger mein nahi gaya: ${posted.error}` };
+
   revalidatePath("/admin/staff-khata");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }
 
@@ -72,16 +91,39 @@ export async function processMonthEndSalary(_prev: ActionState, formData: FormDa
     data: { user },
   } = await supabase.auth.getUser();
 
-  await supabase.from("staff_credit_ledger").insert({
-    profile_id: profileId,
-    ledger_type: "debit",
-    source_type: "month_end_processed",
-    amount: balance,
-    notes: `Salary Due mein shift hua - ${payMonth}/${payYear}`,
-    created_by: user?.id ?? null,
-  });
+  const { data: shiftRow } = await supabase
+    .from("staff_credit_ledger")
+    .insert({
+      profile_id: profileId,
+      ledger_type: "debit",
+      source_type: "month_end_processed",
+      amount: balance,
+      notes: `Salary Due mein shift hua - ${payMonth}/${payYear}`,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+
+  // Yahan paisa nahi hila -- bojh khate se nikal kar "tankhwah baqi"
+  // mein chala gaya. Ise kharcha ginna us mahine ka kharcha dugna dikha
+  // deta, kyunki dihari pehle hi kharcha gin li gayi thi.
+  if (shiftRow?.id) {
+    const posted = await postStaffLedger({
+      profileId,
+      amount: balance,
+      ledgerType: "debit",
+      sourceType: "month_end_processed",
+      description: `Khata se Salary Due mein — ${payMonth}/${payYear}`,
+      ctx: {
+        createdBy: user?.id ?? null,
+        claims: [{ table: "staff_credit_ledger", rowId: shiftRow.id }],
+      },
+    });
+    if (failed(posted)) return { error: `Salary process hui magar ledger mein nahi gayi: ${posted.error}` };
+  }
 
   revalidatePath("/admin/staff-khata");
   revalidatePath("/admin/hr");
+  revalidatePath("/admin/money-trail");
   return { success: true };
 }

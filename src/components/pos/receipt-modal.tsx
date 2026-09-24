@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui/form";
 import { X, MessageCircle, Mail, Printer } from "lucide-react";
@@ -27,7 +28,16 @@ interface ReceiptData {
   items: ReceiptItem[];
 }
 
-export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () => void }) {
+export function ReceiptModal({
+  saleId,
+  onClose,
+  lang,
+}: {
+  saleId: string;
+  onClose: () => void;
+  /** Zaban server se aati hai -- dekhein pos-client.tsx ka note. */
+  lang: Lang;
+}) {
   const supabase = createClient();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,11 +75,11 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
         (item) => `${item.name} x${item.quantity} @ Rs ${item.unit_price.toLocaleString()} = Rs ${item.subtotal.toLocaleString()}`
       ),
       "",
-      `Grand Total: Rs ${r.total_amount.toLocaleString()}`,
+      `${t("pos_grand_total", lang)}: Rs ${r.total_amount.toLocaleString()}`,
     ];
     if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
     if (r.khata_amount > 0) lines.push(`Khata (Credit): Rs ${r.khata_amount.toLocaleString()}`);
-    if (r.outstanding_balance > 0) lines.push(`Total Outstanding Balance: Rs ${r.outstanding_balance.toLocaleString()}`);
+    if (r.outstanding_balance > 0) lines.push(`${t("pos_outstanding", lang)}: Rs ${r.outstanding_balance.toLocaleString()}`);
     lines.push("", "Thank You for Shopping!", "POS Solution by ZR Technologies", "📞 0312-6513294");
     return lines.filter(Boolean).join("\n");
   }
@@ -117,14 +127,14 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
         className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900 print:max-h-none print:shadow-none"
       >
         <div className="mb-3 flex items-center justify-between print:hidden">
-          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Receipt</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_receipt", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {loading || !receipt ? (
-          <p className="py-10 text-center text-sm text-surface-400">Loading receipt...</p>
+          <p className="py-10 text-center text-sm text-surface-400">{t("pos_receipt_loading", lang)}</p>
         ) : (
           <>
             <div className="text-center">
@@ -138,17 +148,17 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             <table className="w-full text-xs">
               <tbody>
                 <tr>
-                  <td className="py-0.5 text-surface-500">Cashier</td>
+                  <td className="py-0.5 text-surface-500">{t("pos_cashier", lang)}</td>
                   <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">{receipt.cashier_name}</td>
                 </tr>
                 {receipt.customer_name && (
                   <tr>
-                    <td className="py-0.5 text-surface-500">Customer</td>
+                    <td className="py-0.5 text-surface-500">{t("pos_customer", lang)}</td>
                     <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">{receipt.customer_name}</td>
                   </tr>
                 )}
                 <tr>
-                  <td className="py-0.5 text-surface-500">Payment Mode</td>
+                  <td className="py-0.5 text-surface-500">{t("pos_payment_mode", lang)}</td>
                   <td className="py-0.5 text-right capitalize text-surface-900 dark:text-surface-100">{receipt.payment_mode}</td>
                 </tr>
               </tbody>
@@ -159,10 +169,10 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-surface-500">
-                  <td className="pb-1.5">Item</td>
-                  <td className="pb-1.5 text-center">Qty</td>
-                  <td className="pb-1.5 text-right">Rate</td>
-                  <td className="pb-1.5 text-right">Total</td>
+                  <td className="pb-1.5">{t("pos_item", lang)}</td>
+                  <td className="pb-1.5 text-center">{t("pos_qty", lang)}</td>
+                  <td className="pb-1.5 text-right">{t("pos_rate", lang)}</td>
+                  <td className="pb-1.5 text-right">{t("pos_total", lang)}</td>
                 </tr>
               </thead>
               <tbody>
@@ -182,14 +192,14 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             <table className="w-full text-xs">
               <tbody>
                 <tr>
-                  <td className="py-0.5 text-surface-500">Grand Total</td>
+                  <td className="py-0.5 text-surface-500">{t("pos_grand_total", lang)}</td>
                   <td className="py-0.5 text-right font-semibold text-surface-900 dark:text-surface-100">
                     Rs {receipt.total_amount.toLocaleString()}
                   </td>
                 </tr>
                 {receipt.cash_paid > 0 && (
                   <tr>
-                    <td className="py-0.5 text-surface-500">Cash Paid</td>
+                    <td className="py-0.5 text-surface-500">{t("pos_cash_paid", lang)}</td>
                     <td className="py-0.5 text-right text-surface-900 dark:text-surface-100">
                       Rs {receipt.cash_paid.toLocaleString()}
                     </td>
@@ -197,7 +207,7 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
                 )}
                 {receipt.khata_amount > 0 && (
                   <tr>
-                    <td className="py-0.5 font-medium text-red-600">Khata (Credit)</td>
+                    <td className="py-0.5 font-medium text-red-600">{t("pos_khata_credit", lang)}</td>
                     <td className="py-0.5 text-right font-medium text-red-600">
                       Rs {receipt.khata_amount.toLocaleString()}
                     </td>
@@ -213,7 +223,7 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
                   <tbody>
                     <tr>
                       <td className="py-0.5 font-semibold text-amber-700 dark:text-amber-400">
-                        Total Outstanding Balance
+                        {t("pos_outstanding", lang)}
                       </td>
                       <td className="py-0.5 text-right font-semibold text-amber-700 dark:text-amber-400">
                         Rs {receipt.outstanding_balance.toLocaleString()}
@@ -225,8 +235,8 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             )}
 
             <div className="my-3 border-t border-dashed border-surface-300 dark:border-surface-700" />
-            <p className="text-center text-xs text-surface-400">Thank You for Shopping!</p>
-            <p className="text-center text-xs text-surface-400">POS Solution by ZR Technologies</p>
+            <p className="text-center text-xs text-surface-400">{t("pos_thank_you", lang)}</p>
+            <p className="text-center text-xs text-surface-400">{t("at_pos_by", lang)}</p>
             <p className="text-center text-xs text-surface-400">📞 0312-6513294</p>
 
             <div className="mt-4 flex gap-2 print:hidden">
@@ -245,7 +255,7 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
               <div className="mt-3 space-y-2 print:hidden">
                 <Input
                   type="email"
-                  placeholder="Email address"
+                  placeholder={t("pos_email_address", lang)}
                   value={emailAddress}
                   onChange={(e) => setEmailAddress(e.target.value)}
                 />
@@ -261,7 +271,7 @@ export function ReceiptModal({ saleId, onClose }: { saleId: string; onClose: () 
             )}
 
             <Button className="mt-3 w-full print:hidden" onClick={onClose}>
-              Close
+              {t("pos_close", lang)}
             </Button>
           </>
         )}

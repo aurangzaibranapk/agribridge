@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { postFarmerLedger } from "@/lib/farmer-ledger";
+import { postFarmerCreditGiven, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -131,17 +133,28 @@ export async function farmerAcceptCreditRequest(_prev: ActionState, formData: Fo
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { error: ledgerError } = await supabase.from("farmer_credit_ledger").insert({
-    farmer_id: request.farmer_id,
-    source_type: request.category,
-    ledger_type: "debit",
-    amount: request.total_amount,
-    reference_id: request.id,
+  const ledger = await postFarmerLedger({
+    farmerId: request.farmer_id,
+    sourceType: request.category,
+    ledgerType: "debit",
+    amount: Number(request.total_amount),
+    referenceId: request.id,
     notes: "Credit request accepted",
-    created_by: user?.id ?? null,
+    createdBy: user?.id ?? null,
   });
+  if (ledger.error) return { error: ledger.error };
 
-  if (ledgerError) return { error: ledgerError.message };
+  const posted = await postFarmerCreditGiven({
+    farmerId: request.farmer_id,
+    amount: Number(request.total_amount),
+    sourceType: request.category,
+    description: `Credit request manzoor — ${request.category} Rs ${Number(request.total_amount).toLocaleString()}`,
+    ctx: {
+      createdBy: user?.id ?? null,
+      claims: ledger.id ? [{ table: "farmer_credit_ledger", rowId: ledger.id }] : [],
+    },
+  });
+  if (failed(posted)) return { error: `Request manzoor hui magar ledger mein nahi gayi: ${posted.error}` };
 
   const { error: statusError } = await supabase
     .from("credit_requests")

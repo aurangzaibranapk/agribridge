@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { HeroSlider } from "@/components/site/hero-slider";
 import { NewsletterForm } from "@/components/site/newsletter-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const CATEGORY_FALLBACK = [
   { name: "Fertilizers", icon: "🧪" },
@@ -27,6 +29,7 @@ async function getSetting(rows: { key: string; value: any }[] | null, key: strin
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
   const [
@@ -63,19 +66,14 @@ export default async function HomePage() {
         <section className="relative overflow-hidden border-b border-surface-200 bg-gradient-to-b from-brand-50 to-white px-4 py-20 dark:border-surface-800 dark:from-surface-900 dark:to-surface-950">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-              <ShieldCheck className="h-3.5 w-3.5" /> Pakistan&apos;s Trusted Agriculture Bridge
-            </span>
-            <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight text-surface-900 dark:text-white sm:text-5xl">
-              Connecting farmers, dealers &amp; investors —
-              <span className="text-brand-600"> without ever crossing wires.</span>
+              <ShieldCheck className="h-3.5 w-3.5" />{t("sh_hero_title", lang)}</span>
+            <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight text-surface-900 dark:text-white sm:text-5xl">{t("sh_hero_line", lang)}<span className="text-brand-600">{t("sh_hero_line2", lang)}</span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-surface-500 dark:text-surface-400">
-              Al Rana Traders supplies certified seed, fertilizer, and crop protection to farmers across Pakistan — every order routed, verified, and settled by AgriBridge, the same way a bank sits between two accounts.
-            </p>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-surface-500 dark:text-surface-400">{t("sh_hero_body", lang)}</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/contact"><Button size="md">Get Started — Contact Us</Button></Link>
-              <Link href="/products"><Button variant="secondary" size="md">Browse Products</Button></Link>
-              <Link href="/invest"><Button variant="ghost" size="md">Become a Partner</Button></Link>
+              <Link href="/contact"><Button size="md">{t("sh_get_started_contact", lang)}</Button></Link>
+              <Link href="/products"><Button variant="secondary" size="md">{t("sh_browse_products", lang)}</Button></Link>
+              <Link href="/invest"><Button variant="ghost" size="md">{t("sh_become_partner", lang)}</Button></Link>
             </div>
           </div>
         </section>
@@ -87,10 +85,10 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <section className="border-b border-surface-200 bg-white px-4 py-10 dark:border-surface-800 dark:bg-surface-950">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 text-center sm:grid-cols-4">
-          <Stat value={districtCount} label="Districts We Serve" />
-          <Stat value={farmerCount ?? 0} label="Registered Farmers" />
-          <Stat value={dealerCount ?? 0} label="Verified Dealers" />
-          <Stat value={productCount ?? 0} label="Products Listed" />
+          <Stat value={districtCount} label={t("sh_districts", lang)} />
+          <Stat value={farmerCount ?? 0} label={t("sh_registered_farmers", lang)} />
+          <Stat value={dealerCount ?? 0} label={t("sh_verified_dealers", lang)} />
+          <Stat value={productCount ?? 0} label={t("sh_products_listed", lang)} />
         </div>
       </section>
 
@@ -99,16 +97,14 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <section className="mx-auto max-w-6xl px-4 py-16">
         <div className="mb-10 text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">How AgriBridge Works</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold text-surface-900 dark:text-white sm:text-3xl">One trusted middle, every side protected</h2>
-          <p className="mx-auto mt-2 max-w-xl text-surface-500 dark:text-surface-400">
-            Companies and dealers never deal with farmers directly, and farmers never deal with dealers directly — AgriBridge verifies, routes, and settles every order in between.
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{t("sh_how_title", lang)}</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-surface-900 dark:text-white sm:text-3xl">{t("sh_one_middle", lang)}</h2>
+          <p className="mx-auto mt-2 max-w-xl text-surface-500 dark:text-surface-400">{t("sh_how_body", lang)}</p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <BridgeStep number="01" icon={Building2} title="Company / Dealer supplies" description="Companies list products, dealers stock them locally by district — never in direct contact with the end farmer." />
-          <BridgeStep number="02" icon={Handshake} title="AgriBridge routes & verifies" description="A farmer's order is matched to a dealer, verified by our team, and payment is settled — the same order both sides see, described differently." />
-          <BridgeStep number="03" icon={Sprout} title="Farmer receives, under our name" description="Delivery reaches the farmer under the Al Rana Traders / AgriBridge identity — never the dealer's — so trust stays with the platform, not a stranger." />
+          <BridgeStep number="01" icon={Building2} title={t("sh_step_supply", lang)} description="Companies list products, dealers stock them locally by district — never in direct contact with the end farmer." />
+          <BridgeStep number="02" icon={Handshake} title={t("sh_step_route", lang)} description="A farmer's order is matched to a dealer, verified by our team, and payment is settled — the same order both sides see, described differently." />
+          <BridgeStep number="03" icon={Sprout} title={t("sh_step_receive", lang)} description="Delivery reaches the farmer under the Al Rana Traders / AgriBridge identity — never the dealer's — so trust stays with the platform, not a stranger." />
         </div>
       </section>
 
@@ -119,11 +115,10 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex items-end justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Shop by Category</p>
-              <h2 className="mt-1 font-display text-2xl font-semibold text-surface-900 dark:text-white">Our Premium Categories</h2>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{t("sh_shop_by_category", lang)}</p>
+              <h2 className="mt-1 font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_categories", lang)}</h2>
             </div>
-            <Link href="/products" className="hidden items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400 sm:flex">
-              View all <ArrowRight className="h-3.5 w-3.5" />
+            <Link href="/products" className="hidden items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400 sm:flex">{t("sh_view_all", lang)}<ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -144,9 +139,8 @@ export default async function HomePage() {
         <section className="px-4 py-16">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex items-end justify-between">
-              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">Latest Products</h2>
-              <Link href="/products" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">
-                View all <ArrowRight className="h-3.5 w-3.5" />
+              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_latest_products", lang)}</h2>
+              <Link href="/products" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">{t("sh_view_all", lang)}<ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -172,21 +166,18 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 sm:grid-cols-2">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-brand-100">
-              <Stethoscope className="h-3.5 w-3.5" /> Free for every registered farmer
-            </span>
-            <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">AI Crop Doctor — fasal bachao!</h2>
-            <p className="mt-3 max-w-md text-brand-100">
-              Upload a photo of an affected crop and get disease detection with a treatment and spray schedule — free, in minutes.
-            </p>
+              <Stethoscope className="h-3.5 w-3.5" />{t("sh_free_for_farmers", lang)}</span>
+            <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">{t("sh_doctor_title", lang)}</h2>
+            <p className="mt-3 max-w-md text-brand-100">{t("sh_doctor_body", lang)}</p>
             <Link href="/ai-crop-doctor" className="mt-6 inline-block">
-              <Button size="md" className="bg-white text-brand-800 hover:bg-brand-50">Try AI Crop Doctor</Button>
+              <Button size="md" className="bg-white text-brand-800 hover:bg-brand-50">{t("sh_try_doctor", lang)}</Button>
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <MiniStep icon="📸" label="Upload Photo" />
-            <MiniStep icon="🤖" label="AI Analysis" />
-            <MiniStep icon="💊" label="Treatment Plan" />
-            <MiniStep icon="🛒" label="Order Products" />
+            <MiniStep icon="📸" label={t("sh_upload_photo", lang)} />
+            <MiniStep icon="🤖" label={t("sh_ai_analysis", lang)} />
+            <MiniStep icon="💊" label={t("sh_treatment_plan", lang)} />
+            <MiniStep icon="🛒" label={t("sh_order_products", lang)} />
           </div>
         </div>
       </section>
@@ -198,20 +189,18 @@ export default async function HomePage() {
         <div className="rounded-card border border-surface-200 bg-wheat-400/10 p-8 dark:border-surface-800 sm:p-10">
           <div className="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-wheat-600">Business &amp; Investment</p>
-              <h2 className="mt-2 font-display text-2xl font-semibold text-surface-900 dark:text-white">Invest in the future of agriculture</h2>
-              <p className="mt-3 text-surface-500 dark:text-surface-400">
-                Product investment, dairy &amp; livestock, corporation deals, and franchise opportunities — transparent, halal, and no cash required. AgriBridge holds the stock, sells through its dealer network, and returns your share.
-              </p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-wheat-600">{t("sh_invest_title", lang)}</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_invest_head", lang)}</h2>
+              <p className="mt-3 text-surface-500 dark:text-surface-400">{t("sh_invest_body", lang)}</p>
               <Link href="/invest" className="mt-6 inline-block">
-                <Button size="md">Explore Partnership Models</Button>
+                <Button size="md">{t("sh_explore_models", lang)}</Button>
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <PartnerModel icon={Package} title="Product Investment" />
-              <PartnerModel icon={Building2} title="Corporation Deal" />
-              <PartnerModel icon={Sprout} title="Dairy & Livestock" />
-              <PartnerModel icon={TrendingUp} title="Franchise" />
+              <PartnerModel icon={Package} title={t("sh_product_investment", lang)} />
+              <PartnerModel icon={Building2} title={t("sh_corporation_deal", lang)} />
+              <PartnerModel icon={Sprout} title={t("sh_dairy_livestock", lang)} />
+              <PartnerModel icon={TrendingUp} title={t("sh_franchise", lang)} />
             </div>
           </div>
         </div>
@@ -224,9 +213,8 @@ export default async function HomePage() {
         <section className="border-t border-surface-200 px-4 py-16 dark:border-surface-800">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex items-end justify-between">
-              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">From the Gallery</h2>
-              <Link href="/gallery" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">
-                View all <ArrowRight className="h-3.5 w-3.5" />
+              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_gallery", lang)}</h2>
+              <Link href="/gallery" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">{t("sh_view_all", lang)}<ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -247,9 +235,8 @@ export default async function HomePage() {
         <section className="border-t border-surface-200 bg-surface-50 px-4 py-16 dark:border-surface-800 dark:bg-surface-900">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex items-end justify-between">
-              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">Latest from the Blog</h2>
-              <Link href="/blog" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">
-                View all <ArrowRight className="h-3.5 w-3.5" />
+              <h2 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_latest_blog", lang)}</h2>
+              <Link href="/blog" className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">{t("sh_view_all", lang)}<ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -274,8 +261,8 @@ export default async function HomePage() {
       {testimonials && testimonials.length > 0 && (
         <section className="border-t border-surface-200 px-4 py-16 dark:border-surface-800">
           <div className="mx-auto max-w-6xl">
-            <p className="text-center text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Satisfied Farmers</p>
-            <h2 className="mt-2 text-center font-display text-2xl font-semibold text-surface-900 dark:text-white">Hamary Khush Farmers</h2>
+            <p className="text-center text-sm font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{t("sh_satisfied_farmers", lang)}</p>
+            <h2 className="mt-2 text-center font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("sh_happy_farmers", lang)}</h2>
             <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
               {testimonials.map((t) => (
                 <div key={t.id} className="rounded-card border border-surface-200 bg-white p-6 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -300,13 +287,13 @@ export default async function HomePage() {
             &ldquo;Hamaara maqsad sirf business nahi — Pakistan ki kheti aur kisaano ki tarakki hai. Ek khushhal kisan hi ek khushhal Pakistan banata hai.&rdquo;
           </p>
           <p className="mt-4 text-sm font-semibold text-surface-900 dark:text-white">Ch. Mahabal Ali</p>
-          <p className="text-xs text-surface-400 dark:text-surface-500">Founder &amp; CEO, Al Rana Traders</p>
+          <p className="text-xs text-surface-400 dark:text-surface-500">{t("sh_founder", lang)}</p>
         </div>
 
         <div className="mt-6 flex gap-3 rounded-card border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-900/20">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <strong>Fraud alert:</strong> Al Rana Traders never accepts cash payment for a partnership or investment. Every deal happens through products or livestock, verified in writing. If anyone asks for cash in our name, report it to <a href="mailto:info@alranatraders.pk" className="underline">info@alranatraders.pk</a>.
+            <strong>{t("sh_fraud_label", lang)}</strong>{t("sh_fraud_body", lang)}<a href="mailto:info@alranatraders.pk" className="underline">info@alranatraders.pk</a>.
           </p>
         </div>
       </section>
@@ -316,8 +303,8 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <section className="border-t border-surface-200 bg-surface-50 px-4 py-14 dark:border-surface-800 dark:bg-surface-900">
         <div className="mx-auto max-w-xl text-center">
-          <h2 className="font-display text-xl font-semibold text-surface-900 dark:text-white">Stay Updated</h2>
-          <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">Get farming tips, new products, and business updates in your inbox.</p>
+          <h2 className="font-display text-xl font-semibold text-surface-900 dark:text-white">{t("sh_stay_updated", lang)}</h2>
+          <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">{t("sh_newsletter_body", lang)}</p>
           <div className="mt-5">
             <NewsletterForm />
           </div>
@@ -328,13 +315,11 @@ export default async function HomePage() {
       {/* FINAL CTA                                                        */}
       {/* ---------------------------------------------------------------- */}
       <section className="border-t border-surface-200 bg-brand-600 px-4 py-14 text-center text-white dark:border-surface-800">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Grow Together. Earn Together. Build Together.</h2>
-        <p className="mx-auto mt-2 max-w-lg text-brand-100">
-          Whether you&apos;re a farmer, a dealer, a company, or an investor — Al Rana Traders is your complete agriculture business platform.
-        </p>
+        <h2 className="font-display text-2xl font-semibold sm:text-3xl">{t("sh_grow_together", lang)}</h2>
+        <p className="mx-auto mt-2 max-w-lg text-brand-100">{t("sh_cta_body", lang)}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/contact"><Button size="md" className="bg-white text-brand-700 hover:bg-brand-50">Get Started Today</Button></Link>
-          <Link href="/products"><Button size="md" variant="ghost" className="text-white hover:bg-white/10">Explore Products</Button></Link>
+          <Link href="/contact"><Button size="md" className="bg-white text-brand-700 hover:bg-brand-50">{t("sh_get_started", lang)}</Button></Link>
+          <Link href="/products"><Button size="md" variant="ghost" className="text-white hover:bg-white/10">{t("sh_explore_products", lang)}</Button></Link>
         </div>
       </section>
     </div>
