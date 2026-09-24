@@ -16,6 +16,7 @@ const PAGE_SIZE = 20;
 type ProductRow = {
   id: string; name: string; pack_size: string | null; purchase_price: number; selling_price: number; wholesale_price: number | null; trade_rate_pending: boolean;
   is_available: boolean; is_verified: boolean; image_url: string | null; categories: { name: string } | null; brands: { name: string } | null;
+  units_per_pack: number | null;
 };
 export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string; cat?: string } }) {
   const lang = getLanguageFromCookies("rm");
@@ -67,7 +68,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
 
   let query = supabase
     .from("products")
-    .select("id, name, pack_size, purchase_price, selling_price, wholesale_price, trade_rate_pending, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
+    .select("id, name, pack_size, purchase_price, selling_price, wholesale_price, units_per_pack, trade_rate_pending, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
     .eq("is_deleted", false);
   if (q) query = query.ilike("name", `%${q}%`);
   if (cat) query = query.eq("category_id", cat);
@@ -111,12 +112,25 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
     // Thok ka rate na ho to "Rs 0" nahi -- khali lakeer. Sifar ka matlab
     // "thok par muft" hota (245).
     {
-      header: "Thok",
+      header: "Thok/Unit",
       accessor: (p) =>
         p.wholesale_price == null ? (
           <span className="text-surface-400">—</span>
         ) : (
           formatCurrency(p.wholesale_price)
+        ),
+      className: "text-right",
+    },
+    {
+      header: "Thok/Pack",
+      accessor: (p) =>
+        p.wholesale_price == null || !p.units_per_pack || p.units_per_pack <= 1 ? (
+          <span className="text-surface-400">—</span>
+        ) : (
+          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+            {formatCurrency(p.wholesale_price * p.units_per_pack)}
+            <span className="ml-1 text-[10px] font-normal text-surface-400">×{p.units_per_pack}</span>
+          </span>
         ),
       className: "text-right",
     },
