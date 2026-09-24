@@ -25,6 +25,7 @@ import {
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { RecentSalesTable } from "./recent-sales-table";
+import { StatementExportBar } from "./statement-export-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -410,7 +411,7 @@ export default async function SalesReportPage({
   const totalCount = (sales ?? []).length;
   const avgSale = totalCount > 0 ? totalSales / totalCount : 0;
 
-  const rows = (sales ?? []).slice(0, 50).map((s: any) => {
+  const allRows = (sales ?? []).map((s: any) => {
     const branch = Array.isArray(s.branches) ? s.branches[0] : s.branches;
     const dealer = Array.isArray(s.dealers) ? s.dealers[0] : s.dealers;
     return {
@@ -423,9 +424,20 @@ export default async function SalesReportPage({
       customer: (s.crm_customer_id ? crmCustName.get(s.crm_customer_id) : null) ?? (s.customer_id ? dealerCustName.get(s.customer_id) : null) ?? null,
     };
   });
+  const rows = allRows.slice(0, 50);
+
+  const dateLabel = `${start.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })} — ${end.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}`;
 
   return (
     <div>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
+          body { font-size: 12px; }
+          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
+        }
+      `}</style>
       <PageHeader
         title={t("rs_title", lang)}
         description={
@@ -474,14 +486,23 @@ export default async function SalesReportPage({
         })}
       </div>
 
-      {/* Filtered payment statement total */}
+      {/* Filtered payment statement total + export */}
       {paymentFilter && (
-        <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-900/50 dark:bg-brand-950/20">
-          <p className="text-xs text-brand-700 dark:text-brand-400">
-            <span className="font-semibold">{PAYMENT_LABELS[paymentFilter] ?? paymentFilter}</span> statement —{" "}
-            {totalCount} transactions, kul: <span className="font-bold">{rs(totalSales)}</span>
-          </p>
-        </div>
+        <>
+          <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-900/50 dark:bg-brand-950/20">
+            <p className="text-xs text-brand-700 dark:text-brand-400">
+              <span className="font-semibold">{PAYMENT_LABELS[paymentFilter] ?? paymentFilter}</span> statement —{" "}
+              {totalCount} transactions, kul: <span className="font-bold">{rs(totalSales)}</span>
+            </p>
+          </div>
+          <StatementExportBar
+            paymentLabel={PAYMENT_LABELS[paymentFilter] ?? paymentFilter}
+            dateLabel={dateLabel}
+            totalAmount={totalSales}
+            totalCount={totalCount}
+            rows={allRows}
+          />
+        </>
       )}
 
       {!sabKuchWala && !meriDukan && (
