@@ -246,7 +246,13 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   redirect("/admin/products");
 }
 
-export async function updateProductNamePackSize(id: string, name: string, pack_size: string | null): Promise<{ error?: string }> {
+export async function updateProductNamePackSize(
+  id: string,
+  name: string,
+  pack_size: string | null,
+  category_id?: string | null,
+  selling_price?: number | null,
+): Promise<{ error?: string }> {
   const supabase = createClient();
   const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
 
@@ -257,11 +263,15 @@ export async function updateProductNamePackSize(id: string, name: string, pack_s
   name = name.trim();
   if (!name) return { error: "Product name khaali nahi ho sakta." };
 
+  const extraFields: Record<string, unknown> = {};
+  if (category_id !== undefined) extraFields.category_id = category_id;
+  if (selling_price !== undefined) extraFields.selling_price = selling_price;
+
   if (!isUnrestricted && permission?.edit_needs_approval) {
     const { error } = await supabase.from("product_edit_requests").insert({
       product_id: id,
       proposed_by: userId,
-      changes: { name, pack_size: pack_size || null },
+      changes: { name, pack_size: pack_size || null, ...extraFields },
       status: "pending",
     });
     if (error) return { error: error.message };
@@ -271,7 +281,7 @@ export async function updateProductNamePackSize(id: string, name: string, pack_s
 
   const { error } = await supabase
     .from("products")
-    .update({ name, pack_size: pack_size || null, updated_at: new Date().toISOString() })
+    .update({ name, pack_size: pack_size || null, ...extraFields, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { error: error.message };
 

@@ -69,6 +69,7 @@ export default async function CatalogExportPage() {
     return {
       id: p.id,
       name: p.name,
+      category_id: categoryId,
       category: Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name,
       shopGroups,
       brand: Array.isArray(p.companies) ? p.companies[0]?.name : p.companies?.name,
