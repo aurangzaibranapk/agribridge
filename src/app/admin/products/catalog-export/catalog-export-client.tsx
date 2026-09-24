@@ -583,7 +583,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
         </div>
         <table className="catalog-print-table w-full text-sm">
           <thead>
-            <tr className="text-left [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
+            <tr className="text-left [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-white dark:[&>th]:bg-surface-900 [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
               <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
