@@ -1,11 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { getOrderPermissions } from "@/lib/order-permissions";
+import { getBranchCreditCheck, creditLimitMessage, isAdvanceOrder } from "@/lib/order-payment-gate";
 import { notifyRole, notifyRoles, notifyBranch } from "@/lib/notifications";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
@@ -13,6 +15,8 @@ const HQ_ROLES = ["super_admin", "admin", "owner"];
 export interface ActionState {
   error?: string;
   success?: boolean;
+  orderId?: string;
+  orderNumber?: string;
 }
 
 interface OrderItemInput {
@@ -106,6 +110,7 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
   const contactPerson = (formData.get("contact_person") as string) || null;
   const mobileNumber = (formData.get("mobile_number") as string) || null;
   const paymentTerms = String(formData.get("payment_terms") ?? "Cash");
+  const settlementMethod = (formData.get("settlement_method") as string) || null;
   const freightCharges = Number(formData.get("freight_charges") ?? 0);
   const otherCharges = Number(formData.get("other_charges") ?? 0);
   const notes = (formData.get("notes") as string) || null;
@@ -145,6 +150,9 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
       order_type: orderType,
       order_from: orderFromBranchId ? "Branch" : "AgriBridge Company",
       order_from_branch_id: orderFromBranchId,
+      // Settlement sirf branch-to-branch par maani rakhta hai; Company se
+      // aane wale order mein khali rehta hai.
+      settlement_method: orderFromBranchId ? settlementMethod : null,
       order_to_type: orderToType,
       order_to_branch_id: orderToBranchId,
       partner_name: partnerName,
@@ -229,10 +237,18 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
 
   const orderType = String(formData.get("order_type") ?? "");
   const paymentTerms = String(formData.get("payment_terms") ?? "Credit");
+  const sourceBranchId = (formData.get("order_from_branch_id") as string) || null;
+  const settlementMethod = (formData.get("settlement_method") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const orderToWarehouseId = (formData.get("order_to_warehouse_id") as string) || null;
   const itemsJson = String(formData.get("items_json") ?? "[]");
 
   if (!orderType) return { error: "Order Type zaroori hai." };
+  if (sourceBranchId) {
+    if (sourceBranchId === seller.id) return { error: "Apni hi shop se order nahi ho sakta. Koi doosri shop chunein." };
+    if (!settlementMethod) return { error: "Settlement ka tareeqa chunein." };
+    if (!["company_ledger", "direct_branch"].includes(settlementMethod)) return { error: "Settlement ka tareeqa sahi nahi hai." };
+  }
 
   let items: OrderItemInput[] = [];
   try {
@@ -254,8 +270,9 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
     .insert({
       order_number: orderNumber,
       order_type: orderType,
-      order_from: "AgriBridge Company",
-      order_from_branch_id: null,
+      order_from: sourceBranchId ? "Branch" : "AgriBridge Company",
+      order_from_branch_id: sourceBranchId,
+      settlement_method: sourceBranchId ? settlementMethod : null,
       order_to_type: "Branch",
       order_to_branch_id: seller.id,
       shop_dealer_name: seller.name,
@@ -270,6 +287,7 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
       existing_outstanding: 0,
       available_credit: 0,
       projected_outstanding: grandTotal,
+      order_to_warehouse_id: orderToWarehouseId || null,
       status: "submitted",
       requested_by: seller.userId,
       notes,
@@ -308,7 +326,7 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
 
   revalidatePath("/admin/agri-orders");
   revalidatePath("/admin/pos/ordering");
-  redirect(`/admin/agri-orders/${order.id}`);
+  return { success: true, orderId: order.id, orderNumber };
 }
 
 export async function salesVerifyOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -348,6 +366,21 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
   const branchId = await getOrderBranchId(orderId);
   const permissions = await getOrderPermissions(branchId);
   if (!permissions.canFinanceVerify) return { error: "Aapko Finance Verify karne ki ijazat nahi hai." };
+
+  // Base (udhaar) order sirf branch ki credit limit ke andar hi chal
+  // sakta hai — yahi wo maqam hai jahan Finance udhaar ki tasdeeq
+  // karti hai. Advance order is check se guzarta nahi, kyunke usmein
+  // paisa pehle aata hai (rok createDispatch par lagti hai).
+  const { data: orderForCredit } = await supabase
+    .from("agri_orders")
+    .select("payment_terms, grand_total")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!isAdvanceOrder(orderForCredit?.payment_terms)) {
+    const credit = await getBranchCreditCheck(branchId, Number(orderForCredit?.grand_total ?? 0));
+    if (!credit.isWithinLimit) return { error: creditLimitMessage(credit) };
+  }
 
   const comment = String(formData.get("comment") ?? "").trim();
 
@@ -397,6 +430,66 @@ export async function approveOrder(_prev: ActionState, formData: FormData): Prom
   await notifyRoles(["warehouse", ...HQ_ROLES], "Order Approve Ho Gaya", `${updatedOrder?.order_number} - ab dispatch banayein.`, `/admin/agri-orders/${orderId}`);
 
   revalidatePath(`/admin/agri-orders/${orderId}`);
+  return { success: true };
+}
+
+export async function adminApproveAllStages(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) return { error: "Missing order id." };
+
+  const branchId = await getOrderBranchId(orderId);
+  const permissions = await getOrderPermissions(branchId);
+  if (!permissions.canSalesVerify || !permissions.canFinanceVerify || !permissions.canApprove) {
+    return { error: "Sirf Admin / Owner ye kaam kar sakte hain." };
+  }
+
+  const { data: order } = await supabase
+    .from("agri_orders")
+    .select("status, order_number, grand_total")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return { error: "Order nahi mila." };
+  if (!["submitted", "sales_verified", "finance_verified"].includes(order.status)) {
+    return { error: "Order already approve ho chuka hai ya is stage par nahi hai." };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const now = new Date().toISOString();
+  const comment = String(formData.get("comment") ?? "").trim() || "Admin ne saary stages ek sath approve kiye.";
+
+  const updateData: Record<string, string | null> = {
+    status: "approved",
+    approved_by: user?.id ?? null,
+    approved_at: now,
+  };
+  const stagesToLog: string[] = [];
+
+  if (order.status === "submitted") {
+    updateData.sales_verified_by = user?.id ?? null;
+    updateData.sales_verified_at = now;
+    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_at = now;
+    stagesToLog.push("sales_verified", "finance_verified", "approved");
+  } else if (order.status === "sales_verified") {
+    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_at = now;
+    stagesToLog.push("finance_verified", "approved");
+  } else {
+    stagesToLog.push("approved");
+  }
+
+  const { error } = await supabase.from("agri_orders").update(updateData).eq("id", orderId);
+  if (error) return { error: error.message };
+
+  for (const stage of stagesToLog) {
+    await logTimeline(orderId, stage, `Admin bypass: ${comment}`);
+  }
+  await logAudit({ actionType: "approve", module: "agri_orders", recordId: orderId, recordLabel: order.order_number, description: `Admin ne saary stages bypass kar ke approve kiya - Rs ${Number(order.grand_total ?? 0).toLocaleString()}` });
+  await notifyRoles(["warehouse", ...HQ_ROLES], "Order Admin Ne Approve Kiya", `${order.order_number} - ab dispatch banayein.`, `/admin/agri-orders/${orderId}`);
+
+  revalidatePath(`/admin/agri-orders/${orderId}`);
+  revalidatePath("/admin/agri-orders");
   return { success: true };
 }
 
@@ -541,17 +634,14 @@ export async function verifyOrderPayment(_prev: ActionState, formData: FormData)
         transaction_type: "income",
         category: "agri_order_payment",
         amount: Number(payment.paid_amount),
-        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_date: aajKaKhana(),
         notes: `AgriBridge order payment verified (${payment.payment_method})`,
         created_by: user?.id ?? null,
       });
-      const { data: account } = await supabase.from("finance_accounts").select("current_balance").eq("id", mapping.finance_account_id).single();
-      if (account) {
-        await supabase
-          .from("finance_accounts")
-          .update({ current_balance: Number(account.current_balance) + Number(payment.paid_amount) })
-          .eq("id", mapping.finance_account_id);
-      }
+      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
+      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane
+      // aur badalne par bhi). Pehle yahan dobara bhi hilaya jata tha,
+      // yani Rs 1,000 ka asar Rs 2,000 hota tha.
     }
   }
 

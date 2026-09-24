@@ -1,0 +1,16 @@
+-- 431: customers.credit_limit ka default NULL, 0 nahi.
+--
+-- 18 September: Muhammad Akhtar (customer) ko udhaar milni band ho
+-- gayi thi kyunke us ki "hadd Rs 0" nikli -- jab ke kabhi kisi ne wo
+-- hadd tay hi nahi ki thi. Wajah: is column ka DEFAULT khud "0" tha
+-- (farmers.credit_limit ka default hamesha se NULL raha hai, sirf
+-- customers galat tha). Jab bhi CRM se customer bana/edit hua aur
+-- "Credit Limit" khali chhoRi gayi, ye default seedha DB mein 0 likh
+-- deta tha -- code (src/actions/customers.ts) bhi isi galti ko dohra
+-- raha tha, wo alag se theek ho chuka hai (isi commit mein).
+--
+-- Purani qatarein jin ka credit_limit already 0 hai, un mein se koi
+-- "waqai kisi ne 0 tay ki" ho sakti hai — is liye backfill (0 -> NULL)
+-- yahan nahi kiya gaya, sirf aane wale naye/khali record theek honge.
+-- Purani qatarein malik ke faisle se theek hongi.
+alter table customers alter column credit_limit set default null;

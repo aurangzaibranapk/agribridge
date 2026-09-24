@@ -2,18 +2,21 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { formatDateTime } from "@/lib/utils/format";
 import { MessageStatusForm } from "@/app/admin/contact-messages/message-status-form";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminContactMessagesPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: messages } = await supabase.from("contact_messages").select("*").order("created_at", { ascending: false });
 
   return (
     <div>
-      <PageHeader title="Contact Messages" description="Submissions from the public Contact Us form" />
+      <PageHeader title={t("at_contact_messages", lang)} description="Submissions from the public Contact Us form" />
       {!messages || messages.length === 0 ? (
-        <EmptyState title="No messages yet" />
+        <EmptyState title={t("at_no_messages", lang)} />
       ) : (
         <div className="space-y-3">
           {messages.map((m) => (

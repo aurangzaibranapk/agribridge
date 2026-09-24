@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateMachineryBookingsListPdf } from "@/lib/machinery-bookings-list-pdf";
+import { requireStaff } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // Bookings ka PDF staff ke liye hai — customer data rakhta hai. Middleware /api ko nahi bachata,
+  // is liye rok yahan lagani parti hai.
+  const auth = await requireStaff();
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const supabase = createClient();
 
   const { data: bookings } = await supabase

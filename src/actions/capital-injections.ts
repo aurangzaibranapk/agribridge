@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -14,7 +15,7 @@ export async function recordCapitalInjection(_prev: ActionState, formData: FormD
   const sourceType = String(formData.get("source_type") ?? "");
   const sourceName = (formData.get("source_name") as string) || null;
   const amount = Number(formData.get("amount") ?? 0);
-  const injectionDate = String(formData.get("injection_date") ?? new Date().toISOString().slice(0, 10));
+  const injectionDate = String(formData.get("injection_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
 
   if (!sourceType) return { error: "Source Type select karein." };

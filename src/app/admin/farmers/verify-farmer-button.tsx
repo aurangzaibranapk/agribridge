@@ -18,8 +18,8 @@ export function VerifyFarmerButton({ id }: { id: string }) {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="rounded-full bg-wheat-400/20 px-2.5 py-0.5 text-xs font-medium text-wheat-600 hover:bg-wheat-400/30 dark:text-wheat-400">
-      {pending ? "..." : "Approve"}
+    <button type="submit" disabled={pending} className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
+      {pending ? "..." : "✓ Approve"}
     </button>
   );
 }

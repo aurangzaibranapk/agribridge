@@ -1,0 +1,479 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { postJournal } from "@/lib/ledger/post";
+import { ACC } from "@/lib/ledger/rules";
+import { cashBookLikhein } from "@/lib/ledger/cash-book";
+import { REASON_MIN } from "@/lib/ledger/handover";
+import { requireAction } from "@/lib/access/guard";
+import { logAudit } from "@/lib/audit";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
+
+export interface ActionState {
+  error?: string;
+  success?: boolean;
+  message?: string;
+  handoverId?: string;
+}
+
+/**
+ * Cash bhejna -- Manager/Finance ko, banda se banda.
+ *
+ * Yahan raqam cash ke khate se nikal kar 1030 "Cash raaste mein" chali
+ * jati hai -- gum nahi hoti, sirf jagah badalti hai, aur us jagah par
+ * ek naam laga hota hai. Jab tak lene wala tasdeeq na kare, wo wahin
+ * rehti hai aur roz nazar aati rehti hai.
+ *
+ * Bank mein khud jama karana (deposit slip wala doosra raasta, malik 8
+ * September) yahan nahi -- `/admin/my-collection` aur
+ * `src/actions/pos-collection.ts` mein, ek poora alag "POS Collection
+ * Outstanding" nizam ke tehet.
+ */
+export async function sendCash(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+
+  const toProfileId = String(formData.get("to_profile_id") ?? "");
+  const carrierId = (formData.get("carrier_profile_id") as string) || null;
+  const toBranchId = (formData.get("to_branch_id") as string) || null;
+  const amount = Number(formData.get("amount") ?? 0);
+  const rawNote = (formData.get("sent_note") as string)?.trim() || null;
+  const METHOD_LABEL: Record<string, string> = {
+    cash: "Cash (Haath se)", jazzcash: "JazzCash", easypaisa: "Easypaisa", bank_transfer: "Bank Transfer",
+  };
+  const transferMethod = (formData.get("transfer_method") as string) || "cash";
+  const methodLabel = METHOD_LABEL[transferMethod] ?? transferMethod;
+  const note = rawNote ? `${methodLabel} — ${rawNote}` : methodLabel;
+
+  // Cash do jagah se ja sakta hai, aur wo do bilkul alag cheezein hain:
+  //
+  //   branch_cash  -- branch ke khate ka cash (purana raasta)
+  //   my_custody   -- wo cash jo MERE paas hai: khet se aaya hua,
+  //                   counter par liya hua, ya kisi ne mujhe diya hua
+  //
+  // Farq na karein to khet se aaya hua cash bhejte waqt branch ke
+  // khate se nikalta hai -- jahan wo kabhi tha hi nahi. Us se branch
+  // ka cash kam dikhta hai aur bhejne wale ke naam par wo raqam
+  // hamesha ke liye khari reh jati hai.
+  const fromSource = String(formData.get("from_source") ?? "branch_cash");
+  if (fromSource !== "branch_cash" && fromSource !== "my_custody") {
+    return { error: "Cash kahan se ja raha hai, wo theek se batayein." };
+  }
+
+  if (!toProfileId) return { error: "Kis ko bhej rahe hain, wo select karein." };
+  if (!amount || amount <= 0) return { error: "Raqam sahi likhein." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const guard = await requireAction("cash-handover", "send");
+  if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
+
+  // Poori company/branch ke khate se (`branch_cash`) sirf Manager/Finance
+  // ya unrestricted bhej sakte hain. Sales staff (jaise Shift Close se
+  // seedha bhejne wala) sirf apni custody se bhej sakta hai -- wo cash
+  // jo waqai us ke haath mein hai, kisi company khate se nahi.
+  if (fromSource === "branch_cash" && !caller.unrestricted && caller.role !== "manager" && caller.role !== "finance") {
+    return { error: "Branch ke khate se cash sirf Manager ya Finance bhej sakte hain — aap sirf apni custody se bhej sakte hain." };
+  }
+
+  if (toProfileId === user.id) {
+    return { error: "Apne aap ko cash nahi bheja ja sakta — lene wala koi doosra shakhs hona chahiye." };
+  }
+
+  const { data: me } = await service
+    .from("profiles")
+    .select("branch_id, full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Pehle ledger, phir record. Ulta karein to aisa handover bach sakta
+  // hai jo darj to hai magar kisi khate mein gaya nahi -- yani cash
+  // kaghaz par branch hi mein para rahega jabke asal mein wo ja chuka
+  // hoga.
+  // Apni custody se bhej rahe hain to pehle dekh lein ke itna hai
+  // bhi. Ye adad ledger se aata hai -- kahin rakha hua nahi.
+  if (fromSource === "my_custody") {
+    const { data: mine } = await service
+      .from("v_cash_custody")
+      .select("cash_paas_hai")
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    let paas = Number(mine?.cash_paas_hai ?? 0);
+
+    // Purani shifts mein close ke waqt custody journal entry fail ho gayi
+    // ho sakti hai. Staff ke paas counted cash phir bhi hota hai, lekin
+    // v_cash_custody Rs 0 dikhata hai. Agar ye request isi staff ki
+    // un-settled closed shifts se match karti ho to missing custody ko
+    // pehle repair kar dein; phir normal handover ledger mein jayega.
+    if (amount > paas + 0.01) {
+      const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+      const shiftIds = (shiftIdsRaw || String(formData.get("shift_id") || ""))
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (shiftIds.length > 0) {
+        const { data: shifts } = await service
+          .from("pos_shifts")
+          .select("id, shift_number, counted_cash, status, staff_id, cash_handover_id")
+          .in("id", shiftIds)
+          .eq("staff_id", user.id)
+          .eq("status", "closed")
+          .is("cash_handover_id", null);
+        const counted = (shifts ?? []).reduce((sum, s) => sum + Number(s.counted_cash ?? 0), 0);
+        const missing = Math.round((amount - paas) * 100) / 100;
+        if (missing > 0 && counted + 0.01 >= missing) {
+          // Idempotency: agar ye shift pehle hi repair ho chuki ho to journal
+          // dobara nahi banegi — warna ek hi submit par N baar repair ban
+          // sakti hai (race condition jo 7 duplicate entries de chuki hai Live par).
+          const { data: existingRepair } = await service
+            .from("journal_entries")
+            .select("id")
+            .eq("source_module", "pos_shift_close_repair")
+            .eq("source_id", shiftIds[0])
+            .maybeSingle();
+          if (existingRepair) {
+            paas += missing;
+          } else {
+            const repaired = await postJournal({
+              description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
+              sourceModule: "pos_shift_close_repair",
+              sourceId: shiftIds[0],
+              branchId: me?.branch_id ?? null,
+              createdBy: user.id,
+              lines: [
+                { account: ACC.cashWithPerson, debit: missing, partyType: "staff", partyId: user.id, memo: "Purani shift ki counted cash" },
+                { account: ACC.cash, credit: missing, memo: "Purani shift ki counted cash custody mein" },
+              ],
+            });
+            if ("error" in repaired) return { error: `Purani shift ki cash custody repair nahi ho saki: ${repaired.error}` };
+            await cashBookLikhein([
+              {
+                glCode: ACC.cash,
+                amount: missing,
+                rukh: "gaya",
+                category: "pos_shift_close_repair",
+                notes: "Purani shift ki counted cash staff custody mein darj hui",
+                createdBy: user.id,
+                entryId: repaired.id,
+              },
+            ]);
+            paas += missing;
+            await logAudit({
+              actionType: "update",
+              module: "pos-shifts",
+              recordId: shiftIds[0],
+              recordLabel: "custody-repair",
+              description: `Rs ${missing.toLocaleString()} purani shift ki missing staff custody entry repair ki gayi.`,
+            });
+          }
+        }
+      }
+    }
+    if (amount > paas + 0.01) {
+      return {
+        error: `Aap ke paas Rs ${paas.toLocaleString()} hai, magar Rs ${amount.toLocaleString()} bheja ja raha hai.`,
+      };
+    }
+  }
+
+  const posted = await postJournal({
+    description: `Cash bheja — Rs ${amount.toLocaleString()}${note ? ` (${note})` : ""}`,
+    sourceModule: "cash_handover",
+    branchId: me?.branch_id ?? null,
+    createdBy: user.id,
+    lines: [
+      {
+        account: ACC.cashWithPerson,
+        debit: amount,
+        partyType: "staff",
+        partyId: toProfileId,
+        memo: note,
+      },
+      // Apni custody se ja raha ho to mere naam se nikalta hai, branch
+      // ke khate se nahi.
+      fromSource === "my_custody"
+        ? {
+            account: ACC.cashWithPerson,
+            credit: amount,
+            partyType: "staff",
+            partyId: user.id,
+            memo: note,
+          }
+        : { account: ACC.cash, credit: amount, memo: note },
+    ],
+  });
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+
+  const shiftId = (formData.get("shift_id") as string) || null;
+  const { data: handoverRow, error } = await service
+    .from("cash_handovers")
+    .insert({
+      from_profile_id: user.id,
+      from_branch_id: me?.branch_id ?? null,
+      to_profile_id: toProfileId,
+      to_branch_id: toBranchId,
+      carrier_profile_id: carrierId,
+      amount_sent: amount,
+      from_source: fromSource,
+      sent_note: note,
+      sent_entry_id: posted.id,
+      status: "sent",
+    })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  // POS Shift se seedha bheja gaya ho to un shifts par nishan laga do.
+  // shift_ids (comma-sep) agar poori raqam bheji to; partial mein khali
+  // rehti hai -- shifts pending rahengi tab tak ke full settle na ho.
+  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").filter(Boolean) : [];
+  // Backward compat: purani calls sirf shift_id bhejti thi
+  const legacyShiftId = ((formData.get("shift_id") as string) || "").trim();
+  if (shiftIdsList.length > 0) {
+    await service
+      .from("pos_shifts")
+      .update({ cash_handover_id: handoverRow.id })
+      .in("id", shiftIdsList)
+      .eq("staff_id", user.id)
+      .is("cash_handover_id", null);
+  } else if (legacyShiftId) {
+    await service
+      .from("pos_shifts")
+      .update({ cash_handover_id: handoverRow.id })
+      .eq("id", legacyShiftId)
+      .eq("staff_id", user.id)
+      .is("cash_handover_id", null);
+  }
+
+  revalidatePath("/admin/cash-handover");
+  revalidatePath("/admin/money-trail");
+  revalidatePath("/admin/pos");
+
+  // In-system notification: Finance, Admin, Manager, Owner ko batao
+  const senderName = me?.full_name ?? "Koi";
+  const { data: toProfile } = await service.from("profiles").select("full_name").eq("id", toProfileId).maybeSingle();
+  const receiverName = (toProfile?.full_name as string | null) ?? "Koi";
+  const notifTitle = `Cash Handover — Rs ${amount.toLocaleString()}`;
+  const notifMsg = `${senderName} ne Rs ${amount.toLocaleString()} bheja ${receiverName} ko. Status: raaste mein. Tasdeeq ka intezar.`;
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, "/admin/cash-handover");
+  // Lene wale ko seedha bhi batao
+  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover par tasdeeq karein.`, "/admin/cash-handover");
+
+  return {
+    success: true,
+    handoverId: handoverRow.id,
+    message: `Rs ${amount.toLocaleString()} bheja hua darj ho gaya. Ab lene wale ki tasdeeq ka intezar hai — tab tak ye raqam "raaste mein" nazar aayegi.`,
+  };
+}
+
+/**
+ * Carrier ki tasdeeq — darmiyan wala shakhs jo cash le kar Finance ke
+ * paas pohonchata hai. Ye sirf WOHI kar sakta hai jis ka naam
+ * carrier_profile_id mein hai.
+ */
+export async function carrierConfirm(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const handoverId = String(formData.get("handover_id") ?? "");
+  if (!handoverId) return { error: "Handover select karein." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: h } = await service
+    .from("cash_handovers")
+    .select("id, status, carrier_profile_id, carrier_confirmed_at")
+    .eq("id", handoverId)
+    .maybeSingle();
+
+  if (!h) return { error: "Handover nahi mila." };
+  if (h.status !== "sent") return { error: "Ye handover pehle hi mukammal ho chuka hai." };
+  if (h.carrier_profile_id !== user.id) {
+    return { error: "Ye tasdeeq sirf carrier (le jane wala) kar sakta hai." };
+  }
+  if (h.carrier_confirmed_at) return { error: "Aap pehle hi tasdeeq kar chuke hain." };
+
+  const { error } = await service
+    .from("cash_handovers")
+    .update({ carrier_confirmed_at: new Date().toISOString(), carrier_confirmed_by: user.id })
+    .eq("id", handoverId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/cash-handover");
+  return { success: true, message: "Tasdeeq darj ho gayi — ab Finance ke paas pohonchayein." };
+}
+
+/**
+ * Cash wusool karna.
+ *
+ * Sirf WOHI shakhs kar sakta hai jis ke naam bheja gaya. Bhejne wale ko
+ * ye ijazat dena poore amal ko bekaar kar deta: wo apni marzi ka adad
+ * dono taraf likh deta aur farq kabhi nahi nikalta.
+ */
+export async function receiveCash(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+
+  const handoverId = String(formData.get("handover_id") ?? "");
+  const received = Number(formData.get("amount_received") ?? 0);
+  const reason = String(formData.get("difference_reason") ?? "").trim();
+
+  if (!handoverId) return { error: "Handover select karein." };
+  if (!Number.isFinite(received) || received < 0) return { error: "Wusool hui raqam sahi likhein." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const guard = await requireAction("cash-handover", "receive");
+  if ("error" in guard) return { error: guard.error };
+
+  const { data: h } = await service
+    .from("cash_handovers")
+    .select("id, amount_sent, to_profile_id, to_branch_id, from_profile_id, status")
+    .eq("id", handoverId)
+    .maybeSingle();
+
+  if (!h) return { error: "Handover nahi mila." };
+  if (h.status !== "sent") return { error: "Ye handover pehle hi mukammal ho chuka hai." };
+
+  if (h.to_profile_id !== user.id) {
+    return {
+      error:
+        "Ye cash aap ke naam nahi bheja gaya. Wusooli sirf wohi shakhs darj kar sakta hai jis ke naam bheji gayi ho.",
+    };
+  }
+
+  const sent = Number(h.amount_sent);
+  const difference = Math.round((received - sent) * 100) / 100;
+
+  if (difference !== 0 && reason.length < REASON_MIN) {
+    const kam = difference < 0 ? "kam" : "zyada";
+    return {
+      error: `Rs ${Math.abs(difference).toLocaleString()} ${kam} pahunche hain. Kya samajh aaya, wo likhna zaroori hai — kam az kam ${REASON_MIN} harf.`,
+    };
+  }
+
+  const { data: me } = await service
+    .from("profiles")
+    .select("branch_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const branchId = h.to_branch_id ?? me?.branch_id ?? null;
+
+  // Raaste wala khata poori BHEJI HUI raqam se khali hota hai -- utni hi
+  // jitni nikli thi. Cash utna barhta hai jitna waqai mila, aur farq
+  // 6100 mein jata hai. Raaste wale khate ko sirf mili hui raqam se
+  // khali karein to baqi wahan hamesha ke liye para reh jayega aur us
+  // par kabhi sawal nahi hoga.
+  //
+  // Aur ek baat jo pehle chhoot gayi thi: raaste wale khate se
+  // nikalte waqt bhi WOHI NAAM likhna zaroori hai jo daalte waqt
+  // likha tha. Bhejte waqt naam likha jata tha magar wusooli par
+  // nahi -- yani us bande ke naam par raqam hamesha ke liye khari
+  // reh jati thi, chahe wo pahunchayi ja chuki ho. "Kis ke paas
+  // kitna cash hai" wala hisaab isi wajah se kabhi sifar nahi hota
+  // tha.
+  const lines: Array<{
+    account: string;
+    debit?: number;
+    credit?: number;
+    memo?: string | null;
+    partyType?: string | null;
+    partyId?: string | null;
+  }> = [];
+  if (received > 0) lines.push({ account: ACC.cash, debit: received, memo: "Cash wusool hua" });
+  if (difference < 0) {
+    lines.push({ account: ACC.cashDifference, debit: Math.abs(difference), memo: reason });
+  }
+  if (difference > 0) {
+    lines.push({ account: ACC.cashDifference, credit: difference, memo: reason });
+  }
+  lines.push({
+    account: ACC.cashWithPerson,
+    credit: sent,
+    partyType: "staff",
+    partyId: h.to_profile_id,
+    memo: "Raasta mukammal",
+  });
+
+  const posted = await postJournal({
+    description: `Cash wusool — Rs ${received.toLocaleString()}${
+      difference !== 0 ? ` (Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"})` : ""
+    }`,
+    sourceModule: "cash_handover",
+    sourceId: handoverId,
+    branchId,
+    createdBy: user.id,
+    lines,
+  });
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+
+  // Cash Book ka rukh bhi (19 September ka finance review): ledger mein
+  // 1000 par cash wapas aaya to Cash Book mein bhi aaye -- shift close
+  // wala "gaya" aur ye "aaya" mil kar chakkar barabar rakhte hain.
+  if (received > 0) {
+    await cashBookLikhein([
+      {
+        glCode: ACC.cash,
+        amount: received,
+        rukh: "aaya",
+        category: "cash_handover",
+        notes: `Cash wusool — handover ${handoverId.slice(0, 8)}`,
+        createdBy: user.id,
+        entryId: posted.id,
+      },
+    ]);
+  }
+
+  const { error } = await service
+    .from("cash_handovers")
+    .update({
+      amount_received: received,
+      received_at: new Date().toISOString(),
+      received_by: user.id,
+      difference,
+      difference_reason: difference === 0 ? null : reason,
+      received_entry_id: posted.id,
+      status: difference === 0 ? "received" : "short",
+    })
+    .eq("id", handoverId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/cash-handover");
+  revalidatePath("/admin/money-trail");
+
+  // Bhejne wale ko tasdeeq ki khabar do
+  const { data: receiverProfile } = await service.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const receiverName2 = (receiverProfile?.full_name as string | null) ?? "Koi";
+  const fromProfileId = (h as any).from_profile_id as string | null;
+  const rcvTitle = difference === 0
+    ? `Cash Mila — Rs ${received.toLocaleString()} (Poora)`
+    : `Cash Mila — Rs ${received.toLocaleString()} (${difference < 0 ? "Kam" : "Zyada"})`;
+  const rcvMsg = difference === 0
+    ? `${receiverName2} ne Rs ${received.toLocaleString()} poore tasdeeq kar diye — hisaab barabar.`
+    : `${receiverName2} ne Rs ${received.toLocaleString()} tasdeeq kiye. Bheja tha Rs ${sent.toLocaleString()} — farq Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"}.`;
+  await notifyUser(fromProfileId, rcvTitle, rcvMsg, "/admin/cash-handover");
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], rcvTitle, rcvMsg, "/admin/cash-handover");
+
+  return {
+    success: true,
+    message:
+      difference === 0
+        ? `Rs ${received.toLocaleString()} poore mile — hisaab barabar.`
+        : `Rs ${Math.abs(difference).toLocaleString()} ${
+            difference < 0 ? "kam" : "zyada"
+          } mile. Farq "Cash ka farq" khate mein darj ho gaya — chhupa nahi.`,
+  };
+}

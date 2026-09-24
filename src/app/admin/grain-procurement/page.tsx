@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { GrainClient } from "@/app/admin/grain-procurement/grain-client";
 
@@ -6,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminGrainProcurementPage() {
   const supabase = createClient();
+  const lang = getLanguageFromCookies("rm");
   const [
     { data: farmers },
     { data: parties },
@@ -102,23 +105,23 @@ export default async function AdminGrainProcurementPage() {
 
   return (
     <div>
-      <PageHeader title="Grain Procurement" description="Wheat, Rice, aur Maize - Farmers aur Parties se kharidna, poora hisaab" />
+      <PageHeader title={t("gr_title", lang)} description={t("gr_subtitle", lang)} />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Kharida (kg)</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_bought_kg", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalPurchasedKg.toLocaleString()} kg</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">Total Kharch</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_expense", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalSpent.toLocaleString()}</p>
         </Card>
         <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-green-600">Total Payment Ho Chuki</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_total_paid", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalPaidOut.toLocaleString()}</p>
         </Card>
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">Baaqi (Payable)</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_payable", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalOutstanding.toLocaleString()}</p>
         </Card>
       </div>

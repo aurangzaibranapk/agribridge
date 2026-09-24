@@ -3,6 +3,8 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import {
   FileText, Clock, CheckCircle2, Users, Calendar, Award, Send, ThumbsUp, ThumbsDown, UserCheck, XCircle,
 } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ const STAGES = [
 ];
 
 export default async function HrDashboardPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: applications } = await supabase.from("job_applications").select("status");
 
@@ -31,12 +34,12 @@ export default async function HrDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="HR Dashboard" description="Recruitment pipeline overview" />
+      <PageHeader title={t("at_hr_dashboard", lang)} description="Recruitment pipeline overview" />
 
       <div className="mb-6 rounded-card border border-brand-200 bg-brand-50 p-5 dark:border-brand-900/40 dark:bg-brand-950/30">
         <div className="flex items-center gap-2 text-brand-600">
           <Users className="h-5 w-5" />
-          <span className="text-sm font-semibold uppercase tracking-wide">Total Applications</span>
+          <span className="text-sm font-semibold uppercase tracking-wide">{t("at_total_applications", lang)}</span>
         </div>
         <p className="mt-2 font-display text-3xl font-bold text-brand-800 dark:text-brand-200">{total}</p>
       </div>

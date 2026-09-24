@@ -1,0 +1,216 @@
+From 8219b0f247f799e2b6ed3c46849d0cded9da081b Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Wed, 23 Sep 2026 01:46:08 +0800
+Subject: [PATCH] fix(pos): repair old shift cash custody handover
+
+---
+ src/actions/cash-handover.ts              | 59 ++++++++++++++++++++++-
+ src/app/admin/reports/pos-shifts/page.tsx |  6 +--
+ src/components/pos/shift-bar.tsx          | 16 ++++--
+ src/lib/pos/shift-cash.ts                 | 18 +++++--
+ 4 files changed, 88 insertions(+), 11 deletions(-)
+
+diff --git a/src/actions/cash-handover.ts b/src/actions/cash-handover.ts
+index aceac3f..1ee5b88 100644
+--- a/src/actions/cash-handover.ts
++++ b/src/actions/cash-handover.ts
+@@ -101,7 +101,64 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
+       .select("cash_paas_hai")
+       .eq("profile_id", user.id)
+       .maybeSingle();
+-    const paas = Number(mine?.cash_paas_hai ?? 0);
++    let paas = Number(mine?.cash_paas_hai ?? 0);
++
++    // Purani shifts mein close ke waqt custody journal entry fail ho gayi
++    // ho sakti hai. Staff ke paas counted cash phir bhi hota hai, lekin
++    // v_cash_custody Rs 0 dikhata hai. Agar ye request isi staff ki
++    // un-settled closed shifts se match karti ho to missing custody ko
++    // pehle repair kar dein; phir normal handover ledger mein jayega.
++    if (amount > paas + 0.01) {
++      const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
++      const shiftIds = (shiftIdsRaw || String(formData.get("shift_id") || ""))
++        .split(",")
++        .map((id) => id.trim())
++        .filter(Boolean);
++      if (shiftIds.length > 0) {
++        const { data: shifts } = await service
++          .from("pos_shifts")
++          .select("id, shift_number, counted_cash, status, staff_id, cash_handover_id")
++          .in("id", shiftIds)
++          .eq("staff_id", user.id)
++          .eq("status", "closed")
++          .is("cash_handover_id", null);
++        const counted = (shifts ?? []).reduce((sum, s) => sum + Number(s.counted_cash ?? 0), 0);
++        const missing = Math.round((amount - paas) * 100) / 100;
++        if (missing > 0 && counted + 0.01 >= missing) {
++          const repaired = await postJournal({
++            description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
++            sourceModule: "pos_shift_close_repair",
++            sourceId: shiftIds[0],
++            branchId: me?.branch_id ?? null,
++            createdBy: user.id,
++            lines: [
++              { account: ACC.cashWithPerson, debit: missing, partyType: "staff", partyId: user.id, memo: "Purani shift ki counted cash" },
++              { account: ACC.cash, credit: missing, memo: "Purani shift ki counted cash custody mein" },
++            ],
++          });
++          if ("error" in repaired) return { error: `Purani shift ki cash custody repair nahi ho saki: ${repaired.error}` };
++          await cashBookLikhein([
++            {
++              glCode: ACC.cash,
++              amount: missing,
++              rukh: "gaya",
++              category: "pos_shift_close_repair",
++              notes: "Purani shift ki counted cash staff custody mein darj hui",
++              createdBy: user.id,
++              entryId: repaired.id,
++            },
++          ]);
++          paas += missing;
++          await logAudit({
++            actionType: "update",
++            module: "pos-shifts",
++            recordId: shiftIds[0],
++            recordLabel: "custody-repair",
++            description: `Rs ${missing.toLocaleString()} purani shift ki missing staff custody entry repair ki gayi.`,
++          });
++        }
++      }
++    }
+     if (amount > paas + 0.01) {
+       return {
+         error: `Aap ke paas Rs ${paas.toLocaleString()} hai, magar Rs ${amount.toLocaleString()} bheja ja raha hai.`,
+diff --git a/src/app/admin/reports/pos-shifts/page.tsx b/src/app/admin/reports/pos-shifts/page.tsx
+index 77daa29..07b7a80 100644
+--- a/src/app/admin/reports/pos-shifts/page.tsx
++++ b/src/app/admin/reports/pos-shifts/page.tsx
+@@ -85,8 +85,8 @@ export default async function PosShiftReportPage({
+     saleIds.length
+       ? service.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
+       : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[] }),
+-    shiftIds.length
+-      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds).eq("refund_method", "cash")
++      shiftIds.length
++      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds)
+       : Promise.resolve({ data: [] as { shift_id: string | null; total_amount: number; refund_method: string }[] }),
+   ]);
+ 
+@@ -103,7 +103,7 @@ export default async function PosShiftReportPage({
+     arr.push(p);
+     paymentsBySale.set(p.sale_id, arr);
+   });
+-  const returnsByShift = new Map<string, { total_amount: number }[]>();
++  const returnsByShift = new Map<string, { total_amount: number; refund_method: string | null }[]>();
+   (allReturns ?? []).forEach((r) => {
+     if (!r.shift_id) return;
+     const arr = returnsByShift.get(r.shift_id) ?? [];
+diff --git a/src/components/pos/shift-bar.tsx b/src/components/pos/shift-bar.tsx
+index 4667600..12c2fc4 100644
+--- a/src/components/pos/shift-bar.tsx
++++ b/src/components/pos/shift-bar.tsx
+@@ -440,7 +440,7 @@ export function ShiftBar({
+             <>
+               <span className="text-brand-300">·</span>
+               <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-brand-700 shadow-sm dark:bg-surface-900 dark:text-brand-300">
+-                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · {rs(summary.totalSales)}
++                <Receipt className="h-3 w-3" /> {summary.saleCount} sale · net {rs(summary.totalSales - summary.returnsTotal)}
+               </span>
+             </>
+           )}
+@@ -565,9 +565,19 @@ export function ShiftBar({
+                 {/* System khud bataye -- staff se pehle sawal nahi. */}
+                 <div className="space-y-1.5 rounded-xl bg-surface-50 px-4 py-3 text-xs dark:bg-surface-800">
+                   <div className="flex items-center justify-between text-surface-700 dark:text-surface-300">
+-                    <span className="font-medium">Total Sale ({summary?.saleCount ?? "…"})</span>
++                    <span className="font-medium">Gross Sale ({summary?.saleCount ?? "…"})</span>
+                     <span className="tabular-nums font-medium">{summary ? rs(summary.totalSales) : "…"}</span>
+                   </div>
++                  {(summary?.returnsTotal ?? 0) > 0 && (
++                    <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
++                      <span>Returns (all methods)</span>
++                      <span className="tabular-nums">− {rs(summary!.returnsTotal)}</span>
++                    </div>
++                  )}
++                  <div className="flex items-center justify-between border-b border-surface-200 pb-1.5 font-semibold text-surface-900 dark:border-surface-700 dark:text-white">
++                    <span>Net Sale</span>
++                    <span className="tabular-nums">{summary ? rs(summary.totalSales - summary.returnsTotal) : "…"}</span>
++                  </div>
+                   <div className="ml-2 flex items-center justify-between text-surface-500">
+                     <span>— Cash</span>
+                     <span className="tabular-nums">{summary ? rs(summary.cashSalesTotal) : "…"}</span>
+@@ -586,7 +596,7 @@ export function ShiftBar({
+                   )}
+                   {(summary?.cashReturnsTotal ?? 0) > 0 && (
+                     <div className="flex items-center justify-between text-surface-500">
+-                      <span>Cash Returns</span>
++                      <span>Cash Returns (Expected Cash)</span>
+                       <span className="tabular-nums">− {rs(summary!.cashReturnsTotal)}</span>
+                     </div>
+                   )}
+diff --git a/src/lib/pos/shift-cash.ts b/src/lib/pos/shift-cash.ts
+index f97cc9c..40b477d 100644
+--- a/src/lib/pos/shift-cash.ts
++++ b/src/lib/pos/shift-cash.ts
+@@ -9,6 +9,8 @@ export interface ShiftCashSummary {
+   cashSalesTotal: number;
+   /** Udhaar (Khata) par gaya hissa. */
+   khataTotal: number;
++  /** Har qisam ki wapsi, gross aur net sale ko saaf dikhane ke liye. */
++  returnsTotal: number;
+   /** Bank/card/Easypaisa/JazzCash/QR -- na cash na khata. */
+   digitalTotal: number;
+   cashReturnsTotal: number;
+@@ -33,7 +35,7 @@ export interface ShiftCashSummary {
+  */
+ function emptySummary(openingCash: number): ShiftCashSummary {
+   return {
+-    saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
++    saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, returnsTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
+     billTotal: 0, loadTotal: 0, loadBillCashTotal: 0, udhaarGivenCashTotal: 0, recoveryCashTotal: 0,
+     expectedCash: openingCash,
+   };
+@@ -74,7 +76,7 @@ export function aggregateShiftCash(
+   openingCash: number,
+   sales: { total_amount: number | string | null; khata_amount: number | string | null }[],
+   payments: { payment_method: string | null; amount: number | string | null }[],
+-  returns: { total_amount: number | string | null }[],
++  returns: { total_amount: number | string | null; refund_method?: string | null }[],
+   loadBillRows: LoadBillRow[] = [],
+   udhaarCashRows: UdhaarCashLegRow[] = []
+ ): ShiftCashSummary {
+@@ -98,7 +100,14 @@ export function aggregateShiftCash(
+     else digitalTotal += amt;
+   }
+ 
+-  const cashReturnsTotal = returns.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
++  const returnsTotal = returns.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
++  // Report ki purani cash-only qatarein mein method nahi hota, is liye missing
++  // method ko cash samjhein; live shift mein original refund expected cash ko
++  // kam nahi karta.
++  const cashReturnsTotal = returns.reduce(
++    (s, r) => s + (r.refund_method == null || r.refund_method === "cash" ? Number(r.total_amount ?? 0) : 0),
++    0
++  );
+ 
+   let billTotal = 0;
+   let loadTotal = 0;
+@@ -128,6 +137,7 @@ export function aggregateShiftCash(
+     totalSales,
+     cashSalesTotal,
+     khataTotal,
++    returnsTotal,
+     digitalTotal,
+     cashReturnsTotal,
+     billTotal,
+@@ -176,7 +186,7 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
+   // wajah bataye.
+   const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }] = await Promise.all([
+     service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
+-    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId).eq("refund_method", "cash"),
++    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId),
+     shopId && staffId && fromTs
+       ? service
+           .from("load_transactions")
+-- 
+2.51.1
+

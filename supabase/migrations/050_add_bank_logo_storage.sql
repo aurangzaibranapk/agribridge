@@ -1,5 +1,5 @@
 -- Add logo_url column to finance_accounts for storing bank logos from Supabase Storage
-ALTER TABLE finance_accounts ADD COLUMN logo_url TEXT;
+ALTER TABLE finance_accounts add column if not exists logo_url TEXT;
 
 -- Create storage bucket for bank logos if it doesn't exist
 INSERT INTO storage.buckets (id, name, public)

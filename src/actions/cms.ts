@@ -301,5 +301,6 @@ export async function verifyFarmer(_prev: ActionState, formData: FormData): Prom
   const { error } = await supabase.from("farmers").update({ is_verified: true }).eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
   revalidatePath("/admin/farmers");
+  revalidatePath("/admin/my-work");
   return { success: true };
 }

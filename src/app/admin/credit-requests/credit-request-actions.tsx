@@ -3,10 +3,13 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { adminApproveCreditRequest, adminRejectCreditRequest, type ActionState } from "@/actions/credit-requests";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
 export function CreditRequestActions({ requestId, baseAmount, defaultMargin }: { requestId: string; baseAmount: number; defaultMargin: number }) {
+  const lang = useLang();
   const [showApprove, setShowApprove] = useState(false);
   const [showReject, setShowReject] = useState(false);
 
@@ -16,14 +19,12 @@ export function CreditRequestActions({ requestId, baseAmount, defaultMargin }: {
         onClick={() => setShowApprove(true)}
         className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
       >
-        <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-      </button>
+        <CheckCircle2 className="h-3.5 w-3.5" />{t("c_approve", lang)}</button>
       <button
         onClick={() => setShowReject(true)}
         className="flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
       >
-        <XCircle className="h-3.5 w-3.5" /> Reject
-      </button>
+        <XCircle className="h-3.5 w-3.5" />{t("c_reject", lang)}</button>
 
       {showApprove && <ApproveModal requestId={requestId} baseAmount={baseAmount} defaultMargin={defaultMargin} onClose={() => setShowApprove(false)} />}
       {showReject && <RejectModal requestId={requestId} onClose={() => setShowReject(false)} />}
@@ -32,6 +33,7 @@ export function CreditRequestActions({ requestId, baseAmount, defaultMargin }: {
 }
 
 function ApproveModal({ requestId, baseAmount, defaultMargin, onClose }: { requestId: string; baseAmount: number; defaultMargin: number; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(adminApproveCreditRequest, initialState);
   const [margin, setMargin] = useState(defaultMargin);
 
@@ -44,12 +46,12 @@ function ApproveModal({ requestId, baseAmount, defaultMargin, onClose }: { reque
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <h3 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Approve Credit Request</h3>
+        <h3 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("crq_approve", lang)}</h3>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="request_id" value={requestId} />
           <div>
-            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">Credit Margin %</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">{t("crq_margin", lang)}</label>
             <input
               type="number"
               name="margin_percentage"
@@ -63,12 +65,12 @@ function ApproveModal({ requestId, baseAmount, defaultMargin, onClose }: { reque
             Base: Rs {baseAmount.toLocaleString()} → Total: Rs {total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
           <div>
-            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">Comments/Conditions (Farmer ko dikhega)</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">{t("crq_comments_visible", lang)}</label>
             <textarea name="admin_comments" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" />
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">Cancel</button>
-            <SubmitButton label="Approve" />
+            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">{t("c_cancel", lang)}</button>
+            <SubmitButton label={t("c_approve", lang)} />
           </div>
         </form>
       </div>
@@ -77,6 +79,7 @@ function ApproveModal({ requestId, baseAmount, defaultMargin, onClose }: { reque
 }
 
 function RejectModal({ requestId, onClose }: { requestId: string; onClose: () => void }) {
+  const lang = useLang();
   const [state, formAction] = useFormState(adminRejectCreditRequest, initialState);
 
   if (state.success) {
@@ -86,17 +89,17 @@ function RejectModal({ requestId, onClose }: { requestId: string; onClose: () =>
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
-        <h3 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">Reject Credit Request</h3>
+        <h3 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("crq_reject", lang)}</h3>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="request_id" value={requestId} />
           <div>
-            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">Wajah (optional)</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-surface-400">{t("crq_reason_optional", lang)}</label>
             <textarea name="admin_comments" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" />
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">Cancel</button>
-            <SubmitButton label="Reject" />
+            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-surface-200 px-3 py-2 text-sm">{t("c_cancel", lang)}</button>
+            <SubmitButton label={t("c_reject", lang)} />
           </div>
         </form>
       </div>

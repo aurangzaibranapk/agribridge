@@ -3,19 +3,22 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { MediaUploader } from "@/app/admin/media-library/media-uploader";
 import { CopyUrlButton } from "@/app/admin/media-library/copy-url-button";
 import { DeleteMediaButton } from "@/app/admin/media-library/delete-media-button";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function MediaLibraryPage() {
+  const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: files } = await supabase.from("media_library").select("*").order("created_at", { ascending: false });
   return (
     <div>
-      <PageHeader title="Media Library" description="Upload images/videos here, then copy the URL into Blog, Gallery, Testimonials, or Hero Slider forms" />
+      <PageHeader title={t("at_media_library", lang)} description="Upload images/videos here, then copy the URL into Blog, Gallery, Testimonials, or Hero Slider forms" />
       <MediaUploader />
       <div className="mt-8">
         {!files || files.length === 0 ? (
-          <EmptyState title="No files uploaded yet" />
+          <EmptyState title={t("at_no_files", lang)} />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {files.map((f) => (

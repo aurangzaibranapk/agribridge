@@ -29,3 +29,19 @@ body {
     transform: translateX(150%);
   }
 }
+
+/* Print styles — sidebar, header, actions column chhupa do */
+@media print {
+  nav, aside, header,
+  [data-sidebar], [class*="sidebar"],
+  .print\:hidden { display: none !important; }
+
+  body { background: white !important; color: black !important; }
+
+  table td:last-child,
+  table th:last-child { display: none; } /* Actions column */
+
+  a { text-decoration: none; color: inherit; }
+
+  @page { margin: 1cm; }
+}

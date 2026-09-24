@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { GrainBillClient } from "./grain-bill-client";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
 export default async function GrainBillPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = getLanguageFromCookies("rm");
   const { id } = await params;
   const supabase = createClient();
 
@@ -14,7 +17,7 @@ export default async function GrainBillPage({ params }: { params: Promise<{ id: 
     .maybeSingle();
 
   if (!entry) {
-    return <div className="p-8 text-center text-surface-400">Entry nahi mili.</div>;
+    return <div className="p-8 text-center text-surface-400">{t("gb_entry_not_found", lang)}</div>;
   }
 
   const farmer = Array.isArray(entry.farmers) ? entry.farmers[0] : entry.farmers;

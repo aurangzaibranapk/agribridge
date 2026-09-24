@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Eye, EyeOff, Download, Layers } from "lucide-react";
+import { t } from "@/lib/i18n/translations";
+import { useLang } from "@/lib/i18n/lang-context";
 
 interface DocItem {
   label: string;
@@ -9,6 +11,7 @@ interface DocItem {
 
 export function DocumentViewer({ documents }: { documents: DocItem[] }) {
   const [openLabel, setOpenLabel] = useState<string | null>(null);
+  const lang = useLang();
   const [viewAll, setViewAll] = useState(false);
 
   if (documents.length === 0) return null;
@@ -40,7 +43,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-surface-400">Documents</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-surface-400">{t("c_documents", lang)}</p>
         <div className="flex gap-1.5">
           <button
             onClick={() => { setViewAll(!viewAll); setOpenLabel(null); }}
@@ -49,8 +52,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
             <Layers className="h-3 w-3" /> {viewAll ? "Sab Band Karein" : "Sab Dekhein"}
           </button>
           <button onClick={downloadAll} className="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700 hover:bg-brand-100">
-            <Download className="h-3 w-3" /> Sab Download
-          </button>
+            <Download className="h-3 w-3" />{t("at_download_all", lang)}</button>
         </div>
       </div>
 
@@ -63,7 +65,7 @@ export function DocumentViewer({ documents }: { documents: DocItem[] }) {
             >
               {openLabel === doc.label ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />} {doc.label}
             </button>
-            <a href={doc.url} download={doc.label} className="rounded-lg border border-surface-200 p-1 text-surface-500 hover:bg-surface-50" title="Download">
+            <a href={doc.url} download={doc.label} className="rounded-lg border border-surface-200 p-1 text-surface-500 hover:bg-surface-50" title={t("c_download", lang)}>
               <Download className="h-3 w-3" />
             </a>
           </div>
