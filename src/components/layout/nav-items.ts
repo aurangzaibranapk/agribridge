@@ -67,6 +67,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products/setup", label: "Product Setup", icon: ListChecks },
       { href: "/admin/products/masters", label: "Product ki Bunyadi Fehrist", icon: Layers },
       { href: "/admin/inventory", label: "Stock", icon: Boxes },
+      { href: "/admin/stock-statement", label: "Stock Statement", icon: FileBarChart },
       { href: "/admin/stock-ledger", label: "Stock ka Khata", icon: List },
       { href: "/admin/stock-transfers", label: "Maal Bhejein (Transfer)", icon: ArrowLeftRight },
       { href: "/admin/agri-returns", label: "Wapsi ka Maal", icon: Undo2 },
