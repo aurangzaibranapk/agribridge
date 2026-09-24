@@ -406,8 +406,21 @@ export function SupplierBillClient({
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800 xl:min-h-0 xl:flex-1 xl:overflow-auto">
-              <table className="w-full min-w-[780px] border-collapse text-sm">
-                <thead><tr className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800"><th className="w-10 px-3 py-2.5">#</th><th className="px-3 py-2.5">Product</th><th className="w-28 px-3 py-2.5">Pack / Unit</th><th className="w-24 px-3 py-2.5">Qty</th><th className="w-32 px-3 py-2.5">Purchase Rate</th><th className="w-28 px-3 py-2.5 text-right">Line Total</th><th className="w-12 px-3 py-2.5"></th></tr></thead>
+              <table className="w-full min-w-[1160px] border-collapse text-sm">
+                <thead>
+                  <tr className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800">
+                    <th className="w-8 px-3 py-2">#</th>
+                    <th className="px-3 py-2">Product</th>
+                    <th className="w-32 px-3 py-2"><div>Pack / Unit</div><div className="text-[10px] font-normal text-surface-400">× items/pack</div></th>
+                    <th className="w-20 px-3 py-2">Qty</th>
+                    <th className="w-32 px-3 py-2"><div>Purchase Rate</div><div className="text-[10px] font-normal text-surface-400">per pack</div></th>
+                    <th className="w-32 px-3 py-2"><div>Wholesale</div><div className="text-[10px] font-normal text-surface-400">per pack</div></th>
+                    <th className="w-28 px-3 py-2"><div>Sale Rate</div><div className="text-[10px] font-normal text-surface-400">per item</div></th>
+                    <th className="w-24 px-3 py-2"><div>MRP</div><div className="text-[10px] font-normal text-surface-400">per item</div></th>
+                    <th className="w-28 px-3 py-2 text-right">Line Total</th>
+                    <th className="w-10 px-3 py-2"></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {lines.map((line, index) => {
                     const selected = products.find((product) => product.id === line.product_id);
@@ -427,8 +440,15 @@ export function SupplierBillClient({
                       return categoryOk && subCatOk && brandOk && textOk;
                     }).slice(0, 12);
                     const csvUnmatched = !line.product_id && line.query.trim().length > 0;
+                    const u = selected?.units_per_pack;
+                    const uOvr = Number(line.units_per_pack_override);
+                    const uEff = (u && u > 1) ? u : (uOvr > 1 ? uOvr : null);
+                    const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
+                    const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
+                    const itemLabel = isBt ? "botal" : "item";
                     return <tr key={index} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
+                      {/* Product column — search + category hint + batch/expiry */}
                       <td className="relative px-3 py-2.5">
                         <div className="relative">
                           <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-surface-400" />
@@ -444,115 +464,76 @@ export function SupplierBillClient({
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
-                        {selected && (() => {
-                          const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null);
-                          const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
-                          const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
-                          const w = Number(line.wholesale_rate);
-                          return (
-                            <div className="mt-1.5">
-                              <label className="mb-0.5 block text-[10px] font-medium text-surface-500 dark:text-surface-400">Wholesale rate (pack)</label>
-                              <div className="relative"><span className="absolute left-2.5 top-2 text-[11px] text-surface-400">Rs</span><input aria-label="Wholesale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-7 pr-2 text-[12px] text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100 dark:focus:ring-brand-900/30" type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" /></div>
-                              {w > 0 && (uEff2 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((w / uEff2) * 100) / 100).toLocaleString()}</span> : isBt ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {w.toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {w.toLocaleString()}/pack</span>)}
-                            </div>
-                          );
-                        })()}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-2 gap-2"><div><label className="mb-1 block text-[10px] text-surface-400">Sale</label><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{(() => { const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null); const s = Number(line.sale_rate); if (!s) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (uEff2) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((s / uEff2) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {s.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {s.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">MRP</label><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{(() => { const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null); const m = Number(line.mrp_rate); if (!m) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (uEff2) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((m / uEff2) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {m.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {m.toLocaleString()}</span>; })()}</div></div></details>}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
+                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
+                      {/* Pack / Unit + items per pack */}
                       <td className="px-3 py-2.5">
                         {selected ? (
                           (selected.pack_size || selected.unit) ? (
-                            (() => {
-                              const hasUpp = selected.units_per_pack != null && selected.units_per_pack > 1;
-                              return (
-                                <span className="block pt-2 text-xs text-surface-600 dark:text-surface-300">
-                                  {selected.pack_size || selected.unit}
-                                  {hasUpp ? (
-                                    <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
-                                      ×{selected.units_per_pack}
-                                    </span>
-                                  ) : (
-                                    <span className="mt-1.5 flex items-center gap-1">
-                                      <span className="text-[10px] text-surface-400">×</span>
-                                      <input
-                                        aria-label="Items per pack"
-                                        type="number" min="1" step="1"
-                                        value={line.units_per_pack_override}
-                                        onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })}
-                                        placeholder="item/pack"
-                                        className="h-7 w-16 rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
-                                      />
-                                    </span>
-                                  )}
-                                </span>
-                              );
-                            })()
+                            <div className="space-y-1.5 pt-1">
+                              <span className="block text-xs font-medium text-surface-700 dark:text-surface-200">{selected.pack_size || selected.unit}</span>
+                              {selected.units_per_pack != null && selected.units_per_pack > 1 ? (
+                                <span className="inline-block rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">×{selected.units_per_pack} {itemLabel}/pack</span>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] text-surface-400">×</span>
+                                  <input aria-label="Items per pack" type="number" min="1" step="1" value={line.units_per_pack_override} onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })} placeholder="items" className="h-7 w-full rounded border border-dashed border-surface-300 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 focus:border-solid dark:border-surface-600 dark:bg-surface-900 dark:text-surface-200" />
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <div className="flex flex-col gap-1.5">
-                              <input
-                                aria-label="Pack / Unit"
-                                className={`${inputClass} text-xs`}
-                                list={`units-list-${index}`}
-                                value={line.pack_override}
-                                onChange={(e) => updateLine(index, { pack_override: e.target.value })}
-                                placeholder="350ml, 1kg, 50kg…"
-                              />
-                              <datalist id={`units-list-${index}`}>
-                                {units.map((u) => <option key={u.code} value={u.label} />)}
-                              </datalist>
-                              <span className="flex items-center gap-1">
+                            <div className="space-y-1.5">
+                              <input aria-label="Pack / Unit" className={`${inputClass} text-xs`} list={`units-list-${index}`} value={line.pack_override} onChange={(e) => updateLine(index, { pack_override: e.target.value })} placeholder="350ml, 1kg…" />
+                              <datalist id={`units-list-${index}`}>{units.map((u) => <option key={u.code} value={u.label} />)}</datalist>
+                              <div className="flex items-center gap-1">
                                 <span className="text-[10px] text-surface-400">×</span>
-                                <input
-                                  aria-label="Items per pack"
-                                  type="number" min="1" step="1"
-                                  value={line.units_per_pack_override}
-                                  onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })}
-                                  placeholder="item/pack"
-                                  className="h-7 w-16 rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
-                                />
-                              </span>
+                                <input aria-label="Items per pack" type="number" min="1" step="1" value={line.units_per_pack_override} onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })} placeholder="items" className="h-7 w-full rounded border border-dashed border-surface-300 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 focus:border-solid dark:border-surface-600 dark:bg-surface-900 dark:text-surface-200" />
+                              </div>
                             </div>
                           )
                         ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
                       </td>
+                      {/* Qty */}
                       <td className="px-3 py-2.5">
                         <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
                         {(() => {
-                          const u = selected?.units_per_pack;
-                          const uOvr = Number(line.units_per_pack_override);
-                          const uEff = (u && u > 1) ? u : (uOvr > 1 ? uOvr : null);
                           const q = Number(line.quantity);
                           if (!q || !selected) return null;
-                          const packLabel = selected.pack_size || selected.unit || line.pack_override || "pack";
-                          const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
-                          const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
-                          if (uEff) {
-                            const total = Math.round(q * uEff * 100) / 100;
-                            const itemLabel = isBt ? "botal" : "item";
-                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">{q} {packLabel} = {total} {itemLabel}</span>;
-                          }
-                          if (isBt) return <span className="mt-1 block text-[10px] text-surface-400">{q} botal</span>;
-                          return <span className="mt-1 block text-[10px] text-surface-400">{q} {packLabel}</span>;
+                          if (uEff) return <span className="mt-1 block text-[10px] font-medium text-brand-700">{q} pack = {Math.round(q * uEff * 100) / 100} {itemLabel}</span>;
+                          return <span className="mt-1 block text-[10px] text-surface-400">{q} pack</span>;
                         })()}
                       </td>
+                      {/* Purchase Rate (per pack) */}
                       <td className="px-3 py-2.5">
                         <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div>
                         {(() => {
-                          const u = selected?.units_per_pack;
-                          const uOvr = Number(line.units_per_pack_override);
-                          const uEff = (u && u > 1) ? u : (uOvr > 1 ? uOvr : null);
                           const r = Number(line.unit_cost);
-                          if (!r) return null;
-                          const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
-                          const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
-                          if (uEff) {
-                            const lbl = isBt ? "1 botal" : "1 item";
-                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">{lbl}: Rs {(Math.round((r / uEff) * 100) / 100).toLocaleString()}</span>;
-                          }
-                          if (isBt) return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 botal: Rs {r.toLocaleString()}</span>;
-                          return <span className="mt-1 block text-[10px] text-emerald-600">✓ Rs {r.toLocaleString()}/pack</span>;
+                          if (!r || !uEff) return null;
+                          return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((r / uEff) * 100) / 100).toLocaleString()}</span>;
                         })()}
+                      </td>
+                      {/* Wholesale Rate (per pack) */}
+                      <td className="px-3 py-2.5">
+                        {selected ? <>
+                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Wholesale rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" /></div>
+                          {(() => {
+                            const w = Number(line.wholesale_rate);
+                            if (!w || !uEff) return null;
+                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((w / uEff) * 100) / 100).toLocaleString()}</span>;
+                          })()}
+                        </> : <span className="block pt-2 text-xs text-surface-400">—</span>}
+                      </td>
+                      {/* Sale Rate (per item) */}
+                      <td className="px-3 py-2.5">
+                        {selected ? (
+                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Sale rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="0" /></div>
+                        ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
+                      </td>
+                      {/* MRP (per item) */}
+                      <td className="px-3 py-2.5">
+                        {selected ? (
+                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="MRP rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="0" /></div>
+                        ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
                       </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
                       <td className="px-3 py-2.5"><button type="button" disabled={lines.length === 1} onClick={() => setLines((previous) => previous.filter((_, i) => i !== index))} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
