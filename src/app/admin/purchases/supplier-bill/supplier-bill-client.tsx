@@ -21,7 +21,7 @@ type Line = {
   product_id: string; query: string; quantity: string; unit_cost: string;
   sale_rate: string; mrp_rate: string; wholesale_rate: string;
   batch_number: string; manufacture_date: string; expiry_date: string; pickerOpen: boolean;
-  pack_override: string;
+  pack_override: string; units_per_pack_override: string;
 };
 type StockGroup = "karyana" | "khaad" | "wanda" | "pesticide";
 const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
@@ -30,7 +30,7 @@ const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
   { id: "wanda", label: "Wanda", roots: ["wanda", "animal feed", "animal feed (wanda)"] },
   { id: "pesticide", label: "Pesticide", roots: ["pesticide", "pesticides"] },
 ];
-const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false, pack_override: "" });
+const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false, pack_override: "", units_per_pack_override: "" });
 const initialState: ActionState = {};
 const inputClass = "h-10 w-full rounded-lg border border-surface-200 bg-white px-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100 dark:focus:ring-brand-900/30";
 const labelClass = "mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300";
@@ -164,6 +164,7 @@ export function SupplierBillClient({
       wholesale_rate: product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
       pickerOpen: false,
       pack_override: product.pack_size ?? product.unit ?? "",
+      units_per_pack_override: "",
     });
   }
   function openNewProduct() {
@@ -443,20 +444,39 @@ export function SupplierBillClient({
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><div><label className="mb-1 block text-[10px] text-surface-400">Sale</label><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{(() => { const u = selected.units_per_pack; const s = Number(line.sale_rate); if (!s) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (u && u > 1) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((s / u) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {s.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {s.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">MRP</label><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{(() => { const u = selected.units_per_pack; const m = Number(line.mrp_rate); if (!m) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (u && u > 1) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((m / u) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {m.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {m.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">Wholesale (pack)</label><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" />{(() => { const u = selected.units_per_pack; const w = Number(line.wholesale_rate); if (!w) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (u && u > 1) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {w.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {w.toLocaleString()}</span>; })()}</div></div></details>}
+                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><div><label className="mb-1 block text-[10px] text-surface-400">Sale</label><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{(() => { const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null); const s = Number(line.sale_rate); if (!s) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (uEff2) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((s / uEff2) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {s.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {s.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">MRP</label><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{(() => { const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null); const m = Number(line.mrp_rate); if (!m) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (uEff2) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((m / uEff2) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {m.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {m.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">Wholesale (pack)</label><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" />{(() => { const u = selected.units_per_pack; const uOvr2 = Number(line.units_per_pack_override); const uEff2 = (u && u > 1) ? u : (uOvr2 > 1 ? uOvr2 : null); const w = Number(line.wholesale_rate); if (!w) return null; const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase(); const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr"); if (uEff2) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{isBt ? "1 botal" : "1 item"}: Rs {(Math.round((w / uEff2) * 100) / 100).toLocaleString()}</span>; if (isBt) return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {w.toLocaleString()}</span>; return <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {w.toLocaleString()}</span>; })()}</div></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
                       <td className="px-3 py-2.5">
                         {selected ? (
                           (selected.pack_size || selected.unit) ? (
-                            <span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">
-                              {selected.pack_size || selected.unit}
-                              {selected.units_per_pack && selected.units_per_pack > 1 && (
-                                <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
-                                  ×{selected.units_per_pack}
+                            (() => {
+                              const bStrPack = `${selected.unit ?? ""} ${selected.pack_size ?? ""}`.toLowerCase();
+                              const isBtPack = bStrPack.includes("botal") || bStrPack.includes("liter") || bStrPack.includes("litr");
+                              const hasUpp = selected.units_per_pack != null && selected.units_per_pack > 1;
+                              return (
+                                <span className="block pt-2 text-xs text-surface-600 dark:text-surface-300">
+                                  {selected.pack_size || selected.unit}
+                                  {hasUpp ? (
+                                    <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
+                                      ×{selected.units_per_pack}
+                                    </span>
+                                  ) : isBtPack ? (
+                                    <span className="mt-1.5 flex items-center gap-1">
+                                      <span className="text-[10px] text-surface-400">×</span>
+                                      <input
+                                        aria-label="Botalen per peti"
+                                        type="number" min="1" step="1"
+                                        value={line.units_per_pack_override}
+                                        onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })}
+                                        placeholder="bot/peti"
+                                        className="h-7 w-16 rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+                                      />
+                                    </span>
+                                  ) : null}
                                 </span>
-                              )}
-                            </span>
+                              );
+                            })()
                           ) : (
                             <input
                               aria-label="Pack / Unit"
@@ -472,13 +492,15 @@ export function SupplierBillClient({
                         <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
                         {(() => {
                           const u = selected?.units_per_pack;
+                          const uOvr = Number(line.units_per_pack_override);
+                          const uEff = (u && u > 1) ? u : (uOvr > 1 ? uOvr : null);
                           const q = Number(line.quantity);
                           if (!q || !selected) return null;
                           const packLabel = selected.pack_size || selected.unit || line.pack_override || "pack";
                           const bStr = `${selected.unit ?? ""} ${selected.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
                           const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
-                          if (u && u > 1) {
-                            const total = Math.round(q * u * 100) / 100;
+                          if (uEff) {
+                            const total = Math.round(q * uEff * 100) / 100;
                             const itemLabel = isBt ? "botal" : "item";
                             return <span className="mt-1 block text-[10px] font-medium text-brand-700">{q} {packLabel} = {total} {itemLabel}</span>;
                           }
@@ -490,13 +512,15 @@ export function SupplierBillClient({
                         <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div>
                         {(() => {
                           const u = selected?.units_per_pack;
+                          const uOvr = Number(line.units_per_pack_override);
+                          const uEff = (u && u > 1) ? u : (uOvr > 1 ? uOvr : null);
                           const r = Number(line.unit_cost);
                           if (!r) return null;
                           const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
                           const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
-                          if (u && u > 1) {
+                          if (uEff) {
                             const lbl = isBt ? "1 botal" : "1 item";
-                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">{lbl}: Rs {(Math.round((r / u) * 100) / 100).toLocaleString()}</span>;
+                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">{lbl}: Rs {(Math.round((r / uEff) * 100) / 100).toLocaleString()}</span>;
                           }
                           if (isBt) return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 botal: Rs {r.toLocaleString()}</span>;
                           return <span className="mt-1 block text-[10px] text-emerald-600">✓ Rs {r.toLocaleString()}/pack</span>;
