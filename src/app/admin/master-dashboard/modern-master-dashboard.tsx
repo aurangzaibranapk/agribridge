@@ -24,6 +24,9 @@ export function ModernMasterDashboard({
   topDebtors,
   salesTrend,
   missingBatchCount,
+  period = "month",
+  periodLabel = "Is Mahine",
+  shopId,
 }: {
   stockDifference: number | null;
   inventoryValue: number;
@@ -38,14 +41,25 @@ export function ModernMasterDashboard({
   topDebtors: { name: string; balance: number }[];
   salesTrend: TrendRow[];
   missingBatchCount: number;
+  period?: string;
+  periodLabel?: string;
+  shopId?: string | null;
 }) {
   const money = (n: number | null) => n === null ? "—" : `Rs ${Math.round(n).toLocaleString()}`;
   const chartProducts = topSellingItems.slice(0, 6).map((x) => ({ name: x.name.length > 18 ? `${x.name.slice(0, 18)}…` : x.name, value: x.qty }));
   const chartDebtors = topDebtors.slice(0, 5).map((x) => ({ name: x.name.length > 18 ? `${x.name.slice(0, 18)}…` : x.name, value: x.balance }));
   const hasMismatch = stockDifference !== null && Math.abs(stockDifference) > 1;
 
+  const periodLink = (p: string) => `/admin/master-dashboard?period=${p}${shopId ? `&shop_id=${shopId}` : ""}`;
+  const periodOptions = [
+    { key: "day", label: "Aaj" },
+    { key: "week", label: "Is Hafta" },
+    { key: "month", label: "Is Mahina" },
+    { key: "year", label: "Is Saal" },
+  ];
+
   const kpis = [
-    { label: "Today Sales", value: money(totalRevenue), note: "current period", icon: ShoppingCart, color: "text-emerald-700", bg: "bg-emerald-50" },
+    { label: `${periodLabel} Sale`, value: money(totalRevenue), note: "selected period", icon: ShoppingCart, color: "text-emerald-700", bg: "bg-emerald-50" },
     { label: "Net Profit", value: money(netProfit), note: netProfit >= 0 ? "positive" : "needs attention", icon: ArrowUpCircle, color: netProfit >= 0 ? "text-emerald-700" : "text-red-600", bg: netProfit >= 0 ? "bg-emerald-50" : "bg-red-50" },
     { label: "Cash & Bank", value: money(totalBankBalance), note: "ledger balance", icon: WalletCards, color: "text-sky-700", bg: "bg-sky-50" },
     { label: "Receivable", value: money(receivables), note: "customers se lena", icon: ArrowDownCircle, color: "text-amber-700", bg: "bg-amber-50" },
@@ -62,9 +76,22 @@ export function ModernMasterDashboard({
           <p className="mt-1 text-sm text-surface-500">Poora business ek nazar mein — real-time business intelligence</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><option>Sab Shops</option></select>
-          <button className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><RefreshCw className="h-4 w-4" /> Refresh</button>
-          <button className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><Download className="h-4 w-4" /> Export</button>
+          <div className="flex items-center gap-1 rounded-xl border border-surface-200 bg-white p-1 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+            {periodOptions.map((opt) => (
+              <Link
+                key={opt.key}
+                href={periodLink(opt.key)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  period === opt.key
+                    ? "bg-brand-600 text-white shadow-sm"
+                    : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            ))}
+          </div>
+          <Link href={periodLink(period)} className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-white dark:hover:bg-surface-800"><RefreshCw className="h-4 w-4" /> Refresh</Link>
         </div>
       </div>
 

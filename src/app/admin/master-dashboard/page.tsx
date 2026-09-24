@@ -17,9 +17,10 @@ const SELL_WEEKS = 5;
 export default async function MasterDashboardPage({
   searchParams,
 }: {
-  searchParams: { shop_id?: string };
+  searchParams: { shop_id?: string; period?: string };
 }) {
   const shopId = searchParams.shop_id || null;
+  const period = (searchParams.period || "month") as "day" | "week" | "month" | "year";
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const businessContext = await getBusinessContext();
@@ -27,9 +28,41 @@ export default async function MasterDashboardPage({
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
+  const today = now.toISOString().slice(0, 10);
   const monthStart = new Date(year, month - 1, 1).toISOString().slice(0, 10);
   const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
   const nextMonthStart = new Date(year, month, 1).toISOString().slice(0, 10);
+
+  // Period-based date range
+  let periodStart: string;
+  let periodEnd: string;
+  let nextPeriodStart: string;
+  let periodLabel: string;
+  switch (period) {
+    case "day":
+      periodStart = today;
+      periodEnd = today;
+      nextPeriodStart = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      periodLabel = "Aaj";
+      break;
+    case "week":
+      periodStart = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      periodEnd = today;
+      nextPeriodStart = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      periodLabel = "Is Hafta";
+      break;
+    case "year":
+      periodStart = `${year}-01-01`;
+      periodEnd = `${year}-12-31`;
+      nextPeriodStart = `${year + 1}-01-01`;
+      periodLabel = "Is Saal";
+      break;
+    default:
+      periodStart = monthStart;
+      periodEnd = monthEnd;
+      nextPeriodStart = nextMonthStart;
+      periodLabel = "Is Mahine";
+  }
 
   const showDairy = businessContext === "master" || businessContext === "dairy";
   const showAgri = businessContext === "master" || businessContext === "karyana" || businessContext === "agri_inputs";
@@ -116,8 +149,8 @@ export default async function MasterDashboardPage({
     .from("agri_orders")
     .select("grand_total")
     .eq("status", "completed")
-    .gte("created_at", monthStart)
-    .lte("created_at", monthEnd + "T23:59:59");
+    .gte("created_at", periodStart)
+    .lte("created_at", periodEnd + "T23:59:59");
   const agriRevenue = (completedOrders ?? []).reduce((s, o) => s + Number(o.grand_total), 0);
 
   // Company Expenses (this month, approved), by category
@@ -125,8 +158,8 @@ export default async function MasterDashboardPage({
     .from("company_expense_requests")
     .select("category, amount")
     .eq("status", "approved")
-    .gte("approved_at", monthStart)
-    .lte("approved_at", monthEnd + "T23:59:59");
+    .gte("approved_at", periodStart)
+    .lte("approved_at", periodEnd + "T23:59:59");
   const categoryTotals: Record<string, number> = {};
   let totalExpenses = 0;
   (monthExpenses ?? []).forEach((e) => {
@@ -139,7 +172,7 @@ export default async function MasterDashboardPage({
   const { data: billingSettings } = await supabase.from("company_billing_settings").select("service_rate_per_liter").limit(1).single();
   const serviceRate = Number(billingSettings?.service_rate_per_liter ?? 10);
 
-  const { data: milkEntries } = await supabase.from("milk_entries").select("adjusted_volume, quantity_liters").gte("entry_date", monthStart).lte("entry_date", monthEnd);
+  const { data: milkEntries } = await supabase.from("milk_entries").select("adjusted_volume, quantity_liters").gte("entry_date", periodStart).lte("entry_date", periodEnd);
   const totalAdjustedVolume = (milkEntries ?? []).reduce((s, e) => s + Number(e.adjusted_volume ?? e.quantity_liters ?? 0), 0);
   const milkGrossIncome = totalAdjustedVolume * serviceRate;
 
@@ -151,20 +184,20 @@ export default async function MasterDashboardPage({
     .from("salary_payments")
     .select("net_salary")
     .eq("status", "paid")
-    .gte("paid_date", monthStart)
-    .lte("paid_date", monthEnd);
+    .gte("paid_date", periodStart)
+    .lte("paid_date", periodEnd);
   const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.net_salary ?? 0), 0);
 
-  const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
+  const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", periodStart).lte("log_date", periodEnd);
   const milkPetrolCost = (fuelLogs ?? []).reduce((s, f) => s + Number(f.fuel_cost ?? 0), 0);
 
-  const { data: generatorLogs } = await supabase.from("generator_logs").select("diesel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
+  const { data: generatorLogs } = await supabase.from("generator_logs").select("diesel_cost").gte("log_date", periodStart).lte("log_date", periodEnd);
   const milkDieselCost = (generatorLogs ?? []).reduce((s, g) => s + Number(g.diesel_cost ?? 0), 0);
 
-  const { data: maintenanceLogs } = await supabase.from("maintenance_logs").select("cost").gte("service_date", monthStart).lte("service_date", monthEnd);
+  const { data: maintenanceLogs } = await supabase.from("maintenance_logs").select("cost").gte("service_date", periodStart).lte("service_date", periodEnd);
   const milkMaintenanceCost = (maintenanceLogs ?? []).reduce((s, m) => s + Number(m.cost ?? 0), 0);
 
-  const { data: routeCollections } = await supabase.from("milk_route_collections").select("shortage_liters").gte("collection_date", monthStart).lte("collection_date", monthEnd);
+  const { data: routeCollections } = await supabase.from("milk_route_collections").select("shortage_liters").gte("collection_date", periodStart).lte("collection_date", periodEnd);
   const { data: rateSettings } = await supabase.from("milk_rate_settings").select("standard_rate").limit(1).single();
   const standardRate = Number(rateSettings?.standard_rate ?? 145);
   const totalShortageLiters = (routeCollections ?? []).reduce((s, r) => s + Math.max(0, Number(r.shortage_liters ?? 0)), 0);
@@ -210,8 +243,8 @@ export default async function MasterDashboardPage({
   let posQuery = serviceClient
     .from("pos_sales")
     .select("total_amount")
-    .gte("created_at", monthStart)
-    .lt("created_at", nextMonthStart);
+    .gte("created_at", periodStart)
+    .lt("created_at", nextPeriodStart);
   if (shopId) posQuery = posQuery.eq("shop_id", shopId);
   const { data: posSalesRows } = await posQuery;
   const posRevenue = (posSalesRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
@@ -238,8 +271,8 @@ export default async function MasterDashboardPage({
   let saleIdsQuery = serviceClient
     .from("pos_sales")
     .select("id")
-    .gte("created_at", monthStart)
-    .lt("created_at", nextMonthStart);
+    .gte("created_at", periodStart)
+    .lt("created_at", nextPeriodStart);
   if (shopId) saleIdsQuery = saleIdsQuery.eq("shop_id", shopId);
   const { data: saleIdRows } = await saleIdsQuery;
   const saleIds = (saleIdRows ?? []).map((r: any) => r.id);
@@ -371,6 +404,9 @@ export default async function MasterDashboardPage({
         topDebtors={topDebtors}
         salesTrend={salesTrend}
         missingBatchCount={missingBatchProducts.length}
+        period={period}
+        periodLabel={periodLabel}
+        shopId={shopId}
       />
       <div className="hidden">
       <PageHeader
