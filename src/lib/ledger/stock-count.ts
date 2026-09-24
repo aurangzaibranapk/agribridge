@@ -155,19 +155,23 @@ export interface PostedCount {
   totalDifferenceValue: number;
   lineCount: number;
   gapCount: number;
+  systemValue: number;
+  countedValue: number;
 }
 
 export async function recentCounts(limit = 20): Promise<PostedCount[]> {
   const service = createServiceClient();
   const { data } = await service
     .from("stock_counts")
-    .select("id, count_date, posted_at, total_difference_value, warehouses(name), stock_count_lines(difference_qty)")
+    .select("id, count_date, posted_at, total_difference_value, warehouses(name), stock_count_lines(difference_qty, expected_qty, counted_qty, unit_cost)")
     .eq("status", "posted")
     .order("posted_at", { ascending: false })
     .limit(limit);
 
   return (data ?? []).map((r) => {
-    const lines = (r.stock_count_lines ?? []) as { difference_qty: number | null }[];
+    const lines = (r.stock_count_lines ?? []) as { difference_qty: number | null; expected_qty: number | null; counted_qty: number | null; unit_cost: number | null }[];
+    const systemValue = lines.reduce((s, l) => s + Number(l.expected_qty ?? 0) * Number(l.unit_cost ?? 0), 0);
+    const countedValue = lines.reduce((s, l) => s + Number(l.counted_qty ?? 0) * Number(l.unit_cost ?? 0), 0);
     return {
       id: r.id,
       warehouseName: (r.warehouses as { name: string } | null)?.name ?? "—",
@@ -176,6 +180,8 @@ export async function recentCounts(limit = 20): Promise<PostedCount[]> {
       totalDifferenceValue: Number(r.total_difference_value ?? 0),
       lineCount: lines.length,
       gapCount: lines.filter((l) => Number(l.difference_qty ?? 0) !== 0).length,
+      systemValue,
+      countedValue,
     };
   });
 }
