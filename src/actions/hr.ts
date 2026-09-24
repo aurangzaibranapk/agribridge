@@ -6,6 +6,7 @@ import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
 
 export interface ActionState {
   error?: string;
@@ -246,6 +247,15 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   });
   if (error) return { error: error.message };
 
+  const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const staffName = myProfile?.full_name ?? "Staff";
+  const checkInTime = new Date(now).toLocaleTimeString("ur-PK", { hour: "2-digit", minute: "2-digit" });
+  await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
+    `Check-in — ${staffName}`,
+    `${staffName} ne aaj ${checkInTime} par check-in kiya.`,
+    "/admin/hr/attendance-log"
+  );
+
   revalidatePath("/admin/my-attendance");
   return { success: true };
 }
@@ -315,6 +325,15 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
       });
     }
   }
+
+  const { data: myProfile2 } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const staffName2 = myProfile2?.full_name ?? "Staff";
+  const checkOutTime = new Date(now).toLocaleTimeString("ur-PK", { hour: "2-digit", minute: "2-digit" });
+  await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
+    `Check-out — ${staffName2}`,
+    `${staffName2} ne aaj ${checkOutTime} par check-out kiya.`,
+    "/admin/hr/attendance-log"
+  );
 
   revalidatePath("/admin/my-attendance");
   revalidatePath("/admin/staff-khata");

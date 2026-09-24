@@ -219,6 +219,7 @@ export default async function MyHrPage() {
                       <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-surface-500">Kati</th>
                       <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-surface-500">Mili</th>
                       <th className="py-2 text-xs font-medium uppercase tracking-wide text-surface-500">Halat</th>
+                      <th className="py-2 text-xs font-medium uppercase tracking-wide text-surface-500">Parchi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -248,6 +249,14 @@ export default async function MyHrPage() {
                             >
                               {s.status === "paid" ? "mil gayi" : String(s.status ?? "baqi")}
                             </span>
+                          </td>
+                          <td className="py-2">
+                            <Link
+                              href={`/admin/my-hr/salary-slip/${s.id}`}
+                              className="text-xs font-medium text-brand-600 hover:underline"
+                            >
+                              Dekho
+                            </Link>
                           </td>
                         </tr>
                       );

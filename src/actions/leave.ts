@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { notifyRoles, notifyUser } from "@/lib/notifications";
 
 export interface LeaveState {
   error?: string;
@@ -106,6 +107,21 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
     return { error: error.message };
   }
 
+  const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  const staffName = myProfile?.full_name ?? "Staff";
+  const dateRange = from === to ? from : `${from} se ${to}`;
+  await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
+    `Chhutti Darkhwast — ${staffName}`,
+    `${staffName} ne ${dateRange} (${type}) ki chhutti maangi hai. Manzoor ya na-manzoor karein.`,
+    "/admin/hr/leave"
+  );
+  if (sd?.reports_to) {
+    await notifyUser(sd.reports_to,
+      `Chhutti Darkhwast — ${staffName}`,
+      `${staffName} ne ${dateRange} ki chhutti ki darkhwast di hai. Apni raaye dein.`,
+      "/admin/hr/leave"
+    );
+  }
   revalidatePath("/admin/hr/leave");
   revalidatePath("/admin/hr/attendance");
   return {
@@ -192,6 +208,12 @@ export async function decideLeave(_prev: LeaveState, formData: FormData): Promis
 
   if (error) return { error: error.message };
 
+  const decisionLabel = decision === "approved" ? "Manzoor" : decision === "rejected" ? "Na-manzoor" : "Wapas bheji gayi";
+  await notifyUser(row.profile_id,
+    `Chhutti — ${decisionLabel}`,
+    `Aap ki chhutti darkhwast ${decisionLabel} ho gayi.${decision === "sent_back" ? " Theek kar ke dobara bhejein." : ""}`,
+    "/admin/hr/leave"
+  );
   revalidatePath("/admin/hr/leave");
   revalidatePath("/admin/hr/attendance-log");
   revalidatePath("/admin/hr/attendance");

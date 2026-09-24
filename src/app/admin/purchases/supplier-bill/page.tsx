@@ -19,7 +19,7 @@ export default async function SupplierPurchaseBillPage() {
 
   const [suppliersResult, productsResult, categoriesResult, companiesResult, warehousesResult, accountsResult, units] = await Promise.all([
     service.from("suppliers").select("id, name, company_name, phone_number").eq("is_active", true).order("name").limit(1000),
-    service.from("products").select("id, name, company_id, category_id, pack_size, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
+    service.from("products").select("id, name, company_id, category_id, pack_size, units_per_pack, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
     service.from("categories").select("id, name, parent_category_id, category_kind").order("name"),
     service.from("companies").select("id, name").order("name"),
     service.from("warehouses").select("id, name, branch_id, shop_id, branches(name), shops(name)").eq("is_active", true).order("name"),
