@@ -673,34 +673,41 @@ export function SupplierBillClient({
                     {selected && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
                       <td />
                       <td colSpan={5} className="px-3 pb-3 pt-0">
-                        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-                          <div className="flex items-end gap-2">
-                            <span className="mb-2 text-[10px] font-medium text-surface-500 whitespace-nowrap">Batch / Expiry</span>
-                            <input aria-label="Batch number" className="h-8 w-24 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none placeholder:text-surface-400 focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." />
-                            <input aria-label="Manufacture date" className="h-8 w-32 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} />
-                            <input aria-label="Expiry date" className="h-8 w-32 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} />
-                          </div>
-                          <div className="mb-0.5 h-7 w-px self-end bg-surface-200 dark:bg-surface-700" />
-                          <div className="min-w-[130px]">
-                            <div className="mb-1 text-[10px] font-medium text-surface-500">Wholesale <span className="font-normal text-surface-400">per pack</span></div>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
-                              <input aria-label="Wholesale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" />
+                        <div className="flex flex-wrap items-start gap-3">
+                          {/* Batch + Expiry */}
+                          <div className="flex items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 dark:border-surface-700 dark:bg-surface-800">
+                            <div>
+                              <div className="mb-1 text-[10px] font-medium text-surface-500">Batch No.</div>
+                              <input aria-label="Batch number" className="h-8 w-28 rounded border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none placeholder:text-surface-400 focus:border-brand-400 dark:border-surface-600 dark:bg-surface-900 dark:text-surface-200" value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="e.g. JX0032" />
                             </div>
-                            {(() => { const w = Number(line.wholesale_rate); if (!w || !uEff) return null; return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((w / uEff) * 100) / 100).toLocaleString()}</span>; })()}
-                          </div>
-                          <div className="min-w-[130px]">
-                            <div className="mb-1 text-[10px] font-medium text-surface-500">Sale Rate <span className="font-normal text-surface-400">per item</span></div>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
-                              <input aria-label="Sale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="0" />
+                            <div>
+                              <div className="mb-1 text-[10px] font-medium text-surface-500">Expiry Date</div>
+                              <input aria-label="Expiry date" className="h-8 w-32 rounded border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-600 dark:bg-surface-900 dark:text-surface-200" type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} />
                             </div>
                           </div>
-                          <div className="min-w-[120px]">
-                            <div className="mb-1 text-[10px] font-medium text-surface-500">MRP <span className="font-normal text-surface-400">per item</span></div>
-                            <div className="relative">
-                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
-                              <input aria-label="MRP rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="0" />
+                          {/* Rates */}
+                          <div className="flex flex-wrap items-start gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 dark:border-surface-700 dark:bg-surface-800">
+                            <div className="w-28">
+                              <div className="mb-1 text-[10px] font-medium text-surface-500">Wholesale <span className="font-normal text-surface-400">/ pack</span></div>
+                              <div className="relative">
+                                <span className="absolute left-2 top-2 text-[10px] text-surface-400">Rs</span>
+                                <input aria-label="Wholesale rate" className="h-8 w-full rounded border border-surface-200 bg-white pl-7 pr-1 text-xs text-surface-900 outline-none focus:border-brand-400 dark:border-surface-600 dark:bg-surface-900 dark:text-surface-100" type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" />
+                              </div>
+                              {(() => { const w = Number(line.wholesale_rate); if (!w || !uEff) return null; return <span className="mt-0.5 block text-[10px] text-brand-700">1 {itemLabel}: Rs {(Math.round((w / uEff) * 100) / 100).toLocaleString()}</span>; })()}
+                            </div>
+                            <div className="w-28">
+                              <div className="mb-1 text-[10px] font-medium text-surface-500">Sale Rate <span className="font-normal text-surface-400">/ item</span></div>
+                              <div className="relative">
+                                <span className="absolute left-2 top-2 text-[10px] text-surface-400">Rs</span>
+                                <input aria-label="Sale rate" className="h-8 w-full rounded border border-surface-200 bg-white pl-7 pr-1 text-xs text-surface-900 outline-none focus:border-brand-400 dark:border-surface-600 dark:bg-surface-900 dark:text-surface-100" type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="0" />
+                              </div>
+                            </div>
+                            <div className="w-28">
+                              <div className="mb-1 text-[10px] font-medium text-surface-500">MRP <span className="font-normal text-surface-400">/ item</span></div>
+                              <div className="relative">
+                                <span className="absolute left-2 top-2 text-[10px] text-surface-400">Rs</span>
+                                <input aria-label="MRP rate" className="h-8 w-full rounded border border-surface-200 bg-white pl-7 pr-1 text-xs text-surface-900 outline-none focus:border-brand-400 dark:border-surface-600 dark:bg-surface-900 dark:text-surface-100" type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="0" />
+                              </div>
                             </div>
                           </div>
                         </div>
