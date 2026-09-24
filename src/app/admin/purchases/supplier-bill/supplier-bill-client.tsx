@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   ArrowLeft, Check, FileText, FileUp, PackagePlus, Plus, Search,
@@ -106,6 +106,51 @@ export function SupplierBillClient({
   const [billNo, setBillNo] = useState("");
   const [billNoGenerating, setBillNoGenerating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlineSaved, setOfflineSaved] = useState(false);
+
+  // Online/offline detect
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const on = () => { setIsOnline(true); setOfflineSaved(false); };
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+
+  // Clear draft on successful submit
+  useEffect(() => {
+    if (state.success) { try { localStorage.removeItem("supplier_bill_draft"); } catch { /* ignore */ } }
+  }, [state.success]);
+
+  // Draft restore on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("supplier_bill_draft");
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.supplierId) setSupplierId(d.supplierId);
+      if (d.warehouseId) setWarehouseId(d.warehouseId);
+      if (d.billDate) setBillDate(d.billDate);
+      if (d.billNo) setBillNo(d.billNo);
+      if (d.terms) setTerms(d.terms);
+      if (d.paidNow) setPaidNow(d.paidNow);
+      if (Array.isArray(d.lines) && d.lines.length > 0) setLines(d.lines.map((l: Line) => ({ ...emptyLine(), ...l, pickerOpen: false })));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Auto-save draft (debounced 800ms) whenever key fields change
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const hasData = lines.some((l) => l.product_id) || supplierId;
+        if (!hasData) { localStorage.removeItem("supplier_bill_draft"); return; }
+        localStorage.setItem("supplier_bill_draft", JSON.stringify({ supplierId, warehouseId, billDate, billNo, terms, paidNow, lines }));
+      } catch { /* quota ignore */ }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [supplierId, warehouseId, billDate, billNo, terms, paidNow, lines]);
 
   const selectedSupplier = suppliers.find((s) => s.id === supplierId) ?? null;
 
@@ -321,6 +366,7 @@ export function SupplierBillClient({
         </Link>
       </div>
 
+      {!isOnline && <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />Offline Mode — Bill ka data save ho raha hai. Internet aane par Submit karein.</div>}
       {state.success && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
       {state.error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{state.error}</p>}
 
@@ -565,7 +611,7 @@ export function SupplierBillClient({
             <div className="my-4 rounded-xl bg-brand-50 px-3.5 py-3 dark:bg-brand-950/30"><SummaryLine label="Total Amount" value={grandTotal} strong /></div>
             <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><div><label className={labelClass}>Payment Status</label><select name="payment_terms" value={terms} onChange={(event) => { setTerms(event.target.value as typeof terms); setPaidNow(""); }} className={inputClass}><option value="credit">Credit / Udhaar</option><option value="partial">Partial Payment</option><option value="paid">Fully Paid</option></select></div>{terms === "partial" && <div><label className={labelClass}>Paid Now</label><input name="paid_now" type="number" min="0.01" max={Math.max(0, grandTotal - 0.01)} step="0.01" value={paidNow} onChange={(event) => setPaidNow(event.target.value)} className={inputClass} placeholder="Paid amount" required /></div>}{terms !== "paid" && <div className="grid grid-cols-2 gap-2"><div><label className={labelClass}>Credit Days</label><input name="credit_days" type="number" min="0" step="1" defaultValue="30" className={inputClass} /></div><div><label className={labelClass}>Due Date</label><input name="due_date" type="date" className={inputClass} /></div></div>}<div className="flex items-center justify-between text-sm"><span className="text-surface-500">Paid</span><span className="font-semibold text-surface-800 dark:text-surface-100">Rs {Math.min(grandTotal, Math.max(0, paidAmount)).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div><div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30"><span className="font-medium text-emerald-800 dark:text-emerald-200">Due</span><span className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200">Rs {amountDue.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div></div>
             <div className="mt-4 space-y-3"><div><label className={labelClass}>Payment Method</label><select name="payment_method" className={inputClass}><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option></select></div><div><label className={labelClass}>Paid From Account</label><select name="finance_account_id" defaultValue={accounts.find((account) => account.account_type === "cash")?.id ?? ""} className={inputClass}><option value="">Default cash account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div><label className={labelClass}>Reference / Note</label><textarea name="notes" rows={3} className="w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" placeholder="Payment ref, bill remarks..." /></div>
-              <SaveBillButton />
+              <SaveBillButton disabled={!isOnline} />
               <p className="text-center text-[11px] leading-relaxed text-surface-400">Payment ledger mein record hogi. Stock GRN ke baad update hoga.</p>
             </div>
           </section>
@@ -619,7 +665,13 @@ function SummaryLine({ label, value, strong = false }: { label: string; value: n
   return <div className={`flex items-center justify-between gap-3 ${strong ? "text-base font-semibold text-surface-900 dark:text-white" : "text-sm text-surface-500"}`}><span>{label}</span><span className="tabular-nums">Rs {value.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>;
 }
 
-function SaveBillButton() {
+function SaveBillButton({ disabled: extraDisabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={pending} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"><FileText className="h-4 w-4" />{pending ? "Bill save ho raha hai..." : "Save & Post Bill"}</button>;
+  const isDisabled = pending || extraDisabled;
+  return (
+    <button type="submit" disabled={isDisabled} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60">
+      <FileText className="h-4 w-4" />
+      {pending ? "Bill save ho raha hai..." : extraDisabled ? "Offline — internet ka intezaar karein" : "Save & Post Bill"}
+    </button>
+  );
 }

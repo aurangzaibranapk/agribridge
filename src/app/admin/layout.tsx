@@ -9,6 +9,7 @@ import { WorkSidebar, type SideItem } from "@/components/layout/work-sidebar";
 import { QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { NavProgress } from "@/components/layout/nav-progress";
+import { OnlineStatusBar } from "@/components/layout/online-status-bar";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { sidebarModeFor, type SidebarKind } from "@/lib/access/sidebar-free";
@@ -267,6 +268,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </ChromeGate>
         </Suspense>
+        <OnlineStatusBar />
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 print:h-auto print:overflow-visible print:p-0">
           {children}
           <p className="mt-8 text-center text-[11px] text-surface-400 2xl:hidden print:hidden">{t("at_footer", lang)}</p>
