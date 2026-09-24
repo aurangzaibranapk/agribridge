@@ -21,6 +21,7 @@ type Line = {
   product_id: string; query: string; quantity: string; unit_cost: string;
   sale_rate: string; mrp_rate: string; wholesale_rate: string;
   batch_number: string; manufacture_date: string; expiry_date: string; pickerOpen: boolean;
+  pack_override: string;
 };
 type StockGroup = "karyana" | "khaad" | "wanda" | "pesticide";
 const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
@@ -29,7 +30,7 @@ const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
   { id: "wanda", label: "Wanda", roots: ["wanda", "animal feed", "animal feed (wanda)"] },
   { id: "pesticide", label: "Pesticide", roots: ["pesticide", "pesticides"] },
 ];
-const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false });
+const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false, pack_override: "" });
 const initialState: ActionState = {};
 const inputClass = "h-10 w-full rounded-lg border border-surface-200 bg-white px-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100 dark:focus:ring-brand-900/30";
 const labelClass = "mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300";
@@ -83,6 +84,8 @@ export function SupplierBillClient({
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? "");
   const [billDate, setBillDate] = useState(aajKaKhana());
   const [activeGroup, setActiveGroup] = useState<StockGroup | "all">("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeBrand, setActiveBrand] = useState<string>("all");
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [terms, setTerms] = useState<"paid" | "partial" | "credit">("credit");
   const [paidNow, setPaidNow] = useState("");
@@ -145,6 +148,7 @@ export function SupplierBillClient({
     mrp_rate: Number(line.mrp_rate) > 0 ? Number(line.mrp_rate) : undefined,
     wholesale_rate: Number(line.wholesale_rate) > 0 ? Number(line.wholesale_rate) : undefined,
     batch_number: line.batch_number || undefined, manufacture_date: line.manufacture_date || undefined, expiry_date: line.expiry_date || undefined,
+    pack_size_override: line.pack_override.trim() || undefined,
   })));
 
   function updateLine(index: number, patch: Partial<Line>) {
@@ -159,6 +163,7 @@ export function SupplierBillClient({
       mrp_rate: product.mrp_price != null && product.mrp_price > 0 ? String(product.mrp_price) : "",
       wholesale_rate: product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
       pickerOpen: false,
+      pack_override: product.pack_size ?? product.unit ?? "",
     });
   }
   function openNewProduct() {
@@ -198,8 +203,8 @@ export function SupplierBillClient({
         mrp_rate: created.mrp_price ? String(created.mrp_price) : "",
         wholesale_rate: created.wholesale_price ? String(created.wholesale_price) : "",
       };
-      if (index < 0) return [...previous, { ...emptyLine(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false }];
-      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false } : line);
+      if (index < 0) return [...previous, { ...emptyLine(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" }];
+      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" } : line);
     });
     setProductModal(false);
     setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductCompany("");
@@ -218,6 +223,7 @@ export function SupplierBillClient({
         mrp_rate: product.mrp_price ? String(product.mrp_price) : "",
         wholesale_rate: product.wholesale_price ? String(product.wholesale_price) : "",
         pickerOpen: false,
+        pack_override: product.pack_size ?? product.unit ?? "",
       };
       if (index < 0) return [...previous, entry];
       return previous.map((line, i) => (i === index ? entry : line));
@@ -287,6 +293,7 @@ export function SupplierBillClient({
         sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : (product.selling_price > 0 ? String(product.selling_price) : ""),
         mrp_rate: mrpColumn >= 0 ? csvNumber(row[mrpColumn]) : (product.mrp_price ? String(product.mrp_price) : ""),
         wholesale_rate: wholesaleColumn >= 0 ? csvNumber(row[wholesaleColumn]) : (product.wholesale_price ? String(product.wholesale_price) : ""),
+        pack_override: product.pack_size ?? product.unit ?? "",
       });
     }
 
@@ -368,9 +375,33 @@ export function SupplierBillClient({
               </div>
             </div>
             {csvNotice && <p className={`mb-3 rounded-lg px-3 py-2 text-xs ${csvNotice.includes("nahi") || csvNotice.includes("mila") ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200" : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"}`}>{csvNotice}</p>}
+            <div className="mb-3 flex flex-wrap gap-2">
+              <CategoryChip active={activeGroup === "all"} onClick={() => { setActiveGroup("all"); setActiveCategory("all"); }}>All Products</CategoryChip>
+              {GROUPS.map((group) => <CategoryChip key={group.id} active={activeGroup === group.id} onClick={() => { setActiveGroup(group.id); setActiveCategory("all"); }}>{group.label}</CategoryChip>)}
+            </div>
             <div className="mb-4 flex flex-wrap gap-2">
-              <CategoryChip active={activeGroup === "all"} onClick={() => setActiveGroup("all")}>All Products</CategoryChip>
-              {GROUPS.map((group) => <CategoryChip key={group.id} active={activeGroup === group.id} onClick={() => setActiveGroup(group.id)}>{group.label}</CategoryChip>)}
+              <select
+                className="h-8 rounded-lg border border-surface-200 bg-white px-2 text-xs text-surface-700 focus:border-brand-500 focus:outline-none dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+              >
+                <option value="all">Saari categories</option>
+                {categories
+                  .filter((c) => {
+                    if (activeGroup === "all") return true;
+                    const root = groupForCategory(c.id, categories);
+                    return root === activeGroup || (c.parent_category_id && groupForCategory(c.parent_category_id, categories) === activeGroup);
+                  })
+                  .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select
+                className="h-8 rounded-lg border border-surface-200 bg-white px-2 text-xs text-surface-700 focus:border-brand-500 focus:outline-none dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+                value={activeBrand}
+                onChange={(e) => setActiveBrand(e.target.value)}
+              >
+                <option value="all">Saare brands</option>
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800 xl:min-h-0 xl:flex-1 xl:overflow-auto">
@@ -383,11 +414,16 @@ export function SupplierBillClient({
                     const normalizedQuery = line.query.trim().toLowerCase();
                     const matches = products.filter((product) => {
                       const group = groupForCategory(product.category_id, categories);
-                      // Text search ho to category filter hatao — "egg" karyana
-                      // mein na ho to bhi milna chahiye.
                       const categoryOk = normalizedQuery ? true : (activeGroup === "all" || group === activeGroup);
+                      const subCatOk = activeCategory === "all" || product.category_id === activeCategory || (() => {
+                        const byId = new Map(categories.map((c) => [c.id, c]));
+                        let cur = product.category_id ? byId.get(product.category_id) : undefined;
+                        while (cur) { if (cur.id === activeCategory) return true; cur = cur.parent_category_id ? byId.get(cur.parent_category_id) : undefined; }
+                        return false;
+                      })();
+                      const brandOk = activeBrand === "all" || product.company_id === activeBrand;
                       const textOk = !normalizedQuery || `${product.name} ${product.pack_size ?? ""} ${product.unit ?? ""}`.toLowerCase().includes(normalizedQuery);
-                      return categoryOk && textOk;
+                      return categoryOk && subCatOk && brandOk && textOk;
                     }).slice(0, 12);
                     const csvUnmatched = !line.product_id && line.query.trim().length > 0;
                     return <tr key={index} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
@@ -407,33 +443,44 @@ export function SupplierBillClient({
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><div><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{(() => { const u = selected.units_per_pack; const s = Number(line.sale_rate); return u && u > 1 ? (s > 0 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {(Math.round((s / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-surface-400">1 botal ka</span>) : null; })()}</div><div><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{(() => { const u = selected.units_per_pack; const m = Number(line.mrp_rate); return u && u > 1 ? (m > 0 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {(Math.round((m / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-surface-400">1 botal ka</span>) : null; })()}</div><div><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale (PET)" />{(() => { const u = selected.units_per_pack; const w = Number(line.wholesale_rate); return u && u > 1 ? (w > 0 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 botal: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-surface-400">PET ka rate likhein</span>) : null; })()}</div></div></details>}
+                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Sale / MRP / Wholesale rates <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><div><label className="mb-1 block text-[10px] text-surface-400">Sale</label><input aria-label="Sale rate" className={inputClass} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="Sale" />{(() => { const u = selected.units_per_pack; const s = Number(line.sale_rate); if (!s) return null; const unitLabel = selected.unit?.toLowerCase().includes("botal") || selected.unit?.toLowerCase().includes("liter") ? "1 botal" : "1 item"; return u && u > 1 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{unitLabel}: Rs {(Math.round((s / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {s.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">MRP</label><input aria-label="MRP rate" className={inputClass} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="MRP" />{(() => { const u = selected.units_per_pack; const m = Number(line.mrp_rate); if (!m) return null; const unitLabel = selected.unit?.toLowerCase().includes("botal") || selected.unit?.toLowerCase().includes("liter") ? "1 botal" : "1 item"; return u && u > 1 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{unitLabel}: Rs {(Math.round((m / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {m.toLocaleString()}</span>; })()}</div><div><label className="mb-1 block text-[10px] text-surface-400">Wholesale (pack)</label><input aria-label="Wholesale rate" className={inputClass} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="Wholesale" />{(() => { const u = selected.units_per_pack; const w = Number(line.wholesale_rate); if (!w) return null; const unitLabel = selected.unit?.toLowerCase().includes("botal") || selected.unit?.toLowerCase().includes("liter") ? "1 botal" : "1 item"; return u && u > 1 ? <span className="mt-0.5 block text-[10px] font-medium text-brand-700">{unitLabel}: Rs {(Math.round((w / u) * 100) / 100).toLocaleString()}</span> : <span className="mt-0.5 block text-[10px] text-emerald-600">✓ Rs {w.toLocaleString()}</span>; })()}</div></div></details>}
                         {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry details <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">
-                          {selected ? (
-                            <>
-                              {selected.pack_size || selected.unit || "—"}
+                        {selected ? (
+                          (selected.pack_size || selected.unit) ? (
+                            <span className="block truncate pt-2 text-xs text-surface-600 dark:text-surface-300">
+                              {selected.pack_size || selected.unit}
                               {selected.units_per_pack && selected.units_per_pack > 1 && (
                                 <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
                                   ×{selected.units_per_pack}
                                 </span>
                               )}
-                            </>
-                          ) : "—"}
-                        </span>
+                            </span>
+                          ) : (
+                            <input
+                              aria-label="Pack / Unit"
+                              className={`${inputClass} text-xs`}
+                              value={line.pack_override}
+                              onChange={(e) => updateLine(index, { pack_override: e.target.value })}
+                              placeholder="e.g. 1kg, 500ml"
+                            />
+                          )
+                        ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
                       </td>
                       <td className="px-3 py-2.5">
                         <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
                         {(() => {
                           const u = selected?.units_per_pack;
                           const q = Number(line.quantity);
-                          return u && u > 1 && q > 0 ? (
-                            <span className="mt-1 block text-[10px] font-medium text-brand-700">
-                              = {Math.round(q * u * 100) / 100} botal
-                            </span>
-                          ) : null;
+                          if (!q || !selected) return null;
+                          const packLabel = selected.pack_size || selected.unit || line.pack_override || "pack";
+                          if (u && u > 1) {
+                            const total = Math.round(q * u * 100) / 100;
+                            const itemLabel = selected.unit?.toLowerCase().includes("botal") || selected.unit?.toLowerCase().includes("liter") ? "botal" : "item";
+                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">{q} {packLabel} = {total} {itemLabel}</span>;
+                          }
+                          return <span className="mt-1 block text-[10px] text-surface-400">{q} {packLabel}</span>;
                         })()}
                       </td>
                       <td className="px-3 py-2.5">
@@ -441,11 +488,11 @@ export function SupplierBillClient({
                         {(() => {
                           const u = selected?.units_per_pack;
                           const r = Number(line.unit_cost);
-                          return u && u > 1 && r > 0 ? (
-                            <span className="mt-1 block text-[10px] font-medium text-brand-700">
-                              1 botal: Rs {(Math.round((r / u) * 100) / 100).toLocaleString()}
-                            </span>
-                          ) : null;
+                          if (!r) return null;
+                          const isBottle = selected?.unit?.toLowerCase().includes("botal") || selected?.unit?.toLowerCase().includes("liter");
+                          const itemLabel = isBottle ? "1 botal" : "1 item";
+                          if (u && u > 1) return <span className="mt-1 block text-[10px] font-medium text-brand-700">{itemLabel}: Rs {(Math.round((r / u) * 100) / 100).toLocaleString()}</span>;
+                          return <span className="mt-1 block text-[10px] text-emerald-600">✓ Rs {r.toLocaleString()}/pack</span>;
                         })()}
                       </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>

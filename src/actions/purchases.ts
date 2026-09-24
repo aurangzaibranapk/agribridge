@@ -41,6 +41,8 @@ type PurchaseItemInput = {
   batch_number?: string;
   manufacture_date?: string;
   expiry_date?: string;
+  /** Bill par user ne pack/unit khud likhi -- product master mein update ho jaye. */
+  pack_size_override?: string;
 };
 
 export async function createPurchase(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -268,6 +270,13 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       // Purchase order ruk kar wapas nahi hoti agar sirf rate na charh
       // saka -- order aur maal ki ginti apni jagah theek ban chuki hai.
       if (rateErr) console.error(`purchase order se rate nahi charha (${item.product_id}):`, rateErr.message);
+    }
+    // Pack/unit user ne bill par likhi -- sirf tab update karo jab product mein pehle se nahi.
+    if (item.pack_size_override?.trim()) {
+      await supabase.from("products")
+        .update({ pack_size: item.pack_size_override.trim() })
+        .eq("id", item.product_id)
+        .is("pack_size", null);
     }
   }
   revalidatePath("/admin/purchases");
