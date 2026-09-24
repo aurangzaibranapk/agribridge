@@ -726,7 +726,7 @@ export async function deletePurchase(_prev: ActionState, formData: FormData): Pr
   if (batchIds.length > 0) {
     const { data: fullItems } = await supabase.from("purchase_items").select("product_id, quantity, batch_id").eq("purchase_id", purchaseId);
     for (const item of fullItems ?? []) {
-      const { data: batch } = await supabase.from("stock_batches").select("warehouse_id").eq("id", item.batch_id).maybeSingle();
+      const { data: batch } = await supabase.from("stock_batches").select("warehouse_id").eq("id", item.batch_id ?? "").maybeSingle();
       if (batch?.warehouse_id) {
         const { data: inv } = await supabase
           .from("inventory")

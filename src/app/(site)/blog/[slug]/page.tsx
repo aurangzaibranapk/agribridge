@@ -23,7 +23,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     .from("blog_posts")
     .select("id, title, slug, featured_image_url")
     .eq("is_published", true)
-    .eq("category", post.category)
+    .eq("category", post.category ?? "")
     .neq("id", post.id)
     .limit(3);
 

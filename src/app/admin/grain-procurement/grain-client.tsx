@@ -11,7 +11,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string; farmer_code: string; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; }
 interface Party { id: string; party_name: string; contact_person: string | null; phone: string | null; }
 interface Warehouse { id: string; name: string; }
 interface CutPreset { id: string; grain_type: string; label: string; cut_percentage: number; }

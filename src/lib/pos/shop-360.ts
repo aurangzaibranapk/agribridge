@@ -598,3 +598,5 @@ export async function branchConsolidated360(branchId: string, date: string): Pro
     note: "Receivable poori branch ka ek hi adad hai -- har shop ke liye dobara nahi jorha gaya (double-count na ho).",
   };
 }
+
+export interface ShopDailySalesPoint { label: string; total: number; }

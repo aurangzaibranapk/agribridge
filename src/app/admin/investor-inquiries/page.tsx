@@ -57,7 +57,7 @@ export default async function AdminInvestorInquiriesPage() {
                       suggestedEmail={i.email}
                     />
                   )}
-                  {["product_investment", "dairy_investment", "franchise", "other"].includes(i.interest_type) && (
+                  {i.interest_type && ["product_investment", "dairy_investment", "franchise", "other"].includes(i.interest_type) && (
                     <ConvertInvestorButton
                       inquiryId={i.id}
                       suggestedName={i.name}

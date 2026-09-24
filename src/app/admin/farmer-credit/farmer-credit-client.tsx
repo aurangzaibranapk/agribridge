@@ -16,7 +16,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string; farmer_code: string; credit_limit: number | null; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; credit_limit: number | null; }
 interface Balance { farmer_id: string; farmer_name: string; farmer_code: string; totalDebit: number; totalCredit: number; credit_limit: number | null; balance_due: number; }
 interface LedgerRow {
   id: string;

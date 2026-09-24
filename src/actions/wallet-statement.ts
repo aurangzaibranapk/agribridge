@@ -45,8 +45,8 @@ async function buildStatementData(farmerId: string) {
   });
 
   return {
-    farmerName: farmer.full_name,
-    farmerCode: farmer.farmer_code,
+    farmerName: farmer.full_name ?? "",
+    farmerCode: farmer.farmer_code ?? "",
     farmerPhone: farmer.phone_number,
     currentBalance: Number(wallet.balance),
     rows,

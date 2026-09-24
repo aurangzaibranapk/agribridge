@@ -50,7 +50,7 @@ export default async function AdminWalletsPage() {
             </thead>
             <tbody>
               {wallets.map((w) => {
-                const name = ownerName(w.owner_type, w.owner_id);
+                const name = ownerName(w.owner_type, w.owner_id ?? "");
                 return (
                   <tr key={w.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{name}</td>

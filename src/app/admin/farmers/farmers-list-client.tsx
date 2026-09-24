@@ -15,7 +15,7 @@ const initialState: ActionState = {};
 
 interface Farmer {
   id: string;
-  full_name: string;
+  full_name: string | null;
   farmer_code: string | null;
   phone_number: string | null;
   cnic: string | null;

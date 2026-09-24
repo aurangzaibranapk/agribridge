@@ -112,7 +112,7 @@ export default async function PnlPage({
           title={`${shop?.name ?? "Shop"} - Product Profitability`}
           description={`${BUSINESS_TYPE_LABELS[shop?.business_type ?? ""] ?? shop?.business_type} - ${from} se ${to} tak`}
         />
-        <DateRangeForm branchId={shop?.branch_id} shopId={params.shop_id} from={from} to={to} />
+        <DateRangeForm branchId={shop?.branch_id ?? undefined} shopId={params.shop_id} from={from} to={to} />
         <div className="mt-4 overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
