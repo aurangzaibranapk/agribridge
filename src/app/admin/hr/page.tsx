@@ -14,7 +14,7 @@ export default async function HRPage() {
     .from("profiles")
     .select("id, full_name, role")
     .eq("is_active", true)
-    .in("role", ["super_admin", "admin", "manager", "sales_staff"])
+    .not("role", "in", '("customer","farmer","vendor")')
     .order("full_name");
 
   const { data: branches } = await supabase.from("branches").select("id, name").order("name");

@@ -42,6 +42,20 @@ const ROLE_LABEL: Record<string, string> = {
   storekeeper: "Storekeeper",
 };
 
+// Ohda na ho to role ki tarteeb se chalein — Owner sabse pehle.
+const ROLE_RANK: Record<string, number> = {
+  owner: 0,
+  super_admin: 1,
+  admin: 2,
+  manager: 3,
+  hr: 4,
+  finance: 5,
+  cashier: 6,
+  sales_staff: 7,
+  storekeeper: 8,
+  staff: 9,
+};
+
 const initialState: AttState = {};
 
 /**
@@ -279,7 +293,9 @@ function Shakh({
             ? "border-brand-400 bg-brand-50 dark:border-brand-600 dark:bg-brand-900/20"
             : banda.id === khudId
               ? "border-brand-300 bg-white dark:border-brand-700 dark:bg-surface-900"
-              : "border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900")
+              : gehrai === 0
+                ? "border-surface-300 bg-surface-50 shadow-sm dark:border-surface-700 dark:bg-surface-800"
+                : "border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900")
         }
       >
         {meray.length > 0 ? (
@@ -398,28 +414,40 @@ export function OrgTreeClient({
     [positions]
   );
 
-  const { bacchay, jaRein, binaAfsar, adhoore } = useMemo(() => {
+  const { bacchay, topLog, adhooreLog, binaAfsar, adhoore } = useMemo(() => {
     const ids = new Set(rows.map((r) => r.id));
     const bacchay = new Map<string, OrgRow[]>();
     const jaRein: OrgRow[] = [];
     for (const r of rows) {
-      // Jis ka afsar is fehrist mein nahi (ya darj hi nahi), wo jaR par.
       if (r.afsar && ids.has(r.afsar) && r.afsar !== r.id) {
         bacchay.set(r.afsar, [...(bacchay.get(r.afsar) ?? []), r]);
       } else {
         jaRein.push(r);
       }
     }
+
+    // Tarteeb: ohda first (rank se), phir role rank, phir naam.
     const lagao = (a: OrgRow, b: OrgRow) => {
-      const da = darjaTarteeb.get(a.darja ?? "") ?? 999;
-      const db = darjaTarteeb.get(b.darja ?? "") ?? 999;
+      const da = darjaTarteeb.has(a.darja ?? "")
+        ? darjaTarteeb.get(a.darja!)!
+        : 100 + (ROLE_RANK[a.role] ?? 50);
+      const db = darjaTarteeb.has(b.darja ?? "")
+        ? darjaTarteeb.get(b.darja!)!
+        : 100 + (ROLE_RANK[b.role] ?? 50);
       return da !== db ? da - db : a.naam.localeCompare(b.naam);
     };
     for (const list of bacchay.values()) list.sort(lagao);
     jaRein.sort(lagao);
+
+    // HR record wale (ya owner/admin role) jaR par intentionally hain.
+    // Bina HR record wale adhoore section mein alag dikhte hain.
+    const topLog = jaRein.filter((r) => r.recordHai || ROLE_RANK[r.role] !== undefined);
+    const adhooreLog = jaRein.filter((r) => !r.recordHai && ROLE_RANK[r.role] === undefined);
+
     return {
       bacchay,
-      jaRein,
+      topLog,
+      adhooreLog,
       binaAfsar: rows.filter((r) => !r.afsar).length,
       adhoore: rows.filter((r) => !r.recordHai).length,
     };
@@ -467,7 +495,7 @@ export function OrgTreeClient({
         </Card>
         <Card className="py-3">
           <p className="text-xs text-surface-500 dark:text-surface-400">Ooper ki satah par</p>
-          <p className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{jaRein.length}</p>
+          <p className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{topLog.length + adhooreLog.length}</p>
         </Card>
       </div>
 
@@ -482,8 +510,9 @@ export function OrgTreeClient({
           />
         </div>
 
+        {/* Top management — tree ki jaR, tarteeb se: Owner/CEO pehle */}
         <ul className="relative">
-          {jaRein.map((r) => (
+          {topLog.map((r) => (
             <Shakh
               key={r.id}
               banda={r}
@@ -504,6 +533,37 @@ export function OrgTreeClient({
             />
           ))}
         </ul>
+
+        {/* Adhoore record wale alag section mein — tree mein mix nahi */}
+        {adhooreLog.length > 0 && (
+          <details className="mt-4 border-t border-surface-100 pt-3 dark:border-surface-800">
+            <summary className="cursor-pointer select-none text-xs font-medium text-surface-500 hover:text-surface-700 dark:text-surface-400">
+              Bina HR record ke staff ({adhooreLog.length}) — &quot;Badlein&quot; se ohda aur afsar lagayein
+            </summary>
+            <ul className="relative mt-2">
+              {adhooreLog.map((r) => (
+                <Shakh
+                  key={r.id}
+                  banda={r}
+                  bacchay={bacchay}
+                  gehrai={0}
+                  khulay={khulay}
+                  toggle={toggle}
+                  chamak={chamak}
+                  khudId={khudId}
+                  chalaGaya={new Set()}
+                  canEdit={canEdit}
+                  badalRahe={badalRahe}
+                  setBadalRahe={setBadalRahe}
+                  sabLog={rows}
+                  positions={positions}
+                  departments={departments}
+                  branches={branches}
+                />
+              ))}
+            </ul>
+          </details>
+        )}
 
         <p className="mt-3 border-t border-surface-100 pt-3 text-xs text-surface-400 dark:border-surface-800">
           Tasveer har banda apne <strong>My HR</strong> safhe se khud lagata hai — yahan se nahi lagti.
