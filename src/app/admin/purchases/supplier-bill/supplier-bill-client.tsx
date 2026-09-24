@@ -106,18 +106,52 @@ export function SupplierBillClient({
   const [billNo, setBillNo] = useState("");
   const [billNoGenerating, setBillNoGenerating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [isOnline, setIsOnline] = useState(true);
-  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "queued" | "syncing" | "synced" | "sync_error">("idle");
 
-  // Online/offline detect
+  // Online/offline detect + auto-sync when internet returns
   useEffect(() => {
     setIsOnline(navigator.onLine);
-    const on = () => { setIsOnline(true); setOfflineSaved(false); };
     const off = () => setIsOnline(false);
-    window.addEventListener("online", on);
+    const on = () => {
+      setIsOnline(true);
+      // Check if there's a pending offline bill to auto-submit
+      let pending: string | null = null;
+      try { pending = localStorage.getItem("offline_bill_pending"); } catch { /* ignore */ }
+      if (!pending) return;
+      setSyncStatus("syncing");
+      let fd: FormData;
+      try {
+        const entries = JSON.parse(pending) as Record<string, string>;
+        fd = new FormData();
+        for (const [k, v] of Object.entries(entries)) fd.append(k, v);
+      } catch { setSyncStatus("sync_error"); return; }
+      createPurchase({}, fd).then((result) => {
+        if (result.success) {
+          try { localStorage.removeItem("offline_bill_pending"); localStorage.removeItem("supplier_bill_draft"); } catch { /* ignore */ }
+          setSyncStatus("synced");
+        } else { setSyncStatus("sync_error"); }
+      }).catch(() => setSyncStatus("sync_error"));
+    };
     window.addEventListener("offline", off);
-    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+    window.addEventListener("online", on);
+    return () => { window.removeEventListener("offline", off); window.removeEventListener("online", on); };
   }, []);
+
+  // Intercept form submit when offline — save FormData to localStorage
+  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (isOnline) return; // online: let server action handle normally
+    e.preventDefault();
+    if (!formRef.current) return;
+    try {
+      const fd = new FormData(formRef.current);
+      const entries: Record<string, string> = {};
+      fd.forEach((value, key) => { entries[key] = String(value); });
+      localStorage.setItem("offline_bill_pending", JSON.stringify(entries));
+      setSyncStatus("queued");
+    } catch { /* storage full — ignore */ }
+  }
 
   // Clear draft on successful submit
   useEffect(() => {
@@ -366,11 +400,15 @@ export function SupplierBillClient({
         </Link>
       </div>
 
-      {!isOnline && <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />Offline Mode — Bill ka data save ho raha hai. Internet aane par Submit karein.</div>}
-      {state.success && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
+      {!isOnline && syncStatus !== "queued" && <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />Offline Mode — Bill ka data save ho raha hai. Submit karo — internet aate hi khud chala jayega.</div>}
+      {syncStatus === "queued" && <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />Bill saved — internet aate hi auto-submit ho jayega, kuch karna nahi.</div>}
+      {syncStatus === "syncing" && <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200"><span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />Internet aa gaya — Bill auto-submit ho raha hai...</div>}
+      {syncStatus === "synced" && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Offline bill auto-submit ho gaya! Stock GRN ke baad charhega.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
+      {syncStatus === "sync_error" && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">Auto-sync mein masla aaya. Dobara submit karein.</p>}
+      {state.success && syncStatus !== "synced" && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
       {state.error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{state.error}</p>}
 
-      <form action={formAction} className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_330px] xl:overflow-hidden">
+      <form ref={formRef} action={formAction} onSubmit={handleFormSubmit} className="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_330px] xl:overflow-hidden">
         <input type="hidden" name="supplier_bill_workspace" value="on" />
         <input type="hidden" name="items_json" value={itemPayload} />
         <input type="hidden" name="purchase_date" value={billDate} />
@@ -569,12 +607,12 @@ export function SupplierBillClient({
                           </div>
                           <div className="mb-0.5 h-7 w-px self-end bg-surface-200 dark:bg-surface-700" />
                           <div className="min-w-[130px]">
-                            <div className="mb-1 text-[10px] font-medium text-surface-500">Wholesale <span className="font-normal text-surface-400">per {itemLabel}</span></div>
+                            <div className="mb-1 text-[10px] font-medium text-surface-500">Wholesale <span className="font-normal text-surface-400">per pack</span></div>
                             <div className="relative">
                               <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
                               <input aria-label="Wholesale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" />
                             </div>
-                            {(() => { const w = Number(line.wholesale_rate); if (!w || !uEff) return null; return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 pack = Rs {(Math.round(w * uEff * 100) / 100).toLocaleString()}</span>; })()}
+                            {(() => { const w = Number(line.wholesale_rate); if (!w || !uEff) return null; return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((w / uEff) * 100) / 100).toLocaleString()}</span>; })()}
                           </div>
                           <div className="min-w-[130px]">
                             <div className="mb-1 text-[10px] font-medium text-surface-500">Sale Rate <span className="font-normal text-surface-400">per item</span></div>
