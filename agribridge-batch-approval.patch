@@ -1,0 +1,282 @@
+From a2043127cd40d4e540ba34b0080c3c62db479f49 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Wed, 23 Sep 2026 00:55:34 +0800
+Subject: [PATCH] feat(inventory): bulk approve missing batches
+
+---
+ src/actions/inventory.ts                      |  28 +++-
+ src/app/admin/inventory/page.tsx              |  24 +++-
+ .../admin/inventory/unbatched-bulk-fixer.tsx  | 126 ++++++++++++++++++
+ src/app/admin/master-dashboard/page.tsx       |   6 +-
+ 4 files changed, 175 insertions(+), 9 deletions(-)
+ create mode 100644 src/app/admin/inventory/unbatched-bulk-fixer.tsx
+
+diff --git a/src/actions/inventory.ts b/src/actions/inventory.ts
+index fa18f46..1af5898 100644
+--- a/src/actions/inventory.ts
++++ b/src/actions/inventory.ts
+@@ -6,6 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
+ export interface ActionState {
+   error?: string;
+   success?: boolean;
++  fixed?: number;
+ }
+ 
+ export async function adjustStock(_prev: ActionState, formData: FormData): Promise<ActionState> {
+@@ -234,6 +235,16 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
+   const { data: { user } } = await supabase.auth.getUser();
+   if (!user) return { error: "Login zaroori hai." };
+ 
++  const { data: me } = await supabase
++    .from("profiles")
++    .select("role, is_active")
++    .eq("id", user.id)
++    .maybeSingle();
++  const allowed = ["owner", "super_admin", "admin", "warehouse"];
++  if (!me?.is_active || !allowed.includes(me.role)) {
++    return { error: "Batch approve karna sirf Owner, Admin ya Warehouse wale kar sakte hain." };
++  }
++
+   const productId = String(formData.get("product_id") ?? "").trim();
+   const unitCostRaw = Number(formData.get("unit_cost") ?? 0);
+   if (!productId) return { error: "Product ID gum hai." };
+@@ -267,13 +278,22 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
+       .select("id")
+       .single();
+     if (batchErr || !batch) continue;
+-    await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
++    const { error: updateErr } = await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
++    if (updateErr) {
++      // Adhoora/orphan batch na chhorein: inventory link na ho to naya
++      // batch bhi wapas hata dein aur baqi rows ki koshish jaari rakhein.
++      await service.from("stock_batches").delete().eq("id", batch.id);
++      continue;
++    }
+     fixed++;
+   }
+ 
+-  if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
+-
+   revalidatePath(`/admin/inventory/product/${productId}`);
++  revalidatePath("/admin/inventory");
+   revalidatePath("/admin/master-dashboard");
+-  return { success: true };
++  if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
++  if (fixed < rows.length) {
++    return { error: `${fixed} batch theek hue, lekin ${rows.length - fixed} abhi baqi hain — dobara approve karein.`, fixed };
++  }
++  return { success: true, fixed };
+ }
+diff --git a/src/app/admin/inventory/page.tsx b/src/app/admin/inventory/page.tsx
+index b11e055..fbf31aa 100644
+--- a/src/app/admin/inventory/page.tsx
++++ b/src/app/admin/inventory/page.tsx
+@@ -3,10 +3,11 @@ import { t } from "@/lib/i18n/translations";
+ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+ import { PageHeader } from "@/components/ui/layout-primitives";
+ import { InventoryClient } from "@/app/admin/inventory/inventory-client";
++import { UnbatchedBulkFixer, type MissingBatchProduct } from "@/app/admin/inventory/unbatched-bulk-fixer";
+ 
+ export const dynamic = "force-dynamic";
+ 
+-export default async function AdminInventoryPage() {
++export default async function AdminInventoryPage({ searchParams }: { searchParams?: { focus?: string } }) {
+   const supabase = createClient();
+   const lang = getLanguageFromCookies("rm");
+ 
+@@ -64,10 +65,29 @@ export default async function AdminInventoryPage() {
+     };
+   });
+ 
++  const missingByProduct = new Map<string, MissingBatchProduct>();
++  for (const row of rows) {
++    if (row.batch_id != null || row.quantity_on_hand <= 0) continue;
++    const current: MissingBatchProduct = missingByProduct.get(row.product_id) ?? {
++      productId: row.product_id,
++      productName: row.product_name,
++      packSize: row.pack_size,
++      totalQuantity: 0,
++      purchaseRate: row.purchase_price > 0 ? row.purchase_price : null,
++      saleRate: row.selling_price,
++      warehouses: [],
++    };
++    current.totalQuantity += row.quantity_on_hand;
++    current.warehouses.push({ name: row.warehouse_name, quantity: row.quantity_on_hand });
++    missingByProduct.set(row.product_id, current);
++  }
++  const missingBatchProducts = [...missingByProduct.values()].sort((a, b) => a.productName.localeCompare(b.productName));
++
+   return (
+     <div>
+       <PageHeader title={t("inv_title", lang)} description={t("inv_subtitle", lang)} />
++      <UnbatchedBulkFixer products={missingBatchProducts} focusProductId={searchParams?.focus} />
+       <InventoryClient rows={rows} warehouses={warehouses ?? []} />
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/src/app/admin/inventory/unbatched-bulk-fixer.tsx b/src/app/admin/inventory/unbatched-bulk-fixer.tsx
+new file mode 100644
+index 0000000..00b258b
+--- /dev/null
++++ b/src/app/admin/inventory/unbatched-bulk-fixer.tsx
+@@ -0,0 +1,126 @@
++"use client";
++
++import { useFormState, useFormStatus } from "react-dom";
++import { AlertTriangle, CheckCircle2, Layers3, Warehouse } from "lucide-react";
++import { fixUnbatchedInventory, type ActionState } from "@/actions/inventory";
++
++export interface MissingBatchProduct {
++  productId: string;
++  productName: string;
++  packSize: string | null;
++  totalQuantity: number;
++  purchaseRate: number | null;
++  saleRate: number | null;
++  warehouses: { name: string; quantity: number }[];
++}
++
++function ApproveButton() {
++  const { pending } = useFormStatus();
++  return (
++    <button
++      type="submit"
++      disabled={pending}
++      className="inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-wait disabled:opacity-60"
++    >
++      {pending ? "Approve ho raha hai…" : "Approve — Batch Banao"}
++    </button>
++  );
++}
++
++function ProductApprovalRow({ product, focused }: { product: MissingBatchProduct; focused: boolean }) {
++  const [state, action] = useFormState<ActionState, FormData>(fixUnbatchedInventory, {});
++  const suggestedRate = product.purchaseRate ?? product.saleRate;
++
++  return (
++    <article
++      id={`missing-batch-${product.productId}`}
++      className={`rounded-xl border bg-white p-4 shadow-sm transition dark:bg-surface-900 ${
++        focused ? "border-amber-500 ring-2 ring-amber-200" : "border-amber-200 dark:border-amber-800"
++      }`}
++    >
++      {state.success ? (
++        <div className="flex min-h-24 items-center gap-3 text-emerald-700 dark:text-emerald-400">
++          <CheckCircle2 className="h-6 w-6 shrink-0" />
++          <div>
++            <p className="font-semibold">{product.productName} approve ho gaya</p>
++            <p className="text-xs">{state.fixed ?? product.warehouses.length} warehouse batch record theek ho gaye.</p>
++          </div>
++        </div>
++      ) : (
++        <>
++          <div className="flex flex-wrap items-start justify-between gap-3">
++            <div className="min-w-0">
++              <p className="font-semibold text-surface-900 dark:text-white">
++                {product.productName}{product.packSize ? ` · ${product.packSize}` : ""}
++              </p>
++              <p className="mt-1 text-xs text-surface-500">
++                Total <b className="text-amber-700">{product.totalQuantity}</b> unit batch ke baghair
++              </p>
++            </div>
++            <div className="flex flex-wrap gap-2">
++              {product.warehouses.map((warehouse) => (
++                <span key={warehouse.name} className="inline-flex items-center gap-1 rounded-full bg-surface-100 px-2.5 py-1 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200">
++                  <Warehouse className="h-3.5 w-3.5" /> {warehouse.name}: <b>{warehouse.quantity}</b>
++                </span>
++              ))}
++            </div>
++          </div>
++
++          <div className="mt-3 grid gap-2 rounded-lg bg-surface-50 p-3 text-xs sm:grid-cols-3 dark:bg-surface-800/60">
++            <div><span className="text-surface-500">Khareed rate</span><strong className="block text-sm">{product.purchaseRate == null ? "Darj nahi" : `Rs ${product.purchaseRate.toLocaleString()}`}</strong></div>
++            <div><span className="text-surface-500">Sale rate</span><strong className="block text-sm">{product.saleRate == null ? "Darj nahi" : `Rs ${product.saleRate.toLocaleString()}`}</strong></div>
++            <div><span className="text-surface-500">Andazati stock value</span><strong className="block text-sm">{suggestedRate == null ? "Rate chahiye" : `Rs ${(suggestedRate * product.totalQuantity).toLocaleString()}`}</strong></div>
++          </div>
++
++          <form action={action} className="mt-3 flex flex-wrap items-end gap-3">
++            <input type="hidden" name="product_id" value={product.productId} />
++            <label className="min-w-[220px] flex-1 text-xs font-medium text-surface-700 dark:text-surface-200">
++              Khareed qeemat per unit (Rs)
++              <input
++                type="number"
++                name="unit_cost"
++                required
++                min="0.01"
++                step="0.01"
++                defaultValue={suggestedRate ?? undefined}
++                placeholder="Khareed rate likhein"
++                className="mt-1 min-h-10 w-full rounded-lg border border-amber-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-amber-400 dark:border-amber-700 dark:bg-surface-950"
++              />
++            </label>
++            <ApproveButton />
++            {state.error && <p className="w-full text-xs font-medium text-red-600">{state.error}</p>}
++          </form>
++        </>
++      )}
++    </article>
++  );
++}
++
++export function UnbatchedBulkFixer({ products, focusProductId }: { products: MissingBatchProduct[]; focusProductId?: string }) {
++  if (products.length === 0) return null;
++  const totalUnits = products.reduce((sum, product) => sum + product.totalQuantity, 0);
++
++  return (
++    <section id="missing-batches" className="mb-5 scroll-mt-24 rounded-xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-800 dark:bg-amber-950/20">
++      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
++        <div className="flex items-start gap-2">
++          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
++          <div>
++            <h2 className="font-semibold text-amber-950 dark:text-amber-100">Batch missing products — ek hi jagah approve karein</h2>
++            <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
++              Har product ki quantity, warehouse aur rate neeche saath hain. Ek ek karke approve karein; page chhorne ki zaroorat nahi.
++            </p>
++          </div>
++        </div>
++        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200">
++          <Layers3 className="h-4 w-4" /> {products.length} products · {totalUnits} units
++        </span>
++      </div>
++      <div className="grid gap-3 xl:grid-cols-2">
++        {products.map((product) => (
++          <ProductApprovalRow key={product.productId} product={product} focused={focusProductId === product.productId} />
++        ))}
++      </div>
++    </section>
++  );
++}
+diff --git a/src/app/admin/master-dashboard/page.tsx b/src/app/admin/master-dashboard/page.tsx
+index ec10cc2..f60ed14 100644
+--- a/src/app/admin/master-dashboard/page.tsx
++++ b/src/app/admin/master-dashboard/page.tsx
+@@ -394,7 +394,7 @@ export default async function MasterDashboardPage({
+         <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+           <div className="flex items-start justify-between gap-3">
+             <p className="font-semibold">Stock ke do adad abhi barabar nahi.</p>
+-            <Link href="/admin/inventory" className="shrink-0 rounded-lg bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-800">
++            <Link href="/admin/inventory#missing-batches" className="shrink-0 rounded-lg bg-amber-700 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-800">
+               Inventory Kholo →
+             </Link>
+           </div>
+@@ -410,7 +410,7 @@ export default async function MasterDashboardPage({
+           {missingBatchProducts.length > 0 && (
+             <div className="mt-2 flex flex-wrap gap-1.5">
+               {missingBatchProducts.map((p) => (
+-                <Link key={p.id} href={`/admin/inventory/product/${p.id}`}
++                <Link key={p.id} href={`/admin/inventory?focus=${p.id}#missing-batch-${p.id}`}
+                   className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-surface-900 dark:text-amber-300">
+                   {p.name} →
+                 </Link>
+@@ -564,4 +564,4 @@ function MiniSparkline({ data, color }: { data: number[]; color: "brand" | "red"
+       {pts.map((p, i) => p.v > 0 && <circle key={i} cx={p.x} cy={p.y} r="2" fill={lineColor} />)}
+     </svg>
+   );
+-}
+\ No newline at end of file
++}
+-- 
+2.51.1
+
