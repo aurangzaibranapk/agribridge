@@ -252,6 +252,15 @@ export async function updateProductNamePackSize(
   pack_size: string | null,
   category_id?: string | null,
   selling_price?: number | null,
+  extras?: {
+    wholesale_price?: number | null;
+    mrp_price?: number | null;
+    unit?: string | null;
+    manufacture_date?: string | null;
+    expiry_date?: string | null;
+    barcode?: string | null;
+    company_id?: string | null;
+  },
 ): Promise<{ error?: string }> {
   const supabase = createClient();
   const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
@@ -266,6 +275,20 @@ export async function updateProductNamePackSize(
   const extraFields: Record<string, unknown> = {};
   if (category_id !== undefined) extraFields.category_id = category_id;
   if (selling_price !== undefined) extraFields.selling_price = selling_price;
+
+  if (extras) {
+    if (extras.wholesale_price !== undefined) extraFields.wholesale_price = extras.wholesale_price;
+    if (extras.mrp_price !== undefined) extraFields.mrp_price = extras.mrp_price;
+    if (extras.manufacture_date !== undefined) extraFields.manufacture_date = extras.manufacture_date || null;
+    if (extras.expiry_date !== undefined) extraFields.expiry_date = extras.expiry_date || null;
+    if (extras.barcode !== undefined) extraFields.barcode = extras.barcode?.trim() || null;
+    if (extras.company_id !== undefined) extraFields.company_id = extras.company_id || null;
+    if (extras.unit !== undefined) {
+      const uf = await unitFields(extras.unit);
+      extraFields.unit = uf.unit;
+      extraFields.unit_code = uf.unit_code;
+    }
+  }
 
   if (!isUnrestricted && permission?.edit_needs_approval) {
     const { error } = await supabase.from("product_edit_requests").insert({

@@ -24,10 +24,10 @@ export default async function CatalogExportPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }, { data: saleItems }] = await Promise.all([
+  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }, { data: saleItems }, { data: companiesRaw }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, category_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
+      .select("id, name, category_id, company_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("categories").select("id, name, parent_category_id"),
@@ -35,6 +35,7 @@ export default async function CatalogExportPage() {
     supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
     supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
     supabase.from("pos_sale_items").select("product_id, quantity, subtotal").limit(100000),
+    supabase.from("companies").select("id, name").order("name"),
   ]);
 
   const categories = (allCategories ?? []).map((c) => ({ id: c.id, name: c.name }));
@@ -70,6 +71,7 @@ export default async function CatalogExportPage() {
       id: p.id,
       name: p.name,
       category_id: categoryId,
+      company_id: p.company_id as string | null,
       category: Array.isArray(p.categories) ? p.categories[0]?.name : p.categories?.name,
       shopGroups,
       brand: Array.isArray(p.companies) ? p.companies[0]?.name : p.companies?.name,
@@ -94,12 +96,13 @@ export default async function CatalogExportPage() {
 
   const warehouseList = (warehouses ?? []).map((w: any) => ({ id: w.id, name: w.name, shop_id: w.shop_id as string | null }));
   const shopList = (shops ?? []).map((s: any) => ({ id: s.id, name: s.name }));
+  const companiesList = (companiesRaw ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string }));
 
   return (
     <div>
       <PageHeader title={t("pd_catalog_export", lang)} description="Category select karein, fields choose karein, Print/Download/WhatsApp/Email karein" />
       <ProductSetupTabs current="export" lang={lang} />
-      <CatalogExportClient products={products} categories={categories} shopGroups={SHOP_GROUPS} warehouses={warehouseList} shops={shopList} />
+      <CatalogExportClient products={products} categories={categories} companies={companiesList} shopGroups={SHOP_GROUPS} warehouses={warehouseList} shops={shopList} />
     </div>
   );
 }
