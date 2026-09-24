@@ -15,6 +15,7 @@ interface InventoryRow {
   batch_id: string | null;
   product_name: string;
   pack_size: string | null;
+  units_per_pack: number;
   batch_number: string | null;
   expiry_date: string | null;
   days_left: number | null;
@@ -281,8 +282,13 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                   </td>
                   <td className={`px-4 py-3 text-right font-semibold ${isLow ? "text-red-600" : "text-surface-800 dark:text-surface-200"}`}>
                     <Link href={`/admin/inventory/product/${r.product_id}`} className="hover:text-brand-600 hover:underline" title={t("inv_qty_report_hint", lang)}>
-                      {r.quantity_on_hand}
+                      {r.units_per_pack > 1
+                        ? <>{(r.quantity_on_hand * r.units_per_pack).toLocaleString()} <span className="text-xs font-normal text-surface-400">btl</span></>
+                        : r.quantity_on_hand}
                     </Link>
+                    {r.units_per_pack > 1 && (
+                      <span className="ml-1 text-[10px] font-normal text-surface-400">({r.quantity_on_hand} packs)</span>
+                    )}
                     {isLow && <span className="ml-1 text-xs">({t("inv_low", lang)})</span>}
                   </td>
                   <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">

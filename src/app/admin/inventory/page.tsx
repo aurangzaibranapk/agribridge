@@ -15,7 +15,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     supabase
       .from("inventory")
       .select(
-        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold)"
+        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, units_per_pack, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold)"
       )
       .order("quantity_on_hand", { ascending: true }),
     supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
@@ -48,6 +48,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
       batch_id: row.batch_id,
       product_name: product?.name ?? "Unknown Product",
       pack_size: product?.pack_size ?? null,
+      units_per_pack: Number(product?.units_per_pack ?? 1),
       batch_number: batch?.batch_number ?? near?.batch_number ?? null,
       expiry_date: batch?.expiry_date ?? near?.expiry_date ?? null,
       days_left: batch?.expiry_date ? null : near?.days_left ?? null,
