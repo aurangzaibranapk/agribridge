@@ -451,8 +451,6 @@ export function SupplierBillClient({
                         {selected ? (
                           (selected.pack_size || selected.unit) ? (
                             (() => {
-                              const bStrPack = `${selected.unit ?? ""} ${selected.pack_size ?? ""}`.toLowerCase();
-                              const isBtPack = bStrPack.includes("botal") || bStrPack.includes("liter") || bStrPack.includes("litr");
                               const hasUpp = selected.units_per_pack != null && selected.units_per_pack > 1;
                               return (
                                 <span className="block pt-2 text-xs text-surface-600 dark:text-surface-300">
@@ -461,30 +459,43 @@ export function SupplierBillClient({
                                     <span className="ml-1.5 rounded bg-surface-100 px-1 py-0.5 text-[10px] font-semibold text-surface-500 dark:bg-surface-800">
                                       ×{selected.units_per_pack}
                                     </span>
-                                  ) : isBtPack ? (
+                                  ) : (
                                     <span className="mt-1.5 flex items-center gap-1">
                                       <span className="text-[10px] text-surface-400">×</span>
                                       <input
-                                        aria-label="Botalen per peti"
+                                        aria-label="Items per pack"
                                         type="number" min="1" step="1"
                                         value={line.units_per_pack_override}
                                         onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })}
-                                        placeholder="bot/peti"
+                                        placeholder="item/pack"
                                         className="h-7 w-16 rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
                                       />
                                     </span>
-                                  ) : null}
+                                  )}
                                 </span>
                               );
                             })()
                           ) : (
-                            <input
-                              aria-label="Pack / Unit"
-                              className={`${inputClass} text-xs`}
-                              value={line.pack_override}
-                              onChange={(e) => updateLine(index, { pack_override: e.target.value })}
-                              placeholder="e.g. 1kg, 500ml"
-                            />
+                            <div className="flex flex-col gap-1.5">
+                              <input
+                                aria-label="Pack / Unit"
+                                className={`${inputClass} text-xs`}
+                                value={line.pack_override}
+                                onChange={(e) => updateLine(index, { pack_override: e.target.value })}
+                                placeholder="e.g. 1kg, 500ml"
+                              />
+                              <span className="flex items-center gap-1">
+                                <span className="text-[10px] text-surface-400">×</span>
+                                <input
+                                  aria-label="Items per pack"
+                                  type="number" min="1" step="1"
+                                  value={line.units_per_pack_override}
+                                  onChange={(e) => updateLine(index, { units_per_pack_override: e.target.value })}
+                                  placeholder="item/pack"
+                                  className="h-7 w-16 rounded border border-surface-200 bg-white px-1.5 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+                                />
+                              </span>
+                            </div>
                           )
                         ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
                       </td>
