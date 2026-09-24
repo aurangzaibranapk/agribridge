@@ -370,7 +370,7 @@ export function ImportClient({
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const off = r.status === "skipped";
+                  const off = r.status === "skipped" || skips.includes(r.line);
                   // Har khana yahin theek ho sakta hai. Jo likha jata
                   // hai wo CSV ki us lakeer par chipak jata hai, aur
                   // dobara "Pehle dekhein" par server usi jaanch se
