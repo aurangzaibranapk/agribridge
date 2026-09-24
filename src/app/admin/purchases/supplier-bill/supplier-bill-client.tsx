@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
-  ArrowLeft, Check, ChevronDown, FileText, FileUp, PackagePlus, Plus, Search,
+  ArrowLeft, Check, FileText, FileUp, PackagePlus, Plus, Search,
   ShoppingCart, Trash2, X,
 } from "lucide-react";
 import { createPurchase, type ActionState } from "@/actions/purchases";
@@ -406,17 +406,14 @@ export function SupplierBillClient({
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800 xl:min-h-0 xl:flex-1 xl:overflow-auto">
-              <table className="w-full min-w-[1160px] border-collapse text-sm">
+              <table className="w-full min-w-[820px] border-collapse text-sm">
                 <thead>
                   <tr className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800">
                     <th className="w-8 px-3 py-2">#</th>
                     <th className="px-3 py-2">Product</th>
                     <th className="w-32 px-3 py-2"><div>Pack / Unit</div><div className="text-[10px] font-normal text-surface-400">× items/pack</div></th>
                     <th className="w-20 px-3 py-2">Qty</th>
-                    <th className="w-32 px-3 py-2"><div>Purchase Rate</div><div className="text-[10px] font-normal text-surface-400">per pack</div></th>
-                    <th className="w-32 px-3 py-2"><div>Wholesale</div><div className="text-[10px] font-normal text-surface-400">per pack</div></th>
-                    <th className="w-28 px-3 py-2"><div>Sale Rate</div><div className="text-[10px] font-normal text-surface-400">per item</div></th>
-                    <th className="w-24 px-3 py-2"><div>MRP</div><div className="text-[10px] font-normal text-surface-400">per item</div></th>
+                    <th className="w-36 px-3 py-2"><div>Trade Rate</div><div className="text-[10px] font-normal text-surface-400">per pack</div></th>
                     <th className="w-28 px-3 py-2 text-right">Line Total</th>
                     <th className="w-10 px-3 py-2"></th>
                   </tr>
@@ -446,7 +443,7 @@ export function SupplierBillClient({
                     const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
                     const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
                     const itemLabel = isBt ? "botal" : "item";
-                    return <tr key={index} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
+                    return <Fragment key={index}><tr className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
                       {/* Product column — search + category hint + batch/expiry */}
                       <td className="relative px-3 py-2.5">
@@ -464,7 +461,6 @@ export function SupplierBillClient({
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
                         {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
-                        {selected && <details className="mt-1.5 text-[11px] text-surface-500"><summary className="w-fit cursor-pointer select-none">Batch / expiry <ChevronDown className="ml-1 inline h-3 w-3" /></summary><div className="mt-2 grid grid-cols-3 gap-2"><input aria-label="Batch number" className={inputClass} value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." /><input aria-label="Manufacture date" className={inputClass} type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} /><input aria-label="Expiry date" className={inputClass} type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} /></div></details>}
                       </td>
                       {/* Pack / Unit + items per pack */}
                       <td className="px-3 py-2.5">
@@ -512,32 +508,47 @@ export function SupplierBillClient({
                           return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((r / uEff) * 100) / 100).toLocaleString()}</span>;
                         })()}
                       </td>
-                      {/* Wholesale Rate (per pack) */}
-                      <td className="px-3 py-2.5">
-                        {selected ? <>
-                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Wholesale rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" /></div>
-                          {(() => {
-                            const w = Number(line.wholesale_rate);
-                            if (!w || !uEff) return null;
-                            return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((w / uEff) * 100) / 100).toLocaleString()}</span>;
-                          })()}
-                        </> : <span className="block pt-2 text-xs text-surface-400">—</span>}
-                      </td>
-                      {/* Sale Rate (per item) */}
-                      <td className="px-3 py-2.5">
-                        {selected ? (
-                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Sale rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="0" /></div>
-                        ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
-                      </td>
-                      {/* MRP (per item) */}
-                      <td className="px-3 py-2.5">
-                        {selected ? (
-                          <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="MRP rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="0" /></div>
-                        ) : <span className="block pt-2 text-xs text-surface-400">—</span>}
-                      </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
                       <td className="px-3 py-2.5"><button type="button" disabled={lines.length === 1} onClick={() => setLines((previous) => previous.filter((_, i) => i !== index))} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
-                    </tr>;
+                    </tr>
+                    {selected && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
+                      <td />
+                      <td colSpan={5} className="px-3 pb-3 pt-0">
+                        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                          <div className="flex items-end gap-2">
+                            <span className="mb-2 text-[10px] font-medium text-surface-500 whitespace-nowrap">Batch / Expiry</span>
+                            <input aria-label="Batch number" className="h-8 w-24 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none placeholder:text-surface-400 focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" value={line.batch_number} onChange={(event) => updateLine(index, { batch_number: event.target.value })} placeholder="Batch no." />
+                            <input aria-label="Manufacture date" className="h-8 w-32 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" type="date" value={line.manufacture_date} onChange={(event) => updateLine(index, { manufacture_date: event.target.value })} />
+                            <input aria-label="Expiry date" className="h-8 w-32 rounded-lg border border-surface-200 bg-white px-2 text-[11px] text-surface-700 outline-none focus:border-brand-400 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-200" type="date" value={line.expiry_date} onChange={(event) => updateLine(index, { expiry_date: event.target.value })} />
+                          </div>
+                          <div className="mb-0.5 h-7 w-px self-end bg-surface-200 dark:bg-surface-700" />
+                          <div className="min-w-[130px]">
+                            <div className="mb-1 text-[10px] font-medium text-surface-500">Wholesale <span className="font-normal text-surface-400">per {itemLabel}</span></div>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
+                              <input aria-label="Wholesale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.wholesale_rate} onChange={(event) => updateLine(index, { wholesale_rate: event.target.value })} placeholder="0" />
+                            </div>
+                            {(() => { const w = Number(line.wholesale_rate); if (!w || !uEff) return null; return <span className="mt-0.5 block text-[10px] font-medium text-brand-700">1 pack = Rs {(Math.round(w * uEff * 100) / 100).toLocaleString()}</span>; })()}
+                          </div>
+                          <div className="min-w-[130px]">
+                            <div className="mb-1 text-[10px] font-medium text-surface-500">Sale Rate <span className="font-normal text-surface-400">per item</span></div>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
+                              <input aria-label="Sale rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.sale_rate} onChange={(event) => updateLine(index, { sale_rate: event.target.value })} placeholder="0" />
+                            </div>
+                          </div>
+                          <div className="min-w-[120px]">
+                            <div className="mb-1 text-[10px] font-medium text-surface-500">MRP <span className="font-normal text-surface-400">per item</span></div>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-2 text-xs text-surface-400">Rs</span>
+                              <input aria-label="MRP rate" className="h-8 w-full rounded-lg border border-surface-200 bg-white pl-8 pr-2 text-sm text-surface-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" type="number" min="0" step="0.01" value={line.mrp_rate} onChange={(event) => updateLine(index, { mrp_rate: event.target.value })} placeholder="0" />
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td />
+                    </tr>}
+                  </Fragment>;
                   })}
                 </tbody>
               </table>
