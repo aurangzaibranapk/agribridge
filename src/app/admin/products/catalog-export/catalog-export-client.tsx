@@ -1,9 +1,9 @@
 "use client";
 import { useState, useMemo, useTransition, useRef, useEffect } from "react";
-import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X, ChevronDown } from "lucide-react";
+import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X, ChevronDown, Trash2, GitMerge } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { updateProductNamePackSize } from "@/actions/products";
+import { updateProductNamePackSize, deleteCatalogProduct, mergeDuplicateProduct } from "@/actions/products";
 
 interface Company {
   id: string;
@@ -126,6 +126,11 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   // Malik (11 September): "next bhi yahan stock likhna hai, farq wahan
   // box hona chahiye."
   const [actualStock, setActualStock] = useState<Record<string, string>>({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<string>("");
+  const [mergeError, setMergeError] = useState("");
+  const [actionPending, setActionPending] = useState(false);
 
   const shopWarehouseIds = useMemo(
     () => shopFilter ? new Set(warehouses.filter((w) => w.shop_id === shopFilter).map((w) => w.id)) : null,
@@ -206,6 +211,33 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   function cancelEdit() {
     setEditingId(null);
     setEditError("");
+  }
+
+  async function handleDeleteConfirm(productId: string) {
+    setActionPending(true);
+    const result = await deleteCatalogProduct(productId);
+    setActionPending(false);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setDeleteConfirmId(null);
+    }
+  }
+
+  async function handleMerge() {
+    if (!mergeSourceId || !mergeTargetId) return;
+    setActionPending(true);
+    const result = await mergeDuplicateProduct(mergeSourceId, mergeTargetId);
+    setActionPending(false);
+    if (result.error) {
+      setMergeError(result.error);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== mergeSourceId));
+      setMergeSourceId(null);
+      setMergeTargetId("");
+      setMergeError("");
+    }
   }
 
   function saveEdit() {
@@ -425,7 +457,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   }
 
   return (
-    <div>
+    <>
       {/* Print par table ke columns barh sakte hain (11 fields tak, +2
           ginti sheet ke liye) -- portrait A4 mein sab nahi aata, dayeen
           taraf ke khane katte hue chhap jate. Landscape + chhota font
@@ -779,12 +811,17 @@ export function CatalogExportClient({ products: initialProducts, categories, com
                         ><X className="h-4 w-4" /></button>
                         {editError && <span className="ml-1 text-xs text-rose-600">{editError}</span>}
                       </span>
+                    ) : deleteConfirmId === p.id ? (
+                      <span className="flex items-center gap-1">
+                        <button onClick={() => handleDeleteConfirm(p.id)} disabled={actionPending} title="Haan, delete karo" className="rounded p-1 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"><Check className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setDeleteConfirmId(null)} disabled={actionPending} title="Nahi" className="rounded p-1 text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800"><X className="h-3.5 w-3.5" /></button>
+                      </span>
                     ) : (
-                      <button
-                        onClick={() => startEdit(p)}
-                        title="Edit name / pack size"
-                        className="rounded p-1 text-surface-400 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-800"
-                      ><Pencil className="h-3.5 w-3.5" /></button>
+                      <span className="flex items-center gap-0.5">
+                        <button onClick={() => startEdit(p)} title="Edit" className="rounded p-1 text-surface-400 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-800"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setDeleteConfirmId(p.id)} title="Delete" className="rounded p-1 text-surface-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => { setMergeSourceId(p.id); setMergeTargetId(""); setMergeError(""); }} title="Stock transfer / merge" className="rounded p-1 text-surface-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30"><GitMerge className="h-3.5 w-3.5" /></button>
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -796,6 +833,37 @@ export function CatalogExportClient({ products: initialProducts, categories, com
           </tbody>
         </table>
       </div>
-    </div>
+
+    {/* Merge / Stock Transfer Modal */}
+    {mergeSourceId && (() => {
+      const src = products.find((p) => p.id === mergeSourceId);
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { if (e.target === e.currentTarget) { setMergeSourceId(null); setMergeError(""); } }}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-surface-900">
+            <h2 className="mb-1 text-base font-semibold text-surface-900 dark:text-surface-100">Stock Transfer / Merge</h2>
+            <p className="mb-4 text-sm text-surface-500 dark:text-surface-400">
+              <span className="font-medium text-surface-700 dark:text-surface-300">{src?.name}</span> ka stock kisi doosre product mein transfer ho jayega, phir ye product delete ho jayega.
+            </p>
+            <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">Target Product chunein</label>
+            <select
+              value={mergeTargetId}
+              onChange={(e) => setMergeTargetId(e.target.value)}
+              className="mb-4 w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-600 dark:bg-surface-800 dark:text-surface-100"
+            >
+              <option value="">— product chunein —</option>
+              {products.filter((p) => p.id !== mergeSourceId).map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.pack_size ? ` (${p.pack_size})` : ""}{p.product_code ? ` [${p.product_code}]` : ""}</option>
+              ))}
+            </select>
+            {mergeError && <p className="mb-3 text-sm text-rose-600">{mergeError}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setMergeSourceId(null); setMergeError(""); }} disabled={actionPending} className="rounded-lg border border-surface-300 px-4 py-2 text-sm text-surface-600 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-600 dark:text-surface-400 dark:hover:bg-surface-800">Raho jane do</button>
+              <button onClick={handleMerge} disabled={!mergeTargetId || actionPending} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">{actionPending ? "Ho raha hai…" : "Transfer karo"}</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+  </>
   );
 }
