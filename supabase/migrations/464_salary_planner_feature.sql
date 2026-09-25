@@ -25,16 +25,15 @@ values ('reports', 'reports.salary-planner', 40, null, 0)
 on conflict (dashboard_key, feature_key) do nothing;
 
 -- Permissions: Owner, Super Admin, Admin, Finance, Manager
-insert into role_features (role, feature_key, can_view, can_edit)
+insert into role_feature_permissions (role, feature_key, actions)
 values
-  ('owner',       'reports.salary-planner', true, false),
-  ('super_admin', 'reports.salary-planner', true, false),
-  ('admin',       'reports.salary-planner', true, false),
-  ('finance',     'reports.salary-planner', true, false),
-  ('manager',     'reports.salary-planner', true, false)
+  ('owner',       'reports.salary-planner', array['view']),
+  ('super_admin', 'reports.salary-planner', array['view']),
+  ('admin',       'reports.salary-planner', array['view']),
+  ('finance',     'reports.salary-planner', array['view']),
+  ('manager',     'reports.salary-planner', array['view'])
 on conflict (role, feature_key) do update
-  set can_view = excluded.can_view,
-      can_edit = excluded.can_edit;
+  set actions = excluded.actions;
 
 -- feature_help: Roman Urdu mein
 insert into public.feature_help
