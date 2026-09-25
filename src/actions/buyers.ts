@@ -25,18 +25,23 @@ export async function createBuyer(_prev: ActionState, formData: FormData): Promi
   const contactPerson = (formData.get("contact_person") as string) || null;
   const address = (formData.get("address") as string) || null;
   if (!businessName) return { error: "Business name is required." };
-  if (!email || !email.includes("@")) return { error: "A valid email is required to invite the buyer." };
   if (!phone) return { error: "Phone number is required." };
-  const { data: invited, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
-    data: { role: "buyer" },
-  });
-  if (inviteError || !invited?.user) {
-    return { error: `Failed to invite buyer: ${inviteError?.message ?? "unknown error"}` };
+
+  let invitedUserId: string | null = null;
+  if (email && email.includes("@")) {
+    const { data: invited, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
+      data: { role: "buyer" },
+    });
+    if (inviteError || !invited?.user) {
+      return { error: `Failed to invite buyer: ${inviteError?.message ?? "unknown error"}` };
+    }
+    await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+    invitedUserId = invited.user.id;
   }
-  await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+
   const buyerCode = `BUY-${Date.now().toString().slice(-6)}`;
   const { error: buyerError } = await supabase.from("buyers").insert({
-    user_id: invited.user.id,
+    user_id: invitedUserId,
     buyer_code: buyerCode,
     business_name: businessName,
     contact_person: contactPerson,
