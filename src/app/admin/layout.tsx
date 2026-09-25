@@ -11,6 +11,7 @@ import { AssistantPanel } from "@/components/layout/assistant-panel";
 import { NavProgress } from "@/components/layout/nav-progress";
 import { OnlineStatusBar } from "@/components/layout/online-status-bar";
 import { PwaInstallPrompt } from "@/components/layout/pwa-install-prompt";
+import { CycleCountNudge } from "@/components/layout/cycle-count-nudge";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { sidebarModeFor, type SidebarKind } from "@/lib/access/sidebar-free";
@@ -283,6 +284,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Suspense>
       )}
       <PwaInstallPrompt />
+      {user && <CycleCountNudge />}
     </div>
     </LangProvider>
   );
