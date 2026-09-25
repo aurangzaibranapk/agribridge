@@ -24,6 +24,7 @@ interface Product {
   mrp_price: number | null;
   unit: string | null;
   barcode: string | null;
+  product_code: string | null;
   manufacture_date: string | null;
   expiry_date: string | null;
   stock_qty: number | null;
@@ -117,6 +118,8 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   const lang = useLang();
   const [selectedFields, setSelectedFields] = useState<string[]>(["category", "stock_qty", "stock_value_purchase", "selling_price"]);
   const [search, setSearch] = useState("");
+  const [codeFrom, setCodeFrom] = useState("");
+  const [codeTo, setCodeTo] = useState("");
   const [includeCountColumns, setIncludeCountColumns] = useState(false);
   // Ginti sheet ab kaghaz tak mehdood nahi -- yahin screen par bhi
   // "Actual Stock" likha ja sakta hai, aur Farq khud ban jata hai.
@@ -147,7 +150,17 @@ export function CatalogExportClient({ products: initialProducts, categories, com
     if (categoryFilters.length > 0) list = list.filter((p) => p.category != null && categoryFilters.includes(p.category));
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q));
+      list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.product_code ?? "").toLowerCase().includes(q));
+    }
+    if (codeFrom || codeTo) {
+      const from = codeFrom ? parseInt(codeFrom, 10) : 0;
+      const to = codeTo ? parseInt(codeTo, 10) : 9999;
+      list = list.filter((p) => {
+        const m = p.product_code?.match(/(\d+)$/);
+        if (!m) return false;
+        const n = parseInt(m[1], 10);
+        return n >= from && n <= to;
+      });
     }
     if (warehouseFilter) {
       list = list.filter((p) => p.warehouse_ids.includes(warehouseFilter));
@@ -164,7 +177,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
       });
     }
     return list;
-  }, [products, shopGroupFilter, categoryFilters, search, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
+  }, [products, shopGroupFilter, categoryFilters, search, codeFrom, codeTo, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
 
   const stockValueTotals = useMemo(() => ({
     purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
@@ -504,7 +517,10 @@ export function CatalogExportClient({ products: initialProducts, categories, com
         </select>
         <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date se" />
         <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date tak" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search naam ya code (e.g. BEV-001)" className="rounded-lg border border-surface-200 p-2 text-sm w-52" />
+        <span className="text-xs text-surface-500">Code range:</span>
+        <input type="number" min={1} value={codeFrom} onChange={(e) => setCodeFrom(e.target.value)} placeholder="Se (e.g. 10)" className="rounded-lg border border-surface-200 p-2 text-sm w-24" title="Code number se" />
+        <input type="number" min={1} value={codeTo} onChange={(e) => setCodeTo(e.target.value)} placeholder="Tak (e.g. 20)" className="rounded-lg border border-surface-200 p-2 text-sm w-24" title="Code number tak" />
         <div className="ml-auto flex gap-2">
           <button onClick={handlePrint} title="Print" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
           <button onClick={handleDownload} title="CSV Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
@@ -585,6 +601,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
           <thead>
             <tr className="text-left [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-white dark:[&>th]:bg-surface-900 [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
               <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">Code</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                 <th key={f.key} className="px-3 py-2 font-medium text-surface-500">{f.label}</th>
@@ -612,6 +629,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
                 >
 
                   <td className="px-3 py-2 text-surface-500">{i + 1}</td>
+                  <td className="px-3 py-2 font-mono text-xs font-semibold text-brand-700 dark:text-brand-400">{p.product_code ?? "—"}</td>
                   <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
                     {editingId === p.id ? (
                       <input

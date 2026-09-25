@@ -17,6 +17,7 @@ type Category = { id: string; name: string; parent_category_id: string | null; c
 type Product = {
   id: string; name: string; company_id: string | null; category_id: string | null; pack_size: string | null; units_per_pack: number | null; unit: string | null;
   purchase_price: number; selling_price: number; wholesale_price: number | null; mrp_price: number | null; trade_rate_pending: boolean;
+  product_code: string | null;
 };
 type Line = {
   product_id: string; query: string; quantity: string; unit_cost: string;
@@ -347,7 +348,7 @@ export function SupplierBillClient({
       pack_size: newProductPack.trim() || null, units_per_pack: null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
       purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0,
       mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
-      trade_rate_pending: false,
+      trade_rate_pending: false, product_code: null,
     };
     setProducts((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
     setLines((previous) => {
@@ -592,7 +593,7 @@ export function SupplierBillClient({
                         return false;
                       })();
                       const brandOk = activeBrand === "all" || product.company_id === activeBrand;
-                      const textOk = !normalizedQuery || `${product.name} ${product.pack_size ?? ""} ${product.unit ?? ""}`.toLowerCase().includes(normalizedQuery);
+                      const textOk = !normalizedQuery || `${product.product_code ?? ""} ${product.name} ${product.pack_size ?? ""} ${product.unit ?? ""}`.toLowerCase().includes(normalizedQuery);
                       return categoryOk && subCatOk && brandOk && textOk;
                     }).slice(0, 12);
                     const csvUnmatched = !line.product_id && line.query.trim().length > 0;
@@ -612,7 +613,7 @@ export function SupplierBillClient({
                           {line.pickerOpen && <>
                             <button aria-label="Close product search" type="button" className="fixed inset-0 z-10 cursor-default" onClick={() => updateLine(index, { pickerOpen: false })} />
                             <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-auto rounded-xl border border-surface-200 bg-white p-1 shadow-xl dark:border-surface-700 dark:bg-surface-900">
-                              {matches.map((product) => <button key={product.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectProduct(index, product)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-950/40"><span className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-100 text-brand-700 dark:bg-surface-800"><FileText className="h-4 w-4" /></span><span className="min-w-0"><span className="block truncate font-medium text-surface-800 dark:text-surface-100">{product.name}</span><span className="block text-[11px] text-surface-400">{product.pack_size || product.unit || "Unit set nahi"}</span></span></span><span className="shrink-0 text-[11px] text-surface-500">{GROUPS.find((group) => group.id === groupForCategory(product.category_id, categories))?.label ?? "Other"}</span></button>)}
+                              {matches.map((product) => <button key={product.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectProduct(index, product)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-950/40"><span className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-100 text-brand-700 dark:bg-surface-800"><FileText className="h-4 w-4" /></span><span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium text-surface-800 dark:text-surface-100">{product.name}</span>{product.product_code && <span className="shrink-0 rounded bg-brand-100 px-1 py-0.5 font-mono text-[10px] font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">{product.product_code}</span>}</span><span className="block text-[11px] text-surface-400">{product.pack_size || product.unit || "Unit set nahi"}</span></span></span><span className="shrink-0 text-[11px] text-surface-500">{GROUPS.find((group) => group.id === groupForCategory(product.category_id, categories))?.label ?? "Other"}</span></button>)}
                               {matches.length === 0 && <p className="px-3 py-4 text-center text-xs text-surface-500">Product nahi mila. New Product se master mein add karein.</p>}
                               <button type="button" onClick={() => { updateLine(index, { pickerOpen: false }); openNewProduct(); }} className="flex w-full items-center gap-2 rounded-lg border-t border-surface-100 px-3 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:border-surface-800 dark:text-brand-300"><Plus className="h-4 w-4" /> New Product Master</button>
                             </div>
