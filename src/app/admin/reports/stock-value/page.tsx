@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
-import { TrendingUp, PackageOpen, Boxes, ArrowDownCircle, Tag } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, PackageOpen, Boxes, ArrowDownCircle, Tag, ShoppingCart, Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Stock Value Report" };
@@ -152,14 +153,32 @@ export default async function StockValueReportPage({
   });
   const warehouseRows = Array.from(warehouseMap.values()).sort((a, b) => b.purchase_value - a.purchase_value);
 
-  // Purchase total
-  const { data: purchaseItems } = await (supabase as any)
+  // Purchase total — received GRNs se actual kharida
+  let purchaseQ = (supabase as any)
     .from("purchase_items")
     .select("line_total, product_id, purchases!inner(status, warehouse_id)")
-    .in("purchases.status", ["received", "approved", "verified"]);
+    .or("status.eq.received,status.eq.approved,status.eq.verified", { referencedTable: "purchases" });
+  const { data: purchaseItems } = await purchaseQ;
 
   const totalPurchaseValue = (purchaseItems ?? []).reduce((s: number, r: any) => {
     if (warehouseId && r.purchases?.warehouse_id !== warehouseId) return s;
+    if (categoryId) {
+      const row = inventoryRows?.find((i: any) => i.product_id === r.product_id);
+      const catId = row?.products?.category_id ?? null;
+      if (!isInCategory(catId, categoryId)) return s;
+    }
+    return s + Number(r.line_total ?? 0);
+  }, 0);
+
+  // Sales total — confirmed sale orders se
+  let salesQ = (supabase as any)
+    .from("sale_order_items")
+    .select("line_total, product_id, sale_orders!inner(status, warehouse_id)")
+    .or("status.eq.confirmed,status.eq.delivered,status.eq.completed", { referencedTable: "sale_orders" });
+  const { data: saleItems } = await salesQ;
+
+  const totalSalesValue = (saleItems ?? []).reduce((s: number, r: any) => {
+    if (warehouseId && r.sale_orders?.warehouse_id !== warehouseId) return s;
     if (categoryId) {
       const row = inventoryRows?.find((i: any) => i.product_id === r.product_id);
       const catId = row?.products?.category_id ?? null;
@@ -223,7 +242,7 @@ export default async function StockValueReportPage({
       </form>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 px-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 px-4 sm:grid-cols-5">
         <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
           <div className="mb-1 flex items-center gap-2 text-xs font-medium text-surface-500">
             <TrendingUp className="h-3.5 w-3.5 text-brand-500" /> Total Kharida
@@ -244,6 +263,13 @@ export default async function StockValueReportPage({
           </div>
           <p className="font-display text-xl font-bold text-emerald-700 dark:text-emerald-400">{fmt(totalCurrentSaleValue)}</p>
           <p className="mt-0.5 text-[11px] text-surface-400">Sale rate × qty</p>
+        </div>
+        <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+          <div className="mb-1 flex items-center gap-2 text-xs font-medium text-surface-500">
+            <ShoppingCart className="h-3.5 w-3.5 text-orange-500" /> Kitna Bika
+          </div>
+          <p className="font-display text-xl font-bold text-orange-600 dark:text-orange-400">{fmt(totalSalesValue)}</p>
+          <p className="mt-0.5 text-[11px] text-surface-400">Confirmed orders se</p>
         </div>
         <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
           <div className="mb-1 flex items-center gap-2 text-xs font-medium text-surface-500">
@@ -277,7 +303,19 @@ export default async function StockValueReportPage({
               <tbody>
                 {categoryRows.map((c, i) => (
                   <tr key={i} className="border-b border-surface-50 last:border-0 hover:bg-surface-50/50 dark:border-surface-800">
-                    <td className="px-4 py-3 font-semibold text-surface-800 dark:text-surface-200">{c.name}</td>
+                    <td className="px-4 py-3 font-semibold text-surface-800 dark:text-surface-200">
+                      <div className="flex items-center gap-2">
+                        {c.name}
+                        {c.name === "Uncategorized" && (
+                          <Link
+                            href="/admin/products?filter=no-category"
+                            className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/50"
+                          >
+                            <Wrench className="h-3 w-3" /> Fix
+                          </Link>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums text-surface-500">{c.products}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-surface-600">{Math.round(c.qty).toLocaleString()}</td>
                     <td className="px-4 py-3 text-right tabular-nums font-semibold text-surface-900 dark:text-white">{fmt(c.purchase_value)}</td>

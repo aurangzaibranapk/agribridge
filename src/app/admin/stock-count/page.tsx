@@ -268,6 +268,7 @@ export default async function StockCountPage({
                   <CountingSheet
                     countId={current.id}
                     canEditRates={["owner", "super_admin", "admin", "warehouse"].includes(me.role)}
+                    canForceClose={["owner", "super_admin", "admin"].includes(me.role)}
                     lines={current.lines.map((l) => ({
                       id: l.id,
                       productId: l.productId,

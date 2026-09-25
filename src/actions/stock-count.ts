@@ -521,6 +521,77 @@ export async function verifyCount(_prev: ActionState, formData: FormData): Promi
 }
 
 /**
+ * Admin force-close: jitni counting ho gayi us ko verify mein le jao —
+ * jo items gin nahi gayin un ko current inventory qty se fill karo taake
+ * farq sifar aa jaye aur ginti ka record mahfooz rahe.
+ */
+export async function forceCloseCount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+
+  const countId = String(formData.get("count_id") ?? "");
+  if (!countId) return { error: "Ginti nahi mili." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isAdmin = ["owner", "super_admin", "admin"].includes(me?.role ?? "");
+  if (!isAdmin) return { error: "Sirf Admin ya Owner force-close kar sakta hai." };
+
+  const { data: count } = await service
+    .from("stock_counts")
+    .select("id, status, warehouse_id")
+    .eq("id", countId)
+    .maybeSingle();
+  if (!count) return { error: "Ginti nahi mili." };
+  if (count.status !== "counting") return { error: "Ye ginti pehle hi band ho chuki hai." };
+
+  // Jo lines abhi tak gini nahi gayin un ko current inventory se fill karo
+  const { data: lines } = await service
+    .from("stock_count_lines")
+    .select("id, product_id, counted_qty")
+    .eq("count_id", countId)
+    .is("counted_qty", null);
+
+  if (lines && lines.length > 0) {
+    const productIds = lines.map((l) => l.product_id);
+    const { data: invRows } = await service
+      .from("inventory")
+      .select("product_id, quantity_on_hand")
+      .eq("warehouse_id", count.warehouse_id)
+      .in("product_id", productIds);
+    const invMap = new Map((invRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand ?? 0)]));
+
+    for (const line of lines) {
+      const sysQty = invMap.get(line.product_id) ?? 0;
+      await service
+        .from("stock_count_lines")
+        .update({ counted_qty: sysQty })
+        .eq("id", line.id);
+    }
+  }
+
+  const { error } = await service
+    .from("stock_counts")
+    .update({ status: "verified", verified_by: user.id, verified_at: new Date().toISOString() })
+    .eq("id", countId);
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "force_close",
+    module: "stock-count",
+    recordId: countId,
+    description: `Admin force-close: ${lines?.length ?? 0} items system qty se fill karke verify kiya.`,
+  });
+
+  revalidatePath("/admin/stock-count");
+  return { success: true, message: `Ginti band ho gayi. ${lines?.length ?? 0} items system qty se puri ki.` };
+}
+
+/**
  * Milaan aur mukammal karna.
  *
  * Ab dono adad saamne aate hain. Jahan farq ho wahan wajah lazmi hai.
@@ -745,4 +816,48 @@ export async function correctStockCountRate(_prev: ActionState, formData: FormDa
 
   revalidatePath("/admin/stock-count");
   return { success: true, message: `Rate theek ho gaya — ab Rs ${newRate.toLocaleString()}.` };
+}
+
+/** Staff ke liye: kya mere warehouse mein koi open stock count hai? */
+export async function getOpenStockCountForMe(): Promise<{ id: string; warehouseName: string; countDate: string; remaining: number } | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Mere warehouses (zimmedari ya role se)
+  const { data: mereGodam } = await supabase.rpc("fn_stock_count_mere_godam");
+  const whIds = (mereGodam ?? []).map((r: any) => r.warehouse_id as string);
+
+  // Role wale bhi sabhi warehouses dekh sakte hain
+  const { data: me } = await supabase.from("profiles").select("role, branch_id").eq("id", user.id).maybeSingle();
+  const roleSeIjazat = ["owner", "super_admin", "admin", "manager", "finance", "warehouse"].includes(me?.role ?? "");
+
+  let whQuery = supabase.from("warehouses").select("id").eq("is_active", true);
+  if (roleSeIjazat && me?.branch_id && !["owner", "super_admin", "admin", "finance"].includes(me?.role ?? "")) {
+    whQuery = whQuery.eq("branch_id", me.branch_id);
+  }
+  const { data: allWh } = await whQuery;
+  const allWhIds = (allWh ?? []).map((w: any) => w.id as string);
+
+  const eligible = roleSeIjazat ? allWhIds : whIds;
+  if (eligible.length === 0) return null;
+
+  const { data: openCount } = await supabase
+    .from("stock_counts")
+    .select("id, warehouse_id, count_date, warehouses(name), stock_count_lines(id, counted_qty)")
+    .eq("status", "counting")
+    .in("warehouse_id", eligible)
+    .order("count_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!openCount) return null;
+  const lines = (openCount as any).stock_count_lines ?? [];
+  const remaining = lines.filter((l: any) => l.counted_qty === null).length;
+  return {
+    id: openCount.id as string,
+    warehouseName: ((openCount as any).warehouses as any)?.name ?? "—",
+    countDate: openCount.count_date as string,
+    remaining,
+  };
 }
