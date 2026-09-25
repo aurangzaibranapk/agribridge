@@ -215,6 +215,7 @@ export default async function AdminPurchasesPage() {
                     <th className="px-4 py-3 font-medium text-surface-500">{t("pu_branch", lang)}</th>
                     <th className="px-4 py-3 font-medium text-surface-500">{t("pu_date", lang)}</th>
                     <th className="px-4 py-3 text-right font-medium text-surface-500">{t("pu_amount", lang)}</th>
+                    <th className="px-4 py-3 text-right font-medium text-surface-500">Discount</th>
                     <th className="px-4 py-3 font-medium text-surface-500">{t("pu_status", lang)}</th>
                     <th className="px-4 py-3 font-medium text-surface-500">{t("pu_action", lang)}</th>
                     {isAdminLevel && <th className="px-4 py-3 font-medium text-surface-500">{t("pu_delete", lang)}</th>}
@@ -234,16 +235,7 @@ export default async function AdminPurchasesPage() {
                             {t("grn_discrepancy", lang)}: Rs {Number(p.invoice_total).toLocaleString()}
                           </span>
                         )}
-                        {/* Poore supplier bill ka discount/tax -- sirf us
-                            bill ki pehli purchase par (389, malik 10
-                            September: "tax aur discount ki amount kahan
-                            gayi hai"). */}
-                        {p.discount_amount != null && (
-                          <span className="block text-[11px] font-normal text-emerald-700 dark:text-emerald-400">
-                            {t("pu_discount", lang)}: Rs {Number(p.discount_amount).toLocaleString()}
-                          </span>
-                        )}
-                        {p.tax_amount != null && (
+                        {p.tax_amount != null && Number(p.tax_amount) > 0 && (
                           <span className="block text-[11px] font-normal text-surface-500">
                             {p.tax_label || t("pu_tax", lang)}: Rs {Number(p.tax_amount).toLocaleString()}
                           </span>
@@ -265,6 +257,11 @@ export default async function AdminPurchasesPage() {
                             ))}
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">
+                        {p.discount_amount != null && Number(p.discount_amount) > 0
+                          ? <span className="font-semibold tabular-nums">Rs {Number(p.discount_amount).toLocaleString()}</span>
+                          : <span className="text-surface-300 dark:text-surface-600">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-1">
@@ -309,6 +306,8 @@ export default async function AdminPurchasesPage() {
                               items={p.items}
                               canApprove={isAdminLevel}
                               canVerify={canVerify}
+                              discountAmount={p.discount_amount}
+                              taxAmount={p.tax_amount}
                             />
                           )}
                         </div>
@@ -325,7 +324,7 @@ export default async function AdminPurchasesPage() {
                     // jawab usi jagah, bina kisi se poochhe.
                     handoffByPurchase.has(p.id) ? (
                       <tr key={`${p.id}-handoff`} className="bg-emerald-50/60 dark:bg-emerald-950/20">
-                        <td colSpan={isAdminLevel ? 7 : 6} className="border-l-4 border-l-emerald-600 px-4 py-2">
+                        <td colSpan={isAdminLevel ? 8 : 7} className="border-l-4 border-l-emerald-600 px-4 py-2">
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                             <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
