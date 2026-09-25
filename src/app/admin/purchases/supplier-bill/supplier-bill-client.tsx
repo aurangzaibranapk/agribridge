@@ -564,10 +564,10 @@ export function SupplierBillClient({
               </select>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-800">
+            <div className="max-h-[55vh] overflow-x-auto overflow-y-auto rounded-xl border border-surface-200 dark:border-surface-800">
               <table className="w-full min-w-[820px] border-collapse text-sm">
                 <thead>
-                  <tr className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800">
+                  <tr className="sticky top-0 z-10 bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800">
                     <th className="w-8 px-3 py-2">#</th>
                     <th className="px-3 py-2">Product</th>
                     <th className="w-32 px-3 py-2"><div>Pack / Unit</div><div className="text-[10px] font-normal text-surface-400">× items/pack</div></th>
@@ -668,7 +668,7 @@ export function SupplierBillClient({
                         })()}
                       </td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
-                      <td className="px-3 py-2.5"><button type="button" disabled={lines.length === 1} onClick={() => setLines((previous) => previous.filter((_, i) => i !== index))} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
+                      <td className="px-3 py-2.5"><button type="button" onClick={() => setLines((previous) => { const next = previous.filter((_, i) => i !== index); return next.length > 0 ? next : [emptyLine()]; })} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
                     </tr>
                     {selected && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
                       <td />
@@ -719,7 +719,13 @@ export function SupplierBillClient({
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><button type="button" onClick={() => setLines((previous) => [...previous, newLineWithDefaults()])} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"><Plus className="h-4 w-4" /> Add bill line</button><span className="text-xs text-surface-400">{lines.filter((line) => line.product_id).length} product lines</span></div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setLines((previous) => [...previous, newLineWithDefaults()])} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"><Plus className="h-4 w-4" /> Add bill line</button>
+                <button type="button" onClick={() => setLines([emptyLine()])} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /> Clear All</button>
+              </div>
+              <span className="text-xs text-surface-400">{lines.filter((line) => line.product_id).length} product lines</span>
+            </div>
           </section>
           <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-xs leading-relaxed text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-200">Bill save hone ke baad maal approved purchase mein rahega. Asal stock sirf <strong>GRN / Maal Receive</strong> par ginti ke baad warehouse mein charhega.</p>
         </div>
