@@ -620,7 +620,7 @@ export function SupplierBillClient({
                           </>}
                         </div>
                         {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
-                        {selected && <span className="mt-1 block text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}</span>}
+                        {selected && <span className="mt-1 flex items-center gap-1.5 text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}{selected.product_code && <span className="rounded bg-brand-100 px-1 py-0.5 font-mono text-[10px] font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">{selected.product_code}</span>}</span>}
                       </td>
                       {/* Pack / Unit + items per pack */}
                       <td className="px-3 py-2.5">
