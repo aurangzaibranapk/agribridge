@@ -634,6 +634,10 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
   }
 
+  // Admin/owner ke liye role check — partial count allow ke liye
+  const { data: meProfile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isAdminOrOwner = ["owner", "super_admin", "admin"].includes(meProfile?.role ?? "");
+
   const { data: lines } = await service
     .from("stock_count_lines")
     .select("id, product_id, inventory_id, expected_qty, counted_qty, difference_qty, unit_cost, reason, products(name)")
@@ -641,8 +645,29 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
 
   const rows = lines ?? [];
   const unfilled = rows.filter((r) => r.counted_qty === null);
+
   if (unfilled.length > 0) {
-    return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };
+    if (!isAdminOrOwner) {
+      return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };
+    }
+    // Admin/owner: jo items nahi gine, un ko current inventory qty se fill karo (farq = 0 rakhna)
+    const productIds = unfilled.map((l) => l.product_id);
+    const { data: invRows } = await service
+      .from("inventory")
+      .select("product_id, quantity_on_hand")
+      .eq("warehouse_id", count.warehouse_id)
+      .in("product_id", productIds);
+    const invMap = new Map((invRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand ?? 0)]));
+    for (const line of unfilled) {
+      const sysQty = invMap.get(line.product_id) ?? 0;
+      await service.from("stock_count_lines").update({ counted_qty: sysQty, difference_qty: 0 }).eq("id", line.id);
+    }
+    // Updated rows reload
+    const { data: refreshed } = await service
+      .from("stock_count_lines")
+      .select("id, product_id, inventory_id, expected_qty, counted_qty, difference_qty, unit_cost, reason, products(name)")
+      .eq("count_id", countId);
+    rows.splice(0, rows.length, ...(refreshed ?? []));
   }
 
   // Wajah har us qatar par jahan farq hai.
