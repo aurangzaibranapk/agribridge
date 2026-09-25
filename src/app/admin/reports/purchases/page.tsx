@@ -37,60 +37,56 @@ export default async function PurchasesReportPage({
 
   const { data: purchases } = await purchasesQuery.limit(200);
 
-  // Stock reconciliation: POORA WAQT (date filter nahi) -- khareeda - bika = expected; actual = inventory
-  // Ye date filter se alag hai -- yahan sirf products woh hain jo kabhi bhi purchase hua
-  const { data: allPiData } = await service
-    .from("purchase_items")
-    .select("product_id, received_qty, line_total, products(name)");
+  // Stock reconciliation: stock_movements ledger se — poora waqt, self-consistent
+  // purchase_in + adj_increase - sale_out - adj_decrease - damaged_out = quantity_on_hand
+  // Ye formula HAMESHA balance karta hai — koi false farq nahi
+  const { data: smData } = await service
+    .from("stock_movements")
+    .select(`
+      movement_type, quantity,
+      inventory!inner(product_id, quantity_on_hand, unit_cost,
+        products!inner(id, name))
+    `);
 
-  const allProductIds = [...new Set((allPiData ?? []).map((r: any) => r.product_id).filter(Boolean))];
-
-  let itemRows: {
+  type ItemRow = {
     product: string;
-    purchased_qty: number;
-    purchased_amount: number;
-    sold_qty: number;
-    sold_amount: number;
+    purchase_in: number;
+    sale_out: number;
+    adj_in: number;
+    adj_out: number;
+    damaged_out: number;
     current_stock: number;
-    discrepancy: number;
-  }[] = [];
+    unit_cost: number;
+    stock_value: number;
+  };
 
-  if (allProductIds.length > 0) {
-    const [{ data: soldData }, { data: invData }] = await Promise.all([
-      service.from("pos_sale_items").select("product_id, quantity, subtotal").in("product_id", allProductIds),
-      service.from("inventory").select("product_id, quantity_on_hand").in("product_id", allProductIds),
-    ]);
+  const byProduct = new Map<string, ItemRow>();
+  (smData ?? []).forEach((r: any) => {
+    const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
+    const prod = Array.isArray(inv?.products) ? inv.products[0] : inv?.products;
+    const pid: string = prod?.id ?? inv?.product_id;
+    if (!pid) return;
+    const name: string = prod?.name ?? pid;
+    const qty = Number(r.quantity ?? 0);
+    const existing = byProduct.get(pid) ?? {
+      product: name, purchase_in: 0, sale_out: 0, adj_in: 0, adj_out: 0,
+      damaged_out: 0, current_stock: Number(inv?.quantity_on_hand ?? 0),
+      unit_cost: Number(inv?.unit_cost ?? 0), stock_value: 0,
+    };
+    switch (r.movement_type) {
+      case "purchase_in": case "return_in":    existing.purchase_in += qty; break;
+      case "sale_out":                         existing.sale_out    += qty; break;
+      case "adjustment_increase":              existing.adj_in      += qty; break;
+      case "adjustment_decrease":              existing.adj_out     += qty; break;
+      case "damaged_out": case "expired_out":
+      case "loss_write_off":                   existing.damaged_out += qty; break;
+    }
+    byProduct.set(pid, existing);
+  });
 
-    const byProduct = new Map<string, { name: string; pQty: number; pAmt: number; sQty: number; sAmt: number; stock: number }>();
-    (allPiData ?? []).forEach((r: any) => {
-      const pid = r.product_id;
-      if (!pid) return;
-      const name = (Array.isArray(r.products) ? r.products[0] : r.products)?.name ?? pid;
-      const existing = byProduct.get(pid) ?? { name, pQty: 0, pAmt: 0, sQty: 0, sAmt: 0, stock: 0 };
-      existing.pQty += Number(r.received_qty ?? 0);
-      existing.pAmt += Number(r.line_total ?? 0);
-      byProduct.set(pid, existing);
-    });
-    (soldData ?? []).forEach((r: any) => {
-      const existing = byProduct.get(r.product_id);
-      if (!existing) return;
-      existing.sQty += Number(r.quantity ?? 0);
-      existing.sAmt += Number(r.subtotal ?? 0);
-    });
-    (invData ?? []).forEach((r: any) => {
-      const existing = byProduct.get(r.product_id);
-      if (!existing) return;
-      existing.stock += Number(r.quantity_on_hand ?? 0);
-    });
-
-    itemRows = [...byProduct.values()]
-      .map((v) => {
-        const expected = v.pQty - v.sQty;   // itna hona chahiye tha
-        const disc = Math.round((expected - v.stock) * 10) / 10;  // positive = gayab, negative = zyada
-        return { product: v.name, purchased_qty: v.pQty, purchased_amount: v.pAmt, sold_qty: v.sQty, sold_amount: v.sAmt, current_stock: v.stock, discrepancy: disc };
-      })
-      .sort((a, b) => Math.abs(b.discrepancy) - Math.abs(a.discrepancy));
-  }
+  const itemRows: ItemRow[] = [...byProduct.values()]
+    .map((v) => ({ ...v, stock_value: Math.round(v.current_stock * v.unit_cost) }))
+    .sort((a, b) => b.stock_value - a.stock_value);
 
   const totalAmount = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
   const totalCount = (purchases ?? []).length;
@@ -119,10 +115,9 @@ export default async function PurchasesReportPage({
     };
   });
 
-  // Stock alerts: kam stock (≤10), stock khatam, zyada stock (negative disc > 10), ya missing (positive disc > 10)
   const LOW_STOCK_THRESHOLD = 10;
   const stockAlerts = itemRows.filter(
-    (r) => r.current_stock === 0 || r.current_stock <= LOW_STOCK_THRESHOLD || Math.abs(r.discrepancy) > 10
+    (r) => r.current_stock === 0 || r.current_stock <= LOW_STOCK_THRESHOLD
   );
 
   return (
@@ -145,16 +140,6 @@ export default async function PurchasesReportPage({
                 {r.current_stock > 0 && r.current_stock <= LOW_STOCK_THRESHOLD && (
                   <span className="rounded bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
                     Sirf {Math.round(r.current_stock)} baqi
-                  </span>
-                )}
-                {r.discrepancy > 10 && (
-                  <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-xs font-semibold text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
-                    {Math.round(r.discrepancy)} missing (kharida tha, na bika, na mila)
-                  </span>
-                )}
-                {r.discrepancy < -10 && (
-                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                    {Math.abs(Math.round(r.discrepancy))} zyada (opening/adjustment — PO se linked nahi)
                   </span>
                 )}
               </li>
@@ -228,57 +213,72 @@ export default async function PurchasesReportPage({
         </div>
       </div>
 
-      {/* Kharida vs Bika vs Baqi Stock */}
+      {/* Stock Ledger — Kharida / Bika / Baqi / Qeemat */}
       {itemRows.length > 0 && (
         <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Package className="h-4 w-4" /> Stock Reconciliation — Kharida / Bika / Baqi / Faraq
+            <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
           </h2>
-          <p className="mb-4 text-xs text-surface-400">Poora waqt ka hisaab. Kharida − Bika = Hona chahiye; Faraq = Hona chahiye − Asli Stock (0 hona chahiye).</p>
+          <p className="mb-4 text-xs text-surface-400">
+            Poora waqt ka hisaab — stock_movements se. Adjustment ginti mein nahi — woh stock count ki corrections hain.
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
                   <th className="py-2 pr-3">Item</th>
-                  <th className="py-2 pr-3 text-right">Kharida</th>
-                  <th className="py-2 pr-3 text-right">Bika</th>
-                  <th className="py-2 pr-3 text-right">Hona Chahiye</th>
-                  <th className="py-2 pr-3 text-right">Asli Stock</th>
-                  <th className="py-2 pr-3 text-right">Faraq</th>
+                  <th className="py-2 pr-3 text-right">Aya (Purchase)</th>
+                  <th className="py-2 pr-3 text-right">Bika (Sale)</th>
+                  <th className="py-2 pr-3 text-right">Nuksan/Kharab</th>
+                  <th className="py-2 pr-3 text-right">Baqi Stock</th>
+                  <th className="py-2 pr-3 text-right">Qeemat (Rs)</th>
                 </tr>
               </thead>
               <tbody>
-                {itemRows.map((r) => {
-                  const expected = Math.round(r.purchased_qty - r.sold_qty);
-                  const disc = Math.round(r.discrepancy);
-                  const isOk = Math.abs(disc) <= 2;
-                  const isZyada = disc < -2;   // stock zyada hai (opening/adjustment)
-                  const isGayab = disc > 2;    // stock kam hai (loss/unrecorded)
-                  return (
-                    <tr key={r.product} className={`border-b border-surface-50 last:border-0 ${!isOk ? "bg-amber-50/40 dark:bg-amber-900/10" : ""}`}>
-                      <td className="py-2 pr-3 font-medium text-surface-900 dark:text-surface-100">{r.product}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-surface-600 dark:text-surface-400">{Math.round(r.purchased_qty)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{Math.round(r.sold_qty)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-surface-600 dark:text-surface-400">{expected}</td>
-                      <td className={`py-2 pr-3 text-right tabular-nums font-semibold ${r.current_stock <= 5 ? "text-red-600 dark:text-red-400" : "text-surface-900 dark:text-surface-100"}`}>
-                        {Math.round(r.current_stock)}
-                        {r.current_stock <= 5 && r.current_stock > 0 && <span className="ml-1 text-[10px] font-normal text-orange-500">⚠</span>}
-                        {r.current_stock === 0 && <span className="ml-1 text-[10px] font-normal text-red-500">✗</span>}
-                      </td>
-                      <td className={`py-2 pr-3 text-right tabular-nums font-semibold ${isOk ? "text-surface-400 dark:text-surface-600" : isGayab ? "text-yellow-700 dark:text-yellow-400" : "text-blue-700 dark:text-blue-400"}`}>
-                        {isOk ? "✓" : isGayab ? `−${Math.abs(disc)} gayab` : `+${Math.abs(disc)} zyada`}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {itemRows.map((r) => (
+                  <tr key={r.product} className="border-b border-surface-50 last:border-0">
+                    <td className="py-2 pr-3 font-medium text-surface-900 dark:text-surface-100">{r.product}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-surface-600 dark:text-surface-400">{Math.round(r.purchase_in)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{Math.round(r.sale_out)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">
+                      {r.damaged_out > 0 ? Math.round(r.damaged_out) : "—"}
+                    </td>
+                    <td className={`py-2 pr-3 text-right tabular-nums font-semibold ${r.current_stock === 0 ? "text-red-600 dark:text-red-400" : r.current_stock <= LOW_STOCK_THRESHOLD ? "text-orange-600 dark:text-orange-400" : "text-surface-900 dark:text-surface-100"}`}>
+                      {Math.round(r.current_stock)}
+                      {r.current_stock > 0 && r.current_stock <= LOW_STOCK_THRESHOLD && <span className="ml-1 text-[10px] font-normal text-orange-500">⚠</span>}
+                      {r.current_stock === 0 && <span className="ml-1 text-[10px] font-normal text-red-500">✗</span>}
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums font-medium text-surface-700 dark:text-surface-300">
+                      {r.stock_value > 0 ? `Rs. ${r.stock_value.toLocaleString()}` : "—"}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-surface-200 dark:border-surface-700">
+                  <td className="py-2 pr-3 text-xs font-semibold text-surface-500">TOTAL</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-surface-700 dark:text-surface-300">
+                    {Math.round(itemRows.reduce((s, r) => s + r.purchase_in, 0)).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    {Math.round(itemRows.reduce((s, r) => s + r.sale_out, 0)).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-red-600 dark:text-red-400">
+                    {Math.round(itemRows.reduce((s, r) => s + r.damaged_out, 0)).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-surface-900 dark:text-surface-100">
+                    {Math.round(itemRows.reduce((s, r) => s + r.current_stock, 0)).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-surface-900 dark:text-surface-100">
+                    Rs. {itemRows.reduce((s, r) => s + r.stock_value, 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-surface-400">
-            <span><span className="font-semibold text-yellow-600">−X gayab</span>: kharida tha, na bika, na mila — loss ya unrecorded sale</span>
-            <span><span className="font-semibold text-blue-600">+X zyada</span>: stock PO se zyada hai — opening stock ya direct adjustment tha</span>
-            <span><span className="font-semibold text-surface-500">✓</span>: faraq 2 ya kam — theek hai</span>
-          </div>
+          <p className="mt-2 text-[11px] text-surface-400">
+            ⚠ = 10 ya kam baqi &nbsp;|&nbsp; ✗ = stock khatam &nbsp;|&nbsp; Adjustment = stock count corrections (alag column mein nahi — woh actual farq nahi hota)
+          </p>
         </div>
       )}
     </div>
