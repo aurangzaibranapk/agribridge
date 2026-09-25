@@ -3809,3 +3809,39 @@ dena.
 3. Migration 440, 441, 442, 443 (is tarteeb mein)
 4. Post-migration verify: products.units_per_carton column maujood; agri_orders.order_to_warehouse_id maujood; supplier_product_aliases table maujood
 5. Naya build upload
+
+---
+
+## 25 September — Salary Planner + Stock Count improvements
+
+**Commits (feature/supplier-bill-final-v2):**
+- `6b5eec5`: Migration 463 (cycle_count_settings RLS), Stock Value fix, Force-close stock count, StockCountNudge
+- `157c9d7`: Salary Planner page + Migration 464
+
+### Testing par baqi migrations
+
+**Migration 463** (`cycle_count_settings` RLS) — Boss ne Testing par confirm kar liya ("Success. No rows returned"). **Live par abhi baqi hai.**
+
+**Migration 464** (Salary Planner: features + role_features + feature_help) — **Testing par chalna baqi hai, phir Live par.**
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+1. Backup tasdeeq (file size chat mein)
+2. Pre-migration ginti:
+   - `select count(*) from cycle_count_settings` (jo bhi ginti ho)
+3. Migration 463 (cycle_count_settings RLS)
+4. Post-verify: same ginti (rows nahi miti)
+5. Migration 464 (Salary Planner feature registration)
+6. Post-verify: `select key from features where key like 'reports.salary%'` → 1 row
+7. Naya build upload aur smoke test: `/admin/reports/salary-planner` khulta ho
+
+### Salary Planner kya karta hai
+
+`/admin/reports/salary-planner` — system ka data khud uthata hai:
+- `pos_sales`: har dukan ki sale, gross munafa
+- `company_expense_requests` (rent+utility_bill+maintenance+other, status=approved): kharche
+- `profiles` (is_active=true, non-admin): staff ginti per branch
+- Net munafa = gross munafa − kharche
+- Interactive slider (5–80%): net munafe ka kitna % salary dena chahiye
+- Per-admi estimate: salary budget ÷ staff count
+- Roles: owner, super_admin, admin, finance, manager
