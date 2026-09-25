@@ -107,6 +107,7 @@ export function PosReturn({
 }) {
   const supabase = createClient();
   const [query, setQuery] = useState("");
+  const [payFilter, setPayFilter] = useState("");
   // Tareekh ka chhanta -- malik ka kehna (5 September): "jis din, jab tak
   // dekhna ho, sale is page par dekh sakein." Default aaj se saat din
   // peeche: wapsi ki miyaad do din hai, magar bikri dekhne ke liye us se
@@ -221,8 +222,11 @@ export function PosReturn({
   }, [supabase]);
 
   const matches = useMemo(() => {
+    let list = sales;
+    // Payment method filter
+    if (payFilter) list = list.filter((s) => s.payment_mode === payFilter);
     const q = query.trim().toLowerCase();
-    if (!q) return sales;
+    if (!q) return list;
     // Naam ke ilawa mobile aur CNIC se bhi -- number "0342..." (mulki)
     // ya "92342..." (international) kisi bhi shakl mein type ho, sirf
     // akhri das hindse hi asal pehchan hain (jaisa pos-client.tsx ka
@@ -231,7 +235,7 @@ export function PosReturn({
     // tha.
     const qDigits = q.replace(/-/g, "");
     const qPhoneCore = q.replace(/\D/g, "").slice(-10);
-    return sales.filter((s) => {
+    return list.filter((s) => {
       const phoneCore = (s.customer_phone ?? "").replace(/\D/g, "").slice(-10);
       return (
         s.id.toLowerCase().startsWith(q) ||
@@ -241,7 +245,7 @@ export function PosReturn({
         (s.customer_cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits)
       );
     });
-  }, [sales, query]);
+  }, [sales, query, payFilter]);
 
   /** Is arse ki kul bikri -- gross (wapas hui bikriyaan minus kar ke net). */
   const kulBikri = matches.reduce((s, r) => s + (r.status === "returned" ? -r.total_amount : r.total_amount), 0);
@@ -466,6 +470,34 @@ export function PosReturn({
               className="h-10 pl-9"
             />
           </div>
+        </div>
+
+        {/* Payment method filter chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { key: "", label: "Sab" },
+            { key: "cash", label: "Cash" },
+            { key: "khata", label: "Khata" },
+            { key: "waseela_card", label: "Wasela Card" },
+            { key: "easypaisa", label: "EasyPaisa" },
+            { key: "jazzcash", label: "JazzCash" },
+            { key: "qr", label: "QR" },
+            { key: "bank_transfer", label: "Bank" },
+            { key: "card", label: "Kisan Card" },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setPayFilter(opt.key)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                payFilter === opt.key
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "border border-surface-200 bg-white text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Is arse ki kul bikri -- wohi jo neeche qataron mein nazar aa
