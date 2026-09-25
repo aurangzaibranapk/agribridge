@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
@@ -56,6 +57,7 @@ export default async function SalesReportPage({
   const lang = getLanguageFromCookies("rm");
   const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
+  const service = createServiceClient();
 
   /**
    * Ye safha kis ka hai.
@@ -149,9 +151,9 @@ export default async function SalesReportPage({
   const crmIds = [...new Set((sales ?? []).map((s: any) => s.crm_customer_id).filter(Boolean))];
   const dealerCustIds = [...new Set((sales ?? []).map((s: any) => s.customer_id).filter(Boolean))];
   const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
-    crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
+    crmIds.length ? service.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
     dealerCustIds.length
-      ? supabase.from("dealer_customers").select("id, name").in("id", dealerCustIds)
+      ? service.from("dealer_customers").select("id, name").in("id", dealerCustIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
   const crmCustName = new Map((crmCusts ?? []).map((c: any) => [c.id, c.name]));
@@ -422,6 +424,7 @@ export default async function SalesReportPage({
       paymentMode: s.payment_mode,
       amount: Number(s.total_amount ?? 0),
       customer: (s.crm_customer_id ? crmCustName.get(s.crm_customer_id) : null) ?? (s.customer_id ? dealerCustName.get(s.customer_id) : null) ?? null,
+      has_customer: !!(s.crm_customer_id || s.customer_id),
     };
   });
   const rows = allRows.slice(0, 50);

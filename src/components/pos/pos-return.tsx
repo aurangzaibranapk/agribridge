@@ -40,6 +40,8 @@ interface SaleRow {
   /** Mobile/CNIC se dhoondne ke liye -- naam se nahi, in se bhi milna chahiye (15 September). */
   customer_phone: string | null;
   customer_cnic: string | null;
+  /** True jab crm_customer_id ya customer_id set ho -- naam lookup nakaam bhi ho to "Walk-in" nahi dikhana. */
+  has_customer: boolean;
 }
 
 interface PaymentDetail {
@@ -198,6 +200,7 @@ export function PosReturn({
           customer_name: crm?.name ?? (r.customer_id ? dealerNameById.get(r.customer_id) : null) ?? null,
           customer_phone: crm?.phone_number ?? null,
           customer_cnic: crm?.cnic ?? null,
+          has_customer: !!(r.crm_customer_id || r.customer_id),
         };
       })
     );
@@ -515,7 +518,7 @@ export function PosReturn({
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
-                      {s.customer_name ?? t("ret_walkin", lang)}
+                      {s.customer_name ?? (s.has_customer ? "Gahak" : t("ret_walkin", lang))}
                       {s.customer_phone && <span className="ml-1 font-normal text-surface-400">· {s.customer_phone}</span>}
                       {wapas && (
                         <span className="ml-2 inline-block rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-900/40 dark:text-red-400">
@@ -560,7 +563,7 @@ export function PosReturn({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
-              {sale.customer_name ?? t("ret_walkin", lang)}
+              {sale.customer_name ?? (sale.has_customer ? "Gahak" : t("ret_walkin", lang))}
               {sale.customer_phone && <span className="ml-1 font-normal text-surface-400">· {sale.customer_phone}</span>}
             </p>
             <p className="text-xs text-surface-500">

@@ -5,6 +5,7 @@ import { Download, Mail, MessageCircle, Printer } from "lucide-react";
 interface ExportRow {
   date: string;
   customer: string | null;
+  has_customer?: boolean;
   location: string;
   cashier: string;
   paymentMode: string;
@@ -33,7 +34,7 @@ function buildText(props: Props): string {
     ``,
     ...rows.slice(0, 50).map((r, i) => {
       const d = new Date(r.date).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
-      const cust = r.customer ?? "Walk-in";
+      const cust = r.customer ?? (r.has_customer ? "Gahak" : "Walk-in");
       return `${i + 1}. ${d} | ${cust} | ${rs(r.amount)}`;
     }),
   ];
