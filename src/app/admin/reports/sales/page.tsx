@@ -218,9 +218,13 @@ export default async function SalesReportPage({
   }
 
   const khaateWaliSale = new Map<string, number>();
+  const tareeqeWariSale = new Map<string, number>();
   for (const a of (adaigiyan ?? []) as { payment_method: string; amount: number }[]) {
     const raqam = Number(a.amount ?? 0);
     if (raqam <= 0) continue;
+    // Payment method se seedha breakdown (Cash, Khata, Wasela Card etc.)
+    const tareeqaNaam = PAYMENT_LABELS[a.payment_method] ?? a.payment_method;
+    tareeqeWariSale.set(tareeqaNaam, (tareeqeWariSale.get(tareeqaNaam) ?? 0) + raqam);
     // Khata (udhaar) kisi asal khate mein paisa laata hi nahi -- credit
     // hai, cash/bank nahi. Yahan gin lena "khata (khata darj nahi)"
     // jaisa ghalat-fehmi paida karne wala label deta tha (malik, 16
@@ -235,6 +239,7 @@ export default async function SalesReportPage({
     khaateWaliSale.set(naam, (khaateWaliSale.get(naam) ?? 0) + raqam);
   }
   const khaateKiFehrist = [...khaateWaliSale.entries()].sort((a, b) => b[1] - a[1]);
+  const tareeqeKiFehrist = [...tareeqeWariSale.entries()].sort((a, b) => b[1] - a[1]);
 
   // Udhaar (khata) -- bikri ka wo hissa jo abhi aaya hi nahi.
   const udhaarDiya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.khata_amount ?? 0), 0);
@@ -586,6 +591,34 @@ export default async function SalesReportPage({
         <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />
         <StatCard label={t("rs_transactions", lang)} value={String(totalCount)} icon={ClipboardList} tone="blue" />
       </div>
+
+      {/* Payment method se bikri ka breakdown */}
+      {tareeqeKiFehrist.length > 0 && (
+        <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="mb-1 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+            Payment tareeqe se bikri
+          </h2>
+          <p className="mb-4 text-xs text-surface-400">
+            Har tareeqe se kitni actual raqam aayi — Cash, Khata, Wasela Card, EasyPaisa waghaira.
+          </p>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">
+            {tareeqeKiFehrist.map(([naam, raqam]) => (
+              <div key={naam} className="flex items-center justify-between gap-2 border-b border-surface-50 py-2 last:border-0 dark:border-surface-800">
+                <span className="text-sm text-surface-700 dark:text-surface-300">{naam}</span>
+                <span className="text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                  {rs(raqam)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-surface-100 pt-3 dark:border-surface-800">
+            <span className="text-xs font-semibold uppercase tracking-wide text-surface-500">Kul</span>
+            <span className="text-base font-bold tabular-nums text-surface-900 dark:text-surface-100">
+              {rs(tareeqeKiFehrist.reduce((s, [, r]) => s + r, 0))}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Kis khaate mein kitna aaya */}
