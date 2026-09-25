@@ -115,7 +115,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const lang = useLang();
-  const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
+  const [selectedFields, setSelectedFields] = useState<string[]>(["category", "stock_qty", "stock_value_purchase", "selling_price"]);
   const [search, setSearch] = useState("");
   const [includeCountColumns, setIncludeCountColumns] = useState(false);
   // Ginti sheet ab kaghaz tak mehdood nahi -- yahin screen par bhi
@@ -534,11 +534,11 @@ export function CatalogExportClient({ products: initialProducts, categories, com
         </label>
       </div>
 
-      {((selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) ||
+      {((selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price") || selectedFields.includes("stock_qty")) ||
         (selectedFields.includes("stock_value_selling") || selectedFields.includes("selling_price")) ||
         (selectedFields.includes("stock_value_wholesale") || selectedFields.includes("wholesale_price"))) && (
         <div className="mb-4 flex flex-wrap gap-3">
-          {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) && (
+          {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price") || selectedFields.includes("stock_qty")) && (
             <div className="rounded-card border border-amber-200 bg-amber-50 p-3 shadow-card dark:border-amber-800 dark:bg-amber-950/30">
               <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Total Stock Value (Trade Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-amber-800 tabular-nums dark:text-amber-300">Rs {stockValueTotals.purchase.toLocaleString()}</p>
