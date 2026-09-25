@@ -23,6 +23,7 @@ export interface PurchaseReviewItem {
   pack_size: string | null;
   quantity: number;
   unit_cost: number;
+  units_per_pack?: number | null;
 }
 
 const STATUS_KEY: Record<string, TranslationKey> = {
@@ -257,43 +258,63 @@ function ItemRow({ purchaseId, item, editable }: { purchaseId: string; item: Pur
   const [unitCost, setUnitCost] = useState(String(item.unit_cost));
   const changed = Number(quantity) !== item.quantity || Number(unitCost) !== item.unit_cost;
 
+  const upp = item.units_per_pack && item.units_per_pack > 1 ? item.units_per_pack : null;
+  const bottleRate = upp ? item.unit_cost / upp : null;
+
   if (!editable) {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
-        <span className="text-surface-700 dark:text-surface-300">
-          {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
-        </span>
-        <span className="tabular-nums text-surface-500">
-          {item.quantity} × Rs {item.unit_cost.toLocaleString()} = Rs {(item.quantity * item.unit_cost).toLocaleString()}
-        </span>
+      <div className="rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+        <div className="flex items-center justify-between">
+          <span className="text-surface-700 dark:text-surface-300">
+            {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+          </span>
+          <span className="tabular-nums text-surface-500">
+            {item.quantity} × Rs {item.unit_cost.toLocaleString()} = Rs {(item.quantity * item.unit_cost).toLocaleString()}
+          </span>
+        </div>
+        {bottleRate && (
+          <div className="mt-0.5 text-right text-[10px] text-brand-700 dark:text-brand-400">
+            Bottle rate: Rs {bottleRate.toLocaleString("en-PK", { maximumFractionDigits: 2 })} / bottle
+          </div>
+        )}
       </div>
     );
   }
 
+  const currentCost = Number(unitCost);
+  const currentBottleRate = upp && currentCost ? currentCost / upp : null;
+
   return (
-    <form action={action} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
-      <input type="hidden" name="purchase_id" value={purchaseId} />
-      <input type="hidden" name="item_id" value={item.id} />
-      <span className="min-w-0 flex-1 truncate text-surface-700 dark:text-surface-300">
-        {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
-      </span>
-      <Input
-        name="quantity"
-        inputMode="decimal"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        className="h-7 w-16 text-right text-xs"
-      />
-      <span className="text-surface-400">×</span>
-      <Input
-        name="unit_cost"
-        inputMode="decimal"
-        value={unitCost}
-        onChange={(e) => setUnitCost(e.target.value)}
-        className="h-7 w-20 text-right text-xs"
-      />
-      {changed && <ItemUpdateButton label={t("pu_rv_update", lang)} />}
-      {state.error && <span className="w-full text-[11px] text-red-600 dark:text-red-400">{state.error}</span>}
+    <form action={action} className="rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <input type="hidden" name="purchase_id" value={purchaseId} />
+        <input type="hidden" name="item_id" value={item.id} />
+        <span className="min-w-0 flex-1 truncate text-surface-700 dark:text-surface-300">
+          {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+        </span>
+        <Input
+          name="quantity"
+          inputMode="decimal"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          className="h-7 w-16 text-right text-xs"
+        />
+        <span className="text-surface-400">×</span>
+        <Input
+          name="unit_cost"
+          inputMode="decimal"
+          value={unitCost}
+          onChange={(e) => setUnitCost(e.target.value)}
+          className="h-7 w-20 text-right text-xs"
+        />
+        {changed && <ItemUpdateButton label={t("pu_rv_update", lang)} />}
+        {state.error && <span className="w-full text-[11px] text-red-600 dark:text-red-400">{state.error}</span>}
+      </div>
+      {currentBottleRate && (
+        <div className="mt-0.5 text-right text-[10px] text-brand-700 dark:text-brand-400">
+          Bottle rate: Rs {currentBottleRate.toLocaleString("en-PK", { maximumFractionDigits: 2 })} / bottle
+        </div>
+      )}
     </form>
   );
 }
