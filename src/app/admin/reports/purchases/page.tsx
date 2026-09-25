@@ -44,8 +44,8 @@ export default async function PurchasesReportPage({
     .from("stock_movements")
     .select(`
       movement_type, quantity,
-      inventory!inner(product_id, quantity_on_hand, unit_cost,
-        products!inner(id, name))
+      inventory!inner(product_id, quantity_on_hand,
+        products!inner(id, name, purchase_price))
     `);
 
   type ItemRow = {
@@ -76,7 +76,7 @@ export default async function PurchasesReportPage({
       product: name, purchase_in: 0, sale_out: 0, transfer_out: 0,
       adj_in: 0, adj_out: 0,
       damaged_out: 0, current_stock: Number(inv?.quantity_on_hand ?? 0),
-      unit_cost: Number(inv?.unit_cost ?? 0),
+      unit_cost: Number(prod?.purchase_price ?? 0),
       stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
     };
     switch (r.movement_type) {
