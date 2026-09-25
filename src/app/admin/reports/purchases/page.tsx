@@ -52,12 +52,16 @@ export default async function PurchasesReportPage({
     product: string;
     purchase_in: number;
     sale_out: number;
+    transfer_out: number;
     adj_in: number;
     adj_out: number;
     damaged_out: number;
     current_stock: number;
     unit_cost: number;
     stock_value: number;
+    sale_value: number;
+    transfer_value: number;
+    purchase_value: number;
   };
 
   const byProduct = new Map<string, ItemRow>();
@@ -69,26 +73,38 @@ export default async function PurchasesReportPage({
     const name: string = prod?.name ?? pid;
     const qty = Number(r.quantity ?? 0);
     const existing = byProduct.get(pid) ?? {
-      product: name, purchase_in: 0, sale_out: 0, adj_in: 0, adj_out: 0,
+      product: name, purchase_in: 0, sale_out: 0, transfer_out: 0,
+      adj_in: 0, adj_out: 0,
       damaged_out: 0, current_stock: Number(inv?.quantity_on_hand ?? 0),
-      unit_cost: Number(inv?.unit_cost ?? 0), stock_value: 0,
+      unit_cost: Number(inv?.unit_cost ?? 0),
+      stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
     };
     switch (r.movement_type) {
-      case "purchase_in": case "return_in":    existing.purchase_in += qty; break;
-      case "sale_out":                         existing.sale_out    += qty; break;
-      case "adjustment_increase":              existing.adj_in      += qty; break;
-      case "adjustment_decrease":              existing.adj_out     += qty; break;
+      case "purchase_in": case "return_in":    existing.purchase_in  += qty; break;
+      case "sale_out":                         existing.sale_out     += qty; break;
+      case "transfer_out":                     existing.transfer_out += qty; break;
+      case "adjustment_increase":              existing.adj_in       += qty; break;
+      case "adjustment_decrease":              existing.adj_out      += qty; break;
       case "damaged_out": case "expired_out":
-      case "loss_write_off":                   existing.damaged_out += qty; break;
+      case "loss_write_off":                   existing.damaged_out  += qty; break;
     }
     byProduct.set(pid, existing);
   });
 
   const itemRows: ItemRow[] = [...byProduct.values()]
-    .map((v) => ({ ...v, stock_value: Math.round(v.current_stock * v.unit_cost) }))
+    .map((v) => ({
+      ...v,
+      stock_value:    Math.round(v.current_stock * v.unit_cost),
+      sale_value:     Math.round(v.sale_out      * v.unit_cost),
+      transfer_value: Math.round(v.transfer_out  * v.unit_cost),
+      purchase_value: Math.round(v.purchase_in   * v.unit_cost),
+    }))
     .sort((a, b) => b.stock_value - a.stock_value);
 
-  const totalAmount = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
+  const totalAmount       = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
+  const totalStockValue   = itemRows.reduce((s, r) => s + r.stock_value,    0);
+  const totalSaleValue    = itemRows.reduce((s, r) => s + r.sale_value,     0);
+  const totalTransferValue= itemRows.reduce((s, r) => s + r.transfer_value, 0);
   const totalCount = (purchases ?? []).length;
   const pendingCount = (purchases ?? []).filter((p) => p.status === "pending").length;
   const receivedCount = (purchases ?? []).filter((p) => p.status === "received").length;
@@ -155,9 +171,9 @@ export default async function PurchasesReportPage({
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <StatCard label={t("c_total_purchases", lang)} value={`Rs. ${totalAmount.toLocaleString()}`} icon={ShoppingCart} tone="orange" />
-        <StatCard label={t("rpu_purchase_orders", lang)} value={String(totalCount)} icon={ClipboardList} tone="brand" />
-        <StatCard label={t("c_pending", lang)} value={String(pendingCount)} icon={Clock} tone="warn" />
-        <StatCard label={t("c_received", lang)} value={String(receivedCount)} icon={CheckCircle2} tone="blue" />
+        <StatCard label="Stock Value (Baqi)" value={`Rs. ${totalStockValue.toLocaleString()}`} icon={Package} tone="brand" />
+        <StatCard label="Biki (Cost par)" value={`Rs. ${totalSaleValue.toLocaleString()}`} icon={CheckCircle2} tone="blue" />
+        <StatCard label="Transfer Bheja" value={`Rs. ${totalTransferValue.toLocaleString()}`} icon={Truck} tone="warn" />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -219,19 +235,48 @@ export default async function PurchasesReportPage({
           <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
             <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
           </h2>
-          <p className="mb-4 text-xs text-surface-400">
-            Poora waqt ka hisaab — stock_movements se. Adjustment ginti mein nahi — woh stock count ki corrections hain.
+          <p className="mb-3 text-xs text-surface-400">
+            Poora waqt ka hisaab — stock_movements se. <strong>Kharida = Bika + Transfer + Nuksan + Baqi.</strong>
           </p>
+
+          {/* Reconciliation summary */}
+          {itemRows.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-3 rounded-lg border border-surface-200 bg-surface-50 px-4 py-3 text-xs dark:border-surface-700 dark:bg-surface-800">
+              <span className="font-semibold text-surface-700 dark:text-surface-300">
+                Kharida (cost): Rs. {itemRows.reduce((s, r) => s + r.purchase_value, 0).toLocaleString()}
+              </span>
+              <span className="text-surface-400">=</span>
+              <span className="text-emerald-700 dark:text-emerald-400">
+                Bika Rs. {totalSaleValue.toLocaleString()}
+              </span>
+              <span className="text-surface-400">+</span>
+              <span className="text-amber-700 dark:text-amber-400">
+                Transfer Rs. {totalTransferValue.toLocaleString()}
+              </span>
+              <span className="text-surface-400">+</span>
+              <span className="text-red-600 dark:text-red-400">
+                Nuksan Rs. {itemRows.reduce((s, r) => s + Math.round(r.damaged_out * r.unit_cost), 0).toLocaleString()}
+              </span>
+              <span className="text-surface-400">+</span>
+              <span className="font-semibold text-brand-700 dark:text-brand-400">
+                Baqi Rs. {totalStockValue.toLocaleString()}
+              </span>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-surface-100 text-xs text-surface-500">
                   <th className="py-2 pr-3">Item</th>
-                  <th className="py-2 pr-3 text-right">Aya (Purchase)</th>
-                  <th className="py-2 pr-3 text-right">Bika (Sale)</th>
-                  <th className="py-2 pr-3 text-right">Nuksan/Kharab</th>
+                  <th className="py-2 pr-3 text-right">Aya (Qty)</th>
+                  <th className="py-2 pr-3 text-right">Bika (Qty)</th>
+                  <th className="py-2 pr-3 text-right">Bika (Rs)</th>
+                  <th className="py-2 pr-3 text-right">Transfer (Qty)</th>
+                  <th className="py-2 pr-3 text-right">Transfer (Rs)</th>
+                  <th className="py-2 pr-3 text-right">Nuksan</th>
                   <th className="py-2 pr-3 text-right">Baqi Stock</th>
-                  <th className="py-2 pr-3 text-right">Qeemat (Rs)</th>
+                  <th className="py-2 pr-3 text-right">Stock Value (Rs)</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,6 +285,15 @@ export default async function PurchasesReportPage({
                     <td className="py-2 pr-3 font-medium text-surface-900 dark:text-surface-100">{r.product}</td>
                     <td className="py-2 pr-3 text-right tabular-nums text-surface-600 dark:text-surface-400">{Math.round(r.purchase_in)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{Math.round(r.sale_out)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {r.sale_value > 0 ? `Rs. ${r.sale_value.toLocaleString()}` : "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-amber-700 dark:text-amber-400">
+                      {r.transfer_out > 0 ? Math.round(r.transfer_out) : "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-amber-700 dark:text-amber-400">
+                      {r.transfer_value > 0 ? `Rs. ${r.transfer_value.toLocaleString()}` : "—"}
+                    </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">
                       {r.damaged_out > 0 ? Math.round(r.damaged_out) : "—"}
                     </td>
@@ -248,7 +302,7 @@ export default async function PurchasesReportPage({
                       {r.current_stock > 0 && r.current_stock <= LOW_STOCK_THRESHOLD && <span className="ml-1 text-[10px] font-normal text-orange-500">⚠</span>}
                       {r.current_stock === 0 && <span className="ml-1 text-[10px] font-normal text-red-500">✗</span>}
                     </td>
-                    <td className="py-2 pr-3 text-right tabular-nums font-medium text-surface-700 dark:text-surface-300">
+                    <td className="py-2 pr-3 text-right tabular-nums font-medium text-brand-700 dark:text-brand-300">
                       {r.stock_value > 0 ? `Rs. ${r.stock_value.toLocaleString()}` : "—"}
                     </td>
                   </tr>
@@ -263,21 +317,30 @@ export default async function PurchasesReportPage({
                   <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                     {Math.round(itemRows.reduce((s, r) => s + r.sale_out, 0)).toLocaleString()}
                   </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    Rs. {totalSaleValue.toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    {Math.round(itemRows.reduce((s, r) => s + r.transfer_out, 0)).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    Rs. {totalTransferValue.toLocaleString()}
+                  </td>
                   <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-red-600 dark:text-red-400">
                     {Math.round(itemRows.reduce((s, r) => s + r.damaged_out, 0)).toLocaleString()}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-surface-900 dark:text-surface-100">
                     {Math.round(itemRows.reduce((s, r) => s + r.current_stock, 0)).toLocaleString()}
                   </td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-surface-900 dark:text-surface-100">
-                    Rs. {itemRows.reduce((s, r) => s + r.stock_value, 0).toLocaleString()}
+                  <td className="py-2 pr-3 text-right tabular-nums text-xs font-semibold text-brand-700 dark:text-brand-300">
+                    Rs. {totalStockValue.toLocaleString()}
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
           <p className="mt-2 text-[11px] text-surface-400">
-            ⚠ = 10 ya kam baqi &nbsp;|&nbsp; ✗ = stock khatam &nbsp;|&nbsp; Adjustment = stock count corrections (alag column mein nahi — woh actual farq nahi hota)
+            ⚠ = 10 ya kam baqi &nbsp;|&nbsp; ✗ = stock khatam &nbsp;|&nbsp; Rs columns = cost price par
           </p>
         </div>
       )}
