@@ -335,3 +335,20 @@ export async function countSchedules(): Promise<CountSchedule[]> {
     // un par koi kaam baqi nahi.
     .sort((a, b) => (b.dinLate ?? -1) - (a.dinLate ?? -1) || a.warehouseName.localeCompare(b.warehouseName));
 }
+
+/** Har khuli hui ginti ka status -- list table mein badge ke liye. */
+export async function openCountsByWarehouse(): Promise<
+  Record<string, { countId: string; status: string }>
+> {
+  const service = createServiceClient();
+  const { data } = await service
+    .from("stock_counts")
+    .select("id, warehouse_id, status")
+    .in("status", ["counting", "verified"]);
+  return Object.fromEntries(
+    (data ?? []).map((r: any) => [
+      r.warehouse_id as string,
+      { countId: r.id as string, status: r.status as string },
+    ])
+  );
+}

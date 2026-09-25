@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { CalendarClock, Pencil, AlertTriangle, CheckCircle2, PauseCircle } from "lucide-react";
+import { CalendarClock, Pencil, AlertTriangle, CheckCircle2, PauseCircle, Loader2 } from "lucide-react";
 import { saveCountSchedule, type ScheduleState } from "@/actions/stock-count-schedule";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select } from "@/components/ui/form";
@@ -188,10 +188,12 @@ export function ScheduleSection({
   rows,
   log,
   canEdit,
+  activeCountMap = {},
 }: {
   rows: CountSchedule[];
   log: { id: string; naam: string }[];
   canEdit: boolean;
+  activeCountMap?: Record<string, { countId: string; status: string }>;
 }) {
   const [khula, setKhula] = useState<string | null>(null);
 
@@ -249,7 +251,15 @@ export function ScheduleSection({
                     {r.aakhriGinti ?? <span className="text-amber-600">kabhi nahi</span>}
                   </td>
                   <td className="py-2">
-                    {r.cycleKind === "band" ? (
+                    {activeCountMap[r.warehouseId] ? (
+                      <a
+                        href={`/admin/stock-count?w=${r.warehouseId}${activeCountMap[r.warehouseId].status === "verified" ? "&step=review" : ""}`}
+                        className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                      >
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        {activeCountMap[r.warehouseId].status === "verified" ? "Review par" : "Ginti chal rahi hai"}
+                      </a>
+                    ) : r.cycleKind === "band" ? (
                       <span className="inline-flex items-center gap-1 text-xs text-surface-500">
                         <PauseCircle className="h-3.5 w-3.5" /> band
                       </span>

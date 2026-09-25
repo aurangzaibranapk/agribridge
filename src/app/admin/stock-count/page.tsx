@@ -9,6 +9,7 @@ import {
   recentCounts,
   overdueCounts,
   countSchedules,
+  openCountsByWarehouse,
   COUNT_OVERDUE_DAYS,
 } from "@/lib/ledger/stock-count";
 import { ScheduleSection } from "./schedule-client";
@@ -93,7 +94,11 @@ export default async function StockCountPage({
   const canApprove = sabKuchWala || (await canDo("stock-count", "approve"));
   const canVerify = !canApprove && (await canDo("stock-count", "verify"));
 
-  const [history, overdue] = await Promise.all([recentCounts(15), overdueCounts()]);
+  const [history, overdue, activeCountMap] = await Promise.all([
+    recentCounts(15),
+    overdueCounts(),
+    openCountsByWarehouse(),
+  ]);
 
   // Ginti ka farq jo staff ke khate ke liye bheja gaya hai -- staff
   // apna hissa yahin qabool/mana karta hai (malik, 15 September: "har
@@ -160,6 +165,7 @@ export default async function StockCountPage({
         rows={tarteebDikhao}
         log={(sabLog ?? []).map((p) => ({ id: p.id as string, naam: (p.full_name as string | null) ?? "—" }))}
         canEdit={tarteebBadalSakta}
+        activeCountMap={activeCountMap}
       />
 
       {warehouses.length === 0 ? (
@@ -238,7 +244,7 @@ export default async function StockCountPage({
                       {current.startedByName && ` • ${current.startedByName}`}
                     </p>
                   </div>
-                  {current.allCounted && !reviewing && (
+                  {(current.allCounted || canApprove) && !reviewing && (
                     <a
                       href={`/admin/stock-count?w=${current.warehouseId}&step=review`}
                       className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
