@@ -180,7 +180,7 @@ const ALL_FEATURES: Feature[] = [
   { section: "Administration", label: "Website Settings", href: "/admin/settings", description: "Website ki bunyadi settings — naam, logo, contact.", who: "Admin" },
 ];
 
-const SECTIONS = ["Sab", ...Array.from(new Set(ALL_FEATURES.map((f) => f.section)))];
+const SECTIONS = ["Sab", "🆕 Naya", ...Array.from(new Set(ALL_FEATURES.map((f) => f.section)))];
 
 const SECTION_COLORS: Record<string, string> = {
   "Master Command": "bg-brand-100 text-brand-800 dark:bg-brand-950/40 dark:text-brand-300",
@@ -204,7 +204,11 @@ export default function ErpDirectoryPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return ALL_FEATURES.filter((f) => {
-      const sectionOk = activeSection === "Sab" || f.section === activeSection;
+      const sectionOk = activeSection === "Sab"
+        ? true
+        : activeSection === "🆕 Naya"
+        ? isNew(f.addedDate)
+        : f.section === activeSection;
       const textOk = !q || f.label.toLowerCase().includes(q) || f.description.toLowerCase().includes(q) || f.section.toLowerCase().includes(q) || f.who.toLowerCase().includes(q);
       return sectionOk && textOk;
     });
@@ -237,7 +241,11 @@ export default function ErpDirectoryPage() {
                 onClick={() => setActiveSection(s)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === s
-                    ? "bg-brand-600 text-white"
+                    ? s === "🆕 Naya"
+                      ? "bg-emerald-600 text-white"
+                      : "bg-brand-600 text-white"
+                    : s === "🆕 Naya"
+                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
                     : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
                 }`}
               >
