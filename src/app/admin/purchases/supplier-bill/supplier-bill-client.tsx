@@ -602,7 +602,7 @@ export function SupplierBillClient({
                     const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
                     const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
                     const itemLabel = isBt ? "botal" : "item";
-                    return <Fragment key={index}><tr className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
+                    return <Fragment key={index}><tr onFocus={(e) => { if (e.target !== e.currentTarget) e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" }); }} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
                       {/* Product column — search + category hint + batch/expiry */}
                       <td className="relative px-3 py-2.5">
