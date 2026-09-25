@@ -1,11 +1,11 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
+import { X, Plus, FileText, AlertTriangle, Trash2, Search, ChevronDown } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -209,6 +209,96 @@ export function GrainClient({
   );
 }
 
+function SearchableSelect({
+  name,
+  options,
+  placeholder,
+  required,
+}: {
+  name: string;
+  options: { value: string; label: string; sub?: string }[];
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [selectedValue, setSelectedValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return options;
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.sub ?? "").toLowerCase().includes(q)
+    );
+  }, [query, options]);
+
+  const selectedLabel = options.find((o) => o.value === selectedValue)?.label ?? "";
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input type="hidden" name={name} value={selectedValue} />
+      {required && <input type="text" className="sr-only" required={!selectedValue} readOnly value={selectedValue} tabIndex={-1} />}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+      >
+        <span className={selectedValue ? "" : "text-surface-400"}>{selectedLabel || placeholder || "- chunein -"}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-surface-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-surface-200 bg-white shadow-xl dark:border-surface-700 dark:bg-surface-900">
+          <div className="flex items-center gap-2 border-b border-surface-100 px-3 py-2 dark:border-surface-800">
+            <Search className="h-3.5 w-3.5 shrink-0 text-surface-400" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Naam se dhoondein..."
+              className="flex-1 bg-transparent text-sm text-surface-800 outline-none placeholder:text-surface-400 dark:text-surface-200"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-surface-400 hover:text-surface-700">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <ul className="max-h-52 overflow-y-auto py-1">
+            {filtered.length === 0 && (
+              <li className="px-4 py-3 text-center text-xs text-surface-400">Koi nahi mila</li>
+            )}
+            {filtered.map((o) => (
+              <li key={o.value}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedValue(o.value); setQuery(""); setOpen(false); }}
+                  className={`flex w-full flex-col px-4 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-900/30 ${selectedValue === o.value ? "bg-brand-50 dark:bg-brand-900/30" : ""}`}
+                >
+                  <span className="text-sm font-medium text-surface-800 dark:text-surface-200">{o.label}</span>
+                  {o.sub && <span className="text-xs text-surface-400">{o.sub}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -335,22 +425,30 @@ function NewEntryForm({
         {sellerType === "farmer" ? (
           <div>
             <Label>{t("gr_farmer_req", lang)}</Label>
-            <Select name="farmer_id" required>
-              <option value="">- select -</option>
-              {farmers.map((f) => (
-                <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              name="farmer_id"
+              required
+              placeholder="Kisan chunein ya naam likhen..."
+              options={farmers.map((f) => ({
+                value: f.id,
+                label: f.full_name ?? f.farmer_code ?? f.id,
+                sub: f.farmer_code ?? undefined,
+              }))}
+            />
           </div>
         ) : (
           <div>
             <Label>{t("gr_party_req", lang)}</Label>
-            <Select name="party_id" required>
-              <option value="">- select -</option>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>{p.party_name}{p.contact_person ? ` - ${p.contact_person}` : ""}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              name="party_id"
+              required
+              placeholder="Party chunein ya naam likhen..."
+              options={parties.map((p) => ({
+                value: p.id,
+                label: p.party_name,
+                sub: [p.contact_person, p.phone].filter(Boolean).join(" · ") || undefined,
+              }))}
+            />
           </div>
         )}
 
