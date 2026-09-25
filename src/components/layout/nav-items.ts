@@ -152,6 +152,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reports/sales", label: "Sale Report", icon: ShoppingCart },
       { href: "/admin/reports/purchases", label: "Kharid Report", icon: ClipboardList },
       { href: "/admin/reports/inventory", label: "Stock Reports", icon: Boxes },
+      { href: "/admin/reports/stock-value", label: "Stock Value Report", icon: LineChart },
       { href: "/admin/reports/finance", label: "Finance Report", icon: Landmark },
       { href: "/admin/reports/credit", label: "Udhaar Report", icon: CreditCard },
       { href: "/admin/reports/procurement", label: "Anaj Kharid Report", icon: Wheat },
