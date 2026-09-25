@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
+import { fetchPosCustomerNames } from "@/actions/pos-customer-lookup";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { Search, Package, RotateCcw, Minus, Plus, Check, Receipt, X } from "lucide-react";
@@ -180,13 +181,13 @@ export function PosReturn({
     // har naam "Walk-in customer" nazar aata tha (15 September).
     const crmIds = Array.from(new Set((data ?? []).map((r: any) => r.crm_customer_id).filter(Boolean)));
     const dealerIds = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
-    const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
-      crmIds.length
-        ? supabase.from("customers").select("id, name, phone_number, cnic").in("id", crmIds)
-        : Promise.resolve({ data: [] as any[] }),
+    // fetchPosCustomerNames service client use karta hai -- browser client
+    // RLS ki wajah se customers table nahi dekh sakta, naam null aata tha,
+    // aur "Gahak" dikh raha tha (25 Sep fix).
+    const [crmById, { data: dealerCusts }] = await Promise.all([
+      fetchPosCustomerNames(crmIds),
       dealerIds.length ? supabase.from("dealer_customers").select("id, name").in("id", dealerIds) : Promise.resolve({ data: [] as any[] }),
     ]);
-    const crmById = new Map((crmCusts ?? []).map((c: any) => [c.id, c]));
     const dealerNameById = new Map((dealerCusts ?? []).map((c: any) => [c.id, c.name]));
 
     setSales(
@@ -198,7 +199,7 @@ export function PosReturn({
           total_amount: Number(r.total_amount ?? 0),
           status: r.status,
           payment_mode: r.payment_mode,
-          customer_name: crm?.name ?? (r.customer_id ? dealerNameById.get(r.customer_id) : null) ?? null,
+          customer_name: crm?.name ?? (r.customer_id ? (dealerNameById.get(r.customer_id) ?? null) : null),
           customer_phone: crm?.phone_number ?? null,
           customer_cnic: crm?.cnic ?? null,
           has_customer: !!(r.crm_customer_id || r.customer_id),
