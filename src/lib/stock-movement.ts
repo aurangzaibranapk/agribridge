@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { postJournal } from "@/lib/ledger/post";
+import { ACC } from "@/lib/ledger/rules";
 
 /**
  * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
@@ -51,13 +53,14 @@ async function deductStock(
   referenceType: string,
   referenceId: string,
   userId: string | null
-) {
+): Promise<number> {
   const supabase = createClient();
 
   let remaining = qty;
+  let totalCost = 0;
   const { data: batches } = await supabase
     .from("stock_batches")
-    .select("id, remaining_quantity")
+    .select("id, remaining_quantity, unit_cost")
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .gt("remaining_quantity", 0)
@@ -69,6 +72,7 @@ async function deductStock(
     if (remaining <= 0) break;
     const take = Math.min(remaining, Number(batch.remaining_quantity));
     await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
+    totalCost += take * Number(batch.unit_cost ?? 0);
     remaining -= take;
   }
 
@@ -78,7 +82,7 @@ async function deductStock(
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .maybeSingle();
-  if (!inv) return;
+  if (!inv) return totalCost;
 
   // Stock manfi nahi hone dete — agar record se zyada nikalne ki koshish
   // ho to utna hi nikalte hain jitna maujood hai, warna ginti ulti par
@@ -100,6 +104,8 @@ async function deductStock(
     reference_id: referenceId,
     created_by: userId,
   });
+
+  return totalCost;
 }
 
 async function addStock(
@@ -158,6 +164,10 @@ export interface StockMoveOptions {
   userId: string | null;
   outType?: MovementType;
   inType?: MovementType;
+  /** Set karo to stock nikalne par journal entry post hogi (Dr COGS, Cr Stock). */
+  journalDescription?: string;
+  journalSourceModule?: string;
+  branchId?: string | null;
 }
 
 /**
@@ -170,7 +180,22 @@ export async function moveStock(opts: StockMoveOptions) {
   if (qty <= 0 || !productId) return;
 
   if (fromWarehouseId) {
-    await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    const cost = await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    // Jab maal company se bahar jaye (jaise agri dispatch), tab ledger mein
+    // stock ka asset kam hota hai: Dr COGS (5000), Cr Stock (1200).
+    if (opts.journalDescription && cost > 0) {
+      await postJournal({
+        description: opts.journalDescription,
+        sourceModule: opts.journalSourceModule ?? referenceType,
+        sourceId: referenceId,
+        branchId: opts.branchId ?? null,
+        createdBy: userId,
+        lines: [
+          { account: ACC.cogs, debit: cost },
+          { account: ACC.stockGoods, credit: cost },
+        ],
+      });
+    }
   }
   if (toWarehouseId) {
     await addStock(toWarehouseId, productId, qty, opts.inType ?? "transfer_in", referenceType, referenceId, userId);
