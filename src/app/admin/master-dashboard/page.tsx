@@ -216,6 +216,17 @@ export default async function MasterDashboardPage({
   const { data: posSalesRows } = await posQuery;
   const posRevenue = (posSalesRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
 
+  // Aaj ki POS sale alag se: totalRevenue current month ka number hai.
+  const todayKey = aajKaKhana();
+  let todayQuery = serviceClient
+    .from("pos_sales")
+    .select("total_amount")
+    .gte("created_at", `${todayKey}T00:00:00`)
+    .lt("created_at", `${todayKey}T23:59:59.999`);
+  if (shopId) todayQuery = todayQuery.eq("shop_id", shopId);
+  const { data: todayRows } = await todayQuery;
+  const todaySales = (todayRows ?? []).reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+
   // Daily POS trend for the professional Master Dashboard charts.
   const trendDays = 14;
   const trendStartDate = new Date(now.getTime() - (trendDays - 1) * 24 * 60 * 60 * 1000).toISOString();
@@ -347,6 +358,35 @@ export default async function MasterDashboardPage({
     trend: customerTrend[r.id] ?? Array(trendWeeks).fill(0),
   }));
 
+  // AI Command Center ke neeche verified 30-day category aur staff totals.
+  const intelligenceStart = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const analyticsClient = serviceClient as any;
+  let categoryQuery = analyticsClient.from("v_ai_sales_category").select("category_name, sales_amount, units_sold").gte("sale_date", intelligenceStart);
+  let staffQuery = analyticsClient.from("v_ai_staff_sales_daily").select("staff_id, staff_name, sales_amount, invoice_count").gte("sale_date", intelligenceStart);
+  if (shopId) {
+    categoryQuery = categoryQuery.eq("shop_id", shopId);
+    staffQuery = staffQuery.eq("shop_id", shopId);
+  }
+  const [{ data: categoryRows }, { data: staffRows }] = await Promise.all([categoryQuery, staffQuery]);
+  const aiCategoryTotals = new Map<string, { name: string; sales: number; units: number }>();
+  for (const row of categoryRows ?? []) {
+    const name = String((row as any).category_name ?? "Uncategorized");
+    const current = aiCategoryTotals.get(name) ?? { name, sales: 0, units: 0 };
+    current.sales += Number((row as any).sales_amount ?? 0);
+    current.units += Number((row as any).units_sold ?? 0);
+    aiCategoryTotals.set(name, current);
+  }
+  const categorySales = [...aiCategoryTotals.values()].sort((a, b) => b.sales - a.sales).slice(0, 8);
+  const staffTotals = new Map<string, { name: string; sales: number; invoices: number }>();
+  for (const row of staffRows ?? []) {
+    const id = String((row as any).staff_id ?? "unknown");
+    const current = staffTotals.get(id) ?? { name: String((row as any).staff_name ?? "Unknown staff"), sales: 0, invoices: 0 };
+    current.sales += Number((row as any).sales_amount ?? 0);
+    current.invoices += Number((row as any).invoice_count ?? 0);
+    staffTotals.set(id, current);
+  }
+  const staffSales = [...staffTotals.values()].sort((a, b) => b.sales - a.sales).slice(0, 8);
+
   const totalRevenue = posRevenue + (showAgri ? agriRevenue : 0) + (showDairy ? milkGrossIncome : 0);
   const totalAllExpenses = (showAgri ? totalExpenses : 0) + (showDairy ? milkTotalDeductions : 0);
   const netProfit = totalRevenue - totalAllExpenses;
@@ -364,13 +404,18 @@ export default async function MasterDashboardPage({
         totalBankBalance={totalBankBalance}
         receivables={totalReceivables}
         payables={totalPayables}
-        totalRevenue={totalRevenue}
+      totalRevenue={totalRevenue}
+        todaySales={todaySales}
+        shopId={shopId}
+        shopOptions={(shopsList ?? []).map((shop: any) => ({ id: shop.id as string, name: shop.name as string }))}
         netProfit={netProfit}
         totalInventoryValue={totalInventoryValue}
         topSellingItems={topSellingItems}
         topDebtors={topDebtors}
         salesTrend={salesTrend}
         missingBatchCount={missingBatchProducts.length}
+        categorySales={categorySales}
+        staffSales={staffSales}
       />
       <div className="hidden">
       <PageHeader

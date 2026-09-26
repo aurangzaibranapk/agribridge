@@ -3,6 +3,12 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
+import {
+  getBusinessIntelligenceReport,
+  getCategorySales,
+  getDemandForecast,
+  getStaffSalesPerformance,
+} from "@/lib/ai/business-intelligence";
 
 // ===== Tool 1: Financial Summary =====
 async function getFinancialSummary(supabase: ReturnType<typeof createClient>) {
@@ -506,6 +512,42 @@ async function getReorderSuggestions(supabase: ReturnType<typeof createClient>) 
 // ===== Gemini ko batata hai har tool kya karta hai =====
 export const bridgeToolDeclarations: FunctionDeclaration[] = [
   {
+    name: "get_business_intelligence_report",
+    description:
+      "Ek verified business intelligence report: category-wise sales, staff ranking aur demand forecast. User jab poore business ka AI status, top staff, category performance ya ek combined report pooche.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.NUMBER, description: "Period: 7, 15 ya 30 din. Default 30." } },
+    },
+  },
+  {
+    name: "get_category_sales",
+    description:
+      "Karyana, Fertilizer, Pesticide, Seed, Wanda aur baqi categories ki verified sales ranking deta hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.NUMBER, description: "Pichlay kitne din. Default 30." } },
+    },
+  },
+  {
+    name: "get_staff_sales_performance",
+    description:
+      "Staff-wise verified sales, invoice count, active days aur ranking deta hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.NUMBER, description: "Pichlay kitne din. Default 30." } },
+    },
+  },
+  {
+    name: "get_demand_forecast",
+    description:
+      "Product-wise 7, 15 ya 30 din ki demand, current stock, stock cover aur suggested order deta hai. Forecast POS velocity par based hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.NUMBER, description: "Forecast horizon: 7, 15 ya 30 din." } },
+    },
+  },
+  {
     name: "get_financial_summary",
     description:
       "Business ka financial summary deta hai: bank balance, receivables (farmers/branches se lena hai), payables (suppliers ko dena hai), aur is mahine ke approved company expenses.",
@@ -853,6 +895,14 @@ export async function executeBridgeTool(
     return { error: "Aap ke role ke liye ye maloomat nahi hai. Apne manager se poochein.", access_denied: true };
   }
   switch (name) {
+    case "get_business_intelligence_report":
+      return getBusinessIntelligenceReport(supabase, Number(args?.days ?? 30));
+    case "get_category_sales":
+      return getCategorySales(supabase, Number(args?.days ?? 30));
+    case "get_staff_sales_performance":
+      return getStaffSalesPerformance(supabase, Number(args?.days ?? 30));
+    case "get_demand_forecast":
+      return getDemandForecast(supabase, Number(args?.days ?? 30));
     case "get_financial_summary":
       return getFinancialSummary(supabase);
     case "get_inventory_summary":
