@@ -503,6 +503,212 @@ async function getReorderSuggestions(supabase: ReturnType<typeof createClient>) 
   };
 }
 
+// ===== Tool 12: Shop-specific stock analysis =====
+// Ek shop ka: abhi kya hai, kya tez bika, kya mangwana hai (N din ke liye).
+// Staff aur admin dono use kar sakte hain -- sirf apni shop ka data.
+async function getShopStockAnalysis(
+  supabase: ReturnType<typeof createClient>,
+  args: { shop_name?: string; days?: number }
+) {
+  const shopName = (args.shop_name ?? "").trim();
+  const days = Math.min(Math.max(Number(args.days ?? 15), 7), 90);
+
+  if (!shopName) {
+    return { error: "Shop ka naam chahiye (jaise 'Mahabali')." };
+  }
+
+  // Branch dhundho
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name, is_main_branch")
+    .eq("is_active", true)
+    .ilike("name", `%${shopName}%`);
+  const shops = (branches ?? []).filter((b) => !b.is_main_branch);
+  if (shops.length === 0) {
+    const { data: all } = await supabase
+      .from("branches")
+      .select("name")
+      .eq("is_active", true)
+      .eq("is_main_branch", false)
+      .order("name")
+      .limit(20);
+    return {
+      found: false,
+      message: `"${shopName}" naam ki koi shop nahi mili.`,
+      available_shops: (all ?? []).map((b) => b.name),
+    };
+  }
+  if (shops.length > 1) {
+    return {
+      found: false,
+      message: `"${shopName}" se kai shops milti hain -- kaun si?`,
+      candidates: shops.map((b) => b.name),
+    };
+  }
+  const shop = shops[0];
+
+  // Is branch ki sales IDs (pichle N din)
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setDate(periodStart.getDate() - days);
+
+  const { data: salesRows } = await supabase
+    .from("pos_sales")
+    .select("id")
+    .eq("branch_id", shop.id)
+    .gte("created_at", periodStart.toISOString())
+    .limit(2000);
+  const saleIds = (salesRows ?? []).map((s) => s.id);
+
+  // Sale items (agar koi sale thi)
+  const byProduct = new Map<string, { qty: number; revenue: number }>();
+  if (saleIds.length > 0) {
+    const { data: items } = await supabase
+      .from("pos_sale_items")
+      .select("product_id, quantity, unit_price")
+      .in("sale_id", saleIds)
+      .limit(10000);
+    (items ?? []).forEach((item: any) => {
+      const cur = byProduct.get(item.product_id) ?? { qty: 0, revenue: 0 };
+      cur.qty += Number(item.quantity ?? 0);
+      cur.revenue += Number(item.quantity ?? 0) * Number(item.unit_price ?? 0);
+      byProduct.set(item.product_id, cur);
+    });
+  }
+
+  // Products ki info (naam, pack_size, selling_price)
+  const soldProductIds = [...byProduct.keys()];
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, pack_size, selling_price, wholesale_price")
+    .in("id", soldProductIds.length > 0 ? soldProductIds : ["__none__"])
+    .eq("is_deleted", false);
+  const productMap = new Map((products ?? []).map((p) => [p.id, p]));
+
+  // Inventory: pehle shop-specific (location_id), phir global fallback
+  const { data: shopInv } = await supabase
+    .from("inventory")
+    .select("product_id, quantity_on_hand")
+    .eq("location_id", shop.id);
+  const useShopInv = (shopInv ?? []).length > 0;
+  let invRows = shopInv ?? [];
+  if (!useShopInv) {
+    const { data: globalInv } = await supabase
+      .from("inventory")
+      .select("product_id, quantity_on_hand");
+    invRows = globalInv ?? [];
+  }
+  const invMap = new Map<string, number>();
+  invRows.forEach((r: any) => {
+    invMap.set(r.product_id, (invMap.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0));
+  });
+
+  // Analysis banayen
+  type ProductRow = {
+    product_id: string;
+    product: string;
+    sold: number;
+    revenue: number;
+    daily_rate: number;
+    in_stock: number;
+    days_left: number | null;
+    reorder_qty: number;
+    unit_price: number;
+  };
+  const analysis: ProductRow[] = [];
+
+  byProduct.forEach((sales, productId) => {
+    const prod = productMap.get(productId);
+    if (!prod) return;
+    const daily_rate = days > 0 ? sales.qty / days : 0;
+    const in_stock = invMap.get(productId) ?? 0;
+    const days_left = daily_rate > 0 ? Number((in_stock / daily_rate).toFixed(1)) : null;
+    // Buffer: 7 din delivery + requested days ka stock
+    const target = daily_rate * (days + 7);
+    const reorder_qty = Math.max(0, Math.round(target - in_stock));
+    const unit = Number(prod.wholesale_price ?? prod.selling_price ?? 0);
+    analysis.push({
+      product_id: productId,
+      product: `${prod.name}${prod.pack_size ? ` (${prod.pack_size})` : ""}`,
+      sold: Math.round(sales.qty),
+      revenue: Math.round(sales.revenue),
+      daily_rate: Number(daily_rate.toFixed(2)),
+      in_stock: Math.round(in_stock),
+      days_left,
+      reorder_qty,
+      unit_price: unit,
+    });
+  });
+
+  // Tez bechne wale (top 8 by daily_rate)
+  analysis.sort((a, b) => b.daily_rate - a.daily_rate);
+  const fastMovers = analysis.slice(0, 8);
+
+  // Slow movers (daily_rate < 0.3, bottom 5)
+  const slowMovers = analysis.filter((a) => a.daily_rate < 0.3).slice(-5);
+
+  // Reorder list (days_left <= days ya stock sifar)
+  const reorderList = analysis
+    .filter((a) => (a.days_left !== null && a.days_left < days) || (a.days_left === null && a.in_stock < 1))
+    .sort((a, b) => (a.days_left ?? -1) - (b.days_left ?? -1));
+
+  const totalRevenue = analysis.reduce((s, a) => s + a.revenue, 0);
+  const totalOrderCost = reorderList.reduce((s, a) => s + a.reorder_qty * a.unit_price, 0);
+
+  // Agar koi sale nahi
+  if (analysis.length === 0) {
+    return {
+      found: true,
+      shop: shop.name,
+      period_days: days,
+      message: `${shop.name} par pichle ${days} din mein koi POS sale nahi mili.`,
+      total_revenue: 0,
+      fast_movers: [],
+      reorder_list: [],
+      slow_movers: [],
+      currency: "PKR",
+    };
+  }
+
+  return {
+    found: true,
+    shop: shop.name,
+    period_days: days,
+    inventory_note: useShopInv ? "Shop ka alag inventory record mila" : "Global inventory (shop-specific nahi mila)",
+    total_products_sold: analysis.length,
+    total_revenue: totalRevenue,
+    currency: "PKR",
+    fast_movers: fastMovers.map((a) => ({
+      product: a.product,
+      sold_in_period: a.sold,
+      revenue: a.revenue,
+      daily_rate: a.daily_rate,
+      in_stock: a.in_stock,
+      days_left: a.days_left,
+    })),
+    reorder_list: reorderList.map((a) => ({
+      product: a.product,
+      in_stock: a.in_stock,
+      days_left: a.days_left,
+      suggested_order_qty: a.reorder_qty,
+      unit_price: a.unit_price,
+      estimated_cost: Math.round(a.reorder_qty * a.unit_price),
+      urgency: (a.days_left !== null && a.days_left <= 3) || a.in_stock < 1 ? "URGENT" : a.days_left !== null && a.days_left <= 7 ? "jaldi" : "normal",
+    })),
+    slow_movers: slowMovers.map((a) => ({
+      product: a.product,
+      sold_in_period: a.sold,
+      in_stock: a.in_stock,
+      note: "Slow-moving — invest kam karein",
+    })),
+    order_summary: {
+      total_items_to_order: reorderList.length,
+      estimated_total_cost: Math.round(totalOrderCost),
+      note: `${days} din ka stock + 7 din delivery buffer ke liye estimate`,
+    },
+  };
+}
+
 // ===== Gemini ko batata hai har tool kya karta hai =====
 export const bridgeToolDeclarations: FunctionDeclaration[] = [
   {
@@ -671,6 +877,25 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
       },
     },
   },
+  {
+    name: "get_shop_stock_analysis",
+    description:
+      "Kisi ek shop/branch ka mukammal stock analysis: pichle N din mein kya bika (fast movers), kya slow hai, aur supplier ko order dene ke liye kya kya mangwana chahiye (har product ki tadad aur estimated cost ke sath). Jab user pooche 'Mahabali ka stock kya hai', 'is shop mein kya tez bika', 'is shop ke liye 15 din ka order kya banao', 'supplier ko kya order doon', 'kya mangwana hai', 'reorder list banao' -- ye tool use karein. `shop_name` zaroori hai; `days` default 15 hai.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        shop_name: {
+          type: Type.STRING,
+          description: "Shop/branch ka naam (jaise 'Mahabali', 'Main Branch'). Partial naam bhi chalega.",
+        },
+        days: {
+          type: Type.NUMBER,
+          description: "Kitne din ka analysis chahiye aur agle kitne din ke liye order banana hai (default 15, min 7, max 90).",
+        },
+      },
+      required: ["shop_name"],
+    },
+  },
 ];
 
 // ===== API route isi ek function ko call karega =====
@@ -835,6 +1060,7 @@ const STAFF_ALLOWED_TOOLS = new Set([
   "get_reorder_suggestions",
   "check_system_errors",
   "get_farmer_outstanding",
+  "get_shop_stock_analysis",
 ]);
 
 /** Staff ke liye sirf allowed tools ki declarations bhejta hai Gemini ko. */
@@ -881,6 +1107,8 @@ export async function executeBridgeTool(
       return getFarmerOutstanding(supabase, args ?? {});
     case "check_system_errors":
       return checkSystemErrors(supabase, args ?? {});
+    case "get_shop_stock_analysis":
+      return getShopStockAnalysis(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -889,13 +1117,13 @@ export async function executeBridgeTool(
 // ===== Specialized Agent System Instructions =====
 export const AGENT_SYSTEM_INSTRUCTIONS: Record<string, string> = {
   crop:
-    "Aap ka naam Abram hai. Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Crop/Grain Agent hain - aapka focus Grain Procurement, Fertilizer, Pesticide, aur Seeds se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   livestock:
-    "Aap ka naam Abram hai. Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Livestock/Dairy Agent hain - aapka focus Milk Collection, Machinery Rental, aur Farm Equipment se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   finance:
-    "Aap ka naam Abram hai. Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
+    "Aap ka naam Abram hai. Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   general:
-    "Aap ka naam Abram hai. Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
+    "Aap ka naam Abram hai. Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
 };
 
 // Simple keyword-based router - koi extra AI call nahi lagti, turant
