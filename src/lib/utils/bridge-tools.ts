@@ -1276,6 +1276,20 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "get_pending_approvals",
+    description:
+      "Bridge AI ke pending approval requests dikhata hai: jo orders ya actions AI ne draft kiye hain aur admin ki manzoori ka intezar kar rahe hain. Jab user pooche 'pending approvals kya hain', 'kaunse orders approve karne hain', 'AI ne kya banaya hai', 'action requests dikhao' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        type: {
+          type: Type.STRING,
+          description: "Sirf ek type ki approvals chahiye ho to (jaise 'order_draft', 'purchase_recommendation'). Khali chhoRein to sab.",
+        },
+      },
+    },
+  },
+  {
     name: "get_demand_forecast",
     description:
       "Demand forecast: kaunsa product kab khatam hoga, agle N din mein kya kya mangwana chahiye, kaunse products urgent hain. Formula: roz ki bikri ke hisaab se. Jab user pooche 'agle 15 din mein kya khatam hoga', 'demand forecast karo', 'kaunse products urgent hain', 'pura reorder plan batao', 'kis cheez ka order doon' -- ye tool use karein. Category filter bhi de sakte hain (jaise 'fertilizer', 'pesticide').",
@@ -1445,6 +1459,38 @@ async function getFarmerOutstanding(
   };
 }
 
+// ===== Tool 17: Pending Approvals (AI action requests jo admin ki approval ka intezar kar rahi hain) =====
+async function getPendingApprovals(
+  supabase: ReturnType<typeof createClient>,
+  args: { type?: string }
+) {
+  let q = supabase
+    .from("bridge_ai_action_requests")
+    .select("id, action_type, description, details, status, created_at, created_order_id")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (args.type) q = q.eq("action_type", args.type);
+  const { data, error } = await q;
+  if (error) return { error: "Pending approvals nahi mil sakein: " + error.message };
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) {
+    return { pending_count: 0, note: "Abhi koi bhi approval pending nahi.", link: "/admin/bridge-ai/action-requests" };
+  }
+  return {
+    pending_count: rows.length,
+    approvals: rows.map((r) => ({
+      id: String(r.id).slice(0, 8),
+      type: r.action_type,
+      description: r.description,
+      details: r.details ?? null,
+      submitted_at: r.created_at ? String(r.created_at).slice(0, 10) : null,
+      has_draft_order: !!r.created_order_id,
+    })),
+    action: "Approve/reject karne ke liye /admin/bridge-ai/action-requests par jayein.",
+  };
+}
+
 // ===== Role-based gating =====
 // Company-wide financial aur operational data sirf broad roles ko —
 // sales/shop staff sirf apna kaam dekh sakta hai, business ka poora
@@ -1514,6 +1560,8 @@ export async function executeBridgeTool(
       return getBuyerRecovery(supabase, args ?? {});
     case "get_demand_forecast":
       return getDemandForecast(supabase, args ?? {});
+    case "get_pending_approvals":
+      return getPendingApprovals(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
