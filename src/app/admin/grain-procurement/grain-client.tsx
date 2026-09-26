@@ -11,7 +11,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string | null; farmer_code: string | null; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; phone_number?: string | null; cnic?: string | null; }
 interface Party { id: string; party_name: string; contact_person: string | null; phone: string | null; }
 interface Warehouse { id: string; name: string; }
 interface CutPreset { id: string; grain_type: string; label: string; cut_percentage: number; }
@@ -353,6 +353,7 @@ function NewEntryForm({
   const [chungiType, setChungiType] = useState<"cash" | "grain">("cash");
   const [chungiCash, setChungiCash] = useState("0");
   const [chungiKg, setChungiKg] = useState("0");
+  const [chungiPaidBy, setChungiPaidBy] = useState<"party" | "self">("party");
 
   const [makePayment, setMakePayment] = useState<"" | "yes" | "no">("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -369,7 +370,7 @@ function NewEntryForm({
   const rateNum = parseFloat(rate) || 0;
   const total = netWeight * rateNum;
   const chungiAmount = chungiType === "grain" ? (parseFloat(chungiKg) || 0) * rateNum : parseFloat(chungiCash) || 0;
-  const payableToSeller = total - chungiAmount;
+  const payableToSeller = chungiPaidBy === "party" ? total - chungiAmount : total;
 
   const expensesJson = JSON.stringify(
     expenseRows
@@ -413,6 +414,7 @@ function NewEntryForm({
         <input type="hidden" name="chungi_type" value={chungiType} />
         <input type="hidden" name="chungi_kg" value={chungiKg} />
         <input type="hidden" name="chungi_amount" value={chungiCash} />
+        <input type="hidden" name="chungi_paid_by" value={chungiPaidBy} />
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
@@ -428,11 +430,11 @@ function NewEntryForm({
             <SearchableSelect
               name="farmer_id"
               required
-              placeholder="Kisan chunein ya naam likhen..."
+              placeholder="Naam, mobile ya CNIC se dhoondein..."
               options={farmers.map((f) => ({
                 value: f.id,
                 label: f.full_name ?? f.farmer_code ?? f.id,
-                sub: f.farmer_code ?? undefined,
+                sub: [f.farmer_code, f.phone_number, f.cnic].filter(Boolean).join(" · ") || undefined,
               }))}
             />
           </div>
@@ -504,7 +506,19 @@ function NewEntryForm({
 
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
           <Label>{t("gr_chungi", lang)}</Label>
+          {/* Kisne di chungi — Party ne ya Boss ne khud */}
           <div className="mt-1 flex gap-2">
+            <button type="button" onClick={() => setChungiPaidBy("party")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "party" ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" : "border-surface-200 text-surface-500"}`}>Party ne di</button>
+            <button type="button" onClick={() => setChungiPaidBy("self")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "self" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Maine khud di</button>
+          </div>
+          {chungiPaidBy === "party" && (
+            <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">Party ki raqam se kategi — payable kam ho ga</p>
+          )}
+          {chungiPaidBy === "self" && (
+            <p className="mt-1 text-[10px] text-brand-600 dark:text-brand-400">Aapne khud di — party ka payable nahi katega</p>
+          )}
+          {/* Kis soorat mein chungi — Cash ya Anaaj */}
+          <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_cash_rs", lang)}</button>
             <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_grain_kg", lang)}</button>
           </div>
@@ -592,9 +606,14 @@ function NewEntryForm({
             <span className="font-medium text-surface-700 dark:text-surface-300">{t("gr_grain_value", lang)}</span>
             <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span>
           </div>
-          {chungiAmount > 0 && (
-            <div className="mt-1 flex items-center justify-between text-xs text-red-600">
-              <span>Chungi Katoti ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
+          {chungiAmount > 0 && chungiPaidBy === "party" && (
+            <div className="mt-1 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>Chungi Katoti — Party ne di ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
+            </div>
+          )}
+          {chungiAmount > 0 && chungiPaidBy === "self" && (
+            <div className="mt-1 flex items-center justify-between text-xs text-brand-600 dark:text-brand-400">
+              <span>Chungi — Maine khud di (party se nahi kati)</span><span>Rs {chungiAmount.toLocaleString()}</span>
             </div>
           )}
           <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-surface-200">
