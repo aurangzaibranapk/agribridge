@@ -31,6 +31,7 @@ import type { PosPermissions } from "@/lib/pos/permissions";
 interface PosProduct {
   name: string;
   pack_size: string | null;
+  units_per_pack?: number | null;
   barcode: string | null;
   internal_barcode?: string | null;
   image_url?: string | null;
@@ -618,7 +619,17 @@ export function PosClient({
                   </div>
                   <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
                     <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
-                    <p className="mt-0.5 flex items-baseline justify-between gap-2"><span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">Rs {item.selling_price.toLocaleString()}</span>{p?.mrp_price != null && p.mrp_price > 0 && <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">{t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}</span>}</p>
+                    {wholesaleOn && item.wholesale_price != null ? (
+                      <div className="mt-0.5">
+                        <p className="flex items-baseline justify-between gap-2">
+                          <span className="font-display text-sm font-semibold text-amber-700 tabular-nums dark:text-amber-400">Rs {item.wholesale_price.toLocaleString()}</span>
+                          {(p?.units_per_pack ?? 0) > 1 && <span className="shrink-0 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{p!.units_per_pack} btl</span>}
+                        </p>
+                        <p className="text-[10px] font-medium text-amber-600 dark:text-amber-500">PET rate</p>
+                      </div>
+                    ) : (
+                      <p className="mt-0.5 flex items-baseline justify-between gap-2"><span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">Rs {item.selling_price.toLocaleString()}</span>{p?.mrp_price != null && p.mrp_price > 0 && <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">{t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}</span>}</p>
+                    )}
                   </div>
                 </button>
               );

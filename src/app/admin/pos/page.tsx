@@ -302,7 +302,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };
