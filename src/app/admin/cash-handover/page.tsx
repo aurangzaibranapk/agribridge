@@ -176,15 +176,23 @@ export default async function CashHandoverPage() {
                         {row.carrier ? ` (${row.carrier} ${t("ch_carried_by", lang)})` : ""}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 text-xs ${
-                        row.daysOld >= TRANSIT_ALERT_DAYS
-                          ? "font-medium text-red-700 dark:text-red-400"
-                          : "text-surface-400"
-                      }`}
-                    >
-                      {row.daysOld === 0 ? t("ch_today", lang) : `${row.daysOld} ${t("ch_days", lang)}`}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`text-xs ${
+                          row.daysOld >= TRANSIT_ALERT_DAYS
+                            ? "font-medium text-red-700 dark:text-red-400"
+                            : "text-surface-400"
+                        }`}
+                      >
+                        {row.daysOld === 0 ? t("ch_today", lang) : `${row.daysOld} ${t("ch_days", lang)}`}
+                      </span>
+                      <Link
+                        href={`/admin/cash-handover/slip/${row.id}`}
+                        className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
+                      >
+                        Verify
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -214,12 +222,16 @@ export default async function CashHandoverPage() {
                     {history.map((h) => (
                       <tr key={h.id} className={h.status === "short" ? "bg-red-50/60 dark:bg-red-950/10" : ""}>
                         <td className="px-4 py-2">
-                          <span className="text-surface-800 dark:text-surface-200">
+                          <Link href={`/admin/cash-handover/slip/${h.id}`} className="text-surface-800 hover:text-brand-600 hover:underline dark:text-surface-200">
                             {h.sentBy ?? "—"} → {h.toPerson ?? "—"}
-                          </span>
+                          </Link>
                           <span className="block text-xs text-surface-400">
                             {h.sentAt.slice(0, 10)}
-                            {h.status === "sent" && t("ch_still_in_transit", lang)}
+                            {h.status === "sent" && (
+                              <Link href={`/admin/cash-handover/slip/${h.id}`} className="ml-1 font-medium text-amber-600 hover:underline dark:text-amber-400">
+                                {t("ch_still_in_transit", lang)} — Verify karein
+                              </Link>
+                            )}
                           </span>
                         </td>
                         <td className="px-4 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
