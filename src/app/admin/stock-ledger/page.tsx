@@ -27,8 +27,8 @@ export default async function StockLedgerPage() {
 
   const [{ data: productsRows }, { data: warehouseRows }] = await Promise.all([
     productIds.length
-      ? supabase.from("products").select("id, name, pack_size").in("id", productIds)
-      : Promise.resolve({ data: [] as { id: string; name: string; pack_size: string | null }[] }),
+      ? supabase.from("products").select("id, name, pack_size, units_per_pack").in("id", productIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; pack_size: string | null; units_per_pack: number | null }[] }),
     warehouseIds.length
       ? supabase.from("warehouses").select("id, name, branch_id").in("id", warehouseIds)
       : Promise.resolve({ data: [] as { id: string; name: string; branch_id: string }[] }),
@@ -42,12 +42,12 @@ export default async function StockLedgerPage() {
   const productMap = new Map((productsRows ?? []).map((p) => [p.id, p]));
   const branchMap = new Map((branchRows ?? []).map((b) => [b.id, b.name]));
   const warehouseMap = new Map(
-    (warehouseRows ?? []).map((w) => [w.id, branchMap.get(w.branch_id) ?? "-"])
+    (warehouseRows ?? []).map((w) => [w.id, { branchName: branchMap.get(w.branch_id) ?? "-", warehouseName: w.name }])
   );
   const inventoryMap = new Map(
     (inventoryRows ?? []).map((r) => [
       r.id,
-      { product: productMap.get(r.product_id), branchName: warehouseMap.get(r.warehouse_id) },
+      { product: productMap.get(r.product_id), location: warehouseMap.get(r.warehouse_id) },
     ])
   );
 
@@ -77,21 +77,33 @@ export default async function StockLedgerPage() {
             <tbody>
               {movements.map((m) => {
                 const info = inventoryMap.get(m.inventory_id);
+                const upp = Number(info?.product?.units_per_pack ?? 1);
+                const hasBottles = upp > 1;
+                const qty = Number(m.quantity);
+                const bal = Number(m.balance_after);
                 return (
                   <tr key={m.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-4 py-3 text-surface-800 dark:text-surface-200">
                       {info?.product?.name ?? "-"}
                       {info?.product?.pack_size ? ` (${info.product.pack_size})` : ""}
                     </td>
-                    <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{info?.branchName ?? "-"}</td>
+                    <td className="px-4 py-3 text-surface-600 dark:text-surface-400">
+                      {info?.location ? `${info.location.branchName} — ${info.location.warehouseName}` : "-"}
+                    </td>
                     <td className="px-4 py-3">
                       <Badge tone={toneFor(m.movement_type)}>{m.movement_type.replace(/_/g, " ")}</Badge>
                     </td>
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
-                      {Number(m.quantity).toLocaleString()}
+                      <span>{qty.toLocaleString()}</span>
+                      {hasBottles && (
+                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{(qty * upp).toLocaleString()} bottles</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
-                      {Number(m.balance_after).toLocaleString()}
+                      <span>{bal.toLocaleString()}</span>
+                      {hasBottles && (
+                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{(bal * upp).toLocaleString()} bottles</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-surface-500">{new Date(m.created_at).toLocaleString()}</td>
                   </tr>
