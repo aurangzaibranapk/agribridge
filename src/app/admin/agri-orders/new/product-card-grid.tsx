@@ -254,6 +254,13 @@ export function ProductCardGrid({
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                  {qty > 0 && (
+                    <p className="mt-1 text-center text-[11px] font-medium text-brand-600 dark:text-brand-400">
+                      {p.units_per_carton && p.units_per_carton > 1
+                        ? `${Math.floor(qty / p.units_per_carton)} PET · ${qty} bottle`
+                        : `${qty} bottle`}
+                    </p>
+                  )}
                   {p.units_per_carton != null && p.units_per_carton > 1 && (() => {
                     const upc = p.units_per_carton as number;
                     const cartons = qty > 0 ? Math.floor(qty / upc) : 0;
