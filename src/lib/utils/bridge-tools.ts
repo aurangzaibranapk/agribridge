@@ -3,6 +3,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
+import { getBusinessIntelligenceReport, getCategorySales, getStaffSalesPerformance } from "@/lib/ai/business-intelligence";
 
 // ===== Tool 1: Financial Summary =====
 async function getFinancialSummary(supabase: ReturnType<typeof createClient>) {
@@ -1307,6 +1308,48 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
       },
     },
   },
+  {
+    name: "get_category_sales",
+    description:
+      "Category-wise sales summary: har category mein kitne rupye ki farokht hui, top sellers kaun si hain. Jab user pooche 'kaunsi category zyada biki', 'category-wise sales', 'DAP ya pesticide kitna bika' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: {
+          type: Type.NUMBER,
+          description: "Pichle kitne din ki sales (default 30).",
+        },
+      },
+    },
+  },
+  {
+    name: "get_staff_sales_performance",
+    description:
+      "Staff-wise sales ranking: kisne kitni sales ki, roz ka average, top performer kaun. Jab user pooche 'staff performance', 'kisne zyada becha', 'top staff', 'employee ranking' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: {
+          type: Type.NUMBER,
+          description: "Pichle kitne din ki sales (default 30).",
+        },
+      },
+    },
+  },
+  {
+    name: "get_business_intelligence_report",
+    description:
+      "Mukammal business intelligence report: category sales + staff performance + demand forecast ek sath. Jab user pooche 'poori report do', 'business ka detailed hisaab', 'sab kuch ek sath batao' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: {
+          type: Type.NUMBER,
+          description: "Pichle kitne din ka data (default 30).",
+        },
+      },
+    },
+  },
 ];
 
 // ===== API route isi ek function ko call karega =====
@@ -1562,6 +1605,12 @@ export async function executeBridgeTool(
       return getDemandForecast(supabase, args ?? {});
     case "get_pending_approvals":
       return getPendingApprovals(supabase, args ?? {});
+    case "get_category_sales":
+      return getCategorySales(supabase, Number(args?.days ?? 30));
+    case "get_staff_sales_performance":
+      return getStaffSalesPerformance(supabase, Number(args?.days ?? 30));
+    case "get_business_intelligence_report":
+      return getBusinessIntelligenceReport(supabase, Number(args?.days ?? 30));
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
