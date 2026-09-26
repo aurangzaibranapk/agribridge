@@ -5,6 +5,7 @@ import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives"
 import { SendCashForm, ReceiveCard } from "./handover-client";
 import { cashInTransit, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
 import { AlertTriangle, CheckCircle2, Send, HandCoins, Clock } from "lucide-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 

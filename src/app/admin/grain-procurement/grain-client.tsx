@@ -115,7 +115,7 @@ export function GrainClient({
         <div className="space-y-4">
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
             <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
-          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
+          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} balances={balances} />
         </div>
       )}
 
@@ -214,11 +214,13 @@ function SearchableSelect({
   options,
   placeholder,
   required,
+  onSelect,
 }: {
   name: string;
   options: { value: string; label: string; sub?: string }[];
   placeholder?: string;
   required?: boolean;
+  onSelect?: (value: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
@@ -284,7 +286,7 @@ function SearchableSelect({
               <li key={o.value}>
                 <button
                   type="button"
-                  onClick={() => { setSelectedValue(o.value); setQuery(""); setOpen(false); }}
+                  onClick={() => { setSelectedValue(o.value); setQuery(""); setOpen(false); onSelect?.(o.value); }}
                   className={`flex w-full flex-col px-4 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-900/30 ${selectedValue === o.value ? "bg-brand-50 dark:bg-brand-900/30" : ""}`}
                 >
                   <span className="text-sm font-medium text-surface-800 dark:text-surface-200">{o.label}</span>
@@ -316,16 +318,19 @@ function NewEntryForm({
   warehouses,
   cutPresets,
   financeAccounts,
+  balances,
 }: {
   farmers: Farmer[];
   parties: Party[];
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
   financeAccounts: FinanceAccount[];
+  balances: Balance[];
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createGrainEntry, initialState);
   const [sellerType, setSellerType] = useState<"farmer" | "party">("farmer");
+  const [selectedSellerId, setSelectedSellerId] = useState("");
   const [grainType, setGrainType] = useState("wheat");
   const [grossWeight, setGrossWeight] = useState("");
   const [grossMaund, setGrossMaund] = useState("");
@@ -436,6 +441,7 @@ function NewEntryForm({
                 label: f.full_name ?? f.farmer_code ?? f.id,
                 sub: [f.farmer_code, f.phone_number, f.cnic].filter(Boolean).join(" · ") || undefined,
               }))}
+              onSelect={(id) => setSelectedSellerId(id)}
             />
           </div>
         ) : (
@@ -450,9 +456,24 @@ function NewEntryForm({
                 label: p.party_name,
                 sub: [p.contact_person, p.phone].filter(Boolean).join(" · ") || undefined,
               }))}
+              onSelect={(id) => setSelectedSellerId(id)}
             />
           </div>
         )}
+        {(() => {
+          if (!selectedSellerId) return null;
+          const b = balances.find((x) => x.seller_id === selectedSellerId);
+          if (!b) return null;
+          return (
+            <div className={`rounded-lg border px-3 py-2 text-sm ${b.balance_due > 0 ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30" : "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"}`}>
+              <span className={b.balance_due > 0 ? "font-medium text-amber-800 dark:text-amber-300" : "text-green-700 dark:text-green-400"}>
+                {b.balance_due > 0
+                  ? `Baaqi dena: Rs ${b.balance_due.toLocaleString()} (${b.entry_count} entries, kul Rs ${b.total_supplied.toLocaleString()})`
+                  : `Hisaab saaf — Rs ${b.total_paid.toLocaleString()} poora diya ja chuka`}
+              </span>
+            </div>
+          );
+        })()}
 
         <div>
           <Label>{t("gr_grain_type_req", lang)}</Label>
