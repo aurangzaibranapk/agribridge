@@ -486,7 +486,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
 
     const { data: existingInventory } = await supabase
       .from("inventory")
-      .select("id, quantity_on_hand")
+      .select("id, quantity_on_hand, batch_id")
       .eq("product_id", row.product_id)
       .eq("warehouse_id", warehouseId)
       .maybeSingle();
@@ -497,12 +497,16 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     let inventoryId: string;
     if (existingInventory) {
       inventoryId = existingInventory.id;
+      if (!existingInventory.batch_id && batchId) {
+        await supabase.from("inventory").update({ batch_id: batchId }).eq("id", inventoryId);
+      }
     } else {
       const { data: newInventory, error: invError } = await supabase
         .from("inventory")
         .insert({
           product_id: row.product_id,
           warehouse_id: warehouseId,
+          batch_id: batchId ?? null,
         })
         .select("id")
         .single();
