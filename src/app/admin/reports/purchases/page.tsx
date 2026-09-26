@@ -44,9 +44,17 @@ export default async function PurchasesReportPage({
     .from("stock_movements")
     .select(`
       movement_type, quantity,
-      inventory!inner(product_id, quantity_on_hand,
-        products!inner(id, name, purchase_price))
+      inventory!inner(product_id, quantity_on_hand, warehouse_id, shop_id,
+        products!inner(id, name, purchase_price),
+        warehouses(id, name),
+        shops(id, name))
     `);
+
+  // Location-wise stock: inventory table se seedha (per-location quantity_on_hand)
+  const { data: locationStock } = await service
+    .from("inventory")
+    .select("quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(purchase_price)")
+    .gt("quantity_on_hand", 0);
 
   type ItemRow = {
     product: string;
@@ -100,6 +108,27 @@ export default async function PurchasesReportPage({
       purchase_value: Math.round(v.purchase_in   * v.unit_cost),
     }))
     .sort((a, b) => b.stock_value - a.stock_value);
+
+  // Location-wise stock summary
+  type LocationStock = { name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
+  const byLocation = new Map<string, LocationStock>();
+  for (const row of (locationStock ?? [])) {
+    const inv = row as any;
+    const wh = Array.isArray(inv.warehouses) ? inv.warehouses[0] : inv.warehouses;
+    const sh = Array.isArray(inv.shops) ? inv.shops[0] : inv.shops;
+    const prod = Array.isArray(inv.products) ? inv.products[0] : inv.products;
+    const name: string = wh?.name ?? sh?.name ?? "Unknown";
+    const key = inv.warehouse_id ?? inv.shop_id ?? "unknown";
+    const kind: "warehouse" | "shop" = inv.warehouse_id ? "warehouse" : "shop";
+    const qty = Number(inv.quantity_on_hand ?? 0);
+    const cost = Number(prod?.purchase_price ?? 0);
+    const existing = byLocation.get(key) ?? { name, kind, stockValue: 0, qty: 0 };
+    existing.stockValue += qty * cost;
+    existing.qty += qty;
+    byLocation.set(key, existing);
+  }
+  const locationRows = [...byLocation.values()].sort((a, b) => b.stockValue - a.stockValue);
+  const totalLocationStockValue = locationRows.reduce((s, r) => s + r.stockValue, 0);
 
   const totalAmount       = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
   const totalStockValue   = itemRows.reduce((s, r) => s + r.stock_value,    0);
@@ -211,20 +240,55 @@ export default async function PurchasesReportPage({
           )}
         </div>
 
-        <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Truck className="h-4 w-4" />{t("at_top_suppliers", lang)}</h2>
-          {topSuppliers.length === 0 ? (
-            <p className="text-sm text-surface-400">{t("rpu_no_data", lang)}</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {topSuppliers.map(([name, amount]) => (
-                <li key={name} className="flex items-center justify-between border-b border-surface-50 pb-2 last:border-0">
-                  <span className="text-surface-700">{name}</span>
-                  <span className="font-medium text-surface-900">Rs. {amount.toLocaleString()}</span>
-                </li>
-              ))}
-            </ul>
+        <div className="space-y-4">
+          <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              <Truck className="h-4 w-4" />{t("at_top_suppliers", lang)}</h2>
+            {topSuppliers.length === 0 ? (
+              <p className="text-sm text-surface-400">{t("rpu_no_data", lang)}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {topSuppliers.map(([name, amount]) => (
+                  <li key={name} className="flex items-center justify-between border-b border-surface-50 pb-2 last:border-0">
+                    <span className="text-surface-700">{name}</span>
+                    <span className="font-medium text-surface-900">Rs. {amount.toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Stock by Location */}
+          {locationRows.length > 0 && (
+            <div className="rounded-card border border-brand-200 bg-brand-50 p-5 shadow-card dark:border-brand-900/40 dark:bg-brand-950/20">
+              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                <Package className="h-4 w-4 text-brand-600" /> Stock — Location Se
+              </h2>
+              <ul className="space-y-2 text-sm">
+                {locationRows.map((loc) => (
+                  <li key={loc.name} className="rounded-lg border border-brand-100 bg-white px-3 py-2 dark:border-brand-900/30 dark:bg-surface-900">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-surface-900 dark:text-surface-100">{loc.name}</p>
+                        <p className="text-xs text-surface-500">{loc.kind === "warehouse" ? "Warehouse" : "Shop"} · {Math.round(loc.qty).toLocaleString()} items</p>
+                      </div>
+                      <span className="shrink-0 font-semibold text-brand-700 dark:text-brand-300">
+                        Rs. {Math.round(loc.stockValue).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/30">
+                      <div
+                        className="h-full rounded-full bg-brand-500"
+                        style={{ width: totalLocationStockValue > 0 ? `${(loc.stockValue / totalLocationStockValue) * 100}%` : "0%" }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-surface-500">
+                Total: Rs. {Math.round(totalLocationStockValue).toLocaleString()}
+              </p>
+            </div>
           )}
         </div>
       </div>
