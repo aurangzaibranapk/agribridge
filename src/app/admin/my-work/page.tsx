@@ -177,21 +177,12 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
-  const deskLinks = [
-    { href: "/admin/pos", label: "POS Sale" },
-    { href: "/admin/agri-orders/new", label: "Create Order" },
-    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
-    { href: "/admin/kharche", label: "Paisa & Khata" },
-    { href: "/admin/stock-count", label: "Stock Check" },
-    { href: "/admin/farmers", label: "Farmers" },
-    { href: "/admin/cash-handover", label: "Cash Handover" },
-  ].filter(link => canRoute(link.href));
-
-  // Shop staff can have a shop assignment and desk access without having
-  // the POS route itself (for example Load & Bill + Paisa & Khata only).
-  // Requiring /admin/pos here sent those users to the legacy dashboard and
-  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
-  if (me.shop_id && deskLinks.length > 0) {
+  // Shop Overview is a specialized POS workspace. It must not replace
+  // the common My Work shell merely because a staff member has Load/Bill,
+  // Khata, Stock Check, Farmers, or Cash Handover access.
+  // Only an assigned shop with explicit POS access gets the specialized desk.
+  const hasPosDeskAccess = Boolean(me.shop_id) && canRoute("/admin/pos");
+  if (hasPosDeskAccess) {
     return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
