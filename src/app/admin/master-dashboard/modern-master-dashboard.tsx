@@ -6,9 +6,13 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Bell, Boxes, CheckCircle2, Clock3, DollarSign, Download, Leaf, MapPin, RefreshCw, ShoppingCart, Sprout, Users, WalletCards } from "lucide-react";
+import { AiCommandCenter } from "./ai-command-center";
 
 type Row = { name: string; value: number };
 type TrendRow = { label: string; sales: number; profit: number };
+type ShopOption = { id: string; name: string };
+type CategorySale = { name: string; sales: number; units: number };
+type StaffSale = { name: string; sales: number; invoices: number };
 
 export function ModernMasterDashboard({
   stockDifference,
@@ -18,15 +22,17 @@ export function ModernMasterDashboard({
   receivables,
   payables,
   totalRevenue,
+  todaySales,
   netProfit,
   totalInventoryValue,
   topSellingItems,
   topDebtors,
   salesTrend,
   missingBatchCount,
-  period = "month",
-  periodLabel = "Is Mahine",
   shopId,
+  shopOptions,
+  categorySales,
+  staffSales,
 }: {
   stockDifference: number | null;
   inventoryValue: number;
@@ -35,31 +41,25 @@ export function ModernMasterDashboard({
   receivables: number | null;
   payables: number | null;
   totalRevenue: number;
+  todaySales: number;
   netProfit: number;
   totalInventoryValue: number;
   topSellingItems: { name: string; qty: number; unit: string }[];
   topDebtors: { name: string; balance: number }[];
   salesTrend: TrendRow[];
   missingBatchCount: number;
-  period?: string;
-  periodLabel?: string;
-  shopId?: string | null;
+  shopId: string | null;
+  shopOptions: ShopOption[];
+  categorySales: CategorySale[];
+  staffSales: StaffSale[];
 }) {
   const money = (n: number | null) => n === null ? "—" : `Rs ${Math.round(n).toLocaleString()}`;
   const chartProducts = topSellingItems.slice(0, 6).map((x) => ({ name: x.name.length > 18 ? `${x.name.slice(0, 18)}…` : x.name, value: x.qty }));
   const chartDebtors = topDebtors.slice(0, 5).map((x) => ({ name: x.name.length > 18 ? `${x.name.slice(0, 18)}…` : x.name, value: x.balance }));
   const hasMismatch = stockDifference !== null && Math.abs(stockDifference) > 1;
 
-  const periodLink = (p: string) => `/admin/master-dashboard?period=${p}${shopId ? `&shop_id=${shopId}` : ""}`;
-  const periodOptions = [
-    { key: "day", label: "Aaj" },
-    { key: "week", label: "Is Hafta" },
-    { key: "month", label: "Is Mahina" },
-    { key: "year", label: "Is Saal" },
-  ];
-
   const kpis = [
-    { label: `${periodLabel} Sale`, value: money(totalRevenue), note: "selected period", icon: ShoppingCart, color: "text-emerald-700", bg: "bg-emerald-50" },
+    { label: "Today Sales", value: money(todaySales), note: "aaj ki POS sale", icon: ShoppingCart, color: "text-emerald-700", bg: "bg-emerald-50" },
     { label: "Net Profit", value: money(netProfit), note: netProfit >= 0 ? "positive" : "needs attention", icon: ArrowUpCircle, color: netProfit >= 0 ? "text-emerald-700" : "text-red-600", bg: netProfit >= 0 ? "bg-emerald-50" : "bg-red-50" },
     { label: "Cash & Bank", value: money(totalBankBalance), note: "ledger balance", icon: WalletCards, color: "text-sky-700", bg: "bg-sky-50" },
     { label: "Receivable", value: money(receivables), note: "customers se lena", icon: ArrowDownCircle, color: "text-amber-700", bg: "bg-amber-50" },
@@ -76,22 +76,11 @@ export function ModernMasterDashboard({
           <p className="mt-1 text-sm text-surface-500">Poora business ek nazar mein — real-time business intelligence</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-surface-200 bg-white p-1 shadow-sm dark:border-surface-700 dark:bg-surface-900">
-            {periodOptions.map((opt) => (
-              <Link
-                key={opt.key}
-                href={periodLink(opt.key)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  period === opt.key
-                    ? "bg-brand-600 text-white shadow-sm"
-                    : "text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
-                }`}
-              >
-                {opt.label}
-              </Link>
-            ))}
-          </div>
-          <Link href={periodLink(period)} className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-white dark:hover:bg-surface-800"><RefreshCw className="h-4 w-4" /> Refresh</Link>
+          <form method="get" className="flex items-center gap-2">
+            <select name="shop_id" defaultValue={shopId ?? ""} onChange={(event) => event.currentTarget.form?.requestSubmit()} className="rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><option value="">Sab Shops</option>{shopOptions.map((shop) => <option key={shop.id} value={shop.id}>{shop.name}</option>)}</select>
+            <button type="submit" className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><RefreshCw className="h-4 w-4" /> Refresh</button>
+          </form>
+          <button className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm text-surface-700 shadow-sm dark:border-surface-700 dark:bg-surface-900 dark:text-white"><Download className="h-4 w-4" /> Export</button>
         </div>
       </div>
 
@@ -110,6 +99,16 @@ export function ModernMasterDashboard({
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
         {kpis.map(({ label, value, note, icon: Icon, color, bg }) => <div key={label} className="rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-surface-500">{label}</p><p className="mt-2 text-xl font-bold tracking-tight text-surface-950 dark:text-white">{value}</p><p className="mt-1 text-[11px] text-surface-400">{note}</p></div><div className={`rounded-xl p-2 ${bg} ${color}`}><Icon className="h-4 w-4" /></div></div></div>)}
+      </div>
+
+      <AiCommandCenter />
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="rounded-2xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-base font-semibold text-surface-950 dark:text-white">Category Sales</h2><p className="text-xs text-surface-400">Pichlay 30 din — AI report ka verified source</p></div><Leaf className="h-5 w-5 text-brand-700" /></div>
+          <div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={categorySales.map((x) => ({ ...x, label: x.name.length > 18 ? `${x.name.slice(0, 18)}…` : x.name }))} layout="vertical" margin={{ left: 8, right: 12 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} /><YAxis dataKey="label" type="category" width={105} tick={{ fontSize: 10 }} /><Tooltip formatter={(v: any) => money(Number(v))} /><Bar dataKey="sales" fill="#16834d" radius={[0, 5, 5, 0]} /></BarChart></ResponsiveContainer></div>
+        </section>
+        <DataCard title="Top Staff — 30 din" icon={<Users />}><SimpleTable headers={["#", "Staff", "Sale", "Bills"]} rows={staffSales.slice(0, 5).map((x, i) => [String(i + 1), x.name, money(x.sales), String(x.invoices)])} /></DataCard>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
