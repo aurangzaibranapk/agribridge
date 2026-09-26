@@ -150,6 +150,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       credit_days: terms.creditDays,
       due_date: terms.dueDate,
       notes,
+      payment_proof_url: supplierBillWorkspace ? (String(formData.get("payment_proof_url") ?? "").trim() || null) : null,
       created_by: user?.id ?? null,
     })
     .select("id")
@@ -485,7 +486,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
 
     const { data: existingInventory } = await supabase
       .from("inventory")
-      .select("id, quantity_on_hand")
+      .select("id, quantity_on_hand, batch_id")
       .eq("product_id", row.product_id)
       .eq("warehouse_id", warehouseId)
       .maybeSingle();
@@ -496,12 +497,16 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     let inventoryId: string;
     if (existingInventory) {
       inventoryId = existingInventory.id;
+      if (!existingInventory.batch_id && batchId) {
+        await supabase.from("inventory").update({ batch_id: batchId }).eq("id", inventoryId);
+      }
     } else {
       const { data: newInventory, error: invError } = await supabase
         .from("inventory")
         .insert({
           product_id: row.product_id,
           warehouse_id: warehouseId,
+          batch_id: batchId ?? null,
         })
         .select("id")
         .single();
@@ -725,7 +730,7 @@ export async function deletePurchase(_prev: ActionState, formData: FormData): Pr
   if (batchIds.length > 0) {
     const { data: fullItems } = await supabase.from("purchase_items").select("product_id, quantity, batch_id").eq("purchase_id", purchaseId);
     for (const item of fullItems ?? []) {
-      const { data: batch } = await supabase.from("stock_batches").select("warehouse_id").eq("id", item.batch_id).maybeSingle();
+      const { data: batch } = await supabase.from("stock_batches").select("warehouse_id").eq("id", item.batch_id ?? "").maybeSingle();
       if (batch?.warehouse_id) {
         const { data: inv } = await supabase
           .from("inventory")

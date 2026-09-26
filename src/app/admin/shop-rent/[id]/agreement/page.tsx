@@ -56,7 +56,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
       <PageHeader title={t("at_rent_agreement", lang)} description={`${branch?.name ?? "Shop"} - ${agreement.landlord_name}`} />
       <AgreementAdminActions
         agreementId={agreement.id}
-        signingToken={agreement.signing_token}
+        signingToken={agreement.signing_token ?? ""}
         hasCompanySignature={!!agreement.company_signature_data}
         hasLandlordSignature={!!agreement.landlord_signature_data}
       />

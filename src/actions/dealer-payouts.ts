@@ -17,7 +17,7 @@ export async function recordDealerPayout(_prev: ActionState, formData: FormData)
   if (!dealerId) return { error: "Dealer select karein." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
 
-  const { error } = await supabase.from("dealer_payouts").insert({
+  const { error } = await (supabase as any).from("dealer_payouts").insert({
     dealer_id: dealerId,
     amount,
     status: "paid",

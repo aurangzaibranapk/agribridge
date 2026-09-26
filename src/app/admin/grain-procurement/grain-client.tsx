@@ -1,17 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
+import { X, Plus, FileText, AlertTriangle, Trash2, Search, ChevronDown } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string; farmer_code: string; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; phone_number?: string | null; cnic?: string | null; }
 interface Party { id: string; party_name: string; contact_person: string | null; phone: string | null; }
 interface Warehouse { id: string; name: string; }
 interface CutPreset { id: string; grain_type: string; label: string; cut_percentage: number; }
@@ -115,7 +115,7 @@ export function GrainClient({
         <div className="space-y-4">
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
             <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
-          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
+          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} balances={balances} />
         </div>
       )}
 
@@ -209,6 +209,98 @@ export function GrainClient({
   );
 }
 
+function SearchableSelect({
+  name,
+  options,
+  placeholder,
+  required,
+  onSelect,
+}: {
+  name: string;
+  options: { value: string; label: string; sub?: string }[];
+  placeholder?: string;
+  required?: boolean;
+  onSelect?: (value: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [selectedValue, setSelectedValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return options;
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.sub ?? "").toLowerCase().includes(q)
+    );
+  }, [query, options]);
+
+  const selectedLabel = options.find((o) => o.value === selectedValue)?.label ?? "";
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input type="hidden" name={name} value={selectedValue} />
+      {required && <input type="text" className="sr-only" required={!selectedValue} readOnly value={selectedValue} tabIndex={-1} />}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+      >
+        <span className={selectedValue ? "" : "text-surface-400"}>{selectedLabel || placeholder || "- chunein -"}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-surface-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-surface-200 bg-white shadow-xl dark:border-surface-700 dark:bg-surface-900">
+          <div className="flex items-center gap-2 border-b border-surface-100 px-3 py-2 dark:border-surface-800">
+            <Search className="h-3.5 w-3.5 shrink-0 text-surface-400" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Naam se dhoondein..."
+              className="flex-1 bg-transparent text-sm text-surface-800 outline-none placeholder:text-surface-400 dark:text-surface-200"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-surface-400 hover:text-surface-700">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <ul className="max-h-52 overflow-y-auto py-1">
+            {filtered.length === 0 && (
+              <li className="px-4 py-3 text-center text-xs text-surface-400">Koi nahi mila</li>
+            )}
+            {filtered.map((o) => (
+              <li key={o.value}>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedValue(o.value); setQuery(""); setOpen(false); onSelect?.(o.value); }}
+                  className={`flex w-full flex-col px-4 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-900/30 ${selectedValue === o.value ? "bg-brand-50 dark:bg-brand-900/30" : ""}`}
+                >
+                  <span className="text-sm font-medium text-surface-800 dark:text-surface-200">{o.label}</span>
+                  {o.sub && <span className="text-xs text-surface-400">{o.sub}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -226,16 +318,19 @@ function NewEntryForm({
   warehouses,
   cutPresets,
   financeAccounts,
+  balances,
 }: {
   farmers: Farmer[];
   parties: Party[];
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
   financeAccounts: FinanceAccount[];
+  balances: Balance[];
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createGrainEntry, initialState);
   const [sellerType, setSellerType] = useState<"farmer" | "party">("farmer");
+  const [selectedSellerId, setSelectedSellerId] = useState("");
   const [grainType, setGrainType] = useState("wheat");
   const [grossWeight, setGrossWeight] = useState("");
   const [grossMaund, setGrossMaund] = useState("");
@@ -263,6 +358,7 @@ function NewEntryForm({
   const [chungiType, setChungiType] = useState<"cash" | "grain">("cash");
   const [chungiCash, setChungiCash] = useState("0");
   const [chungiKg, setChungiKg] = useState("0");
+  const [chungiPaidBy, setChungiPaidBy] = useState<"party" | "self">("party");
 
   const [makePayment, setMakePayment] = useState<"" | "yes" | "no">("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -279,7 +375,7 @@ function NewEntryForm({
   const rateNum = parseFloat(rate) || 0;
   const total = netWeight * rateNum;
   const chungiAmount = chungiType === "grain" ? (parseFloat(chungiKg) || 0) * rateNum : parseFloat(chungiCash) || 0;
-  const payableToSeller = total - chungiAmount;
+  const payableToSeller = chungiPaidBy === "party" ? total - chungiAmount : total;
 
   const expensesJson = JSON.stringify(
     expenseRows
@@ -323,6 +419,7 @@ function NewEntryForm({
         <input type="hidden" name="chungi_type" value={chungiType} />
         <input type="hidden" name="chungi_kg" value={chungiKg} />
         <input type="hidden" name="chungi_amount" value={chungiCash} />
+        <input type="hidden" name="chungi_paid_by" value={chungiPaidBy} />
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
@@ -335,24 +432,48 @@ function NewEntryForm({
         {sellerType === "farmer" ? (
           <div>
             <Label>{t("gr_farmer_req", lang)}</Label>
-            <Select name="farmer_id" required>
-              <option value="">- select -</option>
-              {farmers.map((f) => (
-                <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              name="farmer_id"
+              required
+              placeholder="Naam, mobile ya CNIC se dhoondein..."
+              options={farmers.map((f) => ({
+                value: f.id,
+                label: f.full_name ?? f.farmer_code ?? f.id,
+                sub: [f.farmer_code, f.phone_number, f.cnic].filter(Boolean).join(" · ") || undefined,
+              }))}
+              onSelect={(id) => setSelectedSellerId(id)}
+            />
           </div>
         ) : (
           <div>
             <Label>{t("gr_party_req", lang)}</Label>
-            <Select name="party_id" required>
-              <option value="">- select -</option>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>{p.party_name}{p.contact_person ? ` - ${p.contact_person}` : ""}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              name="party_id"
+              required
+              placeholder="Party chunein ya naam likhen..."
+              options={parties.map((p) => ({
+                value: p.id,
+                label: p.party_name,
+                sub: [p.contact_person, p.phone].filter(Boolean).join(" · ") || undefined,
+              }))}
+              onSelect={(id) => setSelectedSellerId(id)}
+            />
           </div>
         )}
+        {(() => {
+          if (!selectedSellerId) return null;
+          const b = balances.find((x) => x.seller_id === selectedSellerId);
+          if (!b) return null;
+          return (
+            <div className={`rounded-lg border px-3 py-2 text-sm ${b.balance_due > 0 ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30" : "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"}`}>
+              <span className={b.balance_due > 0 ? "font-medium text-amber-800 dark:text-amber-300" : "text-green-700 dark:text-green-400"}>
+                {b.balance_due > 0
+                  ? `Baaqi dena: Rs ${b.balance_due.toLocaleString()} (${b.entry_count} entries, kul Rs ${b.total_supplied.toLocaleString()})`
+                  : `Hisaab saaf — Rs ${b.total_paid.toLocaleString()} poora diya ja chuka`}
+              </span>
+            </div>
+          );
+        })()}
 
         <div>
           <Label>{t("gr_grain_type_req", lang)}</Label>
@@ -406,7 +527,19 @@ function NewEntryForm({
 
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
           <Label>{t("gr_chungi", lang)}</Label>
+          {/* Kisne di chungi — Party ne ya Boss ne khud */}
           <div className="mt-1 flex gap-2">
+            <button type="button" onClick={() => setChungiPaidBy("party")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "party" ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" : "border-surface-200 text-surface-500"}`}>Party ne di</button>
+            <button type="button" onClick={() => setChungiPaidBy("self")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "self" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Maine khud di</button>
+          </div>
+          {chungiPaidBy === "party" && (
+            <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">Party ki raqam se kategi — payable kam ho ga</p>
+          )}
+          {chungiPaidBy === "self" && (
+            <p className="mt-1 text-[10px] text-brand-600 dark:text-brand-400">Aapne khud di — party ka payable nahi katega</p>
+          )}
+          {/* Kis soorat mein chungi — Cash ya Anaaj */}
+          <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_cash_rs", lang)}</button>
             <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_grain_kg", lang)}</button>
           </div>
@@ -494,9 +627,14 @@ function NewEntryForm({
             <span className="font-medium text-surface-700 dark:text-surface-300">{t("gr_grain_value", lang)}</span>
             <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span>
           </div>
-          {chungiAmount > 0 && (
-            <div className="mt-1 flex items-center justify-between text-xs text-red-600">
-              <span>Chungi Katoti ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
+          {chungiAmount > 0 && chungiPaidBy === "party" && (
+            <div className="mt-1 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
+              <span>Chungi Katoti — Party ne di ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
+            </div>
+          )}
+          {chungiAmount > 0 && chungiPaidBy === "self" && (
+            <div className="mt-1 flex items-center justify-between text-xs text-brand-600 dark:text-brand-400">
+              <span>Chungi — Maine khud di (party se nahi kati)</span><span>Rs {chungiAmount.toLocaleString()}</span>
             </div>
           )}
           <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-surface-200">

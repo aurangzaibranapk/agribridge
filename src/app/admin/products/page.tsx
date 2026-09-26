@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Package, Pencil, Upload, Download, Lightbulb } from "lucide-react";
+import { Plus, Package, Pencil, Upload, Download, Lightbulb, Wrench } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { Button, Badge } from "@/components/ui/form";
@@ -18,13 +18,14 @@ type ProductRow = {
   is_available: boolean; is_verified: boolean; image_url: string | null; categories: { name: string } | null; brands: { name: string } | null;
   units_per_pack: number | null;
 };
-export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string; cat?: string } }) {
+export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string; cat?: string; filter?: string } }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const page = Math.max(1, Number(searchParams.page ?? 1));
   const q = searchParams.q?.trim();
   // Qism ka filter (265): Fertilizer, Grocery... alag safhe nahi, yahin tabs.
   const cat = searchParams.cat?.trim() || "";
+  const filterParam = searchParams.filter?.trim() || "";
 
   const {
     data: { user },
@@ -71,7 +72,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
     .select("id, name, pack_size, purchase_price, selling_price, wholesale_price, units_per_pack, trade_rate_pending, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
     .eq("is_deleted", false);
   if (q) query = query.ilike("name", `%${q}%`);
-  if (cat) query = query.eq("category_id", cat);
+  if (filterParam === "no-category") query = (query as any).is("category_id", null);
+  else if (cat) query = query.eq("category_id", cat);
   const [{ data: products, count }, { data: cats }] = await Promise.all([
     query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
     supabase.from("categories").select("id, name").order("name"),
@@ -195,6 +197,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
           </div>
         }
       />
+      {/* No-category filter banner */}
+      {filterParam === "no-category" && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+          <Wrench className="h-4 w-4 shrink-0" />
+          <span>Sirf <strong>{count ?? 0}</strong> products jo kisi category mein nahi hain — in ko category assign karein.</span>
+          <Link href="/admin/products" className="ml-auto text-xs underline">Sab products</Link>
+        </div>
+      )}
       {/* Qism ke tabs (265) */}
       <div className="mb-3 flex flex-wrap gap-1 text-xs">
         <Link href={`/admin/products${q ? `?q=${encodeURIComponent(q)}` : ""}`} className={`rounded-full px-3 py-1.5 ${!cat ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-300"}`}>

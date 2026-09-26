@@ -403,6 +403,17 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
     .select("payment_method, amount")
     .eq("sale_id", saleId);
 
+  // Wasela Pakistan integration: jab enabled ho, Wasela Card ki adaigi
+  // seedha 2062 (Wasela Pakistan Dena) par jati hai — hamara dena un ke
+  // yahan usi waqt kam hota hai, hamare wallet mein nahi girta.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: waselaSettingRow } = await (service as any)
+    .from("system_settings")
+    .select("value")
+    .eq("key", "wasela_pakistan_enabled")
+    .maybeSingle();
+  const waselaEnabled = (waselaSettingRow as { value: string } | null)?.value === "true";
+
   const lines: JournalLine[] = [];
   const claims: SourceClaim[] = [];
 
@@ -413,6 +424,13 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   for (const p of payments ?? []) {
     const amount = Number(p.amount);
     if (amount <= 0 || p.payment_method === "khata") continue;
+
+    // Wasela Card: integration ON ho to 2062 (dena kam karo), OFF ho to
+    // aam raaste se 1019 (mobile wallet) mein girta hai.
+    if (p.payment_method === "waseela_card" && waselaEnabled) {
+      lines.push({ account: ACC.waselaPayable, debit: amount, memo: "POS — waseela_card (Wasela Pakistan dena)" });
+      continue;
+    }
 
     const { data: map } = await service
       .from("payment_method_account_map")

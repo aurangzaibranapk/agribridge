@@ -135,7 +135,7 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const { data: application, error } = await serviceClient.from("job_applications").insert(payload).select("id").single();
+  const { data: application, error } = await (serviceClient as any).from("job_applications").insert(payload).select("id").single();
   if (error) return { error: error.message };
 
   if (application) {
@@ -445,7 +445,7 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
 
   const { data: org } = await serviceClient.from("organizations").select("id").limit(1).single();
 
-  await serviceClient.from("profiles").upsert({
+  await (serviceClient as any).from("profiles").upsert({
     id: authUser.user.id,
     full_name: application.full_name,
     role: "sales_staff",

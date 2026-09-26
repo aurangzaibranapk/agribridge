@@ -38,7 +38,7 @@ export async function logAudit({ actionType, module, recordId, recordLabel, desc
 
     const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
 
-    await createServiceClient().from("audit_logs").insert({
+    await (createServiceClient() as any).from("audit_logs").insert({
       actor_id: user.id,
       actor_name: profile?.full_name ?? user.email ?? "Unknown",
       actor_role: profile?.role ?? null,

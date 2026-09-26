@@ -33798,6 +33798,10 @@ export type Database = {
         Args: { p_from: string; p_into: string; p_reason: string }
         Returns: Json
       }
+      fn_merge_duplicate_product: {
+        Args: { p_source_id: string; p_target_id: string }
+        Returns: undefined
+      }
       fn_next_access_request_number: { Args: never; Returns: string }
       fn_next_asset_code: { Args: never; Returns: string }
       fn_next_farmer_code: { Args: never; Returns: string }

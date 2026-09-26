@@ -171,6 +171,8 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
         referenceId: dispatch.id,
         userId: user?.id ?? null,
         outType: "transfer_out",
+        journalDescription: `${dispatchNumber}: ${item.product_name}`,
+        journalSourceModule: "agri_dispatch",
       });
     }
   }

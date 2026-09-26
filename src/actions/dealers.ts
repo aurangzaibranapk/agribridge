@@ -165,7 +165,7 @@ export async function updateDealer(_prev: ActionState, formData: FormData): Prom
     bank_iban: (formData.get("bank_iban") as string) || null,
   };
 
-  const { error } = await supabase.from("dealers").update(updates).eq("id", id);
+  const { error } = await supabase.from("dealers").update(updates as any).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/dealers");
   return { success: true };

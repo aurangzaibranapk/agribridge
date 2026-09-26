@@ -86,8 +86,8 @@ export default async function PosShiftReportPage({
       ? service.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
       : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[] }),
       shiftIds.length
-      ? service.from("pos_returns").select("shift_id, total_amount, refund_method").in("shift_id", shiftIds)
-      : Promise.resolve({ data: [] as { shift_id: string | null; total_amount: number; refund_method: string }[] }),
+      ? service.from("pos_returns").select("shift_id, total_amount, refund_method, cash_refund").in("shift_id", shiftIds)
+      : Promise.resolve({ data: [] as { shift_id: string | null; total_amount: number; refund_method: string; cash_refund: number | null }[] }),
   ]);
 
   const salesByShift = new Map<string, typeof allSales>();

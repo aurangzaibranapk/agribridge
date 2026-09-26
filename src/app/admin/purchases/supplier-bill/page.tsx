@@ -19,7 +19,7 @@ export default async function SupplierPurchaseBillPage() {
 
   const [suppliersResult, productsResult, categoriesResult, companiesResult, warehousesResult, accountsResult, units] = await Promise.all([
     service.from("suppliers").select("id, name, company_name, phone_number").eq("is_active", true).order("name").limit(1000),
-    service.from("products").select("id, name, company_id, category_id, pack_size, units_per_pack, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending").eq("is_deleted", false).order("name").limit(3000),
+    service.from("products").select("id, name, company_id, category_id, pack_size, units_per_pack, unit, purchase_price, selling_price, wholesale_price, mrp_price, trade_rate_pending, product_code").eq("is_deleted", false).order("name").limit(3000),
     service.from("categories").select("id, name, parent_category_id, category_kind").order("name"),
     service.from("companies").select("id, name").order("name"),
     service.from("warehouses").select("id, name, branch_id, shop_id, branches(name), shops(name)").eq("is_active", true).order("name"),
@@ -42,12 +42,13 @@ export default async function SupplierPurchaseBillPage() {
       companyName: (s.company_name as string | null) ?? null,
       phone: (s.phone_number as string | null) ?? null,
     }))}
-    products={(productsResult.data ?? []).map((product) => ({
+    products={(productsResult.data ?? []).map((product: any) => ({
       ...product,
       purchase_price: Number(product.purchase_price),
       selling_price: Number(product.selling_price),
       wholesale_price: product.wholesale_price == null ? null : Number(product.wholesale_price),
       mrp_price: product.mrp_price == null ? null : Number(product.mrp_price),
+      product_code: (product.product_code as string | null) ?? null,
     }))}
     categories={categoriesResult.data ?? []}
     companies={companiesResult.data ?? []}

@@ -29,8 +29,8 @@ export function BuyerForm() {
           <Input name="contact_person" />
         </div>
         <div>
-          <Label>{t("at_email_invite", lang)}</Label>
-          <Input name="email" type="email" required />
+          <Label>{t("at_email_invite", lang)} <span className="text-xs font-normal text-surface-400">(optional — invite bhejne ke liye)</span></Label>
+          <Input name="email" type="email" />
         </div>
         <div>
           <Label>{t("at_phone_req", lang)}</Label>
@@ -70,5 +70,5 @@ export function BuyerForm() {
 }
 function SubmitButton() {
   const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending} className="w-full">{pending ? "Creating..." : "Create Buyer & Send Invite"}</Button>;
+  return <Button type="submit" disabled={pending} className="w-full">{pending ? "Creating..." : "Buyer Banao"}</Button>;
 }

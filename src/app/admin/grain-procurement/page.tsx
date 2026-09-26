@@ -18,7 +18,7 @@ export default async function AdminGrainProcurementPage() {
     { data: rawEntries },
     { data: rawPayments },
   ] = await Promise.all([
-    supabase.from("farmers").select("id, full_name, farmer_code").eq("is_deleted", false).order("full_name"),
+    supabase.from("farmers").select("id, full_name, farmer_code, phone_number, cnic").eq("is_deleted", false).order("full_name"),
     supabase.from("grain_parties").select("id, party_name, contact_person, phone").eq("is_active", true).order("party_name"),
     supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     supabase.from("grain_cut_presets").select("id, grain_type, label, cut_percentage").eq("is_active", true).order("grain_type"),

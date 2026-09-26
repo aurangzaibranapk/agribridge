@@ -81,7 +81,8 @@ async function nextEntryNumber(): Promise<string> {
   const year = new Date().getFullYear() % 100;
   // Atomic increment: INSERT ... ON CONFLICT DO UPDATE ... RETURNING
   // Race condition khatam — do concurrent sales ek hi number nahi le sakten.
-  const { data } = await service.rpc("next_txn_number", { p_year: year });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (service as any).rpc("next_txn_number", { p_year: year });
   const next = (data as number) ?? 1;
   return `TXN-${year}-${String(next).padStart(6, "0")}`;
 }

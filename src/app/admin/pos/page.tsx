@@ -110,7 +110,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       // se koi bhi ho to patti dobara nahi dikhti.
       const { data: pendingClosedRows } = await supabase
         .from("pos_shifts")
-        .select("id, counter_id, counted_cash, closed_at")
+        .select("id, counter_id, counted_cash, opening_cash, closed_at")
         .eq("staff_id", user.id)
         .eq("status", "closed")
         .is("cash_handover_id", null)
@@ -128,6 +128,25 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         for (const s of openShifts) {
           const prev = openFloatByCounter.get(s.counter_id) ?? 0;
           openFloatByCounter.set(s.counter_id, prev + Number(s.opening_cash ?? 0));
+        }
+        // Agar ek counter par kai pending closed shifts hain to pehli (oldest)
+        // shift ka counted_cash agli shift ki opening mein chala gaya -- double
+        // count rokne ke liye 2nd+ shift ki opening_cash bhi float mein add
+        // karo. Example: SHIFT-7(counted=970) → SHIFT-8(opening=970, counted=1060):
+        // outstanding Rs 1060 hona chahiye, 2030 nahi.
+        {
+          const nonApproved = pendingClosedRows.filter((r) => !approvedIds.has(r.id));
+          const byCounter = new Map<string, typeof nonApproved>();
+          for (const r of [...nonApproved].reverse()) {
+            if (!byCounter.has(r.counter_id)) byCounter.set(r.counter_id, []);
+            byCounter.get(r.counter_id)!.push(r);
+          }
+          for (const [cid, shifts] of byCounter) {
+            for (let i = 1; i < shifts.length; i++) {
+              const prev = openFloatByCounter.get(cid) ?? 0;
+              openFloatByCounter.set(cid, prev + Number(shifts[i].opening_cash ?? 0));
+            }
+          }
         }
 
         let firstUnsubmitted: { id: string; counter_id: string } | null = null;
@@ -283,7 +302,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
           .eq("warehouse_id", warehouseId)
           .gt("quantity_on_hand", 0)
       : { data: [] };

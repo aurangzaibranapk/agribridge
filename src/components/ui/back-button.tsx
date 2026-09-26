@@ -11,7 +11,7 @@ import { ArrowLeft } from "lucide-react";
  * browser history (`router.back()`) hamesha wahi safha deti hai jahan se
  * asal mein banda aaya tha, chahe wo kahin se bhi ho.
  */
-export function BackButton({ label = "Back" }: { label?: string }) {
+export function BackButton({ label = "Back", fallback: _fallback }: { label?: string; fallback?: string }) {
   const router = useRouter();
   return (
     <button

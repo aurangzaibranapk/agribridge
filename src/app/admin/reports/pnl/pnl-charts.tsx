@@ -31,7 +31,7 @@ export function PnlCharts({ shops, expenseBreakdown }: { shops: ShopChartData[];
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value: number) => `Rs ${value.toLocaleString()}`} />
+              <Tooltip formatter={(value: unknown) => `Rs ${Number(value).toLocaleString()}`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="revenue" name="Sale (Revenue)" fill="#2563eb" radius={[4, 4, 0, 0]} />
               <Bar dataKey="expenses" name="Expenses" fill="#dc2626" radius={[4, 4, 0, 0]} />
@@ -50,7 +50,7 @@ export function PnlCharts({ shops, expenseBreakdown }: { shops: ShopChartData[];
                   <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `Rs ${value.toLocaleString()}`} />
+              <Tooltip formatter={(value: unknown) => `Rs ${Number(value).toLocaleString()}`} />
             </PieChart>
           </ResponsiveContainer>
         </div>

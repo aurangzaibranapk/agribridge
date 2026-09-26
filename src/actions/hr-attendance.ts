@@ -334,14 +334,17 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
   const { supabase, user } = await whoAmI();
   if (!user) return { error: "Login karein." };
 
-  const date = String(formData.get("attendance_date") ?? "");
+  // Multi-select: multiple attendance_date values allowed
+  const dates = formData.getAll("attendance_date").map(String).filter(Boolean);
+  if (dates.length === 0) return { error: "Kam az kam ek din chunein." };
+  if (dates.length > 5) return { error: "Ek dafa mein sirf 5 din tak darkhwast de sakte hain." };
+
   const status = String(formData.get("requested_status") ?? "present");
   if (!isStatus(status)) return { error: "Hazri ka darja theek nahi." };
   const reason = String(formData.get("reason") ?? "").trim();
   const checkIn = (formData.get("requested_check_in") as string) || null;
   const checkOut = (formData.get("requested_check_out") as string) || null;
 
-  if (!date) return { error: "Kis din ki hazri, wo tareekh chunein." };
   if (reason.length < 5) {
     return { error: "Wajah likhein — kam az kam paanch harf. Ye wajah hamesha record par rehti hai." };
   }
@@ -350,61 +353,65 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
   }
 
   const today = new Date().toISOString().split("T")[0];
-  if (date > today) return { error: "Aane wale din ki hazri theek nahi karwai ja sakti." };
+  for (const date of dates) {
+    if (date > today) return { error: `Aane wale din (${date}) ki hazri theek nahi karwai ja sakti.` };
+  }
 
-  // Mahine mein sirf 5 darkhwastain. Ye rok is liye hai: correction ek
-  // aazmaishi cheez hai, routine cheez nahi. Zyada corrections ka matlab
-  // ya to nizam mein kharabi hai, ya koi galat faida utha raha hai.
+  // Mahine mein sirf 5 darkhwastain. Multi-select mein bhi yahi ginti chalti hai:
+  // pehle se jitni dain + ab kitni de raha hai — dono mila kar 5 se zyada nahi.
   const monthStart = today.slice(0, 7) + "-01";
-  const monthEnd = today.slice(0, 7) + "-31";
   const { count: monthCount } = await supabase
     .from("attendance_corrections")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", user.id)
-    .gte("created_at", monthStart)
-    .lte("created_at", monthEnd + "T23:59:59Z");
-  if ((monthCount ?? 0) >= 5) {
-    return {
-      error: "Is mahine aap 5 darkhwastain de chuke hain — ye had hai. Zyada zaroorat ho to HR se seedha raabta karein.",
-    };
+    .gte("created_at", monthStart);
+  const existing = monthCount ?? 0;
+  const remaining = 5 - existing;
+  if (remaining <= 0) {
+    return { error: "Is mahine aap 5 darkhwastain de chuke hain — ye had hai. Zyada zaroorat ho to HR se seedha raabta karein." };
+  }
+  if (dates.length > remaining) {
+    return { error: `Is mahine sirf ${remaining} darkhwast(ain) baqi hain (5 mein se ${existing} ho chuki). ${dates.length} chunein hain — ${remaining} tak kam karein.` };
   }
 
-  if (await monthLocked(supabase, user.id, date)) {
-    return {
-      error:
-        "Us mahine ka hisaab band ho chuka hai. HR se kehin ke pehle mahina kholein — us ke baghair tabdeeli tankhwah se mel nahi khayegi.",
-    };
+  // Locked month check for each date
+  for (const date of dates) {
+    if (await monthLocked(supabase, user.id, date)) {
+      return { error: `${date} ka mahina band ho chuka hai. HR se kehin ke pehle mahina kholein.` };
+    }
   }
 
-  const { data: current } = await supabase
-    .from("attendance_records")
-    .select("status, check_in, check_out, check_in_at, check_out_at, source, notes")
-    .eq("profile_id", user.id)
-    .eq("attendance_date", date)
-    .maybeSingle();
-
-  // Afsar kaun hai, ye ABHI tay hota hai. Baad mein reporting badal jaye
-  // to purani darkhwast ka raasta nahi badalta.
+  // Afsar kaun hai
   const { data: sd } = await supabase
     .from("staff_details")
     .select("reports_to")
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  const { error } = await supabase.from("attendance_corrections").insert({
+  // Existing snapshots for each date
+  const { data: existingRecords } = await supabase
+    .from("attendance_records")
+    .select("attendance_date, status, check_in, check_out, check_in_at, check_out_at, source, notes")
+    .eq("profile_id", user.id)
+    .in("attendance_date", dates);
+  const snapMap = new Map((existingRecords ?? []).map((r) => [r.attendance_date as string, r]));
+
+  // Bulk insert
+  const inserts = dates.map((date) => ({
     profile_id: user.id,
     attendance_date: date,
     requested_status: status,
     requested_check_in: checkIn,
     requested_check_out: checkOut,
     reason,
-    original_snapshot: current ?? null,
+    original_snapshot: snapMap.get(date) ?? null,
     manager_id: sd?.reports_to ?? null,
-  });
+  }));
 
+  const { error } = await supabase.from("attendance_corrections").insert(inserts);
   if (error) {
     if (error.message.includes("idx_corr_one_open")) {
-      return { error: "Is din ki ek darkhwast pehle se zer-e-ghaur hai." };
+      return { error: "Ek ya zyada dinon ki darkhwast pehle se zer-e-ghaur hai." };
     }
     return { error: error.message };
   }
@@ -412,15 +419,16 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
   const { supabase: supabase2 } = await whoAmI();
   const { data: myPr } = await supabase2.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
   const staffName = myPr?.full_name ?? "Staff";
+  const dinCount = dates.length === 1 ? dates[0] : `${dates.length} din`;
   await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
     `Hazri Theek Karne ki Darkhwast — ${staffName}`,
-    `${staffName} ne ${date} ki hazri theek karne ki darkhwast di hai (${status}). Manzoor ya na-manzoor karein.`,
+    `${staffName} ne ${dinCount} ki hazri theek karne ki darkhwast di hai (${status}). Manzoor ya na-manzoor karein.`,
     "/admin/hr/corrections"
   );
   if (sd?.reports_to) {
     await notifyUser(sd.reports_to,
       `Hazri Darkhwast — ${staffName}`,
-      `${staffName} ne ${date} ki hazri theek karne ki darkhwast di hai. Apna faisla dein.`,
+      `${staffName} ne ${dinCount} ki hazri theek karne ki darkhwast di hai. Apna faisla dein.`,
       "/admin/hr/corrections"
     );
   }
@@ -429,8 +437,8 @@ export async function requestAttendanceCorrection(_prev: AttState, formData: For
   return {
     success: true,
     notice: sd?.reports_to
-      ? "Darkhwast apne afsar ko bhej di gayi."
-      : "Darkhwast bhej di gayi. Aap ka koi afsar darj nahi, is liye ye HR ke paas jayegi.",
+      ? `${dates.length} din ki darkhwast apne afsar ko bhej di gayi.`
+      : `${dates.length} din ki darkhwast bhej di gayi. Aap ka koi afsar darj nahi, is liye ye HR ke paas jayegi.`,
   };
 }
 

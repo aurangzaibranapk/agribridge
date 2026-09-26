@@ -10,7 +10,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string; farmer_code: string; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; }
 interface Loan {
   id: string;
   farmer_id: string;

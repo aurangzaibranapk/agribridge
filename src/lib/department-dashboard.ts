@@ -120,7 +120,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
     case "product": {
       const [active, pending, edits, reorder] = await Promise.all([
         count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_active", true)),
-        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_verified", false).eq("is_deleted", false)),
         count(() => s.from("product_edit_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("inventory").select("id", { count: "exact", head: true }).lte("quantity", 0)),
       ]);
@@ -207,16 +207,18 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
     }
 
     case "ai": {
-      const [suggestions, actions, logs, instructions] = await Promise.all([
+      const [suggestions, actions, logs, stockAlerts] = await Promise.all([
         count(() => s.from("ai_purchase_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("bridge_ai_action_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("bridge_ai_activity_log").select("id", { count: "exact", head: true }).gte("created_at", t)),
-        // ai_report_instructions ek hi settings row rakhta hai -- "active"
-        // ka koi khana nahi, is liye sirf itna dekha jata hai ke likhi hui
-        // hai ya nahi.
-        count(() => s.from("ai_report_instructions").select("id", { count: "exact", head: true })),
+        count(() => s.from("bridge_ai_notifications").select("id", { count: "exact", head: true }).eq("is_read", false)),
       ]);
-      return [{ label: "Suggestions pending", value: n(suggestions), href: "/admin/ai-suggestions", tone: suggestions ? "warn" : "normal" }, { label: "Actions for review", value: n(actions), href: "/admin/bridge-ai/action-requests", tone: actions ? "alert" : "normal" }, { label: "AI activity today", value: n(logs), href: "/admin/bridge-ai/activity-log" }, { label: "Active instructions", value: n(instructions), href: "/admin/ai-instructions" }];
+      return [
+        { label: "Suggestions pending", value: n(suggestions), href: "/admin/ai-suggestions", tone: suggestions ? "warn" : "normal" },
+        { label: "Actions for review", value: n(actions), href: "/admin/bridge-ai/action-requests", tone: actions ? "alert" : "normal" },
+        { label: "AI activity today", value: n(logs), href: "/admin/bridge-ai/activity-log" },
+        { label: "Stock alerts (unread)", value: n(stockAlerts), href: "/admin/bridge-ai/daily-briefing", tone: stockAlerts ? "warn" : "normal" },
+      ];
     }
 
     case "sales": {
@@ -252,7 +254,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
       const [toDispatch, returns, pendingProducts] = await Promise.all([
         count(() => s.from("agri_orders").select("id", { count: "exact", head: true }).eq("status", "approved")),
         count(() => s.from("agri_order_returns").select("id", { count: "exact", head: true }).eq("status", "pending")),
-        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("status", "pending")),
+        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_verified", false).eq("is_deleted", false)),
       ]);
       return [
         { label: "Dispatch ke intezar mein", value: n(toDispatch), href: "/admin/agri-orders", tone: toDispatch ? "alert" : "normal" },

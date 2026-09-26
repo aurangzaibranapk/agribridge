@@ -9,6 +9,7 @@ import {
   addExtraCountItem,
   renameProductFromCount,
   correctStockCountRate,
+  forceCloseCount,
   type ActionState,
 } from "@/actions/stock-count";
 import { sendShortageToStaff } from "@/actions/stock-count-liability";
@@ -112,13 +113,16 @@ export function CountingSheet({
   countId,
   lines,
   canEditRates,
+  canForceClose = false,
 }: {
   countId: string;
   lines: CountLine[];
   canEditRates: boolean;
+  canForceClose?: boolean;
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(saveCounts, initialState);
+  const [forceState, forceAction] = useFormState(forceCloseCount, initialState);
   const [search, setSearch] = useState("");
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(lines.map((l) => [l.id, l.counted != null ? String(l.counted) : ""]))
@@ -333,6 +337,25 @@ export function CountingSheet({
       <Feedback state={state} />
       <Submit label={t("sc_save_counts", lang)} />
     </form>
+
+    {canForceClose && (
+      <form action={forceAction} className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+        <input type="hidden" name="count_id" value={countId} />
+        <Feedback state={forceState} />
+        <button
+          type="submit"
+          className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
+          onClick={(e) => {
+            if (!confirm("Kya aap ye ginti band karna chahte hain? Jo items gin nahi gayin un ko system ki qty assign ho jayegi.")) {
+              e.preventDefault();
+            }
+          }}
+        >
+          Admin: Ginti Force Band Karo
+        </button>
+        <p className="mt-1 text-[11px] text-surface-400">Adhoori items system qty se poori hongi — farq sifar aa jaye ga</p>
+      </form>
+    )}
     </div>
   );
 }

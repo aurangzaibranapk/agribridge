@@ -45,8 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ farm
   });
 
   const pdfBuffer = await generateWalletStatementPdf({
-    farmerName: farmer.full_name,
-    farmerCode: farmer.farmer_code,
+    farmerName: farmer.full_name ?? "",
+    farmerCode: farmer.farmer_code ?? "",
     farmerPhone: farmer.phone_number,
     currentBalance: Number(wallet.balance),
     rows,

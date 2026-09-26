@@ -98,7 +98,8 @@ export async function requestInternalTransfer(_prev: ActionState, formData: Form
     requested_by: user.id,
   }));
 
-  const { error } = await supabase.from("stock_transfers").insert(rows);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await supabase.from("stock_transfers").insert(rows as any);
   if (error) return { error: error.message };
   revalidatePath("/admin/stock-transfers");
   return { success: true };
@@ -433,7 +434,7 @@ export async function finalizeDiscrepancyAccept(_prev: ActionState, formData: Fo
   const { error } = await supabase
     .from("stock_transfers")
     .update({
-      quantity: transfer.confirmed_quantity,
+      quantity: transfer.confirmed_quantity ?? undefined,
       status: "completed",
       shop_accepted_by: user.id,
       shop_accepted_at: new Date().toISOString(),

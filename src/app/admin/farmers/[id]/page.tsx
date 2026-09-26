@@ -51,7 +51,7 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
   return (
     <div>
       <BackButton fallback="/admin/farmers" label={t("fp_back", lang)} />
-      <PageHeader title={`Farmer: ${farmer.full_name}`} description={farmer.farmer_code} />
+      <PageHeader title={`Farmer: ${farmer.full_name ?? ""}`} description={farmer.farmer_code ?? ""} />
 
       <div className="mb-6">
         <ExpenseStatement categoryTotals={categoryTotals} totalExpense={totalExpense} totalRevenue={totalRevenue} />

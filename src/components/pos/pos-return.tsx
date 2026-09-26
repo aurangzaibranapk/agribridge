@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/client";
 import { returnPosSaleLines } from "@/actions/pos-returns";
+import { fetchPosCustomerNames } from "@/actions/pos-customer-lookup";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { Search, Package, RotateCcw, Minus, Plus, Check, Receipt, X } from "lucide-react";
@@ -40,6 +41,8 @@ interface SaleRow {
   /** Mobile/CNIC se dhoondne ke liye -- naam se nahi, in se bhi milna chahiye (15 September). */
   customer_phone: string | null;
   customer_cnic: string | null;
+  /** True jab crm_customer_id ya customer_id set ho -- naam lookup nakaam bhi ho to "Walk-in" nahi dikhana. */
+  has_customer: boolean;
 }
 
 interface PaymentDetail {
@@ -105,6 +108,7 @@ export function PosReturn({
 }) {
   const supabase = createClient();
   const [query, setQuery] = useState("");
+  const [payFilter, setPayFilter] = useState("");
   // Tareekh ka chhanta -- malik ka kehna (5 September): "jis din, jab tak
   // dekhna ho, sale is page par dekh sakein." Default aaj se saat din
   // peeche: wapsi ki miyaad do din hai, magar bikri dekhne ke liye us se
@@ -177,13 +181,13 @@ export function PosReturn({
     // har naam "Walk-in customer" nazar aata tha (15 September).
     const crmIds = Array.from(new Set((data ?? []).map((r: any) => r.crm_customer_id).filter(Boolean)));
     const dealerIds = Array.from(new Set((data ?? []).map((r: any) => r.customer_id).filter(Boolean)));
-    const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
-      crmIds.length
-        ? supabase.from("customers").select("id, name, phone_number, cnic").in("id", crmIds)
-        : Promise.resolve({ data: [] as any[] }),
+    // fetchPosCustomerNames service client use karta hai -- browser client
+    // RLS ki wajah se customers table nahi dekh sakta, naam null aata tha,
+    // aur "Gahak" dikh raha tha (25 Sep fix).
+    const [crmById, { data: dealerCusts }] = await Promise.all([
+      fetchPosCustomerNames(crmIds),
       dealerIds.length ? supabase.from("dealer_customers").select("id, name").in("id", dealerIds) : Promise.resolve({ data: [] as any[] }),
     ]);
-    const crmById = new Map((crmCusts ?? []).map((c: any) => [c.id, c]));
     const dealerNameById = new Map((dealerCusts ?? []).map((c: any) => [c.id, c.name]));
 
     setSales(
@@ -195,9 +199,10 @@ export function PosReturn({
           total_amount: Number(r.total_amount ?? 0),
           status: r.status,
           payment_mode: r.payment_mode,
-          customer_name: crm?.name ?? (r.customer_id ? dealerNameById.get(r.customer_id) : null) ?? null,
+          customer_name: crm?.name ?? (r.customer_id ? (dealerNameById.get(r.customer_id) ?? null) : null),
           customer_phone: crm?.phone_number ?? null,
           customer_cnic: crm?.cnic ?? null,
+          has_customer: !!(r.crm_customer_id || r.customer_id),
         };
       })
     );
@@ -218,8 +223,11 @@ export function PosReturn({
   }, [supabase]);
 
   const matches = useMemo(() => {
+    let list = sales;
+    // Payment method filter
+    if (payFilter) list = list.filter((s) => s.payment_mode === payFilter);
     const q = query.trim().toLowerCase();
-    if (!q) return sales;
+    if (!q) return list;
     // Naam ke ilawa mobile aur CNIC se bhi -- number "0342..." (mulki)
     // ya "92342..." (international) kisi bhi shakl mein type ho, sirf
     // akhri das hindse hi asal pehchan hain (jaisa pos-client.tsx ka
@@ -228,7 +236,7 @@ export function PosReturn({
     // tha.
     const qDigits = q.replace(/-/g, "");
     const qPhoneCore = q.replace(/\D/g, "").slice(-10);
-    return sales.filter((s) => {
+    return list.filter((s) => {
       const phoneCore = (s.customer_phone ?? "").replace(/\D/g, "").slice(-10);
       return (
         s.id.toLowerCase().startsWith(q) ||
@@ -238,7 +246,7 @@ export function PosReturn({
         (s.customer_cnic ?? "").toLowerCase().replace(/-/g, "").includes(qDigits)
       );
     });
-  }, [sales, query]);
+  }, [sales, query, payFilter]);
 
   /** Is arse ki kul bikri -- gross (wapas hui bikriyaan minus kar ke net). */
   const kulBikri = matches.reduce((s, r) => s + (r.status === "returned" ? -r.total_amount : r.total_amount), 0);
@@ -465,6 +473,34 @@ export function PosReturn({
           </div>
         </div>
 
+        {/* Payment method filter chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { key: "", label: "Sab" },
+            { key: "cash", label: "Cash" },
+            { key: "khata", label: "Khata" },
+            { key: "waseela_card", label: "Wasela Card" },
+            { key: "easypaisa", label: "EasyPaisa" },
+            { key: "jazzcash", label: "JazzCash" },
+            { key: "qr", label: "QR" },
+            { key: "bank_transfer", label: "Bank" },
+            { key: "card", label: "Kisan Card" },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setPayFilter(opt.key)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                payFilter === opt.key
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "border border-surface-200 bg-white text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {/* Is arse ki kul bikri -- wohi jo neeche qataron mein nazar aa
             rahi hai. Adad aur fehrist do alag jagah se ginne par wo kisi
             din alag alag kehne lagte hain. */}
@@ -515,7 +551,7 @@ export function PosReturn({
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-surface-900 dark:text-surface-100">
-                      {s.customer_name ?? t("ret_walkin", lang)}
+                      {s.customer_name ?? (s.has_customer ? "Gahak" : t("ret_walkin", lang))}
                       {s.customer_phone && <span className="ml-1 font-normal text-surface-400">· {s.customer_phone}</span>}
                       {wapas && (
                         <span className="ml-2 inline-block rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-900/40 dark:text-red-400">
@@ -560,7 +596,7 @@ export function PosReturn({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-surface-900 dark:text-white">
-              {sale.customer_name ?? t("ret_walkin", lang)}
+              {sale.customer_name ?? (sale.has_customer ? "Gahak" : t("ret_walkin", lang))}
               {sale.customer_phone && <span className="ml-1 font-normal text-surface-400">· {sale.customer_phone}</span>}
             </p>
             <p className="text-xs text-surface-500">

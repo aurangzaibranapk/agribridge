@@ -76,7 +76,7 @@ export function aggregateShiftCash(
   openingCash: number,
   sales: { total_amount: number | string | null; khata_amount: number | string | null }[],
   payments: { payment_method: string | null; amount: number | string | null }[],
-  returns: { total_amount: number | string | null; refund_method?: string | null }[],
+  returns: { total_amount: number | string | null; refund_method?: string | null; cash_refund?: number | string | null }[],
   loadBillRows: LoadBillRow[] = [],
   udhaarCashRows: UdhaarCashLegRow[] = []
 ): ShiftCashSummary {
@@ -101,13 +101,15 @@ export function aggregateShiftCash(
   }
 
   const returnsTotal = returns.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
-  // Report ki purani cash-only qatarein mein method nahi hota, is liye missing
-  // method ko cash samjhein; live shift mein original refund expected cash ko
-  // kam nahi karta.
-  const cashReturnsTotal = returns.reduce(
-    (s, r) => s + (r.refund_method == null || r.refund_method === "cash" ? Number(r.total_amount ?? 0) : 0),
-    0
-  );
+  // Golak se nikla paisa:
+  //   refund_method = null/"cash" → poori raqam cash (purani qatarein ya seedhi cash wapsi)
+  //   refund_method = "original" → cash_refund field mein sirf cash hissa (467: SQL fix)
+  //   refund_method = "khata" → golak nahi, 0
+  const cashReturnsTotal = returns.reduce((s, r) => {
+    if (r.refund_method == null || r.refund_method === "cash") return s + Number(r.total_amount ?? 0);
+    if (r.refund_method === "original") return s + Number(r.cash_refund ?? 0);
+    return s;
+  }, 0);
 
   let billTotal = 0;
   let loadTotal = 0;
@@ -186,7 +188,7 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   // wajah bataye.
   const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }] = await Promise.all([
     service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
-    service.from("pos_returns").select("total_amount, refund_method").eq("shift_id", shiftId),
+    service.from("pos_returns").select("total_amount, refund_method, cash_refund").eq("shift_id", shiftId),
     shopId && staffId && fromTs
       ? service
           .from("load_transactions")

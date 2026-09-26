@@ -33,7 +33,7 @@ export default async function AdminFarmerCreditPage() {
 
   const balanceMap: Record<string, { farmer_id: string; farmer_name: string; farmer_code: string; totalDebit: number; totalCredit: number; credit_limit: number | null }> = {};
   (farmers ?? []).forEach((f) => {
-    balanceMap[f.id] = { farmer_id: f.id, farmer_name: f.full_name, farmer_code: f.farmer_code, totalDebit: 0, totalCredit: 0, credit_limit: f.credit_limit ? Number(f.credit_limit) : null };
+    balanceMap[f.id] = { farmer_id: f.id, farmer_name: f.full_name ?? "", farmer_code: f.farmer_code ?? "", totalDebit: 0, totalCredit: 0, credit_limit: f.credit_limit ? Number(f.credit_limit) : null };
   });
   ledger.forEach((r) => {
     if (!balanceMap[r.farmer_id]) return;

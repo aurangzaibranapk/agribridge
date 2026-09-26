@@ -46,7 +46,7 @@ export async function createCreditRequest(_prev: ActionState, formData: FormData
   const marginPercentage = 5; // default, admin can adjust per-request on approval
   const totalAmount = baseAmount * (1 + marginPercentage / 100);
 
-  const { error } = await supabase.from("credit_requests").insert({
+  const { error } = await (supabase as any).from("credit_requests").insert({
     farmer_id: farmer.id,
     category,
     product_id: productId,

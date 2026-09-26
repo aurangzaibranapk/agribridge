@@ -50,7 +50,7 @@ export function ReceiptModal({
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("get_sale_receipt", { p_sale_id: saleId });
-      setReceipt(data as ReceiptData);
+      setReceipt(data as unknown as ReceiptData);
       setLoading(false);
     })();
   }, [saleId]);

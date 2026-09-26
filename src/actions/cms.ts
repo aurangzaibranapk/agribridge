@@ -117,7 +117,7 @@ export async function saveGalleryItem(_prev: ActionState, formData: FormData): P
     display_order: Number(formData.get("display_order") ?? 0),
     is_published: true,
   };
-  const { error } = await supabase.from("gallery_items").insert(payload);
+  const { error } = await supabase.from("gallery_items").insert(payload as any);
   if (error) return { error: error.message };
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
@@ -279,7 +279,7 @@ export async function deleteMenuItem(_prev: ActionState, formData: FormData): Pr
 // ---------------------------------------------------------------------
 export async function updateContactMessageStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
-  const { error } = await supabase.from("contact_messages").update({ status: String(formData.get("status")) }).eq("id", String(formData.get("id")));
+  const { error } = await supabase.from("contact_messages").update({ status: String(formData.get("status")) as "new" | "read" | "responded" | "closed" }).eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
   revalidatePath("/admin/contact-messages");
   return { success: true };
@@ -287,7 +287,7 @@ export async function updateContactMessageStatus(_prev: ActionState, formData: F
 
 export async function updateInvestorInquiryStatus(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
-  const { error } = await supabase.from("investor_inquiries").update({ status: String(formData.get("status")) }).eq("id", String(formData.get("id")));
+  const { error } = await (supabase as any).from("investor_inquiries").update({ status: String(formData.get("status")) }).eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
   revalidatePath("/admin/investor-inquiries");
   return { success: true };

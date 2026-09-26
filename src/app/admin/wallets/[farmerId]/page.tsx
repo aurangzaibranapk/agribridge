@@ -50,7 +50,7 @@ export default async function WalletStatementPage({ params }: { params: Promise<
 
   return (
     <WalletStatementClient
-      farmer={{ id: farmer.id, name: farmer.full_name, code: farmer.farmer_code, phone: farmer.phone_number }}
+      farmer={{ id: farmer.id, name: farmer.full_name ?? "", code: farmer.farmer_code ?? "", phone: farmer.phone_number }}
       currentBalance={Number(wallet.balance)}
       transactions={transactions.reverse()}
     />

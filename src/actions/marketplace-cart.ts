@@ -98,7 +98,7 @@ export async function submitMarketplaceCart(_prev: CartState, formData: FormData
   const matchedItems: { product_id: string; quantity: number; unit_price: number; dealer_id: string | null; line_total: number }[] = [];
   for (const item of cart) {
     if (!item.product_id || !item.quantity || item.quantity <= 0) continue;
-    const { data: offers } = await serviceClient.rpc("fn_find_marketplace_offer", {
+    const { data: offers } = await (serviceClient as any).rpc("fn_find_marketplace_offer", {
       p_product_id: item.product_id,
       p_quantity: item.quantity,
       p_organization_id: farmer?.organization_id ?? null,

@@ -95,14 +95,14 @@ export default async function CropsPage({ searchParams }: { searchParams: Promis
   });
 
   const cropRows = (crops ?? []).map((c) => {
-    const progress = getCropProgress(c.sowing_date, c.expected_harvest_date);
+    const progress = getCropProgress(c.sowing_date ?? "", c.expected_harvest_date ?? "");
     const cropExpenses = (allExpenses ?? []).filter((e) => e.crop_history_id === c.id).map((e) => ({ ...e, amount: Number(e.amount) }));
     return {
       id: c.id,
-      cropName: c.crop_name,
+      cropName: c.crop_name ?? "",
       farmName: farmNameMap.get(c.farm_id) ?? "-",
-      sowingDate: c.sowing_date,
-      harvestDate: c.expected_harvest_date,
+      sowingDate: c.sowing_date ?? "",
+      harvestDate: c.expected_harvest_date ?? "",
       percent: progress.percent,
       daysRemaining: progress.daysRemaining,
       daysElapsed: progress.daysElapsed,
@@ -130,8 +130,8 @@ export default async function CropsPage({ searchParams }: { searchParams: Promis
 
       <CropsChart
         data={(crops ?? []).map((c) => {
-          const p = getCropProgress(c.sowing_date, c.expected_harvest_date);
-          return { crop_name: c.crop_name, percent: p.percent, daysRemaining: p.daysRemaining };
+          const p = getCropProgress(c.sowing_date ?? "", c.expected_harvest_date ?? "");
+          return { crop_name: c.crop_name ?? "", percent: p.percent, daysRemaining: p.daysRemaining };
         })}
       />
 

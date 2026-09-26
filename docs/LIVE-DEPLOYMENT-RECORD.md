@@ -3809,3 +3809,87 @@ dena.
 3. Migration 440, 441, 442, 443 (is tarteeb mein)
 4. Post-migration verify: products.units_per_carton column maujood; agri_orders.order_to_warehouse_id maujood; supplier_product_aliases table maujood
 5. Naya build upload
+
+---
+
+## 25 September — Salary Planner + Stock Count improvements
+
+**Commits (feature/supplier-bill-final-v2):**
+- `6b5eec5`: Migration 463 (cycle_count_settings RLS), Stock Value fix, Force-close stock count, StockCountNudge
+- `157c9d7`: Salary Planner page + Migration 464
+
+### Testing par baqi migrations
+
+**Migration 463** (`cycle_count_settings` RLS) — Boss ne Testing par confirm kar liya ("Success. No rows returned"). **Live par abhi baqi hai.**
+
+**Migration 464** (Salary Planner: features + role_features + feature_help) — **Testing par chalna baqi hai, phir Live par.**
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+1. Backup tasdeeq (file size chat mein)
+2. Pre-migration ginti:
+   - `select count(*) from cycle_count_settings` (jo bhi ginti ho)
+3. Migration 463 (cycle_count_settings RLS)
+4. Post-verify: same ginti (rows nahi miti)
+5. Migration 464 (Salary Planner feature registration)
+6. Post-verify: `select key from features where key like 'reports.salary%'` → 1 row
+7. Naya build upload aur smoke test: `/admin/reports/salary-planner` khulta ho
+
+### Salary Planner kya karta hai
+
+`/admin/reports/salary-planner` — system ka data khud uthata hai:
+- `pos_sales`: har dukan ki sale, gross munafa
+- `company_expense_requests` (rent+utility_bill+maintenance+other, status=approved): kharche
+- `profiles` (is_active=true, non-admin): staff ginti per branch
+- Net munafa = gross munafa − kharche
+- Interactive slider (5–80%): net munafe ka kitna % salary dena chahiye
+- Per-admi estimate: salary budget ÷ staff count
+- Roles: owner, super_admin, admin, finance, manager
+
+---
+
+## 25 September — POS Fixes (467, 468) + Code Fixes
+
+**Commits (feature/supplier-bill-final-v2):**
+- `454d8be`: `aggregateShiftCash` — return `refund_method=original` par `cash_refund` se ghatao (shift close expected cash ka masla)
+- `204b595`: Supplier Bill selected line par product code badge
+- `5392e33`: Purchases Report — `inventory.unit_cost` ki jagah `products.purchase_price` (stock value Rs 0 fix)
+- `6610cb3`: POS Return — Gahak naam: server action se service client (RLS bypass)
+- `921d499`: Migration 468 — `create_pos_sale` branch path mein `customers.current_balance` update
+
+### Kiya kya kya (25 September)
+
+1. **Product code Supplier Bill par** — selected line par code badge nahi tha, sirf dropdown mein tha. Fix commit `204b595`.
+2. **Purchases Report Rs 0** — `inventory.unit_cost` column maujood hi nahi, sab zero aa raha tha. Fix: `products.purchase_price` use kiya. Commit `5392e33`.
+3. **Gahak naam POS Return mein** — browser client RLS ke peeche customers table nahi dekh sakta tha. Server action banaya `fetchPosCustomerNames` service client se. Commit `6610cb3`.
+4. **Mooli + Mooli Surf merge** — Live par seedha merge kiya (`stock_movements` mein audit trail). No migration.
+5. **Migration 467** — `fn_pos_return_lines`: khata (split) wapsi mein `cash_refund` sahi ginta hai. Testing par ✓ aur Live par bhi ✓ (backup 24 Sep 2026 20:33:40 UTC se).
+6. **Migration 468** — `create_pos_sale` branch path: `customers.current_balance` bhi barhayen. Testing par ✓ (OID 37130).
+
+### Testing aur Live status
+
+| Migration | Testing | Live |
+|---|---|---|
+| 467 (pos return cash_refund fix) | ✓ | ✓ |
+| 468 (customers.current_balance) | ✓ | **BAQI** |
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+1. Backup tasdeeq (file size chat mein)
+2. Pre-migration ginti: `select count(*) from customers where current_balance != 0` (jo bhi ginti ho)
+3. Migration 468 (create_pos_sale customers.current_balance)
+4. Post-verify: same ginti (ya zyada — naye customers nahi bane the)
+5. Naya build upload + smoke test:
+   - POS Return list mein gahak ka naam aaye
+   - Supplier Bill par product code nazar aaye
+   - Purchases Report mein Stock Value sahi aaye (sifar nahi)
+   - Shift Band Karein mein Expected Cash se return ghat jaye
+
+### Build deploy commands (Boss ke system par)
+
+```
+git pull origin feature/supplier-bill-final-v2 && npm run build > build.log 2>&1; tail -5 build.log
+```
+```
+ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
+```

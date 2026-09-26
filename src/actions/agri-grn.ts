@@ -291,7 +291,7 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
           });
         }
         if (item.batch_no) {
-          await supabase.from("stock_batches").insert({
+          const { data: newBatch } = await supabase.from("stock_batches").insert({
             product_id: item.product_id,
             warehouse_id: warehouse.id,
             batch_number: item.batch_no,
@@ -300,7 +300,10 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
             initial_quantity: item.received_qty,
             remaining_quantity: item.received_qty,
             unit_cost: item.unit_price + item.unit_price * chargeRatio,
-          });
+          }).select("id").single();
+          if (newBatch && inventoryId) {
+            await supabase.from("inventory").update({ batch_id: newBatch.id }).eq("id", inventoryId).is("batch_id", null);
+          }
         }
       }
     }
