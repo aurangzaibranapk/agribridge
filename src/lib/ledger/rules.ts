@@ -121,6 +121,9 @@ export const ACC = {
   // Customer ka bill le liya, provider tak abhi nahi pahuncha. Wo paisa
   // hamare paas hai magar hamara nahi.
   billsCollected: "2060",
+  // Wasela Pakistan ne credit par stock diya; gahak Wasela Card se adaigi
+  // karta hai to paisa un ke paas jata hai aur hamara dena kam hota hai.
+  waselaPayable: "2062",
   ownerCapital: "3000",
   ownerDrawings: "3100",
   openingEquity: "3200",
