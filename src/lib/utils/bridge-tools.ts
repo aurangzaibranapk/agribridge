@@ -709,6 +709,339 @@ async function getShopStockAnalysis(
   };
 }
 
+// ===== Tool 13: Complete Business Report =====
+// Aaj / hafta / mahina — ek click par poori picture:
+// total sales, category breakdown, top products, staff ranking, stock alerts.
+async function getBusinessReport(
+  supabase: ReturnType<typeof createClient>,
+  args: { period?: string; days?: number }
+) {
+  // Period resolve karo
+  let daysBack = 1;
+  const p = (args.period ?? "").toLowerCase().trim();
+  if (p === "aaj" || p === "today" || p === "1") daysBack = 1;
+  else if (p === "hafta" || p === "week" || p === "7") daysBack = 7;
+  else if (p === "mahina" || p === "month" || p === "30") daysBack = 30;
+  else if (args.days) daysBack = Math.min(Math.max(Number(args.days), 1), 90);
+
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - daysBack);
+  const startStr = start.toISOString();
+
+  // Sales + branch + staff
+  const { data: salesData } = await supabase
+    .from("pos_sales")
+    .select("id, total_amount, payment_mode, created_by, branches(name)")
+    .gte("created_at", startStr)
+    .limit(5000);
+
+  let totalSales = 0;
+  const byBranch = new Map<string, number>();
+  const byPayment: Record<string, number> = { cash: 0, khata: 0, split: 0, bank: 0, kisan_card: 0 };
+  const byStaffId = new Map<string, number>();
+
+  (salesData ?? []).forEach((s: any) => {
+    const amt = Number(s.total_amount ?? 0);
+    totalSales += amt;
+    const branch = Array.isArray(s.branches) ? s.branches[0] : s.branches;
+    byBranch.set(branch?.name ?? "Unknown", (byBranch.get(branch?.name ?? "Unknown") ?? 0) + amt);
+    if (byPayment[s.payment_mode] !== undefined) byPayment[s.payment_mode] += amt;
+    if (s.created_by) byStaffId.set(s.created_by, (byStaffId.get(s.created_by) ?? 0) + amt);
+  });
+
+  // Staff names
+  const staffIds = [...byStaffId.keys()];
+  const staffNameMap = new Map<string, string>();
+  if (staffIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", staffIds);
+    (profiles ?? []).forEach((p: any) => staffNameMap.set(p.id, p.full_name ?? "—"));
+  }
+  const staffRanking = [...byStaffId.entries()]
+    .map(([id, amt]) => ({ staff: staffNameMap.get(id) ?? "—", total: Math.round(amt) }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8);
+
+  // Item-level data (products + category)
+  const saleIds = (salesData ?? []).map((s: any) => s.id);
+  const byProductId = new Map<string, { name: string; qty: number; revenue: number; category: string }>();
+  const byCat = new Map<string, number>();
+
+  if (saleIds.length > 0) {
+    // Large sets mein 500 IDs tak limit (most common case thoda zyada)
+    const batchIds = saleIds.slice(0, 800);
+    const { data: items } = await supabase
+      .from("pos_sale_items")
+      .select("product_id, quantity, unit_price, products(name, pack_size, category)")
+      .in("sale_id", batchIds)
+      .limit(15000);
+
+    (items ?? []).forEach((item: any) => {
+      const prod = Array.isArray(item.products) ? item.products[0] : item.products;
+      if (!prod) return;
+      const qty = Number(item.quantity ?? 0);
+      const rev = qty * Number(item.unit_price ?? 0);
+      const cat = prod.category ?? "Other";
+      const label = `${prod.name}${prod.pack_size ? ` (${prod.pack_size})` : ""}`;
+      const cur = byProductId.get(item.product_id) ?? { name: label, qty: 0, revenue: 0, category: cat };
+      cur.qty += qty;
+      cur.revenue += rev;
+      byProductId.set(item.product_id, cur);
+      byCat.set(cat, (byCat.get(cat) ?? 0) + rev);
+    });
+  }
+
+  const topProducts = [...byProductId.values()]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10)
+    .map((p) => ({ product: p.name, sold_qty: Math.round(p.qty), revenue: Math.round(p.revenue) }));
+
+  const categoryBreakdown = [...byCat.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, rev]) => ({ category: cat, revenue: Math.round(rev) }));
+
+  // Slow movers (revenue bottom 5 among products that sold something)
+  const slowMovers = [...byProductId.values()]
+    .filter((p) => p.revenue > 0)
+    .sort((a, b) => a.revenue - b.revenue)
+    .slice(0, 5)
+    .map((p) => ({ product: p.name, sold_qty: Math.round(p.qty), revenue: Math.round(p.revenue) }));
+
+  // Stock alerts (7 din se kam)
+  const { data: reorderAlerts } = await supabase
+    .from("v_reorder_suggestions")
+    .select("name, on_hand, days_cover, urgency")
+    .order("days_cover", { ascending: true, nullsFirst: true })
+    .limit(10);
+  const stockAlerts = (reorderAlerts ?? [])
+    .filter((r: any) => r.days_cover == null || Number(r.days_cover) <= 10)
+    .map((r: any) => ({
+      product: r.name,
+      days_left: r.days_cover == null ? null : Number(r.days_cover),
+      urgency: r.urgency,
+    }));
+
+  // Bank balance
+  const { data: bankAccounts } = await supabase
+    .from("finance_accounts")
+    .select("current_balance")
+    .eq("is_active", true)
+    .eq("account_type", "bank");
+  const bankBalance = (bankAccounts ?? []).reduce((s, a) => s + Number(a.current_balance), 0);
+
+  const periodLabel = daysBack === 1 ? "Aaj" : daysBack === 7 ? "Pichle 7 din" : `Pichle ${daysBack} din`;
+
+  return {
+    period: periodLabel,
+    currency: "PKR",
+    summary: {
+      total_sales: Math.round(totalSales),
+      transaction_count: (salesData ?? []).length,
+      bank_balance: Math.round(bankBalance),
+    },
+    top_branch: [...byBranch.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, total]) => ({ branch: name, sales: Math.round(total) })),
+    payment_mode_breakdown: byPayment,
+    top_products: topProducts,
+    slow_products: slowMovers,
+    category_breakdown: categoryBreakdown,
+    staff_ranking: staffRanking,
+    stock_alerts: stockAlerts,
+    stock_alert_count: stockAlerts.length,
+  };
+}
+
+// ===== Tool 14: Staff Performance (kitne din mein kiski kitni sale) =====
+async function getStaffPerformance(
+  supabase: ReturnType<typeof createClient>,
+  args: { days?: number }
+) {
+  const days = Math.min(Math.max(Number(args.days ?? 30), 1), 90);
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+
+  const { data: salesData } = await supabase
+    .from("pos_sales")
+    .select("total_amount, created_by, branches(name)")
+    .gte("created_at", start.toISOString())
+    .limit(10000);
+
+  const byStaff = new Map<string, { total: number; count: number; branches: Set<string> }>();
+  (salesData ?? []).forEach((s: any) => {
+    if (!s.created_by) return;
+    const cur = byStaff.get(s.created_by) ?? { total: 0, count: 0, branches: new Set() };
+    cur.total += Number(s.total_amount ?? 0);
+    cur.count += 1;
+    const b = Array.isArray(s.branches) ? s.branches[0] : s.branches;
+    if (b?.name) cur.branches.add(b.name);
+    byStaff.set(s.created_by, cur);
+  });
+
+  const staffIds = [...byStaff.keys()];
+  const nameMap = new Map<string, string>();
+  if (staffIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .in("id", staffIds);
+    (profiles ?? []).forEach((p: any) => nameMap.set(p.id, `${p.full_name ?? "—"} (${p.role})`));
+  }
+
+  const ranking = [...byStaff.entries()]
+    .map(([id, d]) => ({
+      staff: nameMap.get(id) ?? "—",
+      total_sales: Math.round(d.total),
+      transaction_count: d.count,
+      avg_per_transaction: d.count > 0 ? Math.round(d.total / d.count) : 0,
+      branches: [...d.branches].join(", "),
+    }))
+    .sort((a, b) => b.total_sales - a.total_sales);
+
+  const totalAll = ranking.reduce((s, r) => s + r.total_sales, 0);
+  return {
+    period_days: days,
+    currency: "PKR",
+    total_sales_all_staff: totalAll,
+    staff_count: ranking.length,
+    ranking,
+    top_performer: ranking[0] ?? null,
+    note: `Sirf POS sales counted hain (${days} din)`,
+  };
+}
+
+// ===== Tool 15: Buyer Recovery List (kaun kitna dena hai) =====
+async function getBuyerRecovery(
+  supabase: ReturnType<typeof createClient>,
+  args: { buyer_name?: string }
+) {
+  const name = (args.buyer_name ?? "").trim();
+
+  // Buyers table se outstanding balance
+  let q = supabase
+    .from("buyers")
+    .select("id, name, phone, outstanding_balance, last_transaction_at")
+    .gt("outstanding_balance", 0)
+    .order("outstanding_balance", { ascending: false })
+    .limit(30);
+  if (name) q = q.ilike("name", `%${name}%`);
+
+  const { data: buyerRows, error: buyerErr } = await q;
+
+  // Fallback: branch_credit_balances view (agar buyers table structure alag ho)
+  if (buyerErr || !buyerRows || buyerRows.length === 0) {
+    const { data: bcRows } = await supabase
+      .from("branch_credit_transactions")
+      .select("customer_name, transaction_type, amount")
+      .limit(5000);
+
+    if (!bcRows || bcRows.length === 0) {
+      return {
+        found: false,
+        note: "Buyer recovery data is waqt nahi mila (buyers table ya credit transactions). /admin/buyers safhe par dekhein.",
+      };
+    }
+
+    const byCustomer = new Map<string, number>();
+    (bcRows ?? []).forEach((t: any) => {
+      const cust = t.customer_name ?? "—";
+      const amt = Number(t.amount ?? 0);
+      const cur = byCustomer.get(cust) ?? 0;
+      if (t.transaction_type === "order_charge") byCustomer.set(cust, cur + amt);
+      else if (t.transaction_type === "advance_payment") byCustomer.set(cust, cur - amt);
+    });
+
+    const withBalance = [...byCustomer.entries()]
+      .filter(([, bal]) => bal > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([cust, bal]) => ({ buyer: cust, balance_due: Math.round(bal) }));
+
+    return {
+      currency: "PKR",
+      total_outstanding: withBalance.reduce((s, r) => s + r.balance_due, 0),
+      buyer_count: withBalance.length,
+      recovery_list: withBalance,
+      source: "branch_credit_transactions",
+    };
+  }
+
+  const rows = (buyerRows ?? []).map((b: any) => ({
+    buyer: b.name ?? "—",
+    phone: b.phone ?? null,
+    balance_due: Math.round(Number(b.outstanding_balance ?? 0)),
+    last_transaction: b.last_transaction_at ? String(b.last_transaction_at).slice(0, 10) : null,
+  }));
+
+  return {
+    currency: "PKR",
+    total_outstanding: rows.reduce((s, r) => s + r.balance_due, 0),
+    buyer_count: rows.length,
+    recovery_list: rows,
+    source: "buyers",
+  };
+}
+
+// ===== Tool 16: Demand Forecast (kab kya khatam hoga, agle 7/15/30 din mein kya chahiye) =====
+async function getDemandForecast(
+  supabase: ReturnType<typeof createClient>,
+  args: { days?: number; category?: string }
+) {
+  const days = Math.min(Math.max(Number(args.days ?? 15), 7), 60);
+  const cat = (args.category ?? "").trim().toLowerCase();
+
+  let q = supabase
+    .from("v_reorder_suggestions")
+    .select("name, pack_size, sold_30, on_hand, daily_rate, days_cover, suggested_qty, urgency, last_supplier_name, last_unit_cost")
+    .order("days_cover", { ascending: true, nullsFirst: true })
+    .limit(100);
+
+  const { data, error } = await q;
+  if (error) return { error: "Demand forecast nahi mila: " + error.message };
+
+  let rows = (data ?? []) as any[];
+  if (cat) rows = rows.filter((r) => (r.name ?? "").toLowerCase().includes(cat));
+
+  // Forecast ke liye: target = daily_rate * (days + 7 buffer)
+  const forecast = rows.map((r: any) => {
+    const daily = Number(r.daily_rate ?? 0);
+    const onHand = Number(r.on_hand ?? 0);
+    const daysLeft = daily > 0 ? onHand / daily : null;
+    const target = daily * (days + 7);
+    const orderQty = Math.max(0, Math.round(target - onHand));
+    const estimatedCost = r.last_unit_cost ? Math.round(orderQty * Number(r.last_unit_cost)) : null;
+    return {
+      product: `${r.name}${r.pack_size ? ` (${r.pack_size})` : ""}`,
+      in_stock: Math.round(onHand),
+      daily_rate: Number(daily.toFixed(2)),
+      days_left: daysLeft == null ? null : Number(daysLeft.toFixed(1)),
+      runs_out_in: daysLeft == null ? "hisaab nahi (bikri sifar)" : daysLeft <= 0 ? "KHATAM" : `${Math.round(daysLeft)} din`,
+      order_for_next_N_days: orderQty,
+      estimated_cost: estimatedCost,
+      urgency: r.urgency ?? (daysLeft != null && daysLeft <= 3 ? "URGENT" : daysLeft != null && daysLeft <= 7 ? "jaldi" : "normal"),
+      last_supplier: r.last_supplier_name ?? null,
+    };
+  });
+
+  const urgent = forecast.filter((f) => f.urgency === "URGENT");
+  const soon = forecast.filter((f) => f.urgency === "jaldi");
+  const totalEstCost = forecast.reduce((s, f) => s + (f.estimated_cost ?? 0), 0);
+
+  return {
+    forecast_for_days: days,
+    currency: "PKR",
+    urgent_count: urgent.length,
+    soon_count: soon.length,
+    total_products: forecast.length,
+    total_estimated_order_cost: totalEstCost > 0 ? Math.round(totalEstCost) : null,
+    urgent_products: urgent,
+    need_soon: soon,
+    all_products: forecast,
+    note: `Agle ${days} din ke liye + 7 din delivery buffer shamil hai`,
+  };
+}
+
 // ===== Gemini ko batata hai har tool kya karta hai =====
 export const bridgeToolDeclarations: FunctionDeclaration[] = [
   {
@@ -894,6 +1227,70 @@ export const bridgeToolDeclarations: FunctionDeclaration[] = [
         },
       },
       required: ["shop_name"],
+    },
+  },
+  {
+    name: "get_business_report",
+    description:
+      "Poori business ki mukammal report: total sales, category-wise breakdown (fertilizer/pesticide/karyana), top-selling products, slow-moving products, branch comparison, staff ranking, payment mode, bank balance, aur stock alerts. Jab user pooche 'aaj ka business status batao', 'is hafte ki report do', 'is mahine ki performance kya rahi', 'sales summary batao', 'aaj ki sale kitni hai', 'top products kaun se hain', 'category-wise sale batao' -- ye tool use karein. period: 'aaj'/'today', 'hafta'/'week', 'mahina'/'month', ya custom 'days'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        period: {
+          type: Type.STRING,
+          description: "'aaj'/'today' (1 din), 'hafta'/'week' (7 din), 'mahina'/'month' (30 din). Default: aaj.",
+        },
+        days: {
+          type: Type.NUMBER,
+          description: "Custom din (1-90), agar period ki jagah specific number chahiye ho.",
+        },
+      },
+    },
+  },
+  {
+    name: "get_staff_performance",
+    description:
+      "Staff ki sale performance ranking: har staff member ne pichle N din mein kitni sale ki, kitne transactions, average per transaction, aur kaun top performer hai. Jab user pooche 'staff performance dikhao', 'kisne zyada sale ki', 'top seller kaun hai', 'staff ranking batao', 'Ali ne kitni sale ki' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: {
+          type: Type.NUMBER,
+          description: "Kitne din ka performance chahiye (default 30, max 90).",
+        },
+      },
+    },
+  },
+  {
+    name: "get_buyer_recovery",
+    description:
+      "Buyers/customers ki recovery list: kaun kitna dena hai, kitna overdue hai, kiski payment baqi hai. Jab user pooche 'recovery list batao', 'kaunse customers ka pesa baqi hai', 'outstanding payment kaun se hain', 'kaun sa buyer pesa nahi de raha' -- ye tool use karein.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        buyer_name: {
+          type: Type.STRING,
+          description: "Ek specific buyer ka naam (partial bhi chalega). Khali chhoRein to sab buyers.",
+        },
+      },
+    },
+  },
+  {
+    name: "get_demand_forecast",
+    description:
+      "Demand forecast: kaunsa product kab khatam hoga, agle N din mein kya kya mangwana chahiye, kaunse products urgent hain. Formula: roz ki bikri ke hisaab se. Jab user pooche 'agle 15 din mein kya khatam hoga', 'demand forecast karo', 'kaunse products urgent hain', 'pura reorder plan batao', 'kis cheez ka order doon' -- ye tool use karein. Category filter bhi de sakte hain (jaise 'fertilizer', 'pesticide').",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        days: {
+          type: Type.NUMBER,
+          description: "Agle kitne din ke liye forecast (default 15, max 60).",
+        },
+        category: {
+          type: Type.STRING,
+          description: "Sirf ek category ka forecast chahiye ho to (jaise 'fertilizer', 'pesticide', 'seed'). Khali chhoRein to sab.",
+        },
+      },
     },
   },
 ];
@@ -1109,6 +1506,14 @@ export async function executeBridgeTool(
       return checkSystemErrors(supabase, args ?? {});
     case "get_shop_stock_analysis":
       return getShopStockAnalysis(supabase, args ?? {});
+    case "get_business_report":
+      return getBusinessReport(supabase, args ?? {});
+    case "get_staff_performance":
+      return getStaffPerformance(supabase, args ?? {});
+    case "get_buyer_recovery":
+      return getBuyerRecovery(supabase, args ?? {});
+    case "get_demand_forecast":
+      return getDemandForecast(supabase, args ?? {});
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -1123,7 +1528,7 @@ export const AGENT_SYSTEM_INSTRUCTIONS: Record<string, string> = {
   finance:
     "Aap ka naam Abram hai. Aap AgriBridge ke Finance Agent hain - aapka focus Accounts, Sales, Inventory, aur Farmer Credit (Kisan Khata) se related sawalon par hai. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action chahe, to propose_action tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
   general:
-    "Aap ka naam Abram hai. Aap AgriBridge / Al Rana Traders ke business assistant hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. Agar user chahe ke Farmers ko koi Message/Announcement/Reward bheji jaye, to broadcast_to_farmers tool use karein. Agar user kisi shop ka stock, fast movers, slow movers, ya supplier ko order dene ke liye list pooche (jaise 'Mahabali ka stock kya hai', '15 din ka order kya hoga', 'supplier ko kya order doon', 'kya mangwana hai') to get_shop_stock_analysis tool use karein -- ye khud DB se data lekar complete reorder list banata hai. Agar user kisi shop/branch ke liye maal ka order likhwana chahe (jaise \"Mahabali ke liye DAP 20\"), to draft_shop_order tool use karein -- wo sirf draft banata hai, manzoori admin deta hai; tool jo jawab de (shop nahi mili, product do milte hain, rate baqi) wohi user ko batayein aur poochein. Supplier ki adaigi ka sawal ho (\"ABC ko kitne dene hain\", \"agle 7 din mein kitni adaigi hai\", \"kaun si payment overdue hai\") to get_supplier_dues tool use karein; jo adad na mile us par \"—\" kahein, sifar nahi. Kisi farmer ka POORA baqaya poocha jaye (\"falan kisan ka kitna baqaya hai\", \"is farmer ka total lena kitna hai\") to get_farmer_outstanding tool use karein -- ye machine+doodh+khad+POS chaaron jama deta hai. Alag alag tool (get_farmer_credit_summary sirf khad, get_machinery_summary sirf machine) khud jama kar ke total mat banayein. Koi ghalti/masla/bug poochein (\"koi ghalti hui hai\", \"system theek chal raha hai?\", \"koi masla to nahi\") to check_system_errors tool use karein -- ye asal /admin/errors ka khata hai, khud se \"sab theek hai\" mat kahein.",
+    "Aap ka naam Abram hai. Aap AgriBridge / Al Rana Traders ke AI Business Command Center hain. Jawab Roman Urdu mein, seedha aur clear dein. Numbers hamesha Rs (PKR) ke sath dikhayein. Sirf tool se mile data par based jawab dein, khud se andaza mat lagayein. Aap khud kabhi database change nahi kar sakte - agar user koi action (purchase, task, waghera) chahe, to propose_action tool use karein taake admin approve kare. TOOL SELECTION GUIDE: (1) 'Aaj/hafte/mahine ka business status/report/summary' → get_business_report. (2) 'Staff performance/ranking/kisne zyada sale ki' → get_staff_performance. (3) 'Recovery list/buyer payment baqi/customer outstanding' → get_buyer_recovery. (4) 'Demand forecast/kya khatam hoga/agle N din mein kya chahiye/pura reorder plan' → get_demand_forecast. (5) 'Ek shop ka stock/Mahabali ka stock/supplier order list' → get_shop_stock_analysis. (6) 'Kya mangwana hai (overall)' → get_reorder_suggestions ya get_demand_forecast. (7) Shop order likhwana (draft banana) → draft_shop_order. (8) Agar user chahe ke Farmers ko koi Message bheji jaye → broadcast_to_farmers. (9) Supplier ki adaigi ('ABC ko kitne dene hain', 'overdue payment') → get_supplier_dues. (10) Ek farmer ka POORA baqaya → get_farmer_outstanding (machine+doodh+khad+POS). (11) System ghalti/masla → check_system_errors. Kisi bhi sawal mein pehle tool call karo, phir jawab do -- khud se koi andaza mat lagao.",
 };
 
 // Simple keyword-based router - koi extra AI call nahi lagti, turant
