@@ -177,20 +177,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
-  const deskLinks = [
-    { href: "/admin/pos", label: "POS Sale" },
-    { href: "/admin/agri-orders/new", label: "Create Order" },
-    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
-    { href: "/admin/kharche", label: "Paisa & Khata" },
-    { href: "/admin/stock-count", label: "Stock Check" },
-    { href: "/admin/farmers", label: "Farmers" },
-    { href: "/admin/cash-handover", label: "Cash Handover" },
-  ].filter(link => canRoute(link.href));
-
-  // Shop staff can have a shop assignment and desk access without having
-  // the POS route itself (for example Load & Bill + Paisa & Khata only).
-  // Requiring /admin/pos here sent those users to the legacy dashboard and
-  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   return (
     <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
@@ -229,6 +215,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       {me.shop_id && canRoute("/admin/pos") && (
         <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
       )}
+      <div className="mx-auto w-full max-w-[1100px]">
 
       {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
           greeting, date/time aur score teen alag boxon mein. Ab ek hi
