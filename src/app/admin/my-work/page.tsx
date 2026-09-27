@@ -1,5 +1,13 @@
 import { DeskWorkspace } from "@/components/guided/desk-workspace";
 import { ShopOverview } from "@/components/desk/shop-overview";
+import { FinanceOverview } from "@/components/desk/finance-overview";
+import { WarehouseOverview } from "@/components/desk/warehouse-overview";
+import { ProcurementOverview } from "@/components/desk/procurement-overview";
+import { DairyOverview } from "@/components/desk/dairy-overview";
+import { MachineryOverview } from "@/components/desk/machinery-overview";
+import { HROverview } from "@/components/desk/hr-overview";
+import { ManagerOverview } from "@/components/desk/manager-overview";
+import { AdminOverview } from "@/components/desk/admin-overview";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import Link from "next/link";
@@ -211,6 +219,30 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
       {me.shop_id && canRoute("/admin/pos") && (
         <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+      )}
+      {me.role === "finance" && (
+        <FinanceOverview branchId={me.branch_id} />
+      )}
+      {me.role === "warehouse" && (
+        <WarehouseOverview branchId={me.branch_id} />
+      )}
+      {me.role === "procurement" && (
+        <ProcurementOverview branchId={me.branch_id} />
+      )}
+      {me.role === "milk_collection" && (
+        <DairyOverview branchId={me.branch_id} />
+      )}
+      {me.role === "machinery" && (
+        <MachineryOverview branchId={me.branch_id} />
+      )}
+      {me.role === "hr" && (
+        <HROverview branchId={me.branch_id} />
+      )}
+      {me.role === "manager" && (
+        <ManagerOverview branchId={me.branch_id} />
+      )}
+      {me.role === "admin_assistant" && (
+        <AdminOverview />
       )}
       <div className="mx-auto w-full max-w-[1100px]">
 
